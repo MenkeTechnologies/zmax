@@ -1,0 +1,2610 @@
+[
+ {
+  "id": "mg.default-key-bindings.c_spc",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-SPC",
+  "desc": "set-mark-command",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L141"
+ },
+ {
+  "id": "mg.default-key-bindings.c_a",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-a",
+  "desc": "beginning-of-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L143"
+ },
+ {
+  "id": "mg.default-key-bindings.c_b",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-b",
+  "desc": "backward-char",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L145"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s c",
+  "desc": "cscope-find-functions-calling-this-function",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L147"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c_2",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s d",
+  "desc": "cscope-find-global-definition",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L149"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c_3",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s e",
+  "desc": "cscope-find-egrep-pattern",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L151"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c_4",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s f",
+  "desc": "cscope-find-this-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L153"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c_5",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s i",
+  "desc": "cscope-find-files-including-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L155"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c_6",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s n",
+  "desc": "cscope-next-symbol",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L157"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c_7",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s p",
+  "desc": "cscope-prev-symbol",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L159"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c_8",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s s",
+  "desc": "cscope-find-this-symbol",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L161"
+ },
+ {
+  "id": "mg.default-key-bindings.c_c_9",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-c s t",
+  "desc": "cscope-find-this-text-string",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L163"
+ },
+ {
+  "id": "mg.default-key-bindings.c_d",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-d",
+  "desc": "delete-char",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L165"
+ },
+ {
+  "id": "mg.default-key-bindings.c_e",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-e",
+  "desc": "end-of-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L167"
+ },
+ {
+  "id": "mg.default-key-bindings.c_f",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-f",
+  "desc": "forward-char",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L169"
+ },
+ {
+  "id": "mg.default-key-bindings.c_g",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-g",
+  "desc": "keyboard-quit",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L171"
+ },
+ {
+  "id": "mg.default-key-bindings.c_h",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-h C-h",
+  "desc": "help-help",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L173"
+ },
+ {
+  "id": "mg.default-key-bindings.c_h_2",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-h a",
+  "desc": "apropos",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L175"
+ },
+ {
+  "id": "mg.default-key-bindings.c_h_3",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-h b",
+  "desc": "describe-bindings",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L177"
+ },
+ {
+  "id": "mg.default-key-bindings.c_h_4",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-h c",
+  "desc": "describe-key-briefly",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L179"
+ },
+ {
+  "id": "mg.default-key-bindings.c_j",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-j",
+  "desc": "newline-and-indent",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L181"
+ },
+ {
+  "id": "mg.default-key-bindings.c_k",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-k",
+  "desc": "kill-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L183"
+ },
+ {
+  "id": "mg.default-key-bindings.c_l",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-l",
+  "desc": "recenter",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L185"
+ },
+ {
+  "id": "mg.default-key-bindings.ret",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "RET",
+  "desc": "newline",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L187"
+ },
+ {
+  "id": "mg.default-key-bindings.c_n",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-n",
+  "desc": "next-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L189"
+ },
+ {
+  "id": "mg.default-key-bindings.c_o",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-o",
+  "desc": "open-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L191"
+ },
+ {
+  "id": "mg.default-key-bindings.c_p",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-p",
+  "desc": "previous-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L193"
+ },
+ {
+  "id": "mg.default-key-bindings.c_q",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-q",
+  "desc": "quoted-insert",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L195"
+ },
+ {
+  "id": "mg.default-key-bindings.c_r",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-r",
+  "desc": "isearch-backward",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L197"
+ },
+ {
+  "id": "mg.default-key-bindings.c_s",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-s",
+  "desc": "isearch-forward",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L199"
+ },
+ {
+  "id": "mg.default-key-bindings.c_t",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-t",
+  "desc": "transpose-chars",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L201"
+ },
+ {
+  "id": "mg.default-key-bindings.c_u",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-u",
+  "desc": "universal-argument",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L203"
+ },
+ {
+  "id": "mg.default-key-bindings.c_v",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-v",
+  "desc": "scroll-up",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L205"
+ },
+ {
+  "id": "mg.default-key-bindings.c_w",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-w",
+  "desc": "kill-region",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L207"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-b",
+  "desc": "list-buffers",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L209"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_2",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-c",
+  "desc": "save-buffers-kill-emacs",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L211"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_3",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-f",
+  "desc": "find-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L213"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_4",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-j",
+  "desc": "dired-jump",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L215"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_5",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-g",
+  "desc": "keyboard-quit",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L217"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_6",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-l",
+  "desc": "downcase-region",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L219"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_7",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-o",
+  "desc": "delete-blank-lines",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L221"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_8",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-q",
+  "desc": "toggle-read-only",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L223"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_9",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-r",
+  "desc": "find-file-read-only",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L225"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_10",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-s",
+  "desc": "save-buffer",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L227"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_11",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-u",
+  "desc": "upcase-region",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L229"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_12",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-v",
+  "desc": "find-alternate-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L231"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_13",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-w",
+  "desc": "write-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L233"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_14",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x C-x",
+  "desc": "exchange-point-and-mark",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L235"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_15",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x (",
+  "desc": "start-kbd-macro",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L237"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_16",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x )",
+  "desc": "end-kbd-macro",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L239"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_17",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x 0",
+  "desc": "delete-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L241"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_18",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x 1",
+  "desc": "delete-other-windows",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L243"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_19",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x 2",
+  "desc": "split-window-vertically",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L245"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_20",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x 4 C-f",
+  "desc": "find-file-other-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L247"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_21",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x 4 C-g",
+  "desc": "keyboard-quit",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L249"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_22",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x 4 b",
+  "desc": "switch-to-buffer-other-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L251"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_23",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x 4 f",
+  "desc": "find-file-other-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L253"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_24",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x =",
+  "desc": "what-cursor-position",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L255"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_25",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x ^",
+  "desc": "enlarge-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L257"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_26",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x `",
+  "desc": "next-error",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L259"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_27",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x b",
+  "desc": "switch-to-buffer",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L261"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_28",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x d",
+  "desc": "dired",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L263"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_29",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x e",
+  "desc": "call-last-kbd-macro",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L265"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_30",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x f",
+  "desc": "set-fill-column",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L267"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_31",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x g",
+  "desc": "goto-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L269"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_32",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x h",
+  "desc": "mark-whole-buffer",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L271"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_33",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x i",
+  "desc": "insert-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L273"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_34",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x k",
+  "desc": "kill-buffer",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L275"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_35",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x n",
+  "desc": "other-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L277"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_36",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x o",
+  "desc": "other-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L279"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_37",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x p",
+  "desc": "previous-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L281"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_38",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x s",
+  "desc": "save-some-buffers",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L283"
+ },
+ {
+  "id": "mg.default-key-bindings.c_x_39",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-x u",
+  "desc": "undo",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L285"
+ },
+ {
+  "id": "mg.default-key-bindings.c_y",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-y",
+  "desc": "yank",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L287"
+ },
+ {
+  "id": "mg.default-key-bindings.c_z",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-z",
+  "desc": "suspend-emacs",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L289"
+ },
+ {
+  "id": "mg.default-key-bindings.m_c_v",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-C-v",
+  "desc": "scroll-other-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L291"
+ },
+ {
+  "id": "mg.default-key-bindings.m_spc",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-SPC",
+  "desc": "just-one-space",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L293"
+ },
+ {
+  "id": "mg.default-key-bindings.m",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-!",
+  "desc": "shell-command",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L295"
+ },
+ {
+  "id": "mg.default-key-bindings.m_2",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-.",
+  "desc": "find-tag",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L297"
+ },
+ {
+  "id": "mg.default-key-bindings.m_3",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-*",
+  "desc": "pop-tag-mark",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L299"
+ },
+ {
+  "id": "mg.default-key-bindings.m_4",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-%",
+  "desc": "query-replace",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L301"
+ },
+ {
+  "id": "mg.default-key-bindings.m_5",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-<",
+  "desc": "beginning-of-buffer",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L303"
+ },
+ {
+  "id": "mg.default-key-bindings.m_6",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M->",
+  "desc": "end-of-buffer",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L305"
+ },
+ {
+  "id": "mg.default-key-bindings.m_7",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-\\",
+  "desc": "delete-horizontal-space",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L307"
+ },
+ {
+  "id": "mg.default-key-bindings.m_8",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-^",
+  "desc": "join-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L309"
+ },
+ {
+  "id": "mg.default-key-bindings.m_b",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-b",
+  "desc": "backward-word",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L311"
+ },
+ {
+  "id": "mg.default-key-bindings.m_c",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-c",
+  "desc": "capitalize-word",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L313"
+ },
+ {
+  "id": "mg.default-key-bindings.m_d",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-d",
+  "desc": "kill-word",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L315"
+ },
+ {
+  "id": "mg.default-key-bindings.m_f",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-f",
+  "desc": "forward-word",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L317"
+ },
+ {
+  "id": "mg.default-key-bindings.m_h",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-h",
+  "desc": "mark-paragraph",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L319"
+ },
+ {
+  "id": "mg.default-key-bindings.m_l",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-l",
+  "desc": "downcase-word",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L321"
+ },
+ {
+  "id": "mg.default-key-bindings.m_m",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-m",
+  "desc": "back-to-indentation",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L323"
+ },
+ {
+  "id": "mg.default-key-bindings.m_q",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-q",
+  "desc": "fill-paragraph",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L325"
+ },
+ {
+  "id": "mg.default-key-bindings.m_r",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-r",
+  "desc": "search-backward",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L327"
+ },
+ {
+  "id": "mg.default-key-bindings.m_s",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-s",
+  "desc": "search-forward",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L329"
+ },
+ {
+  "id": "mg.default-key-bindings.m_t",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-t",
+  "desc": "transpose-words",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L331"
+ },
+ {
+  "id": "mg.default-key-bindings.m_u",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-u",
+  "desc": "upcase-word",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L333"
+ },
+ {
+  "id": "mg.default-key-bindings.m_v",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-v",
+  "desc": "scroll-down",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L335"
+ },
+ {
+  "id": "mg.default-key-bindings.m_w",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-w",
+  "desc": "copy-region-as-kill",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L337"
+ },
+ {
+  "id": "mg.default-key-bindings.m_x",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-x",
+  "desc": "execute-extended-command",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L339"
+ },
+ {
+  "id": "mg.default-key-bindings.m_z",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-z",
+  "desc": "zap-to-char",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L341"
+ },
+ {
+  "id": "mg.default-key-bindings.m_9",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-{",
+  "desc": "backward-paragraph",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L343"
+ },
+ {
+  "id": "mg.default-key-bindings.m_10",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-|",
+  "desc": "shell-command-on-region",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L345"
+ },
+ {
+  "id": "mg.default-key-bindings.m_11",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-}",
+  "desc": "forward-paragraph",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L347"
+ },
+ {
+  "id": "mg.default-key-bindings.m_12",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-~",
+  "desc": "not-modified",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L349"
+ },
+ {
+  "id": "mg.default-key-bindings.m_del",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "M-DEL",
+  "desc": "backward-kill-word",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L351"
+ },
+ {
+  "id": "mg.default-key-bindings.c",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "C-_",
+  "desc": "undo",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L353"
+ },
+ {
+  "id": "mg.default-key-bindings.item",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": ")",
+  "desc": "blink-and-insert",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L355"
+ },
+ {
+  "id": "mg.default-key-bindings.del",
+  "source": "mg",
+  "category": "default-key-bindings",
+  "name": "DEL",
+  "desc": "delete-backward-char",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L357"
+ },
+ {
+  "id": "mg.mg-commands.apropos",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "apropos",
+  "desc": "Help Apropos. Prompt the user for a string, open the *help* buffer, and list all commands that contain that string.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L388"
+ },
+ {
+  "id": "mg.mg-commands.audible_bell",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "audible-bell",
+  "desc": "Toggle the audible system bell.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L394"
+ },
+ {
+  "id": "mg.mg-commands.auto_execute",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "auto-execute",
+  "desc": "Register an auto-execute hook; that is, specify a filename pattern (conforming to the shell's filename globbing rules) and an associated function to execute when a file matching the specified pattern is read into a buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L396"
+ },
+ {
+  "id": "mg.mg-commands.auto_fill_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "auto-fill-mode",
+  "desc": "Toggle auto-fill mode (sometimes called mail-mode) in the current buffer, where text inserted past the fill column is automatically wrapped to a new line. Can be set globally with set-default-mode .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L401"
+ },
+ {
+  "id": "mg.mg-commands.auto_indent_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "auto-indent-mode",
+  "desc": "Toggle indent mode in the current buffer, where indentation is preserved after a newline. Can be set globally with set-default-mode .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L407"
+ },
+ {
+  "id": "mg.mg-commands.back_to_indentation",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "back-to-indentation",
+  "desc": "Move the dot to the first non-whitespace character on the current line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L412"
+ },
+ {
+  "id": "mg.mg-commands.backup_to_home_directory",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "backup-to-home-directory",
+  "desc": "Save backup copies to a ~/.mg.d directory instead of working directory. Requires make-backup-files to be on.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L414"
+ },
+ {
+  "id": "mg.mg-commands.backward_char",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "backward-char",
+  "desc": "Move cursor backwards one character.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L421"
+ },
+ {
+  "id": "mg.mg-commands.backward_kill_word",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "backward-kill-word",
+  "desc": "Kill text backwards by n words.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L423"
+ },
+ {
+  "id": "mg.mg-commands.backward_paragraph",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "backward-paragraph",
+  "desc": "Move cursor backwards n paragraphs. Paragraphs are delimited by <NL><NL> or <NL><TAB> or <NL><SPACE>.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L427"
+ },
+ {
+  "id": "mg.mg-commands.backward_word",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "backward-word",
+  "desc": "Move cursor backwards by the specified number of words.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L432"
+ },
+ {
+  "id": "mg.mg-commands.beginning_of_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "beginning-of-buffer",
+  "desc": "Move cursor to the top of the buffer. If set, keep mark's position, otherwise set at current position. A numeric argument n will move n/10th of the way from the top.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L434"
+ },
+ {
+  "id": "mg.mg-commands.beginning_of_line",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "beginning-of-line",
+  "desc": "Move cursor to the beginning of the line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L440"
+ },
+ {
+  "id": "mg.mg-commands.blink_and_insert",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "blink-and-insert",
+  "desc": "Self-insert a character, then search backwards and blink its matching delimiter. For delimiters other than parenthesis, brackets, and braces, the character itself is used as its own match. Can be used in the startup file with the global-set-key command.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L442"
+ },
+ {
+  "id": "mg.mg-commands.bsmap_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "bsmap-mode",
+  "desc": "Toggle bsmap mode, where DEL and C-h are swapped.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L451"
+ },
+ {
+  "id": "mg.mg-commands.c_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "c-mode",
+  "desc": "Toggle a KNF-compliant mode for editing C program files.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L453"
+ },
+ {
+  "id": "mg.mg-commands.call_last_kbd_macro",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "call-last-kbd-macro",
+  "desc": "Invoke the keyboard macro.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L455"
+ },
+ {
+  "id": "mg.mg-commands.capitalize_word",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "capitalize-word",
+  "desc": "Capitalize n words; i.e. convert the first character of the word to upper case, and subsequent letters to lower case.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L457"
+ },
+ {
+  "id": "mg.mg-commands.cd",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cd",
+  "desc": "Change the global working directory. See also global-wd-mode .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L462"
+ },
+ {
+  "id": "mg.mg-commands.column_number_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "column-number-mode",
+  "desc": "Toggle whether the column number is displayed in the modeline.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L466"
+ },
+ {
+  "id": "mg.mg-commands.copy_region_as_kill",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "copy-region-as-kill",
+  "desc": "Copy all of the characters in the region to the kill buffer, clearing the mark afterwards. This is a bit like a kill-region followed by a yank .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L468"
+ },
+ {
+  "id": "mg.mg-commands.count_matches",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "count-matches",
+  "desc": "Count the number of lines matching the supplied regular expression.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L475"
+ },
+ {
+  "id": "mg.mg-commands.count_non_matches",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "count-non-matches",
+  "desc": "Count the number of lines not matching the supplied regular expression.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L477"
+ },
+ {
+  "id": "mg.mg-commands.cscope_find_this_symbol",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-find-this-symbol",
+  "desc": "List the matches for the given symbol.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L479"
+ },
+ {
+  "id": "mg.mg-commands.cscope_find_global_definition",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-find-global-definition",
+  "desc": "List global definitions for the given literal.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L481"
+ },
+ {
+  "id": "mg.mg-commands.cscope_find_called_functions",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-find-called-functions",
+  "desc": "List functions called from the given function.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L483"
+ },
+ {
+  "id": "mg.mg-commands.cscope_find_functions_calling_this_function",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-find-functions-calling-this-function",
+  "desc": "List functions calling the given function.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L485"
+ },
+ {
+  "id": "mg.mg-commands.cscope_find_this_text_string",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-find-this-text-string",
+  "desc": "List locations matching the given text string.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L487"
+ },
+ {
+  "id": "mg.mg-commands.cscope_find_egrep_pattern",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-find-egrep-pattern",
+  "desc": "List locations matching the given extended regular expression pattern.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L489"
+ },
+ {
+  "id": "mg.mg-commands.cscope_find_this_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-find-this-file",
+  "desc": "List filenames matching the given filename.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L491"
+ },
+ {
+  "id": "mg.mg-commands.cscope_find_files_including_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-find-files-including-file",
+  "desc": "List files that #include the given filename.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L493"
+ },
+ {
+  "id": "mg.mg-commands.cscope_next_symbol",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-next-symbol",
+  "desc": "Navigate to the next match.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L495"
+ },
+ {
+  "id": "mg.mg-commands.cscope_prev_symbol",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-prev-symbol",
+  "desc": "Navigate to the previous match.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L497"
+ },
+ {
+  "id": "mg.mg-commands.cscope_next_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-next-file",
+  "desc": "Navigate to the next file.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L499"
+ },
+ {
+  "id": "mg.mg-commands.cscope_prev_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-prev-file",
+  "desc": "Navigate to the previous file.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L501"
+ },
+ {
+  "id": "mg.mg-commands.cscope_create_list_of_files_to_index",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "cscope-create-list-of-files-to-index",
+  "desc": "Create cscope's List and Index in the given directory.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L503"
+ },
+ {
+  "id": "mg.mg-commands.define_key",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "define-key",
+  "desc": "Prompts the user for a named keymap (mode), a key, and an command, then creates a keybinding in the appropriate map.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L505"
+ },
+ {
+  "id": "mg.mg-commands.delete_backward_char",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-backward-char",
+  "desc": "Delete backwards n characters. Like delete-char , this actually does a kill if presented with an argument.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L511"
+ },
+ {
+  "id": "mg.mg-commands.delete_blank_lines",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-blank-lines",
+  "desc": "Delete blank lines around dot. If dot is sitting on a blank line, this command deletes all the blank lines above and below the current line. Otherwise, it deletes all of the blank lines after the current line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L519"
+ },
+ {
+  "id": "mg.mg-commands.delete_char",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-char",
+  "desc": "Delete n characters forward. If any argument is present, it kills rather than deletes, saving the result in the kill buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L524"
+ },
+ {
+  "id": "mg.mg-commands.delete_horizontal_space",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-horizontal-space",
+  "desc": "Delete any whitespace around the dot.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L530"
+ },
+ {
+  "id": "mg.mg-commands.delete_leading_space",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-leading-space",
+  "desc": "Delete leading whitespace on the current line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L532"
+ },
+ {
+  "id": "mg.mg-commands.delete_trailing_space",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-trailing-space",
+  "desc": "Delete trailing whitespace on the current line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L534"
+ },
+ {
+  "id": "mg.mg-commands.delete_matching_lines",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-matching-lines",
+  "desc": "Delete all lines after dot that contain a string matching the supplied regular expression.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L536"
+ },
+ {
+  "id": "mg.mg-commands.delete_non_matching_lines",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-non-matching-lines",
+  "desc": "Delete all lines after dot that don't contain a string matching the supplied regular expression.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L539"
+ },
+ {
+  "id": "mg.mg-commands.delete_other_windows",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-other-windows",
+  "desc": "Make the current window the only window visible on the screen.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L542"
+ },
+ {
+  "id": "mg.mg-commands.delete_window",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "delete-window",
+  "desc": "Delete current window.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L544"
+ },
+ {
+  "id": "mg.mg-commands.describe_bindings",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "describe-bindings",
+  "desc": "List all global and local keybindings, putting the result in the *help* buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L546"
+ },
+ {
+  "id": "mg.mg-commands.describe_key_briefly",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "describe-key-briefly",
+  "desc": "Read a key from the keyboard, and look it up in the keymap. Display the name of the function currently bound to the key.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L549"
+ },
+ {
+  "id": "mg.mg-commands.diff_buffer_with_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "diff-buffer-with-file",
+  "desc": "View the differences between buffer and its associated file.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L552"
+ },
+ {
+  "id": "mg.mg-commands.digit_argument",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "digit-argument",
+  "desc": "Process a numerical argument for keyboard-invoked functions.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L554"
+ },
+ {
+  "id": "mg.mg-commands.dired_jump",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "dired-jump",
+  "desc": "Open a dired buffer containing the current buffer's directory location.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L556"
+ },
+ {
+  "id": "mg.mg-commands.downcase_region",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "downcase-region",
+  "desc": "Set all characters in the region to lower case.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L558"
+ },
+ {
+  "id": "mg.mg-commands.downcase_word",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "downcase-word",
+  "desc": "Set characters to lower case, starting at the dot, and ending n words away.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L560"
+ },
+ {
+  "id": "mg.mg-commands.emacs_version",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "emacs-version",
+  "desc": "Return an version string.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L564"
+ },
+ {
+  "id": "mg.mg-commands.end_kbd_macro",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "end-kbd-macro",
+  "desc": "Stop defining a keyboard macro.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L568"
+ },
+ {
+  "id": "mg.mg-commands.end_of_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "end-of-buffer",
+  "desc": "Move cursor to the end of the buffer. If set, keep mark's position, otherwise set at current position. A numeric argument n will move n/10th of the way from the end.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L570"
+ },
+ {
+  "id": "mg.mg-commands.end_of_line",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "end-of-line",
+  "desc": "Move cursor to the end of the line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L576"
+ },
+ {
+  "id": "mg.mg-commands.enlarge_window",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "enlarge-window",
+  "desc": "Enlarge the current window by shrinking either the window above or below it.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L578"
+ },
+ {
+  "id": "mg.mg-commands.eval_current_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "eval-current-buffer",
+  "desc": "Evaluate the current buffer as a series of commands. Useful for testing startup files.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L581"
+ },
+ {
+  "id": "mg.mg-commands.eval_expression",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "eval-expression",
+  "desc": "Get one line from the user, and run it. Useful for testing expressions in startup files.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L588"
+ },
+ {
+  "id": "mg.mg-commands.exchange_point_and_mark",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "exchange-point-and-mark",
+  "desc": "Swap the values of \"dot\" and \"mark\" in the current window. Return an error if no mark is set.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L593"
+ },
+ {
+  "id": "mg.mg-commands.execute_extended_command",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "execute-extended-command",
+  "desc": "Invoke an extended command; i.e. M-x. Call the message line routine to read in the command name and apply autocompletion to it. When it comes back, look the name up in the symbol table and run the command if it is found, passing arguments as necessary. Print an error if there is anything wrong.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L596"
+ },
+ {
+  "id": "mg.mg-commands.fill_paragraph",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "fill-paragraph",
+  "desc": "Justify a paragraph, wrapping text at the current fill column.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L603"
+ },
+ {
+  "id": "mg.mg-commands.find_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "find-file",
+  "desc": "Select a file for editing. First check if the file can be found in another buffer; if it is there, just switch to that buffer. If the file cannot be found, create a new buffer, read in the file from disk, and switch to the new buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L605"
+ },
+ {
+  "id": "mg.mg-commands.find_file_read_only",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "find-file-read-only",
+  "desc": "Same as find-file , except the new buffer is set to read-only.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L611"
+ },
+ {
+  "id": "mg.mg-commands.find_alternate_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "find-alternate-file",
+  "desc": "Replace the current file with an alternate one. Semantics for finding the replacement file are the same as find-file , except the current buffer is killed before the switch. If the kill fails, or is aborted, revert to the original file.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L615"
+ },
+ {
+  "id": "mg.mg-commands.find_file_other_window",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "find-file-other-window",
+  "desc": "Opens the specified file in a second buffer. Splits the current window if necessary.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L621"
+ },
+ {
+  "id": "mg.mg-commands.find_tag",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "find-tag",
+  "desc": "Jump to definition of tag at dot.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L624"
+ },
+ {
+  "id": "mg.mg-commands.forward_char",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "forward-char",
+  "desc": "Move cursor forwards (or backwards, if n is negative) n characters. Returns an error if the end of buffer is reached.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L626"
+ },
+ {
+  "id": "mg.mg-commands.forward_paragraph",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "forward-paragraph",
+  "desc": "Move forward n paragraphs. Paragraphs are delimited by <NL><NL> or <NL><TAB> or <NL><SPACE>.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L633"
+ },
+ {
+  "id": "mg.mg-commands.forward_word",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "forward-word",
+  "desc": "Move the cursor forward by the specified number of words.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L638"
+ },
+ {
+  "id": "mg.mg-commands.global_set_key",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "global-set-key",
+  "desc": "Bind a key in the global (fundamental) key map.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L640"
+ },
+ {
+  "id": "mg.mg-commands.global_unset_key",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "global-unset-key",
+  "desc": "Unbind a key from the global (fundamental) key map; i.e. set it to 'rescan'.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L642"
+ },
+ {
+  "id": "mg.mg-commands.global_wd_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "global-wd-mode",
+  "desc": "Toggle global working-directory mode. When enabled, defaults to opening files (and executing commands like compile and grep ) relative to the global working directory. When disabled, a working directory is set for each buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L644"
+ },
+ {
+  "id": "mg.mg-commands.goto_line",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "goto-line",
+  "desc": "Go to a specific line. If an argument is present, then it is the line number, else prompt for a line number to use.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L654"
+ },
+ {
+  "id": "mg.mg-commands.help_help",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "help-help",
+  "desc": "Prompts for one of (a)propos, (b)indings, des(c)ribe key briefly.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L658"
+ },
+ {
+  "id": "mg.mg-commands.insert",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "insert",
+  "desc": "Insert a string, mainly for use from macros.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L660"
+ },
+ {
+  "id": "mg.mg-commands.insert_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "insert-buffer",
+  "desc": "Insert the contents of another buffer at dot.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L662"
+ },
+ {
+  "id": "mg.mg-commands.insert_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "insert-file",
+  "desc": "Insert a file into the current buffer at dot.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L664"
+ },
+ {
+  "id": "mg.mg-commands.insert_with_wrap",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "insert-with-wrap",
+  "desc": "Insert the bound character with word wrap. Check to see if we're past the fill column, and if so, justify this line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L666"
+ },
+ {
+  "id": "mg.mg-commands.isearch_backward",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "isearch-backward",
+  "desc": "Use incremental searching, initially in the reverse direction. isearch ignores any explicit arguments. If invoked during macro definition or evaluation, the non-incremental search-backward is invoked instead.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L670"
+ },
+ {
+  "id": "mg.mg-commands.isearch_forward",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "isearch-forward",
+  "desc": "Use incremental searching, initially in the forward direction. isearch ignores any explicit arguments. If invoked during macro definition or evaluation, the non-incremental search-forward is invoked instead.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L676"
+ },
+ {
+  "id": "mg.mg-commands.join_line",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "join-line",
+  "desc": "Join the current line to the previous. If called with an argument, join the next line to the current one.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L682"
+ },
+ {
+  "id": "mg.mg-commands.just_one_space",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "just-one-space",
+  "desc": "Delete any whitespace around dot, then insert a space.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L686"
+ },
+ {
+  "id": "mg.mg-commands.keyboard_quit",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "keyboard-quit",
+  "desc": "Abort the current action.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L688"
+ },
+ {
+  "id": "mg.mg-commands.kill_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "kill-buffer",
+  "desc": "Dispose of a buffer, by name. If the buffer name does not start and end with an asterisk, prompt the user if the buffer has been changed.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L690"
+ },
+ {
+  "id": "mg.mg-commands.kill_line",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "kill-line",
+  "desc": "Kill line. If called without an argument, it kills from dot to the end of the line, unless it is at the end of the line, when it kills the newline. If called with an argument of 0, it kills from the start of the line to dot. If called with a positive argument, it kills from dot forward over that number of newlines. If called with a negative argument it kills any text before dot on the current line, then it kills back",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L695"
+ },
+ {
+  "id": "mg.mg-commands.kill_paragraph",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "kill-paragraph",
+  "desc": "Delete n paragraphs starting with the current one.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L707"
+ },
+ {
+  "id": "mg.mg-commands.kill_region",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "kill-region",
+  "desc": "Kill the currently defined region.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L711"
+ },
+ {
+  "id": "mg.mg-commands.kill_word",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "kill-word",
+  "desc": "Delete forward n words.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L713"
+ },
+ {
+  "id": "mg.mg-commands.leave_tmpdir_backups",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "leave-tmpdir-backups",
+  "desc": "Modifies the behaviour of backup-to-home-directory . Backup files that would normally reside in /tmp are left there and not moved to the ~/.mg.d directory.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L717"
+ },
+ {
+  "id": "mg.mg-commands.line_number_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "line-number-mode",
+  "desc": "Toggle whether the line number is displayed in the modeline.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L725"
+ },
+ {
+  "id": "mg.mg-commands.list_buffers",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "list-buffers",
+  "desc": "Display the list of available buffers. The first column in the output indicates which buffer is active with a '>' character. The second column indicates which buffers are modified. The third column indicates which buffers are read-only. The remaining columns are self-explanatory.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L727"
+ },
+ {
+  "id": "mg.mg-commands.load",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "load",
+  "desc": "Prompt the user for a filename, and then execute commands from that file.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L734"
+ },
+ {
+  "id": "mg.mg-commands.local_set_key",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "local-set-key",
+  "desc": "Bind a key mapping in the local (topmost) mode.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L737"
+ },
+ {
+  "id": "mg.mg-commands.local_unset_key",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "local-unset-key",
+  "desc": "Unbind a key mapping in the local (topmost) mode.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L739"
+ },
+ {
+  "id": "mg.mg-commands.make_backup_files",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "make-backup-files",
+  "desc": "Toggle generation of backup files. Enabled by default.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L741"
+ },
+ {
+  "id": "mg.mg-commands.make_directory",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "make-directory",
+  "desc": "Prompt the user for a path or directory name which is then created.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L744"
+ },
+ {
+  "id": "mg.mg-commands.mark_paragraph",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "mark-paragraph",
+  "desc": "Mark n paragraphs.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L746"
+ },
+ {
+  "id": "mg.mg-commands.mark_whole_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "mark-whole-buffer",
+  "desc": "Marks whole buffer as a region by putting dot at the beginning and mark at the end of buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L750"
+ },
+ {
+  "id": "mg.mg-commands.meta_key_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "meta-key-mode",
+  "desc": "When disabled, the meta key can be used to insert extended-ascii (8-bit) characters. When enabled, the meta key acts as usual.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L753"
+ },
+ {
+  "id": "mg.mg-commands.negative_argument",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "negative-argument",
+  "desc": "Process a negative argument for keyboard-invoked functions.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L757"
+ },
+ {
+  "id": "mg.mg-commands.newline",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "newline",
+  "desc": "Insert a newline into the current buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L759"
+ },
+ {
+  "id": "mg.mg-commands.newline_and_indent",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "newline-and-indent",
+  "desc": "Insert a newline, then enough tabs and spaces to duplicate the indentation of the previous line, respecting no-tab-mode and the buffer tab width.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L761"
+ },
+ {
+  "id": "mg.mg-commands.next_line",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "next-line",
+  "desc": "Move forward n lines.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L766"
+ },
+ {
+  "id": "mg.mg-commands.no_tab_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "no-tab-mode",
+  "desc": "Toggle notab mode. In this mode, spaces are inserted rather than tabs. Can be set globally with set-default-mode .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L770"
+ },
+ {
+  "id": "mg.mg-commands.not_modified",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "not-modified",
+  "desc": "Turn off the modified flag in the current buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L775"
+ },
+ {
+  "id": "mg.mg-commands.open_line",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "open-line",
+  "desc": "Open up some blank space. Essentially, insert n newlines, then back up over them.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L777"
+ },
+ {
+  "id": "mg.mg-commands.other_window",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "other-window",
+  "desc": "The command to make the next (down the screen) window the current window. There are no real errors, although the command does nothing if there is only 1 window on the screen.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L782"
+ },
+ {
+  "id": "mg.mg-commands.overwrite_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "overwrite-mode",
+  "desc": "Toggle overwrite mode in the current buffer, where typing overwrites existing characters rather than inserting them. Can be set globally with set-default-mode .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L787"
+ },
+ {
+  "id": "mg.mg-commands.prefix_region",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "prefix-region",
+  "desc": "Inserts a prefix string before each line of a region. The prefix string is settable by using set-prefix-string or by invoking this command with a prefix argument.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L792"
+ },
+ {
+  "id": "mg.mg-commands.previous_line",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "previous-line",
+  "desc": "Move backwards n lines.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L797"
+ },
+ {
+  "id": "mg.mg-commands.previous_window",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "previous-window",
+  "desc": "This command makes the previous (up the screen) window the current window. There are no errors, although the command does not do a lot if there is only 1 window.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L801"
+ },
+ {
+  "id": "mg.mg-commands.pop_tag_mark",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "pop-tag-mark",
+  "desc": "Return to position where find-tag was previously invoked.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L806"
+ },
+ {
+  "id": "mg.mg-commands.push_shell",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "push-shell",
+  "desc": "Suspend and switch to alternate screen, if available.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L808"
+ },
+ {
+  "id": "mg.mg-commands.pwd",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "pwd",
+  "desc": "Display current (global) working directory in the status area.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L812"
+ },
+ {
+  "id": "mg.mg-commands.query_replace",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "query-replace",
+  "desc": "Query Replace. Search and replace strings selectively, prompting after each match.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L814"
+ },
+ {
+  "id": "mg.mg-commands.replace_regexp",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "replace-regexp",
+  "desc": "Replace regular expression globally without individual prompting.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L817"
+ },
+ {
+  "id": "mg.mg-commands.replace_string",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "replace-string",
+  "desc": "Replace string globally without individual prompting.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L819"
+ },
+ {
+  "id": "mg.mg-commands.query_replace_regexp",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "query-replace-regexp",
+  "desc": "Replace strings selectively. Does a search and replace operation using regular expressions for both patterns.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L821"
+ },
+ {
+  "id": "mg.mg-commands.quoted_insert",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "quoted-insert",
+  "desc": "Insert the next character verbatim into the current buffer; i.e. ignore any function bound to that key.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L825"
+ },
+ {
+  "id": "mg.mg-commands.re_search_again",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "re-search-again",
+  "desc": "Perform a regular expression search again, using the same search string and direction as the last search command.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L828"
+ },
+ {
+  "id": "mg.mg-commands.re_search_backward",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "re-search-backward",
+  "desc": "Search backwards using a regular expression. Get a search string from the user, and search, starting at dot and proceeding toward the front of the buffer. If found, dot is left pointing at the first character of the pattern [the last character that was matched].",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L831"
+ },
+ {
+  "id": "mg.mg-commands.re_search_forward",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "re-search-forward",
+  "desc": "Search forward using a regular expression. Get a search string from the user and search for it starting at dot. If found, move dot to just after the matched characters. display does all the hard stuff. If not found, it just prints a message.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L838"
+ },
+ {
+  "id": "mg.mg-commands.recenter",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "recenter",
+  "desc": "Reposition dot in the current window. By default, the dot is centered. If given a positive argument (n), the display is repositioned to line n. If n is negative, it is that line from the bottom.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L845"
+ },
+ {
+  "id": "mg.mg-commands.redraw_display",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "redraw-display",
+  "desc": "Refresh the display. Recomputes all window sizes in case something has changed.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L853"
+ },
+ {
+  "id": "mg.mg-commands.require_final_newline",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "require-final-newline n",
+  "desc": "Control whether a newline is added at end of file when saving. n may be -1 to prompt the user (the default), 0 to never add a newline, or 1 to always add one silently.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L856"
+ },
+ {
+  "id": "mg.mg-commands.revert_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "revert-buffer",
+  "desc": "Revert the current buffer to the latest file on disk.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L866"
+ },
+ {
+  "id": "mg.mg-commands.save_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "save-buffer",
+  "desc": "Save the contents of the current buffer if it has been changed, optionally creating a backup copy.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L868"
+ },
+ {
+  "id": "mg.mg-commands.save_buffers_kill_emacs",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "save-buffers-kill-emacs",
+  "desc": "Offer to save modified buffers and quit .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L871"
+ },
+ {
+  "id": "mg.mg-commands.save_some_buffers",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "save-some-buffers",
+  "desc": "Look through the list of buffers, offering to save any buffer that has been changed. Buffers that are not associated with files (such as *scratch*, *grep*, *compile*) are ignored.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L874"
+ },
+ {
+  "id": "mg.mg-commands.scroll_down",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "scroll-down",
+  "desc": "Scroll backwards n pages. A two-line overlap between pages is assumed. If given a repeat argument, scrolls back lines, not pages.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L879"
+ },
+ {
+  "id": "mg.mg-commands.scroll_one_line_down",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "scroll-one-line-down",
+  "desc": "Scroll the display down n lines without changing the cursor position.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L886"
+ },
+ {
+  "id": "mg.mg-commands.scroll_one_line_up",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "scroll-one-line-up",
+  "desc": "Scroll the display n lines up without moving the cursor position.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L890"
+ },
+ {
+  "id": "mg.mg-commands.scroll_other_window",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "scroll-other-window",
+  "desc": "Scroll the next window in the window list window forward n pages.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L894"
+ },
+ {
+  "id": "mg.mg-commands.scroll_up",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "scroll-up",
+  "desc": "Scroll forward one page. A two-line overlap between pages is assumed. If given a repeat argument, scrolls back lines, not pages.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L898"
+ },
+ {
+  "id": "mg.mg-commands.search_again",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "search-again",
+  "desc": "Search again, using the same search string and direction as the last search command.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L903"
+ },
+ {
+  "id": "mg.mg-commands.search_backward",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "search-backward",
+  "desc": "Reverse search. Get a search string from the user, and search, starting at dot and proceeding toward the front of the buffer. If found, dot is left pointing at the first character of the pattern (the last character that was matched).",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L906"
+ },
+ {
+  "id": "mg.mg-commands.search_forward",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "search-forward",
+  "desc": "Search forward. Get a search string from the user, and search for it starting at dot. If found, dot gets moved to just after the matched characters, if not found, print a message.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L913"
+ },
+ {
+  "id": "mg.mg-commands.self_insert_command",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "self-insert-command",
+  "desc": "Insert a character.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L919"
+ },
+ {
+  "id": "mg.mg-commands.sentence_end_double_space",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "sentence-end-double-space",
+  "desc": "Toggle double or single spaces for end of sentences. Double is the default. Currently only affects fill-paragraph.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L921"
+ },
+ {
+  "id": "mg.mg-commands.set_case_fold_search",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "set-case-fold-search",
+  "desc": "Set case-fold searching, causing case not to matter in regular expression searches. This is the default.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L925"
+ },
+ {
+  "id": "mg.mg-commands.set_case_replace",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "set-case-replace",
+  "desc": "Preserve the case of the replaced string. This is the default.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L929"
+ },
+ {
+  "id": "mg.mg-commands.set_default_mode",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "set-default-mode",
+  "desc": "Append the supplied mode to the list of default modes used by subsequent buffer creation. Built in modes include: fill, indent, notab and overwrite.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L932"
+ },
+ {
+  "id": "mg.mg-commands.set_fill_column",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "set-fill-column",
+  "desc": "Prompt the user for a fill column. Used by auto-fill-mode .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L936"
+ },
+ {
+  "id": "mg.mg-commands.set_mark_command",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "set-mark-command",
+  "desc": "Sets the mark in the current window to the current dot location.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L940"
+ },
+ {
+  "id": "mg.mg-commands.set_prefix_string",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "set-prefix-string",
+  "desc": "Sets the prefix string to be used by the prefix-region command.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L942"
+ },
+ {
+  "id": "mg.mg-commands.set_tab_width",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "set-tab-width",
+  "desc": "Set the tab width for the current buffer, or the default for new buffers if called with a prefix argument or from the startup file.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L946"
+ },
+ {
+  "id": "mg.mg-commands.shell_command",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "shell-command",
+  "desc": "Execute external command from mini-buffer. With a universal argument it inserts the command output into the current buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L949"
+ },
+ {
+  "id": "mg.mg-commands.shell_command_on_region",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "shell-command-on-region",
+  "desc": "Provide the text in region to the shell command as input. With a universal argument it replaces the region with the command output.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L953"
+ },
+ {
+  "id": "mg.mg-commands.shrink_window",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "shrink-window",
+  "desc": "Shrink current window by one line. The window immediately below is expanded to pick up the slack. If only one window is present, this command has no effect.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L957"
+ },
+ {
+  "id": "mg.mg-commands.space_to_tabstop",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "space-to-tabstop",
+  "desc": "Insert enough spaces to reach the next tab-stop position. By default, tab-stops occur every 8 characters.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L961"
+ },
+ {
+  "id": "mg.mg-commands.split_window_vertically",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "split-window-vertically",
+  "desc": "Split the current window. A window smaller than 3 lines cannot be split.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L964"
+ },
+ {
+  "id": "mg.mg-commands.start_kbd_macro",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "start-kbd-macro",
+  "desc": "Start defining a keyboard macro. Macro definition is ended by invoking end-kbd-macro.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L967"
+ },
+ {
+  "id": "mg.mg-commands.suspend_emacs",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "suspend-emacs",
+  "desc": "Suspend and switch back to alternate screen, if in use.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L970"
+ },
+ {
+  "id": "mg.mg-commands.switch_to_buffer",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "switch-to-buffer",
+  "desc": "Prompt and switch to a new buffer in the current window.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L974"
+ },
+ {
+  "id": "mg.mg-commands.switch_to_buffer_other_window",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "switch-to-buffer-other-window",
+  "desc": "Switch to buffer in another window.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L976"
+ },
+ {
+  "id": "mg.mg-commands.toggle_read_only",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "toggle-read-only",
+  "desc": "Toggle the read-only flag on the current buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L978"
+ },
+ {
+  "id": "mg.mg-commands.toggle_read_only_all",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "toggle-read-only-all",
+  "desc": "Toggle the read-only flag on all non-ephemeral buffers. A simple toggle that switches a global read-only flag either on or off.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L980"
+ },
+ {
+  "id": "mg.mg-commands.transpose_chars",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "transpose-chars",
+  "desc": "Transpose the two characters in front of and under dot, then move forward one character. Treat newline characters the same as any other.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L984"
+ },
+ {
+  "id": "mg.mg-commands.transpose_paragraphs",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "transpose-paragraphs",
+  "desc": "Transpose adjacent paragraphs. If multiple iterations are requested, the current paragraph will be moved n paragraphs forward.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L988"
+ },
+ {
+  "id": "mg.mg-commands.transpose_words",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "transpose-words",
+  "desc": "Transpose adjacent words.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L994"
+ },
+ {
+  "id": "mg.mg-commands.undo",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "undo",
+  "desc": "Undo the most recent action. If invoked again without an intervening command, move the undo pointer to the previous action and undo it.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L996"
+ },
+ {
+  "id": "mg.mg-commands.undo_boundary",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "undo-boundary",
+  "desc": "Add an undo boundary. This is not usually done interactively.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1000"
+ },
+ {
+  "id": "mg.mg-commands.undo_boundary_toggle",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "undo-boundary-toggle",
+  "desc": "Toggle whether undo boundaries are generated. Undo boundaries are often disabled before operations that should be considered atomically undoable.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1003"
+ },
+ {
+  "id": "mg.mg-commands.undo_enable",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "undo-enable",
+  "desc": "Toggle whether undo information is kept.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1007"
+ },
+ {
+  "id": "mg.mg-commands.undo_list",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "undo-list",
+  "desc": "Show the undo records for the current buffer in a new buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1009"
+ },
+ {
+  "id": "mg.mg-commands.universal_argument",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "universal-argument",
+  "desc": "Repeat the next command 4 times. Usually bound to C-u. This command may be stacked; e.g. C-u C-u C-f moves the cursor forward 16 characters.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1011"
+ },
+ {
+  "id": "mg.mg-commands.upcase_region",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "upcase-region",
+  "desc": "Upper case region. Change all of the lower case characters in the region to upper case.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1016"
+ },
+ {
+  "id": "mg.mg-commands.upcase_word",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "upcase-word",
+  "desc": "Move the cursor forward by the specified number of words. As it moves, convert any characters to upper case.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1020"
+ },
+ {
+  "id": "mg.mg-commands.visible_bell",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "visible-bell",
+  "desc": "Toggle the visible bell. If this toggle is on, the modeline will flash.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1023"
+ },
+ {
+  "id": "mg.mg-commands.visit_tags_table",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "visit-tags-table",
+  "desc": "Load tags file to be used for subsequent find-tag .",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1026"
+ },
+ {
+  "id": "mg.mg-commands.what_cursor_position",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "what-cursor-position",
+  "desc": "Display a bunch of useful information about the current location of dot. The character under the cursor (in octal), the current line, row, and column, and approximate position of the cursor in the file (as a percentage) is displayed. The column position assumes an infinite position display; it does not truncate just because the screen does.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1029"
+ },
+ {
+  "id": "mg.mg-commands.write_file",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "write-file",
+  "desc": "Ask for a file name and write the contents of the current buffer to that file. Update the remembered file name and clear the buffer changed flag.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1037"
+ },
+ {
+  "id": "mg.mg-commands.yank",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "yank",
+  "desc": "Yank text from kill-buffer . Unlike emacs, the kill buffer consists only of the most recent kill. It is not a ring.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1042"
+ },
+ {
+  "id": "mg.mg-commands.zap_to_char",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "zap-to-char",
+  "desc": "Ask for a character and delete text from the current cursor position until the next instance of that character, including it.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1050"
+ },
+ {
+  "id": "mg.mg-commands.zap_up_to_char",
+  "source": "mg",
+  "category": "mg-commands",
+  "name": "zap-up-to-char",
+  "desc": "Like zap-to-char but doesn't delete the target character.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1053"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.del",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "DEL",
+  "desc": "dired-unmark-backward",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1062"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.ret",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "RET, e, f and C-m",
+  "desc": "dired-find-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1064"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.spc",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "SPC, n",
+  "desc": "dired-next-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1066"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.item",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "!",
+  "desc": "dired-shell-command",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1068"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.item_2",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "+",
+  "desc": "dired-create-directory",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1070"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.item_3",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "^",
+  "desc": "dired-up-directory",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1072"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.a",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "a",
+  "desc": "dired-find-alternate-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1074"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.c",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "c",
+  "desc": "dired-do-copy",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1076"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.d",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "d and C-d",
+  "desc": "dired-flag-file-deletion",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1078"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.g",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "g",
+  "desc": "dired-revert",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1080"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.j",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "j",
+  "desc": "dired-goto-file",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1082"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.o",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "o",
+  "desc": "dired-find-file-other-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1084"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.p",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "p",
+  "desc": "dired-previous-line",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1086"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.q",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "q",
+  "desc": "quit-window",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1088"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.r",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "r",
+  "desc": "dired-do-rename",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1090"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.u",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "u",
+  "desc": "dired-unmark",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1092"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.x",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "x",
+  "desc": "dired-do-flagged-delete",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1094"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.c_v",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "C-v",
+  "desc": "dired-scroll-down",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1096"
+ },
+ {
+  "id": "mg.mg-dired-key-bindings.m_v",
+  "source": "mg",
+  "category": "mg-dired-key-bindings",
+  "name": "M-v",
+  "desc": "dired-scroll-up",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1098"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_create_directory",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-create-directory",
+  "desc": "Create a directory.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1104"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_do_copy",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-do-copy",
+  "desc": "Copy the file listed on the current line of the dired buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1106"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_do_flagged_delete",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-do-flagged-delete",
+  "desc": "Delete the files that have been flagged for deletion.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1108"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_do_rename",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-do-rename",
+  "desc": "Rename the file listed on the current line of the dired buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1110"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_find_alternate_file",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-find-alternate-file",
+  "desc": "Replace the current dired buffer with an alternate one as specified by the position of the cursor in the dired buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1112"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_find_file",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-find-file",
+  "desc": "Open the file on the current line of the dired buffer. If the cursor is on a directory, it will be opened in dired mode.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1115"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_flag_file_deletion",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-flag-file-deletion",
+  "desc": "Flag the file listed on the current line for deletion. This is indicated in the buffer by putting a D at the left margin. No files are actually deleted until the function dired-do-flagged-delete is executed.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1118"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_find_file_other_window",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-find-file-other-window",
+  "desc": "Open the file on the current line of the dired buffer in a different window.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1124"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_goto_file",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-goto-file",
+  "desc": "Move the cursor to a file name in the dired buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1127"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_next_line",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-next-line",
+  "desc": "Move the cursor to the next line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1129"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_other_window",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-other-window",
+  "desc": "This function works just like dired, except that it puts the dired buffer in another window.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1131"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_previous_line",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-previous-line",
+  "desc": "Move the cursor to the previous line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1134"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_revert",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-revert",
+  "desc": "Refresh the dired buffer while retaining any flags.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1136"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_scroll_down",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-scroll-down",
+  "desc": "Scroll down the dired buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1138"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_scroll_up",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-scroll-up",
+  "desc": "Scroll up the dired buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1140"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_shell_command",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-shell-command",
+  "desc": "Pipe the file under the current cursor position through a shell command.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1142"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_unmark",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-unmark",
+  "desc": "Remove the deletion flag for the file on the current line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1144"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_unmark_backward",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-unmark-backward",
+  "desc": "Remove the deletion flag from the file listed on the previous line of the dired buffer, then move up to that line.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1146"
+ },
+ {
+  "id": "mg.mg-dired-commands.dired_up_directory",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "dired-up-directory",
+  "desc": "Open a dired buffer in the parent directory.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1149"
+ },
+ {
+  "id": "mg.mg-dired-commands.quit_window",
+  "source": "mg",
+  "category": "mg-dired-commands",
+  "name": "quit-window",
+  "desc": "Close the current dired buffer.",
+  "doc_ref": "https://github.com/hboetes/mg/blob/master/mg.1#L1151"
+ }
+]

@@ -1,0 +1,1122 @@
+[
+ {
+  "id": "ne.file-commands.open",
+  "source": "ne",
+  "category": "file-commands",
+  "name": "Open [filename]",
+  "desc": "abbreviation O. replaces the contents of the current document with that of the file specified by the filename string. (To load filename's content into a new document without changing the current document, see OpenNew.) The current document's macro, search, and replace strings are preserved. If the optional filename argument is not specified, the file requester is opened, and you are prompted to select a file. (You",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2482"
+ },
+ {
+  "id": "ne.file-commands.opennew",
+  "source": "ne",
+  "category": "file-commands",
+  "name": "OpenNew [filename]",
+  "desc": "abbreviation ON. creates a new document and loads into it the contents of the file specified by the optional filename string. This new document will inherit the macro, search, and replace strings from the current document. If filename is unspecified, the file requester behaves the same as for the Open command; see Open.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2509"
+ },
+ {
+  "id": "ne.file-commands.save",
+  "source": "ne",
+  "category": "file-commands",
+  "name": "Save",
+  "desc": "abbreviation S. saves the current document using its default file name. If the current document is unnamed, the file requester will open and you will be prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can input the file name on the command line. If the file has been modified since the current document was loaded or last",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2527"
+ },
+ {
+  "id": "ne.file-commands.saveas",
+  "source": "ne",
+  "category": "file-commands",
+  "name": "SaveAs [filename]",
+  "desc": "abbreviation SA. saves the current document using the specified string as the file name. If the optional filename argument is not specified, the file requester will open and you will be prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can enter the file name on the input line, the default being the current document name, if available.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2551"
+ },
+ {
+  "id": "ne.file-commands.saveall",
+  "source": "ne",
+  "category": "file-commands",
+  "name": "SaveAll",
+  "desc": "abbreviation SL. saves all modified documents. If any modified documents cannot be saved, the action is suspended and an error message is issued. Note that only named documents can be saved, so SaveAll will report an error if you have any modified unnamed documents. Other reasons SaveAll may fail include: if any of the modified documents' corresponding files have been updated since they were loaded or last saved, or if any modified",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2574"
+ },
+ {
+  "id": "ne.document-commands.quit",
+  "source": "ne",
+  "category": "document-commands",
+  "name": "Quit",
+  "desc": "abbreviation Q. closes all documents and exits. If any documents are modified, you have to confirm the action.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2609"
+ },
+ {
+  "id": "ne.document-commands.exit",
+  "source": "ne",
+  "category": "document-commands",
+  "name": "Exit",
+  "desc": "abbreviation X. saves all modified documents, closes them and exits. If any documents cannot be saved, the action is suspended and an error message is issued and no documents are closed. Note that only named documents can be saved, so Exit will report an error if you have any modified unnamed documents. Like SaveAll, Exit will not save a document if its corresponding file has been modified since the document was loaded or last",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2622"
+ },
+ {
+  "id": "ne.document-commands.newdoc",
+  "source": "ne",
+  "category": "document-commands",
+  "name": "NewDoc",
+  "desc": "abbreviation N. creates a new, empty, unnamed document that becomes the current document. The position of the document in the document list is just after the current document. The preferences of the new document are a copy of the preferences of the current document.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2641"
+ },
+ {
+  "id": "ne.document-commands.clear",
+  "source": "ne",
+  "category": "document-commands",
+  "name": "Clear",
+  "desc": "abbreviation CL. destroys the contents of the current document and of its undo buffer. Moreover, the document becomes unnamed. If your current document is marked as modified, you have to confirm the action.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2655"
+ },
+ {
+  "id": "ne.document-commands.closedoc",
+  "source": "ne",
+  "category": "document-commands",
+  "name": "CloseDoc",
+  "desc": "abbreviation CD. closes the current document. If the document was modified since it was last saved, you have to confirm the action. If it is the only document, ne exits. Otherwise ne will select the most recently active next or previous document adjacent to the one you just closed as the new current document. See NextDoc, and PrevDoc.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2668"
+ },
+ {
+  "id": "ne.document-commands.nextdoc",
+  "source": "ne",
+  "category": "document-commands",
+  "name": "NextDoc",
+  "desc": "abbreviation ND. sets as current document the next document in the document list. See PrevDoc and SelectDoc.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2683"
+ },
+ {
+  "id": "ne.document-commands.prevdoc",
+  "source": "ne",
+  "category": "document-commands",
+  "name": "PrevDoc",
+  "desc": "abbreviation PD. sets as current document the previous document in the document list. See NextDoc and SelectDoc.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2695"
+ },
+ {
+  "id": "ne.document-commands.selectdoc",
+  "source": "ne",
+  "category": "document-commands",
+  "name": "SelectDoc",
+  "desc": "abbreviation SD. displays a requester containing the names of all the documents in memory. Your cursor will be on your current document's name, and documents with unsaved changes will be indicated with asterisks (and bold if your terminal supports that). You select whichever document you want to become the current document by moving your cursor to its name and hitting Return. While the list of documents is displayed, you can close unmodified",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2707"
+ },
+ {
+  "id": "ne.clip-commands.mark",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "Mark [0|1]",
+  "desc": "abbreviation M. sets the mark at the current position or cancels the previous mark. The mark and cursor together define the range of text over which clips (Cut, Copy, Erase) and left and right shifts operate. If you invoke Mark with no arguments, it will set the mark. If you specify 0 or 1, the mark will be cancelled or set to the current position, respectively. A capital M appears on the status bar, if the mark is",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2781"
+ },
+ {
+  "id": "ne.clip-commands.markvert",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "MarkVert [0|1]",
+  "desc": "abbreviation MV. is the same as Mark, but the region manipulated by the cut/paste commands is the rectangle having as vertices the cursor and the mark. If you invoke MarkVert with no arguments, it will set the mark. If you specify 0 or 1, the mark will be cancelled or set to the current position, respectively. Moreover, a capital V, rather than a capital M, will appear on the status bar. For example, if you have the following text:",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2798"
+ },
+ {
+  "id": "ne.clip-commands.copy",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "Copy [n]",
+  "desc": "abbreviation C. copies the contents of the characters lying between the cursor and the mark into the clip specified by the optional numeric argument, the default clip being the current clip, which can be set with the ClipNumber command; see ClipNumber. If the current mark was vertical, the rectangle of characters defined by the cursor and the mark is copied instead.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2826"
+ },
+ {
+  "id": "ne.clip-commands.cut",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "Cut [n]",
+  "desc": "abbreviation CU. acts just like Copy, but also deletes the block being copied.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2842"
+ },
+ {
+  "id": "ne.clip-commands.paste",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "Paste [n]",
+  "desc": "abbreviation P. pastes the contents of specified clip into the current document at the cursor position. If you don't specify the clip number, the current clip is used; Specify which clip is current with ClipNumber. Every time you paste into a document, a pair of bookmarks designated by < and > mark the start and end points of the text you pasted. Subsequently you can move to either end of a pasted block with the GotoBookmark < or GotoBookmark > commands.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2853"
+ },
+ {
+  "id": "ne.clip-commands.pastevert",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "PasteVert [n]",
+  "desc": "abbreviation PV. vertically pastes the contents of the specified clip, the default being the current clip. Each line of the clip is inserted on consecutive lines at the horizontal cursor position. Every time you paste into a document, a pair of bookmarks designated by < and > mark the start and end points of the text you pasted. Subsequently you can move to either end of a pasted block with the GotoBookmark < or GotoBookmark > commands.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2870"
+ },
+ {
+  "id": "ne.clip-commands.erase",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "Erase",
+  "desc": "abbreviation E. acts like Cut, but the block is just deleted and not copied into any clip.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2887"
+ },
+ {
+  "id": "ne.clip-commands.shift",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "Shift [<|>][n][t|s]",
+  "desc": "abbreviation SH. shifts the text on lines between the mark and the cursor either right (>) or left (<) by adding or removing white space on each line. The adjustment size, specified as an unsigned integer n, is in units of the current tab size (t) or spaces (s). The defaults are >, 1, and t. Adjustments start at the left edge of a vertical mark, or column 1 otherwise. If the mark is not currently set, only the current line is affected.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2899"
+ },
+ {
+  "id": "ne.clip-commands.openclip",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "OpenClip [filename]",
+  "desc": "abbreviation OC. loads the given file name as the current clip, just as if you cut or copied it from the current document; see Copy. If the optional filename argument is not specified, the file requester will open and you will be prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can enter the file name on the",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2926"
+ },
+ {
+  "id": "ne.clip-commands.saveclip",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "SaveClip [filename]",
+  "desc": "abbreviation SC. saves the current clip to the given file name. If the optional filename argument is not specified, the file requester will open and you will be prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can enter the file name on the input line.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2946"
+ },
+ {
+  "id": "ne.clip-commands.clipnumber",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "ClipNumber [n]",
+  "desc": "abbreviation CN. sets the current clip number. This number is used by OpenClip and SaveClip, and by Copy, Cut and Paste if they are called without any argument. Its default value is zero. n is limited only by the integer size of the machine ne is running on. If the optional argument n is not specified, you can enter it on the input line, the default being the current clip number.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2965"
+ },
+ {
+  "id": "ne.clip-commands.through",
+  "source": "ne",
+  "category": "clip-commands",
+  "name": "Through [command]",
+  "desc": "abbreviation T. asks the shell to execute command, piping the current block in the standard input, and replacing it with the output of the command. This command is most useful with filters, such as sort. Its practical effect is to pass the block through the specified filter. Note that by selecting an empty block (or equivalently by having the mark unset) you can use Through to insert the output of any un*x command in your file.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L2983"
+ },
+ {
+  "id": "ne.search-commands.find",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "Find [pattern]",
+  "desc": "abbreviation F. searches for the given pattern. The cursor is positioned on the first occurrence of the pattern, or an error message is given. The direction and the case sensitivity of the search are established by the value of the back search and case sensitive search flags. See SearchBack, and CaseSearch. If the optional argument pattern is not specified, you can enter it on the input line, the default being the last pattern used.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3029"
+ },
+ {
+  "id": "ne.search-commands.findregexp",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "FindRegExp [pattern]",
+  "desc": "abbreviation FX. searches the current document for the given extended regular expression autohelp (Regular Expressions) ifclear . The cursor is positioned on the first string matching the expression. The direction and the kind of search are established by the value of the back search and case sensitive search flags. See SearchBack, and CaseSearch. If the optional argument pattern is not specified, you can enter it on",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3047"
+ },
+ {
+  "id": "ne.search-commands.replace",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "Replace [string]",
+  "desc": "abbreviation R. moves to the first match of the most recent find string or regular expression and prompts you for which action to perform. You can choose among: replacing the string found with the given string and moving to the next match (Yes); moving to the next match (No); replacing the string found with the given string, and stopping the search (Last); stopping the search immediately (Quit); replacing all occurrences of the find string with the given string",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3068"
+ },
+ {
+  "id": "ne.search-commands.replaceonce",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "ReplaceOnce [string]",
+  "desc": "abbreviation R1. acts just like Replace, but without any interaction with you (unless there is no find string). The first string matched by the last search pattern, if it exists, is replaced by the given replacement string. If the optional argument string is not specified, you can enter it on the input line, the default being the last string used.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3131"
+ },
+ {
+  "id": "ne.search-commands.replaceall",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "ReplaceAll [string]",
+  "desc": "abbreviation RA. is similar to ReplaceOnce, but replaces all occurrences of the last search pattern between the cursor position and the end of the document (in the direction indicated by the SearchBack flag) with the given replacement string. If the optional argument string is not specified, you can enter it on the input line, the default being the last string used. Note that a single Undo will restore all the occurrences of the search",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3147"
+ },
+ {
+  "id": "ne.search-commands.repeatlast",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "RepeatLast [times] [F|Find|R|Replace]",
+  "desc": "abbreviation RL. repeats for the given number of times the last find or replace operation (with replace we mean here a single replace, even if the last Replace operation ended with a global substitution). If you don't specify either Find or Replace, it will repeat whichever one was last performed. If any find or replace operation runs into the end of the document (in the direction indicated by the SearchBack flag) and stops, then and only then will a",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3167"
+ },
+ {
+  "id": "ne.search-commands.matchbracket",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "MatchBracket",
+  "desc": "abbreviation MB. moves the cursor to the bracket associated with the bracket the cursor is on. If the cursor is not on a bracket, or there is no bracket associated with the current one, an error message is issued. Recognized brackets are , (), [] <>, and `'. See AutoMatchBracket.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3212"
+ },
+ {
+  "id": "ne.search-commands.automatchbracket",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "AutoMatchBracket [0..15]",
+  "desc": "abbreviation AMB. sets the auto match bracket mode. When the cursor is on a recognized bracket (, (), [], <>, or `') and the associated matching bracket is on the screen, that matching bracket will be indicated according to the mode. The mode is either zero for no bracket matching, or the sum of 1 (altered foreground and background brightness), 2 (inverse), 4 (bold), and 8 (underline). If no mode is specified, ne prompts you for one. The default mode is 1. See MatchBracket.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3225"
+ },
+ {
+  "id": "ne.search-commands.searchback",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "SearchBack [0|1]",
+  "desc": "abbreviation SB. sets the back search flag. When this flag is true, every search or replacement command is performed backwards. If you invoke SearchBack with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. A lower case b will appear on the status bar if the flag is true. Note that this flag also can be set through interactions with the Replace command. See Replace.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3242"
+ },
+ {
+  "id": "ne.search-commands.casesearch",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "CaseSearch [0|1]",
+  "desc": "abbreviation CS. sets the case sensitivity flag. When this flag is true, the search commands distinguish between the upper and lower case letters. By default the flag is false. If you invoke CaseSearch with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. A lower case c will appear on the status bar if the flag is true.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3261"
+ },
+ {
+  "id": "ne.search-commands.autocomplete",
+  "source": "ne",
+  "category": "search-commands",
+  "name": "AutoComplete [prefix]",
+  "desc": "abbreviation AC. attempts to extend the prefix using matching words from your open documents, and inserts the extended text into your document. If the prefix can be extended unambiguously, the matching text is immediately inserted into your document. Otherwise, ne displays a selection of all words in open documents that match prefix, and inserts the word you select into the current document. Matching words from the current document display normally; those which only",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3279"
+ },
+ {
+  "id": "ne.macros-commands.record",
+  "source": "ne",
+  "category": "macros-commands",
+  "name": "Record [0|1]",
+  "desc": "abbreviation REC. starts, stops, cancels, or resumes macro recording. With no arguments, Record starts recording your commands as a new macro unless recording is already underway. In that case, macro recording is stopped, and the newly recorded macro replaces the current document's unnamed macro. The new macro can be played or saved via Play, or SaveMacro. The default key binding for Control-T is Record with no arguments, and is by far the most common way",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3331"
+ },
+ {
+  "id": "ne.macros-commands.play",
+  "source": "ne",
+  "category": "macros-commands",
+  "name": "Play [times]",
+  "desc": "abbreviation PL. plays the current document's macro the given number of times. If the optional argument times is not specified, you can enter it on the input line. A (possibly iterated) macro execution terminates as soon as its stream of instructions is exhausted, or one of its commands returns an error. This means that, for instance, you can perform some complex operation on all the lines containing a certain pattern by recording a macro that searches for the pattern",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3359"
+ },
+ {
+  "id": "ne.macros-commands.macro",
+  "source": "ne",
+  "category": "macros-commands",
+  "name": "Macro [filename]",
+  "desc": "abbreviation MA. executes the given file name as a macro. If the optional filename argument is not specified, the file requester is opened, and you are prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can input the file name on the command line. Note that macros whose names do not conflict with a command can be called",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3381"
+ },
+ {
+  "id": "ne.macros-commands.openmacro",
+  "source": "ne",
+  "category": "macros-commands",
+  "name": "OpenMacro [filename]",
+  "desc": "abbreviation OM. loads the given file name as the current document's macro just as if you Recorded it; see Record. If the optional filename argument is not specified, the file requester is opened, and you are prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can input the file name on the command line.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3418"
+ },
+ {
+  "id": "ne.macros-commands.savemacro",
+  "source": "ne",
+  "category": "macros-commands",
+  "name": "SaveMacro [filename]",
+  "desc": "abbreviation SM. saves the current document's macro in a file with the given name. If the optional filename argument is not specified, the file requester is opened, and you are prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can input the file name on the command line. SaveMacro is of course most useful for saving macros you just",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3438"
+ },
+ {
+  "id": "ne.macros-commands.unloadmacros",
+  "source": "ne",
+  "category": "macros-commands",
+  "name": "UnloadMacros",
+  "desc": "abbreviation UM. frees the macro cache list. After this command, the Macro command will be forced to search for the file containing the macros it has to play. UnloadMacros is especially useful if you are experimenting with a macro bound to some keystroke, and you are interactively modifying it and playing it. UnloadMacros forces ne to look for the newer version available.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3465"
+ },
+ {
+  "id": "ne.undo-commands.undo",
+  "source": "ne",
+  "category": "undo-commands",
+  "name": "Undo [n]",
+  "desc": "abbreviation U. undoes the last n actions. If n is not specified, it is assumed to be one. After you undo a number of actions, you can Redo all or some of them; see Redo. However, if you take any new actions after having Undone some, you can no longer Redo those Undone actions. See Redo.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3498"
+ },
+ {
+  "id": "ne.undo-commands.redo",
+  "source": "ne",
+  "category": "undo-commands",
+  "name": "Redo [n]",
+  "desc": "abbreviation RE. redoes the last n actions undone by Undo (as long as you don't take any actions that change the text between the Undo and Redo commands). If n is not specified, it is assumed to be one. You can only Redo actions that have been Undone. See Undo.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3513"
+ },
+ {
+  "id": "ne.undo-commands.undelline",
+  "source": "ne",
+  "category": "undo-commands",
+  "name": "UndelLine [n]",
+  "desc": "abbreviation UL. inserts at the cursor position for n times the last non-empty line that was deleted with the DeleteLine command. If n is not specified, it is assumed to be one. UndelLine is most useful in that it allows a very fast way of moving one line around. Just delete it, and undelete it somewhere else. It is also an easy way to replicate a line without getting involved with clips. Note that UndelLine works independently of the status of the",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3528"
+ },
+ {
+  "id": "ne.undo-commands.doundo",
+  "source": "ne",
+  "category": "undo-commands",
+  "name": "DoUndo [0|1]",
+  "desc": "abbreviation DU. sets the flag that enables or disables the undo system. When you turn the undo system off, all the recorded actions are discarded, and the undo buffers are reset. If you invoke DoUndo with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. A lower case u will appear on the status bar if the flag is true. (The U will be upper case if the flag is true and the AtomicUndo",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3548"
+ },
+ {
+  "id": "ne.undo-commands.atomicundo",
+  "source": "ne",
+  "category": "undo-commands",
+  "name": "AtomicUndo [0|+|-]",
+  "desc": "abbreviation AU. increases, decreases, sets or clears the AtomicUndo level. The normal level is zero. All current document changes made while the AtomicUndo level is above zero are treated as a single change by the Undo and Redo commands. If no parameter is given, a level of 0 is set to 1; otherwise the current non-zero level is decremented. If 0 is given, the level is reset to zero. Parameters of + and - respectively",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3573"
+ },
+ {
+  "id": "ne.formatting-commands.center",
+  "source": "ne",
+  "category": "formatting-commands",
+  "name": "Center [n]",
+  "desc": "abbreviation CE. centers n lines from the cursor position onwards. If n is not specified, it is assumed to be one. The lines are centered with spaces, relatively to the value of the right margin as set by the RightMargin command. See RightMargin.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3622"
+ },
+ {
+  "id": "ne.formatting-commands.paragraph",
+  "source": "ne",
+  "category": "formatting-commands",
+  "name": "Paragraph [n]",
+  "desc": "abbreviation PA. reformats n paragraphs from the cursor position onwards. If n is not specified, it is assumed to be one. The paragraphs are formatted relatively to the value of the right margin as set by the RightMargin command. See RightMargin. ne's notion of a paragraph includes the current non-blank line (regardless of its leading white space) and all subsequent non-blank lines that have identical (to each other's---not to the first line's) leading",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3636"
+ },
+ {
+  "id": "ne.formatting-commands.toupper",
+  "source": "ne",
+  "category": "formatting-commands",
+  "name": "ToUpper [n]",
+  "desc": "abbreviation TU. shifts to upper case the letters from the cursor position up to the end of a word, and moves to the first letter of next word for n times. The description of the command may seem a little bit cryptic. What is really happening is that there are situations where you only want to upper case the last part of a word. In this case, you just have to position the cursor in the first character you want to upper case, and use ToUpper with no",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3678"
+ },
+ {
+  "id": "ne.formatting-commands.tolower",
+  "source": "ne",
+  "category": "formatting-commands",
+  "name": "ToLower [n]",
+  "desc": "abbreviation TL. acts exactly like ToUpper, but lowers the case. See ToUpper.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3699"
+ },
+ {
+  "id": "ne.formatting-commands.capitalize",
+  "source": "ne",
+  "category": "formatting-commands",
+  "name": "Capitalize [n]",
+  "desc": "abbreviation CA. acts exactly like ToUpper, but capitalizes, that is, makes the first letter upper case and the other ones lower case. See ToUpper.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3710"
+ },
+ {
+  "id": "ne.formatting-commands.rightmargin",
+  "source": "ne",
+  "category": "formatting-commands",
+  "name": "RightMargin [n]",
+  "desc": "abbreviation RM. sets the right margin for all formatting operations, and for WordWrap. See WordWrap. If the optional argument n is not specified, you can enter it on the input line, the default being the current value of the right margin. A value of zero for n will force ne to use (what it thinks it is) the current screen width as right margin.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3722"
+ },
+ {
+  "id": "ne.formatting-commands.wordwrap",
+  "source": "ne",
+  "category": "formatting-commands",
+  "name": "WordWrap [0|1]",
+  "desc": "abbreviation WW. sets the word wrap flag. When this flag is true, ne will automatically break lines of text when you attempt to insert characters beyond the right margin. See RightMargin. See ignored section in \"paragraph\" discussion. ne will attempt to preserve certain invariant characters at the left edge of paragraphs typically used to indicate comments in source code or quoted passages in email text. See Paragraph.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3741"
+ },
+ {
+  "id": "ne.formatting-commands.autoindent",
+  "source": "ne",
+  "category": "formatting-commands",
+  "name": "AutoIndent [0|1]",
+  "desc": "abbreviation AI. sets the auto indent flag. When this flag is true, ne will automatically insert tabs and spaces on a new line (created by an InsertLine command, or by automatic word wrapping) in such a way to replicate the initial spaces of the previous line. Most useful for indenting programs. If you invoke AutoIndent with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. A lower",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3768"
+ },
+ {
+  "id": "ne.preferences-commands.flags",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "Flags",
+  "desc": "abbreviation FLAG. displays a list of all the status flags for ne and their associated commands. It is not recorded when recording a macro. FLAG COMMAND ABBR DESCRIPTION i Insert I inserts new characters (vs. replacing) a AutoIndent AI aligns cursor under previous line after <Return> b SearchBack SB searches search backward rather than forward c CaseSearch CS searches are case sensitive w WordWrap WW breaks long lines as you type",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3862"
+ },
+ {
+  "id": "ne.preferences-commands.autoprefs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "AutoPrefs [0|1]",
+  "desc": "abbreviation AP. sets the automatic preferences flag. If this flag is true, each time an Open command is executed and a file is loaded, ne will look for an automatic preferences file in your ~/.ne directory. The preferences file name is given by the extension of the file loaded, postfixed with #ap. Thus, for instance, C sources have an associated c#ap file. autohelp Automatic Preferences. ifclear If you invoke AutoPrefs with no arguments, it will toggle the flag. If you",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3903"
+ },
+ {
+  "id": "ne.preferences-commands.binary",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "Binary [0|1]",
+  "desc": "abbreviation B. Binary files sets the binary flag. When this flag is true, loading and saving a document is performed in a different way. On loading, only nulls are considered newlines; on saving, nulls are saved instead of newlines. This allows you to edit a binary file, fix some text in it, and save it without modifying anything else. Normally, line feeds, carriage returns and nulls are considered newlines, so that what you load will have all nulls and carriage",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3926"
+ },
+ {
+  "id": "ne.preferences-commands.insert",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "Insert [0|1]",
+  "desc": "abbreviation I. sets the insert flag. If this flag is true, the text you type is inserted, otherwise it overwrites the existing characters. This also governs the behaviour of the InsertChar and InsertString commands. If you invoke Insert with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. A lower case i will appear on the status bar if the flag is true.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3957"
+ },
+ {
+  "id": "ne.preferences-commands.fastgui",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "FastGUI [0|1]",
+  "desc": "abbreviation FG. sets the fast graphical user interface flag. When this flag is true, ne tries to print as little as possible while displaying menus and the status bar. In particular, menu items are highlighted by the cursor only, the status bar is not highlighted (which allows printing it with fewer characters), the current position of the mark is not highlighted, and the hexadecimal code for the character under the cursor is not",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L3975"
+ },
+ {
+  "id": "ne.preferences-commands.freeform",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "FreeForm [0|1]",
+  "desc": "abbreviation FF. sets the free form flag. When this flag is true, you can move with the cursor anywhere on the screen, even where there is no text present (however, you cannot move inside the space expansion of a tab character). If you invoke FreeForm with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. A lower case f will appear on the status bar if the flag is true.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4000"
+ },
+ {
+  "id": "ne.preferences-commands.nofilereq",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "NoFileReq [0|1]",
+  "desc": "abbreviation NFR. sets the file requester flag. When this flag is true, the file requester is never opened, under any circumstances. If you invoke NoFileReq with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4022"
+ },
+ {
+  "id": "ne.preferences-commands.requestorder",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "RequestOrder [0|1]",
+  "desc": "abbreviation RQO. sets the request order flag. When this flag is true, the requester displays entries in column order. Otherwise entries are displayed by rows. If you invoke RequestOrder with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. The RequestOrder setting is saved in your ~/.ne/.default#ap file when you use the SaveDefPrefs command or the Save Def Prefs menu.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4037"
+ },
+ {
+  "id": "ne.preferences-commands.statusbar",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "StatusBar [0|1]",
+  "desc": "abbreviation ST. sets the status bar flag. When this flag is true, the status bar is displayed at the bottom of the screen. There are only two reasons to turn off the status bar we are aware of: if you are using ne through a slow connection, updating the line/column indicator can really slow down editing; scrolling caused by cursor movement on terminals that do not allow to set a scrolling region can produce annoying flashes at the bottom of the screen.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4057"
+ },
+ {
+  "id": "ne.preferences-commands.hexcode",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "HexCode [0|1]",
+  "desc": "abbreviation HC. sets the hex code flag. When this flag is true, the hexadecimal code of the character currently under the cursor is displayed on the status bar.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4090"
+ },
+ {
+  "id": "ne.preferences-commands.readonly",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "ReadOnly [0|1]",
+  "desc": "abbreviation RO. sets the read only flag. When this flag is true, no editing can be performed on the document (any such attempt produces an error message). Saving read only documents is inhibited as well; you must affirmatively answer a prompt to save a document with the read only flag set. This flag is automatically set whenever you open a file that you cannot write to. See Open. If you invoke ReadOnly with no arguments, it will toggle the flag. If you",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4104"
+ },
+ {
+  "id": "ne.preferences-commands.escapetime",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "EscapeTime [n]",
+  "desc": "abbreviation ET. sets the escape time. The Escape key is recognized as such after n tenths of second. autohelp (Motivations and Design.) ifclear Along slow connections, it can happen that the default value of 10 is too low: in this case, escape sequences (e.g., those of the arrow keys) could be erroneously broken into an escape and some spurious characters. Rising the escape time usually solves this problem. Allowed values range",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4124"
+ },
+ {
+  "id": "ne.preferences-commands.tabsize",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "TabSize [size]",
+  "desc": "abbreviation TS. sets the number of spaces ne will use when expanding a tab character. If the optional argument size is not specified, you can enter it on the input line, the default being the current tab size. Allowed values are strictly between 0 and half the width of the screen.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4150"
+ },
+ {
+  "id": "ne.preferences-commands.tabs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "Tabs [0|1]",
+  "desc": "abbreviation TAB. sets the Tabs flag. When this flag is set, Tab key and the InsertTab command will insert literal TAB characters. Otherwise it will insert enough spaces to have the same visual effect. In normal editing, the Tab key invokes the command \"InsertTab 1\". Unlike most others, the Tab key cannot be mapped to other commands. Thus the Tabs flag provides the only customization ne offers for the Tab key. If set, either a lower case t or upper case T will appear",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4166"
+ },
+ {
+  "id": "ne.preferences-commands.deltabs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "DelTabs [0|1]",
+  "desc": "abbreviation DT. sets the DelTabs flag. When this flag is set, a d will appear on the status bar, and the BackSpace and Del keys will remove a tab's worth of space characters if a TAB character could have occupied the same whitespace in the current line as the removed spaces. This is the deletion counterpart to the Tabs flag. See Tabs.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4189"
+ },
+ {
+  "id": "ne.preferences-commands.shifttabs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "ShiftTabs [0|1]",
+  "desc": "abbreviation SHT. sets the ShiftTabs flag. ShiftTabs has an effect only when the Tabs flag is set, in which case an upper case T appears in the status bar. When this flag and the Tabs flag are both set, left and right Shift commands may use tab characters to adjust leading white space. Otherwise only spaces are used. See Shift.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4204"
+ },
+ {
+  "id": "ne.preferences-commands.turbo",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "Turbo [steps]",
+  "desc": "abbreviation TUR. sets the turbo parameter. Iterated actions and global replaces will update at most steps lines of the screen (or at most twice the number of visible rows if steps is zero); then, update will be delayed to the end of the action. This feature is most useful when massive operations (such as replacing thousands of occurrences of a pattern) have to be performed. After having updated steps lines, ne can proceed at maximum speed, because",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4219"
+ },
+ {
+  "id": "ne.preferences-commands.verbosemacros",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "VerboseMacros [0|1]",
+  "desc": "abbreviation VM. sets the verbose macros flag. When this flag is true, all macros generated by recording or by automatic preferences saving will contain full names, instead of short names. This is highly desirable if you are going to edit the macro manually, but it can slow down command parsing. If you invoke VerboseMacros with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. A lower",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4254"
+ },
+ {
+  "id": "ne.preferences-commands.preservecr",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "PreserveCR [0|1]",
+  "desc": "abbreviation PCR. sets the preserve carriage returns flag. When a file is loaded into a document for which this flag is false, both CR (carriage return) and NL (new line) characters are treated as line terminators. If the flag is true, CR characters do not act as line terminators but are instead preserved in the document. This flag has no effect except when loading a file into a document. If you invoke PreserveCR with no arguments, it will toggle the flag.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4279"
+ },
+ {
+  "id": "ne.preferences-commands.crlf",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "CRLF [0|1]",
+  "desc": "abbreviation CRLF. sets the CR/LF flag. When a file is saved from a document for which this flag is true, both a CR (carriage return) and a NL (new line) character are output as line terminators. This flag has no effect except when saving a file. This flag is automatically set if you load a file that has at least one CR/LF sequence in it. If you invoke CRLF with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true,",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4300"
+ },
+ {
+  "id": "ne.preferences-commands.bracketedpaste",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "BracketedPaste [0|1|macro_name_before macro_name_after]",
+  "desc": "abbreviation BP. ``Bracketed paste'' is an informal though widely adopted protocol between terminal mode programs (like ne) and the terminal emulators through which they present their user interfaces. When BracketedPaste is enabled, blocks of text pasted from a system clipboard are ``bracketed'' -- that is, they are immediately preceded and followed -- by special character sequences which distinguish such blocks from text you actually typed. Bracketed",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4322"
+ },
+ {
+  "id": "ne.preferences-commands.visualbell",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "VisualBell [0|1]",
+  "desc": "abbreviation VB. sets the visual bell flag. When this flag is true, the terminal will flash (if possible) instead of beeping. If you invoke VisualBell with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4369"
+ },
+ {
+  "id": "ne.preferences-commands.pushprefs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "PushPrefs [n]",
+  "desc": "abbreviation PUSHP. pushes n copies of the user preferences onto a stack. If not specified, n defaults to one. Use the PopPrefs command to pop preferences off the stack and restore the values. See PopPrefs. Note that the preferences stack is global, not document-specific, so you could PushPrefs one document's preferences, switch documents, then PopPrefs those preferences, thereby altering the preferences for the second document. The maximum preferences stack depth is 32.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4384"
+ },
+ {
+  "id": "ne.preferences-commands.popprefs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "PopPrefs [n]",
+  "desc": "abbreviation POPP. pops n sets of preferences from the preferences stack (where they were placed previously by PushPrefs) and applies those preferences to the current document. See PushPrefs. If not specified, n defaults to one. Note that the preferences stack is global, not document specific. Therefore you could PushPrefs one document's preferences, switch documents, then PopPrefs those settings altering the preferences for the second document. The",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4416"
+ },
+ {
+  "id": "ne.preferences-commands.loadprefs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "LoadPrefs [filename]",
+  "desc": "abbreviation LP. loads the given preference file, and sets the current preferences accordingly. If the optional filename argument is not specified, the file requester is opened, and you are prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can input the file name on the command line. Note that a preferences file is just a macro containing only option",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4448"
+ },
+ {
+  "id": "ne.preferences-commands.saveprefs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "SavePrefs [filename]",
+  "desc": "abbreviation SP. saves the current preferences to the given file. If the optional filename argument is not specified, the file requester is opened, and you are prompted to select a file. (You can inhibit the file requester opening by using the NoFileReq command; see NoFileReq.) If you escape from the file requester, you can input the file name on the command line.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4473"
+ },
+ {
+  "id": "ne.preferences-commands.loadautoprefs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "LoadAutoPrefs",
+  "desc": "abbreviation LAP. loads the preferences file in ~/.ne associated with the current document's file name extension. If the current file name has no extension, the default preferences are loaded. See AutoPrefs.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4490"
+ },
+ {
+  "id": "ne.preferences-commands.saveautoprefs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "SaveAutoPrefs",
+  "desc": "abbreviation SAP. saves the current preferences to the file in ~/.ne associated with the current document's file name extension. If the current file name has no extension, an error message is issued. See AutoPrefs.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4504"
+ },
+ {
+  "id": "ne.preferences-commands.savedefprefs",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "SaveDefPrefs",
+  "desc": "abbreviation SDP. saves the current preferences to the ~/.ne/.default#ap file. This file is always loaded by ne at startup.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4518"
+ },
+ {
+  "id": "ne.preferences-commands.modified",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "Modified [0|1]",
+  "desc": "abbreviation MOD. sets the modified flag. This flag is set automatically whenever a document is modified, and is used to determine which documents need to be saved by SaveAll or when ne exits. Normally you would not alter this flag, but when a document is inadvertently modified and you don't want the changes saved, Modified provides a way to make ne consider the document unchanged. If you invoke Modified with no arguments, it will toggle the flag.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4530"
+ },
+ {
+  "id": "ne.preferences-commands.syntax",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "Syntax [name|*]",
+  "desc": "abbreviation SY. loads the syntax with the given name, and colors the current document accordingly. If the optional name argument is not specified, you are prompted for one. The current one, if set, is suggested as the default. Use the Tab key for a requester of the extant syntax recognizers. The special name * turns off syntax highlighting for the current document. Otherwise, name must match a syntax definition either in your ~/.ne/syntax directory or in a",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4553"
+ },
+ {
+  "id": "ne.preferences-commands.utf8",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "UTF8 [0|1]",
+  "desc": "abbreviation U8. sets the UTF-8 flag. When this flag is true, ne considers the current document as UTF-8 coded. Note that this flag is set automatically upon file loading (if possible) if you required automatic detection. See UTF8Auto. If you invoke UTF8 with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true, respectively. When you try to set this flag, the document will be checked",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4619"
+ },
+ {
+  "id": "ne.preferences-commands.utf8auto",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "UTF8Auto [0|1]",
+  "desc": "abbreviation U8A. sets the UTF-8 automatic-detection flag. When this flag is true, ne will try to guess whether a file just loaded is UTF-8 encoded. Moreover, when a non US-ASCII character is inserted in a pure US-ASCII document, ne will automatically switch to UTF-8. See UTF8. The flag is true by default if ne detects UTF-8 I/O at startup. See UTF8IO. If you invoke UTF8Auto with no arguments, it will toggle the flag.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4646"
+ },
+ {
+  "id": "ne.preferences-commands.utf8io",
+  "source": "ne",
+  "category": "preferences-commands",
+  "name": "UTF8IO [0|1]",
+  "desc": "abbreviation U8IO. sets the UTF-8 input/output flag. This flag is set automatically depending on your locale setting, and is used to determine whether communication with the user (keyboard and terminal) should be UTF-8 encoded. Normally you would not alter this flag, but sometimes ne may make the wrong guess (e.g., when you are remotely connected). If you invoke UTF8IO with no arguments, it will toggle the flag. If you specify 0 or 1, the flag will be set to false or true,",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4666"
+ },
+ {
+  "id": "ne.navigation-commands.moveleft",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveLeft [n]",
+  "desc": "abbreviation ML. moves the cursor to the left by one character n times. If the optional n argument is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4727"
+ },
+ {
+  "id": "ne.navigation-commands.moveright",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveRight [n]",
+  "desc": "abbreviation MR. moves the cursor to the right by one character n times. If the optional n argument is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4739"
+ },
+ {
+  "id": "ne.navigation-commands.lineup",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "LineUp [n]",
+  "desc": "abbreviation LU. moves the cursor up by one line n times. If the optional n argument is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4751"
+ },
+ {
+  "id": "ne.navigation-commands.linedown",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "LineDown [n]",
+  "desc": "abbreviation LD. moves the cursor down by one line n times. If the optional n argument is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4763"
+ },
+ {
+  "id": "ne.navigation-commands.gotoline",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "GotoLine [line]",
+  "desc": "abbreviation GL. moves the cursor to the lineth line of the file. If line is zero or greater than the number of lines in the file, the cursor is moved to the last line. If the optional argument line is not specified, you can enter it on the input line; the default input response is the current line number.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4775"
+ },
+ {
+  "id": "ne.navigation-commands.gotocolumn",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "GotoColumn [column]",
+  "desc": "abbreviation GC. moves the cursor to the columnth column of the file. If the optional argument line is not specified, you can enter it on the input line; the default input response is the current column number.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4791"
+ },
+ {
+  "id": "ne.navigation-commands.gotomark",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "GotoMark",
+  "desc": "abbreviation GM. moves the cursor to the current mark, if it exists. See Mark. GotoMark is mainly useful if you forgot where you started marking. If you want to record positions in a file and jump to them later, you may want to use bookmarks instead. See SetBookmark.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4805"
+ },
+ {
+  "id": "ne.navigation-commands.prevpage",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "PrevPage [n]",
+  "desc": "abbreviation PP. moves the cursor n pages backward, if the cursor is on the first line of the screen; otherwise moves the cursor to the first line of the screen, and moves by n-1 pages. If the optional n argument is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4820"
+ },
+ {
+  "id": "ne.navigation-commands.nextpage",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "NextPage [n]",
+  "desc": "abbreviation NP. moves the cursor n pages forward, if the cursor is on the last line of the screen; otherwise moves the cursor to the last line of the screen, and moves by n-1 pages. If the optional n argument is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4835"
+ },
+ {
+  "id": "ne.navigation-commands.pageup",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "PageUp [n]",
+  "desc": "abbreviation PUP. pages the screen backward by n screens. If n is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4850"
+ },
+ {
+  "id": "ne.navigation-commands.pagedown",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "PageDown [n]",
+  "desc": "abbreviation PDN. pages the screen forward by n screens. If n is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4864"
+ },
+ {
+  "id": "ne.navigation-commands.prevword",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "PrevWord [n][<|>]",
+  "desc": "abbreviation PW. moves the cursor to the left to the nth word beginning or ending. If the optional n argument is not specified, one is used. The optional < or > determines whether to move to the word beginning or ending, respectively. If unspecified, the left end (<) is used.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4877"
+ },
+ {
+  "id": "ne.navigation-commands.nextword",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "NextWord [n][<|>]",
+  "desc": "abbreviation NW. moves the cursor to the right to the nth word beginning or ending. If the optional n argument is not specified, one is used. The optional < or > determines whether to move to the word beginning or ending, respectively. If unspecified, the left end (<) is used.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4892"
+ },
+ {
+  "id": "ne.navigation-commands.moveeol",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveEOL",
+  "desc": "abbreviation EOL. moves the cursor to the end of the current line (EOL = end of line).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4907"
+ },
+ {
+  "id": "ne.navigation-commands.movesol",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveSOL",
+  "desc": "abbreviation SOL. moves the cursor to the start of the current line (SOL = start of line).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4920"
+ },
+ {
+  "id": "ne.navigation-commands.movetos",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveTOS",
+  "desc": "abbreviation TOS. moves the cursor to the top line of the screen (TOS = top of screen).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4933"
+ },
+ {
+  "id": "ne.navigation-commands.movebos",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveBOS",
+  "desc": "abbreviation BOS. moves the cursor to the lowest line currently visible (BOS = bottom of screen).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4946"
+ },
+ {
+  "id": "ne.navigation-commands.moveeof",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveEOF",
+  "desc": "abbreviation EOF. moves the cursor to the end of the document (EOF = end of file).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4959"
+ },
+ {
+  "id": "ne.navigation-commands.movesof",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveSOF",
+  "desc": "abbreviation SOF. moves the cursor to the start of the document (SOF = start of file).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4972"
+ },
+ {
+  "id": "ne.navigation-commands.moveeow",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveEOW [<|>]",
+  "desc": "abbreviation EOW. moves the cursor to the end of the current word, that end being the right end unless you include the optional parameter <. If the cursor is not currently in a word, or if it's already at the indicated end, it retains its current location. MoveEOW is extremely useful in macros, because it allows you to copy precisely the word the cursor is on. autohelp Hints and Tricks. ifclear",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L4985"
+ },
+ {
+  "id": "ne.navigation-commands.moveincup",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveIncUp",
+  "desc": "abbreviation MIU. moves the cursor incrementally towards the beginning of the document. More precisely, if the cursor is not on the start of the line it lies on, then it is moved to the start of that line. Otherwise, if it is on the first line of the screen, then it is moved to the start of the document; otherwise, it is moved to the first line of the screen.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5006"
+ },
+ {
+  "id": "ne.navigation-commands.moveincdown",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "MoveIncDown",
+  "desc": "abbreviation MID. moves the cursor incrementally towards the end of the document. More precisely, if the cursor is not on the end of the line it lies on, then it is moved to the end of that line. Otherwise, if it is on the last line of the screen, then it is moved to the end of the document; otherwise, it is moved to the last line of the screen.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5022"
+ },
+ {
+  "id": "ne.navigation-commands.adjustview",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "AdjustView [T|M|B|L|C|R] [n]",
+  "desc": "abbreviation AV. shifts the view (text visible in the terminal window) horizontally or vertically without changing the cursor's position in the document. View adjustments are constrained by the current tab size and the length and width of the current document. If called with no arguments T is assumed. T, M, and B cause vertical shifts so that the current line becomes the top, middle, or bottom-most visible line respectively.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5038"
+ },
+ {
+  "id": "ne.navigation-commands.toggleseof",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "ToggleSEOF",
+  "desc": "abbreviation TSEOF. moves the cursor to the start of document, if it is not already there; otherwise, moves it to the end of the document. This kind of toggling command is very useful in order to gain some keystrokes on systems with very few keys. See also ToggleSEOL, MoveSOF, and MoveEOF.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5072"
+ },
+ {
+  "id": "ne.navigation-commands.toggleseol",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "ToggleSEOL",
+  "desc": "abbreviation TSEOL. moves the cursor to the start of the current line, if it is not already there; otherwise, moves it to the end of the current line. This kind of toggling command is very useful in order to gain some keystrokes on systems with very few keys. See also ToggleSEOF, MoveSOL, and MoveEOL.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5088"
+ },
+ {
+  "id": "ne.navigation-commands.setbookmark",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "SetBookmark [n|+1|-1|<|>|-|?]",
+  "desc": "abbreviation SBM. sets a document bookmark to the current cursor position. Each document has 10 available bookmarks designated 0 to 9, the most recently pasted block's start and end designated < and >, plus the automatic bookmark designated by -. If no option is given, 0 is assumed. Values of n from 0 to 9 set the nth bookmark, while +1 and -1 indicate respectively the next and previous available unset bookmarks. You can also set the",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5105"
+ },
+ {
+  "id": "ne.navigation-commands.gotobookmark",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "GotoBookmark [n|+1|-1|<|>|-]|?]",
+  "desc": "abbreviation GBM. moves the cursor to the designated bookmark if that bookmark is set; see SetBookmark. Each document has 10 available bookmarks designated 0 to 9, either end of the most recently pasted text block designated < and >, plus the automatic bookmark designated by -. If no option is given, 0 is assumed. The options +1 and -1 indicate respectively the next and previous set bookmarks, so that repeated GotoBookmark +1 commands will cycle through all",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5130"
+ },
+ {
+  "id": "ne.navigation-commands.unsetbookmark",
+  "source": "ne",
+  "category": "navigation-commands",
+  "name": "UnsetBookmark [n|+1|-1|<|>|-|*]",
+  "desc": "abbreviation UBM. unsets either the nth bookmark (0 through 9), the next (+1) or previous (-1) set bookmarks, the bookmarks designating the start (<) or end (>) of the most recently pasted text block, the automatic (-) bookmark, or all (*) bookmarks, making it as if they had never been set; see SetBookmark. If no option is specified, n is assumed to be zero. While you can unset the automatic bookmark -, it will be reset automatically to the current position whenever a GotoBookmark",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5158"
+ },
+ {
+  "id": "ne.editing-commands.insertchar",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "InsertChar [code]",
+  "desc": "abbreviation IC. inserts a character whose ascii code is code at the current cursor position. code can be either decimal, hexadecimal if preceded by 0x, or octal if preceded by 0. In any case, code must be different from 0. All the currently active preferences options (insert, word wrapping, auto indent, et cetera) are applied. If the optional argument code is not specified, you can enter it on the input line, the default being the last inserted character.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5199"
+ },
+ {
+  "id": "ne.editing-commands.insertstring",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "InsertString [text]",
+  "desc": "abbreviation IS. inserts text at the current cursor position. If the optional argument text is omitted, you will be prompted for it on the command line. All the currently active preferences options (insert, word wrapping, auto indent, et cetera) are applied. Note that SaveMacro converts InsertChar commands into a possibly smaller number of InsertString commands. This makes macros easier to read and edit. See SaveMacro.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5226"
+ },
+ {
+  "id": "ne.editing-commands.inserttab",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "InsertTab [n]",
+  "desc": "abbreviation IT. inserts either n literal TAB characters or one or more spaces sufficient to advance the current cursor position n tab stops depending on the Tabs flag. See Tabs, TabSize.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5245"
+ },
+ {
+  "id": "ne.editing-commands.deletechar",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "DeleteChar [n]",
+  "desc": "abbreviation DC. deletes n characters from the text. If the optional n argument is not specified, it is assumed to be one. Deleting a character when the cursor is just after the last char on a line will join a line with the following one; in other words, the carriage return between the two lines will be deleted. Note that if the cursor is past the end of the current line, no action will be performed.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5259"
+ },
+ {
+  "id": "ne.editing-commands.deleteprevword",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "DeletePrevWord [n]",
+  "desc": "abbreviation DPW. deletes text from the current position through the first character of the n'th previous start-of-word. If the optional n argument is not specified, it is assumed to be one (in which case, if the cursor is in the middle of a word the effect is just to delete to the start of that word).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5276"
+ },
+ {
+  "id": "ne.editing-commands.deletenextword",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "DeleteNextWord [n]",
+  "desc": "abbreviation DNW. deletes text from the current position to the n'th next end-of-word If the optional n argument is not specified, it is assumed to be one (in which case, if the cursor is in the middle of a word the effect is just to delete to the end of that word).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5291"
+ },
+ {
+  "id": "ne.editing-commands.backspace",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "Backspace [n]",
+  "desc": "abbreviation BS. acts like DeleteChar, but moves the cursor to the left before deleting each character.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5306"
+ },
+ {
+  "id": "ne.editing-commands.insertline",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "InsertLine [n]",
+  "desc": "abbreviation IL. inserts n lines at the current cursor position, breaking the current line. If the optional n argument is not specified, it is assumed to be one.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5319"
+ },
+ {
+  "id": "ne.editing-commands.deleteline",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "DeleteLine [n]",
+  "desc": "abbreviation DL. deletes n lines starting from the current cursor position, putting the last one in the temporary buffer, from which it can be undeleted. See UndelLine. If the optional n argument is not specified, it is assumed to be one. Note that this action is in no way inverse with respect to InsertLine.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5332"
+ },
+ {
+  "id": "ne.editing-commands.deleteeol",
+  "source": "ne",
+  "category": "editing-commands",
+  "name": "DeleteEOL",
+  "desc": "abbreviation DE. deletes all characters from the current cursor position to the end of the line. DeleteEOL could be easily implemented with a macro, but it is such a common, basic editing feature that it seemed worth a separate implementation.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5347"
+ },
+ {
+  "id": "ne.support-commands.about",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "About",
+  "desc": "abbreviation About. displays the copyright splash screen and places a simple information line containing the version and build date of ne on the status bar. Press any key to dismiss this screen.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5388"
+ },
+ {
+  "id": "ne.support-commands.alert",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "Alert",
+  "desc": "abbreviation AL. beeps or flashes, depending on the value of the visual bell flag.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5400"
+ },
+ {
+  "id": "ne.support-commands.beep",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "Beep",
+  "desc": "abbreviation BE. beeps. If your terminal cannot beep, it flashes. If it cannot flash, nothing happens (but you have a very bad terminal).",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5411"
+ },
+ {
+  "id": "ne.support-commands.exec",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "Exec",
+  "desc": "abbreviation EX. prompts the user on the input line, asking for a command, and executes it. It is never registered while recording a macro (though the command you type is). Exec is mainly useful for key bindings, menu configurations, and in manually programmed macros. Note that if the command you specify does not appear in ne's internal tables, it is considered to be a macro name. See Macro.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5423"
+ },
+ {
+  "id": "ne.support-commands.flash",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "Flash",
+  "desc": "abbreviation FL. acts as Beep, but interchanging the words ``beep'' and ``flash''. Same comments apply. See Beep.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5442"
+ },
+ {
+  "id": "ne.support-commands.help",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "Help [name]",
+  "desc": "abbreviation H. displays some help about the command name (both the short and the long versions of the command names are accepted). If no argument is given, a list of all existing commands in long form is displayed, allowing you to choose one. You can browse the help text with the standard navigation keys. If you press Return, the command list will be displayed again. If you press f1 or Escape, you will return to normal editing.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5454"
+ },
+ {
+  "id": "ne.support-commands.nop",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "NOP",
+  "desc": "abbreviation NOP. does nothing. Mainly useful for inhibiting standard key bindings.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5475"
+ },
+ {
+  "id": "ne.support-commands.refresh",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "Refresh",
+  "desc": "abbreviation REF. refreshes the display. Refresh is very important, and should preferably be bound to the Control-L sequence, for historical reasons. It can always happen that a noisy phone line or a quirk in the terminal corrupts the display. This command restores it from scratch. Refresh has the side effect of checking to see if your window size has changed, and will modify the display to take that into account.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5486"
+ },
+ {
+  "id": "ne.support-commands.suspend",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "Suspend",
+  "desc": "abbreviation SU. suspends ne and returns you to a shell prompt; usually, the shell command fg is used to resume ne.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5504"
+ },
+ {
+  "id": "ne.support-commands.system",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "System [command]",
+  "desc": "abbreviation SYS. asks the shell to execute command. The terminal is temporarily reset to the state it was in before ne's activation, and command is started. When the execution is finished, control returns to ne. If the optional argument command is not specified, you can enter it on the input line. Before starting the execution, ne defines a series of environment variables which can thus be used on the command line. The variables allow",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5516"
+ },
+ {
+  "id": "ne.support-commands.escape",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "Escape",
+  "desc": "abbreviation ESC. toggles the menus on and off, or escapes from the input line. This command is mainly useful for reprogramming the menu activator, and it is never registered while recording a macro. See Record.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5541"
+ },
+ {
+  "id": "ne.support-commands.keycode",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "KeyCode [k]",
+  "desc": "abbreviation KC. prompts you to press a key, and reports on the status bar the key code ne associates with that key, the command currently associated with that key code, as well as the input class for that key code. Input class codes are: ALPHA, COMMAND, RETURN, TAB, IGNORE, and INVALID. This can be useful while configuring your ~/.ne/.keys file. If the optional integer k (between 0 and 511) is given, KeyCode uses k as the key code and displays the information described above.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5554"
+ },
+ {
+  "id": "ne.support-commands.nameconvert",
+  "source": "ne",
+  "category": "support-commands",
+  "name": "NameConvert [0|1]",
+  "desc": "abbreviation NC. converts the current document's name between relative and absolute path names. With no parameter it switches the current name from relative to absolute, or absolute to relative. With 1 it converts the relative path to absolute or leaves the absolute path unchanged. With 0 it converts the absolute path to relative or leaves the relative path unchanged.",
+  "doc_ref": "https://github.com/vigna/ne/blob/master/doc/ne.texinfo#L5574"
+ }
+]
