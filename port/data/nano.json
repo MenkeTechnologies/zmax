@@ -1,0 +1,3202 @@
+[
+ {
+  "id": "nano.keys.m",
+  "source": "nano",
+  "category": "keys",
+  "name": "^M",
+  "desc": "^M runs do_enter (menu most|browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1237"
+ },
+ {
+  "id": "nano.keys.enter",
+  "source": "nano",
+  "category": "keys",
+  "name": "Enter",
+  "desc": "Enter runs do_enter (menu most|browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1238"
+ },
+ {
+  "id": "nano.keys.i",
+  "source": "nano",
+  "category": "keys",
+  "name": "^I",
+  "desc": "^I runs do_tab (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1239"
+ },
+ {
+  "id": "nano.keys.tab",
+  "source": "nano",
+  "category": "keys",
+  "name": "Tab",
+  "desc": "Tab runs do_tab (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1240"
+ },
+ {
+  "id": "nano.keys.b",
+  "source": "nano",
+  "category": "keys",
+  "name": "^B",
+  "desc": "^B runs do_search_backward (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1241"
+ },
+ {
+  "id": "nano.keys.f",
+  "source": "nano",
+  "category": "keys",
+  "name": "^F",
+  "desc": "^F runs do_search_forward (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1242"
+ },
+ {
+  "id": "nano.keys.q",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Q",
+  "desc": "^Q runs do_exit (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1246"
+ },
+ {
+  "id": "nano.keys.s",
+  "source": "nano",
+  "category": "keys",
+  "name": "^S",
+  "desc": "^S runs do_savefile (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1247"
+ },
+ {
+  "id": "nano.keys.w",
+  "source": "nano",
+  "category": "keys",
+  "name": "^W",
+  "desc": "^W runs do_writeout (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1248"
+ },
+ {
+  "id": "nano.keys.o",
+  "source": "nano",
+  "category": "keys",
+  "name": "^O",
+  "desc": "^O runs do_insertfile (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1249"
+ },
+ {
+  "id": "nano.keys.d",
+  "source": "nano",
+  "category": "keys",
+  "name": "^D",
+  "desc": "^D runs do_findprevious (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1250"
+ },
+ {
+  "id": "nano.keys.g",
+  "source": "nano",
+  "category": "keys",
+  "name": "^G",
+  "desc": "^G runs do_findnext (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1251"
+ },
+ {
+  "id": "nano.keys.r",
+  "source": "nano",
+  "category": "keys",
+  "name": "^R",
+  "desc": "^R runs do_replace (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1252"
+ },
+ {
+  "id": "nano.keys.t",
+  "source": "nano",
+  "category": "keys",
+  "name": "^T",
+  "desc": "^T runs do_gotolinecolumn (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1253"
+ },
+ {
+  "id": "nano.keys.p",
+  "source": "nano",
+  "category": "keys",
+  "name": "^P",
+  "desc": "^P runs report_cursor_position (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1254"
+ },
+ {
+  "id": "nano.keys.z",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Z",
+  "desc": "^Z runs do_undo (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1256"
+ },
+ {
+  "id": "nano.keys.y",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Y",
+  "desc": "^Y runs do_redo (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1257"
+ },
+ {
+  "id": "nano.keys.a",
+  "source": "nano",
+  "category": "keys",
+  "name": "^A",
+  "desc": "^A runs do_mark (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1258"
+ },
+ {
+  "id": "nano.keys.x",
+  "source": "nano",
+  "category": "keys",
+  "name": "^X",
+  "desc": "^X runs cut_text (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1260"
+ },
+ {
+  "id": "nano.keys.c",
+  "source": "nano",
+  "category": "keys",
+  "name": "^C",
+  "desc": "^C runs copy_text (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1261"
+ },
+ {
+  "id": "nano.keys.v",
+  "source": "nano",
+  "category": "keys",
+  "name": "^V",
+  "desc": "^V runs paste_text (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1262"
+ },
+ {
+  "id": "nano.keys.x_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^X",
+  "desc": "^X runs do_exit (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1265"
+ },
+ {
+  "id": "nano.keys.s_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^S",
+  "desc": "^S runs do_savefile (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1267"
+ },
+ {
+  "id": "nano.keys.o_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^O",
+  "desc": "^O runs do_writeout (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1268"
+ },
+ {
+  "id": "nano.keys.r_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^R",
+  "desc": "^R runs do_insertfile (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1269"
+ },
+ {
+  "id": "nano.keys.q_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Q",
+  "desc": "^Q runs do_search_backward (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1271"
+ },
+ {
+  "id": "nano.keys.w_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^W",
+  "desc": "^W runs do_search_forward (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1272"
+ },
+ {
+  "id": "nano.keys.a_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^A",
+  "desc": "^A runs do_home (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1273"
+ },
+ {
+  "id": "nano.keys.e",
+  "source": "nano",
+  "category": "keys",
+  "name": "^E",
+  "desc": "^E runs do_end (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1274"
+ },
+ {
+  "id": "nano.keys.p_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^P",
+  "desc": "^P runs do_up (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1275"
+ },
+ {
+  "id": "nano.keys.n",
+  "source": "nano",
+  "category": "keys",
+  "name": "^N",
+  "desc": "^N runs do_down (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1276"
+ },
+ {
+  "id": "nano.keys.y_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Y",
+  "desc": "^Y runs do_page_up (menu main|browser|help|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1277"
+ },
+ {
+  "id": "nano.keys.v_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^V",
+  "desc": "^V runs do_page_down (menu main|browser|help|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1278"
+ },
+ {
+  "id": "nano.keys.c_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^C",
+  "desc": "^C runs report_cursor_position (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1279"
+ },
+ {
+  "id": "nano.keys.h",
+  "source": "nano",
+  "category": "keys",
+  "name": "^H",
+  "desc": "^H runs do_backspace (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1280"
+ },
+ {
+  "id": "nano.keys.d_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^D",
+  "desc": "^D runs do_delete (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1281"
+ },
+ {
+  "id": "nano.keys.bsp",
+  "source": "nano",
+  "category": "keys",
+  "name": "Bsp",
+  "desc": "Bsp runs do_backspace (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1283"
+ },
+ {
+  "id": "nano.keys.sh_del",
+  "source": "nano",
+  "category": "keys",
+  "name": "Sh-Del",
+  "desc": "Sh-Del runs do_backspace (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1284"
+ },
+ {
+  "id": "nano.keys.del",
+  "source": "nano",
+  "category": "keys",
+  "name": "Del",
+  "desc": "Del runs do_delete (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1285"
+ },
+ {
+  "id": "nano.keys.ins",
+  "source": "nano",
+  "category": "keys",
+  "name": "Ins",
+  "desc": "Ins runs do_insertfile (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1286"
+ },
+ {
+  "id": "nano.keys.item",
+  "source": "nano",
+  "category": "keys",
+  "name": "^\\\\",
+  "desc": "^\\\\ runs do_replace (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1287"
+ },
+ {
+  "id": "nano.keys.m_r",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-R",
+  "desc": "M-R runs do_replace (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1288"
+ },
+ {
+  "id": "nano.keys.k",
+  "source": "nano",
+  "category": "keys",
+  "name": "^K",
+  "desc": "^K runs cut_text (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1289"
+ },
+ {
+  "id": "nano.keys.m_6",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-6",
+  "desc": "M-6 runs copy_text (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1291"
+ },
+ {
+  "id": "nano.keys.m_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-^",
+  "desc": "M-^ runs copy_text (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1292"
+ },
+ {
+  "id": "nano.keys.u",
+  "source": "nano",
+  "category": "keys",
+  "name": "^U",
+  "desc": "^U runs paste_text (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1293"
+ },
+ {
+  "id": "nano.keys.m_6_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-6",
+  "desc": "M-6 runs copy_text (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1298"
+ },
+ {
+  "id": "nano.keys.m_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-^",
+  "desc": "M-^ runs copy_text (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1299"
+ },
+ {
+  "id": "nano.keys.u_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^U",
+  "desc": "^U runs paste_text (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1300"
+ },
+ {
+  "id": "nano.keys.s_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^S",
+  "desc": "^S runs do_spell (menu execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1304"
+ },
+ {
+  "id": "nano.keys.t_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^T",
+  "desc": "^T runs do_spell (menu execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1305"
+ },
+ {
+  "id": "nano.keys.j",
+  "source": "nano",
+  "category": "keys",
+  "name": "^J",
+  "desc": "^J runs do_justify (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1309"
+ },
+ {
+  "id": "nano.keys.y_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Y",
+  "desc": "^Y runs do_linter (menu execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1312"
+ },
+ {
+  "id": "nano.keys.o_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^O",
+  "desc": "^O runs do_formatter (menu execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1315"
+ },
+ {
+  "id": "nano.keys.m_g",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-G",
+  "desc": "M-G runs do_gotolinecolumn (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1318"
+ },
+ {
+  "id": "nano.keys.item_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^_",
+  "desc": "^_ runs do_gotolinecolumn (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1319"
+ },
+ {
+  "id": "nano.keys.pgup",
+  "source": "nano",
+  "category": "keys",
+  "name": "PgUp",
+  "desc": "PgUp runs do_page_up (menu main|browser|help|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1320"
+ },
+ {
+  "id": "nano.keys.pgdn",
+  "source": "nano",
+  "category": "keys",
+  "name": "PgDn",
+  "desc": "PgDn runs do_page_down (menu main|browser|help|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1321"
+ },
+ {
+  "id": "nano.keys.bsp_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "Bsp",
+  "desc": "Bsp runs do_page_up (menu browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1322"
+ },
+ {
+  "id": "nano.keys.sh_del_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "Sh-Del",
+  "desc": "Sh-Del runs do_page_up (menu browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1323"
+ },
+ {
+  "id": "nano.keys.space",
+  "source": "nano",
+  "category": "keys",
+  "name": "Space",
+  "desc": "Space runs do_page_down (menu browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1324"
+ },
+ {
+  "id": "nano.keys.m_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-\\\\",
+  "desc": "M-\\\\ runs to_first_line (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1325"
+ },
+ {
+  "id": "nano.keys.home",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Home",
+  "desc": "^Home runs to_first_line (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1326"
+ },
+ {
+  "id": "nano.keys.m_5",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-/",
+  "desc": "M-/ runs to_last_line (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1327"
+ },
+ {
+  "id": "nano.keys.end",
+  "source": "nano",
+  "category": "keys",
+  "name": "^End",
+  "desc": "^End runs to_last_line (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1328"
+ },
+ {
+  "id": "nano.keys.m_b",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-B",
+  "desc": "M-B runs do_findprevious (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1329"
+ },
+ {
+  "id": "nano.keys.m_f",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-F",
+  "desc": "M-F runs do_findnext (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1330"
+ },
+ {
+  "id": "nano.keys.m_w",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-W",
+  "desc": "M-W runs do_findnext (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1331"
+ },
+ {
+  "id": "nano.keys.m_q",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Q",
+  "desc": "M-Q runs do_findprevious (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1332"
+ },
+ {
+  "id": "nano.keys.m_n",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-N",
+  "desc": "M-N runs toggle_numbers (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1335"
+ },
+ {
+  "id": "nano.keys.m_n_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-N",
+  "desc": "M-N runs to_next_word (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1337"
+ },
+ {
+  "id": "nano.keys.m_d",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-D",
+  "desc": "M-D runs to_prev_word (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1339"
+ },
+ {
+  "id": "nano.keys.m_7",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-]",
+  "desc": "M-] runs do_find_bracket (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1341"
+ },
+ {
+  "id": "nano.keys.m_a",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-A",
+  "desc": "M-A runs do_mark (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1342"
+ },
+ {
+  "id": "nano.keys.6",
+  "source": "nano",
+  "category": "keys",
+  "name": "^6",
+  "desc": "^6 runs do_mark (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1343"
+ },
+ {
+  "id": "nano.keys.item_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^^",
+  "desc": "^^ runs do_mark (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1344"
+ },
+ {
+  "id": "nano.keys.m_8",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-}",
+  "desc": "M-} runs do_indent (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1345"
+ },
+ {
+  "id": "nano.keys.m_9",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-{",
+  "desc": "M-{ runs do_unindent (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1346"
+ },
+ {
+  "id": "nano.keys.sh_tab",
+  "source": "nano",
+  "category": "keys",
+  "name": "Sh-Tab",
+  "desc": "Sh-Tab runs do_unindent (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1347"
+ },
+ {
+  "id": "nano.keys.m_10",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-:",
+  "desc": "M-: runs record_macro (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1348"
+ },
+ {
+  "id": "nano.keys.m_11",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-;",
+  "desc": "M-; runs run_macro (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1349"
+ },
+ {
+  "id": "nano.keys.m_u",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-U",
+  "desc": "M-U runs do_undo (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1350"
+ },
+ {
+  "id": "nano.keys.m_e",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-E",
+  "desc": "M-E runs do_redo (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1351"
+ },
+ {
+  "id": "nano.keys.m_bsp",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Bsp",
+  "desc": "M-Bsp runs chop_previous_word (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1352"
+ },
+ {
+  "id": "nano.keys.sh_del_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "Sh-^Del",
+  "desc": "Sh-^Del runs chop_previous_word (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1353"
+ },
+ {
+  "id": "nano.keys.del_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Del",
+  "desc": "^Del runs chop_next_word (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1354"
+ },
+ {
+  "id": "nano.keys.m_del",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Del",
+  "desc": "M-Del runs zap_text (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1355"
+ },
+ {
+  "id": "nano.keys.m_ins",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Ins",
+  "desc": "M-Ins runs put_or_lift_anchor (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1356"
+ },
+ {
+  "id": "nano.keys.m_home",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Home",
+  "desc": "M-Home runs to_top_row (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1357"
+ },
+ {
+  "id": "nano.keys.m_end",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-End",
+  "desc": "M-End runs to_bottom_row (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1358"
+ },
+ {
+  "id": "nano.keys.m_pgup",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-PgUp",
+  "desc": "M-PgUp runs to_prev_anchor (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1359"
+ },
+ {
+  "id": "nano.keys.m_pgdn",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-PgDn",
+  "desc": "M-PgDn runs to_next_anchor (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1360"
+ },
+ {
+  "id": "nano.keys.m_12",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-'",
+  "desc": "M-' runs to_next_anchor (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1362"
+ },
+ {
+  "id": "nano.keys.item_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "^]",
+  "desc": "^] runs complete_a_word (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1365"
+ },
+ {
+  "id": "nano.keys.m_3_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-3",
+  "desc": "M-3 runs do_comment (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1368"
+ },
+ {
+  "id": "nano.keys.xe2_x97_x82",
+  "source": "nano",
+  "category": "keys",
+  "name": "\\xE2\\x97\\x82",
+  "desc": "\\xE2\\x97\\x82 runs do_left (menu most|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1374"
+ },
+ {
+  "id": "nano.keys.xe2_x96_xb8",
+  "source": "nano",
+  "category": "keys",
+  "name": "\\xE2\\x96\\xb8",
+  "desc": "\\xE2\\x96\\xb8 runs do_right (menu most|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1375"
+ },
+ {
+  "id": "nano.keys.xe2_x97_x82_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^\\xE2\\x97\\x82",
+  "desc": "^\\xE2\\x97\\x82 runs to_prev_word (menu some)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1376"
+ },
+ {
+  "id": "nano.keys.xe2_x96_xb8_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^\\xE2\\x96\\xb8",
+  "desc": "^\\xE2\\x96\\xb8 runs to_next_word (menu some)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1377"
+ },
+ {
+  "id": "nano.keys.m_xe2_x97_x82",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-\\xE2\\x97\\x82",
+  "desc": "M-\\xE2\\x97\\x82 runs switch_to_prev_buffer (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1380"
+ },
+ {
+  "id": "nano.keys.m_xe2_x96_xb8",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-\\xE2\\x96\\xb8",
+  "desc": "M-\\xE2\\x96\\xb8 runs switch_to_next_buffer (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1381"
+ },
+ {
+  "id": "nano.keys.left",
+  "source": "nano",
+  "category": "keys",
+  "name": "Left",
+  "desc": "Left runs do_left (menu most|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1387"
+ },
+ {
+  "id": "nano.keys.right",
+  "source": "nano",
+  "category": "keys",
+  "name": "Right",
+  "desc": "Right runs do_right (menu most|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1388"
+ },
+ {
+  "id": "nano.keys.left_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Left",
+  "desc": "^Left runs to_prev_word (menu some)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1389"
+ },
+ {
+  "id": "nano.keys.right_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Right",
+  "desc": "^Right runs to_next_word (menu some)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1390"
+ },
+ {
+  "id": "nano.keys.m_left",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Left",
+  "desc": "M-Left runs switch_to_prev_buffer (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1393"
+ },
+ {
+  "id": "nano.keys.m_right",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Right",
+  "desc": "M-Right runs switch_to_next_buffer (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1394"
+ },
+ {
+  "id": "nano.keys.m_space",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Space",
+  "desc": "M-Space runs to_prev_word (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1398"
+ },
+ {
+  "id": "nano.keys.space_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Space",
+  "desc": "^Space runs to_next_word (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1399"
+ },
+ {
+  "id": "nano.keys.home_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "Home",
+  "desc": "Home runs do_home (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1400"
+ },
+ {
+  "id": "nano.keys.end_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "End",
+  "desc": "End runs do_end (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1401"
+ },
+ {
+  "id": "nano.keys.xe2_x96_xb4",
+  "source": "nano",
+  "category": "keys",
+  "name": "\\xE2\\x96\\xb4",
+  "desc": "\\xE2\\x96\\xb4 runs do_up (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1404"
+ },
+ {
+  "id": "nano.keys.xe2_x96_xbe",
+  "source": "nano",
+  "category": "keys",
+  "name": "\\xE2\\x96\\xbe",
+  "desc": "\\xE2\\x96\\xbe runs do_down (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1405"
+ },
+ {
+  "id": "nano.keys.xe2_x96_xb4_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^\\xE2\\x96\\xb4",
+  "desc": "^\\xE2\\x96\\xb4 runs to_prev_block (menu main|browser|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1406"
+ },
+ {
+  "id": "nano.keys.xe2_x96_xbe_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^\\xE2\\x96\\xbe",
+  "desc": "^\\xE2\\x96\\xbe runs to_next_block (menu main|browser|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1407"
+ },
+ {
+  "id": "nano.keys.up",
+  "source": "nano",
+  "category": "keys",
+  "name": "Up",
+  "desc": "Up runs do_up (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1411"
+ },
+ {
+  "id": "nano.keys.down",
+  "source": "nano",
+  "category": "keys",
+  "name": "Down",
+  "desc": "Down runs do_down (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1412"
+ },
+ {
+  "id": "nano.keys.up_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Up",
+  "desc": "^Up runs to_prev_block (menu main|browser|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1413"
+ },
+ {
+  "id": "nano.keys.down_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Down",
+  "desc": "^Down runs to_next_block (menu main|browser|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1414"
+ },
+ {
+  "id": "nano.keys.m_7_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-7",
+  "desc": "M-7 runs to_prev_block (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1416"
+ },
+ {
+  "id": "nano.keys.m_8_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-8",
+  "desc": "M-8 runs to_next_block (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1417"
+ },
+ {
+  "id": "nano.keys.m_13",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-(",
+  "desc": "M-( runs to_para_begin (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1419"
+ },
+ {
+  "id": "nano.keys.m_9_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-9",
+  "desc": "M-9 runs to_para_begin (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1420"
+ },
+ {
+  "id": "nano.keys.m_14",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-)",
+  "desc": "M-) runs to_para_end (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1421"
+ },
+ {
+  "id": "nano.keys.m_0",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-0",
+  "desc": "M-0 runs to_para_end (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1422"
+ },
+ {
+  "id": "nano.keys.m_xe2_x96_xb4",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-\\xE2\\x96\\xb4",
+  "desc": "M-\\xE2\\x96\\xb4 runs do_scroll_up (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1427"
+ },
+ {
+  "id": "nano.keys.m_xe2_x96_xbe",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-\\xE2\\x96\\xbe",
+  "desc": "M-\\xE2\\x96\\xbe runs do_scroll_down (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1428"
+ },
+ {
+  "id": "nano.keys.m_up",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Up",
+  "desc": "M-Up runs do_scroll_up (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1432"
+ },
+ {
+  "id": "nano.keys.m_down",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Down",
+  "desc": "M-Down runs do_scroll_down (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1433"
+ },
+ {
+  "id": "nano.keys.m_15",
+  "source": "nano",
+  "category": "keys",
+  "name": "M--",
+  "desc": "M-- runs do_scroll_up (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1437"
+ },
+ {
+  "id": "nano.keys.m_16",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-_",
+  "desc": "M-_ runs do_scroll_up (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1438"
+ },
+ {
+  "id": "nano.keys.m_17",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-+",
+  "desc": "M-+ runs do_scroll_down (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1439"
+ },
+ {
+  "id": "nano.keys.m_18",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-=",
+  "desc": "M-= runs do_scroll_down (menu main|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1440"
+ },
+ {
+  "id": "nano.keys.m_19",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-,",
+  "desc": "M-, runs switch_to_prev_buffer (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1443"
+ },
+ {
+  "id": "nano.keys.m_20",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-.",
+  "desc": "M-. runs switch_to_next_buffer (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1444"
+ },
+ {
+  "id": "nano.keys.m_v",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-V",
+  "desc": "M-V runs do_verbatim_input (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1446"
+ },
+ {
+  "id": "nano.keys.m_t",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-T",
+  "desc": "M-T runs cut_till_eof (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1448"
+ },
+ {
+  "id": "nano.keys.v_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^V",
+  "desc": "^V runs cut_till_eof (menu execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1449"
+ },
+ {
+  "id": "nano.keys.z_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Z",
+  "desc": "^Z runs do_suspend (menu execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1450"
+ },
+ {
+  "id": "nano.keys.z_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Z",
+  "desc": "^Z runs suggest_ctrlT_ctrlZ (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1451"
+ },
+ {
+  "id": "nano.keys.m_d_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-D",
+  "desc": "M-D runs count_lines_words_and_characters (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1452"
+ },
+ {
+  "id": "nano.keys.m_h",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-H",
+  "desc": "M-H runs do_help (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1454"
+ },
+ {
+  "id": "nano.keys.m_j",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-J",
+  "desc": "M-J runs do_full_justify (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1457"
+ },
+ {
+  "id": "nano.keys.j_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^J",
+  "desc": "^J runs do_full_justify (menu execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1458"
+ },
+ {
+  "id": "nano.keys.m_21",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-<",
+  "desc": "M-< runs do_scroll_left (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1461"
+ },
+ {
+  "id": "nano.keys.m_22",
+  "source": "nano",
+  "category": "keys",
+  "name": "M->",
+  "desc": "M-> runs do_scroll_right (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1462"
+ },
+ {
+  "id": "nano.keys.l",
+  "source": "nano",
+  "category": "keys",
+  "name": "^L",
+  "desc": "^L runs do_center (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1463"
+ },
+ {
+  "id": "nano.keys.m_23",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-%",
+  "desc": "M-% runs do_cycle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1464"
+ },
+ {
+  "id": "nano.keys.l_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^L",
+  "desc": "^L runs full_refresh (menu most|browser|help|yesno)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1467"
+ },
+ {
+  "id": "nano.keys.m_z",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Z",
+  "desc": "M-Z runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1472"
+ },
+ {
+  "id": "nano.keys.m_c",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-C",
+  "desc": "M-C runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1474"
+ },
+ {
+  "id": "nano.keys.m_s",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-S",
+  "desc": "M-S runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1475"
+ },
+ {
+  "id": "nano.keys.m_24",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-$",
+  "desc": "M-$ runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1476"
+ },
+ {
+  "id": "nano.keys.m_n_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-N",
+  "desc": "M-N runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1478"
+ },
+ {
+  "id": "nano.keys.m_25",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-#",
+  "desc": "M-# runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1479"
+ },
+ {
+  "id": "nano.keys.m_p",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-P",
+  "desc": "M-P runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1481"
+ },
+ {
+  "id": "nano.keys.m_y",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-Y",
+  "desc": "M-Y runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1483"
+ },
+ {
+  "id": "nano.keys.m_h_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-H",
+  "desc": "M-H runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1487"
+ },
+ {
+  "id": "nano.keys.m_i",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-I",
+  "desc": "M-I runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1488"
+ },
+ {
+  "id": "nano.keys.m_k",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-K",
+  "desc": "M-K runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1489"
+ },
+ {
+  "id": "nano.keys.m_l",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-L",
+  "desc": "M-L runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1491"
+ },
+ {
+  "id": "nano.keys.m_o",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-O",
+  "desc": "M-O runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1493"
+ },
+ {
+  "id": "nano.keys.m_m",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-M",
+  "desc": "M-M runs do_toggle (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1495"
+ },
+ {
+  "id": "nano.keys.m_c_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-C",
+  "desc": "M-C runs case_sens_void (menu whereis|replace)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1501"
+ },
+ {
+  "id": "nano.keys.m_r_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-R",
+  "desc": "M-R runs regexp_void (menu whereis|replace)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1502"
+ },
+ {
+  "id": "nano.keys.m_b_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-B",
+  "desc": "M-B runs backwards_void (menu whereis|replace)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1503"
+ },
+ {
+  "id": "nano.keys.r_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^R",
+  "desc": "^R runs flip_replace (menu whereis|replace)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1504"
+ },
+ {
+  "id": "nano.keys.t_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^T",
+  "desc": "^T runs flip_goto (menu whereis|gotoline)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1506"
+ },
+ {
+  "id": "nano.keys.p_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^P",
+  "desc": "^P runs get_older_item (menu whereis|replace|replacewith|whereisfile|findinhelp|execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1508"
+ },
+ {
+  "id": "nano.keys.n_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^N",
+  "desc": "^N runs get_newer_item (menu whereis|replace|replacewith|whereisfile|findinhelp|execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1509"
+ },
+ {
+  "id": "nano.keys.xe2_x96_xb4_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "\\xE2\\x96\\xb4",
+  "desc": "\\xE2\\x96\\xb4 runs get_older_item (menu whereis|replace|replacewith|whereisfile|findinhelp|execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1512"
+ },
+ {
+  "id": "nano.keys.xe2_x96_xbe_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "\\xE2\\x96\\xbe",
+  "desc": "\\xE2\\x96\\xbe runs get_newer_item (menu whereis|replace|replacewith|whereisfile|findinhelp|execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1513"
+ },
+ {
+  "id": "nano.keys.up_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "Up",
+  "desc": "Up runs get_older_item (menu whereis|replace|replacewith|whereisfile|findinhelp|execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1517"
+ },
+ {
+  "id": "nano.keys.down_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "Down",
+  "desc": "Down runs get_newer_item (menu whereis|replace|replacewith|whereisfile|findinhelp|execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1518"
+ },
+ {
+  "id": "nano.keys.w_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^W",
+  "desc": "^W runs to_para_begin (menu gotoline)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1522"
+ },
+ {
+  "id": "nano.keys.o_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "^O",
+  "desc": "^O runs to_para_end (menu gotoline)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1523"
+ },
+ {
+  "id": "nano.keys.y_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Y",
+  "desc": "^Y runs to_first_line (menu gotoline|whereis|findinhelp)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1526"
+ },
+ {
+  "id": "nano.keys.v_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "^V",
+  "desc": "^V runs to_last_line (menu gotoline|whereis|findinhelp)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1527"
+ },
+ {
+  "id": "nano.keys.y_5",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Y",
+  "desc": "^Y runs to_first_file (menu whereisfile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1529"
+ },
+ {
+  "id": "nano.keys.v_5",
+  "source": "nano",
+  "category": "keys",
+  "name": "^V",
+  "desc": "^V runs to_last_file (menu whereisfile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1530"
+ },
+ {
+  "id": "nano.keys.m_26",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-\\\\",
+  "desc": "M-\\\\ runs to_first_file (menu browser|whereisfile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1531"
+ },
+ {
+  "id": "nano.keys.m_27",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-/",
+  "desc": "M-/ runs to_last_file (menu browser|whereisfile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1532"
+ },
+ {
+  "id": "nano.keys.home_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "Home",
+  "desc": "Home runs to_first_file (menu browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1533"
+ },
+ {
+  "id": "nano.keys.end_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "End",
+  "desc": "End runs to_last_file (menu browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1534"
+ },
+ {
+  "id": "nano.keys.home_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Home",
+  "desc": "^Home runs to_first_file (menu browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1535"
+ },
+ {
+  "id": "nano.keys.end_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "^End",
+  "desc": "^End runs to_last_file (menu browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1536"
+ },
+ {
+  "id": "nano.keys.m_g_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-G",
+  "desc": "M-G runs goto_dir (menu browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1538"
+ },
+ {
+  "id": "nano.keys.item_5",
+  "source": "nano",
+  "category": "keys",
+  "name": "^_",
+  "desc": "^_ runs goto_dir (menu browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1539"
+ },
+ {
+  "id": "nano.keys.q_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^Q",
+  "desc": "^Q runs discard_buffer (menu writefile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1542"
+ },
+ {
+  "id": "nano.keys.m_d_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-D",
+  "desc": "M-D runs dos_format (menu writefile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1544"
+ },
+ {
+  "id": "nano.keys.m_b_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-B",
+  "desc": "M-B runs back_it_up (menu writefile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1548"
+ },
+ {
+  "id": "nano.keys.m_a_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-A",
+  "desc": "M-A runs append_it (menu writefile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1549"
+ },
+ {
+  "id": "nano.keys.m_p_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-P",
+  "desc": "M-P runs prepend_it (menu writefile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1550"
+ },
+ {
+  "id": "nano.keys.x_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^X",
+  "desc": "^X runs flip_execute (menu insertfile|execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1551"
+ },
+ {
+  "id": "nano.keys.m_n_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-N",
+  "desc": "M-N runs flip_convert (menu insertfile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1553"
+ },
+ {
+  "id": "nano.keys.m_f_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-F",
+  "desc": "M-F runs flip_newbuffer (menu insertfile|execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1557"
+ },
+ {
+  "id": "nano.keys.m_28",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-\\\\",
+  "desc": "M-\\\\ runs flip_pipe (menu execute)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1559"
+ },
+ {
+  "id": "nano.keys.c_3",
+  "source": "nano",
+  "category": "keys",
+  "name": "^C",
+  "desc": "^C runs do_exit (menu browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1563"
+ },
+ {
+  "id": "nano.keys.t_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "^T",
+  "desc": "^T runs to_files (menu writefile|insertfile)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1567"
+ },
+ {
+  "id": "nano.keys.t_5",
+  "source": "nano",
+  "category": "keys",
+  "name": "^T",
+  "desc": "^T runs do_exit (menu browser)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1569"
+ },
+ {
+  "id": "nano.keys.g_2",
+  "source": "nano",
+  "category": "keys",
+  "name": "^G",
+  "desc": "^G runs do_exit (menu help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1573"
+ },
+ {
+  "id": "nano.keys.f1",
+  "source": "nano",
+  "category": "keys",
+  "name": "F1",
+  "desc": "F1 runs do_exit (menu help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1574"
+ },
+ {
+  "id": "nano.keys.home_5",
+  "source": "nano",
+  "category": "keys",
+  "name": "Home",
+  "desc": "Home runs to_first_line (menu help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1575"
+ },
+ {
+  "id": "nano.keys.end_5",
+  "source": "nano",
+  "category": "keys",
+  "name": "End",
+  "desc": "End runs to_last_line (menu help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1576"
+ },
+ {
+  "id": "nano.keys.x_4",
+  "source": "nano",
+  "category": "keys",
+  "name": "^X",
+  "desc": "^X runs do_cancel (menu linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1579"
+ },
+ {
+  "id": "nano.keys.f2",
+  "source": "nano",
+  "category": "keys",
+  "name": "F2",
+  "desc": "F2 runs do_exit (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1582"
+ },
+ {
+  "id": "nano.keys.f3",
+  "source": "nano",
+  "category": "keys",
+  "name": "F3",
+  "desc": "F3 runs do_writeout (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1583"
+ },
+ {
+  "id": "nano.keys.f4",
+  "source": "nano",
+  "category": "keys",
+  "name": "F4",
+  "desc": "F4 runs do_justify (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1585"
+ },
+ {
+  "id": "nano.keys.f5",
+  "source": "nano",
+  "category": "keys",
+  "name": "F5",
+  "desc": "F5 runs do_insertfile (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1587"
+ },
+ {
+  "id": "nano.keys.f6",
+  "source": "nano",
+  "category": "keys",
+  "name": "F6",
+  "desc": "F6 runs do_search_forward (menu main|browser|help)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1588"
+ },
+ {
+  "id": "nano.keys.f7",
+  "source": "nano",
+  "category": "keys",
+  "name": "F7",
+  "desc": "F7 runs do_page_up (menu main|browser|help|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1589"
+ },
+ {
+  "id": "nano.keys.f8",
+  "source": "nano",
+  "category": "keys",
+  "name": "F8",
+  "desc": "F8 runs do_page_down (menu main|browser|help|linter)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1590"
+ },
+ {
+  "id": "nano.keys.f9",
+  "source": "nano",
+  "category": "keys",
+  "name": "F9",
+  "desc": "F9 runs cut_text (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1591"
+ },
+ {
+  "id": "nano.keys.f10",
+  "source": "nano",
+  "category": "keys",
+  "name": "F10",
+  "desc": "F10 runs paste_text (menu most)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1592"
+ },
+ {
+  "id": "nano.keys.f11",
+  "source": "nano",
+  "category": "keys",
+  "name": "F11",
+  "desc": "F11 runs report_cursor_position (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1593"
+ },
+ {
+  "id": "nano.keys.f12",
+  "source": "nano",
+  "category": "keys",
+  "name": "F12",
+  "desc": "F12 runs do_spell (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1595"
+ },
+ {
+  "id": "nano.keys.m_29",
+  "source": "nano",
+  "category": "keys",
+  "name": "M-&",
+  "desc": "M-& runs show_curses_version (menu main)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/src/global.c#n1598"
+ },
+ {
+  "id": "nano.option.afterends",
+  "source": "nano",
+  "category": "option",
+  "name": "set afterends",
+  "desc": "Make Ctrl+Right and Ctrl+Delete stop at word ends instead of beginnings.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n88"
+ },
+ {
+  "id": "nano.option.allow_insecure_backup",
+  "source": "nano",
+  "category": "option",
+  "name": "set allow_insecure_backup",
+  "desc": "When backing up files, allow the backup to succeed even if its permissions can't be (re)set due to special OS considerations. You should NOT enable this option unless you are sure you need it.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n91"
+ },
+ {
+  "id": "nano.option.atblanks",
+  "source": "nano",
+  "category": "option",
+  "name": "set atblanks",
+  "desc": "When soft line wrapping is enabled, make it wrap lines at blank characters (tabs and spaces) instead of always at the edge of the screen.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n96"
+ },
+ {
+  "id": "nano.option.autoindent",
+  "source": "nano",
+  "category": "option",
+  "name": "set autoindent",
+  "desc": "Automatically indent a newly created line to the same number of tabs and/or spaces as the previous line (or as the next line if the previous line is the beginning of a paragraph).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n100"
+ },
+ {
+  "id": "nano.option.backup",
+  "source": "nano",
+  "category": "option",
+  "name": "set backup",
+  "desc": "When saving a file, create a backup file by adding a tilde (\\[ti]) to the file's name.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n105"
+ },
+ {
+  "id": "nano.option.backupdir",
+  "source": "nano",
+  "category": "option",
+  "name": "set backupdir directory",
+  "desc": "Make and keep not just one backup file, but make and keep a uniquely numbered one every time a file is saved \\[em] when backups are enabled with set backup or --backup or -B. The uniquely numbered files are stored in the specified directory.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n109"
+ },
+ {
+  "id": "nano.option.boldtext",
+  "source": "nano",
+  "category": "option",
+  "name": "set boldtext",
+  "desc": "Use bold instead of reverse video for the title bar, status bar, prompt bar, mini bar, key combos, line numbers, and selected text. This can be overridden by setting the options titlecolor, statuscolor, promptcolor, minicolor, keycolor, numbercolor, and/or selectedcolor.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n115"
+ },
+ {
+  "id": "nano.option.bookstyle",
+  "source": "nano",
+  "category": "option",
+  "name": "set bookstyle",
+  "desc": "When justifying, treat any line that starts with whitespace as the beginning of a paragraph (unless auto-indenting is on).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n122"
+ },
+ {
+  "id": "nano.option.breaklonglines",
+  "source": "nano",
+  "category": "option",
+  "name": "set breaklonglines",
+  "desc": "Automatically hard-wrap the current line when it becomes overlong \\[em] that is: when it becomes wider than the value given with set fill (which defaults to the width of the terminal minus eight).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n132"
+ },
+ {
+  "id": "nano.option.casesensitive",
+  "source": "nano",
+  "category": "option",
+  "name": "set casesensitive",
+  "desc": "Do case-sensitive searches by default.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n137"
+ },
+ {
+  "id": "nano.option.colonparsing",
+  "source": "nano",
+  "category": "option",
+  "name": "set colonparsing",
+  "desc": "When a filename given on the command line ends in a colon plus digits and this filename does not exist, then snip the colon plus digits and understand the digits as a line number. If the trimmed filename does not exist either, then repeat the process and understand the obtained two numbers as line and column number. But if the doubly trimmed",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n140"
+ },
+ {
+  "id": "nano.option.constantshow",
+  "source": "nano",
+  "category": "option",
+  "name": "set constantshow",
+  "desc": "Constantly report the cursor position on the status bar. This overrides the option quickblank.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n150"
+ },
+ {
+  "id": "nano.option.cutfromcursor",
+  "source": "nano",
+  "category": "option",
+  "name": "set cutfromcursor",
+  "desc": "Use cut-from-cursor-to-end-of-line by default, instead of cutting the whole line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n154"
+ },
+ {
+  "id": "nano.option.emptyline",
+  "source": "nano",
+  "category": "option",
+  "name": "set emptyline",
+  "desc": "Do not use the line below the title bar, leaving it entirely blank.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n157"
+ },
+ {
+  "id": "nano.option.errorcolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set errorcolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for the status bar when an error message is displayed. The default value is bold,white,red. See set titlecolor for valid color names.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n160"
+ },
+ {
+  "id": "nano.option.fill",
+  "source": "nano",
+  "category": "option",
+  "name": "set fill number",
+  "desc": "Set the target width for justifying and automatic hard-wrapping at this number of columns. If the value is 0 or less, wrapping occurs at the width of the screen minus number columns, allowing the wrap point to vary along with the width of the screen if the screen is resized. The default value is -8.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n165"
+ },
+ {
+  "id": "nano.option.functioncolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set functioncolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for the concise function descriptions in the two help lines at the bottom of the screen. See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n172"
+ },
+ {
+  "id": "nano.option.guidestripe",
+  "source": "nano",
+  "category": "option",
+  "name": "set guidestripe number",
+  "desc": "Draw a vertical stripe at the given column, to help judge the width of the text. (The color of the stripe can be changed with set stripecolor.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n177"
+ },
+ {
+  "id": "nano.option.historylog",
+  "source": "nano",
+  "category": "option",
+  "name": "set historylog",
+  "desc": "Save the last hundred search strings and replacement strings and executed commands, so they can be easily reused in later sessions.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n181"
+ },
+ {
+  "id": "nano.option.indicator",
+  "source": "nano",
+  "category": "option",
+  "name": "set indicator",
+  "desc": "Display a \\[lq]scrollbar\\[rq] on the righthand side of the edit window. It shows the position of the viewport in the buffer and how much of the buffer is covered by the viewport.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n185"
+ },
+ {
+  "id": "nano.option.jumpyscrolling",
+  "source": "nano",
+  "category": "option",
+  "name": "set jumpyscrolling",
+  "desc": "Scroll the buffer contents per half-screen instead of per line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n190"
+ },
+ {
+  "id": "nano.option.keycolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set keycolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for the shortcut key combos in the two help lines at the bottom of the screen. See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n193"
+ },
+ {
+  "id": "nano.option.linenumbers",
+  "source": "nano",
+  "category": "option",
+  "name": "set linenumbers",
+  "desc": "Display line numbers to the left of the text area. (Any line with an anchor additionally gets a mark in the margin.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n198"
+ },
+ {
+  "id": "nano.option.locking",
+  "source": "nano",
+  "category": "option",
+  "name": "set locking",
+  "desc": "Use vim-style lock-files when editing files.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n202"
+ },
+ {
+  "id": "nano.option.magic",
+  "source": "nano",
+  "category": "option",
+  "name": "set magic",
+  "desc": "When neither the file's name nor its first line give a clue, try using libmagic to determine the applicable syntax. (Calling libmagic can be relatively time consuming. It is therefore not done by default.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n205"
+ },
+ {
+  "id": "nano.option.minibar",
+  "source": "nano",
+  "category": "option",
+  "name": "set minibar",
+  "desc": "Suppress the title bar and instead show information about the current buffer at the bottom of the screen, in the space for the status bar. In this \\[lq]mini bar\\[rq] the filename is shown on the left, followed by an asterisk if the buffer has been modified. On the right are displayed the current line and column number, the",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n217"
+ },
+ {
+  "id": "nano.option.minicolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set minicolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for the mini bar. (When this option is not specified, the colors of the title bar are used.) See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n234"
+ },
+ {
+  "id": "nano.option.mouse",
+  "source": "nano",
+  "category": "option",
+  "name": "set mouse",
+  "desc": "Enable mouse support, if available for your system. When enabled, mouse clicks can be used to place the cursor, set the mark (with two clicks), and execute shortcuts. The mouse works in the X Window System, and on the console when gpm is running. Text can still be selected through dragging by holding down the Shift key.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n239"
+ },
+ {
+  "id": "nano.option.newbuffer",
+  "source": "nano",
+  "category": "option",
+  "name": "set newbuffer",
+  "desc": "When reading in a file with ^R, insert it into a new buffer by default. (The old form of this option, set multibuffer, is deprecated.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n246"
+ },
+ {
+  "id": "nano.option.noconvert",
+  "source": "nano",
+  "category": "option",
+  "name": "set noconvert",
+  "desc": "Don't convert files from DOS format.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n250"
+ },
+ {
+  "id": "nano.option.nohelp",
+  "source": "nano",
+  "category": "option",
+  "name": "set nohelp",
+  "desc": "Don't display the two help lines at the bottom of the screen.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n253"
+ },
+ {
+  "id": "nano.option.nonewlines",
+  "source": "nano",
+  "category": "option",
+  "name": "set nonewlines",
+  "desc": "Don't automatically add a newline when a text does not end with one. (This can cause you to save non-POSIX text files.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n256"
+ },
+ {
+  "id": "nano.option.nowrap",
+  "source": "nano",
+  "category": "option",
+  "name": "set nowrap",
+  "desc": "Deprecated option since it has become the default setting. When needed, use unset breaklonglines instead.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n260"
+ },
+ {
+  "id": "nano.option.numbercolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set numbercolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for line numbers. See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n264"
+ },
+ {
+  "id": "nano.option.operatingdir",
+  "source": "nano",
+  "category": "option",
+  "name": "set operatingdir directory",
+  "desc": "At startup, make nano change to the given directory, and allow reading and writing files only in this directory and its subdirectories.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n268"
+ },
+ {
+  "id": "nano.option.positionlog",
+  "source": "nano",
+  "category": "option",
+  "name": "set positionlog",
+  "desc": "Save the positions of cursor and anchors between editing sessions. These positions are remembered for the 200 most-recently edited files.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n272"
+ },
+ {
+  "id": "nano.option.preserve",
+  "source": "nano",
+  "category": "option",
+  "name": "set preserve",
+  "desc": "Preserve the XOFF and XON sequences (^S and ^Q) so that they are caught by the terminal (stopping and resuming the output).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n276"
+ },
+ {
+  "id": "nano.option.promptcolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set promptcolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for the prompt bar. (When this option is not specified, the colors of the title bar are used.) See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n280"
+ },
+ {
+  "id": "nano.option.quickblank",
+  "source": "nano",
+  "category": "option",
+  "name": "set quickblank",
+  "desc": "Make status-bar messages disappear after 1 keystroke instead of after 20. Note that option constantshow overrides this. When option minibar or zero is in effect, quickblank makes a message disappear after 0.8 seconds instead of after the default 1.5 seconds.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n291"
+ },
+ {
+  "id": "nano.option.rawsequences",
+  "source": "nano",
+  "category": "option",
+  "name": "set rawsequences",
+  "desc": "Interpret escape sequences directly, instead of asking ncurses to translate them. (If you need this option to get some keys to work properly, it means that the terminfo terminal description that is used does not fully match the actual behavior of your terminal. This can happen when you ssh into a BSD machine, for example.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n305"
+ },
+ {
+  "id": "nano.option.rebinddelete",
+  "source": "nano",
+  "category": "option",
+  "name": "set rebinddelete",
+  "desc": "Interpret the Delete and Backspace keys differently so that both Backspace and Delete work properly. You should only use this option when on your system either Backspace acts like Delete or Delete acts like Backspace.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n313"
+ },
+ {
+  "id": "nano.option.regexp",
+  "source": "nano",
+  "category": "option",
+  "name": "set regexp",
+  "desc": "Do regular-expression searches by default. Regular expressions in nano are of the extended type (ERE).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n318"
+ },
+ {
+  "id": "nano.option.saveonexit",
+  "source": "nano",
+  "category": "option",
+  "name": "set saveonexit",
+  "desc": "Save a changed buffer automatically on exit (^X); don't prompt.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n322"
+ },
+ {
+  "id": "nano.option.scrollercolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set scrollercolor fgcolor,bgcolor",
+  "desc": "Use this color combination for the indicator alias \\[lq]scrollbar\\[rq]. See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n325"
+ },
+ {
+  "id": "nano.option.selectedcolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set selectedcolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for selected text. See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n329"
+ },
+ {
+  "id": "nano.option.showcursor",
+  "source": "nano",
+  "category": "option",
+  "name": "set showcursor",
+  "desc": "Put the cursor on the highlighted item in the file browser, and show the cursor in the help viewer, to aid braille users and people with poor vision.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n333"
+ },
+ {
+  "id": "nano.option.smarthome",
+  "source": "nano",
+  "category": "option",
+  "name": "set smarthome",
+  "desc": "Make the Home key smarter. When Home is pressed anywhere but at the very beginning of non-whitespace characters on a line, the cursor jumps to that beginning (either forwards or backwards). If the cursor is already at that position, it jumps to the true beginning of the line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n338"
+ },
+ {
+  "id": "nano.option.softwrap",
+  "source": "nano",
+  "category": "option",
+  "name": "set softwrap",
+  "desc": "Display lines that exceed the screen's width over multiple screen lines. (You can make this soft-wrapping occur at whitespace instead of rudely at the screen's edge, by using also set atblanks.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n344"
+ },
+ {
+  "id": "nano.option.solosidescroll",
+  "source": "nano",
+  "category": "option",
+  "name": "set solosidescroll",
+  "desc": "When the cursor approaches the right edge of the edit window, scroll only the current line sideways by a large amount, instead of scrolling all visible lines sideways by just the amount needed to keep the cursor in view. This latter whole-window smooth sideways scrolling is the new default behavior. The single-line jerky sideways scrolling enabled by this option was the old",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n349"
+ },
+ {
+  "id": "nano.option.speller",
+  "source": "nano",
+  "category": "option",
+  "name": "set speller \"\"\"program [argument ...]\"\"\"",
+  "desc": "Use the given program to do spell checking and correcting, instead of using the built-in corrector that calls hunspell(1) or spell(1).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n357"
+ },
+ {
+  "id": "nano.option.spotlightcolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set spotlightcolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for highlighting a search match. The default value is black,lightyellow. See set titlecolor for valid color names.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n361"
+ },
+ {
+  "id": "nano.option.stateflags",
+  "source": "nano",
+  "category": "option",
+  "name": "set stateflags",
+  "desc": "Use the top-right corner of the screen for showing some state flags: I when auto-indenting, M when the mark is on, L when hard-wrapping (breaking long lines), R when recording a macro, and S when soft-wrapping. When the buffer is modified, a star (*) is shown after the filename in the center of the title bar.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n366"
+ },
+ {
+  "id": "nano.option.statuscolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set statuscolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for the status bar. See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n374"
+ },
+ {
+  "id": "nano.option.stripecolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set stripecolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for the vertical guiding stripe. See set titlecolor for more details.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n378"
+ },
+ {
+  "id": "nano.option.tabsize",
+  "source": "nano",
+  "category": "option",
+  "name": "set tabsize number",
+  "desc": "Use a tab size of number columns. The value of number must be greater than 0. The default value is 8.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n382"
+ },
+ {
+  "id": "nano.option.tabstospaces",
+  "source": "nano",
+  "category": "option",
+  "name": "set tabstospaces",
+  "desc": "Convert each typed tab to spaces \\[em] to the number of spaces that a tab at that position would take up. (Note: pasted tabs are not converted.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n386"
+ },
+ {
+  "id": "nano.option.titlecolor",
+  "source": "nano",
+  "category": "option",
+  "name": "set titlecolor [bold,][italic,]fgcolor,bgcolor",
+  "desc": "Use this color combination for the title bar. Valid names for the foreground and background colors are: red \", \" green \", \" blue \", \" magenta \", \" yellow \", \" cyan , white \", and \" black . Each of these eight names may be prefixed with the word light to get a brighter version of that color. The word grey or gray may be used",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n391"
+ },
+ {
+  "id": "nano.option.trimblanks",
+  "source": "nano",
+  "category": "option",
+  "name": "set trimblanks",
+  "desc": "Remove trailing whitespace from wrapped lines when automatic hard-wrapping occurs or when text is justified.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n419"
+ },
+ {
+  "id": "nano.option.unix",
+  "source": "nano",
+  "category": "option",
+  "name": "set unix",
+  "desc": "Save a file by default in Unix format. This overrides nano's default behavior of saving a file in the format that it had. (This option has no effect when you also use set noconvert.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n423"
+ },
+ {
+  "id": "nano.option.wordbounds",
+  "source": "nano",
+  "category": "option",
+  "name": "set wordbounds",
+  "desc": "Detect word boundaries differently by treating punctuation characters as parts of words.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n433"
+ },
+ {
+  "id": "nano.option.zap",
+  "source": "nano",
+  "category": "option",
+  "name": "set zap",
+  "desc": "Let an unmodified Backspace or Delete erase the marked region (instead of a single character, and without affecting the cutbuffer).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n442"
+ },
+ {
+  "id": "nano.option.zero",
+  "source": "nano",
+  "category": "option",
+  "name": "set zero",
+  "desc": "Hide all elements of the interface (title bar, status bar, and help lines) and use all rows of the terminal for showing the contents of the buffer. The status bar appears only when there is a significant message, and disappears after 1.5 seconds or upon the next keystroke. With M-Z the title bar plus status bar can be toggled.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n446"
+ },
+ {
+  "id": "nano.function.help",
+  "source": "nano",
+  "category": "function",
+  "name": "help",
+  "desc": "Invokes the help viewer.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n670"
+ },
+ {
+  "id": "nano.function.cancel",
+  "source": "nano",
+  "category": "function",
+  "name": "cancel",
+  "desc": "Cancels the current command.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n673"
+ },
+ {
+  "id": "nano.function.exit",
+  "source": "nano",
+  "category": "function",
+  "name": "exit",
+  "desc": "Exits from the program (or from the help viewer or file browser).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n676"
+ },
+ {
+  "id": "nano.function.writeout",
+  "source": "nano",
+  "category": "function",
+  "name": "writeout",
+  "desc": "Writes the current buffer to disk, asking for a name.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n679"
+ },
+ {
+  "id": "nano.function.savefile",
+  "source": "nano",
+  "category": "function",
+  "name": "savefile",
+  "desc": "Writes the current file to disk without prompting.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n682"
+ },
+ {
+  "id": "nano.function.insert",
+  "source": "nano",
+  "category": "function",
+  "name": "insert",
+  "desc": "Inserts a file into the current buffer (at the current cursor position), or into a new buffer when option newbuffer is set.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n685"
+ },
+ {
+  "id": "nano.function.whereis",
+  "source": "nano",
+  "category": "function",
+  "name": "whereis",
+  "desc": "Starts a forward search for text in the current buffer \\[em] or for filenames matching a string in the current list in the file browser.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n689"
+ },
+ {
+  "id": "nano.function.wherewas",
+  "source": "nano",
+  "category": "function",
+  "name": "wherewas",
+  "desc": "Starts a backward search for text in the current buffer \\[em] or for filenames matching a string in the current list in the file browser.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n693"
+ },
+ {
+  "id": "nano.function.findprevious",
+  "source": "nano",
+  "category": "function",
+  "name": "findprevious",
+  "desc": "Searches the next occurrence in the backward direction.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n697"
+ },
+ {
+  "id": "nano.function.findnext",
+  "source": "nano",
+  "category": "function",
+  "name": "findnext",
+  "desc": "Searches the next occurrence in the forward direction.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n700"
+ },
+ {
+  "id": "nano.function.replace",
+  "source": "nano",
+  "category": "function",
+  "name": "replace",
+  "desc": "Interactively replaces text within the current buffer.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n703"
+ },
+ {
+  "id": "nano.function.cut",
+  "source": "nano",
+  "category": "function",
+  "name": "cut",
+  "desc": "Cuts and stores the current line (or the marked region).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n706"
+ },
+ {
+  "id": "nano.function.copy",
+  "source": "nano",
+  "category": "function",
+  "name": "copy",
+  "desc": "Copies the current line (or the marked region) without deleting it.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n709"
+ },
+ {
+  "id": "nano.function.paste",
+  "source": "nano",
+  "category": "function",
+  "name": "paste",
+  "desc": "Pastes the currently stored text into the current buffer at the current cursor position.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n712"
+ },
+ {
+  "id": "nano.function.zap",
+  "source": "nano",
+  "category": "function",
+  "name": "zap",
+  "desc": "Throws away the current line (or the marked region). (This function is bound by default to <Meta+Delete>.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n716"
+ },
+ {
+  "id": "nano.function.chopwordleft",
+  "source": "nano",
+  "category": "function",
+  "name": "chopwordleft",
+  "desc": "Deletes from the cursor position to the beginning of the preceding word. (This function is bound by default to <Shift+Ctrl+Delete>. If your terminal produces ^H for <Ctrl+Backspace>, you can make <Ctrl+Backspace> delete the word to the left of the cursor by rebinding ^H to this function.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n720"
+ },
+ {
+  "id": "nano.function.chopwordright",
+  "source": "nano",
+  "category": "function",
+  "name": "chopwordright",
+  "desc": "Deletes from the cursor position to the beginning of the next word. (This function is bound by default to <Ctrl+Delete>.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n726"
+ },
+ {
+  "id": "nano.function.cutrestoffile",
+  "source": "nano",
+  "category": "function",
+  "name": "cutrestoffile",
+  "desc": "Cuts all text from the cursor position till the end of the buffer.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n730"
+ },
+ {
+  "id": "nano.function.mark",
+  "source": "nano",
+  "category": "function",
+  "name": "mark",
+  "desc": "Sets the mark at the current position, to start selecting text. Or, when it is set, unsets the mark.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n733"
+ },
+ {
+  "id": "nano.function.location",
+  "source": "nano",
+  "category": "function",
+  "name": "location",
+  "desc": "Reports the current position of the cursor in the buffer: the line, column, and character positions.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n737"
+ },
+ {
+  "id": "nano.function.wordcount",
+  "source": "nano",
+  "category": "function",
+  "name": "wordcount",
+  "desc": "Counts and reports on the status bar the number of lines, words, and characters in the current buffer (or in the marked region).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n741"
+ },
+ {
+  "id": "nano.function.execute",
+  "source": "nano",
+  "category": "function",
+  "name": "execute",
+  "desc": "Prompts for a program to execute. The program's output is inserted into the current buffer \\[em] or into a new buffer when M-F is toggled. When the program's name is preceded by a pipe symbol (|), then the current buffer (or the marked region) is piped to the program, and the output of the program replaces the buffer (or the marked region).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n745"
+ },
+ {
+  "id": "nano.function.speller",
+  "source": "nano",
+  "category": "function",
+  "name": "speller",
+  "desc": "Invokes a spell-checking program, either the default hunspell(1) or GNU spell(1), or the one defined by --speller or set speller.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n752"
+ },
+ {
+  "id": "nano.function.formatter",
+  "source": "nano",
+  "category": "function",
+  "name": "formatter",
+  "desc": "Invokes a full-buffer-processing program (if the active syntax defines one). (The current buffer is written out to a temporary file, the program is run on it, and then the temporary file is read back in, replacing the contents of the buffer.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n756"
+ },
+ {
+  "id": "nano.function.linter",
+  "source": "nano",
+  "category": "function",
+  "name": "linter",
+  "desc": "Invokes a syntax-checking program (if the active syntax defines one). If this program produces lines of the form \"filename:linenum:charnum: some message\", then the cursor is put at the indicated position in the mentioned file while showing \"some message\" on the status bar. You can move from message to message with <PgUp> and <PgDn>,",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n762"
+ },
+ {
+  "id": "nano.function.justify",
+  "source": "nano",
+  "category": "function",
+  "name": "justify",
+  "desc": "Justifies the current paragraph (or the marked region). A paragraph is a group of contiguous lines that, apart from possibly the first line, all have the same indentation. The beginning of a paragraph is detected by either this lone line with a differing indentation or by a preceding blank line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n770"
+ },
+ {
+  "id": "nano.function.fulljustify",
+  "source": "nano",
+  "category": "function",
+  "name": "fulljustify",
+  "desc": "Justifies the entire current buffer (or the marked region).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n777"
+ },
+ {
+  "id": "nano.function.indent",
+  "source": "nano",
+  "category": "function",
+  "name": "indent",
+  "desc": "Indents (shifts to the right) the current line or the marked lines.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n780"
+ },
+ {
+  "id": "nano.function.unindent",
+  "source": "nano",
+  "category": "function",
+  "name": "unindent",
+  "desc": "Unindents (shifts to the left) the current line or the marked lines.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n783"
+ },
+ {
+  "id": "nano.function.comment",
+  "source": "nano",
+  "category": "function",
+  "name": "comment",
+  "desc": "Comments or uncomments the current line or the marked lines, using the comment style specified in the active syntax.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n786"
+ },
+ {
+  "id": "nano.function.complete",
+  "source": "nano",
+  "category": "function",
+  "name": "complete",
+  "desc": "Completes (when possible) the fragment before the cursor to a full word found elsewhere in the current buffer.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n790"
+ },
+ {
+  "id": "nano.function.left",
+  "source": "nano",
+  "category": "function",
+  "name": "left",
+  "desc": "Goes left one position (in the editor or browser).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n794"
+ },
+ {
+  "id": "nano.function.right",
+  "source": "nano",
+  "category": "function",
+  "name": "right",
+  "desc": "Goes right one position (in the editor or browser).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n797"
+ },
+ {
+  "id": "nano.function.up",
+  "source": "nano",
+  "category": "function",
+  "name": "up",
+  "desc": "Goes one line up (in the editor or browser).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n800"
+ },
+ {
+  "id": "nano.function.down",
+  "source": "nano",
+  "category": "function",
+  "name": "down",
+  "desc": "Goes one line down (in the editor or browser).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n803"
+ },
+ {
+  "id": "nano.function.scrollleft",
+  "source": "nano",
+  "category": "function",
+  "name": "scrollleft",
+  "desc": "Scrolls the viewport a tabsize to the left, when possible. (This function is bound by default to M-<.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n806"
+ },
+ {
+  "id": "nano.function.scrollright",
+  "source": "nano",
+  "category": "function",
+  "name": "scrollright",
+  "desc": "Scrolls the viewport a tabsize to the right. When needed to keep the cursor visible, it is moved to a longer line in the viewport. If there is no sufficiently longer line, no scroll is made. (This function is bound by default to M->.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n810"
+ },
+ {
+  "id": "nano.function.scrollup",
+  "source": "nano",
+  "category": "function",
+  "name": "scrollup",
+  "desc": "Scrolls the viewport up one row (meaning that the text slides down) while keeping the cursor in the same text position, if possible. (This function is bound by default to M-Up. If M-Up does nothing on your Linux console, see the FAQ: https://nano-editor.org/dist/latest/faq.html#4.1 .)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n816"
+ },
+ {
+  "id": "nano.function.scrolldown",
+  "source": "nano",
+  "category": "function",
+  "name": "scrolldown",
+  "desc": "Scrolls the viewport down one row (meaning that the text slides up) while keeping the cursor in the same text position, if possible. (This function is bound by default to M-Down.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n824"
+ },
+ {
+  "id": "nano.function.center",
+  "source": "nano",
+  "category": "function",
+  "name": "center",
+  "desc": "Scrolls the line with the cursor to the middle of the viewport.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n829"
+ },
+ {
+  "id": "nano.function.cycle",
+  "source": "nano",
+  "category": "function",
+  "name": "cycle",
+  "desc": "Scrolls the line with the cursor first to the middle of the viewport, then to the top, then to the bottom.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n832"
+ },
+ {
+  "id": "nano.function.prevword",
+  "source": "nano",
+  "category": "function",
+  "name": "prevword",
+  "desc": "Moves the cursor to the beginning of the previous word.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n836"
+ },
+ {
+  "id": "nano.function.nextword",
+  "source": "nano",
+  "category": "function",
+  "name": "nextword",
+  "desc": "Moves the cursor to the beginning of the next word.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n839"
+ },
+ {
+  "id": "nano.function.home",
+  "source": "nano",
+  "category": "function",
+  "name": "home",
+  "desc": "Moves the cursor to the beginning of the current line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n842"
+ },
+ {
+  "id": "nano.function.end",
+  "source": "nano",
+  "category": "function",
+  "name": "end",
+  "desc": "Moves the cursor to the end of the current line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n845"
+ },
+ {
+  "id": "nano.function.beginpara",
+  "source": "nano",
+  "category": "function",
+  "name": "beginpara",
+  "desc": "Moves the cursor to the beginning of the current paragraph.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n848"
+ },
+ {
+  "id": "nano.function.endpara",
+  "source": "nano",
+  "category": "function",
+  "name": "endpara",
+  "desc": "Moves the cursor to the end of the current paragraph.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n851"
+ },
+ {
+  "id": "nano.function.prevblock",
+  "source": "nano",
+  "category": "function",
+  "name": "prevblock",
+  "desc": "Moves the cursor to the beginning of the current or preceding block of text. (Blocks are separated by one or more blank lines.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n854"
+ },
+ {
+  "id": "nano.function.nextblock",
+  "source": "nano",
+  "category": "function",
+  "name": "nextblock",
+  "desc": "Moves the cursor to the beginning of the next block of text.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n858"
+ },
+ {
+  "id": "nano.function.toprow",
+  "source": "nano",
+  "category": "function",
+  "name": "toprow",
+  "desc": "Moves the cursor to the first row in the viewport.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n861"
+ },
+ {
+  "id": "nano.function.bottomrow",
+  "source": "nano",
+  "category": "function",
+  "name": "bottomrow",
+  "desc": "Moves the cursor to the last row in the viewport.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n864"
+ },
+ {
+  "id": "nano.function.pageup",
+  "source": "nano",
+  "category": "function",
+  "name": "pageup",
+  "desc": "Goes up one screenful.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n867"
+ },
+ {
+  "id": "nano.function.pagedown",
+  "source": "nano",
+  "category": "function",
+  "name": "pagedown",
+  "desc": "Goes down one screenful.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n870"
+ },
+ {
+  "id": "nano.function.firstline",
+  "source": "nano",
+  "category": "function",
+  "name": "firstline",
+  "desc": "Goes to the first line of the file.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n873"
+ },
+ {
+  "id": "nano.function.lastline",
+  "source": "nano",
+  "category": "function",
+  "name": "lastline",
+  "desc": "Goes to the last line of the file.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n876"
+ },
+ {
+  "id": "nano.function.gotoline",
+  "source": "nano",
+  "category": "function",
+  "name": "gotoline",
+  "desc": "Goes to a specific line (and column if given). A negative number counts from the end of the buffer (and end of the line). Putting ++ or -- before the first number will jump the given number of lines forward or backward.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n879"
+ },
+ {
+  "id": "nano.function.findbracket",
+  "source": "nano",
+  "category": "function",
+  "name": "findbracket",
+  "desc": "Moves the cursor to the bracket (or brace or parenthesis, etc.) that matches (pairs) with the one under the cursor. See set matchbrackets.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n885"
+ },
+ {
+  "id": "nano.function.anchor",
+  "source": "nano",
+  "category": "function",
+  "name": "anchor",
+  "desc": "Places an anchor at the current line, or removes it when already present. (An anchor is visible when line numbers are activated.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n889"
+ },
+ {
+  "id": "nano.function.prevanchor",
+  "source": "nano",
+  "category": "function",
+  "name": "prevanchor",
+  "desc": "Goes to the first anchor before the current line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n893"
+ },
+ {
+  "id": "nano.function.nextanchor",
+  "source": "nano",
+  "category": "function",
+  "name": "nextanchor",
+  "desc": "Goes to the first anchor after the current line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n896"
+ },
+ {
+  "id": "nano.function.prevbuf",
+  "source": "nano",
+  "category": "function",
+  "name": "prevbuf",
+  "desc": "Switches to editing/viewing the previous buffer when multiple buffers are open.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n899"
+ },
+ {
+  "id": "nano.function.nextbuf",
+  "source": "nano",
+  "category": "function",
+  "name": "nextbuf",
+  "desc": "Switches to editing/viewing the next buffer when multiple buffers are open.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n902"
+ },
+ {
+  "id": "nano.function.verbatim",
+  "source": "nano",
+  "category": "function",
+  "name": "verbatim",
+  "desc": "Inserts the next keystroke verbatim into the file, or begins Unicode input when a hexadecimal digit is typed.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n905"
+ },
+ {
+  "id": "nano.function.tab",
+  "source": "nano",
+  "category": "function",
+  "name": "tab",
+  "desc": "Inserts a tab at the current cursor location.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n909"
+ },
+ {
+  "id": "nano.function.enter",
+  "source": "nano",
+  "category": "function",
+  "name": "enter",
+  "desc": "Inserts a new line below the current one.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n912"
+ },
+ {
+  "id": "nano.function.delete",
+  "source": "nano",
+  "category": "function",
+  "name": "delete",
+  "desc": "Deletes the character under the cursor.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n915"
+ },
+ {
+  "id": "nano.function.backspace",
+  "source": "nano",
+  "category": "function",
+  "name": "backspace",
+  "desc": "Deletes the character before the cursor.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n918"
+ },
+ {
+  "id": "nano.function.recordmacro",
+  "source": "nano",
+  "category": "function",
+  "name": "recordmacro",
+  "desc": "Starts the recording of keystrokes \\[em] the keystrokes are stored as a macro. When already recording, the recording is stopped.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n921"
+ },
+ {
+  "id": "nano.function.runmacro",
+  "source": "nano",
+  "category": "function",
+  "name": "runmacro",
+  "desc": "Replays the keystrokes of the last recorded macro.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n925"
+ },
+ {
+  "id": "nano.function.undo",
+  "source": "nano",
+  "category": "function",
+  "name": "undo",
+  "desc": "Undoes the last performed text action (add text, delete text, etc).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n928"
+ },
+ {
+  "id": "nano.function.redo",
+  "source": "nano",
+  "category": "function",
+  "name": "redo",
+  "desc": "Redoes the last undone action (that is: it undoes an undo).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n931"
+ },
+ {
+  "id": "nano.function.refresh",
+  "source": "nano",
+  "category": "function",
+  "name": "refresh",
+  "desc": "Refreshes the screen.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n934"
+ },
+ {
+  "id": "nano.function.suspend",
+  "source": "nano",
+  "category": "function",
+  "name": "suspend",
+  "desc": "Suspends the editor and returns control to the shell (until you tell the process to resume execution with fg).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n937"
+ },
+ {
+  "id": "nano.function.casesens",
+  "source": "nano",
+  "category": "function",
+  "name": "casesens",
+  "desc": "Toggles whether searching/replacing ignores or respects the case of the given characters.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n941"
+ },
+ {
+  "id": "nano.function.regexp",
+  "source": "nano",
+  "category": "function",
+  "name": "regexp",
+  "desc": "Toggles whether searching/replacing uses literal strings or regular expressions.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n945"
+ },
+ {
+  "id": "nano.function.backwards",
+  "source": "nano",
+  "category": "function",
+  "name": "backwards",
+  "desc": "Toggles whether searching/replacing goes forward or backward.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n948"
+ },
+ {
+  "id": "nano.function.older",
+  "source": "nano",
+  "category": "function",
+  "name": "older",
+  "desc": "Retrieves the previous (earlier) entry at a prompt.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n951"
+ },
+ {
+  "id": "nano.function.newer",
+  "source": "nano",
+  "category": "function",
+  "name": "newer",
+  "desc": "Retrieves the next (later) entry at a prompt.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n954"
+ },
+ {
+  "id": "nano.function.flipreplace",
+  "source": "nano",
+  "category": "function",
+  "name": "flipreplace",
+  "desc": "Toggles between searching for something and replacing something.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n957"
+ },
+ {
+  "id": "nano.function.flipexecute",
+  "source": "nano",
+  "category": "function",
+  "name": "flipexecute",
+  "desc": "Switches from inserting a file to executing a command.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n960"
+ },
+ {
+  "id": "nano.function.flippipe",
+  "source": "nano",
+  "category": "function",
+  "name": "flippipe",
+  "desc": "When executing a command, toggles whether the current buffer (or marked region) is piped to the command.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n963"
+ },
+ {
+  "id": "nano.function.flipnewbuffer",
+  "source": "nano",
+  "category": "function",
+  "name": "flipnewbuffer",
+  "desc": "When reading in a file or executing a command, toggles between inserting the result into the current buffer and into a new empty buffer.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n967"
+ },
+ {
+  "id": "nano.function.flipconvert",
+  "source": "nano",
+  "category": "function",
+  "name": "flipconvert",
+  "desc": "When reading in a file, toggles between converting and not converting it from DOS format. Converting is the default.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n971"
+ },
+ {
+  "id": "nano.function.dosformat",
+  "source": "nano",
+  "category": "function",
+  "name": "dosformat",
+  "desc": "When writing a file, switches to writing DOS format (CR+LF line endings).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n975"
+ },
+ {
+  "id": "nano.function.append",
+  "source": "nano",
+  "category": "function",
+  "name": "append",
+  "desc": "When writing a file, appends to the end instead of overwriting.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n978"
+ },
+ {
+  "id": "nano.function.prepend",
+  "source": "nano",
+  "category": "function",
+  "name": "prepend",
+  "desc": "When writing a file, \\[lq]prepends\\[rq] (writes at the beginning) instead of overwriting.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n981"
+ },
+ {
+  "id": "nano.function.backup",
+  "source": "nano",
+  "category": "function",
+  "name": "backup",
+  "desc": "When writing a file, creates a backup of the current file.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n984"
+ },
+ {
+  "id": "nano.function.discardbuffer",
+  "source": "nano",
+  "category": "function",
+  "name": "discardbuffer",
+  "desc": "Discards the current buffer without saving (when in the Write Out menu). When it was the last buffer, then nano exits with error status 2.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n987"
+ },
+ {
+  "id": "nano.function.browser",
+  "source": "nano",
+  "category": "function",
+  "name": "browser",
+  "desc": "Starts the file browser (in the Read File and Write Out menus), allowing to select a file from a list.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n991"
+ },
+ {
+  "id": "nano.function.gotodir",
+  "source": "nano",
+  "category": "function",
+  "name": "gotodir",
+  "desc": "Goes to a directory to be specified, allowing to browse anywhere in the filesystem.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n995"
+ },
+ {
+  "id": "nano.function.firstfile",
+  "source": "nano",
+  "category": "function",
+  "name": "firstfile",
+  "desc": "Goes to the first file in the list when using the file browser.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n999"
+ },
+ {
+  "id": "nano.function.lastfile",
+  "source": "nano",
+  "category": "function",
+  "name": "lastfile",
+  "desc": "Goes to the last file in the list when using the file browser.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1002"
+ },
+ {
+  "id": "nano.function.nohelp",
+  "source": "nano",
+  "category": "function",
+  "name": "nohelp",
+  "desc": "Toggles the presence of the two-line list of key bindings at the bottom of the screen. (This toggle is special: it is available in all menus except the help viewer and the linter. All further toggles are available in the main menu only.)",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1005"
+ },
+ {
+  "id": "nano.function.zero",
+  "source": "nano",
+  "category": "function",
+  "name": "zero",
+  "desc": "Toggles the presence of title bar and status bar.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1010"
+ },
+ {
+  "id": "nano.function.constantshow",
+  "source": "nano",
+  "category": "function",
+  "name": "constantshow",
+  "desc": "Toggles the constant reporting (on the status bar) of the current line, column, and character positions.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1013"
+ },
+ {
+  "id": "nano.function.softwrap",
+  "source": "nano",
+  "category": "function",
+  "name": "softwrap",
+  "desc": "Toggles the displaying of overlong lines on multiple screen lines.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1017"
+ },
+ {
+  "id": "nano.function.linenumbers",
+  "source": "nano",
+  "category": "function",
+  "name": "linenumbers",
+  "desc": "Toggles the display of line numbers in front of the text.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1020"
+ },
+ {
+  "id": "nano.function.whitespacedisplay",
+  "source": "nano",
+  "category": "function",
+  "name": "whitespacedisplay",
+  "desc": "Toggles the showing of whitespace.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1023"
+ },
+ {
+  "id": "nano.function.nosyntax",
+  "source": "nano",
+  "category": "function",
+  "name": "nosyntax",
+  "desc": "Toggles syntax highlighting.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1026"
+ },
+ {
+  "id": "nano.function.smarthome",
+  "source": "nano",
+  "category": "function",
+  "name": "smarthome",
+  "desc": "Toggles the smartness of the Home key.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1029"
+ },
+ {
+  "id": "nano.function.autoindent",
+  "source": "nano",
+  "category": "function",
+  "name": "autoindent",
+  "desc": "Toggles whether a newly created line will contain the same amount of leading whitespace as the preceding line \\[em] or as the next line if the preceding line is the beginning of a paragraph.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1032"
+ },
+ {
+  "id": "nano.function.cutfromcursor",
+  "source": "nano",
+  "category": "function",
+  "name": "cutfromcursor",
+  "desc": "Toggles whether cutting text cuts the whole line or just from the current cursor position to the end of the line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1037"
+ },
+ {
+  "id": "nano.function.breaklonglines",
+  "source": "nano",
+  "category": "function",
+  "name": "breaklonglines",
+  "desc": "Toggles whether the overlong part of a line is hard-wrapped to the next line.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1041"
+ },
+ {
+  "id": "nano.function.tabstospaces",
+  "source": "nano",
+  "category": "function",
+  "name": "tabstospaces",
+  "desc": "Toggles whether typed tabs are converted to spaces.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1044"
+ },
+ {
+  "id": "nano.function.mouse",
+  "source": "nano",
+  "category": "function",
+  "name": "mouse",
+  "desc": "Toggles mouse support.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1047"
+ },
+ {
+  "id": "nano.function.main",
+  "source": "nano",
+  "category": "function",
+  "name": "main",
+  "desc": "The main editor window where text is entered and edited.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1055"
+ },
+ {
+  "id": "nano.function.help_2",
+  "source": "nano",
+  "category": "function",
+  "name": "help",
+  "desc": "The help-viewer menu.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1058"
+ },
+ {
+  "id": "nano.function.search",
+  "source": "nano",
+  "category": "function",
+  "name": "search",
+  "desc": "The search menu (AKA whereis).",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1061"
+ },
+ {
+  "id": "nano.function.replace_2",
+  "source": "nano",
+  "category": "function",
+  "name": "replace",
+  "desc": "The 'search to replace' menu.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1064"
+ },
+ {
+  "id": "nano.function.replacewith",
+  "source": "nano",
+  "category": "function",
+  "name": "replacewith",
+  "desc": "The 'replace with' menu, which comes up after 'search to replace'.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1067"
+ },
+ {
+  "id": "nano.function.yesno",
+  "source": "nano",
+  "category": "function",
+  "name": "yesno",
+  "desc": "The 'yesno' menu, where the Yes/No/All/Cancel question is asked.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1070"
+ },
+ {
+  "id": "nano.function.gotoline_2",
+  "source": "nano",
+  "category": "function",
+  "name": "gotoline",
+  "desc": "The 'goto line (and column)' menu.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1073"
+ },
+ {
+  "id": "nano.function.writeout_2",
+  "source": "nano",
+  "category": "function",
+  "name": "writeout",
+  "desc": "The 'write file' menu.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1076"
+ },
+ {
+  "id": "nano.function.insert_2",
+  "source": "nano",
+  "category": "function",
+  "name": "insert",
+  "desc": "The 'insert file' menu.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1079"
+ },
+ {
+  "id": "nano.function.browser_2",
+  "source": "nano",
+  "category": "function",
+  "name": "browser",
+  "desc": "The 'file browser' menu, for selecting a file to be opened or inserted or written to.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1082"
+ },
+ {
+  "id": "nano.function.whereisfile",
+  "source": "nano",
+  "category": "function",
+  "name": "whereisfile",
+  "desc": "The 'search for a file' menu in the file browser.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1086"
+ },
+ {
+  "id": "nano.function.gotodir_2",
+  "source": "nano",
+  "category": "function",
+  "name": "gotodir",
+  "desc": "The 'go to directory' menu in the file browser.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1089"
+ },
+ {
+  "id": "nano.function.execute_2",
+  "source": "nano",
+  "category": "function",
+  "name": "execute",
+  "desc": "The menu for inserting the output from an external command, or for filtering the buffer (or the marked region) through an external command, or for executing one of several tools.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1092"
+ },
+ {
+  "id": "nano.function.spell",
+  "source": "nano",
+  "category": "function",
+  "name": "spell",
+  "desc": "The menu of the integrated spell checker where the user can edit a misspelled word.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1097"
+ },
+ {
+  "id": "nano.function.linter_2",
+  "source": "nano",
+  "category": "function",
+  "name": "linter",
+  "desc": "The linter menu, which allows jumping through the linting messages.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1100"
+ },
+ {
+  "id": "nano.function.all",
+  "source": "nano",
+  "category": "function",
+  "name": "all",
+  "desc": "A special name that encompasses all menus. For bind it means all menus where the specified function exists; for unbind it means all menus where the specified key exists.",
+  "doc_ref": "https://git.savannah.gnu.org/cgit/nano.git/tree/doc/nanorc.5#n1103"
+ }
+]

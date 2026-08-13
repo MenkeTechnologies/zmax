@@ -1,0 +1,762 @@
+[
+ {
+  "id": "mcedit.editor.store",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Store",
+  "desc": "bound to ctrl-insert",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L260"
+ },
+ {
+  "id": "mcedit.editor.paste",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Paste",
+  "desc": "bound to shift-insert",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L261"
+ },
+ {
+  "id": "mcedit.editor.cut",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Cut",
+  "desc": "bound to shift-delete",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L262"
+ },
+ {
+  "id": "mcedit.editor.up",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Up",
+  "desc": "bound to up",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L263"
+ },
+ {
+  "id": "mcedit.editor.down",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Down",
+  "desc": "bound to down",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L264"
+ },
+ {
+  "id": "mcedit.editor.left",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Left",
+  "desc": "bound to left",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L265"
+ },
+ {
+  "id": "mcedit.editor.right",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Right",
+  "desc": "bound to right",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L266"
+ },
+ {
+  "id": "mcedit.editor.wordleft",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "WordLeft",
+  "desc": "bound to ctrl-left; ctrl-z",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L267"
+ },
+ {
+  "id": "mcedit.editor.wordright",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "WordRight",
+  "desc": "bound to ctrl-right; ctrl-x",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L268"
+ },
+ {
+  "id": "mcedit.editor.enter",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Enter",
+  "desc": "bound to enter",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L269"
+ },
+ {
+  "id": "mcedit.editor.return",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Return",
+  "desc": "bound to shift-enter; ctrl-enter; ctrl-shift-enter",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L270"
+ },
+ {
+  "id": "mcedit.editor.backspace",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "BackSpace",
+  "desc": "bound to backspace; ctrl-h",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L271"
+ },
+ {
+  "id": "mcedit.editor.delete",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Delete",
+  "desc": "bound to delete; ctrl-d",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L272"
+ },
+ {
+  "id": "mcedit.editor.pageup",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "PageUp",
+  "desc": "bound to pgup",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L273"
+ },
+ {
+  "id": "mcedit.editor.pagedown",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "PageDown",
+  "desc": "bound to pgdn",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L274"
+ },
+ {
+  "id": "mcedit.editor.home",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Home",
+  "desc": "bound to home",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L275"
+ },
+ {
+  "id": "mcedit.editor.end",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "End",
+  "desc": "bound to end",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L276"
+ },
+ {
+  "id": "mcedit.editor.tab",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Tab",
+  "desc": "bound to tab; shift-tab; ctrl-tab; ctrl-shift-tab",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L277"
+ },
+ {
+  "id": "mcedit.editor.undo",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Undo",
+  "desc": "bound to ctrl-u",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L278"
+ },
+ {
+  "id": "mcedit.editor.redo",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Redo",
+  "desc": "bound to alt-r",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L279"
+ },
+ {
+  "id": "mcedit.editor.top",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Top",
+  "desc": "bound to ctrl-home; alt-lt",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L280"
+ },
+ {
+  "id": "mcedit.editor.bottom",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Bottom",
+  "desc": "bound to ctrl-end; alt-gt",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L281"
+ },
+ {
+  "id": "mcedit.editor.scrollup",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "ScrollUp",
+  "desc": "bound to ctrl-up",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L282"
+ },
+ {
+  "id": "mcedit.editor.scrolldown",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "ScrollDown",
+  "desc": "bound to ctrl-down",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L283"
+ },
+ {
+  "id": "mcedit.editor.toponscreen",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "TopOnScreen",
+  "desc": "bound to ctrl-pgup",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L284"
+ },
+ {
+  "id": "mcedit.editor.bottomonscreen",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "BottomOnScreen",
+  "desc": "bound to ctrl-pgdn",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L285"
+ },
+ {
+  "id": "mcedit.editor.deletetowordbegin",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "DeleteToWordBegin",
+  "desc": "bound to alt-backspace",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L286"
+ },
+ {
+  "id": "mcedit.editor.deletetowordend",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "DeleteToWordEnd",
+  "desc": "bound to alt-d",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L287"
+ },
+ {
+  "id": "mcedit.editor.deleteline",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "DeleteLine",
+  "desc": "bound to ctrl-y",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L288"
+ },
+ {
+  "id": "mcedit.editor.deletetoend",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "DeleteToEnd",
+  "desc": "bound to ctrl-k",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L289"
+ },
+ {
+  "id": "mcedit.editor.save",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Save",
+  "desc": "bound to f2",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L293"
+ },
+ {
+  "id": "mcedit.editor.editnew",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "EditNew",
+  "desc": "bound to ctrl-n",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L295"
+ },
+ {
+  "id": "mcedit.editor.saveas",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "SaveAs",
+  "desc": "bound to f12; ctrl-f2",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L296"
+ },
+ {
+  "id": "mcedit.editor.history",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "History",
+  "desc": "bound to alt-shift-e",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L298"
+ },
+ {
+  "id": "mcedit.editor.mark",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Mark",
+  "desc": "bound to f3",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L299"
+ },
+ {
+  "id": "mcedit.editor.copy",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Copy",
+  "desc": "bound to f5",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L300"
+ },
+ {
+  "id": "mcedit.editor.move",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Move",
+  "desc": "bound to f6",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L301"
+ },
+ {
+  "id": "mcedit.editor.remove",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Remove",
+  "desc": "bound to f8",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L302"
+ },
+ {
+  "id": "mcedit.editor.search",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Search",
+  "desc": "bound to f7",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L307"
+ },
+ {
+  "id": "mcedit.editor.searchcontinue",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "SearchContinue",
+  "desc": "bound to f17",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L308"
+ },
+ {
+  "id": "mcedit.editor.markpageup",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkPageUp",
+  "desc": "bound to shift-pgup",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L311"
+ },
+ {
+  "id": "mcedit.editor.markpagedown",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkPageDown",
+  "desc": "bound to shift-pgdn",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L312"
+ },
+ {
+  "id": "mcedit.editor.markleft",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkLeft",
+  "desc": "bound to shift-left",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L313"
+ },
+ {
+  "id": "mcedit.editor.markright",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkRight",
+  "desc": "bound to shift-right",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L314"
+ },
+ {
+  "id": "mcedit.editor.marktowordbegin",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkToWordBegin",
+  "desc": "bound to ctrl-shift-left",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L315"
+ },
+ {
+  "id": "mcedit.editor.marktowordend",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkToWordEnd",
+  "desc": "bound to ctrl-shift-right",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L316"
+ },
+ {
+  "id": "mcedit.editor.markup",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkUp",
+  "desc": "bound to shift-up",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L317"
+ },
+ {
+  "id": "mcedit.editor.markdown",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkDown",
+  "desc": "bound to shift-down",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L318"
+ },
+ {
+  "id": "mcedit.editor.marktohome",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkToHome",
+  "desc": "bound to shift-home",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L319"
+ },
+ {
+  "id": "mcedit.editor.marktoend",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkToEnd",
+  "desc": "bound to shift-end",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L320"
+ },
+ {
+  "id": "mcedit.editor.marktofilebegin",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkToFileBegin",
+  "desc": "bound to ctrl-shift-home",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L321"
+ },
+ {
+  "id": "mcedit.editor.marktofileend",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkToFileEnd",
+  "desc": "bound to ctrl-shift-end",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L322"
+ },
+ {
+  "id": "mcedit.editor.marktopagebegin",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkToPageBegin",
+  "desc": "bound to ctrl-shift-pgup",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L323"
+ },
+ {
+  "id": "mcedit.editor.marktopageend",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkToPageEnd",
+  "desc": "bound to ctrl-shift-pgdn",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L324"
+ },
+ {
+  "id": "mcedit.editor.markscrollup",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkScrollUp",
+  "desc": "bound to ctrl-shift-up",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L325"
+ },
+ {
+  "id": "mcedit.editor.markscrolldown",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkScrollDown",
+  "desc": "bound to ctrl-shift-down",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L326"
+ },
+ {
+  "id": "mcedit.editor.markcolumnpageup",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkColumnPageUp",
+  "desc": "bound to alt-pgup",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L329"
+ },
+ {
+  "id": "mcedit.editor.markcolumnpagedown",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkColumnPageDown",
+  "desc": "bound to alt-pgdn",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L330"
+ },
+ {
+  "id": "mcedit.editor.markcolumnleft",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkColumnLeft",
+  "desc": "bound to alt-left",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L331"
+ },
+ {
+  "id": "mcedit.editor.markcolumnright",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkColumnRight",
+  "desc": "bound to alt-right",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L332"
+ },
+ {
+  "id": "mcedit.editor.markcolumnup",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkColumnUp",
+  "desc": "bound to alt-up",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L333"
+ },
+ {
+  "id": "mcedit.editor.markcolumndown",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkColumnDown",
+  "desc": "bound to alt-down",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L334"
+ },
+ {
+  "id": "mcedit.editor.blocksave",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "BlockSave",
+  "desc": "bound to ctrl-f",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L339"
+ },
+ {
+  "id": "mcedit.editor.markcolumn",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MarkColumn",
+  "desc": "bound to f13",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L340"
+ },
+ {
+  "id": "mcedit.editor.replace",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Replace",
+  "desc": "bound to f4",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L341"
+ },
+ {
+  "id": "mcedit.editor.replacecontinue",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "ReplaceContinue",
+  "desc": "bound to f14",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L342"
+ },
+ {
+  "id": "mcedit.editor.complete",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Complete",
+  "desc": "bound to alt-tab",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L343"
+ },
+ {
+  "id": "mcedit.editor.insertfile",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "InsertFile",
+  "desc": "bound to f15",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L344"
+ },
+ {
+  "id": "mcedit.editor.quit",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Quit",
+  "desc": "bound to f10; esc",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L345"
+ },
+ {
+  "id": "mcedit.editor.insertoverwrite",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "InsertOverwrite",
+  "desc": "bound to insert",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L346"
+ },
+ {
+  "id": "mcedit.editor.help",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Help",
+  "desc": "bound to f1",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L347"
+ },
+ {
+  "id": "mcedit.editor.refresh",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Refresh",
+  "desc": "bound to ctrl-l",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L349"
+ },
+ {
+  "id": "mcedit.editor.goto",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Goto",
+  "desc": "bound to alt-l",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L350"
+ },
+ {
+  "id": "mcedit.editor.sort",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Sort",
+  "desc": "bound to alt-t",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L351"
+ },
+ {
+  "id": "mcedit.editor.mail",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Mail",
+  "desc": "bound to alt-m",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L352"
+ },
+ {
+  "id": "mcedit.editor.paragraphformat",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "ParagraphFormat",
+  "desc": "bound to alt-p",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L353"
+ },
+ {
+  "id": "mcedit.editor.matchbracket",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MatchBracket",
+  "desc": "bound to alt-b",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L354"
+ },
+ {
+  "id": "mcedit.editor.externalcommand",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "ExternalCommand",
+  "desc": "bound to alt-u",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L355"
+ },
+ {
+  "id": "mcedit.editor.usermenu",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "UserMenu",
+  "desc": "bound to f11",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L356"
+ },
+ {
+  "id": "mcedit.editor.menu",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Menu",
+  "desc": "bound to f9",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L357"
+ },
+ {
+  "id": "mcedit.editor.bookmark",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Bookmark",
+  "desc": "bound to alt-k",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L358"
+ },
+ {
+  "id": "mcedit.editor.bookmarkflush",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "BookmarkFlush",
+  "desc": "bound to alt-o",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L359"
+ },
+ {
+  "id": "mcedit.editor.bookmarknext",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "BookmarkNext",
+  "desc": "bound to alt-j",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L360"
+ },
+ {
+  "id": "mcedit.editor.bookmarkprev",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "BookmarkPrev",
+  "desc": "bound to alt-i",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L361"
+ },
+ {
+  "id": "mcedit.editor.shell",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Shell",
+  "desc": "bound to ctrl-o",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L363"
+ },
+ {
+  "id": "mcedit.editor.insertliteral",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "InsertLiteral",
+  "desc": "bound to ctrl-q",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L364"
+ },
+ {
+  "id": "mcedit.editor.macrostartstoprecord",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "MacroStartStopRecord",
+  "desc": "bound to ctrl-r",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L367"
+ },
+ {
+  "id": "mcedit.editor.shownumbers",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "ShowNumbers",
+  "desc": "bound to alt-n",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L369"
+ },
+ {
+  "id": "mcedit.editor.showtabtws",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "ShowTabTws",
+  "desc": "bound to alt-underline",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L370"
+ },
+ {
+  "id": "mcedit.editor.syntaxonoff",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "SyntaxOnOff",
+  "desc": "bound to ctrl-s",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L371"
+ },
+ {
+  "id": "mcedit.editor.find",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "Find",
+  "desc": "bound to alt-enter",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L374"
+ },
+ {
+  "id": "mcedit.editor.fileprev",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "FilePrev",
+  "desc": "bound to alt-minus",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L375"
+ },
+ {
+  "id": "mcedit.editor.filenext",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "FileNext",
+  "desc": "bound to alt-plus",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L376"
+ },
+ {
+  "id": "mcedit.editor.selectcodepage",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "SelectCodepage",
+  "desc": "bound to alt-e",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L378"
+ },
+ {
+  "id": "mcedit.editor.spellcheckcurrentword",
+  "source": "mcedit",
+  "category": "editor",
+  "name": "SpellCheckCurrentWord",
+  "desc": "bound to ctrl-p",
+  "doc_ref": "https://github.com/MidnightCommander/mc/blob/master/misc/mc.default.keymap#L382"
+ }
+]
