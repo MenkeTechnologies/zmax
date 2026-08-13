@@ -73,6 +73,7 @@ pub mod sm_web;
 pub mod snippet_store;
 pub mod spacemacs_keys;
 pub mod spell;
+pub mod structural;
 pub mod translate;
 pub mod ui;
 pub mod vim_autocmd;
