@@ -64487,5 +64487,405 @@
    "typable:nnoremap"
   ],
   "note": "mg global-set-key, via the GNU Emacs command of the same name (emacs.command.global_set_key)"
+ },
+ {
+  "spec_id": "vile.command.alternate_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_accessed_file"
+  ],
+  "note": "vile alternate-buffer"
+ },
+ {
+  "spec_id": "vile.command.append_chars",
+  "status": "ported",
+  "evidence": [
+   "static:append_mode"
+  ],
+  "note": "vile append-chars"
+ },
+ {
+  "spec_id": "vile.command.append_chars_at_eol",
+  "status": "ported",
+  "evidence": [
+   "static:insert_at_line_end"
+  ],
+  "note": "vile append-chars-at-eol"
+ },
+ {
+  "spec_id": "vile.command.backward_character",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "vile backward-character"
+ },
+ {
+  "spec_id": "vile.command.backward_character_to_bol",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "vile backward-character-to-bol"
+ },
+ {
+  "spec_id": "vile.command.delete_previous_character",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "vile delete-previous-character"
+ },
+ {
+  "spec_id": "vile.command.hunt_backward",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "vile hunt-backward"
+ },
+ {
+  "spec_id": "vile.command.previous_half_page",
+  "status": "ported",
+  "evidence": [
+   "static:page_cursor_half_up"
+  ],
+  "note": "vile previous-half-page"
+ },
+ {
+  "spec_id": "vile.command.previous_line",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "vile previous-line"
+ },
+ {
+  "spec_id": "vile.command.previous_page",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "vile previous-page"
+ },
+ {
+  "spec_id": "vile.command.previous_word",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "vile previous-word"
+ },
+ {
+  "spec_id": "vile.command.search_reverse",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "vile search-reverse"
+ },
+ {
+  "spec_id": "vile.command.bind_key",
+  "status": "ported",
+  "evidence": [
+   "typable:map"
+  ],
+  "note": "vile bind-key"
+ },
+ {
+  "spec_id": "vile.command.bind_insmode_key",
+  "status": "ported",
+  "evidence": [
+   "typable:imap"
+  ],
+  "note": "vile bind-insmode-key"
+ },
+ {
+  "spec_id": "vile.command.bind_cmdmode_key",
+  "status": "ported",
+  "evidence": [
+   "typable:nmap"
+  ],
+  "note": "vile bind-cmdmode-key"
+ },
+ {
+  "spec_id": "vile.command.suspend",
+  "status": "ported",
+  "evidence": [
+   "static:suspend"
+  ],
+  "note": "vile suspend"
+ },
+ {
+  "spec_id": "vile.command.cd",
+  "status": "ported",
+  "evidence": [
+   "typable:change-current-directory"
+  ],
+  "note": "vile cd"
+ },
+ {
+  "spec_id": "vile.command.change_char",
+  "status": "ported",
+  "evidence": [
+   "static:replace"
+  ],
+  "note": "vile change-char"
+ },
+ {
+  "spec_id": "vile.command.change_line",
+  "status": "ported",
+  "evidence": [
+   "static:change_selection"
+  ],
+  "note": "vile change-line"
+ },
+ {
+  "spec_id": "vile.command.change_to_eol",
+  "status": "ported",
+  "evidence": [
+   "static:change_selection"
+  ],
+  "note": "vile change-to-eol"
+ },
+ {
+  "spec_id": "vile.command.clear_message_line",
+  "status": "ported",
+  "evidence": [
+   "typable:nohlsearch"
+  ],
+  "note": "vile clear-message-line"
+ },
+ {
+  "spec_id": "vile.command.continue_search",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "vile continue-search"
+ },
+ {
+  "spec_id": "vile.command.end_keyboard_macro",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "vile end-keyboard-macro"
+ },
+ {
+  "spec_id": "vile.command.execute_keyboard_macro",
+  "status": "ported",
+  "evidence": [
+   "static:replay_macro"
+  ],
+  "note": "vile execute-keyboard-macro"
+ },
+ {
+  "spec_id": "vile.command.delete_window",
+  "status": "ported",
+  "evidence": [
+   "typable:close"
+  ],
+  "note": "vile delete-window"
+ },
+ {
+  "spec_id": "vile.command.describe_bindings",
+  "status": "ported",
+  "evidence": [
+   "typable:map"
+  ],
+  "note": "vile describe-bindings"
+ },
+ {
+  "spec_id": "vile.command.write_file",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "vile write-file"
+ },
+ {
+  "spec_id": "vile.command.first_nonwhite",
+  "status": "ported",
+  "evidence": [
+   "static:goto_first_nonwhitespace"
+  ],
+  "note": "vile first-nonwhite"
+ },
+ {
+  "spec_id": "vile.command.delete_next_character",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "vile delete-next-character"
+ },
+ {
+  "spec_id": "vile.command.forward_character",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "vile forward-character"
+ },
+ {
+  "spec_id": "vile.command.hunt_forward",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "vile hunt-forward"
+ },
+ {
+  "spec_id": "vile.command.search_forward",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "vile search-forward"
+ },
+ {
+  "spec_id": "vile.command.goto_matching_fence",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "vile goto-matching-fence"
+ },
+ {
+  "spec_id": "vile.command.beginning_of_file",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "vile beginning-of-file"
+ },
+ {
+  "spec_id": "vile.command.goto_line",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line"
+  ],
+  "note": "vile goto-line"
+ },
+ {
+  "spec_id": "vile.command.insert_chars",
+  "status": "ported",
+  "evidence": [
+   "static:insert_mode"
+  ],
+  "note": "vile insert-chars"
+ },
+ {
+  "spec_id": "vile.command.insert_chars_at_bol",
+  "status": "ported",
+  "evidence": [
+   "static:insert_at_line_start"
+  ],
+  "note": "vile insert-chars-at-bol"
+ },
+ {
+  "spec_id": "vile.command.join_lines",
+  "status": "ported",
+  "evidence": [
+   "static:join_selections"
+  ],
+  "note": "vile join-lines"
+ },
+ {
+  "spec_id": "vile.command.delete_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "vile delete-buffer"
+ },
+ {
+  "spec_id": "vile.command.next_window",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "vile next-window"
+ },
+ {
+  "spec_id": "vile.command.delete_til",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "vile delete-til"
+ },
+ {
+  "spec_id": "vile.command.yank_til",
+  "status": "ported",
+  "evidence": [
+   "static:yank"
+  ],
+  "note": "vile yank-til"
+ },
+ {
+  "spec_id": "vile.command.position_window",
+  "status": "ported",
+  "evidence": [
+   "static:align_view_center"
+  ],
+  "note": "vile position-window"
+ },
+ {
+  "spec_id": "vile.command.previous_window",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view_reverse"
+  ],
+  "note": "vile previous-window"
+ },
+ {
+  "spec_id": "vile.command.screen_search_forward",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection_detect_word_boundaries"
+  ],
+  "note": "vile screen-search-forward"
+ },
+ {
+  "spec_id": "vile.command.setv",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "vile setv"
+ },
+ {
+  "spec_id": "vile.command.shell_command",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "vile shell-command"
+ },
+ {
+  "spec_id": "vile.command.split_current_window",
+  "status": "ported",
+  "evidence": [
+   "typable:hsplit"
+  ],
+  "note": "vile split-current-window"
+ },
+ {
+  "spec_id": "vile.command.view_file",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": "vile view-file"
+ },
+ {
+  "spec_id": "vile.command.yank_line",
+  "status": "ported",
+  "evidence": [
+   "static:yank_main_selection_to_clipboard"
+  ],
+  "note": "vile yank-line"
  }
 ]
