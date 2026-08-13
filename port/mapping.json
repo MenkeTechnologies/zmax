@@ -56690,5 +56690,1605 @@
    "static:remove_selections"
   ],
   "note": "as sam g/v"
+ },
+ {
+  "spec_id": "micro.action.cursorup",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "micro CursorUp"
+ },
+ {
+  "spec_id": "micro.action.cursordown",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "micro CursorDown"
+ },
+ {
+  "spec_id": "micro.action.cursorpageup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "micro CursorPageUp"
+ },
+ {
+  "spec_id": "micro.action.cursorpagedown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "micro CursorPageDown"
+ },
+ {
+  "spec_id": "micro.action.cursorleft",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "micro CursorLeft"
+ },
+ {
+  "spec_id": "micro.action.cursorright",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "micro CursorRight"
+ },
+ {
+  "spec_id": "micro.action.cursorstart",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "micro CursorStart"
+ },
+ {
+  "spec_id": "micro.action.cursorend",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "micro CursorEnd"
+ },
+ {
+  "spec_id": "micro.action.cursortoviewtop",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": "micro CursorToViewTop"
+ },
+ {
+  "spec_id": "micro.action.cursortoviewcenter",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_center"
+  ],
+  "note": "micro CursorToViewCenter"
+ },
+ {
+  "spec_id": "micro.action.cursortoviewbottom",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_bottom"
+  ],
+  "note": "micro CursorToViewBottom"
+ },
+ {
+  "spec_id": "micro.action.selecttostart",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_file_start"
+  ],
+  "note": "micro SelectToStart"
+ },
+ {
+  "spec_id": "micro.action.selecttoend",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_last_line"
+  ],
+  "note": "micro SelectToEnd"
+ },
+ {
+  "spec_id": "micro.action.selectup",
+  "status": "ported",
+  "evidence": [
+   "static:extend_visual_line_up"
+  ],
+  "note": "micro SelectUp"
+ },
+ {
+  "spec_id": "micro.action.selectdown",
+  "status": "ported",
+  "evidence": [
+   "static:extend_visual_line_down"
+  ],
+  "note": "micro SelectDown"
+ },
+ {
+  "spec_id": "micro.action.selectleft",
+  "status": "ported",
+  "evidence": [
+   "static:extend_char_left"
+  ],
+  "note": "micro SelectLeft"
+ },
+ {
+  "spec_id": "micro.action.selectright",
+  "status": "ported",
+  "evidence": [
+   "static:extend_char_right"
+  ],
+  "note": "micro SelectRight"
+ },
+ {
+  "spec_id": "micro.action.wordright",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "micro WordRight"
+ },
+ {
+  "spec_id": "micro.action.wordleft",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "micro WordLeft"
+ },
+ {
+  "spec_id": "micro.action.subwordright",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_sub_word_start"
+  ],
+  "note": "micro SubWordRight"
+ },
+ {
+  "spec_id": "micro.action.subwordleft",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_sub_word_start"
+  ],
+  "note": "micro SubWordLeft"
+ },
+ {
+  "spec_id": "micro.action.selectwordright",
+  "status": "ported",
+  "evidence": [
+   "static:extend_next_word_start"
+  ],
+  "note": "micro SelectWordRight"
+ },
+ {
+  "spec_id": "micro.action.selectwordleft",
+  "status": "ported",
+  "evidence": [
+   "static:extend_prev_word_start"
+  ],
+  "note": "micro SelectWordLeft"
+ },
+ {
+  "spec_id": "micro.action.selectsubwordright",
+  "status": "ported",
+  "evidence": [
+   "static:extend_next_sub_word_start"
+  ],
+  "note": "micro SelectSubWordRight"
+ },
+ {
+  "spec_id": "micro.action.selectsubwordleft",
+  "status": "ported",
+  "evidence": [
+   "static:extend_prev_sub_word_start"
+  ],
+  "note": "micro SelectSubWordLeft"
+ },
+ {
+  "spec_id": "micro.action.deletewordright",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_forward"
+  ],
+  "note": "micro DeleteWordRight"
+ },
+ {
+  "spec_id": "micro.action.deletewordleft",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "micro DeleteWordLeft"
+ },
+ {
+  "spec_id": "micro.action.selectline",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_bounds"
+  ],
+  "note": "micro SelectLine"
+ },
+ {
+  "spec_id": "micro.action.selecttostartofline",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_start"
+  ],
+  "note": "micro SelectToStartOfLine"
+ },
+ {
+  "spec_id": "micro.action.selecttostartoftext",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_first_nonwhitespace"
+  ],
+  "note": "micro SelectToStartOfText"
+ },
+ {
+  "spec_id": "micro.action.selecttoendofline",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_end"
+  ],
+  "note": "micro SelectToEndOfLine"
+ },
+ {
+  "spec_id": "micro.action.paragraphprevious",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "micro ParagraphPrevious"
+ },
+ {
+  "spec_id": "micro.action.paragraphnext",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "micro ParagraphNext"
+ },
+ {
+  "spec_id": "micro.action.insertnewline",
+  "status": "ported",
+  "evidence": [
+   "static:insert_newline"
+  ],
+  "note": "micro InsertNewline"
+ },
+ {
+  "spec_id": "micro.action.backspace",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "micro Backspace"
+ },
+ {
+  "spec_id": "micro.action.delete",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "micro Delete"
+ },
+ {
+  "spec_id": "micro.action.inserttab",
+  "status": "ported",
+  "evidence": [
+   "static:insert_tab"
+  ],
+  "note": "micro InsertTab"
+ },
+ {
+  "spec_id": "micro.action.save",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "micro Save"
+ },
+ {
+  "spec_id": "micro.action.saveall",
+  "status": "ported",
+  "evidence": [
+   "typable:write-all"
+  ],
+  "note": "micro SaveAll"
+ },
+ {
+  "spec_id": "micro.action.saveas",
+  "status": "partial",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "micro SaveAs: micro prompts for the new name; :write takes it as an argument"
+ },
+ {
+  "spec_id": "micro.action.find",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "micro Find"
+ },
+ {
+  "spec_id": "micro.action.findnext",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "micro FindNext"
+ },
+ {
+  "spec_id": "micro.action.findprevious",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "micro FindPrevious"
+ },
+ {
+  "spec_id": "micro.action.diffnext",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_change"
+  ],
+  "note": "micro DiffNext"
+ },
+ {
+  "spec_id": "micro.action.diffprevious",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_change"
+  ],
+  "note": "micro DiffPrevious"
+ },
+ {
+  "spec_id": "micro.action.center",
+  "status": "ported",
+  "evidence": [
+   "static:align_view_center"
+  ],
+  "note": "micro Center"
+ },
+ {
+  "spec_id": "micro.action.undo",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "micro Undo"
+ },
+ {
+  "spec_id": "micro.action.redo",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "micro Redo"
+ },
+ {
+  "spec_id": "micro.action.copy",
+  "status": "ported",
+  "evidence": [
+   "static:yank_to_clipboard"
+  ],
+  "note": "micro Copy"
+ },
+ {
+  "spec_id": "micro.action.copyline",
+  "status": "ported",
+  "evidence": [
+   "static:yank_main_selection_to_clipboard"
+  ],
+  "note": "micro CopyLine"
+ },
+ {
+  "spec_id": "micro.action.cut",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_clipboard"
+  ],
+  "note": "micro Cut"
+ },
+ {
+  "spec_id": "micro.action.cutline",
+  "status": "partial",
+  "evidence": [
+   "static:kill_to_line_end"
+  ],
+  "note": "micro CutLine: micro cuts the whole line to the clipboard; kill_to_line_end cuts from the cursor"
+ },
+ {
+  "spec_id": "micro.action.duplicate",
+  "status": "ported",
+  "evidence": [
+   "static:duplicate_selection_down"
+  ],
+  "note": "micro Duplicate"
+ },
+ {
+  "spec_id": "micro.action.duplicateline",
+  "status": "ported",
+  "evidence": [
+   "static:duplicate_selection_down"
+  ],
+  "note": "micro DuplicateLine"
+ },
+ {
+  "spec_id": "micro.action.deleteline",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection_linewise"
+  ],
+  "note": "micro DeleteLine"
+ },
+ {
+  "spec_id": "micro.action.movelinesup",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "micro MoveLinesUp"
+ },
+ {
+  "spec_id": "micro.action.movelinesdown",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "micro MoveLinesDown"
+ },
+ {
+  "spec_id": "micro.action.indentselection",
+  "status": "ported",
+  "evidence": [
+   "static:indent"
+  ],
+  "note": "micro IndentSelection"
+ },
+ {
+  "spec_id": "micro.action.outdentselection",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "micro OutdentSelection"
+ },
+ {
+  "spec_id": "micro.action.autocomplete",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "micro Autocomplete"
+ },
+ {
+  "spec_id": "micro.action.outdentline",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "micro OutdentLine"
+ },
+ {
+  "spec_id": "micro.action.indentline",
+  "status": "ported",
+  "evidence": [
+   "static:indent"
+  ],
+  "note": "micro IndentLine"
+ },
+ {
+  "spec_id": "micro.action.paste",
+  "status": "ported",
+  "evidence": [
+   "static:paste_clipboard_before"
+  ],
+  "note": "micro Paste"
+ },
+ {
+  "spec_id": "micro.action.pasteprimary",
+  "status": "ported",
+  "evidence": [
+   "static:paste_primary_clipboard_before"
+  ],
+  "note": "micro PastePrimary"
+ },
+ {
+  "spec_id": "micro.action.selectall",
+  "status": "ported",
+  "evidence": [
+   "static:select_all"
+  ],
+  "note": "micro SelectAll"
+ },
+ {
+  "spec_id": "micro.action.openfile",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "micro OpenFile"
+ },
+ {
+  "spec_id": "micro.action.start",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "micro Start"
+ },
+ {
+  "spec_id": "micro.action.end",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "micro End"
+ },
+ {
+  "spec_id": "micro.action.pageup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "micro PageUp"
+ },
+ {
+  "spec_id": "micro.action.pagedown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "micro PageDown"
+ },
+ {
+  "spec_id": "micro.action.halfpageup",
+  "status": "ported",
+  "evidence": [
+   "static:page_cursor_half_up"
+  ],
+  "note": "micro HalfPageUp"
+ },
+ {
+  "spec_id": "micro.action.halfpagedown",
+  "status": "ported",
+  "evidence": [
+   "static:page_cursor_half_down"
+  ],
+  "note": "micro HalfPageDown"
+ },
+ {
+  "spec_id": "micro.action.startoftext",
+  "status": "ported",
+  "evidence": [
+   "static:goto_first_nonwhitespace"
+  ],
+  "note": "micro StartOfText"
+ },
+ {
+  "spec_id": "micro.action.startofline",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "micro StartOfLine"
+ },
+ {
+  "spec_id": "micro.action.endofline",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "micro EndOfLine"
+ },
+ {
+  "spec_id": "micro.action.togglehelp",
+  "status": "ported",
+  "evidence": [
+   "typable:help"
+  ],
+  "note": "micro ToggleHelp"
+ },
+ {
+  "spec_id": "micro.action.togglediffgutter",
+  "status": "partial",
+  "evidence": [
+   "typable:toggle-option"
+  ],
+  "note": "micro ToggleDiffGutter: the diff gutter is a gutter-layout option rather than a toggle command"
+ },
+ {
+  "spec_id": "micro.action.toggleruler",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "micro ToggleRuler: the ruler is an option zmax sets rather than a dedicated toggle command"
+ },
+ {
+  "spec_id": "micro.action.togglehighlightsearch",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "micro ToggleHighlightSearch: search highlighting is an option rather than a toggle command"
+ },
+ {
+  "spec_id": "micro.action.unhighlightsearch",
+  "status": "ported",
+  "evidence": [
+   "typable:nohlsearch"
+  ],
+  "note": "micro UnhighlightSearch"
+ },
+ {
+  "spec_id": "micro.action.shellmode",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "micro ShellMode"
+ },
+ {
+  "spec_id": "micro.action.commandmode",
+  "status": "ported",
+  "evidence": [
+   "static:command_mode"
+  ],
+  "note": "micro CommandMode"
+ },
+ {
+  "spec_id": "micro.action.toggleoverwritemode",
+  "status": "ported",
+  "evidence": [
+   "static:overwrite_mode"
+  ],
+  "note": "micro ToggleOverwriteMode"
+ },
+ {
+  "spec_id": "micro.action.escape",
+  "status": "ported",
+  "evidence": [
+   "static:normal_mode"
+  ],
+  "note": "micro Escape"
+ },
+ {
+  "spec_id": "micro.action.quit",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "micro Quit"
+ },
+ {
+  "spec_id": "micro.action.quitall",
+  "status": "ported",
+  "evidence": [
+   "typable:quit-all"
+  ],
+  "note": "micro QuitAll"
+ },
+ {
+  "spec_id": "micro.action.forcequit",
+  "status": "ported",
+  "evidence": [
+   "typable:quit!"
+  ],
+  "note": "micro ForceQuit"
+ },
+ {
+  "spec_id": "micro.action.addtab",
+  "status": "ported",
+  "evidence": [
+   "typable:tabnew"
+  ],
+  "note": "micro AddTab"
+ },
+ {
+  "spec_id": "micro.action.previoustab",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "micro PreviousTab"
+ },
+ {
+  "spec_id": "micro.action.nexttab",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "micro NextTab"
+ },
+ {
+  "spec_id": "micro.action.nextsplit",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "micro NextSplit"
+ },
+ {
+  "spec_id": "micro.action.previoussplit",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view_reverse"
+  ],
+  "note": "micro PreviousSplit"
+ },
+ {
+  "spec_id": "micro.action.unsplit",
+  "status": "partial",
+  "evidence": [
+   "typable:only"
+  ],
+  "note": "micro Unsplit: :only keeps the current split and closes the others"
+ },
+ {
+  "spec_id": "micro.action.vsplit",
+  "status": "ported",
+  "evidence": [
+   "typable:vsplit"
+  ],
+  "note": "micro VSplit"
+ },
+ {
+  "spec_id": "micro.action.hsplit",
+  "status": "ported",
+  "evidence": [
+   "typable:hsplit"
+  ],
+  "note": "micro HSplit"
+ },
+ {
+  "spec_id": "micro.action.togglemacro",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "micro ToggleMacro"
+ },
+ {
+  "spec_id": "micro.action.playmacro",
+  "status": "ported",
+  "evidence": [
+   "static:replay_macro"
+  ],
+  "note": "micro PlayMacro"
+ },
+ {
+  "spec_id": "micro.action.scrollup",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "micro ScrollUp"
+ },
+ {
+  "spec_id": "micro.action.scrolldown",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "micro ScrollDown"
+ },
+ {
+  "spec_id": "micro.action.spawnmulticursor",
+  "status": "ported",
+  "evidence": [
+   "static:add_selection_to_next_match"
+  ],
+  "note": "micro SpawnMultiCursor"
+ },
+ {
+  "spec_id": "micro.action.spawnmulticursorup",
+  "status": "ported",
+  "evidence": [
+   "static:copy_selection_on_prev_line"
+  ],
+  "note": "micro SpawnMultiCursorUp"
+ },
+ {
+  "spec_id": "micro.action.spawnmulticursordown",
+  "status": "ported",
+  "evidence": [
+   "static:copy_selection_on_next_line"
+  ],
+  "note": "micro SpawnMultiCursorDown"
+ },
+ {
+  "spec_id": "micro.action.spawnmulticursorselect",
+  "status": "ported",
+  "evidence": [
+   "static:select_all_instances"
+  ],
+  "note": "micro SpawnMultiCursorSelect"
+ },
+ {
+  "spec_id": "micro.action.removemulticursor",
+  "status": "ported",
+  "evidence": [
+   "static:remove_primary_selection"
+  ],
+  "note": "micro RemoveMultiCursor"
+ },
+ {
+  "spec_id": "micro.action.removeallmulticursors",
+  "status": "ported",
+  "evidence": [
+   "static:keep_primary_selection"
+  ],
+  "note": "micro RemoveAllMultiCursors"
+ },
+ {
+  "spec_id": "micro.action.skipmulticursor",
+  "status": "partial",
+  "evidence": [
+   "static:remove_primary_selection"
+  ],
+  "note": "micro SkipMultiCursor: micro skips the match and moves on; remove_primary_selection only drops the cursor"
+ },
+ {
+  "spec_id": "micro.action.jumptomatchingbrace",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "micro JumpToMatchingBrace"
+ },
+ {
+  "spec_id": "micro.action.jumpline",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line"
+  ],
+  "note": "micro JumpLine"
+ },
+ {
+  "spec_id": "micro.action.deselect",
+  "status": "ported",
+  "evidence": [
+   "static:collapse_selection"
+  ],
+  "note": "micro Deselect"
+ },
+ {
+  "spec_id": "micro.keys.up",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "micro CursorUp"
+ },
+ {
+  "spec_id": "micro.keys.down",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "micro CursorDown"
+ },
+ {
+  "spec_id": "micro.keys.right",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "micro CursorRight"
+ },
+ {
+  "spec_id": "micro.keys.left",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "micro CursorLeft"
+ },
+ {
+  "spec_id": "micro.keys.shiftup",
+  "status": "ported",
+  "evidence": [
+   "static:extend_visual_line_up"
+  ],
+  "note": "micro SelectUp"
+ },
+ {
+  "spec_id": "micro.keys.shiftdown",
+  "status": "ported",
+  "evidence": [
+   "static:extend_visual_line_down"
+  ],
+  "note": "micro SelectDown"
+ },
+ {
+  "spec_id": "micro.keys.shiftleft",
+  "status": "ported",
+  "evidence": [
+   "static:extend_char_left"
+  ],
+  "note": "micro SelectLeft"
+ },
+ {
+  "spec_id": "micro.keys.shiftright",
+  "status": "ported",
+  "evidence": [
+   "static:extend_char_right"
+  ],
+  "note": "micro SelectRight"
+ },
+ {
+  "spec_id": "micro.keys.altleft",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "micro WordLeft"
+ },
+ {
+  "spec_id": "micro.keys.altright",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "micro WordRight"
+ },
+ {
+  "spec_id": "micro.keys.altup",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "micro MoveLinesUp"
+ },
+ {
+  "spec_id": "micro.keys.altdown",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "micro MoveLinesDown"
+ },
+ {
+  "spec_id": "micro.keys.ctrlshiftright",
+  "status": "ported",
+  "evidence": [
+   "static:extend_next_word_start"
+  ],
+  "note": "micro SelectWordRight"
+ },
+ {
+  "spec_id": "micro.keys.ctrlshiftleft",
+  "status": "ported",
+  "evidence": [
+   "static:extend_prev_word_start"
+  ],
+  "note": "micro SelectWordLeft"
+ },
+ {
+  "spec_id": "micro.keys.altright_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "micro EndOfLine"
+ },
+ {
+  "spec_id": "micro.keys.altshiftright",
+  "status": "ported",
+  "evidence": [
+   "static:extend_next_word_start"
+  ],
+  "note": "micro SelectWordRight"
+ },
+ {
+  "spec_id": "micro.keys.altshiftleft",
+  "status": "ported",
+  "evidence": [
+   "static:extend_prev_word_start"
+  ],
+  "note": "micro SelectWordLeft"
+ },
+ {
+  "spec_id": "micro.keys.ctrlleft",
+  "status": "ported",
+  "evidence": [
+   "static:goto_first_nonwhitespace"
+  ],
+  "note": "micro StartOfText"
+ },
+ {
+  "spec_id": "micro.keys.ctrlright",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "micro EndOfLine"
+ },
+ {
+  "spec_id": "micro.keys.altshiftright_2",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_end"
+  ],
+  "note": "micro SelectToEndOfLine"
+ },
+ {
+  "spec_id": "micro.keys.ctrlshiftright_2",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_end"
+  ],
+  "note": "micro SelectToEndOfLine"
+ },
+ {
+  "spec_id": "micro.keys.shiftend",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_end"
+  ],
+  "note": "micro SelectToEndOfLine"
+ },
+ {
+  "spec_id": "micro.keys.ctrlup",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "micro CursorStart"
+ },
+ {
+  "spec_id": "micro.keys.ctrldown",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "micro CursorEnd"
+ },
+ {
+  "spec_id": "micro.keys.ctrlshiftup",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_file_start"
+  ],
+  "note": "micro SelectToStart"
+ },
+ {
+  "spec_id": "micro.keys.ctrlshiftdown",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_last_line"
+  ],
+  "note": "micro SelectToEnd"
+ },
+ {
+  "spec_id": "micro.keys.alt",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "micro ParagraphPrevious"
+ },
+ {
+  "spec_id": "micro.keys.alt_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "micro ParagraphNext"
+ },
+ {
+  "spec_id": "micro.keys.enter",
+  "status": "ported",
+  "evidence": [
+   "static:insert_newline"
+  ],
+  "note": "micro InsertNewline"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_h",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "micro Backspace"
+ },
+ {
+  "spec_id": "micro.keys.backspace",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "micro Backspace"
+ },
+ {
+  "spec_id": "micro.keys.alt_ctrlh",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "micro DeleteWordLeft"
+ },
+ {
+  "spec_id": "micro.keys.alt_backspace",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "micro DeleteWordLeft"
+ },
+ {
+  "spec_id": "micro.keys.tab",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "micro Autocomplete"
+ },
+ {
+  "spec_id": "micro.keys.backtab",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "micro OutdentSelection"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_o",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "micro OpenFile"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_s",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "micro Save"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_f",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "micro Find"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_n",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "micro FindNext"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_p",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "micro FindPrevious"
+ },
+ {
+  "spec_id": "micro.keys.alt_3",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_change"
+  ],
+  "note": "micro DiffPrevious"
+ },
+ {
+  "spec_id": "micro.keys.alt_4",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_change"
+  ],
+  "note": "micro DiffNext"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_z",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "micro Undo"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_y",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "micro Redo"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_c",
+  "status": "ported",
+  "evidence": [
+   "static:yank_to_clipboard"
+  ],
+  "note": "micro Copy"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_x",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_clipboard"
+  ],
+  "note": "micro Cut"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_k",
+  "status": "partial",
+  "evidence": [
+   "static:kill_to_line_end"
+  ],
+  "note": "micro CutLine: micro cuts the whole line to the clipboard; kill_to_line_end cuts from the cursor"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_d",
+  "status": "ported",
+  "evidence": [
+   "static:duplicate_selection_down"
+  ],
+  "note": "micro Duplicate"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_v",
+  "status": "ported",
+  "evidence": [
+   "static:paste_clipboard_before"
+  ],
+  "note": "micro Paste"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_a",
+  "status": "ported",
+  "evidence": [
+   "static:select_all"
+  ],
+  "note": "micro SelectAll"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_t",
+  "status": "ported",
+  "evidence": [
+   "typable:tabnew"
+  ],
+  "note": "micro AddTab"
+ },
+ {
+  "spec_id": "micro.keys.alt_5",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "micro PreviousTab"
+ },
+ {
+  "spec_id": "micro.keys.alt_6",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "micro NextTab"
+ },
+ {
+  "spec_id": "micro.keys.home",
+  "status": "ported",
+  "evidence": [
+   "static:goto_first_nonwhitespace"
+  ],
+  "note": "micro StartOfText"
+ },
+ {
+  "spec_id": "micro.keys.end",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "micro EndOfLine"
+ },
+ {
+  "spec_id": "micro.keys.ctrlhome",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "micro CursorStart"
+ },
+ {
+  "spec_id": "micro.keys.ctrlend",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "micro CursorEnd"
+ },
+ {
+  "spec_id": "micro.keys.pageup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "micro CursorPageUp"
+ },
+ {
+  "spec_id": "micro.keys.pagedown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "micro CursorPageDown"
+ },
+ {
+  "spec_id": "micro.keys.ctrlpageup",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "micro PreviousTab"
+ },
+ {
+  "spec_id": "micro.keys.ctrlpagedown",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "micro NextTab"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_g",
+  "status": "ported",
+  "evidence": [
+   "typable:help"
+  ],
+  "note": "micro ToggleHelp"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_r",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "micro ToggleRuler: the ruler is an option zmax sets rather than a dedicated toggle command"
+ },
+ {
+  "spec_id": "micro.keys.delete",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "micro Delete"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_b",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "micro ShellMode"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_q",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "micro Quit"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_e",
+  "status": "ported",
+  "evidence": [
+   "static:command_mode"
+  ],
+  "note": "micro CommandMode"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_w",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "micro NextSplit"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_u",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "micro ToggleMacro"
+ },
+ {
+  "spec_id": "micro.keys.ctrl_j",
+  "status": "ported",
+  "evidence": [
+   "static:replay_macro"
+  ],
+  "note": "micro PlayMacro"
+ },
+ {
+  "spec_id": "micro.keys.insert",
+  "status": "ported",
+  "evidence": [
+   "static:overwrite_mode"
+  ],
+  "note": "micro ToggleOverwriteMode"
+ },
+ {
+  "spec_id": "micro.keys.alt_f_2",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "micro WordRight"
+ },
+ {
+  "spec_id": "micro.keys.alt_b",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "micro WordLeft"
+ },
+ {
+  "spec_id": "micro.keys.alt_a",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "micro StartOfLine"
+ },
+ {
+  "spec_id": "micro.keys.alt_e",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "micro EndOfLine"
+ },
+ {
+  "spec_id": "micro.keys.f2",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "micro Save"
+ },
+ {
+  "spec_id": "micro.keys.f3",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "micro Find"
+ },
+ {
+  "spec_id": "micro.keys.f4",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "micro Quit"
+ },
+ {
+  "spec_id": "micro.keys.f7",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "micro Find"
+ },
+ {
+  "spec_id": "micro.keys.f10",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "micro Quit"
+ },
+ {
+  "spec_id": "micro.keys.esc",
+  "status": "ported",
+  "evidence": [
+   "static:normal_mode"
+  ],
+  "note": "micro Escape"
+ },
+ {
+  "spec_id": "micro.keys.mousewheelup",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "micro ScrollUp"
+ },
+ {
+  "spec_id": "micro.keys.mousewheeldown",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "micro ScrollDown"
+ },
+ {
+  "spec_id": "micro.keys.mousemiddle",
+  "status": "ported",
+  "evidence": [
+   "static:paste_primary_clipboard_before"
+  ],
+  "note": "micro PastePrimary"
+ },
+ {
+  "spec_id": "micro.keys.alt_n",
+  "status": "ported",
+  "evidence": [
+   "static:add_selection_to_next_match"
+  ],
+  "note": "micro SpawnMultiCursor"
+ },
+ {
+  "spec_id": "micro.keys.altshiftup",
+  "status": "ported",
+  "evidence": [
+   "static:copy_selection_on_prev_line"
+  ],
+  "note": "micro SpawnMultiCursorUp"
+ },
+ {
+  "spec_id": "micro.keys.altshiftdown",
+  "status": "ported",
+  "evidence": [
+   "static:copy_selection_on_next_line"
+  ],
+  "note": "micro SpawnMultiCursorDown"
+ },
+ {
+  "spec_id": "micro.keys.alt_m",
+  "status": "ported",
+  "evidence": [
+   "static:select_all_instances"
+  ],
+  "note": "micro SpawnMultiCursorSelect"
+ },
+ {
+  "spec_id": "micro.keys.alt_p",
+  "status": "ported",
+  "evidence": [
+   "static:remove_primary_selection"
+  ],
+  "note": "micro RemoveMultiCursor"
+ },
+ {
+  "spec_id": "micro.keys.alt_c",
+  "status": "ported",
+  "evidence": [
+   "static:keep_primary_selection"
+  ],
+  "note": "micro RemoveAllMultiCursors"
+ },
+ {
+  "spec_id": "micro.keys.alt_x",
+  "status": "partial",
+  "evidence": [
+   "static:remove_primary_selection"
+  ],
+  "note": "micro SkipMultiCursor: micro skips the match and moves on; remove_primary_selection only drops the cursor"
  }
 ]
