@@ -34838,6 +34838,85 @@ map_commands! {
     vmapclear_cmd => "vmapclear",
 }
 
+/// sam / vis `X` and `Y`: run a command in every *file* whose name matches (or
+/// does not match) a regex — the across-buffers half of the structural
+/// commands, where `x`/`y` work inside one buffer (`sam(1)` "Loops and
+/// Conditionals").
+///
+/// This is `:bufdo` with a filter on the buffer's name, and it returns to the
+/// buffer you started in: sam runs the command on each matching file and leaves
+/// the current file where it was.
+fn structural_files(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    invert: bool,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = if invert { "structural-Y" } else { "structural-X" };
+    let joined = args.into_iter().collect::<Vec<_>>().join(" ");
+    let raw = joined.trim();
+    let delim = raw
+        .chars()
+        .next()
+        .filter(|c| !c.is_alphanumeric() && !c.is_whitespace())
+        .ok_or_else(|| anyhow!("usage: :{name}/pattern/command"))?;
+    let body = &raw[delim.len_utf8()..];
+    let mut parts = body.splitn(2, delim);
+    let pattern = parts.next().unwrap_or("");
+    let command = parts.next().unwrap_or("").trim().to_string();
+    if pattern.is_empty() || command.is_empty() {
+        bail!("usage: :{name}/pattern/command");
+    }
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+
+    let starting = doc!(cx.editor).id();
+    let targets: Vec<_> = cx
+        .editor
+        .documents()
+        .filter(|doc| {
+            // Match the name the editor shows, not the absolute path: sam's `X`
+            // matches the file's menu entry, and matching the full path would
+            // make a short pattern hit every buffer through its directories.
+            re.is_match(&doc.display_name()) != invert
+        })
+        .map(|doc| doc.id())
+        .collect();
+    if targets.is_empty() {
+        bail!("{name}: no file matches");
+    }
+
+    let count = targets.len();
+    for id in targets {
+        cx.editor.switch(id, Action::Replace);
+        run_command_line(cx, &command);
+    }
+    // Back to where the loop started, which is what sam does with dot.
+    if cx.editor.documents().any(|doc| doc.id() == starting) {
+        cx.editor.switch(starting, Action::Replace);
+    }
+    cx.editor.set_status(format!("{name}: {count} file(s)"));
+    Ok(())
+}
+
+fn structural_x_files(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    structural_files(cx, args, event, false)
+}
+
+fn structural_y_files(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    structural_files(cx, args, event, true)
+}
+
 fn structural_x(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     structural_command(cx, args, event, false)
 }
@@ -60981,6 +61060,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "structural-X",
+        aliases: &["sX"],
+        doc: "sam/vis structural regex X: run a command in every file whose name matches — :sX/\\.rs$/ write.",
+        fun: structural_x_files,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "structural-Y",
+        aliases: &[],
+        doc: "sam/vis structural regex Y: run a command in every file whose name does not match.",
+        fun: structural_y_files,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },

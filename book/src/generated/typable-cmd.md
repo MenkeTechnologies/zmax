@@ -1376,6 +1376,8 @@
 | `:copy-lines`, `:t`, `:co`, `:copy` | Copy the current line to after line {address}: :t{addr} (e.g. :t0, :t$). |
 | `:global` | Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d. |
 | `:vglobal` | Run a command on non-matching lines: :v/pattern/d (delete). |
+| `:structural-X`, `:sX` | sam/vis structural regex X: run a command in every file whose name matches — :sX/\.rs$/ write. |
+| `:structural-Y` | sam/vis structural regex Y: run a command in every file whose name does not match. |
 | `:structural-x`, `:sx` | sam/vis structural regex x: select every match, then run a command over them — :sx/\w+/ d. (vim keeps :x = write-quit.) |
 | `:structural-y` | sam/vis structural regex y: select the stretches between matches — :structural-y/,/. (vim keeps :y = yank.) |
 | `:substitute`, `:s` | Substitute: :s/pattern/replacement/[flags]. Also :%s/.../.../g for the whole file. |

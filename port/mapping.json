@@ -65631,5 +65631,37 @@
    "static:transpose_char"
   ],
   "note": "vile transpose-characters"
+ },
+ {
+  "spec_id": "sam.loops-and-conditionals.x_2",
+  "status": "ported",
+  "evidence": [
+   "typable:structural-X"
+  ],
+  "note": "sam X: run a command in every file whose name matches"
+ },
+ {
+  "spec_id": "sam.loops-and-conditionals.y_2",
+  "status": "ported",
+  "evidence": [
+   "typable:structural-Y"
+  ],
+  "note": "sam Y: the files that do not match"
+ },
+ {
+  "spec_id": "vis.loops-and-conditionals.x_2",
+  "status": "ported",
+  "evidence": [
+   "typable:structural-X"
+  ],
+  "note": "vis inherits sam X"
+ },
+ {
+  "spec_id": "vis.loops-and-conditionals.y_2",
+  "status": "ported",
+  "evidence": [
+   "typable:structural-Y"
+  ],
+  "note": "vis inherits sam Y"
  }
 ]
