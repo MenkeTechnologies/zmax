@@ -58549,11 +58549,11 @@
  },
  {
   "spec_id": "nano.keys.y_3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_diag"
+   "typable:lint"
   ],
-  "note": "zmax lints through the language server rather than an external linter run"
+  "note": "nano linter: :lint runs the configured checker over the file"
  },
  {
   "spec_id": "nano.keys.o_3",
@@ -59206,11 +59206,11 @@
  },
  {
   "spec_id": "nano.function.linter",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_diag"
+   "typable:lint"
   ],
-  "note": "zmax lints through the language server rather than an external linter run"
+  "note": "nano linter: :lint runs the configured checker over the file"
  },
  {
   "spec_id": "nano.function.justify",
@@ -59790,11 +59790,11 @@
  },
  {
   "spec_id": "nano.function.linter_2",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_diag"
+   "typable:lint"
   ],
-  "note": "zmax lints through the language server rather than an external linter run"
+  "note": "nano linter: :lint runs the configured checker over the file"
  },
  {
   "spec_id": "mcedit.editor.store",

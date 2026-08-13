@@ -334,6 +334,7 @@
 | `:dotnet-goto-csproj` | Open the enclosing .csproj file (dotnet.el dotnet-goto-csproj). |
 | `:dotnet-goto-fsproj` | Open the enclosing .fsproj file (dotnet.el dotnet-goto-fsproj). |
 | `:recompile` | Re-run the last compile command (emacs recompile). |
+| `:lint` | Run an external checker over this file and collect its messages (nano linter). Program from :set linter or the argument; % is the file path. |
 | `:make` | Run `make [args]`, collect errors into the quickfix list, jump to the first (vim :make). |
 | `:lmake`, `:lmak` | Run `make [args]` and collect its errors into the location list, jumping to the first (vim :lmake). |
 | `:tag`, `:ta` | Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag). |

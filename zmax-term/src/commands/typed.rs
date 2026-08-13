@@ -2506,6 +2506,58 @@ fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     make_impl(cx, &args, false)
 }
 
+/// nano's `linter` (`^T` in nano's tools menu, `set linter <program>` in
+/// nanorc): run an external checker over the current file and collect what it
+/// says.
+///
+/// zmax's own diagnostics come from the language server, which is a different
+/// thing from nano's "run this program over the file" — that is why the nano
+/// linter row was mapped partial. The linter program comes from `:set linter`
+/// (or the `linter` argument), `%` is replaced by the file's path, and the
+/// output lands in the location list so `:lnext` walks it, as `:lmake` does.
+fn ex_lint(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let given = args.join(" ");
+    let given = given.trim();
+    let prog = if given.is_empty() {
+        vim_opt_str("linter")
+            .filter(|p| !p.trim().is_empty())
+            .ok_or_else(|| anyhow!("no linter set: :set linter=<program>, or :lint <program>"))?
+    } else {
+        given.to_string()
+    };
+
+    let path = doc!(cx.editor)
+        .path()
+        .map(|p| p.to_string_lossy().into_owned())
+        .ok_or_else(|| anyhow!("lint: the buffer has no file to check"))?;
+    // nano lints what is on disk, so write first — same reason `:make` honours
+    // 'autowrite'.
+    vim_autowrite(cx)?;
+
+    let quoted = shell_single_quote(&path);
+    let command = if prog.contains('%') {
+        prog.replace('%', &quoted)
+    } else {
+        format!("{prog} {quoted}")
+    };
+
+    let output = shell_capture(cx, &command)?;
+    // The same reader :lmake uses, so a linter that prints file:line:col
+    // messages lands in the list the same way a compiler does.
+    let count = crate::commands::qf_entries_from_text(&output).len();
+    if count == 0 {
+        cx.editor.set_status(format!("{prog}: no complaints"));
+        return Ok(());
+    }
+    qf_populate(cx, QfKind::Location, &output, false, true)?;
+    cx.editor
+        .set_status(format!("{prog}: {count} message(s) — :lnext walks them"));
+    Ok(())
+}
+
 /// vim `:lmake [args]` — as `:make`, but the errors go to the *location list* of
 /// the current window (`:lopen` / `:lnext` / `:ll`) instead of the compilation
 /// list `:make` fills, exactly as vim splits the two.
@@ -50019,6 +50071,18 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "lint",
+        aliases: &[],
+        doc: "Run an external checker over this file and collect its messages (nano linter). Program from :set linter or the argument; % is the file path.",
+        fun: ex_lint,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
             ..Signature::DEFAULT
         },
     },
