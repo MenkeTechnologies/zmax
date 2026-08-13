@@ -59795,5 +59795,1205 @@
    "static:goto_next_diag"
   ],
   "note": "zmax lints through the language server rather than an external linter run"
+ },
+ {
+  "spec_id": "mcedit.editor.store",
+  "status": "ported",
+  "evidence": [
+   "static:yank_to_clipboard"
+  ],
+  "note": "mcedit Store"
+ },
+ {
+  "spec_id": "mcedit.editor.paste",
+  "status": "ported",
+  "evidence": [
+   "static:paste_clipboard_before"
+  ],
+  "note": "mcedit Paste"
+ },
+ {
+  "spec_id": "mcedit.editor.cut",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_clipboard"
+  ],
+  "note": "mcedit Cut"
+ },
+ {
+  "spec_id": "mcedit.editor.up",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "mcedit Up"
+ },
+ {
+  "spec_id": "mcedit.editor.down",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "mcedit Down"
+ },
+ {
+  "spec_id": "mcedit.editor.left",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "mcedit Left"
+ },
+ {
+  "spec_id": "mcedit.editor.right",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "mcedit Right"
+ },
+ {
+  "spec_id": "mcedit.editor.wordleft",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "mcedit WordLeft"
+ },
+ {
+  "spec_id": "mcedit.editor.wordright",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "mcedit WordRight"
+ },
+ {
+  "spec_id": "mcedit.editor.enter",
+  "status": "ported",
+  "evidence": [
+   "static:insert_newline"
+  ],
+  "note": "mcedit Enter"
+ },
+ {
+  "spec_id": "mcedit.editor.return",
+  "status": "ported",
+  "evidence": [
+   "static:insert_newline"
+  ],
+  "note": "mcedit Return"
+ },
+ {
+  "spec_id": "mcedit.editor.backspace",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "mcedit BackSpace"
+ },
+ {
+  "spec_id": "mcedit.editor.delete",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "mcedit Delete"
+ },
+ {
+  "spec_id": "mcedit.editor.pageup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "mcedit PageUp"
+ },
+ {
+  "spec_id": "mcedit.editor.pagedown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "mcedit PageDown"
+ },
+ {
+  "spec_id": "mcedit.editor.home",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "mcedit Home"
+ },
+ {
+  "spec_id": "mcedit.editor.end",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "mcedit End"
+ },
+ {
+  "spec_id": "mcedit.editor.tab",
+  "status": "ported",
+  "evidence": [
+   "static:insert_tab"
+  ],
+  "note": "mcedit Tab"
+ },
+ {
+  "spec_id": "mcedit.editor.undo",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "mcedit Undo"
+ },
+ {
+  "spec_id": "mcedit.editor.redo",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "mcedit Redo"
+ },
+ {
+  "spec_id": "mcedit.editor.top",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "mcedit Top"
+ },
+ {
+  "spec_id": "mcedit.editor.bottom",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "mcedit Bottom"
+ },
+ {
+  "spec_id": "mcedit.editor.scrollup",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "mcedit ScrollUp"
+ },
+ {
+  "spec_id": "mcedit.editor.scrolldown",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "mcedit ScrollDown"
+ },
+ {
+  "spec_id": "mcedit.editor.toponscreen",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": "mcedit TopOnScreen"
+ },
+ {
+  "spec_id": "mcedit.editor.bottomonscreen",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_bottom"
+  ],
+  "note": "mcedit BottomOnScreen"
+ },
+ {
+  "spec_id": "mcedit.editor.deletetowordbegin",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "mcedit DeleteToWordBegin"
+ },
+ {
+  "spec_id": "mcedit.editor.deletetowordend",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_forward"
+  ],
+  "note": "mcedit DeleteToWordEnd"
+ },
+ {
+  "spec_id": "mcedit.editor.deleteline",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection_linewise"
+  ],
+  "note": "mcedit DeleteLine"
+ },
+ {
+  "spec_id": "mcedit.editor.deletetoend",
+  "status": "ported",
+  "evidence": [
+   "static:kill_to_line_end"
+  ],
+  "note": "mcedit DeleteToEnd"
+ },
+ {
+  "spec_id": "mcedit.editor.save",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "mcedit Save"
+ },
+ {
+  "spec_id": "mcedit.editor.editnew",
+  "status": "ported",
+  "evidence": [
+   "typable:new"
+  ],
+  "note": "mcedit EditNew"
+ },
+ {
+  "spec_id": "mcedit.editor.saveas",
+  "status": "partial",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "mcedit prompts for the name; :write takes it as an argument"
+ },
+ {
+  "spec_id": "mcedit.editor.mark",
+  "status": "ported",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "mcedit Mark"
+ },
+ {
+  "spec_id": "mcedit.editor.copy",
+  "status": "partial",
+  "evidence": [
+   "static:yank"
+  ],
+  "note": "mcedit Copy: mc copies the marked block to the cursor position rather than to a register"
+ },
+ {
+  "spec_id": "mcedit.editor.move",
+  "status": "partial",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "mcedit Move: mc moves the marked block to the cursor; shift_line_down moves the line under it"
+ },
+ {
+  "spec_id": "mcedit.editor.remove",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "mcedit Remove"
+ },
+ {
+  "spec_id": "mcedit.editor.search",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "mcedit Search"
+ },
+ {
+  "spec_id": "mcedit.editor.searchcontinue",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "mcedit SearchContinue"
+ },
+ {
+  "spec_id": "mcedit.editor.markleft",
+  "status": "ported",
+  "evidence": [
+   "static:extend_char_left"
+  ],
+  "note": "mcedit MarkLeft"
+ },
+ {
+  "spec_id": "mcedit.editor.markright",
+  "status": "ported",
+  "evidence": [
+   "static:extend_char_right"
+  ],
+  "note": "mcedit MarkRight"
+ },
+ {
+  "spec_id": "mcedit.editor.marktowordbegin",
+  "status": "ported",
+  "evidence": [
+   "static:extend_prev_word_start"
+  ],
+  "note": "mcedit MarkToWordBegin"
+ },
+ {
+  "spec_id": "mcedit.editor.marktowordend",
+  "status": "ported",
+  "evidence": [
+   "static:extend_next_word_end"
+  ],
+  "note": "mcedit MarkToWordEnd"
+ },
+ {
+  "spec_id": "mcedit.editor.markup",
+  "status": "ported",
+  "evidence": [
+   "static:extend_visual_line_up"
+  ],
+  "note": "mcedit MarkUp"
+ },
+ {
+  "spec_id": "mcedit.editor.markdown",
+  "status": "ported",
+  "evidence": [
+   "static:extend_visual_line_down"
+  ],
+  "note": "mcedit MarkDown"
+ },
+ {
+  "spec_id": "mcedit.editor.marktohome",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_start"
+  ],
+  "note": "mcedit MarkToHome"
+ },
+ {
+  "spec_id": "mcedit.editor.marktoend",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_end"
+  ],
+  "note": "mcedit MarkToEnd"
+ },
+ {
+  "spec_id": "mcedit.editor.marktofilebegin",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_file_start"
+  ],
+  "note": "mcedit MarkToFileBegin"
+ },
+ {
+  "spec_id": "mcedit.editor.marktofileend",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_last_line"
+  ],
+  "note": "mcedit MarkToFileEnd"
+ },
+ {
+  "spec_id": "mcedit.editor.markcolumn",
+  "status": "ported",
+  "evidence": [
+   "static:column_selection"
+  ],
+  "note": "mcedit MarkColumn"
+ },
+ {
+  "spec_id": "mcedit.editor.replace",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "mcedit Replace"
+ },
+ {
+  "spec_id": "mcedit.editor.replacecontinue",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "mcedit ReplaceContinue"
+ },
+ {
+  "spec_id": "mcedit.editor.complete",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "mcedit Complete"
+ },
+ {
+  "spec_id": "mcedit.editor.insertfile",
+  "status": "ported",
+  "evidence": [
+   "typable:read"
+  ],
+  "note": "mcedit InsertFile"
+ },
+ {
+  "spec_id": "mcedit.editor.quit",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "mcedit Quit"
+ },
+ {
+  "spec_id": "mcedit.editor.insertoverwrite",
+  "status": "ported",
+  "evidence": [
+   "static:overwrite_mode"
+  ],
+  "note": "mcedit InsertOverwrite"
+ },
+ {
+  "spec_id": "mcedit.editor.help",
+  "status": "ported",
+  "evidence": [
+   "typable:help"
+  ],
+  "note": "mcedit Help"
+ },
+ {
+  "spec_id": "mcedit.editor.refresh",
+  "status": "ported",
+  "evidence": [
+   "typable:redraw"
+  ],
+  "note": "mcedit Refresh"
+ },
+ {
+  "spec_id": "mcedit.editor.goto",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line"
+  ],
+  "note": "mcedit Goto"
+ },
+ {
+  "spec_id": "mcedit.editor.sort",
+  "status": "ported",
+  "evidence": [
+   "typable:sort"
+  ],
+  "note": "mcedit Sort"
+ },
+ {
+  "spec_id": "mcedit.editor.paragraphformat",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "mcedit ParagraphFormat"
+ },
+ {
+  "spec_id": "mcedit.editor.matchbracket",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "mcedit MatchBracket"
+ },
+ {
+  "spec_id": "mcedit.editor.externalcommand",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "mcedit ExternalCommand"
+ },
+ {
+  "spec_id": "mcedit.editor.menu",
+  "status": "ported",
+  "evidence": [
+   "static:menu_bar_open"
+  ],
+  "note": "mcedit Menu"
+ },
+ {
+  "spec_id": "mcedit.editor.bookmark",
+  "status": "partial",
+  "evidence": [
+   "static:save_selection"
+  ],
+  "note": "mcedit Bookmark: mc keeps per-line bookmarks; save_selection pushes onto the jumplist"
+ },
+ {
+  "spec_id": "mcedit.editor.bookmarknext",
+  "status": "partial",
+  "evidence": [
+   "static:jump_forward"
+  ],
+  "note": "mcedit BookmarkNext: jumplist navigation rather than mc bookmark navigation"
+ },
+ {
+  "spec_id": "mcedit.editor.bookmarkprev",
+  "status": "partial",
+  "evidence": [
+   "static:jump_backward"
+  ],
+  "note": "mcedit BookmarkPrev: jumplist navigation rather than mc bookmark navigation"
+ },
+ {
+  "spec_id": "mcedit.editor.shell",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "mcedit Shell"
+ },
+ {
+  "spec_id": "mcedit.editor.macrostartstoprecord",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "mcedit MacroStartStopRecord"
+ },
+ {
+  "spec_id": "mcedit.editor.shownumbers",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "mcedit ShowNumbers"
+ },
+ {
+  "spec_id": "mcedit.editor.syntaxonoff",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "mcedit SyntaxOnOff"
+ },
+ {
+  "spec_id": "mcedit.editor.find",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "mcedit Find"
+ },
+ {
+  "spec_id": "mcedit.editor.fileprev",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "mcedit FilePrev"
+ },
+ {
+  "spec_id": "mcedit.editor.filenext",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "mcedit FileNext"
+ },
+ {
+  "spec_id": "mcedit.editor.spellcheckcurrentword",
+  "status": "ported",
+  "evidence": [
+   "static:flyspell_auto_correct_word"
+  ],
+  "note": "mcedit SpellCheckCurrentWord"
+ },
+ {
+  "spec_id": "ne.file-commands.open",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": "ne Open"
+ },
+ {
+  "spec_id": "ne.file-commands.opennew",
+  "status": "ported",
+  "evidence": [
+   "typable:new"
+  ],
+  "note": "ne OpenNew"
+ },
+ {
+  "spec_id": "ne.file-commands.save",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "ne Save"
+ },
+ {
+  "spec_id": "ne.file-commands.saveas",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "ne SaveAs"
+ },
+ {
+  "spec_id": "ne.file-commands.saveall",
+  "status": "ported",
+  "evidence": [
+   "typable:write-all"
+  ],
+  "note": "ne SaveAll"
+ },
+ {
+  "spec_id": "ne.document-commands.quit",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "ne Quit"
+ },
+ {
+  "spec_id": "ne.document-commands.exit",
+  "status": "ported",
+  "evidence": [
+   "typable:write-quit-all"
+  ],
+  "note": "ne Exit"
+ },
+ {
+  "spec_id": "ne.document-commands.newdoc",
+  "status": "ported",
+  "evidence": [
+   "typable:new"
+  ],
+  "note": "ne NewDoc"
+ },
+ {
+  "spec_id": "ne.document-commands.closedoc",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "ne CloseDoc"
+ },
+ {
+  "spec_id": "ne.document-commands.nextdoc",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "ne NextDoc"
+ },
+ {
+  "spec_id": "ne.document-commands.prevdoc",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "ne PrevDoc"
+ },
+ {
+  "spec_id": "ne.document-commands.selectdoc",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_picker"
+  ],
+  "note": "ne SelectDoc"
+ },
+ {
+  "spec_id": "ne.clip-commands.mark",
+  "status": "ported",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "ne Mark"
+ },
+ {
+  "spec_id": "ne.clip-commands.markvert",
+  "status": "ported",
+  "evidence": [
+   "static:column_selection"
+  ],
+  "note": "ne MarkVert"
+ },
+ {
+  "spec_id": "ne.clip-commands.copy",
+  "status": "ported",
+  "evidence": [
+   "static:yank"
+  ],
+  "note": "ne Copy"
+ },
+ {
+  "spec_id": "ne.clip-commands.cut",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "ne Cut"
+ },
+ {
+  "spec_id": "ne.clip-commands.paste",
+  "status": "ported",
+  "evidence": [
+   "static:paste_after"
+  ],
+  "note": "ne Paste"
+ },
+ {
+  "spec_id": "ne.clip-commands.erase",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection_noyank"
+  ],
+  "note": "ne Erase"
+ },
+ {
+  "spec_id": "ne.clip-commands.through",
+  "status": "ported",
+  "evidence": [
+   "static:shell_pipe"
+  ],
+  "note": "ne Through"
+ },
+ {
+  "spec_id": "ne.search-commands.find",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "ne Find"
+ },
+ {
+  "spec_id": "ne.search-commands.findregexp",
+  "status": "partial",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "ne FindRegExp: zmax always searches by regex; ne makes it a separate command"
+ },
+ {
+  "spec_id": "ne.search-commands.replace",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "ne Replace"
+ },
+ {
+  "spec_id": "ne.search-commands.replaceonce",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "ne ReplaceOnce"
+ },
+ {
+  "spec_id": "ne.search-commands.replaceall",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "ne ReplaceAll"
+ },
+ {
+  "spec_id": "ne.search-commands.repeatlast",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "ne RepeatLast"
+ },
+ {
+  "spec_id": "ne.search-commands.matchbracket",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "ne MatchBracket"
+ },
+ {
+  "spec_id": "ne.search-commands.searchback",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "ne SearchBack"
+ },
+ {
+  "spec_id": "ne.search-commands.autocomplete",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "ne AutoComplete"
+ },
+ {
+  "spec_id": "ne.macros-commands.record",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "ne Record"
+ },
+ {
+  "spec_id": "ne.macros-commands.play",
+  "status": "ported",
+  "evidence": [
+   "static:replay_macro"
+  ],
+  "note": "ne Play"
+ },
+ {
+  "spec_id": "ne.undo-commands.undo",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "ne Undo"
+ },
+ {
+  "spec_id": "ne.undo-commands.redo",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "ne Redo"
+ },
+ {
+  "spec_id": "ne.formatting-commands.center",
+  "status": "ported",
+  "evidence": [
+   "static:align_view_center"
+  ],
+  "note": "ne Center"
+ },
+ {
+  "spec_id": "ne.formatting-commands.paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "ne Paragraph"
+ },
+ {
+  "spec_id": "ne.formatting-commands.toupper",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_uppercase"
+  ],
+  "note": "ne ToUpper"
+ },
+ {
+  "spec_id": "ne.formatting-commands.tolower",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_lowercase"
+  ],
+  "note": "ne ToLower"
+ },
+ {
+  "spec_id": "ne.formatting-commands.capitalize",
+  "status": "ported",
+  "evidence": [
+   "static:capitalize_word"
+  ],
+  "note": "ne Capitalize"
+ },
+ {
+  "spec_id": "ne.formatting-commands.wordwrap",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "ne WordWrap"
+ },
+ {
+  "spec_id": "ne.formatting-commands.autoindent",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "ne AutoIndent"
+ },
+ {
+  "spec_id": "ne.preferences-commands.readonly",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "ne ReadOnly"
+ },
+ {
+  "spec_id": "ne.preferences-commands.tabsize",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "ne TabSize"
+ },
+ {
+  "spec_id": "ne.preferences-commands.syntax",
+  "status": "ported",
+  "evidence": [
+   "typable:set-language"
+  ],
+  "note": "ne Syntax"
+ },
+ {
+  "spec_id": "ne.navigation-commands.moveleft",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "ne MoveLeft"
+ },
+ {
+  "spec_id": "ne.navigation-commands.moveright",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "ne MoveRight"
+ },
+ {
+  "spec_id": "ne.navigation-commands.lineup",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "ne LineUp"
+ },
+ {
+  "spec_id": "ne.navigation-commands.linedown",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "ne LineDown"
+ },
+ {
+  "spec_id": "ne.navigation-commands.gotoline",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line"
+  ],
+  "note": "ne GotoLine"
+ },
+ {
+  "spec_id": "ne.navigation-commands.gotocolumn",
+  "status": "ported",
+  "evidence": [
+   "static:goto_column"
+  ],
+  "note": "ne GotoColumn"
+ },
+ {
+  "spec_id": "ne.navigation-commands.prevpage",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "ne PrevPage"
+ },
+ {
+  "spec_id": "ne.navigation-commands.nextpage",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "ne NextPage"
+ },
+ {
+  "spec_id": "ne.navigation-commands.pageup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "ne PageUp"
+ },
+ {
+  "spec_id": "ne.navigation-commands.pagedown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "ne PageDown"
+ },
+ {
+  "spec_id": "ne.navigation-commands.prevword",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "ne PrevWord"
+ },
+ {
+  "spec_id": "ne.navigation-commands.nextword",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "ne NextWord"
+ },
+ {
+  "spec_id": "ne.navigation-commands.moveeol",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "ne MoveEOL"
+ },
+ {
+  "spec_id": "ne.navigation-commands.movesol",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "ne MoveSOL"
+ },
+ {
+  "spec_id": "ne.navigation-commands.movetos",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": "ne MoveTOS"
+ },
+ {
+  "spec_id": "ne.navigation-commands.movebos",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_bottom"
+  ],
+  "note": "ne MoveBOS"
+ },
+ {
+  "spec_id": "ne.navigation-commands.moveeof",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "ne MoveEOF"
+ },
+ {
+  "spec_id": "ne.navigation-commands.movesof",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "ne MoveSOF"
+ },
+ {
+  "spec_id": "ne.navigation-commands.moveeow",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_end"
+  ],
+  "note": "ne MoveEOW"
+ },
+ {
+  "spec_id": "ne.navigation-commands.adjustview",
+  "status": "ported",
+  "evidence": [
+   "static:align_view_center"
+  ],
+  "note": "ne AdjustView"
+ },
+ {
+  "spec_id": "ne.navigation-commands.setbookmark",
+  "status": "partial",
+  "evidence": [
+   "static:save_selection"
+  ],
+  "note": "ne SetBookmark: ne has ten numbered bookmarks; save_selection pushes onto the jumplist"
+ },
+ {
+  "spec_id": "ne.navigation-commands.gotobookmark",
+  "status": "partial",
+  "evidence": [
+   "static:jump_backward"
+  ],
+  "note": "ne GotoBookmark: jumplist navigation rather than ne bookmark navigation"
+ },
+ {
+  "spec_id": "ne.editing-commands.insertchar",
+  "status": "ported",
+  "evidence": [
+   "static:insert_char_interactive"
+  ],
+  "note": "ne InsertChar"
+ },
+ {
+  "spec_id": "ne.editing-commands.inserttab",
+  "status": "ported",
+  "evidence": [
+   "static:insert_tab"
+  ],
+  "note": "ne InsertTab"
+ },
+ {
+  "spec_id": "ne.editing-commands.deletechar",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "ne DeleteChar"
+ },
+ {
+  "spec_id": "ne.editing-commands.deleteprevword",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "ne DeletePrevWord"
+ },
+ {
+  "spec_id": "ne.editing-commands.deletenextword",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_forward"
+  ],
+  "note": "ne DeleteNextWord"
+ },
+ {
+  "spec_id": "ne.editing-commands.backspace",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "ne Backspace"
+ },
+ {
+  "spec_id": "ne.editing-commands.insertline",
+  "status": "ported",
+  "evidence": [
+   "static:open_below"
+  ],
+  "note": "ne InsertLine"
+ },
+ {
+  "spec_id": "ne.editing-commands.deleteline",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection_linewise"
+  ],
+  "note": "ne DeleteLine"
+ },
+ {
+  "spec_id": "ne.editing-commands.deleteeol",
+  "status": "ported",
+  "evidence": [
+   "static:kill_to_line_end"
+  ],
+  "note": "ne DeleteEOL"
+ },
+ {
+  "spec_id": "ne.support-commands.about",
+  "status": "ported",
+  "evidence": [
+   "typable:version"
+  ],
+  "note": "ne About"
+ },
+ {
+  "spec_id": "ne.support-commands.exec",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "ne Exec"
  }
 ]
