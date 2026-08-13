@@ -1531,6 +1531,26 @@
 | `:reflow` | Hard-wrap the current selection of lines to a given width. |
 | `:tree-sitter-subtree`, `:ts-subtree`, `:InspectTree` | Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree). |
 | `:config-reload` | Refresh user config. |
+| `:map` | Map a key in normal+select mode: :map <leader>w :write<CR>. With no rhs, list the mappings. |
+| `:nmap` | Map a key in normal mode (vim :nmap). |
+| `:imap` | Map a key in insert mode (vim :imap). |
+| `:vmap` | Map a key in select/visual mode (vim :vmap). |
+| `:xmap` | Map a key in visual mode (vim :xmap). |
+| `:smap` | Map a key in select mode (vim :smap). |
+| `:omap` | Map a key in operator-pending mode; approximated by normal mode (vim :omap). |
+| `:noremap` | Map a key without remapping the right-hand side (vim :noremap). |
+| `:nnoremap` | Non-recursive normal-mode mapping (vim :nnoremap). |
+| `:inoremap` | Non-recursive insert-mode mapping (vim :inoremap). |
+| `:vnoremap` | Non-recursive select/visual-mode mapping (vim :vnoremap). |
+| `:xnoremap` | Non-recursive visual-mode mapping (vim :xnoremap). |
+| `:unmap` | Remove a normal+select mapping (vim :unmap). |
+| `:nunmap` | Remove a normal-mode mapping (vim :nunmap). |
+| `:iunmap` | Remove an insert-mode mapping (vim :iunmap). |
+| `:vunmap` | Remove a select/visual-mode mapping (vim :vunmap). |
+| `:mapclear` | Remove every normal+select mapping (vim :mapclear). |
+| `:nmapclear` | Remove every normal-mode mapping (vim :nmapclear). |
+| `:imapclear` | Remove every insert-mode mapping (vim :imapclear). |
+| `:vmapclear` | Remove every select/visual-mode mapping (vim :vmapclear). |
 | `:keymap` | Switch the active keymap preset: spacemacs, vim, helix, or emacs. |
 | `:config-open` | Open the user config.toml file. |
 | `:config-open-workspace` | Open the workspace config.toml file. |
