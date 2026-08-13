@@ -64887,5 +64887,725 @@
    "static:yank_main_selection_to_clipboard"
   ],
   "note": "vile yank-line"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.j",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "lazyvim: Down"
+ },
+ {
+  "spec_id": "lazyvim.keys-x.j",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "lazyvim: Down"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.down",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "lazyvim: Down"
+ },
+ {
+  "spec_id": "lazyvim.keys-x.down",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "lazyvim: Down"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.k",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "lazyvim: Up"
+ },
+ {
+  "spec_id": "lazyvim.keys-x.k",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "lazyvim: Up"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.up",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "lazyvim: Up"
+ },
+ {
+  "spec_id": "lazyvim.keys-x.up",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "lazyvim: Up"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.c_h",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_left"
+  ],
+  "note": "lazyvim: Go to Left Window"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.c_j",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_down"
+  ],
+  "note": "lazyvim: Go to Lower Window"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.c_k",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_up"
+  ],
+  "note": "lazyvim: Go to Upper Window"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.c_l",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_right"
+  ],
+  "note": "lazyvim: Go to Right Window"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.c_up",
+  "status": "partial",
+  "evidence": [
+   "typable:hsplit"
+  ],
+  "note": "zmax resizes splits from the workbench rather than a keybound step"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.a_j",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "lazyvim: Move Down"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.a_k",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "lazyvim: Move Up"
+ },
+ {
+  "spec_id": "lazyvim.keys-i.a_j",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "lazyvim: Move Down"
+ },
+ {
+  "spec_id": "lazyvim.keys-i.a_k",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "lazyvim: Move Up"
+ },
+ {
+  "spec_id": "lazyvim.keys-v.a_j",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "lazyvim: Move Down"
+ },
+ {
+  "spec_id": "lazyvim.keys-v.a_k",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "lazyvim: Move Up"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.s_h",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "lazyvim: Prev Buffer"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.s_l",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "lazyvim: Next Buffer"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.b",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "lazyvim: Prev Buffer"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.b_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "lazyvim: Next Buffer"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leaderbb",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_accessed_file"
+  ],
+  "note": "lazyvim: Switch to Other Buffer"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leader",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_accessed_file"
+  ],
+  "note": "lazyvim: Switch to Other Buffer"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leaderbd_2",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "lazyvim: Delete Buffer and Window"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.n",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "lazyvim: Next Search Result"
+ },
+ {
+  "spec_id": "lazyvim.keys-x.n",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "lazyvim: Next Search Result"
+ },
+ {
+  "spec_id": "lazyvim.keys-o.n",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "lazyvim: Next Search Result"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.n_2",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "lazyvim: Prev Search Result"
+ },
+ {
+  "spec_id": "lazyvim.keys-x.n_2",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "lazyvim: Prev Search Result"
+ },
+ {
+  "spec_id": "lazyvim.keys-o.n_2",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "lazyvim: Prev Search Result"
+ },
+ {
+  "spec_id": "lazyvim.keys-i.c_s",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "lazyvim: Save File"
+ },
+ {
+  "spec_id": "lazyvim.keys-x.c_s",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "lazyvim: Save File"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.c_s",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "lazyvim: Save File"
+ },
+ {
+  "spec_id": "lazyvim.keys-s.c_s",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "lazyvim: Save File"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leaderk",
+  "status": "ported",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": "lazyvim: Keywordprg"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.gco",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": "lazyvim: Add Comment Below"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.gco_2",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": "lazyvim: Add Comment Above"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leaderfn",
+  "status": "ported",
+  "evidence": [
+   "typable:new"
+  ],
+  "note": "lazyvim: New File"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.q",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_diag"
+  ],
+  "note": "lazyvim: Previous Quickfix"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.q_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "lazyvim: Next Quickfix"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leadercd",
+  "status": "ported",
+  "evidence": [
+   "static:diagnostics_picker"
+  ],
+  "note": "lazyvim: Line Diagnostics"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.d",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "lazyvim: Next Diagnostic"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.d_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_diag"
+  ],
+  "note": "lazyvim: Prev Diagnostic"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.e",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "lazyvim: Next Error"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.e_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_diag"
+  ],
+  "note": "lazyvim: Prev Error"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.w",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "lazyvim: Next Warning"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.w_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_diag"
+  ],
+  "note": "lazyvim: Prev Warning"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leadergb",
+  "status": "ported",
+  "evidence": [
+   "typable:blame"
+  ],
+  "note": "lazyvim: Git Blame Line"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leaderqq",
+  "status": "ported",
+  "evidence": [
+   "typable:quit-all"
+  ],
+  "note": "lazyvim: Quit All"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leaderft",
+  "status": "ported",
+  "evidence": [
+   "typable:terminal"
+  ],
+  "note": "lazyvim: Terminal (cwd)"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leaderft_2",
+  "status": "ported",
+  "evidence": [
+   "typable:terminal"
+  ],
+  "note": "lazyvim: Terminal (Root Dir)"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.c",
+  "status": "ported",
+  "evidence": [
+   "typable:terminal"
+  ],
+  "note": "lazyvim: Terminal (Root Dir)"
+ },
+ {
+  "spec_id": "lazyvim.keys-t.c",
+  "status": "ported",
+  "evidence": [
+   "typable:terminal"
+  ],
+  "note": "lazyvim: Terminal (Root Dir)"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leader_2",
+  "status": "ported",
+  "evidence": [
+   "typable:hsplit"
+  ],
+  "note": "lazyvim: Split Window Below"
+ },
+ {
+  "spec_id": "lazyvim.keys-n.leader_3",
+  "status": "ported",
+  "evidence": [
+   "typable:vsplit"
+  ],
+  "note": "lazyvim: Split Window Right"
+ },
+ {
+  "spec_id": "astronvim.keys-n.j",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "astronvim: Move cursor down"
+ },
+ {
+  "spec_id": "astronvim.keys-n.k",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "astronvim: Move cursor up"
+ },
+ {
+  "spec_id": "astronvim.keys-n.leaderw",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "astronvim: Save"
+ },
+ {
+  "spec_id": "astronvim.keys-n.leaderq",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "astronvim: Quit Window"
+ },
+ {
+  "spec_id": "astronvim.keys-n.leadern",
+  "status": "ported",
+  "evidence": [
+   "typable:new"
+  ],
+  "note": "astronvim: New File"
+ },
+ {
+  "spec_id": "astronvim.keys-n.c_s",
+  "status": "ported",
+  "evidence": [
+   "typable:write!"
+  ],
+  "note": "astronvim: Force write"
+ },
+ {
+  "spec_id": "astronvim.keys-n.c_q",
+  "status": "ported",
+  "evidence": [
+   "typable:quit!"
+  ],
+  "note": "astronvim: Force quit"
+ },
+ {
+  "spec_id": "astronvim.keys-n.gco",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": "astronvim: Add Comment Below"
+ },
+ {
+  "spec_id": "astronvim.keys-n.gco_2",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": "astronvim: Add Comment Above"
+ },
+ {
+  "spec_id": "astronvim.keys-n.leaderld",
+  "status": "ported",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": "astronvim: Hover diagnostics"
+ },
+ {
+  "spec_id": "astronvim.keys-n.gl",
+  "status": "ported",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": "astronvim: Hover diagnostics"
+ },
+ {
+  "spec_id": "lunarvim.keys-insert.a_j",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "lunarvim <A-j> runs <Esc>:m .+1<CR>==gi"
+ },
+ {
+  "spec_id": "lunarvim.keys-insert.a_k",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "lunarvim <A-k> runs <Esc>:m .-2<CR>==gi"
+ },
+ {
+  "spec_id": "lunarvim.keys-insert.a_up",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_up"
+  ],
+  "note": "lunarvim <A-Up> runs <C-\\\\><C-N><C-w>k"
+ },
+ {
+  "spec_id": "lunarvim.keys-insert.a_down",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_down"
+  ],
+  "note": "lunarvim <A-Down> runs <C-\\\\><C-N><C-w>j"
+ },
+ {
+  "spec_id": "lunarvim.keys-insert.a_left",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_left"
+  ],
+  "note": "lunarvim <A-Left> runs <C-\\\\><C-N><C-w>h"
+ },
+ {
+  "spec_id": "lunarvim.keys-insert.a_right",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_right"
+  ],
+  "note": "lunarvim <A-Right> runs <C-\\\\><C-N><C-w>l"
+ },
+ {
+  "spec_id": "lunarvim.keys-normal.c_h",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_left"
+  ],
+  "note": "lunarvim <C-h> runs <C-w>h"
+ },
+ {
+  "spec_id": "lunarvim.keys-normal.c_j",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_down"
+  ],
+  "note": "lunarvim <C-j> runs <C-w>j"
+ },
+ {
+  "spec_id": "lunarvim.keys-normal.c_k",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_up"
+  ],
+  "note": "lunarvim <C-k> runs <C-w>k"
+ },
+ {
+  "spec_id": "lunarvim.keys-normal.c_l",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_right"
+  ],
+  "note": "lunarvim <C-l> runs <C-w>l"
+ },
+ {
+  "spec_id": "lunarvim.keys-normal.a_j",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "lunarvim <A-j> runs :m .+1<CR>=="
+ },
+ {
+  "spec_id": "lunarvim.keys-normal.a_k",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "lunarvim <A-k> runs :m .-2<CR>=="
+ },
+ {
+  "spec_id": "lunarvim.keys-normal.q",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "lunarvim ]q runs :cnext<CR>"
+ },
+ {
+  "spec_id": "lunarvim.keys-normal.q_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_diag"
+  ],
+  "note": "lunarvim [q runs :cprev<CR>"
+ },
+ {
+  "spec_id": "lunarvim.keys-term.c_h",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_left"
+  ],
+  "note": "lunarvim <C-h> runs <C-\\\\><C-N><C-w>h"
+ },
+ {
+  "spec_id": "lunarvim.keys-term.c_j",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_down"
+  ],
+  "note": "lunarvim <C-j> runs <C-\\\\><C-N><C-w>j"
+ },
+ {
+  "spec_id": "lunarvim.keys-term.c_k",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_up"
+  ],
+  "note": "lunarvim <C-k> runs <C-\\\\><C-N><C-w>k"
+ },
+ {
+  "spec_id": "lunarvim.keys-term.c_l",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_right"
+  ],
+  "note": "lunarvim <C-l> runs <C-\\\\><C-N><C-w>l"
+ },
+ {
+  "spec_id": "lunarvim.keys-visual.key",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "lunarvim < runs <gv"
+ },
+ {
+  "spec_id": "lunarvim.keys-visual.key_2",
+  "status": "ported",
+  "evidence": [
+   "static:indent"
+  ],
+  "note": "lunarvim > runs >gv"
+ },
+ {
+  "spec_id": "lunarvim.keys-visual_block.a_j",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "lunarvim <A-j> runs :m '>+1<CR>gv-gv"
+ },
+ {
+  "spec_id": "lunarvim.keys-visual_block.a_k",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "lunarvim <A-k> runs :m '<-2<CR>gv-gv"
  }
 ]
