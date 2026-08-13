@@ -495,6 +495,9 @@ impl MappableCommand {
         split_selection_on_newline, "Split selection on newlines",
         merge_selections, "Merge selections",
         merge_consecutive_selections, "Merge consecutive selections",
+        set_numbered_bookmark, "Set a numbered bookmark on this line (ne SetBookmark)",
+        goto_numbered_bookmark, "Jump to a numbered bookmark (ne GotoBookmark)",
+        unset_numbered_bookmark, "Forget a numbered bookmark (ne UnsetBookmark)",
         undo_selection_change, "Undo the last selection change (kakoune A-u)",
         redo_selection_change, "Redo a selection change (kakoune A-U)",
         save_selections_to_register, "Save selections to a register (kakoune Z)",
@@ -11241,6 +11244,91 @@ fn merge_consecutive_selections(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id).clone().merge_consecutive_ranges();
     doc.set_selection(view.id, selection);
+}
+
+/// ne `SetBookmark`, mcedit's bookmark key: remember the current line in one of
+/// the document's ten numbered slots. The slot is the next digit typed, as it is
+/// in both editors.
+fn set_numbered_bookmark(cx: &mut Context) {
+    cx.editor.autoinfo = Some(Info::new(
+        "Set bookmark",
+        &[("0-9", "remember this line in that slot")],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(slot) = event.char().and_then(crate::numbered_bookmarks::slot_of) else {
+            return;
+        };
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+        let id = doc.id();
+        let replaced = crate::numbered_bookmarks::set(id, slot, line);
+        cx.editor.set_status(match replaced {
+            Some(old) => format!("bookmark {slot} moved from line {} to {}", old + 1, line + 1),
+            None => format!("bookmark {slot} set at line {}", line + 1),
+        });
+    })
+}
+
+/// ne `GotoBookmark`: jump to the line held in a numbered slot.
+fn goto_numbered_bookmark(cx: &mut Context) {
+    let rows = {
+        let (_, doc) = current_ref!(cx.editor);
+        crate::numbered_bookmarks::list(doc.id())
+    };
+    let labels: Vec<(String, String)> = rows
+        .iter()
+        .map(|(slot, line)| (slot.to_string(), format!("line {}", line + 1)))
+        .collect();
+    cx.editor.autoinfo = Some(Info::new(
+        "Go to bookmark",
+        &labels
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect::<Vec<_>>(),
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(slot) = event.char().and_then(crate::numbered_bookmarks::slot_of) else {
+            return;
+        };
+        let (view, doc) = current!(cx.editor);
+        let Some(line) = crate::numbered_bookmarks::get(doc.id(), slot) else {
+            cx.editor.set_error(format!("bookmark {slot} is not set"));
+            return;
+        };
+        let text = doc.text().slice(..);
+        // The line may have been deleted since; land on the last line rather
+        // than refusing, which is what ne does with a stale bookmark.
+        let line = line.min(text.len_lines().saturating_sub(1));
+        let pos = text.line_to_char(line);
+        // Going somewhere on purpose is a jump, so the jumplist should know.
+        push_jump(view, doc);
+        let (view, doc) = current!(cx.editor);
+        doc.set_selection(view.id, Selection::point(pos));
+        align_view(doc, view, Align::Center);
+    })
+}
+
+/// ne `UnsetBookmark`: forget one of the document's numbered slots.
+fn unset_numbered_bookmark(cx: &mut Context) {
+    cx.editor.autoinfo = Some(Info::new(
+        "Unset bookmark",
+        &[("0-9", "forget that slot")],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(slot) = event.char().and_then(crate::numbered_bookmarks::slot_of) else {
+            return;
+        };
+        let id = doc!(cx.editor).id();
+        if crate::numbered_bookmarks::unset(id, slot) {
+            cx.editor.set_status(format!("bookmark {slot} unset"));
+        } else {
+            cx.editor.set_error(format!("bookmark {slot} is not set"));
+        }
+    })
 }
 
 /// kakoune `<a-u>`: undo the last *selection* change, leaving the text alone.
