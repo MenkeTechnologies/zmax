@@ -57,6 +57,7 @@ pub mod job;
 pub mod keymap;
 pub mod local_history;
 pub mod logging;
+pub mod numbered_bookmarks;
 pub mod parinfer;
 pub mod rainbow;
 pub mod rebox;

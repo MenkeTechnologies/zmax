@@ -117,6 +117,9 @@
 | `split_selection_on_newline` | Split selection on newlines | **helix, kakoune** — normal: `` <A-s> ``, select: `` <A-s> `` |
 | `merge_selections` | Merge selections | **helix** — normal: `` <A-minus> ``, select: `` <A-minus> ``<br>**kakoune** — normal: `` <A-+> ``, `` <A-minus> ``, select: `` <A-minus> `` |
 | `merge_consecutive_selections` | Merge consecutive selections | **helix, kakoune** — normal: `` <A-_> ``, select: `` <A-_> `` |
+| `set_numbered_bookmark` | Set a numbered bookmark on this line (ne SetBookmark) |  |
+| `goto_numbered_bookmark` | Jump to a numbered bookmark (ne GotoBookmark) |  |
+| `unset_numbered_bookmark` | Forget a numbered bookmark (ne UnsetBookmark) |  |
 | `undo_selection_change` | Undo the last selection change (kakoune A-u) | **kakoune** — normal: `` <A-u> `` |
 | `redo_selection_change` | Redo a selection change (kakoune A-U) | **kakoune** — normal: `` <A-U> `` |
 | `save_selections_to_register` | Save selections to a register (kakoune Z) | **kakoune** — normal: `` Z ``, `` <A-Z> ``, select: `` Z `` |

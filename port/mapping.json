@@ -60310,11 +60310,11 @@
  },
  {
   "spec_id": "mcedit.editor.bookmark",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:save_selection"
+   "static:set_numbered_bookmark"
   ],
-  "note": "mcedit Bookmark: mc keeps per-line bookmarks; save_selection pushes onto the jumplist"
+  "note": "mcedit Bookmark"
  },
  {
   "spec_id": "mcedit.editor.bookmarknext",
@@ -60894,19 +60894,19 @@
  },
  {
   "spec_id": "ne.navigation-commands.setbookmark",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:save_selection"
+   "static:set_numbered_bookmark"
   ],
-  "note": "ne SetBookmark: ne has ten numbered bookmarks; save_selection pushes onto the jumplist"
+  "note": "ne SetBookmark"
  },
  {
   "spec_id": "ne.navigation-commands.gotobookmark",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:jump_backward"
+   "static:goto_numbered_bookmark"
   ],
-  "note": "ne GotoBookmark: jumplist navigation rather than ne bookmark navigation"
+  "note": "ne GotoBookmark"
  },
  {
   "spec_id": "ne.editing-commands.insertchar",
