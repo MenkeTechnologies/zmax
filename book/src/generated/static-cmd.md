@@ -117,6 +117,8 @@
 | `split_selection_on_newline` | Split selection on newlines | **helix, kakoune** — normal: `` <A-s> ``, select: `` <A-s> `` |
 | `merge_selections` | Merge selections | **helix** — normal: `` <A-minus> ``, select: `` <A-minus> ``<br>**kakoune** — normal: `` <A-+> ``, `` <A-minus> ``, select: `` <A-minus> `` |
 | `merge_consecutive_selections` | Merge consecutive selections | **helix, kakoune** — normal: `` <A-_> ``, select: `` <A-_> `` |
+| `undo_selection_change` | Undo the last selection change (kakoune A-u) | **kakoune** — normal: `` <A-u> `` |
+| `redo_selection_change` | Redo a selection change (kakoune A-U) | **kakoune** — normal: `` <A-U> `` |
 | `save_selections_to_register` | Save selections to a register (kakoune Z) | **kakoune** — normal: `` Z ``, `` <A-Z> ``, select: `` Z `` |
 | `restore_selections_from_register` | Restore selections from a register (kakoune z) | **kakoune** — normal: `` z ``, select: `` z `` |
 | `combine_selections_from_register` | Combine selections with a register's (kakoune A-z) | **kakoune** — normal: `` <A-z> ``, select: `` <A-z> `` |
@@ -165,6 +167,7 @@
 | `ediff_dotfile_and_template` | Diff the config file against the shipped template (SPC f e D) | **spacemacs** — normal: `` <space>Df. ``, `` <space>feD ``, select: `` <space>Df. ``, `` <space>feD `` |
 | `compare_with_clipboard` | Diff the current buffer against the clipboard (JetBrains Compare with Clipboard) | **spacemacs** — normal: `` <space>Dc ``, select: `` <space>Dc `` |
 | `transpose_paragraph` | Swap the current paragraph with the previous one (SPC x t p) | **spacemacs** — normal: `` <space>xtp ``, select: `` <space>xtp `` |
+| `transpose_char` | Swap the two characters around the cursor (emacs transpose-chars, C-t) |  |
 | `transpose_line` | Swap the current line with the previous one (emacs transpose-lines, C-x C-t) | **spacemacs** — normal: `` <C-x><C-t> ``, select: `` <C-x><C-t> ``, insert: `` <C-x><C-t> ``<br>**emacs** — insert: `` <C-x><C-t> ``<br>**cua** — select: `` <C-X><C-t> ``, insert: `` <C-x><C-t> `` |
 | `move_element_right` | Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right) | **spacemacs** — normal: `` <space>x<gt> ``, select: `` <space>x<gt> `` |
 | `move_element_left` | Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left) | **spacemacs** — normal: `` <space>x<lt> ``, select: `` <space>x<lt> `` |
@@ -875,8 +878,8 @@
 | `undo` | Undo change | **spacemacs** — normal: `` u ``, `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``, `` <space>ku ``, select: `` <C-x>u ``, `` <space>ku ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``<br>**vim** — normal: `` u ``<br>**helix, kakoune** — normal: `` u ``, select: `` u ``<br>**emacs** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``<br>**cua** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, `` <C-x>u ``, select: `` <C-X>u ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, `` <C-x>u ``<br>**micro** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``<br>**nano** — normal: `` <A-u> ``, `` <C-/> ``, insert: `` <A-u> ``, `` <C-/> `` |
 | `undo_line` | Undo all latest changes on one line (vim U) | **spacemacs, vim** — normal: `` U `` |
 | `redo` | Redo change | **spacemacs** — normal: `` <C-r> ``, `` <space>k<C-r> ``, select: `` <space>k<C-r> ``<br>**vim** — normal: `` <C-r> ``<br>**helix, kakoune** — normal: `` U ``, select: `` U ``<br>**micro** — normal: `` <C-y> ``, insert: `` <C-y> ``<br>**nano** — normal: `` <A-e> ``, insert: `` <A-e> `` |
-| `earlier` | Move backward in history | **spacemacs, vim** — normal: `` g<minus> ``<br>**helix** — normal: `` <A-u> ``, select: `` <A-u> ``<br>**kakoune** — normal: `` <A-u> ``, `` <C-k> ``, select: `` <A-u> `` |
-| `later` | Move forward in history | **spacemacs, vim** — normal: `` g+ ``<br>**helix** — normal: `` <A-U> ``, select: `` <A-U> ``<br>**kakoune** — normal: `` <A-U> ``, `` <C-j> ``, select: `` <A-U> `` |
+| `earlier` | Move backward in history | **spacemacs, vim** — normal: `` g<minus> ``<br>**helix** — normal: `` <A-u> ``, select: `` <A-u> ``<br>**kakoune** — normal: `` <C-k> ``, select: `` <A-u> `` |
+| `later` | Move forward in history | **spacemacs, vim** — normal: `` g+ ``<br>**helix** — normal: `` <A-U> ``, select: `` <A-U> ``<br>**kakoune** — normal: `` <C-j> ``, select: `` <A-U> `` |
 | `undo_tree` | Browse the branching undo history (vim undotree) | **spacemacs** — normal: `` <space>aU ``, select: `` <space>aU `` |
 | `edit_injected_fragment` | Edit the injected-language fragment at point in its own buffer |  |
 | `apply_injected_fragment` | Write the fragment buffer back into its host string |  |

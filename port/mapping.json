@@ -65607,5 +65607,29 @@
    "static:shift_line_up"
   ],
   "note": "lunarvim <A-k> runs :m '<-2<CR>gv-gv"
+ },
+ {
+  "spec_id": "kakoune.changes.a_u",
+  "status": "ported",
+  "evidence": [
+   "static:undo_selection_change"
+  ],
+  "note": "kakoune <a-u> undoes the last selection change"
+ },
+ {
+  "spec_id": "kakoune.changes.a_u_2",
+  "status": "ported",
+  "evidence": [
+   "static:redo_selection_change"
+  ],
+  "note": "kakoune <a-U> redoes it"
+ },
+ {
+  "spec_id": "vile.command.transpose_characters",
+  "status": "ported",
+  "evidence": [
+   "static:transpose_char"
+  ],
+  "note": "vile transpose-characters"
  }
 ]

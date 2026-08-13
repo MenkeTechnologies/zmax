@@ -121,6 +121,11 @@ fn overrides() -> HashMap<Mode, KeyTrie> {
         "A-o" => add_newline_below,
         "A-O" => add_newline_above,
 
+        // Selection history: <a-u> and <a-U> walk selection changes the way
+        // u and U walk text changes.
+        "A-u" => undo_selection_change,
+        "A-U" => redo_selection_change,
+
         // Merge overlapping selections (kakoune's `<a-+>`); `+` itself would
         // duplicate a selection onto itself, which zmax cannot hold — see the
         // module docs.

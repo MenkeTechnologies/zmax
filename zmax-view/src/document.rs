@@ -154,10 +154,29 @@ pub enum DocumentOpenError {
     IoError(#[from] io::Error),
 }
 
+/// One view's walk through its past selections. `entries` is oldest-first and
+/// `index` is where the walk currently stands; a fresh selection change drops
+/// whatever was ahead of it, exactly as an edit does to the redo stack.
+#[derive(Debug, Default)]
+struct SelectionHistory {
+    entries: Vec<Selection>,
+    index: usize,
+}
+
+/// How many selection changes a view remembers. Every motion is a selection
+/// change, so this is a scrollback rather than a checkpoint list; a few hundred
+/// covers "put it back the way it was" without holding a session's worth.
+const SELECTION_HISTORY_LEN: usize = 256;
+
 pub struct Document {
     pub(crate) id: DocumentId,
     text: Rope,
     selections: HashMap<ViewId, Selection>,
+    /// Per-view selection history — kakoune's `<a-u>` / `<a-U>`, which walk
+    /// *selection* changes the way `u` / `U` walk text changes. Every
+    /// `set_selection` pushes the selection it replaced, so a motion is
+    /// undoable without touching the buffer.
+    selection_history: HashMap<ViewId, SelectionHistory>,
     view_data: HashMap<ViewId, ViewData>,
     pub active_snippet: Option<ActiveSnippet>,
 
@@ -1339,6 +1358,7 @@ impl Document {
             has_bom,
             text,
             selections: HashMap::default(),
+            selection_history: HashMap::default(),
             inlay_hints: HashMap::default(),
             inlay_hints_oudated: false,
             view_data: Default::default(),
@@ -2236,11 +2256,67 @@ impl Document {
             let line = self.text().char_to_line(cursor);
             self.folds.close_all_except(line);
         }
+        // Record what is being replaced so `<a-u>` can put it back. Identical
+        // selections are not history: re-setting the same selection (which many
+        // commands do) would otherwise fill the ring with nothing.
+        if let Some(previous) = self.selections.get(&view_id) {
+            if *previous != selection {
+                let previous = previous.clone();
+                let history = self.selection_history.entry(view_id).or_default();
+                history.entries.truncate(history.index);
+                history.entries.push(previous);
+                if history.entries.len() > SELECTION_HISTORY_LEN {
+                    history.entries.remove(0);
+                }
+                history.index = history.entries.len();
+            }
+        }
         self.selections.insert(view_id, selection);
         zmax_event::dispatch(SelectionDidChange {
             doc: self,
             view: view_id,
         })
+    }
+
+    /// kakoune `<a-u>`: step back to the selection before the last change.
+    /// Returns false when there is nothing older to go to.
+    pub fn undo_selection(&mut self, view_id: ViewId) -> bool {
+        let Some(history) = self.selection_history.get_mut(&view_id) else {
+            return false;
+        };
+        if history.index == 0 {
+            return false;
+        }
+        let current = match self.selections.get(&view_id) {
+            Some(selection) => selection.clone(),
+            None => return false,
+        };
+        history.index -= 1;
+        let restored = history.entries[history.index].clone();
+        // Leave the selection we came from where the walk can find it again, so
+        // `<a-U>` is a real redo rather than a second undo.
+        history.entries[history.index] = current;
+        self.selections.insert(view_id, restored);
+        true
+    }
+
+    /// kakoune `<a-U>`: step forward again through the selection history.
+    pub fn redo_selection(&mut self, view_id: ViewId) -> bool {
+        let Some(history) = self.selection_history.get_mut(&view_id) else {
+            return false;
+        };
+        if history.index >= history.entries.len() {
+            return false;
+        }
+        let current = match self.selections.get(&view_id) {
+            Some(selection) => selection.clone(),
+            None => return false,
+        };
+        let restored = history.entries[history.index].clone();
+        history.entries[history.index] = current;
+        history.index += 1;
+        self.selections.insert(view_id, restored);
+        true
     }
 
     /// Find the origin selection of the text in a document, i.e. where
@@ -4017,6 +4093,61 @@ mod test {
     use arc_swap::ArcSwap;
 
     use super::*;
+
+    /// kakoune `<a-u>` / `<a-U>`: the selection history walks back and forward
+    /// through selection changes without touching the text.
+    #[test]
+    fn selection_history_walks_back_and_forward() {
+        let mut doc = Document::from(
+            Rope::from("hello world\n"),
+            None,
+            Arc::new(ArcSwap::from_pointee(Config::default())),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let view = ViewId::default();
+        doc.set_selection(view, Selection::point(0));
+        doc.set_selection(view, Selection::single(0, 5));
+        doc.set_selection(view, Selection::single(6, 11));
+        assert_eq!(doc.selection(view).primary(), Range::new(6, 11));
+
+        // Back through each change…
+        assert!(doc.undo_selection(view));
+        assert_eq!(doc.selection(view).primary(), Range::new(0, 5));
+        assert!(doc.undo_selection(view));
+        // `set_selection` runs `ensure_invariants`, which widens a bare point to
+        // the one-character range the block cursor occupies — so that is what the
+        // history holds, and what comes back.
+        assert_eq!(doc.selection(view).primary(), Range::new(0, 1));
+        // …and no further.
+        assert!(!doc.undo_selection(view));
+
+        // Forward again lands where the walk started.
+        assert!(doc.redo_selection(view));
+        assert_eq!(doc.selection(view).primary(), Range::new(0, 5));
+        assert!(doc.redo_selection(view));
+        assert_eq!(doc.selection(view).primary(), Range::new(6, 11));
+        assert!(!doc.redo_selection(view));
+
+        // The text was never part of this.
+        assert_eq!(doc.text().to_string(), "hello world\n");
+    }
+
+    /// Re-setting the same selection is not a change, or every command that
+    /// re-asserts the selection would fill the ring with nothing to undo.
+    #[test]
+    fn an_unchanged_selection_is_not_history() {
+        let mut doc = Document::from(
+            Rope::from("hello\n"),
+            None,
+            Arc::new(ArcSwap::from_pointee(Config::default())),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let view = ViewId::default();
+        doc.set_selection(view, Selection::point(0));
+        doc.set_selection(view, Selection::point(0));
+        doc.set_selection(view, Selection::point(0));
+        assert!(!doc.undo_selection(view), "nothing changed, nothing to undo");
+    }
 
     #[test]
     fn glob_match_wildcards() {

@@ -495,6 +495,8 @@ impl MappableCommand {
         split_selection_on_newline, "Split selection on newlines",
         merge_selections, "Merge selections",
         merge_consecutive_selections, "Merge consecutive selections",
+        undo_selection_change, "Undo the last selection change (kakoune A-u)",
+        redo_selection_change, "Redo a selection change (kakoune A-U)",
         save_selections_to_register, "Save selections to a register (kakoune Z)",
         restore_selections_from_register, "Restore selections from a register (kakoune z)",
         combine_selections_from_register, "Combine selections with a register's (kakoune A-z)",
@@ -543,6 +545,7 @@ impl MappableCommand {
         ediff_dotfile_and_template, "Diff the config file against the shipped template (SPC f e D)",
         compare_with_clipboard, "Diff the current buffer against the clipboard (JetBrains Compare with Clipboard)",
         transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
+        transpose_char, "Swap the two characters around the cursor (emacs transpose-chars, C-t)",
         transpose_line, "Swap the current line with the previous one (emacs transpose-lines, C-x C-t)",
         move_element_right, "Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right)",
         move_element_left, "Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left)",
@@ -11239,6 +11242,22 @@ fn merge_consecutive_selections(cx: &mut Context) {
     doc.set_selection(view.id, selection);
 }
 
+/// kakoune `<a-u>`: undo the last *selection* change, leaving the text alone.
+fn undo_selection_change(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    if !doc.undo_selection(view.id) {
+        cx.editor.set_status("no older selection");
+    }
+}
+
+/// kakoune `<a-U>`: walk forward again through the selection history.
+fn redo_selection_change(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    if !doc.redo_selection(view.id) {
+        cx.editor.set_status("no newer selection");
+    }
+}
+
 /// kakoune `Z` (`:doc registers`): write the current selections into a register
 /// as kakoune's own `line.col,line.col` descriptors. Writing text (rather than a
 /// hidden side table) is what makes the register a normal register — `"aZ` then
@@ -13984,6 +14003,25 @@ fn transpose_paragraph(cx: &mut Context) {
 
 /// Emacs `transpose-lines` (C-x C-t): swap the current line with the previous
 /// one and move point to the following line.
+/// emacs `C-t` `transpose-chars`, vile `transpose-characters`: swap the two
+/// characters straddling the cursor and step past them. `region_ops` has done
+/// the character work since before this command existed; nothing was calling it.
+fn transpose_char(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let text = doc.text().to_string();
+    let Some((swapped, new_cursor)) = zmax_core::region_ops::transpose_chars(&text, cursor) else {
+        cx.editor.set_status("nothing to transpose");
+        return;
+    };
+    let len = doc.text().len_chars();
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((0, len, Some(swapped.into()))));
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(new_cursor));
+    doc.append_changes_to_history(view);
+}
+
 fn transpose_line(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
