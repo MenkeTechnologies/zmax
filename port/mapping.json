@@ -65663,5 +65663,21 @@
    "typable:structural-Y"
   ],
   "note": "vis inherits sam Y"
+ },
+ {
+  "spec_id": "kakoune.multiple-selections.a_s_2",
+  "status": "ported",
+  "evidence": [
+   "static:select_first_last_chars"
+  ],
+  "note": "kakoune <a-S> keeps the first and last character of each selection"
+ },
+ {
+  "spec_id": "kakoune.changes.a_7",
+  "status": "ported",
+  "evidence": [
+   "static:copy_indent"
+  ],
+  "note": "kakoune <a-&> copies the main selection’s indent to the other selected lines"
  }
 ]

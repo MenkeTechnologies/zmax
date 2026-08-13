@@ -78,14 +78,23 @@ pub fn slot_of(ch: char) -> Option<u8> {
 mod test {
     use super::*;
 
-    /// `DocumentId` has no public constructor, so the tests drive the store
-    /// through the ids the editor hands out; `Default` is one real id.
+    /// `DocumentId` has no public constructor, so every test here addresses the
+    /// same id in one process-wide store — which means they must not run at the
+    /// same time. `cargo test` runs a module's tests in parallel by default, and
+    /// two of these did interfere before this guard existed.
+    static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
+
     fn doc() -> DocumentId {
         DocumentId::default()
     }
 
+    fn guard() -> std::sync::MutexGuard<'static, ()> {
+        ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     #[test]
     fn a_slot_holds_a_line_until_it_is_replaced_or_unset() {
+        let _serial = guard();
         let doc = doc();
         forget(doc);
         assert_eq!(get(doc, 3), None);
@@ -101,6 +110,7 @@ mod test {
 
     #[test]
     fn slots_are_independent_and_listed_in_order() {
+        let _serial = guard();
         let doc = doc();
         forget(doc);
         set(doc, 9, 90);

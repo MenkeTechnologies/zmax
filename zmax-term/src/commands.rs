@@ -495,6 +495,8 @@ impl MappableCommand {
         split_selection_on_newline, "Split selection on newlines",
         merge_selections, "Merge selections",
         merge_consecutive_selections, "Merge consecutive selections",
+        select_first_last_chars, "Keep the first and last character of each selection (kakoune A-S)",
+        copy_indent, "Copy the main selection's indent to the other selected lines (kakoune A-&)",
         set_numbered_bookmark, "Set a numbered bookmark on this line (ne SetBookmark)",
         goto_numbered_bookmark, "Jump to a numbered bookmark (ne GotoBookmark)",
         unset_numbered_bookmark, "Forget a numbered bookmark (ne UnsetBookmark)",
@@ -11244,6 +11246,38 @@ fn merge_consecutive_selections(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id).clone().merge_consecutive_ranges();
     doc.set_selection(view.id, selection);
+}
+
+/// kakoune `<a-S>`: keep the first and last character of each selection, which
+/// is how you turn a set of matched regions into a set of their delimiters.
+fn select_first_last_chars(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let ends = crate::selection_ops::first_and_last(doc.selection(view.id));
+    doc.set_selection(view.id, ends);
+}
+
+/// kakoune `<a-&>`: copy the main selection's indentation onto every other
+/// selected line.
+fn copy_indent(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id);
+    let indent = crate::selection_ops::indent_of_line(text, selection.primary().from());
+    let changes = crate::selection_ops::copy_indent_changes(text, selection, &indent);
+    if changes.is_empty() {
+        cx.editor.set_status("indent already matches");
+        return;
+    }
+    let count = changes.len();
+    let transaction = Transaction::change(
+        doc.text(),
+        changes
+            .into_iter()
+            .map(|(start, end, indent)| (start, end, Some(indent.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("copied indent to {count} line(s)"));
 }
 
 /// ne `SetBookmark`, mcedit's bookmark key: remember the current line in one of
