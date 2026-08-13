@@ -3,6 +3,7 @@ pub mod emacs;
 pub mod kakoune;
 pub mod macros;
 pub mod micro;
+pub mod nano;
 pub mod major_mode;
 pub mod spacemacs;
 pub mod vim;
@@ -17,7 +18,7 @@ pub use spacemacs::default;
 
 /// The keymap preset names selectable via `keymap = "..."` in config.toml and
 /// the `:keymap` command.
-pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "kakoune", "emacs", "cua", "micro"];
+pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "kakoune", "emacs", "cua", "micro", "nano"];
 
 /// The keymap preset currently in force. `Config::keymap` is the authority, but
 /// it lives in the app-level config that only `Application` can reach; commands
@@ -51,6 +52,7 @@ pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
         "helix" => Some(default::default()),
         "kakoune" => Some(kakoune::default()),
         "micro" => Some(micro::default()),
+        "nano" => Some(nano::default()),
         "emacs" => Some(emacs::default()),
         "cua" => Some(cua::default()),
         _ => None,
@@ -63,7 +65,7 @@ pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
 /// `cua-mode` on top, so it starts in Insert too.
 pub fn default_mode(name: &str) -> Mode {
     match name {
-        "emacs" | "cua" | "micro" => Mode::Insert,
+        "emacs" | "cua" | "micro" | "nano" => Mode::Insert,
         _ => Mode::Normal,
     }
 }
