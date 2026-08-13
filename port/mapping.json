@@ -57101,11 +57101,11 @@
  },
  {
   "spec_id": "micro.action.cutline",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:kill_to_line_end"
+   "static:kill_whole_line"
   ],
-  "note": "micro CutLine: micro cuts the whole line to the clipboard; kill_to_line_end cuts from the cursor"
+  "note": "micro CutLine"
  },
  {
   "spec_id": "micro.action.duplicate",
@@ -57933,11 +57933,11 @@
  },
  {
   "spec_id": "micro.keys.ctrl_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:kill_to_line_end"
+   "static:kill_whole_line"
   ],
-  "note": "micro CutLine: micro cuts the whole line to the clipboard; kill_to_line_end cuts from the cursor"
+  "note": "micro CutLine"
  },
  {
   "spec_id": "micro.keys.ctrl_d",
