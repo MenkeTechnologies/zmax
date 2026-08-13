@@ -61931,5 +61931,919 @@
    "static:add_selection_to_next_match"
   ],
   "note": "vis gn"
+ },
+ {
+  "spec_id": "nvi.vi-commands.control_a",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection_detect_word_boundaries"
+  ],
+  "note": "nvi control-A"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_2",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "nvi control-B"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_3",
+  "status": "ported",
+  "evidence": [
+   "static:page_cursor_half_down"
+  ],
+  "note": "nvi control-D"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_4",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "nvi control-E"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_5",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "nvi control-F"
+ },
+ {
+  "spec_id": "nvi.vi-commands.control_g",
+  "status": "ported",
+  "evidence": [
+   "typable:stats"
+  ],
+  "note": "nvi control-G"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_7",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "nvi control-J"
+ },
+ {
+  "spec_id": "nvi.vi-commands.control_l",
+  "status": "ported",
+  "evidence": [
+   "typable:redraw"
+  ],
+  "note": "nvi control-L"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_8",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "nvi control-M"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_9",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "nvi control-P"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_10",
+  "status": "ported",
+  "evidence": [
+   "static:page_cursor_half_up"
+  ],
+  "note": "nvi control-U"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_11",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "nvi control-Y"
+ },
+ {
+  "spec_id": "nvi.vi-commands.control_z",
+  "status": "ported",
+  "evidence": [
+   "static:suspend"
+  ],
+  "note": "nvi control-Z"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_15",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "nvi $"
+ },
+ {
+  "spec_id": "nvi.vi-commands.item",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "nvi %"
+ },
+ {
+  "spec_id": "nvi.vi-commands.item_3",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "nvi /"
+ },
+ {
+  "spec_id": "nvi.vi-commands.0",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "nvi 0"
+ },
+ {
+  "spec_id": "nvi.vi-commands.item_4",
+  "status": "ported",
+  "evidence": [
+   "static:command_mode"
+  ],
+  "note": "nvi :"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_21",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "nvi <"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_22",
+  "status": "ported",
+  "evidence": [
+   "static:insert_at_line_end"
+  ],
+  "note": "nvi A"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_23",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_long_word_start"
+  ],
+  "note": "nvi B"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_2",
+  "status": "partial",
+  "evidence": [
+   "static:extend_to_line_end",
+   "static:change_selection"
+  ],
+  "note": "nvi C"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_3",
+  "status": "ported",
+  "evidence": [
+   "static:kill_to_line_end"
+  ],
+  "note": "nvi D"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_24",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_long_word_end"
+  ],
+  "note": "nvi E"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_25",
+  "status": "ported",
+  "evidence": [
+   "static:find_prev_char"
+  ],
+  "note": "nvi F"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_26",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line"
+  ],
+  "note": "nvi G"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_27",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": "nvi H"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_28",
+  "status": "ported",
+  "evidence": [
+   "static:insert_at_line_start"
+  ],
+  "note": "nvi I"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_29",
+  "status": "ported",
+  "evidence": [
+   "static:join_selections"
+  ],
+  "note": "nvi J"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_30",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_bottom"
+  ],
+  "note": "nvi L"
+ },
+ {
+  "spec_id": "nvi.vi-commands.m",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_center"
+  ],
+  "note": "nvi M"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_31",
+  "status": "ported",
+  "evidence": [
+   "static:open_above"
+  ],
+  "note": "nvi O"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_4",
+  "status": "ported",
+  "evidence": [
+   "static:paste_before"
+  ],
+  "note": "nvi P"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_32",
+  "status": "ported",
+  "evidence": [
+   "static:replace_mode"
+  ],
+  "note": "nvi R"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_5",
+  "status": "partial",
+  "evidence": [
+   "static:extend_to_line_bounds",
+   "static:change_selection"
+  ],
+  "note": "nvi S"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_33",
+  "status": "ported",
+  "evidence": [
+   "static:till_prev_char"
+  ],
+  "note": "nvi T"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_34",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_long_word_start"
+  ],
+  "note": "nvi W"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_6",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "nvi X"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_7",
+  "status": "ported",
+  "evidence": [
+   "static:yank_main_selection_to_clipboard"
+  ],
+  "note": "nvi Y"
+ },
+ {
+  "spec_id": "nvi.vi-commands.zz",
+  "status": "ported",
+  "evidence": [
+   "typable:write-quit"
+  ],
+  "note": "nvi ZZ"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_38",
+  "status": "ported",
+  "evidence": [
+   "static:append_mode"
+  ],
+  "note": "nvi a"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_39",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "nvi b"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_8",
+  "status": "ported",
+  "evidence": [
+   "static:change_selection"
+  ],
+  "note": "nvi c"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_9",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "nvi d"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_40",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_end"
+  ],
+  "note": "nvi e"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_41",
+  "status": "ported",
+  "evidence": [
+   "static:find_next_char"
+  ],
+  "note": "nvi f"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_42",
+  "status": "ported",
+  "evidence": [
+   "static:insert_mode"
+  ],
+  "note": "nvi i"
+ },
+ {
+  "spec_id": "nvi.vi-commands.m_2",
+  "status": "ported",
+  "evidence": [
+   "static:save_selection"
+  ],
+  "note": "nvi m"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_43",
+  "status": "ported",
+  "evidence": [
+   "static:open_below"
+  ],
+  "note": "nvi o"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_10",
+  "status": "ported",
+  "evidence": [
+   "static:paste_after"
+  ],
+  "note": "nvi p"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_44",
+  "status": "ported",
+  "evidence": [
+   "static:replace"
+  ],
+  "note": "nvi r"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_11",
+  "status": "ported",
+  "evidence": [
+   "static:change_selection"
+  ],
+  "note": "nvi s"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_45",
+  "status": "ported",
+  "evidence": [
+   "static:find_till_char"
+  ],
+  "note": "nvi t"
+ },
+ {
+  "spec_id": "nvi.vi-commands.u_2",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "nvi u"
+ },
+ {
+  "spec_id": "nvi.vi-commands.count_46",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "nvi w"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_12",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "nvi x"
+ },
+ {
+  "spec_id": "nvi.vi-commands.buffer_13",
+  "status": "ported",
+  "evidence": [
+   "static:yank"
+  ],
+  "note": "nvi y"
+ },
+ {
+  "spec_id": "nvi.ex-commands.ab",
+  "status": "ported",
+  "evidence": [
+   "typable:ab"
+  ],
+  "note": "nvi ex command :ab"
+ },
+ {
+  "spec_id": "nvi.ex-commands.ar",
+  "status": "ported",
+  "evidence": [
+   "typable:ar"
+  ],
+  "note": "nvi ex command :ar"
+ },
+ {
+  "spec_id": "nvi.ex-commands.exu",
+  "status": "ported",
+  "evidence": [
+   "typable:exu"
+  ],
+  "note": "nvi ex command :exu"
+ },
+ {
+  "spec_id": "nvi.ex-commands.mk",
+  "status": "ported",
+  "evidence": [
+   "typable:mk"
+  ],
+  "note": "nvi ex command :mk"
+ },
+ {
+  "spec_id": "nvi.ex-commands.pre",
+  "status": "ported",
+  "evidence": [
+   "typable:pre"
+  ],
+  "note": "nvi ex command :pre"
+ },
+ {
+  "spec_id": "nvi.ex-commands.q",
+  "status": "ported",
+  "evidence": [
+   "typable:q"
+  ],
+  "note": "nvi ex command :q"
+ },
+ {
+  "spec_id": "nvi.ex-commands.rec",
+  "status": "ported",
+  "evidence": [
+   "typable:rec"
+  ],
+  "note": "nvi ex command :rec"
+ },
+ {
+  "spec_id": "nvi.ex-commands.res",
+  "status": "ported",
+  "evidence": [
+   "typable:res"
+  ],
+  "note": "nvi ex command :res"
+ },
+ {
+  "spec_id": "nvi.ex-commands.rew",
+  "status": "ported",
+  "evidence": [
+   "typable:rew"
+  ],
+  "note": "nvi ex command :rew"
+ },
+ {
+  "spec_id": "nvi.ex-commands.se",
+  "status": "ported",
+  "evidence": [
+   "typable:se"
+  ],
+  "note": "nvi ex command :se"
+ },
+ {
+  "spec_id": "nvi.ex-commands.sh",
+  "status": "ported",
+  "evidence": [
+   "typable:sh"
+  ],
+  "note": "nvi ex command :sh"
+ },
+ {
+  "spec_id": "nvi.ex-commands.so",
+  "status": "ported",
+  "evidence": [
+   "typable:so"
+  ],
+  "note": "nvi ex command :so"
+ },
+ {
+  "spec_id": "nvi.ex-commands.una",
+  "status": "ported",
+  "evidence": [
+   "typable:una"
+  ],
+  "note": "nvi ex command :una"
+ },
+ {
+  "spec_id": "nvi.ex-commands.u_3",
+  "status": "ported",
+  "evidence": [
+   "typable:u"
+  ],
+  "note": "nvi ex command :u"
+ },
+ {
+  "spec_id": "nvi.ex-commands.viu",
+  "status": "ported",
+  "evidence": [
+   "typable:viu"
+  ],
+  "note": "nvi ex command :viu"
+ },
+ {
+  "spec_id": "nvi.ex-commands.vs",
+  "status": "ported",
+  "evidence": [
+   "typable:vs"
+  ],
+  "note": "nvi ex command :vs"
+ },
+ {
+  "spec_id": "nvi.set-options.autoindent",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set autoindent round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.autowrite",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set autowrite is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.backup",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set backup round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.cdpath",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set cdpath round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.cedit",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set cedit round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.columns",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set columns round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.directory",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set directory round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.errorbells",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set errorbells round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.expandtab",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set expandtab round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.exrc",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set exrc is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.fileencoding",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set fileencoding round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.ignorecase",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set ignorecase is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.lines",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set lines round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.lisp",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set lisp round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.list",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set list round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.matchtime",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set matchtime is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.modelines",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set modelines is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.number",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set number round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.paragraphs",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set paragraphs round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.path",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set path round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.readonly",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set readonly round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.report",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set report is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.ruler",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set ruler round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.scroll",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set scroll round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.sections",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set sections round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.shell",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set shell round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.shiftwidth",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set shiftwidth is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.showmatch",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set showmatch is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.showmode",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set showmode round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.sidescroll",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set sidescroll round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.tabstop",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set tabstop round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.taglength",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set taglength is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.tags",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set tags is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.tildeop",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set tildeop round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.timeout",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set timeout is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.verbose",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set verbose round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.warn",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set warn is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.window",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set window round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.wrapmargin",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set wrapmargin is read by zmax"
+ },
+ {
+  "spec_id": "nvi.set-options.wrapscan",
+  "status": "partial",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set wrapscan round-trips but nothing reads it yet"
+ },
+ {
+  "spec_id": "nvi.set-options.writeany",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": ":set writeany is read by zmax"
  }
 ]
