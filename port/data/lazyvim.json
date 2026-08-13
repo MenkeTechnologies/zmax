@@ -1,0 +1,802 @@
+[
+ {
+  "id": "lazyvim.keys-n.j",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "j",
+  "desc": "Down",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L8"
+ },
+ {
+  "id": "lazyvim.keys-x.j",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "j",
+  "desc": "Down",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L8"
+ },
+ {
+  "id": "lazyvim.keys-n.down",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<Down>",
+  "desc": "Down",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L9"
+ },
+ {
+  "id": "lazyvim.keys-x.down",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "<Down>",
+  "desc": "Down",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L9"
+ },
+ {
+  "id": "lazyvim.keys-n.k",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "k",
+  "desc": "Up",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L10"
+ },
+ {
+  "id": "lazyvim.keys-x.k",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "k",
+  "desc": "Up",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L10"
+ },
+ {
+  "id": "lazyvim.keys-n.up",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<Up>",
+  "desc": "Up",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L11"
+ },
+ {
+  "id": "lazyvim.keys-x.up",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "<Up>",
+  "desc": "Up",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L11"
+ },
+ {
+  "id": "lazyvim.keys-n.c_h",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-h>",
+  "desc": "Go to Left Window",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L14"
+ },
+ {
+  "id": "lazyvim.keys-n.c_j",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-j>",
+  "desc": "Go to Lower Window",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L15"
+ },
+ {
+  "id": "lazyvim.keys-n.c_k",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-k>",
+  "desc": "Go to Upper Window",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L16"
+ },
+ {
+  "id": "lazyvim.keys-n.c_l",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-l>",
+  "desc": "Go to Right Window",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L17"
+ },
+ {
+  "id": "lazyvim.keys-n.c_up",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-Up>",
+  "desc": "Increase Window Height",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L20"
+ },
+ {
+  "id": "lazyvim.keys-n.c_down",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-Down>",
+  "desc": "Decrease Window Height",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L21"
+ },
+ {
+  "id": "lazyvim.keys-n.c_left",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-Left>",
+  "desc": "Decrease Window Width",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L22"
+ },
+ {
+  "id": "lazyvim.keys-n.c_right",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-Right>",
+  "desc": "Increase Window Width",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L23"
+ },
+ {
+  "id": "lazyvim.keys-n.a_j",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<A-j>",
+  "desc": "Move Down",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L26"
+ },
+ {
+  "id": "lazyvim.keys-n.a_k",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<A-k>",
+  "desc": "Move Up",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L27"
+ },
+ {
+  "id": "lazyvim.keys-i.a_j",
+  "source": "lazyvim",
+  "category": "keys-i",
+  "name": "<A-j>",
+  "desc": "Move Down",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L28"
+ },
+ {
+  "id": "lazyvim.keys-i.a_k",
+  "source": "lazyvim",
+  "category": "keys-i",
+  "name": "<A-k>",
+  "desc": "Move Up",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L29"
+ },
+ {
+  "id": "lazyvim.keys-v.a_j",
+  "source": "lazyvim",
+  "category": "keys-v",
+  "name": "<A-j>",
+  "desc": "Move Down",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L30"
+ },
+ {
+  "id": "lazyvim.keys-v.a_k",
+  "source": "lazyvim",
+  "category": "keys-v",
+  "name": "<A-k>",
+  "desc": "Move Up",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L31"
+ },
+ {
+  "id": "lazyvim.keys-n.s_h",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<S-h>",
+  "desc": "Prev Buffer",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L34"
+ },
+ {
+  "id": "lazyvim.keys-n.s_l",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<S-l>",
+  "desc": "Next Buffer",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L35"
+ },
+ {
+  "id": "lazyvim.keys-n.b",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "[b",
+  "desc": "Prev Buffer",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L36"
+ },
+ {
+  "id": "lazyvim.keys-n.b_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "]b",
+  "desc": "Next Buffer",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L37"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderbb",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>bb",
+  "desc": "Switch to Other Buffer",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L38"
+ },
+ {
+  "id": "lazyvim.keys-n.leader",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>`",
+  "desc": "Switch to Other Buffer",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L39"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderbd",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>bd",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L40"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderbo",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>bo",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L43"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderbi",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>bi",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L46"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderbd_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>bD",
+  "desc": "Delete Buffer and Window",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L49"
+ },
+ {
+  "id": "lazyvim.keys-i.esc",
+  "source": "lazyvim",
+  "category": "keys-i",
+  "name": "<esc>",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L52"
+ },
+ {
+  "id": "lazyvim.keys-n.esc",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<esc>",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L52"
+ },
+ {
+  "id": "lazyvim.keys-s.esc",
+  "source": "lazyvim",
+  "category": "keys-s",
+  "name": "<esc>",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L52"
+ },
+ {
+  "id": "lazyvim.keys-n.n",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "n",
+  "desc": "Next Search Result",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L68"
+ },
+ {
+  "id": "lazyvim.keys-x.n",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "n",
+  "desc": "Next Search Result",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L69"
+ },
+ {
+  "id": "lazyvim.keys-o.n",
+  "source": "lazyvim",
+  "category": "keys-o",
+  "name": "n",
+  "desc": "Next Search Result",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L70"
+ },
+ {
+  "id": "lazyvim.keys-n.n_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "N",
+  "desc": "Prev Search Result",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L71"
+ },
+ {
+  "id": "lazyvim.keys-x.n_2",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "N",
+  "desc": "Prev Search Result",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L72"
+ },
+ {
+  "id": "lazyvim.keys-o.n_2",
+  "source": "lazyvim",
+  "category": "keys-o",
+  "name": "N",
+  "desc": "Prev Search Result",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L73"
+ },
+ {
+  "id": "lazyvim.keys-i.key",
+  "source": "lazyvim",
+  "category": "keys-i",
+  "name": ",",
+  "desc": "runs \",<c-g>u\"",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L76"
+ },
+ {
+  "id": "lazyvim.keys-i.key_2",
+  "source": "lazyvim",
+  "category": "keys-i",
+  "name": ".",
+  "desc": "runs \".<c-g>u\"",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L77"
+ },
+ {
+  "id": "lazyvim.keys-i.key_3",
+  "source": "lazyvim",
+  "category": "keys-i",
+  "name": ";",
+  "desc": "runs \";<c-g>u\"",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L78"
+ },
+ {
+  "id": "lazyvim.keys-i.c_s",
+  "source": "lazyvim",
+  "category": "keys-i",
+  "name": "<C-s>",
+  "desc": "Save File",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L81"
+ },
+ {
+  "id": "lazyvim.keys-x.c_s",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "<C-s>",
+  "desc": "Save File",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L81"
+ },
+ {
+  "id": "lazyvim.keys-n.c_s",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<C-s>",
+  "desc": "Save File",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L81"
+ },
+ {
+  "id": "lazyvim.keys-s.c_s",
+  "source": "lazyvim",
+  "category": "keys-s",
+  "name": "<C-s>",
+  "desc": "Save File",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L81"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderk",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>K",
+  "desc": "Keywordprg",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L84"
+ },
+ {
+  "id": "lazyvim.keys-x.key",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "<",
+  "desc": "runs \"<gv\"",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L87"
+ },
+ {
+  "id": "lazyvim.keys-x.key_2",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": ">",
+  "desc": "runs \">gv\"",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L88"
+ },
+ {
+  "id": "lazyvim.keys-n.gco",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "gco",
+  "desc": "Add Comment Below",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L91"
+ },
+ {
+  "id": "lazyvim.keys-n.gco_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "gcO",
+  "desc": "Add Comment Above",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L92"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderl",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>l",
+  "desc": "Lazy",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L95"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderfn",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>fn",
+  "desc": "New File",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L98"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderxl",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>xl",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L101"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderxq",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>xq",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L109"
+ },
+ {
+  "id": "lazyvim.keys-n.q",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "[q",
+  "desc": "Previous Quickfix",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L116"
+ },
+ {
+  "id": "lazyvim.keys-n.q_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "]q",
+  "desc": "Next Quickfix",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L117"
+ },
+ {
+  "id": "lazyvim.keys-n.leadercf",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>cf",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L120"
+ },
+ {
+  "id": "lazyvim.keys-x.leadercf",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "<leader>cf",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L120"
+ },
+ {
+  "id": "lazyvim.keys-n.leadercd",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>cd",
+  "desc": "Line Diagnostics",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L134"
+ },
+ {
+  "id": "lazyvim.keys-n.d",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "]d",
+  "desc": "Next Diagnostic",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L135"
+ },
+ {
+  "id": "lazyvim.keys-n.d_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "[d",
+  "desc": "Prev Diagnostic",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L136"
+ },
+ {
+  "id": "lazyvim.keys-n.e",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "]e",
+  "desc": "Next Error",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L137"
+ },
+ {
+  "id": "lazyvim.keys-n.e_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "[e",
+  "desc": "Prev Error",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L138"
+ },
+ {
+  "id": "lazyvim.keys-n.w",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "]w",
+  "desc": "Next Warning",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L139"
+ },
+ {
+  "id": "lazyvim.keys-n.w_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "[w",
+  "desc": "Prev Warning",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L140"
+ },
+ {
+  "id": "lazyvim.keys-n.leadergg",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>gg",
+  "desc": "Lazygit (Root Dir)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L169"
+ },
+ {
+  "id": "lazyvim.keys-n.leadergg_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>gG",
+  "desc": "Lazygit (cwd)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L170"
+ },
+ {
+  "id": "lazyvim.keys-n.leadergl",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>gL",
+  "desc": "Git Log (cwd)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L173"
+ },
+ {
+  "id": "lazyvim.keys-n.leadergb",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>gb",
+  "desc": "Git Blame Line",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L174"
+ },
+ {
+  "id": "lazyvim.keys-n.leadergf",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>gf",
+  "desc": "Git Current File History",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L175"
+ },
+ {
+  "id": "lazyvim.keys-n.leadergl_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>gl",
+  "desc": "Git Log",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L176"
+ },
+ {
+  "id": "lazyvim.keys-n.leadergb_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>gB",
+  "desc": "Git Browse (open)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L177"
+ },
+ {
+  "id": "lazyvim.keys-x.leadergb",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "<leader>gB",
+  "desc": "Git Browse (open)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L177"
+ },
+ {
+  "id": "lazyvim.keys-n.leadergy",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>gY",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L178"
+ },
+ {
+  "id": "lazyvim.keys-x.leadergy",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "<leader>gY",
+  "desc": "runs function()",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L178"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderqq",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>qq",
+  "desc": "Quit All",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L183"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderui",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>ui",
+  "desc": "Inspect Pos",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L186"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderui_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>uI",
+  "desc": "Inspect Tree",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L187"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderl_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>L",
+  "desc": "LazyVim Changelog",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L190"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderft",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>fT",
+  "desc": "Terminal (cwd)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L193"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderft_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>ft",
+  "desc": "Terminal (Root Dir)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L194"
+ },
+ {
+  "id": "lazyvim.keys-n.c",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<c-/>",
+  "desc": "Terminal (Root Dir)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L195"
+ },
+ {
+  "id": "lazyvim.keys-t.c",
+  "source": "lazyvim",
+  "category": "keys-t",
+  "name": "<c-/>",
+  "desc": "Terminal (Root Dir)",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L195"
+ },
+ {
+  "id": "lazyvim.keys-n.c_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<c-_>",
+  "desc": "which_key_ignore",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L196"
+ },
+ {
+  "id": "lazyvim.keys-t.c_2",
+  "source": "lazyvim",
+  "category": "keys-t",
+  "name": "<c-_>",
+  "desc": "which_key_ignore",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L196"
+ },
+ {
+  "id": "lazyvim.keys-n.leader_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>-",
+  "desc": "Split Window Below",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L199"
+ },
+ {
+  "id": "lazyvim.keys-n.leader_3",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>|",
+  "desc": "Split Window Right",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L200"
+ },
+ {
+  "id": "lazyvim.keys-n.leaderwd",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader>wd",
+  "desc": "Delete Window",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L201"
+ },
+ {
+  "id": "lazyvim.keys-n.leadertabl",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader><tab>l",
+  "desc": "Last Tab",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L206"
+ },
+ {
+  "id": "lazyvim.keys-n.leadertabo",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader><tab>o",
+  "desc": "Close Other Tabs",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L207"
+ },
+ {
+  "id": "lazyvim.keys-n.leadertabf",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader><tab>f",
+  "desc": "First Tab",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L208"
+ },
+ {
+  "id": "lazyvim.keys-n.leadertabtab",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader><tab><tab>",
+  "desc": "New Tab",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L209"
+ },
+ {
+  "id": "lazyvim.keys-n.leadertab",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader><tab>]",
+  "desc": "Next Tab",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L210"
+ },
+ {
+  "id": "lazyvim.keys-n.leadertabd",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader><tab>d",
+  "desc": "Close Tab",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L211"
+ },
+ {
+  "id": "lazyvim.keys-n.leadertab_2",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<leader><tab>[",
+  "desc": "Previous Tab",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L212"
+ },
+ {
+  "id": "lazyvim.keys-n.localleaderr",
+  "source": "lazyvim",
+  "category": "keys-n",
+  "name": "<localleader>r",
+  "desc": "Run Lua",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L215"
+ },
+ {
+  "id": "lazyvim.keys-x.localleaderr",
+  "source": "lazyvim",
+  "category": "keys-x",
+  "name": "<localleader>r",
+  "desc": "Run Lua",
+  "doc_ref": "https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua#L215"
+ }
+]

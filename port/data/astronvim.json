@@ -1,0 +1,594 @@
+[
+ {
+  "id": "astronvim.keys-n.j",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "j",
+  "desc": "Move cursor down",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L28"
+ },
+ {
+  "id": "astronvim.keys-n.k",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "k",
+  "desc": "Move cursor up",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L30"
+ },
+ {
+  "id": "astronvim.keys-n.leaderw",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>w",
+  "desc": "Save",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L32"
+ },
+ {
+  "id": "astronvim.keys-n.leaderq",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>q",
+  "desc": "Quit Window",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L33"
+ },
+ {
+  "id": "astronvim.keys-n.leaderq_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>Q",
+  "desc": "Exit AstroNvim",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L34"
+ },
+ {
+  "id": "astronvim.keys-n.leadern",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>n",
+  "desc": "New File",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L35"
+ },
+ {
+  "id": "astronvim.keys-n.c_s",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-S>",
+  "desc": "Force write",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L36"
+ },
+ {
+  "id": "astronvim.keys-n.c_q",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-Q>",
+  "desc": "Force quit",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L38"
+ },
+ {
+  "id": "astronvim.keys-n.key",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "|",
+  "desc": "Vertical Split",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L39"
+ },
+ {
+  "id": "astronvim.keys-n.key_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "\\\\",
+  "desc": "Horizontal Split",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L40"
+ },
+ {
+  "id": "astronvim.keys-n.leader",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>/",
+  "desc": "Toggle comment line",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L41"
+ },
+ {
+  "id": "astronvim.keys-x.leader",
+  "source": "astronvim",
+  "category": "keys-x",
+  "name": "<Leader>/",
+  "desc": "Toggle comment",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L42"
+ },
+ {
+  "id": "astronvim.keys-n.gco",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "gco",
+  "desc": "Add Comment Below",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L44"
+ },
+ {
+  "id": "astronvim.keys-n.gco_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "gcO",
+  "desc": "Add Comment Above",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L45"
+ },
+ {
+  "id": "astronvim.keys-n.leaderr",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>R",
+  "desc": "Rename file",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L47"
+ },
+ {
+  "id": "astronvim.keys-n.leaderpi",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>pi",
+  "desc": "Plugins Install",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L51"
+ },
+ {
+  "id": "astronvim.keys-n.leaderps",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>ps",
+  "desc": "Plugins Status",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L52"
+ },
+ {
+  "id": "astronvim.keys-n.leaderps_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>pS",
+  "desc": "Plugins Sync",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L53"
+ },
+ {
+  "id": "astronvim.keys-n.leaderpu",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>pu",
+  "desc": "Plugins Check Updates",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L54"
+ },
+ {
+  "id": "astronvim.keys-n.leaderpu_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>pU",
+  "desc": "Plugins Update",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L55"
+ },
+ {
+  "id": "astronvim.keys-n.leaderpa",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>pa",
+  "desc": "Update Lazy and Mason",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L56"
+ },
+ {
+  "id": "astronvim.keys-n.leaderc",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>c",
+  "desc": "Close buffer",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L59"
+ },
+ {
+  "id": "astronvim.keys-n.leaderc_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>C",
+  "desc": "Force close buffer",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L60"
+ },
+ {
+  "id": "astronvim.keys-n.b",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "]b",
+  "desc": "runs ",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L61"
+ },
+ {
+  "id": "astronvim.keys-n.b_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "[b",
+  "desc": "runs ",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L65"
+ },
+ {
+  "id": "astronvim.keys-n.b_3",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": ">b",
+  "desc": "runs ",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L69"
+ },
+ {
+  "id": "astronvim.keys-n.b_4",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<b",
+  "desc": "runs ",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L73"
+ },
+ {
+  "id": "astronvim.keys-n.leaderbc",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>bC",
+  "desc": "Close all buffers",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L81"
+ },
+ {
+  "id": "astronvim.keys-n.leaderbp",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>bp",
+  "desc": "Previous buffer",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L84"
+ },
+ {
+  "id": "astronvim.keys-n.leaderbse",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>bse",
+  "desc": "By extension",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L88"
+ },
+ {
+  "id": "astronvim.keys-n.leaderbsr",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>bsr",
+  "desc": "By relative path",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L89"
+ },
+ {
+  "id": "astronvim.keys-n.leaderbsp",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>bsp",
+  "desc": "By full path",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L90"
+ },
+ {
+  "id": "astronvim.keys-n.leaderbsi",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>bsi",
+  "desc": "By buffer number",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L91"
+ },
+ {
+  "id": "astronvim.keys-n.leaderbsm",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>bsm",
+  "desc": "By modification",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L92"
+ },
+ {
+  "id": "astronvim.keys-n.leaderli",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>li",
+  "desc": "Lsp Information",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L95"
+ },
+ {
+  "id": "astronvim.keys-n.leaderld",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>ld",
+  "desc": "Hover diagnostics",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L96"
+ },
+ {
+  "id": "astronvim.keys-n.e",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "[e",
+  "desc": "Previous error",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L105"
+ },
+ {
+  "id": "astronvim.keys-n.e_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "]e",
+  "desc": "Next error",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L106"
+ },
+ {
+  "id": "astronvim.keys-n.w",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "[w",
+  "desc": "Previous warning",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L107"
+ },
+ {
+  "id": "astronvim.keys-n.w_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "]w",
+  "desc": "Next warning",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L108"
+ },
+ {
+  "id": "astronvim.keys-n.gl",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "gl",
+  "desc": "Hover diagnostics",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L109"
+ },
+ {
+  "id": "astronvim.keys-n.t",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "]t",
+  "desc": "Next tab",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L112"
+ },
+ {
+  "id": "astronvim.keys-n.t_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "[t",
+  "desc": "Previous tab",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L113"
+ },
+ {
+  "id": "astronvim.keys-n.c_h",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-H>",
+  "desc": "Move to left split",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L116"
+ },
+ {
+  "id": "astronvim.keys-n.c_j",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-J>",
+  "desc": "Move to below split",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L117"
+ },
+ {
+  "id": "astronvim.keys-n.c_k",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-K>",
+  "desc": "Move to above split",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L118"
+ },
+ {
+  "id": "astronvim.keys-n.c_l",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-L>",
+  "desc": "Move to right split",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L119"
+ },
+ {
+  "id": "astronvim.keys-n.c_up",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-Up>",
+  "desc": "Resize split up",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L120"
+ },
+ {
+  "id": "astronvim.keys-n.c_down",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-Down>",
+  "desc": "Resize split down",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L121"
+ },
+ {
+  "id": "astronvim.keys-n.c_left",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-Left>",
+  "desc": "Resize split left",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L122"
+ },
+ {
+  "id": "astronvim.keys-n.c_right",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<C-Right>",
+  "desc": "Resize split right",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L123"
+ },
+ {
+  "id": "astronvim.keys-n.leaderxq",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>xq",
+  "desc": "Quickfix List",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L127"
+ },
+ {
+  "id": "astronvim.keys-n.leaderxl",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>xl",
+  "desc": "Location List",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L128"
+ },
+ {
+  "id": "astronvim.keys-v.s_tab",
+  "source": "astronvim",
+  "category": "keys-v",
+  "name": "<S-Tab>",
+  "desc": "Unindent line",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L131"
+ },
+ {
+  "id": "astronvim.keys-v.tab",
+  "source": "astronvim",
+  "category": "keys-v",
+  "name": "<Tab>",
+  "desc": "Indent line",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L132"
+ },
+ {
+  "id": "astronvim.keys-t.c_h",
+  "source": "astronvim",
+  "category": "keys-t",
+  "name": "<C-H>",
+  "desc": "Terminal left window navigation",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L144"
+ },
+ {
+  "id": "astronvim.keys-t.c_j",
+  "source": "astronvim",
+  "category": "keys-t",
+  "name": "<C-J>",
+  "desc": "Terminal down window navigation",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L145"
+ },
+ {
+  "id": "astronvim.keys-t.c_k",
+  "source": "astronvim",
+  "category": "keys-t",
+  "name": "<C-K>",
+  "desc": "Terminal up window navigation",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L146"
+ },
+ {
+  "id": "astronvim.keys-t.c_l",
+  "source": "astronvim",
+  "category": "keys-t",
+  "name": "<C-L>",
+  "desc": "Terminal right window navigation",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L147"
+ },
+ {
+  "id": "astronvim.keys-n.leaderua",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>uA",
+  "desc": "Toggle rooter autochdir",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L151"
+ },
+ {
+  "id": "astronvim.keys-n.leaderub",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>ub",
+  "desc": "Toggle background",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L152"
+ },
+ {
+  "id": "astronvim.keys-n.leaderud",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>ud",
+  "desc": "Toggle diagnostics",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L153"
+ },
+ {
+  "id": "astronvim.keys-n.leaderug",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>ug",
+  "desc": "Toggle signcolumn",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L154"
+ },
+ {
+  "id": "astronvim.keys-n.leaderu",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>u>",
+  "desc": "Toggle foldcolumn",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L155"
+ },
+ {
+  "id": "astronvim.keys-n.leaderui",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>ui",
+  "desc": "Change indent setting",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L156"
+ },
+ {
+  "id": "astronvim.keys-n.leaderul",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>ul",
+  "desc": "Toggle statusline",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L157"
+ },
+ {
+  "id": "astronvim.keys-n.leaderun",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>un",
+  "desc": "Change line numbering",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L158"
+ },
+ {
+  "id": "astronvim.keys-n.leaderup",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>up",
+  "desc": "Toggle paste mode",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L161"
+ },
+ {
+  "id": "astronvim.keys-n.leaderus",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>us",
+  "desc": "Toggle spellcheck",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L162"
+ },
+ {
+  "id": "astronvim.keys-n.leaderus_2",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>uS",
+  "desc": "Toggle conceal",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L163"
+ },
+ {
+  "id": "astronvim.keys-n.leaderut",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>ut",
+  "desc": "Toggle tabline",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L164"
+ },
+ {
+  "id": "astronvim.keys-n.leaderuu",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>uu",
+  "desc": "Toggle URL highlight",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L165"
+ },
+ {
+  "id": "astronvim.keys-n.leaderuv",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>uv",
+  "desc": "Toggle virtual text",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L166"
+ },
+ {
+  "id": "astronvim.keys-n.leaderuw",
+  "source": "astronvim",
+  "category": "keys-n",
+  "name": "<Leader>uw",
+  "desc": "Toggle wrap",
+  "doc_ref": "https://github.com/AstroNvim/AstroNvim/blob/main/lua/astronvim/plugins/_astrocore_mappings.lua#L169"
+ }
+]
