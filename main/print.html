@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-74b46bd1.js";
+            window.path_to_searchindex_js = "searchindex-dcc80ee6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -2972,6 +2972,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:copy-lines</code>, <code>:t</code>, <code>:co</code>, <code>:copy</code></td><td>Copy the current line to after line {address}: :t{addr} (e.g. :t0, :t$).</td></tr>
 <tr><td><code>:global</code></td><td>Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d.</td></tr>
 <tr><td><code>:vglobal</code></td><td>Run a command on non-matching lines: :v/pattern/d (delete).</td></tr>
+<tr><td><code>:structural-X</code>, <code>:sX</code></td><td>sam/vis structural regex X: run a command in every file whose name matches — :sX/.rs$/ write.</td></tr>
+<tr><td><code>:structural-Y</code></td><td>sam/vis structural regex Y: run a command in every file whose name does not match.</td></tr>
 <tr><td><code>:structural-x</code>, <code>:sx</code></td><td>sam/vis structural regex x: select every match, then run a command over them — :sx/\w+/ d. (vim keeps :x = write-quit.)</td></tr>
 <tr><td><code>:structural-y</code></td><td>sam/vis structural regex y: select the stretches between matches — :structural-y/,/. (vim keeps :y = yank.)</td></tr>
 <tr><td><code>:substitute</code>, <code>:s</code></td><td>Substitute: :s/pattern/replacement/[flags]. Also :%s/…/…/g for the whole file.</td></tr>
