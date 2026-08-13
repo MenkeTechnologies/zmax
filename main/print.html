@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-c950722a.js";
+            window.path_to_searchindex_js = "searchindex-dca4602b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -1924,6 +1924,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:dotnet-goto-csproj</code></td><td>Open the enclosing .csproj file (dotnet.el dotnet-goto-csproj).</td></tr>
 <tr><td><code>:dotnet-goto-fsproj</code></td><td>Open the enclosing .fsproj file (dotnet.el dotnet-goto-fsproj).</td></tr>
 <tr><td><code>:recompile</code></td><td>Re-run the last compile command (emacs recompile).</td></tr>
+<tr><td><code>:lint</code></td><td>Run an external checker over this file and collect its messages (nano linter). Program from :set linter or the argument; % is the file path.</td></tr>
 <tr><td><code>:make</code></td><td>Run <code>make [args]</code>, collect errors into the quickfix list, jump to the first (vim :make).</td></tr>
 <tr><td><code>:lmake</code>, <code>:lmak</code></td><td>Run <code>make [args]</code> and collect its errors into the location list, jumping to the first (vim :lmake).</td></tr>
 <tr><td><code>:tag</code>, <code>:ta</code></td><td>Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag).</td></tr>
