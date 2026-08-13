@@ -121,6 +121,11 @@ fn overrides() -> HashMap<Mode, KeyTrie> {
         "A-o" => add_newline_below,
         "A-O" => add_newline_above,
 
+        // <a-S> keeps the two ends of each selection; <a-&> copies the main
+        // selection's indent onto the other selected lines.
+        "A-S" => select_first_last_chars,
+        "A-&" => copy_indent,
+
         // Selection history: <a-u> and <a-U> walk selection changes the way
         // u and U walk text changes.
         "A-u" => undo_selection_change,
