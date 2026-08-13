@@ -11,14 +11,14 @@
 | `drag_line_up` | Drag the current line up (SPC x . k) | **spacemacs** — normal: `` <space>x.K ``, `` <space>x.k ``, `` <space>x.<up> ``, select: `` <space>x.K ``, `` <space>x.k ``, `` <space>x.<up> `` |
 | `toggle_test_file` | Toggle between implementation and test file (SPC p a) | **spacemacs** — normal: `` <space>pa ``, select: `` <space>pa `` |
 | `fold_comments` | Fold multi-line comment blocks (SPC c h) | **spacemacs** — normal: `` <space>ch ``, select: `` <space>ch `` |
-| `move_visual_line_up` | Move up | **spacemacs, vim** — normal: `` gk ``, `` g<up> ``, insert: `` <C-g>k ``, `` <C-g><up> ``, `` <C-g><C-k> ``<br>**helix, kakoune** — normal: `` k ``, `` <up> ``, insert: `` <up> ``<br>**emacs, cua** — normal: `` <up> ``, `` <C-p> ``, insert: `` <up> ``, `` <C-p> `` |
-| `move_visual_line_down` | Move down | **spacemacs, vim** — normal: `` gj ``, `` g<down> ``, insert: `` <C-g>j ``, `` <C-g><C-j> ``, `` <C-g><down> ``<br>**helix, kakoune** — normal: `` j ``, `` <down> ``, insert: `` <down> ``<br>**emacs, cua** — normal: `` <C-n> ``, `` <down> ``, insert: `` <C-n> ``, `` <down> `` |
-| `extend_char_left` | Extend left | **helix, kakoune** — select: `` h ``, `` <left> ``<br>**emacs** — select: `` <C-b> ``, `` <left> ``<br>**cua** — select: `` <C-b> ``, `` <left> ``, `` <S-left> `` |
-| `extend_char_right` | Extend right | **vim** — select: `` <space> ``<br>**helix, kakoune** — select: `` l ``, `` <right> ``<br>**emacs** — select: `` <C-f> ``, `` <right> ``<br>**cua** — select: `` <C-f> ``, `` <right> ``, `` <S-right> `` |
+| `move_visual_line_up` | Move up | **spacemacs, vim** — normal: `` gk ``, `` g<up> ``, insert: `` <C-g>k ``, `` <C-g><up> ``, `` <C-g><C-k> ``<br>**helix, kakoune** — normal: `` k ``, `` <up> ``, insert: `` <up> ``<br>**emacs, cua** — normal: `` <up> ``, `` <C-p> ``, insert: `` <up> ``, `` <C-p> ``<br>**micro** — normal: `` <up> ``, insert: `` <up> `` |
+| `move_visual_line_down` | Move down | **spacemacs, vim** — normal: `` gj ``, `` g<down> ``, insert: `` <C-g>j ``, `` <C-g><C-j> ``, `` <C-g><down> ``<br>**helix, kakoune** — normal: `` j ``, `` <down> ``, insert: `` <down> ``<br>**emacs, cua** — normal: `` <C-n> ``, `` <down> ``, insert: `` <C-n> ``, `` <down> ``<br>**micro** — normal: `` <down> ``, insert: `` <down> `` |
+| `extend_char_left` | Extend left | **helix, kakoune** — select: `` h ``, `` <left> ``<br>**emacs, micro** — select: `` <C-b> ``, `` <left> ``<br>**cua** — select: `` <C-b> ``, `` <left> ``, `` <S-left> `` |
+| `extend_char_right` | Extend right | **vim** — select: `` <space> ``<br>**helix, kakoune** — select: `` l ``, `` <right> ``<br>**emacs, micro** — select: `` <C-f> ``, `` <right> ``<br>**cua** — select: `` <C-f> ``, `` <right> ``, `` <S-right> `` |
 | `extend_line_up` | Extend up | **helix, kakoune** — select: `` gk `` |
 | `extend_line_down` | Extend down | **helix, kakoune** — select: `` gj `` |
-| `extend_visual_line_up` | Extend up | **helix, kakoune** — select: `` k ``, `` <up> ``<br>**emacs** — select: `` <up> ``, `` <C-p> ``<br>**cua** — select: `` <up> ``, `` <C-p> ``, `` <S-up> `` |
-| `extend_visual_line_down` | Extend down | **helix, kakoune** — select: `` j ``, `` <down> ``<br>**emacs** — select: `` <C-n> ``, `` <down> ``<br>**cua** — select: `` <C-n> ``, `` <down> ``, `` <S-down> `` |
+| `extend_visual_line_up` | Extend up | **helix, kakoune** — select: `` k ``, `` <up> ``<br>**emacs, micro** — select: `` <up> ``, `` <C-p> ``<br>**cua** — select: `` <up> ``, `` <C-p> ``, `` <S-up> `` |
+| `extend_visual_line_down` | Extend down | **helix, kakoune** — select: `` j ``, `` <down> ``<br>**emacs, micro** — select: `` <C-n> ``, `` <down> ``<br>**cua** — select: `` <C-n> ``, `` <down> ``, `` <S-down> `` |
 | `copy_selection_on_next_line` | Copy selection on next line | **helix, kakoune** — normal: `` C ``, select: `` C `` |
 | `copy_selection_on_prev_line` | Copy selection on previous line | **helix, kakoune** — normal: `` <A-C> ``, select: `` <A-C> `` |
 | `column_selection` | Turn the selection into a rectangular column block (IntelliJ column selection) |  |
@@ -31,8 +31,8 @@
 | `block_swap_columns` | Visual-block: move cursor to the other column edge (O) | **spacemacs, vim** — select: `` O `` |
 | `block_insert` | Visual-block: insert at the left column on every row (I) | **spacemacs, vim** — select: `` I `` |
 | `block_append` | Visual-block: append at the right column, padding short rows (A) | **spacemacs, vim** — select: `` A `` |
-| `move_next_word_start` | Move to start of next word | **spacemacs** — normal: `` <A-f> ``, `` <A-right> ``, insert: `` <A-f> ``<br>**helix, kakoune** — normal: `` w `` |
-| `move_prev_word_start` | Move to start of previous word | **spacemacs** — normal: `` <A-b> ``, `` <A-left> ``, `` <C-left> ``, insert: `` <A-b> ``, `` <C-left> ``, `` <S-left> ``<br>**vim** — normal: `` <C-left> ``, insert: `` <C-left> ``, `` <S-left> ``<br>**helix, kakoune** — normal: `` b ``<br>**emacs, cua** — normal: `` <A-b> ``, insert: `` <A-b> `` |
+| `move_next_word_start` | Move to start of next word | **spacemacs** — normal: `` <A-f> ``, `` <A-right> ``, insert: `` <A-f> ``<br>**helix, kakoune** — normal: `` w ``<br>**micro** — normal: `` <A-f> ``, insert: `` <A-f> `` |
+| `move_prev_word_start` | Move to start of previous word | **spacemacs** — normal: `` <A-b> ``, `` <A-left> ``, `` <C-left> ``, insert: `` <A-b> ``, `` <C-left> ``, `` <S-left> ``<br>**vim** — normal: `` <C-left> ``, insert: `` <C-left> ``, `` <S-left> ``<br>**helix, kakoune** — normal: `` b ``<br>**emacs, cua, micro** — normal: `` <A-b> ``, insert: `` <A-b> `` |
 | `move_next_word_end` | Move to end of next word | **helix, kakoune** — normal: `` e ``<br>**emacs, cua** — normal: `` <A-f> ``, insert: `` <A-f> `` |
 | `move_prev_word_end` | Move to end of previous word |  |
 | `move_next_long_word_start` | Move to start of next long word | **helix, kakoune** — normal: `` W `` |
@@ -54,8 +54,8 @@
 | `move_parent_node_end` | Move to end of the parent node | **spacemacs** — normal: `` <space>k$ ``, select: `` <space>k$ ``<br>**helix, kakoune** — normal: `` <A-e> `` |
 | `move_parent_node_start` | Move to beginning of the parent node | **spacemacs** — normal: `` <space>k0 ``, select: `` <space>k0 ``<br>**helix, kakoune** — normal: `` <A-b> `` |
 | `extend_next_word_start` | Extend to start of next word | **helix, kakoune** — select: `` w `` |
-| `extend_prev_word_start` | Extend to start of previous word | **helix, kakoune** — select: `` b ``<br>**emacs, cua** — select: `` <A-b> `` |
-| `extend_next_word_end` | Extend to end of next word | **helix, kakoune** — select: `` e ``<br>**emacs, cua** — select: `` <A-f> `` |
+| `extend_prev_word_start` | Extend to start of previous word | **helix, kakoune** — select: `` b ``<br>**emacs, cua, micro** — select: `` <A-b> `` |
+| `extend_next_word_end` | Extend to end of next word | **helix, kakoune** — select: `` e ``<br>**emacs, cua, micro** — select: `` <A-f> `` |
 | `extend_prev_word_end` | Extend to end of previous word |  |
 | `extend_next_long_word_start` | Extend to start of next long word | **helix, kakoune** — select: `` W `` |
 | `extend_prev_long_word_start` | Extend to start of previous long word | **helix, kakoune** — select: `` B `` |
@@ -92,16 +92,16 @@
 | `switch_case_forward` | Toggle case and advance cursor (vim ~) | **spacemacs, vim** — normal: `` ~ `` |
 | `switch_to_uppercase` | Switch to uppercase | **spacemacs** — normal: `` <space>xU ``, `` <C-x><C-u> ``, select: `` <space>xU ``, `` <C-x><C-u> ``, insert: `` <C-x><C-u> ``<br>**helix, kakoune** — normal: `` <A-`> ``, select: `` <A-`> ``<br>**emacs** — insert: `` <C-x><C-u> ``<br>**cua** — select: `` <C-X><C-u> ``, insert: `` <C-x><C-u> `` |
 | `switch_to_lowercase` | Switch to lowercase | **spacemacs** — normal: `` <space>xu ``, `` <C-x><C-l> ``, select: `` <space>xu ``, `` <C-x><C-l> ``, insert: `` <C-x><C-l> ``<br>**helix, kakoune** — normal: `` ` ``, select: `` ` ``<br>**emacs** — insert: `` <C-x><C-l> ``<br>**cua** — select: `` <C-X><C-l> ``, insert: `` <C-x><C-l> `` |
-| `upcase_word` | Upper-case the word after point (emacs upcase-word, M-u) | **spacemacs** — normal: `` <A-u> ``<br>**emacs, cua** — normal: `` <A-u> ``, insert: `` <A-u> `` |
-| `downcase_word` | Lower-case the word after point (emacs downcase-word, M-l) | **spacemacs** — normal: `` <A-l> ``<br>**emacs, cua** — normal: `` <A-l> ``, insert: `` <A-l> `` |
+| `upcase_word` | Upper-case the word after point (emacs upcase-word, M-u) | **spacemacs** — normal: `` <A-u> ``<br>**emacs, cua, micro** — normal: `` <A-u> ``, insert: `` <A-u> `` |
+| `downcase_word` | Lower-case the word after point (emacs downcase-word, M-l) | **spacemacs** — normal: `` <A-l> ``<br>**emacs, cua, micro** — normal: `` <A-l> ``, insert: `` <A-l> `` |
 | `capitalize_word` | Capitalize the word after point (emacs capitalize-word, M-c) | **spacemacs** — normal: `` <A-c> ``<br>**emacs, cua** — normal: `` <A-c> ``, insert: `` <A-c> `` |
 | `upcase_prev_word` | Upper-case the previous word (emacs M-- M-u) | **spacemacs, vim** — normal: `` <A-minus>u ``, `` <A-minus><A-u> `` |
 | `downcase_prev_word` | Lower-case the previous word (emacs M-- M-l) | **spacemacs, vim** — normal: `` <A-minus>l ``, `` <A-minus><A-l> `` |
 | `capitalize_prev_word` | Capitalize the previous word (emacs M-- M-c) | **spacemacs, vim** — normal: `` <A-minus>c ``, `` <A-minus><A-c> `` |
 | `capitalize_region` | Title-case every word in the region (emacs capitalize-region) |  |
 | `upcase_initials_region` | Upper-case the first letter of each word in the region (emacs upcase-initials-region) |  |
-| `page_up` | Move page up | **spacemacs** — normal: `` <A-v> ``, `` <C-b> ``, `` <S-minus> ``, insert: `` <A-v> ``, `` <S-up> ``, `` <pageup> ``<br>**vim** — normal: `` <C-b> ``, `` <S-minus> ``, insert: `` <S-up> ``, `` <pageup> ``<br>**helix** — normal: `` <C-b> ``, `` Z<C-b> ``, `` z<C-b> ``, `` <pageup> ``, `` Z<pageup> ``, `` z<pageup> ``, select: `` <C-b> ``, `` Z<C-b> ``, `` z<C-b> ``, `` <pageup> ``, `` Z<pageup> ``, `` z<pageup> ``, insert: `` <pageup> ``<br>**kakoune** — normal: `` <C-b> ``, `` V<C-b> ``, `` v<C-b> ``, `` <pageup> ``, `` V<pageup> ``, `` v<pageup> ``, select: `` <C-b> ``, `` <pageup> ``, insert: `` <pageup> ``<br>**emacs, cua** — normal: `` <A-v> ``, `` <pageup> ``, insert: `` <A-v> ``, `` <pageup> `` |
-| `page_down` | Move page down | **spacemacs, vim** — normal: `` <C-f> ``, `` <S-+> ``, `` <S-ret> ``, insert: `` <S-down> ``, `` <pagedown> ``<br>**helix** — normal: `` <C-f> ``, `` Z<C-f> ``, `` z<C-f> ``, `` <pagedown> ``, `` Z<pagedown> ``, `` z<pagedown> ``, select: `` <C-f> ``, `` Z<C-f> ``, `` z<C-f> ``, `` <pagedown> ``, `` Z<pagedown> ``, `` z<pagedown> ``, insert: `` <pagedown> ``<br>**kakoune** — normal: `` <C-f> ``, `` V<C-f> ``, `` v<C-f> ``, `` <pagedown> ``, `` V<pagedown> ``, `` v<pagedown> ``, select: `` <C-f> ``, `` <pagedown> ``, insert: `` <pagedown> ``<br>**emacs** — normal: `` <C-v> ``, `` <pagedown> ``, insert: `` <C-v> ``, `` <pagedown> ``<br>**cua** — normal: `` <pagedown> ``, insert: `` <pagedown> `` |
+| `page_up` | Move page up | **spacemacs** — normal: `` <A-v> ``, `` <C-b> ``, `` <S-minus> ``, insert: `` <A-v> ``, `` <S-up> ``, `` <pageup> ``<br>**vim** — normal: `` <C-b> ``, `` <S-minus> ``, insert: `` <S-up> ``, `` <pageup> ``<br>**helix** — normal: `` <C-b> ``, `` Z<C-b> ``, `` z<C-b> ``, `` <pageup> ``, `` Z<pageup> ``, `` z<pageup> ``, select: `` <C-b> ``, `` Z<C-b> ``, `` z<C-b> ``, `` <pageup> ``, `` Z<pageup> ``, `` z<pageup> ``, insert: `` <pageup> ``<br>**kakoune** — normal: `` <C-b> ``, `` V<C-b> ``, `` v<C-b> ``, `` <pageup> ``, `` V<pageup> ``, `` v<pageup> ``, select: `` <C-b> ``, `` <pageup> ``, insert: `` <pageup> ``<br>**emacs, cua, micro** — normal: `` <A-v> ``, `` <pageup> ``, insert: `` <A-v> ``, `` <pageup> `` |
+| `page_down` | Move page down | **spacemacs, vim** — normal: `` <C-f> ``, `` <S-+> ``, `` <S-ret> ``, insert: `` <S-down> ``, `` <pagedown> ``<br>**helix** — normal: `` <C-f> ``, `` Z<C-f> ``, `` z<C-f> ``, `` <pagedown> ``, `` Z<pagedown> ``, `` z<pagedown> ``, select: `` <C-f> ``, `` Z<C-f> ``, `` z<C-f> ``, `` <pagedown> ``, `` Z<pagedown> ``, `` z<pagedown> ``, insert: `` <pagedown> ``<br>**kakoune** — normal: `` <C-f> ``, `` V<C-f> ``, `` v<C-f> ``, `` <pagedown> ``, `` V<pagedown> ``, `` v<pagedown> ``, select: `` <C-f> ``, `` <pagedown> ``, insert: `` <pagedown> ``<br>**emacs** — normal: `` <C-v> ``, `` <pagedown> ``, insert: `` <C-v> ``, `` <pagedown> ``<br>**cua, micro** — normal: `` <pagedown> ``, insert: `` <pagedown> `` |
 | `half_page_up` | Move half page up |  |
 | `half_page_down` | Move half page down |  |
 | `page_cursor_up` | Move page and cursor up |  |
@@ -110,7 +110,7 @@
 | `page_cursor_half_down` | Move page and cursor half down | **spacemacs, vim** — normal: `` <C-d> ``<br>**helix** — normal: `` <C-d> ``, `` Z<C-d> ``, `` z<C-d> ``, `` Z<space> ``, `` z<space> ``, select: `` <C-d> ``, `` Z<C-d> ``, `` z<C-d> ``, `` Z<space> ``, `` z<space> ``<br>**kakoune** — normal: `` <C-d> ``, `` V<C-d> ``, `` v<C-d> ``, `` V<space> ``, `` v<space> ``, select: `` <C-d> `` |
 | `extend_page_up` | Extend the selection a page up (vim <S-PageUp>) | **cua** — select: `` <S-pageup> `` |
 | `extend_page_down` | Extend the selection a page down (vim <S-PageDown>) | **cua** — select: `` <S-pagedown> `` |
-| `select_all` | Select whole document | **spacemacs** — normal: `` <C-x>h ``, select: `` <C-x>h ``, insert: `` <C-x>h ``<br>**helix, kakoune** — normal: `` % ``, select: `` % ``<br>**emacs** — normal: `` <C-x>h ``, insert: `` <C-x>h ``<br>**cua** — normal: `` <C-x>h ``, select: `` <C-X>h ``, insert: `` <C-x>h `` |
+| `select_all` | Select whole document | **spacemacs** — normal: `` <C-x>h ``, select: `` <C-x>h ``, insert: `` <C-x>h ``<br>**helix, kakoune** — normal: `` % ``, select: `` % ``<br>**emacs** — normal: `` <C-x>h ``, insert: `` <C-x>h ``<br>**cua** — normal: `` <C-x>h ``, select: `` <C-X>h ``, insert: `` <C-x>h ``<br>**micro** — normal: `` <C-a> ``, insert: `` <C-a> `` |
 | `select_regex` | Select all regex matches inside selections | **helix, kakoune** — normal: `` s ``, select: `` s `` |
 | `select_all_instances` | Select all occurrences of the current selection in the buffer |  |
 | `split_selection` | Split selections on regex matches | **helix, kakoune** — normal: `` S ``, select: `` S `` |
@@ -120,16 +120,16 @@
 | `save_selections_to_register` | Save selections to a register (kakoune Z) | **kakoune** — normal: `` Z ``, `` <A-Z> ``, select: `` Z `` |
 | `restore_selections_from_register` | Restore selections from a register (kakoune z) | **kakoune** — normal: `` z ``, select: `` z `` |
 | `combine_selections_from_register` | Combine selections with a register's (kakoune A-z) | **kakoune** — normal: `` <A-z> ``, select: `` <A-z> `` |
-| `search` | Search for regex pattern | **spacemacs** — normal: `` / ``, `` <C-s> ``, `` <A-C-s> ``, select: `` / ``<br>**vim, kakoune** — normal: `` / ``, select: `` / ``<br>**helix** — normal: `` / ``, `` Z/ ``, `` z/ ``, select: `` / ``, `` Z/ ``, `` z/ ``<br>**emacs, cua** — normal: `` <C-s> ``, `` <A-C-s> ``, insert: `` <C-s> ``, `` <A-C-s> `` |
-| `rsearch` | Reverse search for regex pattern | **spacemacs** — normal: `` ? ``, `` <A-C-r> ``, select: `` ? ``<br>**vim, kakoune** — normal: `` ? ``, select: `` ? ``<br>**helix** — normal: `` ? ``, `` Z? ``, `` z? ``, select: `` ? ``, `` Z? ``, `` z? ``<br>**emacs, cua** — normal: `` <C-r> ``, `` <A-C-r> ``, insert: `` <C-r> ``, `` <A-C-r> `` |
+| `search` | Search for regex pattern | **spacemacs** — normal: `` / ``, `` <C-s> ``, `` <A-C-s> ``, select: `` / ``<br>**vim, kakoune** — normal: `` / ``, select: `` / ``<br>**helix** — normal: `` / ``, `` Z/ ``, `` z/ ``, select: `` / ``, `` Z/ ``, `` z/ ``<br>**emacs, cua** — normal: `` <C-s> ``, `` <A-C-s> ``, insert: `` <C-s> ``, `` <A-C-s> ``<br>**micro** — normal: `` <F3> ``, `` <F7> ``, `` <C-f> ``, `` <A-C-s> ``, insert: `` <F3> ``, `` <F7> ``, `` <C-f> ``, `` <A-C-s> `` |
+| `rsearch` | Reverse search for regex pattern | **spacemacs** — normal: `` ? ``, `` <A-C-r> ``, select: `` ? ``<br>**vim, kakoune** — normal: `` ? ``, select: `` ? ``<br>**helix** — normal: `` ? ``, `` Z? ``, `` z? ``, select: `` ? ``, `` Z? ``, `` z? ``<br>**emacs, cua, micro** — normal: `` <C-r> ``, `` <A-C-r> ``, insert: `` <C-r> ``, `` <A-C-r> `` |
 | `delete_to_search_forward` | Delete up to the next match (vim d/pat) | **spacemacs, vim** — normal: `` d/ `` |
 | `delete_to_search_backward` | Delete back to the previous match (vim d?pat) | **spacemacs, vim** — normal: `` d? `` |
 | `change_to_search_forward` | Change up to the next match (vim c/pat) | **spacemacs, vim** — normal: `` c/ `` |
 | `change_to_search_backward` | Change back to the previous match (vim c?pat) | **spacemacs, vim** — normal: `` c? `` |
 | `yank_to_search_forward` | Yank up to the next match (vim y/pat) | **spacemacs, vim** — normal: `` y/ `` |
 | `yank_to_search_backward` | Yank back to the previous match (vim y?pat) | **spacemacs, vim** — normal: `` y? `` |
-| `search_next` | Select next search match | **spacemacs** — normal: `` <space>sH ``, select: `` <space>sH ``<br>**helix** — normal: `` n ``, `` Zn ``, `` zn ``, select: `` Zn ``, `` zn ``<br>**kakoune** — normal: `` n `` |
-| `search_prev` | Select previous search match | **helix** — normal: `` N ``, `` ZN ``, `` zN ``, select: `` ZN ``, `` zN ``<br>**kakoune** — normal: `` N `` |
+| `search_next` | Select next search match | **spacemacs** — normal: `` <space>sH ``, select: `` <space>sH ``<br>**helix** — normal: `` n ``, `` Zn ``, `` zn ``, select: `` Zn ``, `` zn ``<br>**kakoune** — normal: `` n ``<br>**micro** — normal: `` <C-n> ``, insert: `` <C-n> `` |
+| `search_prev` | Select previous search match | **helix** — normal: `` N ``, `` ZN ``, `` zN ``, select: `` ZN ``, `` zN ``<br>**kakoune** — normal: `` N ``<br>**micro** — normal: `` <C-p> ``, insert: `` <C-p> `` |
 | `extend_search_next` | Add next search match to selection | **helix, kakoune** — select: `` n `` |
 | `extend_search_prev` | Add previous search match to selection | **helix, kakoune** — select: `` N `` |
 | `select_gn_match` | vim gn: select the search match at/after the cursor (for cgn/dgn) |  |
@@ -138,7 +138,7 @@
 | `search_prev_vim` | vim N: repeat last search in the opposite direction | **spacemacs, vim** — normal: `` N `` |
 | `extend_search_next_vim` | vim n (visual): extend to the repeated match | **spacemacs, vim** — select: `` n `` |
 | `extend_search_prev_vim` | vim N (visual): extend to the reverse match | **spacemacs, vim** — select: `` N `` |
-| `add_selection_to_next_match` | Add the next occurrence of the selection as a new cursor |  |
+| `add_selection_to_next_match` | Add the next occurrence of the selection as a new cursor | **micro** — normal: `` <A-n> ``, insert: `` <A-n> `` |
 | `select_all_occurrences` | Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences) | **spacemacs** — normal: `` <space>xo ``, select: `` <space>xo `` |
 | `search_selection` | Use current selection as search pattern | **helix, kakoune** — normal: `` <A-*> ``, select: `` <A-*> `` |
 | `search_selection_detect_word_boundaries` | Use current selection as the search pattern, automatically wrapping with `\b` on word boundaries | **helix, kakoune** — normal: `` * ``, select: `` * `` |
@@ -402,16 +402,16 @@
 | `delete_selection_noyank` | Delete selection without yanking | **helix, kakoune** — normal: `` <A-d> ``, select: `` <A-d> `` |
 | `change_selection` | Change selection | **helix, kakoune** — normal: `` c ``, select: `` c `` |
 | `change_selection_noyank` | Change selection without yanking | **helix, kakoune** — normal: `` <A-c> ``, select: `` <A-c> `` |
-| `collapse_selection` | Collapse selection into single cursor | **helix, kakoune** — normal: `` ; ``, select: `` ; ``<br>**emacs, cua** — normal: `` <C-g> ``, `` <C-pause> ``, insert: `` <C-g> ``, `` <C-pause> `` |
+| `collapse_selection` | Collapse selection into single cursor | **helix, kakoune** — normal: `` ; ``, select: `` ; ``<br>**emacs, cua** — normal: `` <C-g> ``, `` <C-pause> ``, insert: `` <C-g> ``, `` <C-pause> ``<br>**micro** — normal: `` <C-pause> ``, insert: `` <C-pause> `` |
 | `flip_selections` | Flip selection cursor and anchor | **spacemacs** — normal: `` <C-x><C-x> ``, select: `` <C-x><C-x> ``, insert: `` <C-x><C-x> ``<br>**helix, kakoune** — normal: `` <A-;> ``, select: `` <A-;> ``<br>**emacs** — normal: `` <C-x><C-x> ``, insert: `` <C-x><C-x> ``<br>**cua** — normal: `` <C-x><C-x> ``, select: `` <C-X><C-x> ``, insert: `` <C-x><C-x> `` |
 | `ensure_selections_forward` | Ensure all selections face forward | **helix, kakoune** — normal: `` <A-:> ``, select: `` <A-:> `` |
-| `insert_mode` | Insert before selection | **spacemacs** — normal: `` i ``, `` <ins> ``, `` <space>ki ``, select: `` <space>ki ``<br>**vim** — normal: `` i ``, `` <ins> ``<br>**helix, kakoune** — normal: `` i ``, select: `` i ``<br>**emacs, cua** — normal: `` a ``, `` i `` |
+| `insert_mode` | Insert before selection | **spacemacs** — normal: `` i ``, `` <ins> ``, `` <space>ki ``, select: `` <space>ki ``<br>**vim** — normal: `` i ``, `` <ins> ``<br>**helix, kakoune** — normal: `` i ``, select: `` i ``<br>**emacs, cua, micro** — normal: `` a ``, `` i `` |
 | `append_mode` | Append after selection | **spacemacs, vim** — normal: `` a ``<br>**helix, kakoune** — normal: `` a ``, select: `` a `` |
 | `replace_mode` | Enter Replace mode (overtype) | **spacemacs, vim** — normal: `` R `` |
 | `virtual_replace_mode` | Enter Virtual Replace mode, overtyping in screen space (vim gR) | **spacemacs, vim** — normal: `` gR `` |
-| `command_mode` | Enter command mode | **spacemacs** — normal: `` <space>: ``, `` <space>k: ``, select: `` : ``, `` <space>: ``, `` <space>k: ``<br>**vim** — select: `` : ``<br>**helix, kakoune** — normal: `` : ``, select: `` : `` |
+| `command_mode` | Enter command mode | **spacemacs** — normal: `` <space>: ``, `` <space>k: ``, select: `` : ``, `` <space>: ``, `` <space>k: ``<br>**vim** — select: `` : ``<br>**helix, kakoune** — normal: `` : ``, select: `` : ``<br>**micro** — normal: `` <C-e> ``, insert: `` <C-e> `` |
 | `ex_mode` | Enter Ex mode: type : commands one after another until :visual (vim gQ) | **spacemacs, vim** — normal: `` gQ `` |
-| `file_picker` | Open file picker | **spacemacs** — normal: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, select: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, insert: `` <C-x><C-f> ``<br>**helix** — normal: `` <space>f ``, select: `` <space>f ``<br>**emacs** — normal: `` <C-x><C-f> ``, insert: `` <C-x><C-f> ``<br>**cua** — normal: `` <C-x><C-f> ``, select: `` <C-X><C-f> ``, insert: `` <C-x><C-f> `` |
+| `file_picker` | Open file picker | **spacemacs** — normal: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, select: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, insert: `` <C-x><C-f> ``<br>**helix** — normal: `` <space>f ``, select: `` <space>f ``<br>**emacs** — normal: `` <C-x><C-f> ``, insert: `` <C-x><C-f> ``<br>**cua** — normal: `` <C-x><C-f> ``, select: `` <C-X><C-f> ``, insert: `` <C-x><C-f> ``<br>**micro** — normal: `` <C-o> ``, insert: `` <C-o> `` |
 | `bury_buffer` | Stop showing the current buffer without killing it (emacs bury-buffer) | **spacemacs** — normal: `` <space>b.<C-d> ``, select: `` <space>b.<C-d> `` |
 | `toggle_column_indexing` | Toggle 0/1-based column indexing in the statusline (Spacemacs SPC t z) | **spacemacs** — normal: `` <space>tz ``, select: `` <space>tz `` |
 | `next_file_in_dir` | Open the next file in the current file's directory (Spacemacs ] f) |  |
@@ -552,8 +552,8 @@
 | `isearch_char_by_name` | Add a char by digraph mnemonic to the search (emacs isearch-char-by-name) |  |
 | `isearch_emoji_by_name` | Add a char by digraph mnemonic to the search (emacs isearch-emoji-by-name) |  |
 | `isearch_occur` | Run occur with the current search pattern (emacs isearch-occur) |  |
-| `query_replace` | Replace matches one by one, asking (emacs query-replace M-%) | **emacs, cua** — insert: `` <A-%> `` |
-| `query_replace_regexp` | Replace regexp matches one by one, asking (emacs query-replace-regexp C-M-%) | **emacs, cua** — insert: `` <A-C-%> `` |
+| `query_replace` | Replace matches one by one, asking (emacs query-replace M-%) | **emacs, cua, micro** — insert: `` <A-%> `` |
+| `query_replace_regexp` | Replace regexp matches one by one, asking (emacs query-replace-regexp C-M-%) | **emacs, cua, micro** — insert: `` <A-C-%> `` |
 | `tags_query_replace` | Query-replace a regexp across every file in the tags table (emacs tags-query-replace) |  |
 | `isearch_query_replace` | Query-replace the current search pattern (emacs isearch-query-replace) |  |
 | `isearch_query_replace_regexp` | Query-replace the current search regexp (emacs isearch-query-replace-regexp) |  |
@@ -694,7 +694,7 @@
 | `complete_current_statement` | Complete the current statement (close brackets, add terminator, open next line) (JetBrains) | **spacemacs** — normal: `` <C-c>; ``, select: `` <C-c>; ``, insert: `` <C-c>; `` |
 | `postfix_expand` | Postfix completion: expand `expr.kw` (if/for/while/match/let/return/not/…) (JetBrains) | **spacemacs** — normal: `` <C-c>. ``, select: `` <C-c>. ``, insert: `` <C-c>. `` |
 | `normal_mode` | Enter normal mode | **spacemacs** — normal: `` <C-\><C-g> ``, `` <C-\><C-n> ``<br>**vim** — normal: `` <C-c> ``, `` <C-\><C-g> ``, `` <C-\><C-n> ``<br>**helix, kakoune** — normal: `` <esc> ``, select: `` v ``, insert: `` <esc> `` |
-| `select_mode` | Enter selection extend mode | **spacemacs** — normal: `` v ``, `` gh ``, `` <C-space> ``, `` <space>kv ``, `` <space>k<C-v> ``, select: `` <space>kv ``, `` <space>k<C-v> ``<br>**vim** — normal: `` v ``, `` gh ``<br>**helix** — normal: `` v ``<br>**emacs, cua** — normal: `` <C-space> `` |
+| `select_mode` | Enter selection extend mode | **spacemacs** — normal: `` v ``, `` gh ``, `` <C-space> ``, `` <space>kv ``, `` <space>k<C-v> ``, select: `` <space>kv ``, `` <space>k<C-v> ``<br>**vim** — normal: `` v ``, `` gh ``<br>**helix** — normal: `` v ``<br>**emacs, cua, micro** — normal: `` <C-space> `` |
 | `exit_select_mode` | Exit selection mode | **helix, kakoune** — select: `` <esc> `` |
 | `goto_definition` | Goto definition | **spacemacs** — normal: `` g] ``, `` gd ``, `` <A-.> ``, `` <C-w>] ``, `` g<C-]> ``, `` <C-c>,j ``, `` <C-w>g] ``, `` <C-x>5. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <C-w><C-]> ``, `` <space>mgg ``, `` <space>wg] ``, `` <C-w>g<C-]> ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, select: `` <C-]> ``, `` <C-c>,j ``, `` <C-x>5. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <space>mgg ``, `` <space>wg] ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, insert: `` <C-c>,j ``, `` <C-x>5. ``<br>**vim** — normal: `` g] ``, `` gd ``, `` <C-w>] ``, `` g<C-]> ``, `` <C-w>g] ``, `` <C-w><C-]> ``, `` <C-w>g<C-]> ``, select: `` <C-]> ``<br>**helix, kakoune** — normal: `` gd ``, select: `` gd ``<br>**emacs, cua** — normal: `` <A-.> ``, insert: `` <A-.> `` |
 | `tag_jump` | Jump to the definition of the symbol under the cursor, recording where from on the tag stack (vim CTRL-]) | **spacemacs, vim** — normal: `` <C-]> `` |
@@ -707,7 +707,7 @@
 | `add_newline_below` | Add newline below | **helix** — normal: `` ]<space> ``, select: `` ]<space> ``<br>**kakoune** — normal: `` <A-o> ``, `` ]<space> ``, select: `` ]<space> `` |
 | `goto_type_definition` | Goto type definition | **spacemacs** — normal: `` gy ``, `` <space>gy ``, select: `` <space>gy ``<br>**vim** — normal: `` gy ``<br>**helix, kakoune** — normal: `` gy ``, select: `` gy `` |
 | `goto_implementation` | Goto implementation | **helix, kakoune** — normal: `` gi ``, select: `` gi `` |
-| `goto_file_start` | Goto line number `<n>` else file start | **spacemacs** — normal: `` gg ``, `` <A-lt> ``, `` <C-home> ``, insert: `` <A-lt> ``, `` <C-home> ``<br>**vim** — normal: `` gg ``, `` <C-home> ``, insert: `` <C-home> ``<br>**helix, kakoune** — normal: `` gg ``<br>**emacs, cua** — normal: `` <A-lt> ``, select: `` <A-lt> ``, insert: `` <A-lt> `` |
+| `goto_file_start` | Goto line number `<n>` else file start | **spacemacs** — normal: `` gg ``, `` <A-lt> ``, `` <C-home> ``, insert: `` <A-lt> ``, `` <C-home> ``<br>**vim** — normal: `` gg ``, `` <C-home> ``, insert: `` <C-home> ``<br>**helix, kakoune** — normal: `` gg ``<br>**emacs, cua, micro** — normal: `` <A-lt> ``, select: `` <A-lt> ``, insert: `` <A-lt> `` |
 | `goto_file_end` | Goto file end | **spacemacs** — insert: `` <A-gt> ``, `` <C-end> ``<br>**vim** — insert: `` <C-end> `` |
 | `extend_to_file_start` | Extend to line number `<n>` else file start | **helix, kakoune** — select: `` gg `` |
 | `extend_to_file_end` | Extend to file end |  |
@@ -717,7 +717,7 @@
 | `goto_file_readonly` | Visit the file at point read-only (emacs ffap-read-only, C-x C-r) |  |
 | `goto_file_new_tab` | Visit the file at point in a new tab (emacs ffap-other-tab, C-x t C-f) |  |
 | `goto_file_other_frame` | Visit the file at point in a new frame (emacs ffap-other-frame, C-x 5 f) |  |
-| `goto_reference` | Goto references | **spacemacs, vim** — normal: `` gr ``<br>**helix, kakoune** — normal: `` gr ``, select: `` gr ``<br>**emacs, cua** — normal: `` <A-?> ``, insert: `` <A-?> `` |
+| `goto_reference` | Goto references | **spacemacs, vim** — normal: `` gr ``<br>**helix, kakoune** — normal: `` gr ``, select: `` gr ``<br>**emacs, cua, micro** — normal: `` <A-?> ``, insert: `` <A-?> `` |
 | `call_hierarchy_incoming_calls` | Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H) | **spacemacs** — normal: `` <space>gh ``, select: `` <space>gh `` |
 | `call_hierarchy_outgoing_calls` | Call hierarchy: what the symbol calls | **spacemacs** — normal: `` <space>gO ``, select: `` <space>gO `` |
 | `type_hierarchy_supertypes` | Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H) | **spacemacs** — normal: `` <space>gT ``, select: `` <space>gT `` |
@@ -727,7 +727,7 @@
 | `what_page` | Report the page number and line within the page (emacs what-page) |  |
 | `count_lines_page` | Report lines on the current page, before + after point (emacs count-lines-page, C-x l) | **spacemacs** — normal: `` <C-x>l ``, select: `` <C-x>l ``, insert: `` <C-x>l `` |
 | `what_cursor_position` | Report the character at point, its code, position, percentage and column (emacs what-cursor-position, C-x =) | **spacemacs** — normal: `` <C-x>= ``, select: `` <C-x>= ``, insert: `` <C-x>= `` |
-| `move_to_window_line_top_bottom` | Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r) | **spacemacs** — normal: `` <A-r> ``<br>**emacs, cua** — normal: `` <A-r> ``, insert: `` <A-r> `` |
+| `move_to_window_line_top_bottom` | Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r) | **spacemacs** — normal: `` <A-r> ``<br>**emacs, cua, micro** — normal: `` <A-r> ``, insert: `` <A-r> `` |
 | `goto_window_center` | Goto window center | **spacemacs, vim** — normal: `` M ``<br>**helix, kakoune** — normal: `` gc ``, select: `` gc `` |
 | `goto_window_bottom` | Goto window bottom | **spacemacs, vim** — normal: `` L ``<br>**helix, kakoune** — normal: `` gb ``, select: `` gb `` |
 | `goto_last_accessed_file` | Goto last accessed file | **spacemacs** — normal: `` <C-^> ``, `` <C-w>^ ``, `` g<tab> ``, `` <C-tab> ``, `` <space>w^ ``, `` <C-w><C-^> ``, `` <C-w>g<tab> ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> ``, select: `` <space>w^ ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> ``<br>**vim** — normal: `` <C-^> ``, `` <C-w>^ ``, `` g<tab> ``, `` <C-tab> ``, `` <C-w><C-^> ``, `` <C-w>g<tab> ``<br>**helix, kakoune** — normal: `` ga ``, select: `` ga `` |
@@ -735,14 +735,14 @@
 | `goto_last_modification` | Goto last modification | **spacemacs, vim** — normal: `` g. ``<br>**helix, kakoune** — normal: `` g. ``, select: `` g. `` |
 | `goto_older_change` | vim g;: jump to an older change-list position | **spacemacs, vim** — normal: `` g; `` |
 | `goto_newer_change` | vim g,: jump to a newer change-list position | **spacemacs, vim** — normal: `` g, `` |
-| `goto_line` | Goto line | **spacemacs** — normal: `` <A-g>g ``, `` <A-g><A-g> ``<br>**helix, kakoune** — normal: `` G ``, select: `` G ``<br>**emacs, cua** — normal: `` <A-g>g ``, `` <A-g><A-g> ``, insert: `` <A-g>g ``, `` <A-g><A-g> `` |
-| `goto_last_line` | Goto last line | **spacemacs** — normal: `` G ``, `` <A-gt> ``, `` <C-end> ``<br>**vim** — normal: `` G ``, `` <C-end> ``<br>**helix, kakoune** — normal: `` ge ``<br>**emacs, cua** — normal: `` <A-gt> ``, select: `` <A-gt> ``, insert: `` <A-gt> `` |
+| `goto_line` | Goto line | **spacemacs** — normal: `` <A-g>g ``, `` <A-g><A-g> ``<br>**helix, kakoune** — normal: `` G ``, select: `` G ``<br>**emacs, cua, micro** — normal: `` <A-g>g ``, `` <A-g><A-g> ``, insert: `` <A-g>g ``, `` <A-g><A-g> `` |
+| `goto_last_line` | Goto last line | **spacemacs** — normal: `` G ``, `` <A-gt> ``, `` <C-end> ``<br>**vim** — normal: `` G ``, `` <C-end> ``<br>**helix, kakoune** — normal: `` ge ``<br>**emacs, cua, micro** — normal: `` <A-gt> ``, select: `` <A-gt> ``, insert: `` <A-gt> `` |
 | `extend_to_last_line` | Extend to last line | **helix, kakoune** — select: `` ge `` |
 | `goto_first_diag` | Goto first diagnostic | **spacemacs** — normal: `` <space>ef ``, `` <space>enf ``, `` <space>epf ``, select: `` <space>ef ``, `` <space>enf ``, `` <space>epf ``<br>**helix, kakoune** — normal: `` [D ``, select: `` [D `` |
 | `copy_diagnostic` | Copy the diagnostic message(s) on the current line |  |
 | `goto_last_diag` | Goto last diagnostic | **spacemacs** — normal: `` <space>e. ``, select: `` <space>e. ``<br>**helix, kakoune** — normal: `` ]D ``, select: `` ]D `` |
-| `goto_next_diag` | Goto next diagnostic | **spacemacs** — normal: `` ]d ``, `` <space>enj ``, `` <space>enn ``, `` <space>epj ``, `` <space>epn ``, select: `` <space>enj ``, `` <space>enn ``, `` <space>epj ``, `` <space>epn ``<br>**vim** — normal: `` ]d ``<br>**helix, kakoune** — normal: `` ]d ``, select: `` ]d ``<br>**emacs, cua** — normal: `` <A-g>n ``, insert: `` <A-g>n ``, `` <A-g><A-n> `` |
-| `goto_prev_diag` | Goto previous diagnostic | **spacemacs** — normal: `` [d ``, `` <space>enk ``, `` <space>enp ``, `` <space>epk ``, `` <space>epp ``, select: `` <space>enk ``, `` <space>enp ``, `` <space>epk ``, `` <space>epp ``<br>**vim** — normal: `` [d ``<br>**helix, kakoune** — normal: `` [d ``, select: `` [d ``<br>**emacs, cua** — normal: `` <A-g>p ``, insert: `` <A-g>p ``, `` <A-g><A-p> `` |
+| `goto_next_diag` | Goto next diagnostic | **spacemacs** — normal: `` ]d ``, `` <space>enj ``, `` <space>enn ``, `` <space>epj ``, `` <space>epn ``, select: `` <space>enj ``, `` <space>enn ``, `` <space>epj ``, `` <space>epn ``<br>**vim** — normal: `` ]d ``<br>**helix, kakoune** — normal: `` ]d ``, select: `` ]d ``<br>**emacs, cua, micro** — normal: `` <A-g>n ``, insert: `` <A-g>n ``, `` <A-g><A-n> `` |
+| `goto_prev_diag` | Goto previous diagnostic | **spacemacs** — normal: `` [d ``, `` <space>enk ``, `` <space>enp ``, `` <space>epk ``, `` <space>epp ``, select: `` <space>enk ``, `` <space>enp ``, `` <space>epk ``, `` <space>epp ``<br>**vim** — normal: `` [d ``<br>**helix, kakoune** — normal: `` [d ``, select: `` [d ``<br>**emacs, cua, micro** — normal: `` <A-g>p ``, insert: `` <A-g>p ``, `` <A-g><A-p> `` |
 | `goto_next_change` | Goto next change | **spacemacs, vim** — normal: `` ]g ``<br>**helix, kakoune** — normal: `` ]g ``, select: `` ]g `` |
 | `goto_prev_change` | Goto previous change | **spacemacs, vim** — normal: `` [g ``<br>**helix, kakoune** — normal: `` [g ``, select: `` [g `` |
 | `goto_next_conflict` | Goto next merge-conflict marker | **spacemacs, vim** — normal: `` ]n `` |
@@ -800,7 +800,7 @@
 | `android_relinquish_directory_access` | Revoke access to a directory (emacs android-relinquish-directory-access) |  |
 | `tooltip_mode` | Toggle GUI help tooltips; no visible effect on a tty (emacs tooltip-mode) |  |
 | `unicode_fonts_setup` | Configure per-block font fallback; no visible effect on a tty (spacemacs unicode-fonts-setup) |  |
-| `tmm_menubar` | Pick a menu-bar command from a text list (emacs tmm-menubar) | **emacs, cua** — normal: `` <A-`> ``, insert: `` <A-`> `` |
+| `tmm_menubar` | Pick a menu-bar command from a text list (emacs tmm-menubar) | **emacs, cua, micro** — normal: `` <A-`> ``, insert: `` <A-`> `` |
 | `vc_dir_mark` | Mark the file at point in the VC directory (emacs vc-dir-mark) |  |
 | `vc_dir_mark_all_files` | Mark every file in the VC directory (emacs vc-dir-mark-all-files) |  |
 | `vc_dir_mark_by_regexp` | Mark VC-directory files matching a regexp (emacs vc-dir-mark-by-regexp) |  |
@@ -822,7 +822,7 @@
 | `info_search_other_window` | Open the Info directory node in another window (emacs info-other-window) | **spacemacs** — normal: `` <C-h>4i ``, select: `` <C-h>4i ``, insert: `` <C-h>4i `` |
 | `xref_query_replace_in_results` | Query-replace across xref/project results (emacs xref-query-replace-in-results) |  |
 | `xref_find_references_and_replace` | Find references and replace them (emacs xref-find-references-and-replace) |  |
-| `cut_to_clipboard` | Cut the selection to the system clipboard |  |
+| `cut_to_clipboard` | Cut the selection to the system clipboard | **micro** — normal: `` <C-x> ``, insert: `` <C-x> `` |
 | `org_cycle` | Org: toggle subtree fold | **spacemacs** — normal: `` <space>mz ``, `` <space>m<tab> ``, select: `` <space>mz ``, `` <space>m<tab> `` |
 | `org_todo` | Org: cycle TODO keyword |  |
 | `org_priority` | Org: cycle priority cookie | **spacemacs** — normal: `` <space>mp ``, select: `` <space>mp `` |
@@ -837,8 +837,8 @@
 | `org_capture` | Org: capture note | **spacemacs** — normal: `` <space>oc ``, `` <space>aoc ``, select: `` <space>oc ``, `` <space>aoc `` |
 | `goto_first_change` | Goto first change | **helix, kakoune** — normal: `` [G ``, select: `` [G `` |
 | `goto_last_change` | Goto last change | **spacemacs** — normal: `` <space>jc ``, select: `` <space>jc ``<br>**helix, kakoune** — normal: `` ]G ``, select: `` ]G `` |
-| `goto_line_start` | Goto line start | **spacemacs** — normal: `` 0 ``, `` g<home> ``, `` <space>j0 ``, select: `` <space>j0 ``, insert: `` <home> ``<br>**vim** — normal: `` 0 ``, `` g<home> ``, insert: `` <home> ``<br>**helix, kakoune** — normal: `` gh ``, `` <home> ``, select: `` gh ``, insert: `` <home> ``<br>**emacs, cua** — normal: `` <C-a> ``, `` <home> ``, select: `` <C-a> ``, insert: `` <C-a> ``, `` <home> `` |
-| `goto_line_end` | Goto line end | **spacemacs** — normal: `` $ ``, `` gl ``, `` g<end> ``, `` <space>j$ ``, select: `` <space>j$ ``<br>**vim** — normal: `` $ ``, `` gl ``, `` g<end> ``<br>**helix, kakoune** — normal: `` gl ``, `` <end> ``, select: `` gl ``<br>**emacs, cua** — normal: `` <C-e> ``, `` <end> ``, select: `` <C-e> ``, insert: `` <C-e> ``, `` <end> `` |
+| `goto_line_start` | Goto line start | **spacemacs** — normal: `` 0 ``, `` g<home> ``, `` <space>j0 ``, select: `` <space>j0 ``, insert: `` <home> ``<br>**vim** — normal: `` 0 ``, `` g<home> ``, insert: `` <home> ``<br>**helix, kakoune** — normal: `` gh ``, `` <home> ``, select: `` gh ``, insert: `` <home> ``<br>**emacs, cua** — normal: `` <C-a> ``, `` <home> ``, select: `` <C-a> ``, insert: `` <C-a> ``, `` <home> ``<br>**micro** — normal: `` <A-a> ``, `` <home> ``, select: `` <C-a> ``, insert: `` <A-a> ``, `` <home> `` |
+| `goto_line_end` | Goto line end | **spacemacs** — normal: `` $ ``, `` gl ``, `` g<end> ``, `` <space>j$ ``, select: `` <space>j$ ``<br>**vim** — normal: `` $ ``, `` gl ``, `` g<end> ``<br>**helix, kakoune** — normal: `` gl ``, `` <end> ``, select: `` gl ``<br>**emacs, cua** — normal: `` <C-e> ``, `` <end> ``, select: `` <C-e> ``, insert: `` <C-e> ``, `` <end> ``<br>**micro** — normal: `` <A-e> ``, `` <end> ``, select: `` <C-e> ``, insert: `` <A-e> ``, `` <end> `` |
 | `goto_visual_line_start` | Goto visual line start (soft-wrap aware) | **spacemacs, vim** — normal: `` g0 `` |
 | `goto_visual_first_nonwhitespace` | Goto first non-blank of the screen line (vim g^) | **spacemacs, vim** — normal: `` g^ `` |
 | `goto_visual_line_end` | Goto visual line end (soft-wrap aware) | **spacemacs, vim** — normal: `` g$ `` |
@@ -846,35 +846,35 @@
 | `extend_to_visual_line_end` | Extend to visual line end |  |
 | `goto_column` | Goto column | **spacemacs** — normal: `` \| ``, `` <A-g><tab> ``<br>**vim** — normal: `` \| ``<br>**helix, kakoune** — normal: `` g\| `` |
 | `extend_to_column` | Extend to column | **helix, kakoune** — select: `` g\| `` |
-| `goto_next_buffer` | Goto next buffer | **spacemacs** — normal: `` ]b ``, `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, select: `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, insert: `` <C-x><right> ``<br>**vim** — normal: `` ]b ``<br>**helix, kakoune** — normal: `` gn ``, select: `` gn ``<br>**emacs** — normal: `` <C-x><right> ``, insert: `` <C-x><right> ``<br>**cua** — normal: `` <C-x><right> ``, select: `` <C-X><right> ``, insert: `` <C-x><right> `` |
-| `goto_previous_buffer` | Goto previous buffer | **spacemacs** — normal: `` [b ``, `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, select: `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, insert: `` <C-x><left> ``<br>**vim** — normal: `` [b ``<br>**helix, kakoune** — normal: `` gp ``, select: `` gp ``<br>**emacs** — normal: `` <C-x><left> ``, insert: `` <C-x><left> ``<br>**cua** — normal: `` <C-x><left> ``, select: `` <C-X><left> ``, insert: `` <C-x><left> `` |
+| `goto_next_buffer` | Goto next buffer | **spacemacs** — normal: `` ]b ``, `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, select: `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, insert: `` <C-x><right> ``<br>**vim** — normal: `` ]b ``<br>**helix, kakoune** — normal: `` gn ``, select: `` gn ``<br>**emacs** — normal: `` <C-x><right> ``, insert: `` <C-x><right> ``<br>**cua** — normal: `` <C-x><right> ``, select: `` <C-X><right> ``, insert: `` <C-x><right> ``<br>**micro** — normal: `` <A-.> ``, insert: `` <A-.> `` |
+| `goto_previous_buffer` | Goto previous buffer | **spacemacs** — normal: `` [b ``, `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, select: `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, insert: `` <C-x><left> ``<br>**vim** — normal: `` [b ``<br>**helix, kakoune** — normal: `` gp ``, select: `` gp ``<br>**emacs** — normal: `` <C-x><left> ``, insert: `` <C-x><left> ``<br>**cua** — normal: `` <C-x><left> ``, select: `` <C-X><left> ``, insert: `` <C-x><left> ``<br>**micro** — normal: `` <A-,> ``, insert: `` <A-,> `` |
 | `goto_line_end_newline` | Goto newline at line end | **spacemacs, vim, helix, kakoune** — insert: `` <end> `` |
-| `goto_first_nonwhitespace` | Goto first non-blank in line | **spacemacs** — normal: `` ^ ``, `` <A-m> ``<br>**vim** — normal: `` ^ ``<br>**helix, kakoune** — normal: `` gs ``, select: `` gs ``<br>**emacs, cua** — normal: `` <A-m> ``, insert: `` <A-m> `` |
+| `goto_first_nonwhitespace` | Goto first non-blank in line | **spacemacs** — normal: `` ^ ``, `` <A-m> ``<br>**vim** — normal: `` ^ ``<br>**helix, kakoune** — normal: `` gs ``, select: `` gs ``<br>**emacs, cua, micro** — normal: `` <A-m> ``, insert: `` <A-m> `` |
 | `trim_selections` | Trim whitespace from selections | **helix, kakoune** — normal: `` _ ``, select: `` _ `` |
 | `extend_to_line_start` | Extend to line start | **helix, kakoune** — select: `` <home> ``<br>**cua** — select: `` <S-home> `` |
-| `extend_to_first_nonwhitespace` | Extend to first non-blank in line | **emacs, cua** — select: `` <A-m> `` |
+| `extend_to_first_nonwhitespace` | Extend to first non-blank in line | **emacs, cua, micro** — select: `` <A-m> `` |
 | `extend_to_line_end` | Extend to line end | **helix, kakoune** — select: `` <end> ``<br>**cua** — select: `` <S-end> `` |
 | `extend_to_line_end_newline` | Extend to line end |  |
 | `signature_help` | Show signature help | **spacemacs** — normal: `` <space>ls ``, select: `` <space>ls `` |
 | `smart_tab` | Insert tab if all cursors have all whitespace to their left; otherwise, run a separate command. |  |
-| `insert_tab` | Insert tab char | **helix, kakoune** — insert: `` <S-tab> ``<br>**emacs, cua** — insert: `` <A-i> `` |
-| `insert_newline` | Insert newline char | **spacemacs, vim, helix, kakoune, emacs, cua** — insert: `` <C-j> ``, `` <ret> `` |
+| `insert_tab` | Insert tab char | **helix, kakoune** — insert: `` <S-tab> ``<br>**emacs, cua, micro** — insert: `` <A-i> `` |
+| `insert_newline` | Insert newline char | **spacemacs, vim, helix, kakoune, emacs, cua** — insert: `` <C-j> ``, `` <ret> ``<br>**micro** — insert: `` <ret> `` |
 | `default_indent_new_line` | Break line at point and continue the comment, indenting under it (emacs default-indent-new-line, M-j) | **spacemacs** — normal: `` <A-C-j> ``, insert: `` <A-j> ``<br>**vim** — insert: `` <A-j> `` |
 | `insert_char_interactive` | Insert an interactively-chosen char | **spacemacs, vim** — insert: `` <C-Q> ``, `` <C-V> ``, `` <C-q> ``, `` <C-v> `` |
 | `append_char_interactive` | Append an interactively-chosen char |  |
-| `delete_char_backward` | Delete previous char | **spacemacs** — insert: `` <backspace> ``<br>**vim, emacs, cua** — insert: `` <C-h> ``, `` <backspace> ``<br>**helix, kakoune** — insert: `` <C-h> ``, `` <backspace> ``, `` <S-backspace> `` |
-| `delete_char_forward` | Delete next char | **spacemacs, vim** — insert: `` <del> ``<br>**helix, kakoune** — insert: `` <C-d> ``, `` <del> ``<br>**emacs, cua** — normal: `` <C-d> ``, insert: `` <C-d> ``, `` <del> `` |
+| `delete_char_backward` | Delete previous char | **spacemacs** — insert: `` <backspace> ``<br>**vim, emacs, cua, micro** — insert: `` <C-h> ``, `` <backspace> ``<br>**helix, kakoune** — insert: `` <C-h> ``, `` <backspace> ``, `` <S-backspace> `` |
+| `delete_char_forward` | Delete next char | **spacemacs, vim, micro** — insert: `` <del> ``<br>**helix, kakoune** — insert: `` <C-d> ``, `` <del> ``<br>**emacs, cua** — normal: `` <C-d> ``, insert: `` <C-d> ``, `` <del> `` |
 | `delete_chars_forward_vim` | Delete char(s) under cursor, line-bounded (vim x) | **spacemacs, vim** — normal: `` x ``, `` <del> `` |
 | `delete_chars_backward_vim` | Delete char(s) before cursor, no line join (vim X) | **spacemacs, vim** — normal: `` X `` |
 | `replace_chars_vim` | Replace char(s) under cursor, line-bounded (vim r) | **spacemacs, vim** — normal: `` r `` |
-| `delete_word_backward` | Delete previous word | **spacemacs, vim, helix, kakoune** — insert: `` <C-w> ``, `` <A-backspace> ``<br>**emacs, cua** — insert: `` <C-w> ``, `` <A-backspace> ``, `` <A-C-backspace> `` |
-| `delete_word_forward` | Delete next word | **spacemacs** — normal: `` <A-d> ``, insert: `` <A-d> ``<br>**vim, emacs, cua** — insert: `` <A-d> ``<br>**helix, kakoune** — insert: `` <A-d> ``, `` <A-del> `` |
+| `delete_word_backward` | Delete previous word | **spacemacs, vim, helix, kakoune** — insert: `` <C-w> ``, `` <A-backspace> ``<br>**emacs, cua** — insert: `` <C-w> ``, `` <A-backspace> ``, `` <A-C-backspace> ``<br>**micro** — insert: `` <A-backspace> ``, `` <A-C-backspace> `` |
+| `delete_word_forward` | Delete next word | **spacemacs** — normal: `` <A-d> ``, insert: `` <A-d> ``<br>**vim, emacs, cua, micro** — insert: `` <A-d> ``<br>**helix, kakoune** — insert: `` <A-d> ``, `` <A-del> `` |
 | `insert_kill_entered_vim` | Delete the text entered this insert session (vim i_CTRL-U) | **spacemacs, vim** — insert: `` <C-u> `` |
 | `kill_to_line_start` | Delete till start of line | **helix, kakoune** — insert: `` <C-u> `` |
-| `kill_to_line_end` | Delete till end of line | **helix, kakoune** — insert: `` <C-k> ``<br>**emacs, cua** — normal: `` <C-k> ``, insert: `` <C-k> `` |
-| `undo` | Undo change | **spacemacs** — normal: `` u ``, `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``, `` <space>ku ``, select: `` <C-x>u ``, `` <space>ku ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``<br>**vim** — normal: `` u ``<br>**helix, kakoune** — normal: `` u ``, select: `` u ``<br>**emacs** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``<br>**cua** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, `` <C-x>u ``, select: `` <C-X>u ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, `` <C-x>u `` |
+| `kill_to_line_end` | Delete till end of line | **helix, kakoune** — insert: `` <C-k> ``<br>**emacs, cua, micro** — normal: `` <C-k> ``, insert: `` <C-k> `` |
+| `undo` | Undo change | **spacemacs** — normal: `` u ``, `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``, `` <space>ku ``, select: `` <C-x>u ``, `` <space>ku ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``<br>**vim** — normal: `` u ``<br>**helix, kakoune** — normal: `` u ``, select: `` u ``<br>**emacs** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``<br>**cua** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, `` <C-x>u ``, select: `` <C-X>u ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, `` <C-x>u ``<br>**micro** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-z> `` |
 | `undo_line` | Undo all latest changes on one line (vim U) | **spacemacs, vim** — normal: `` U `` |
-| `redo` | Redo change | **spacemacs** — normal: `` <C-r> ``, `` <space>k<C-r> ``, select: `` <space>k<C-r> ``<br>**vim** — normal: `` <C-r> ``<br>**helix, kakoune** — normal: `` U ``, select: `` U `` |
+| `redo` | Redo change | **spacemacs** — normal: `` <C-r> ``, `` <space>k<C-r> ``, select: `` <space>k<C-r> ``<br>**vim** — normal: `` <C-r> ``<br>**helix, kakoune** — normal: `` U ``, select: `` U ``<br>**micro** — normal: `` <C-y> ``, insert: `` <C-y> `` |
 | `earlier` | Move backward in history | **spacemacs, vim** — normal: `` g<minus> ``<br>**helix** — normal: `` <A-u> ``, select: `` <A-u> ``<br>**kakoune** — normal: `` <A-u> ``, `` <C-k> ``, select: `` <A-u> `` |
 | `later` | Move forward in history | **spacemacs, vim** — normal: `` g+ ``<br>**helix** — normal: `` <A-U> ``, select: `` <A-U> ``<br>**kakoune** — normal: `` <A-U> ``, `` <C-j> ``, select: `` <A-U> `` |
 | `undo_tree` | Browse the branching undo history (vim undotree) | **spacemacs** — normal: `` <space>aU ``, select: `` <space>aU `` |
@@ -882,7 +882,7 @@
 | `apply_injected_fragment` | Write the fragment buffer back into its host string |  |
 | `commit_undo_checkpoint` | Commit changes to new checkpoint | **spacemacs, vim** — insert: `` <C-g>U ``, `` <C-g>u ``<br>**helix, kakoune** — insert: `` <C-s> `` |
 | `yank` | Yank selection | **spacemacs** — normal: `` <A-w> ``<br>**helix, kakoune** — normal: `` y ``, select: `` y `` |
-| `yank_to_clipboard` | Yank selections to clipboard | **helix** — normal: `` <space>y ``, select: `` <space>y `` |
+| `yank_to_clipboard` | Yank selections to clipboard | **helix** — normal: `` <space>y ``, select: `` <space>y ``<br>**micro** — normal: `` <C-c> ``, insert: `` <C-c> `` |
 | `yank_to_primary_clipboard` | Yank selections to primary clipboard |  |
 | `yank_joined` | Join and yank selections |  |
 | `yank_joined_to_clipboard` | Join and yank selections to clipboard |  |
@@ -898,8 +898,8 @@
 | `paste_before_cursor_after` | Paste before selection, cursor after the pasted text (vim gP) | **spacemacs, vim** — normal: `` gP `` |
 | `paste_before` | Paste before selection | **spacemacs** — normal: `` P ``, `` [P ``, `` ]P ``, `` <space>kP ``, select: `` <space>kP ``<br>**vim** — normal: `` P ``, `` [P ``, `` ]P ``<br>**helix, kakoune** — normal: `` P ``, select: `` P `` |
 | `yank_from_kill_ring` | Yank the latest kill-ring entry (emacs C-y) | **emacs** — normal: `` <C-y> ``, insert: `` <C-y> ``<br>**cua** — normal: `` <C-v> ``, `` <C-y> ``, insert: `` <C-v> ``, `` <C-y> `` |
-| `yank_pop` | Replace the just-yanked text with the next kill-ring entry (emacs M-y) | **spacemacs** — normal: `` <A-y> ``<br>**emacs, cua** — normal: `` <A-y> ``, insert: `` <A-y> `` |
-| `set_mark_command` | Set mark and activate region, pushing to the mark ring (emacs C-SPC) | **spacemacs** — normal: `` <C-@> ``<br>**emacs, cua** — insert: `` <C-space> `` |
+| `yank_pop` | Replace the just-yanked text with the next kill-ring entry (emacs M-y) | **spacemacs** — normal: `` <A-y> ``<br>**emacs, cua, micro** — normal: `` <A-y> ``, insert: `` <A-y> `` |
+| `set_mark_command` | Set mark and activate region, pushing to the mark ring (emacs C-SPC) | **spacemacs** — normal: `` <C-@> ``<br>**emacs, cua, micro** — insert: `` <C-space> `` |
 | `pop_to_mark` | Jump to the top of the mark ring, rotating it (emacs C-x C-SPC) | **spacemacs** — normal: `` <C-x><C-space> ``, select: `` <C-x><C-space> ``, insert: `` <C-x><C-space> ``<br>**emacs** — insert: `` <C-x><C-space> ``<br>**cua** — select: `` <C-X><C-space> ``, insert: `` <C-x><C-space> `` |
 | `universal_argument` | Begin a prefix argument for the next command; repeat to multiply it by 4 (emacs C-u) | **emacs, cua** — normal: `` <C-u> ``, insert: `` <C-u> `` |
 | `digit_argument` | Read a numeric prefix argument for the next command (emacs M-1 … M-9) |  |
@@ -984,31 +984,31 @@
 | `insert_abbrevs` | Insert a description of every defined abbrev at point (emacs insert-abbrevs) |  |
 | `define_abbrevs` | Define abbrevs from the buffer text after point (emacs define-abbrevs) |  |
 | `paste_clipboard_after` | Paste clipboard after selections | **helix** — normal: `` <space>p ``, select: `` <space>p `` |
-| `paste_clipboard_before` | Paste clipboard before selections | **helix** — normal: `` <space>P ``, select: `` <space>P `` |
+| `paste_clipboard_before` | Paste clipboard before selections | **helix** — normal: `` <space>P ``, select: `` <space>P ``<br>**micro** — normal: `` <C-v> ``, insert: `` <C-v> `` |
 | `paste_primary_clipboard_after` | Paste primary clipboard after selections |  |
 | `paste_primary_clipboard_before` | Paste primary clipboard before selections |  |
 | `indent` | Indent selection | **spacemacs, vim** — normal: `` == ``, select: `` <gt> ``, insert: `` <C-t> ``<br>**helix, kakoune** — normal: `` <gt> ``, select: `` <gt> `` |
 | `unindent` | Unindent selection | **spacemacs, vim** — select: `` <lt> ``<br>**helix, kakoune** — normal: `` <lt> ``, select: `` <lt> `` |
 | `format_selections` | Format selection | **spacemacs** — normal: `` <space>j+ ``, `` <space>j= ``, `` <space>lf ``, select: `` <space>j+ ``, `` <space>j= ``, `` <space>lf ``<br>**helix, kakoune** — normal: `` = ``, select: `` = `` |
-| `reflow_selections` | vim gq: reflow selection to text-width | **spacemacs** — normal: `` <A-q> ``<br>**emacs, cua** — normal: `` <A-q> ``, insert: `` <A-q> `` |
+| `reflow_selections` | vim gq: reflow selection to text-width | **spacemacs** — normal: `` <A-q> ``<br>**emacs, cua, micro** — normal: `` <A-q> ``, insert: `` <A-q> `` |
 | `reflow_selections_keep_cursor` | vim gw: reflow to text-width, keep cursor |  |
 | `reflow_mark_cursor` | Record the cursor for the vim gw that follows |  |
-| `join_selections` | Join lines inside selection | **spacemacs** — normal: `` <A-^> ``, `` <space>kJ ``, select: `` <space>kJ ``<br>**helix, kakoune** — normal: `` J ``, select: `` J ``<br>**emacs, cua** — insert: `` <A-^> `` |
+| `join_selections` | Join lines inside selection | **spacemacs** — normal: `` <A-^> ``, `` <space>kJ ``, select: `` <space>kJ ``<br>**helix, kakoune** — normal: `` J ``, select: `` J ``<br>**emacs, cua, micro** — insert: `` <A-^> `` |
 | `join_selections_space` | Join lines inside selection and select spaces | **helix, kakoune** — normal: `` <A-J> ``, select: `` <A-J> `` |
 | `join_lines_vim` | Join line(s) with a space, cursor at join (vim J) | **spacemacs, vim** — normal: `` J `` |
 | `join_lines_vim_nospace` | Join line(s) without a space (vim gJ) |  |
 | `keep_selections` | Keep selections matching regex | **helix** — normal: `` K ``, select: `` K ``<br>**kakoune** — normal: `` K ``, `` <A-k> ``, select: `` K ``, `` <A-k> `` |
 | `remove_selections` | Remove selections matching regex | **helix, kakoune** — normal: `` <A-K> ``, select: `` <A-K> `` |
 | `align_selections` | Align selections in column | **spacemacs** — normal: `` <space>xaa ``, select: `` <space>xaa ``<br>**helix, kakoune** — normal: `` & ``, select: `` & `` |
-| `keep_primary_selection` | Keep primary selection | **helix** — normal: `` , ``, select: `` , ``<br>**kakoune** — normal: `` , ``, `` <space> ``, select: `` , ``, `` <space> `` |
-| `remove_primary_selection` | Remove primary selection | **helix** — normal: `` <A-,> ``, select: `` <A-,> ``<br>**kakoune** — normal: `` <A-,> ``, `` <A-space> ``, select: `` <A-,> ``, `` <A-space> `` |
-| `completion` | Invoke completion popup | **spacemacs** — normal: `` <A-C-i> ``, `` <A-tab> ``, `` <C-c>,l ``, `` <C-c>,<space> ``, select: `` <C-c>,l ``, `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,l ``, `` <C-c>,<space> ``<br>**vim** — insert: `` <C-n> ``, `` <C-p> ``, `` <C-x><C-i> ``, `` <C-x><C-n> ``, `` <C-x><C-p> ``<br>**helix, kakoune** — insert: `` <C-x> ``<br>**emacs, cua** — normal: `` <A-tab> ``, insert: `` <A-tab> `` |
+| `keep_primary_selection` | Keep primary selection | **helix** — normal: `` , ``, select: `` , ``<br>**kakoune** — normal: `` , ``, `` <space> ``, select: `` , ``, `` <space> ``<br>**micro** — normal: `` <A-c> ``, insert: `` <A-c> `` |
+| `remove_primary_selection` | Remove primary selection | **helix** — normal: `` <A-,> ``, select: `` <A-,> ``<br>**kakoune** — normal: `` <A-,> ``, `` <A-space> ``, select: `` <A-,> ``, `` <A-space> ``<br>**micro** — normal: `` <A-x> ``, insert: `` <A-x> `` |
+| `completion` | Invoke completion popup | **spacemacs** — normal: `` <A-C-i> ``, `` <A-tab> ``, `` <C-c>,l ``, `` <C-c>,<space> ``, select: `` <C-c>,l ``, `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,l ``, `` <C-c>,<space> ``<br>**vim** — insert: `` <C-n> ``, `` <C-p> ``, `` <C-x><C-i> ``, `` <C-x><C-n> ``, `` <C-x><C-p> ``<br>**helix, kakoune** — insert: `` <C-x> ``<br>**emacs, cua, micro** — normal: `` <A-tab> ``, insert: `` <A-tab> `` |
 | `hover` | Show docs for item under cursor | **spacemacs** — normal: `` <C-h>. ``, `` <space>lk ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, select: `` K ``, `` <C-h>. ``, `` <space>lk ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, insert: `` <C-h>. ``<br>**vim** — select: `` K ``<br>**helix** — normal: `` <space>k ``, select: `` <space>k `` |
 | `keyword_lookup` | vim K: run keywordprg on the word under cursor, else LSP hover | **spacemacs, vim** — normal: `` K `` |
 | `goto_first_nonwhitespace_down` | vim _: first non-blank, count-1 lines down | **spacemacs, vim** — normal: `` _ `` |
 | `toggle_replace_mode` | vim <Insert>: toggle insert/overtype | **spacemacs, vim** — insert: `` <ins> `` |
 | `insert_unindent` | vim i_CTRL-D: unindent, or 0/^ CTRL-D delete all indent | **spacemacs, vim** — insert: `` <C-d> `` |
-| `toggle_comments` | Comment/uncomment selections | **spacemacs** — normal: `` <A-;> ``, `` <space>; ``, `` <space>cP ``, `` <space>cc ``, `` <space>cp ``, `` <C-x><C-;> ``, select: `` <space>; ``, `` <space>cP ``, `` <space>cc ``, `` <space>cp ``, `` <C-x><C-;> ``, insert: `` <C-x><C-;> ``<br>**helix** — normal: `` <C-c> ``, `` <space>c ``, select: `` <C-c> ``, `` <space>c ``<br>**kakoune** — normal: `` <C-c> ``, select: `` <C-c> ``<br>**emacs** — normal: `` <A-;> ``, insert: `` <A-;> ``, `` <C-x><C-;> ``<br>**cua** — normal: `` <A-;> ``, select: `` <C-X><C-;> ``, insert: `` <A-;> ``, `` <C-x><C-;> `` |
+| `toggle_comments` | Comment/uncomment selections | **spacemacs** — normal: `` <A-;> ``, `` <space>; ``, `` <space>cP ``, `` <space>cc ``, `` <space>cp ``, `` <C-x><C-;> ``, select: `` <space>; ``, `` <space>cP ``, `` <space>cc ``, `` <space>cp ``, `` <C-x><C-;> ``, insert: `` <C-x><C-;> ``<br>**helix** — normal: `` <C-c> ``, `` <space>c ``, select: `` <C-c> ``, `` <space>c ``<br>**kakoune** — normal: `` <C-c> ``, select: `` <C-c> ``<br>**emacs** — normal: `` <A-;> ``, insert: `` <A-;> ``, `` <C-x><C-;> ``<br>**cua** — normal: `` <A-;> ``, select: `` <C-X><C-;> ``, insert: `` <A-;> ``, `` <C-x><C-;> ``<br>**micro** — normal: `` <A-;> ``, insert: `` <A-;> `` |
 | `toggle_line_comments` | Line comment/uncomment selections | **spacemacs** — normal: `` gcc ``, `` <space>cL ``, `` <space>cl ``, select: `` <space>cL ``, `` <space>cl ``<br>**vim** — normal: `` gcc ``<br>**helix** — normal: `` <space><A-c> ``, select: `` <space><A-c> `` |
 | `comment_to_line` | Comment/uncomment from the cursor line to a prompted line (SPC c t) | **spacemacs** — normal: `` <space>ct ``, select: `` <space>ct `` |
 | `invert_comment_to_line` | Invert comments per line from the cursor to a prompted line (SPC c T) | **spacemacs** — normal: `` <space>cT ``, select: `` <space>cT `` |
@@ -1027,7 +1027,7 @@
 | `select_prev_sibling` | Select previous sibling the in syntax tree | **spacemacs** — normal: `` <space>kH ``, `` <space>kh ``, select: `` <space>kH ``, `` <space>kh ``<br>**helix, kakoune** — normal: `` <A-p> ``, `` <A-left> ``, select: `` <A-p> ``, `` <A-left> `` |
 | `select_all_siblings` | Select all siblings of the current node | **helix** — normal: `` <A-a> ``, select: `` <A-a> `` |
 | `select_all_children` | Select all children of the current node | **helix, kakoune** — normal: `` <A-I> ``, `` <S-A-down> ``, select: `` <A-I> ``, `` <S-A-down> `` |
-| `jump_forward` | Jump forward on jumplist | **spacemacs, vim** — normal: `` <C-i> ``, `` <tab> ``<br>**helix, kakoune** — normal: `` <C-i> ``, `` <tab> ``, select: `` <C-i> ``, `` <tab> ``<br>**emacs, cua** — insert: `` <A-C-,> `` |
+| `jump_forward` | Jump forward on jumplist | **spacemacs, vim** — normal: `` <C-i> ``, `` <tab> ``<br>**helix, kakoune** — normal: `` <C-i> ``, `` <tab> ``, select: `` <C-i> ``, `` <tab> ``<br>**emacs, cua, micro** — insert: `` <A-C-,> `` |
 | `jump_backward` | Jump backward on jumplist | **spacemacs** — normal: `` <C-o> ``, `` <space>jb ``, `` <space>s` ``, select: `` <space>jb ``, `` <space>s` ``<br>**vim** — normal: `` <C-o> ``<br>**helix, kakoune** — normal: `` <C-o> ``, select: `` <C-o> ``<br>**emacs, cua** — normal: `` <A-,> ``, insert: `` <A-,> `` |
 | `save_selection` | Save current selection to jumplist | **helix, kakoune** — normal: `` <C-s> ``, select: `` <C-s> `` |
 | `jump_view_right` | Jump to right split | **spacemacs** — normal: `` <C-w>l ``, `` <C-w>.l ``, `` <C-w>[l ``, `` <C-w>{l ``, `` <space>wl ``, `` <C-w><C-l> ``, `` <space>w.l ``, `` <space>w[l ``, `` <space>w{l ``, `` <C-w><right> ``, `` <space>w<C-l> ``, `` <space>w<right> ``, select: `` <space>wl ``, `` <space>w.l ``, `` <space>w[l ``, `` <space>w{l ``, `` <space>w<C-l> ``, `` <space>w<right> ``<br>**vim** — normal: `` <C-w>l ``, `` <C-w>.l ``, `` <C-w>[l ``, `` <C-w>{l ``, `` <C-w><C-l> ``, `` <C-w><right> ``<br>**helix** — normal: `` <C-w>l ``, `` <space>wl ``, `` <C-w><C-l> ``, `` <C-w><right> ``, `` <space>w<C-l> ``, `` <space>w<right> ``, select: `` <C-w>l ``, `` <space>wl ``, `` <C-w><C-l> ``, `` <C-w><right> ``, `` <space>w<C-l> ``, `` <space>w<right> ``<br>**kakoune** — normal: `` <C-w>l ``, `` <C-w><C-l> ``, `` <C-w><right> ``, select: `` <C-w>l ``, `` <C-w><C-l> ``, `` <C-w><right> `` |
@@ -1077,7 +1077,7 @@
 | `goto_first_tabpage` | Go to the first tabpage (:tabfirst) |  |
 | `goto_last_tabpage` | Go to the last tabpage (:tablast) |  |
 | `tab_select` | Go to the [count]-th tab (emacs tab-select) |  |
-| `tab_recent` | Switch to the most recently visited tab (emacs tab-recent) | **emacs, cua** — normal: `` <C-0> ``, select: `` <C-0> ``, insert: `` <C-0> `` |
+| `tab_recent` | Switch to the most recently visited tab (emacs tab-recent) | **emacs, cua, micro** — normal: `` <C-0> ``, select: `` <C-0> ``, insert: `` <C-0> `` |
 | `tab_bar_mode` | Toggle the tab bar (emacs tab-bar-mode) |  |
 | `tab_rename` | Name the current tab (emacs tab-rename) | **spacemacs** — normal: `` <C-x>tr ``, select: `` <C-x>tr ``, insert: `` <C-x>tr `` |
 | `tab_switch` | Switch to a tab by name or number (emacs tab-switch) | **spacemacs** — normal: `` <C-x>t<ret> ``, select: `` <C-x>t<ret> ``, insert: `` <C-x>t<ret> `` |
@@ -1114,7 +1114,7 @@
 | `copy_as_format_slack` | Copy the region or line as Slack markup (copy-as-format-slack) | **spacemacs** — normal: `` <space>xfs ``, select: `` <space>xfs `` |
 | `copy_as_format_whatsapp` | Copy the region or line as WhatsApp markup (copy-as-format-whatsapp) |  |
 | `mark_word` | Set the region over the next word (emacs mark-word, M-@) | **spacemacs** — normal: `` <A-@> `` |
-| `mark_paragraph` | Select the paragraph around point (emacs mark-paragraph, M-h) | **spacemacs** — normal: `` <A-h> ``<br>**emacs, cua** — normal: `` <A-h> ``, insert: `` <A-h> `` |
+| `mark_paragraph` | Select the paragraph around point (emacs mark-paragraph, M-h) | **spacemacs** — normal: `` <A-h> ``<br>**emacs, cua, micro** — normal: `` <A-h> ``, insert: `` <A-h> `` |
 | `mark_defun` | Select the function/defun around point (emacs mark-defun, C-M-h) | **spacemacs** — normal: `` <A-C-h> `` |
 | `kill_sentence` | Kill from point to end of sentence (emacs kill-sentence, M-k) | **spacemacs** — normal: `` <A-k> `` |
 | `backward_kill_sentence` | Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL) | **spacemacs** — normal: `` <C-x><backspace> ``, select: `` <C-x><backspace> ``, insert: `` <C-x><backspace> `` |
@@ -1123,7 +1123,7 @@
 | `backward_page` | Move to the previous form-feed page (emacs backward-page, C-x [) | **spacemacs** — normal: `` <C-x>[ ``, select: `` <C-x>[ ``, insert: `` <C-x>[ `` |
 | `mark_page` | Select the current form-feed page (emacs mark-page, C-x C-p) | **spacemacs** — normal: `` <C-x><C-p> ``, select: `` <C-x><C-p> ``, insert: `` <C-x><C-p> `` |
 | `move_to_opposite_group` | Move the current editor to the opposite split group (JetBrains) |  |
-| `rotate_view` | Goto next window | **spacemacs** — normal: `` ]w ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <C-w>[o ``, `` <C-w>[r ``, `` <C-w>[w ``, `` <C-w>{o ``, `` <C-w>{r ``, `` <C-w>{w ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o ``<br>**vim** — normal: `` ]w ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <C-w>[o ``, `` <C-w>[r ``, `` <C-w>[w ``, `` <C-w>{o ``, `` <C-w>{r ``, `` <C-w>{w ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``<br>**helix** — normal: `` <C-w>w ``, `` <space>ww ``, `` <C-w><C-w> ``, `` <space>w<C-w> ``, select: `` <C-w>w ``, `` <space>ww ``, `` <C-w><C-w> ``, `` <space>w<C-w> ``<br>**kakoune** — normal: `` <C-w>w ``, `` <C-w><C-w> ``, select: `` <C-w>w ``, `` <C-w><C-w> ``<br>**emacs** — normal: `` <C-x>o ``, insert: `` <C-x>o ``<br>**cua** — normal: `` <C-x>o ``, select: `` <C-X>o ``, insert: `` <C-x>o `` |
+| `rotate_view` | Goto next window | **spacemacs** — normal: `` ]w ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <C-w>[o ``, `` <C-w>[r ``, `` <C-w>[w ``, `` <C-w>{o ``, `` <C-w>{r ``, `` <C-w>{w ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o ``<br>**vim** — normal: `` ]w ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <C-w>[o ``, `` <C-w>[r ``, `` <C-w>[w ``, `` <C-w>{o ``, `` <C-w>{r ``, `` <C-w>{w ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``<br>**helix** — normal: `` <C-w>w ``, `` <space>ww ``, `` <C-w><C-w> ``, `` <space>w<C-w> ``, select: `` <C-w>w ``, `` <space>ww ``, `` <C-w><C-w> ``, `` <space>w<C-w> ``<br>**kakoune** — normal: `` <C-w>w ``, `` <C-w><C-w> ``, select: `` <C-w>w ``, `` <C-w><C-w> ``<br>**emacs** — normal: `` <C-x>o ``, insert: `` <C-x>o ``<br>**cua** — normal: `` <C-x>o ``, select: `` <C-X>o ``, insert: `` <C-x>o ``<br>**micro** — normal: `` <C-w> ``, insert: `` <C-w> `` |
 | `goto_preview_window` | Goto the preview window (vim CTRL-W P) | **spacemacs** — normal: `` <C-w>P ``, `` <space>wP ``, select: `` <space>wP ``<br>**vim** — normal: `` <C-w>P `` |
 | `rotate_view_reverse` | Goto previous window | **spacemacs** — normal: `` [t ``, `` [w ``, `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <C-w>[R ``, `` <C-w>{R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, `` <space>w[R ``, `` <space>w{R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, `` <space>w[R ``, `` <space>w{R ``<br>**vim** — normal: `` [t ``, `` [w ``, `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <C-w>[R ``, `` <C-w>{R `` |
 | `scroll_other_window` | Scroll the other window forward (emacs scroll-other-window, C-M-v) | **spacemacs** — normal: `` <A-C-v> `` |
@@ -1150,7 +1150,7 @@
 | `prepend_to_register` | Prepend the region to a register (emacs prepend-to-register, C-x r p) |  |
 | `align_view_middle` | Align view middle | **helix** — normal: `` Zm ``, `` zm ``, select: `` Zm ``, `` zm ``<br>**kakoune** — normal: `` Vm ``, `` vm `` |
 | `align_view_top` | Align view top | **spacemacs, vim** — normal: `` zt ``, select: `` zt ``<br>**helix** — normal: `` Zt ``, `` zt ``, select: `` Zt ``, `` zt ``<br>**kakoune** — normal: `` Vt ``, `` vt `` |
-| `align_view_center` | Align view center | **spacemacs** — normal: `` zz ``, `` <C-l> ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``, select: `` zz ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``<br>**vim** — normal: `` zz ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, select: `` zz ``<br>**helix** — normal: `` Zc ``, `` Zz ``, `` zc ``, `` zz ``, select: `` Zc ``, `` Zz ``, `` zc ``, `` zz ``<br>**kakoune** — normal: `` Vc ``, `` Vv ``, `` vc ``, `` vv ``<br>**emacs, cua** — insert: `` <C-l> `` |
+| `align_view_center` | Align view center | **spacemacs** — normal: `` zz ``, `` <C-l> ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``, select: `` zz ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``<br>**vim** — normal: `` zz ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, select: `` zz ``<br>**helix** — normal: `` Zc ``, `` Zz ``, `` zc ``, `` zz ``, select: `` Zc ``, `` Zz ``, `` zc ``, `` zz ``<br>**kakoune** — normal: `` Vc ``, `` Vv ``, `` vc ``, `` vv ``<br>**emacs, cua, micro** — insert: `` <C-l> `` |
 | `align_view_bottom` | Align view bottom | **spacemacs, vim** — normal: `` zb ``, select: `` zb ``<br>**helix** — normal: `` Zb ``, `` zb ``, select: `` Zb ``, `` zb ``<br>**kakoune** — normal: `` Vb ``, `` vb `` |
 | `scroll_up` | Scroll view up | **spacemacs** — normal: `` <C-y> ``<br>**vim** — normal: `` <C-y> ``, insert: `` <C-x><C-y> ``<br>**helix** — normal: `` Zk ``, `` zk ``, `` Z<up> ``, `` z<up> ``, select: `` Zk ``, `` zk ``, `` Z<up> ``, `` z<up> ``<br>**kakoune** — normal: `` Vk ``, `` vk ``, `` V<up> ``, `` v<up> `` |
 | `scroll_down` | Scroll view down | **spacemacs** — normal: `` <C-e> ``<br>**vim** — normal: `` <C-e> ``, insert: `` <C-x><C-e> ``<br>**helix** — normal: `` Zj ``, `` zj ``, `` Z<down> ``, `` z<down> ``, select: `` Zj ``, `` zj ``, `` Z<down> ``, `` z<down> ``<br>**kakoune** — normal: `` Vj ``, `` vj ``, `` V<down> ``, `` v<down> `` |
@@ -1282,7 +1282,7 @@
 | `global_whitespace_toggle_options` | Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options) |  |
 | `global_tab_line_mode` | Toggle the buffer tab line (emacs global-tab-line-mode) |  |
 | `global_visual_wrap_prefix_mode` | Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode) |  |
-| `help` | Open the inline Help browser | **spacemacs** — normal: `` <F1> ``, `` <C-h>? ``, `` <C-h>F ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <C-h><C-h> ``<br>**vim** — normal: `` <F1> `` |
+| `help` | Open the inline Help browser | **spacemacs** — normal: `` <F1> ``, `` <C-h>? ``, `` <C-h>F ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <C-h><C-h> ``<br>**vim** — normal: `` <F1> ``<br>**micro** — normal: `` <C-g> ``, insert: `` <C-g> `` |
 | `dashboard` | Open the system-stats Dashboard (Preferences) | **spacemacs** — normal: `` <space>bh ``, select: `` <space>bh `` |
 | `search_in_files` | Open the project-wide Find in Files panel |  |
 | `terminal` | Open an integrated terminal (PTY shell) | **spacemacs** — normal: `` <space>p' ``, select: `` <space>p' `` |
@@ -1519,7 +1519,7 @@
 | `regexp_generate_strings_emacs` | Generate every string matched by a finite Emacs regexp (SPC x r e ') | **spacemacs** — normal: `` <space>xre' ``, select: `` <space>xre' `` |
 | `toggle_fringe` | Hide or show the whole fringe (gutter column strip) (fringe-mode, SPC T f) | **spacemacs** — normal: `` <space>Tf ``, select: `` <space>Tf `` |
 | `restart_editor` | Close every view and relaunch zmax with the same arguments (restart-emacs, SPC q r) | **spacemacs** — normal: `` <space>qr ``, select: `` <space>qr `` |
-| `duplicate_selection_down` | Duplicate current line(s) downward |  |
+| `duplicate_selection_down` | Duplicate current line(s) downward | **micro** — normal: `` <C-d> ``, insert: `` <C-d> `` |
 | `duplicate_selection_up` | Duplicate current line(s) upward |  |
 | `move_text_line_down` | Move current line(s) down past the next line |  |
 | `move_text_line_up` | Move current line(s) up past the previous line |  |
@@ -1563,7 +1563,7 @@
 | `togglecase_textobject_around` | Toggle case around object (vim g~a) | **spacemacs, vim** — normal: `` g~a `` |
 | `delete_find_char_forward` | Delete to next char (df) | **spacemacs, vim** — normal: `` df `` |
 | `delete_till_char_forward` | Delete till next char (dt) | **spacemacs, vim** — normal: `` dt `` |
-| `zap_to_char` | Kill through the next char, inclusive (emacs zap-to-char, M-z) | **spacemacs** — normal: `` <A-z> ``<br>**emacs, cua** — normal: `` <A-z> ``, insert: `` <A-z> `` |
+| `zap_to_char` | Kill through the next char, inclusive (emacs zap-to-char, M-z) | **spacemacs** — normal: `` <A-z> ``<br>**emacs, cua, micro** — normal: `` <A-z> ``, insert: `` <A-z> `` |
 | `zap_up_to_char` | Kill up to the next char, exclusive (emacs zap-up-to-char) |  |
 | `five_by_five` | Play 5x5, the light-flipping puzzle (emacs 5x5) |  |
 | `solitaire` | Play English peg solitaire (emacs solitaire) |  |
@@ -1698,10 +1698,10 @@
 | `quietly_read_abbrev_file` | Read abbrev definitions from a file, silently (emacs quietly-read-abbrev-file) |  |
 | `whitespace_toggle_options` | Toggle one whitespace visualization by key (emacs whitespace-toggle-options) |  |
 | `xref_find_apropos` | List project identifiers matching a pattern (emacs xref-find-apropos) |  |
-| `keyboard_escape_quit` | Drop extra cursors and deactivate the region (emacs keyboard-escape-quit) | **emacs, cua** — insert: `` <C-]> ``, `` <esc><esc><esc> `` |
+| `keyboard_escape_quit` | Drop extra cursors and deactivate the region (emacs keyboard-escape-quit) | **emacs, cua, micro** — insert: `` <C-]> ``, `` <esc><esc><esc> `` |
 | `kill_ring_deindent_mode` | Toggle deindenting text saved to the kill ring (emacs kill-ring-deindent-mode) |  |
 | `kill_some_buffers` | Offer to kill each buffer in turn (emacs kill-some-buffers) |  |
-| `async_shell_command` | Run a shell command without blocking, output to a buffer (emacs async-shell-command) | **emacs, cua** — insert: `` <A-&> `` |
+| `async_shell_command` | Run a shell command without blocking, output to a buffer (emacs async-shell-command) | **emacs, cua, micro** — insert: `` <A-&> `` |
 | `xref_quit_and_pop_marker_stack` | Close the xref results and jump back (emacs xref-quit-and-pop-marker-stack) |  |
 | `display_fill_column_indicator_mode` | Toggle a rule at the fill column (emacs display-fill-column-indicator-mode) |  |
 | `fortran_next_statement` | Move to the next fixed-form Fortran statement (emacs fortran-next-statement) |  |
@@ -1818,8 +1818,8 @@
 | `reselect_visual` | Reselect the last visual area (gv) | **spacemacs, vim** — normal: `` gv ``, select: `` gv `` |
 | `mark_insert_exit` | Record the insert-exit position (for gi) |  |
 | `insert_at_last_insert` | Insert at the last insert position (gi) | **spacemacs, vim** — normal: `` gi `` |
-| `goto_next_function` | Goto next function | **spacemacs, vim** — normal: `` ][ ``, `` ]m ``<br>**helix, kakoune** — normal: `` ]f ``, select: `` ]f ``<br>**emacs, cua** — normal: `` <A-C-e> ``, insert: `` <A-C-e> `` |
-| `goto_prev_function` | Goto previous function | **spacemacs, vim** — normal: `` [] ``, `` [m ``<br>**helix, kakoune** — normal: `` [f ``, select: `` [f ``<br>**emacs, cua** — normal: `` <A-C-a> ``, insert: `` <A-C-a> `` |
+| `goto_next_function` | Goto next function | **spacemacs, vim** — normal: `` ][ ``, `` ]m ``<br>**helix, kakoune** — normal: `` ]f ``, select: `` ]f ``<br>**emacs, cua, micro** — normal: `` <A-C-e> ``, insert: `` <A-C-e> `` |
+| `goto_prev_function` | Goto previous function | **spacemacs, vim** — normal: `` [] ``, `` [m ``<br>**helix, kakoune** — normal: `` [f ``, select: `` [f ``<br>**emacs, cua, micro** — normal: `` <A-C-a> ``, insert: `` <A-C-a> `` |
 | `goto_next_class` | Goto next type definition | **helix, kakoune** — normal: `` ]t ``, select: `` ]t `` |
 | `goto_prev_class` | Goto previous type definition | **helix, kakoune** — normal: `` [t ``, select: `` [t `` |
 | `goto_next_parameter` | Goto next parameter | **helix, kakoune** — normal: `` ]a ``, select: `` ]a `` |
@@ -1832,8 +1832,8 @@
 | `goto_prev_xml_element` | Goto previous (X)HTML element | **helix, kakoune** — normal: `` [x ``, select: `` [x `` |
 | `goto_next_entry` | Goto next pairing | **helix, kakoune** — normal: `` ]e ``, select: `` ]e `` |
 | `goto_prev_entry` | Goto previous pairing | **helix, kakoune** — normal: `` [e ``, select: `` [e `` |
-| `goto_next_paragraph` | Goto next paragraph | **spacemacs** — normal: `` } ``, `` <A-}> ``, select: `` } ``<br>**vim** — normal: `` } ``, select: `` } ``<br>**helix, kakoune** — normal: `` ]p ``, select: `` ]p ``<br>**emacs, cua** — normal: `` <A-}> ``, insert: `` <A-}> `` |
-| `goto_prev_paragraph` | Goto previous paragraph | **spacemacs** — normal: `` { ``, `` <A-{> ``, select: `` { ``<br>**vim** — normal: `` { ``, select: `` { ``<br>**helix, kakoune** — normal: `` [p ``, select: `` [p ``<br>**emacs, cua** — normal: `` <A-{> ``, insert: `` <A-{> `` |
+| `goto_next_paragraph` | Goto next paragraph | **spacemacs** — normal: `` } ``, `` <A-}> ``, select: `` } ``<br>**vim** — normal: `` } ``, select: `` } ``<br>**helix, kakoune** — normal: `` ]p ``, select: `` ]p ``<br>**emacs, cua, micro** — normal: `` <A-}> ``, insert: `` <A-}> `` |
+| `goto_prev_paragraph` | Goto previous paragraph | **spacemacs** — normal: `` { ``, `` <A-{> ``, select: `` { ``<br>**vim** — normal: `` { ``, select: `` { ``<br>**helix, kakoune** — normal: `` [p ``, select: `` [p ``<br>**emacs, cua, micro** — normal: `` <A-{> ``, insert: `` <A-{> `` |
 | `goto_next_section` | Goto next section (vim ]]) | **spacemacs, vim** — normal: `` ]] `` |
 | `goto_prev_section` | Goto previous section (vim [[) | **spacemacs, vim** — normal: `` [[ `` |
 | `move_sentence_forward` | Move to next sentence | **spacemacs** — normal: `` ) ``, `` <A-e> ``, select: `` ) ``<br>**vim** — normal: `` ) ``, select: `` ) `` |
@@ -1841,7 +1841,7 @@
 | `dap_launch` | Launch debug target | **spacemacs** — normal: `` <S-F5> ``, `` <space>dd ``, `` <C-c><C-d> ``, select: `` <space>dd ``, `` <C-c><C-d> ``, insert: `` <C-c><C-d> ``<br>**vim** — normal: `` <S-F5> ``<br>**helix** — normal: `` <space>Gl ``, select: `` <space>Gl `` |
 | `dap_restart` | Restart debugging session | **spacemacs** — normal: `` <space>dr ``, select: `` <space>dr ``<br>**helix** — normal: `` <space>Gr ``, select: `` <space>Gr `` |
 | `dap_toggle_breakpoint` | Toggle breakpoint | **spacemacs** — normal: `` <F9> ``, `` <space>db ``, `` <C-x><C-a><C-b> ``, select: `` <space>db ``, `` <C-x><C-a><C-b> ``, insert: `` <C-x><C-a><C-b> ``<br>**vim** — normal: `` <F9> ``<br>**helix** — normal: `` <space>Gb ``, select: `` <space>Gb `` |
-| `dap_remove_breakpoint` | Remove breakpoint on current line (Emacs gud-remove) | **spacemacs** — normal: `` <C-x><C-a><C-d> ``, select: `` <C-x><C-a><C-d> ``, insert: `` <C-x><C-a><C-d> ``<br>**emacs** — normal: `` <C-c><C-d> ``, select: `` <C-c><C-d> ``, insert: `` <C-c><C-d> ``<br>**cua** — normal: `` <C-c><C-d> ``, insert: `` <C-c><C-d> `` |
+| `dap_remove_breakpoint` | Remove breakpoint on current line (Emacs gud-remove) | **spacemacs** — normal: `` <C-x><C-a><C-d> ``, select: `` <C-x><C-a><C-d> ``, insert: `` <C-x><C-a><C-d> ``<br>**emacs** — normal: `` <C-c><C-d> ``, select: `` <C-c><C-d> ``, insert: `` <C-c><C-d> ``<br>**cua** — normal: `` <C-c><C-d> ``, insert: `` <C-c><C-d> ``<br>**micro** — select: `` <C-c><C-d> `` |
 | `dap_continue` | Continue program execution | **spacemacs** — normal: `` <space>dc ``, `` <C-x><C-a><C-r> ``, select: `` <space>dc ``, `` <C-x><C-a><C-r> ``, insert: `` <C-x><C-a><C-r> ``<br>**helix** — normal: `` <space>Gc ``, select: `` <space>Gc `` |
 | `dap_run_to_cursor` | Run the debugger up to the cursor line (JetBrains Run To Cursor) | **spacemacs** — normal: `` <space>dC ``, `` <C-c><C-u> ``, `` <C-x><C-a><C-u> ``, select: `` <space>dC ``, `` <C-c><C-u> ``, `` <C-x><C-a><C-u> ``, insert: `` <C-c><C-u> ``, `` <C-x><C-a><C-u> `` |
 | `dap_pause` | Pause program execution | **spacemacs** — normal: `` <space>dp ``, select: `` <space>dp ``<br>**helix** — normal: `` <space>Gh ``, select: `` <space>Gh `` |
@@ -1883,9 +1883,9 @@
 | `decrement` | Decrement item under cursor | **spacemacs** — normal: `` g<C-x> ``, `` <space>n+_ ``, `` <space>n=_ ``, `` <space>n__ ``, `` <space>n+<minus> ``, `` <space>n<minus>_ ``, `` <space>n=<minus> ``, `` <space>n_<minus> ``, `` <space>n<minus><minus> ``, select: `` <space>n+_ ``, `` <space>n=_ ``, `` <space>n__ ``, `` <space>n+<minus> ``, `` <space>n<minus>_ ``, `` <space>n=<minus> ``, `` <space>n_<minus> ``, `` <space>n<minus><minus> ``<br>**vim** — normal: `` <C-x> ``, `` g<C-x> ``, select: `` <C-x> ``<br>**helix, kakoune** — normal: `` <C-x> ``, select: `` <C-x> `` |
 | `increment_sequential` | Increment each line in the selection by a growing amount (vim g CTRL-A) | **spacemacs, vim** — select: `` g<C-a> `` |
 | `decrement_sequential` | Decrement each line in the selection by a growing amount (vim g CTRL-X) | **spacemacs, vim** — select: `` g<C-x> `` |
-| `record_macro` | Record macro | **spacemacs** — normal: `` <C-x>( ``, select: `` <C-x>( ``, insert: `` <C-x>( ``<br>**helix, kakoune** — normal: `` Q ``, select: `` Q `` |
-| `replay_macro` | Replay macro | **spacemacs, vim** — normal: `` Q ``<br>**helix, kakoune** — normal: `` q ``, select: `` q `` |
-| `command_palette` | Open command palette | **spacemacs** — normal: `` <A-X> ``, `` <A-x> ``, `` <C-x>* ``, `` <space>? ``, `` <space><space> ``, select: `` <C-x>* ``, `` <space>? ``, `` <space><space> ``, insert: `` <C-x>* ``<br>**helix** — normal: `` <space>? ``, select: `` <space>? ``<br>**emacs, cua** — normal: `` <A-x> ``, insert: `` <A-X> ``, `` <A-x> `` |
+| `record_macro` | Record macro | **spacemacs** — normal: `` <C-x>( ``, select: `` <C-x>( ``, insert: `` <C-x>( ``<br>**helix, kakoune** — normal: `` Q ``, select: `` Q ``<br>**micro** — normal: `` <C-u> ``, insert: `` <C-u> `` |
+| `replay_macro` | Replay macro | **spacemacs, vim** — normal: `` Q ``<br>**helix, kakoune** — normal: `` q ``, select: `` q ``<br>**micro** — normal: `` <C-j> ``, insert: `` <C-j> `` |
+| `command_palette` | Open command palette | **spacemacs** — normal: `` <A-X> ``, `` <A-x> ``, `` <C-x>* ``, `` <space>? ``, `` <space><space> ``, select: `` <C-x>* ``, `` <space>? ``, `` <space><space> ``, insert: `` <C-x>* ``<br>**helix** — normal: `` <space>? ``, select: `` <space>? ``<br>**emacs, cua** — normal: `` <A-x> ``, insert: `` <A-X> ``, `` <A-x> ``<br>**micro** — insert: `` <A-X> `` |
 | `search_everywhere` | Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains) | **spacemacs** — normal: `` <space>sE ``, select: `` <space>sE `` |
 | `recent_files_switcher` | Recent Files switcher: tool windows + recent files (SPC b r) | **spacemacs** — normal: `` <space>br ``, select: `` <space>br `` |
 | `recentf_mode` | Toggle recording of opened files in the recent-files list (emacs recentf-mode) |  |
@@ -1902,7 +1902,7 @@
 | `till_char_backward_label` | easymotion T: label backward, jump till after a char |  |
 | `goto_next_tabstop` | Goto next snippet placeholder |  |
 | `goto_prev_tabstop` | Goto next snippet placeholder |  |
-| `emmet_expand` | Expand emmet/zen HTML abbreviation (or Tab) | **helix, kakoune, emacs, cua** — insert: `` <tab> `` |
+| `emmet_expand` | Expand emmet/zen HTML abbreviation (or Tab) | **helix, kakoune, emacs, cua, micro** — insert: `` <tab> `` |
 | `snippet_expand` | Expand the user snippet whose trigger precedes the cursor |  |
 | `rotate_selections_first` | Make the first selection your primary one |  |
 | `rotate_selections_last` | Make the last selection your primary one |  |
@@ -2016,7 +2016,7 @@
 | `minibuffer_complete_and_exit` | Complete uniquely and accept the minibuffer (emacs minibuffer-complete-and-exit) |  |
 | `minibuffer_choose_completion` | Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion) |  |
 | `minibuffer_complete_history` | Complete the minibuffer input against its history (emacs minibuffer-complete-history) |  |
-| `dabbrev_expand` | Expand the word before point from the buffer's other words (emacs dabbrev-expand, JetBrains Cyclic Expand Word) | **emacs, cua** — normal: `` <A-/> ``, insert: `` <A-/> `` |
+| `dabbrev_expand` | Expand the word before point from the buffer's other words (emacs dabbrev-expand, JetBrains Cyclic Expand Word) | **emacs, cua, micro** — normal: `` <A-/> ``, insert: `` <A-/> `` |
 | `dabbrev_completion` | List the buffer words that could expand the word before point (emacs dabbrev-completion) | **spacemacs** — normal: `` <A-C-/> `` |
 | `copy_reference` | Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference) |  |
 | `error_description` | Show the full text of the diagnostic under the cursor (JetBrains Error Description) |  |
@@ -2052,11 +2052,11 @@
 | `set_locale_environment` | Take the default coding systems from the locale ($LC_ALL/$LC_CTYPE/$LANG) (emacs set-locale-environment) |  |
 | `set_input_method` | Choose the input method this buffer composes characters with (emacs set-input-method, C-x RET C-\) | **spacemacs** — normal: `` <C-x><ret><C-\> ``, select: `` <C-x><ret><C-\> ``, insert: `` <C-x><ret><C-\> ``<br>**emacs** — insert: `` <C-x><ret><C-\> ``<br>**cua** — select: `` <C-X><ret><C-\> ``, insert: `` <C-x><ret><C-\> `` |
 | `quail_set_keyboard_layout` | Tell the input-method system your physical keyboard layout (emacs quail-set-keyboard-layout) |  |
-| `toggle_input_method` | Switch the buffer's input method off, or back on (emacs toggle-input-method, C-\) | **emacs, cua** — normal: `` <C-\> ``, insert: `` <C-\> `` |
+| `toggle_input_method` | Switch the buffer's input method off, or back on (emacs toggle-input-method, C-\) | **emacs, cua, micro** — normal: `` <C-\> ``, insert: `` <C-\> `` |
 | `list_input_methods` | List every input method that can be selected (emacs list-input-methods) |  |
 | `quail_show_key` | Show which keys type the character after point in the current input method (emacs quail-show-key) |  |
-| `left_char` | Move to the character to the left on display, reading the paragraph's direction (emacs left-char) | **emacs, cua** — normal: `` <left> ``, insert: `` <left> `` |
-| `right_char` | Move to the character to the right on display, reading the paragraph's direction (emacs right-char) | **emacs, cua** — normal: `` <right> ``, insert: `` <right> `` |
+| `left_char` | Move to the character to the left on display, reading the paragraph's direction (emacs left-char) | **emacs, cua, micro** — normal: `` <left> ``, insert: `` <left> `` |
+| `right_char` | Move to the character to the right on display, reading the paragraph's direction (emacs right-char) | **emacs, cua, micro** — normal: `` <right> ``, insert: `` <right> `` |
 | `modify_category_entry` | Add the character after point to a character category, or remove it (emacs modify-category-entry) |  |
 | `activate_transient_input_method` | Turn an input method on for one character only (emacs activate-transient-input-method, C-x \) | **spacemacs** — normal: `` <C-x>\ ``, select: `` <C-x>\ ``, insert: `` <C-x>\ ``<br>**emacs** — insert: `` <C-x>\ ``<br>**cua** — select: `` <C-X>\ ``, insert: `` <C-x>\ `` |
 | `custom_prompt_customize_unsaved_options` | Ask whether to examine options customized this session but not saved (emacs custom-prompt-customize-unsaved-options) |  |
@@ -2149,7 +2149,7 @@
 | `dired_other_tab` | Open Dired in a new tab (emacs dired-other-tab) | **spacemacs** — normal: `` <C-x>td ``, select: `` <C-x>td ``, insert: `` <C-x>td `` |
 | `rot13_other_window` | Show this buffer ROT13'd in a split (emacs rot13-other-window) |  |
 | `outline_hide_other` | Hide everything but the current entry, its parents and the top-level headings (emacs outline-hide-other) | **spacemacs** — normal: `` <C-c>@<C-o> ``, select: `` <C-c>@<C-o> ``, insert: `` <C-c>@<C-o> `` |
-| `reposition_window` | Scroll so the whole function at point is on screen (emacs reposition-window) | **emacs, cua** — insert: `` <A-C-l> `` |
+| `reposition_window` | Scroll so the whole function at point is on screen (emacs reposition-window) | **emacs, cua, micro** — insert: `` <A-C-l> `` |
 | `load` | Evaluate an elisp file in the embedded interpreter (emacs load) |  |
 | `load_library` | Load an elisp library by name from the load path (emacs load-library) |  |
 | `complete_keyword` | Complete the keyword before the cursor from the 'complete' sources (vim i_CTRL-N) |  |
@@ -2301,12 +2301,12 @@
 | `fortran_window_create` | Mark column 72, the fixed-form Fortran line limit (emacs fortran-window-create) |  |
 | `fortran_window_create_momentarily` | Mark column 72 until the next key (emacs fortran-window-create-momentarily) |  |
 | `recode_region` | Re-decode the region with the coding system it was really in (emacs recode-region) |  |
-| `make_frame_command` | Create a new frame showing this buffer (emacs make-frame-command) | **spacemacs** — normal: `` <C-x>52 ``, `` <space>Fn ``, select: `` <C-x>52 ``, `` <space>Fn ``, insert: `` <C-x>52 ``<br>**emacs** — normal: `` <C-x>52 ``, select: `` <C-x>52 ``, insert: `` <C-x>52 ``<br>**cua** — normal: `` <C-x>52 ``, select: `` <C-X>52 ``, insert: `` <C-x>52 `` |
+| `make_frame_command` | Create a new frame showing this buffer (emacs make-frame-command) | **spacemacs** — normal: `` <C-x>52 ``, `` <space>Fn ``, select: `` <C-x>52 ``, `` <space>Fn ``, insert: `` <C-x>52 ``<br>**emacs** — normal: `` <C-x>52 ``, select: `` <C-x>52 ``, insert: `` <C-x>52 ``<br>**cua** — normal: `` <C-x>52 ``, select: `` <C-X>52 ``, insert: `` <C-x>52 ``<br>**micro** — select: `` <C-x>52 `` |
 | `make_frame_on_display` | Create a frame on a named display; one display on a tty (emacs make-frame-on-display) |  |
 | `make_frame_on_monitor` | Create a frame on a named monitor; one monitor on a tty (emacs make-frame-on-monitor) |  |
-| `toggle_frame_fullscreen` | Toggle the terminal window's fullscreen state (emacs toggle-frame-fullscreen, F11) | **spacemacs** — normal: `` <space>TF ``, select: `` <space>TF ``<br>**emacs, cua** — normal: `` <F11> ``, select: `` <F11> ``, insert: `` <F11> `` |
-| `toggle_frame_maximized` | Maximize or restore the terminal window (emacs toggle-frame-maximized, M-F10) | **spacemacs** — normal: `` <space>TM ``, select: `` <space>TM ``<br>**emacs, cua** — normal: `` <A-F10> ``, select: `` <A-F10> ``, insert: `` <A-F10> `` |
-| `iconify_or_deiconify_frame` | Iconify or deiconify the frame; no visible effect on a tty (emacs iconify-or-deiconify-frame, C-z under X) | **emacs** — normal: `` <C-z> ``, select: `` <C-z> ``, insert: `` <C-z> `` |
+| `toggle_frame_fullscreen` | Toggle the terminal window's fullscreen state (emacs toggle-frame-fullscreen, F11) | **spacemacs** — normal: `` <space>TF ``, select: `` <space>TF ``<br>**emacs, cua, micro** — normal: `` <F11> ``, select: `` <F11> ``, insert: `` <F11> `` |
+| `toggle_frame_maximized` | Maximize or restore the terminal window (emacs toggle-frame-maximized, M-F10) | **spacemacs** — normal: `` <space>TM ``, select: `` <space>TM ``<br>**emacs, cua, micro** — normal: `` <A-F10> ``, select: `` <A-F10> ``, insert: `` <A-F10> `` |
+| `iconify_or_deiconify_frame` | Iconify or deiconify the frame; no visible effect on a tty (emacs iconify-or-deiconify-frame, C-z under X) | **emacs** — normal: `` <C-z> ``, select: `` <C-z> ``, insert: `` <C-z> ``<br>**micro** — select: `` <C-z> `` |
 | `dos_mode25` | Resize the terminal to 80x25 (emacs dos-mode25) |  |
 | `dos_mode4350` | Resize the terminal to 80x50 (emacs dos-mode4350) |  |
 | `w32_set_console_codepage` | Set the codepage the hosted terminal's output is decoded with (emacs w32-set-console-codepage) |  |
@@ -2321,18 +2321,18 @@
 | `category_set_mnemonics` | Report the category mnemonics of the character at point (emacs category-set-mnemonics) |  |
 | `char_category_set` | Report the category set of the character at point (emacs char-category-set) |  |
 | `clone_frame` | Create a new frame with a copy of this frame's layout (emacs clone-frame) | **spacemacs** — normal: `` <C-x>5c ``, select: `` <C-x>5c ``, insert: `` <C-x>5c `` |
-| `delete_frame` | Delete the displayed frame (emacs delete-frame) | **spacemacs** — normal: `` <C-x>50 ``, `` <space>Fd ``, select: `` <C-x>50 ``, `` <space>Fd ``, insert: `` <C-x>50 ``<br>**emacs** — normal: `` <C-x>50 ``, select: `` <C-x>50 ``, insert: `` <C-x>50 ``<br>**cua** — normal: `` <C-x>50 ``, select: `` <C-X>50 ``, insert: `` <C-x>50 `` |
-| `delete_other_frames` | Delete every frame but this one (emacs delete-other-frames) | **spacemacs** — normal: `` <C-x>51 ``, `` <space>FD ``, select: `` <C-x>51 ``, `` <space>FD ``, insert: `` <C-x>51 ``<br>**emacs** — normal: `` <C-x>51 ``, select: `` <C-x>51 ``, insert: `` <C-x>51 ``<br>**cua** — normal: `` <C-x>51 ``, select: `` <C-X>51 ``, insert: `` <C-x>51 `` |
-| `other_frame` | Display the next frame (emacs other-frame) | **spacemacs** — normal: `` ]t ``, `` <C-x>5o ``, `` <space>Fo ``, select: `` <C-x>5o ``, `` <space>Fo ``, insert: `` <C-x>5o ``<br>**vim** — normal: `` ]t ``<br>**emacs** — normal: `` <C-x>5o ``, select: `` <C-x>5o ``, insert: `` <C-x>5o ``<br>**cua** — normal: `` <C-x>5o ``, select: `` <C-X>5o ``, insert: `` <C-x>5o `` |
-| `undelete_frame` | Bring back the most recently deleted frame (emacs undelete-frame) | **spacemacs, emacs** — normal: `` <C-x>5u ``, select: `` <C-x>5u ``, insert: `` <C-x>5u ``<br>**cua** — normal: `` <C-x>5u ``, select: `` <C-X>5u ``, insert: `` <C-x>5u `` |
+| `delete_frame` | Delete the displayed frame (emacs delete-frame) | **spacemacs** — normal: `` <C-x>50 ``, `` <space>Fd ``, select: `` <C-x>50 ``, `` <space>Fd ``, insert: `` <C-x>50 ``<br>**emacs** — normal: `` <C-x>50 ``, select: `` <C-x>50 ``, insert: `` <C-x>50 ``<br>**cua** — normal: `` <C-x>50 ``, select: `` <C-X>50 ``, insert: `` <C-x>50 ``<br>**micro** — select: `` <C-x>50 `` |
+| `delete_other_frames` | Delete every frame but this one (emacs delete-other-frames) | **spacemacs** — normal: `` <C-x>51 ``, `` <space>FD ``, select: `` <C-x>51 ``, `` <space>FD ``, insert: `` <C-x>51 ``<br>**emacs** — normal: `` <C-x>51 ``, select: `` <C-x>51 ``, insert: `` <C-x>51 ``<br>**cua** — normal: `` <C-x>51 ``, select: `` <C-X>51 ``, insert: `` <C-x>51 ``<br>**micro** — select: `` <C-x>51 `` |
+| `other_frame` | Display the next frame (emacs other-frame) | **spacemacs** — normal: `` ]t ``, `` <C-x>5o ``, `` <space>Fo ``, select: `` <C-x>5o ``, `` <space>Fo ``, insert: `` <C-x>5o ``<br>**vim** — normal: `` ]t ``<br>**emacs** — normal: `` <C-x>5o ``, select: `` <C-x>5o ``, insert: `` <C-x>5o ``<br>**cua** — normal: `` <C-x>5o ``, select: `` <C-X>5o ``, insert: `` <C-x>5o ``<br>**micro** — select: `` <C-x>5o `` |
+| `undelete_frame` | Bring back the most recently deleted frame (emacs undelete-frame) | **spacemacs, emacs** — normal: `` <C-x>5u ``, select: `` <C-x>5u ``, insert: `` <C-x>5u ``<br>**cua** — normal: `` <C-x>5u ``, select: `` <C-X>5u ``, insert: `` <C-x>5u ``<br>**micro** — select: `` <C-x>5u `` |
 | `undelete_frame_mode` | Record deleted frames so undelete-frame can bring them back (emacs undelete-frame-mode) |  |
 | `select_frame_by_name` | Pick a frame by name and display it (emacs select-frame-by-name) |  |
 | `set_frame_name` | Rename the displayed frame (emacs set-frame-name) |  |
-| `find_file_other_frame` | Open a file in a new frame (emacs find-file-other-frame) | **spacemacs, emacs** — normal: `` <C-x>5f ``, select: `` <C-x>5f ``, insert: `` <C-x>5f ``<br>**cua** — normal: `` <C-x>5f ``, select: `` <C-X>5f ``, insert: `` <C-x>5f `` |
-| `find_file_read_only_other_frame` | Open a file read-only in a new frame (emacs find-file-read-only-other-frame) | **spacemacs, emacs** — normal: `` <C-x>5r ``, select: `` <C-x>5r ``, insert: `` <C-x>5r ``<br>**cua** — normal: `` <C-x>5r ``, select: `` <C-X>5r ``, insert: `` <C-x>5r `` |
-| `switch_to_buffer_other_frame` | Display a buffer in a new frame (emacs switch-to-buffer-other-frame) | **spacemacs, emacs** — normal: `` <C-x>5b ``, select: `` <C-x>5b ``, insert: `` <C-x>5b ``<br>**cua** — normal: `` <C-x>5b ``, select: `` <C-X>5b ``, insert: `` <C-x>5b `` |
+| `find_file_other_frame` | Open a file in a new frame (emacs find-file-other-frame) | **spacemacs, emacs** — normal: `` <C-x>5f ``, select: `` <C-x>5f ``, insert: `` <C-x>5f ``<br>**cua** — normal: `` <C-x>5f ``, select: `` <C-X>5f ``, insert: `` <C-x>5f ``<br>**micro** — select: `` <C-x>5f `` |
+| `find_file_read_only_other_frame` | Open a file read-only in a new frame (emacs find-file-read-only-other-frame) | **spacemacs, emacs** — normal: `` <C-x>5r ``, select: `` <C-x>5r ``, insert: `` <C-x>5r ``<br>**cua** — normal: `` <C-x>5r ``, select: `` <C-X>5r ``, insert: `` <C-x>5r ``<br>**micro** — select: `` <C-x>5r `` |
+| `switch_to_buffer_other_frame` | Display a buffer in a new frame (emacs switch-to-buffer-other-frame) | **spacemacs, emacs** — normal: `` <C-x>5b ``, select: `` <C-x>5b ``, insert: `` <C-x>5b ``<br>**cua** — normal: `` <C-x>5b ``, select: `` <C-X>5b ``, insert: `` <C-x>5b ``<br>**micro** — select: `` <C-x>5b `` |
 | `display_buffer_other_frame` | Put a buffer in another frame without selecting it (emacs display-buffer-other-frame, SPC F B) |  |
-| `dired_other_frame` | Open Dired in a new frame (emacs dired-other-frame) | **spacemacs** — normal: `` <C-x>5d ``, `` <space>FO ``, select: `` <C-x>5d ``, `` <space>FO ``, insert: `` <C-x>5d ``<br>**emacs** — normal: `` <C-x>5d ``, select: `` <C-x>5d ``, insert: `` <C-x>5d ``<br>**cua** — normal: `` <C-x>5d ``, select: `` <C-X>5d ``, insert: `` <C-x>5d `` |
+| `dired_other_frame` | Open Dired in a new frame (emacs dired-other-frame) | **spacemacs** — normal: `` <C-x>5d ``, `` <space>FO ``, select: `` <C-x>5d ``, `` <space>FO ``, insert: `` <C-x>5d ``<br>**emacs** — normal: `` <C-x>5d ``, select: `` <C-x>5d ``, insert: `` <C-x>5d ``<br>**cua** — normal: `` <C-x>5d ``, select: `` <C-X>5d ``, insert: `` <C-x>5d ``<br>**micro** — select: `` <C-x>5d `` |
 | `other_frame_prefix` | Display the next command's buffer in a new frame (emacs other-frame-prefix) | **spacemacs** — normal: `` <C-x>55 ``, select: `` <C-x>55 ``, insert: `` <C-x>55 `` |
 | `other_window_prefix` | Display the next command's buffer in another window (emacs other-window-prefix) | **spacemacs** — normal: `` <C-x>44 ``, select: `` <C-x>44 ``, insert: `` <C-x>44 `` |
 | `other_tab_prefix` | Display the next command's buffer in a new tab (emacs other-tab-prefix) | **spacemacs** — normal: `` <C-x>tt ``, select: `` <C-x>tt ``, insert: `` <C-x>tt `` |
@@ -2370,14 +2370,14 @@
 | `mouse_secondary_save_then_kill` | Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill) |  |
 | `mouse_select_window` | Select the window the click landed on (emacs mouse-select-window) |  |
 | `mouse_split_window_horizontally` | Split the clicked window side by side at the click (emacs mouse-split-window-horizontally) |  |
-| `context_menu_open` | Pop up the context menu at the click, or at point (emacs context-menu-open) | **spacemacs, vim** — normal: `` <S-F10> ``<br>**emacs, cua** — insert: `` <S-F10> `` |
+| `context_menu_open` | Pop up the context menu at the click, or at point (emacs context-menu-open) | **spacemacs, vim** — normal: `` <S-F10> ``<br>**emacs, cua, micro** — insert: `` <S-F10> `` |
 | `hs_toggle_hiding` | Hide or show the block at the click (emacs hs-toggle-hiding, S-mouse-2) |  |
 | `ffap_at_mouse` | Visit the file or URL at the click (emacs ffap-at-mouse, S-mouse-3) |  |
 | `ffap_bindings` | Make the file commands read the name at point (emacs ffap-bindings) |  |
 | `ffap_alternate_file` | Visit the file at point in place of this buffer (emacs ffap-alternate-file, C-x C-v) |  |
 | `ffap_other_window` | Visit the file at point in another window (emacs ffap-other-window, C-x 4 f) |  |
 | `find_file_read_only` | Visit a file in a read-only buffer (emacs find-file-read-only, C-x C-r) | **spacemacs** — normal: `` <C-x><C-r> ``, select: `` <C-x><C-r> ``, insert: `` <C-x><C-r> ``<br>**emacs** — insert: `` <C-x><C-r> ``<br>**cua** — select: `` <C-X><C-r> ``, insert: `` <C-x><C-r> `` |
-| `overwrite_mode` | Typing replaces the character under point (emacs overwrite-mode) |  |
+| `overwrite_mode` | Typing replaces the character under point (emacs overwrite-mode) | **micro** — normal: `` <ins> ``, insert: `` <ins> `` |
 | `binary_overwrite_mode` | Overwrite mode that replaces newlines too (emacs binary-overwrite-mode) |  |
 | `compose_mail_other_frame` | Open a mail draft in a new frame (emacs compose-mail-other-frame) | **spacemacs** — normal: `` <C-x>5m ``, select: `` <C-x>5m ``, insert: `` <C-x>5m `` |
 | `context_menu_mode` | Turn the right-button popup menu on or off (emacs context-menu-mode) |  |

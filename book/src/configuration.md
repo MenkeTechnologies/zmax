@@ -48,7 +48,7 @@ Zmax ships the keybinding presets below. Select one with the top-level `keymap`
 key (or switch at runtime with `:keymap <name>`, or in Preferences ▸ Keymap):
 
 ```toml
-keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "kakoune" | "emacs" | "cua"
+keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "kakoune" | "micro" | "emacs" | "cua"
 ```
 
 | Preset | Starts in | Leader / prefixes |
@@ -56,6 +56,7 @@ keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "kakoune" | "
 | `spacemacs` *(default)* | Normal | vim/evil keys + the `SPC` leader **and** the Emacs `C-x` prefix; both open a which-key popup. |
 | `vim` | Normal | pure vim — no `SPC` leader and no which-key popup; `C-x` is `decrement`. |
 | `helix` | Normal | the original selection-first keymap with its `SPC` leader. |
+| `micro` | Insert | modeless CUA-style chords from micro's own bindings.json defaults (`C-s` save, `C-q` quit, `C-e` command bar, `A-n` multi-cursor). |
 | `kakoune` | Normal | the helix base with kakoune's own key placement: view commands on `v`/`V`, text objects on `A-i`/`A-a`, selection registers on `Z`/`z`/`A-z`, `space` to reduce to the primary selection. |
 | `emacs` | Insert | modeless Emacs bindings (`C-x`, `C-c`, `M-x`, …). |
 | `cua` | Insert | the Emacs keymap with `cua-mode` on top (`C-x` cut, `C-c` copy, `C-v` paste, `C-z` undo). |
