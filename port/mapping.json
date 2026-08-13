@@ -64469,5 +64469,23 @@
    "static:quit_window"
   ],
   "note": "mg quit-window, via the GNU Emacs command of the same name (emacs.command.quit_window)"
+ },
+ {
+  "spec_id": "mg.mg-commands.define_key",
+  "status": "partial",
+  "evidence": [
+   "typable:map",
+   "typable:noremap"
+  ],
+  "note": "mg define-key, via the GNU Emacs command of the same name (emacs.command.define_key)"
+ },
+ {
+  "spec_id": "mg.mg-commands.global_set_key",
+  "status": "partial",
+  "evidence": [
+   "typable:map",
+   "typable:nnoremap"
+  ],
+  "note": "mg global-set-key, via the GNU Emacs command of the same name (emacs.command.global_set_key)"
  }
 ]

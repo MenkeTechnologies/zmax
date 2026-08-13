@@ -1,0 +1,3562 @@
+[
+ {
+  "id": "vile.command.abbreviate",
+  "source": "vile",
+  "category": "command",
+  "name": "abbreviate, list-abbreviations, show-abbreviations",
+  "desc": "establish shorthand for another string, or show all abbreviations",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L104"
+ },
+ {
+  "id": "vile.command.alternate_buffer",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "alternate-buffer [^^ CTRL+6]",
+  "desc": "switch to previous buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L109"
+ },
+ {
+  "id": "vile.command.append_chars",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "append-chars [a]",
+  "desc": "insert (CNT copies of) text after the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L114"
+ },
+ {
+  "id": "vile.command.append_indented_chars",
+  "source": "vile",
+  "category": "command",
+  "name": "append-indented-chars, a!",
+  "desc": "insert (CNT copies of) text after the cursor, toggles autoindent",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L118"
+ },
+ {
+  "id": "vile.command.append_string",
+  "source": "vile",
+  "category": "command",
+  "name": "append-string",
+  "desc": "append (CNT copies of) the given string after the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L122"
+ },
+ {
+  "id": "vile.command.append_number",
+  "source": "vile",
+  "category": "command",
+  "name": "append-number",
+  "desc": "append (CNT copies of) the given character-number after the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L125"
+ },
+ {
+  "id": "vile.command.append_chars_at_eol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "append-chars-at-eol [A]",
+  "desc": "insert (CNT copies of) text after the end of line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L128"
+ },
+ {
+  "id": "vile.command.backward_character",
+  "source": "vile",
+  "category": "command",
+  "name": "backward-character",
+  "desc": "move CNT characters left, wrapping to previous line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L132"
+ },
+ {
+  "id": "vile.command.backward_character_to_bol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "backward-character-to-bol, left-arrow [h ^H ^? FN-D]",
+  "desc": "move CNT characters left, stopping at beginning of line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L135"
+ },
+ {
+  "id": "vile.command.delete_previous_character",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-previous-character [X]",
+  "desc": "delete CNT characters to the left",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L143"
+ },
+ {
+  "id": "vile.command.hunt_backward",
+  "source": "vile",
+  "category": "command",
+  "name": "hunt-backward",
+  "desc": "search backward for CNT'th occurrence of previously entered pattern",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L147"
+ },
+ {
+  "id": "vile.command.previous_half_page",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-half-page, back-half-page, up-half-page [^U]",
+  "desc": "move up CNT half screens",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L150"
+ },
+ {
+  "id": "vile.command.previous_line",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-line, back-line, up-line, up-arrow [k ^P FN-A]",
+  "desc": "move up CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L156"
+ },
+ {
+  "id": "vile.command.previous_line_at_bol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-line-at-bol, back-line-at-bol, up-line-at-bol [-]",
+  "desc": "move up CNT lines, to first non-white character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L165"
+ },
+ {
+  "id": "vile.command.previous_page",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-page, back-page [^B FN-p]",
+  "desc": "move up CNT full screens",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L171"
+ },
+ {
+  "id": "vile.command.backward_row",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "backward-row, previous-row [^X-^U]",
+  "desc": "move up CNT rows on the screen",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L177"
+ },
+ {
+  "id": "vile.command.previous_word",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-word, back-word [B]",
+  "desc": "move left by CNT \\\"big\\\" words",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L182"
+ },
+ {
+  "id": "vile.command.previous_punctuated_word",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-punctuated-word, back-punctuated-word [b]",
+  "desc": "move left by CNT \\\"small\\\" words",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L187"
+ },
+ {
+  "id": "vile.command.search_reverse",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "search-reverse [?]",
+  "desc": "search backwards for fresh pattern",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L192"
+ },
+ {
+  "id": "vile.command.backward_char_scan",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "backward-char-scan [F]",
+  "desc": "scan left on the line for CNT'th occurrence of the given character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L196"
+ },
+ {
+  "id": "vile.command.backward_char_scan_to",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "backward-char-scan-to [T]",
+  "desc": "scan left on the line up to but not including CNT'th occurrence of the given character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L200"
+ },
+ {
+  "id": "vile.command.bind_key",
+  "source": "vile",
+  "category": "command",
+  "name": "bind-key, rebind-key",
+  "desc": "bind a keystroke to a function",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L204"
+ },
+ {
+  "id": "vile.command.bind_insmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "bind-insmode-key, rebind-insmode-key",
+  "desc": "bind a keystroke to a function effective in insertion mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L208"
+ },
+ {
+  "id": "vile.command.bind_cmdmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "bind-cmdmode-key, rebind-cmdmode-key",
+  "desc": "bind a keystroke to a function effective in command mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L212"
+ },
+ {
+  "id": "vile.command.bind_selmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "bind-selmode-key, rebind-selmode-key",
+  "desc": "bind a keystroke to a function effective in select mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L216"
+ },
+ {
+  "id": "vile.command.suspend",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "suspend, suspend!, stop, stop! [^Z]",
+  "desc": "suspend the editor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L220"
+ },
+ {
+  "id": "vile.command.cd",
+  "source": "vile",
+  "category": "command",
+  "name": "cd, change-directory",
+  "desc": "move to a new directory, \\\"-\\\" is previous, \\\"~\\\" is $HOME",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L227"
+ },
+ {
+  "id": "vile.command.cntl_x_prefix",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "cntl_x-prefix [^X]",
+  "desc": "the \\\"Control-X\\\" prefix, used when typing extended commands",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L231"
+ },
+ {
+  "id": "vile.command.change_char",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "change-char, delete-char-and-insert-chars [s]",
+  "desc": "insert text to replace CNT characters",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L235"
+ },
+ {
+  "id": "vile.command.change_line",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "change-line, delete-line-and-insert-chars [S]",
+  "desc": "insert text to replace the CNT lines, starting with current line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L240"
+ },
+ {
+  "id": "vile.command.change_to_eol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "change-to-eol, delete-to-eol-and-insert-chars [C]",
+  "desc": "insert text to replace the rest of the line (plus CNT-1 following)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L245"
+ },
+ {
+  "id": "vile.command.clear_visual_matches",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "clear-visual-matches [=]",
+  "desc": "clear highlighting caused by searches when \\\"visual-matches\\\" is set",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L250"
+ },
+ {
+  "id": "vile.command.clear_message_line",
+  "source": "vile",
+  "category": "command",
+  "name": "clear-message-line",
+  "desc": "erase text on the bottom line of screen",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L254"
+ },
+ {
+  "id": "vile.command.compile_error_expressions",
+  "source": "vile",
+  "category": "command",
+  "name": "compile-error-expressions",
+  "desc": "(re)compile the [Error Expressions] buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L257"
+ },
+ {
+  "id": "vile.command.list_error_expressions",
+  "source": "vile",
+  "category": "command",
+  "name": "list-error-expressions, show-error-expressions",
+  "desc": "display error meta-expressions and resulting regular expressions",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L260"
+ },
+ {
+  "id": "vile.command.continue_search",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "continue-search [n]",
+  "desc": "search for previous pattern in same direction as before, CNT'th occurrence",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L264"
+ },
+ {
+  "id": "vile.command.copy_til",
+  "source": "vile",
+  "category": "command",
+  "name": "copy-til, co",
+  "desc": "copy text in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L268"
+ },
+ {
+  "id": "vile.command.end_keyboard_macro",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "end-keyboard-macro, begin-keyboard-macro [^X-( ^X-)]",
+  "desc": "begin or end recording a macro of keystrokes",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L272"
+ },
+ {
+  "id": "vile.command.execute_keyboard_macro",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-keyboard-macro [^X-&]",
+  "desc": "execute a previously recorded macro of keystrokes CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L278"
+ },
+ {
+  "id": "vile.command.save_keyboard_macro",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "save-keyboard-macro [^X-^]",
+  "desc": "save a previously recorded macro of keystrokes to a named register",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L282"
+ },
+ {
+  "id": "vile.command.execute_macro_1",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-1 [FN-1 FN-P]",
+  "desc": "execute [Macro 1] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L286"
+ },
+ {
+  "id": "vile.command.execute_macro_2",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-2 [FN-2 FN-Q]",
+  "desc": "execute [Macro 2] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L291"
+ },
+ {
+  "id": "vile.command.execute_macro_3",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-3 [FN-3 FN-R]",
+  "desc": "execute [Macro 3] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L296"
+ },
+ {
+  "id": "vile.command.execute_macro_4",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-4 [FN-4 FN-S]",
+  "desc": "execute [Macro 4] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L301"
+ },
+ {
+  "id": "vile.command.execute_macro_5",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-5 [FN-5]",
+  "desc": "execute [Macro 5] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L306"
+ },
+ {
+  "id": "vile.command.execute_macro_6",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-6 [FN-6]",
+  "desc": "execute [Macro 6] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L310"
+ },
+ {
+  "id": "vile.command.execute_macro_7",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-7 [FN-7]",
+  "desc": "execute [Macro 7] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L314"
+ },
+ {
+  "id": "vile.command.execute_macro_8",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-8 [FN-8]",
+  "desc": "execute [Macro 8] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L318"
+ },
+ {
+  "id": "vile.command.execute_macro_9",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-9 [FN-9]",
+  "desc": "execute [Macro 9] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L322"
+ },
+ {
+  "id": "vile.command.execute_macro_10",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-10 [FN-0]",
+  "desc": "execute [Macro 10] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L326"
+ },
+ {
+  "id": "vile.command.execute_macro_11",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-11 [FN-!]",
+  "desc": "execute [Macro 11] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L330"
+ },
+ {
+  "id": "vile.command.execute_macro_12",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-12 [FN-@]",
+  "desc": "execute [Macro 12] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L334"
+ },
+ {
+  "id": "vile.command.execute_macro_13",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-13 [FN-#]",
+  "desc": "execute [Macro 13] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L338"
+ },
+ {
+  "id": "vile.command.execute_macro_14",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-14 [FN-$]",
+  "desc": "execute [Macro 14] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L342"
+ },
+ {
+  "id": "vile.command.execute_macro_15",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-15 [FN-%]",
+  "desc": "execute [Macro 15] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L346"
+ },
+ {
+  "id": "vile.command.execute_macro_16",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-16 [FN-^]",
+  "desc": "execute [Macro 16] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L350"
+ },
+ {
+  "id": "vile.command.execute_macro_17",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-17 [FN-&]",
+  "desc": "execute [Macro 17] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L354"
+ },
+ {
+  "id": "vile.command.execute_macro_18",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-18 [FN-*]",
+  "desc": "execute [Macro 18] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L358"
+ },
+ {
+  "id": "vile.command.execute_macro_19",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-19 [FN-(]",
+  "desc": "execute [Macro 19] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L362"
+ },
+ {
+  "id": "vile.command.execute_macro_20",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-20 [FN-)]",
+  "desc": "execute [Macro 20] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L366"
+ },
+ {
+  "id": "vile.command.execute_macro_21",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-21 [FN-\\241]",
+  "desc": "execute [Macro 21] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L370"
+ },
+ {
+  "id": "vile.command.execute_macro_22",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-22 [FN-\\242]",
+  "desc": "execute [Macro 22] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L374"
+ },
+ {
+  "id": "vile.command.execute_macro_23",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-23 [FN-\\243]",
+  "desc": "execute [Macro 23] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L378"
+ },
+ {
+  "id": "vile.command.execute_macro_24",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-24 [FN-\\244]",
+  "desc": "execute [Macro 24] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L382"
+ },
+ {
+  "id": "vile.command.execute_macro_25",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-25 [FN-\\245]",
+  "desc": "execute [Macro 25] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L386"
+ },
+ {
+  "id": "vile.command.execute_macro_26",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-26 [FN-\\246]",
+  "desc": "execute [Macro 26] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L390"
+ },
+ {
+  "id": "vile.command.execute_macro_27",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-27 [FN-\\247]",
+  "desc": "execute [Macro 27] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L394"
+ },
+ {
+  "id": "vile.command.execute_macro_28",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-28 [FN-\\250]",
+  "desc": "execute [Macro 28] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L398"
+ },
+ {
+  "id": "vile.command.execute_macro_29",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-29 [FN-\\251]",
+  "desc": "execute [Macro 29] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L402"
+ },
+ {
+  "id": "vile.command.execute_macro_30",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-30 [FN-\\252]",
+  "desc": "execute [Macro 30] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L406"
+ },
+ {
+  "id": "vile.command.execute_macro_31",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-31 [FN-\\253]",
+  "desc": "execute [Macro 31] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L410"
+ },
+ {
+  "id": "vile.command.execute_macro_32",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-32 [FN-\\254]",
+  "desc": "execute [Macro 32] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L414"
+ },
+ {
+  "id": "vile.command.execute_macro_33",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-33 [FN-\\255]",
+  "desc": "execute [Macro 33] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L418"
+ },
+ {
+  "id": "vile.command.execute_macro_34",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-34 [FN-\\256]",
+  "desc": "execute [Macro 34] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L422"
+ },
+ {
+  "id": "vile.command.execute_macro_35",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-35 [FN-\\257]",
+  "desc": "execute [Macro 35] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L426"
+ },
+ {
+  "id": "vile.command.execute_macro_36",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-36 [FN-\\260]",
+  "desc": "execute [Macro 36] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L430"
+ },
+ {
+  "id": "vile.command.execute_macro_37",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-37 [FN-\\261]",
+  "desc": "execute [Macro 37] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L434"
+ },
+ {
+  "id": "vile.command.execute_macro_38",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-38 [FN-\\262]",
+  "desc": "execute [Macro 38] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L438"
+ },
+ {
+  "id": "vile.command.execute_macro_39",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-39 [FN-\\263]",
+  "desc": "execute [Macro 39] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L442"
+ },
+ {
+  "id": "vile.command.execute_macro_40",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-40 [FN-\\264]",
+  "desc": "execute [Macro 40] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L446"
+ },
+ {
+  "id": "vile.command.execute_macro_41",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-41 [FN-\\265]",
+  "desc": "execute [Macro 41] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L450"
+ },
+ {
+  "id": "vile.command.execute_macro_42",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-42 [FN-\\266]",
+  "desc": "execute [Macro 42] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L454"
+ },
+ {
+  "id": "vile.command.execute_macro_43",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-43 [FN-\\267]",
+  "desc": "execute [Macro 43] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L458"
+ },
+ {
+  "id": "vile.command.execute_macro_44",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-44 [FN-\\270]",
+  "desc": "execute [Macro 44] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L462"
+ },
+ {
+  "id": "vile.command.execute_macro_45",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-45 [FN-\\271]",
+  "desc": "execute [Macro 45] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L466"
+ },
+ {
+  "id": "vile.command.execute_macro_46",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-46 [FN-\\272]",
+  "desc": "execute [Macro 46] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L470"
+ },
+ {
+  "id": "vile.command.execute_macro_47",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-47 [FN-\\273]",
+  "desc": "execute [Macro 47] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L474"
+ },
+ {
+  "id": "vile.command.execute_macro_48",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-macro-48 [FN-\\274]",
+  "desc": "execute [Macro 48] CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L478"
+ },
+ {
+  "id": "vile.command.define_majormode",
+  "source": "vile",
+  "category": "command",
+  "name": "define-majormode, define-mode",
+  "desc": "define a major mode, i.e., a collection of buffer modes",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L482"
+ },
+ {
+  "id": "vile.command.derive_majormode",
+  "source": "vile",
+  "category": "command",
+  "name": "derive-majormode, derive-mode",
+  "desc": "derive a major mode based on an existing majormode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L486"
+ },
+ {
+  "id": "vile.command.define_submode",
+  "source": "vile",
+  "category": "command",
+  "name": "define-submode",
+  "desc": "define a submode within a major mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L490"
+ },
+ {
+  "id": "vile.command.define_color_scheme",
+  "source": "vile",
+  "category": "command",
+  "name": "define-color-scheme",
+  "desc": "define a color scheme",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L493"
+ },
+ {
+  "id": "vile.command.delete_window",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-window [^K ^X-0]",
+  "desc": "destroy the current window, unless it is the last one",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L496"
+ },
+ {
+  "id": "vile.command.delete_blank_lines",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-blank-lines, force-blank-lines [^A-d]",
+  "desc": "delete blank lines (or force some if CNT specified)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L501"
+ },
+ {
+  "id": "vile.command.delete_empty_lines",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-empty-lines [^A-e]",
+  "desc": "delete empty lines in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L506"
+ },
+ {
+  "id": "vile.command.force_empty_lines",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "force-empty-lines [^X-E]",
+  "desc": "force sequences of empty lines in the region to be $empty-lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L510"
+ },
+ {
+  "id": "vile.command.delete_global_mode",
+  "source": "vile",
+  "category": "command",
+  "name": "delete-global-mode, setgno, unsetg, setno, unset",
+  "desc": "turn off the global value of a mode setting",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L514"
+ },
+ {
+  "id": "vile.command.delete_mode",
+  "source": "vile",
+  "category": "command",
+  "name": "delete-mode, setlno, unsetl",
+  "desc": "turn off the current buffer's local value of a mode setting",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L521"
+ },
+ {
+  "id": "vile.command.delete_to_eol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-to-eol [D]",
+  "desc": "delete text from cursor to the end of line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L526"
+ },
+ {
+  "id": "vile.command.describe_bindings",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-bindings, list-bindings, list-commands, show-bindings, show-commands",
+  "desc": "show a list of all commands",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L530"
+ },
+ {
+  "id": "vile.command.describe_insmode_bindings",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-insmode-bindings, list-insmode-bindings, show-insmode-bindings",
+  "desc": "show a list of all commands that may be executed in insert-mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L537"
+ },
+ {
+  "id": "vile.command.describe_cmdmode_bindings",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-cmdmode-bindings, list-cmdmode-bindings, show-cmdmode-bindings",
+  "desc": "show a list of all commands that may be executed in command-editing mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L542"
+ },
+ {
+  "id": "vile.command.describe_selmode_bindings",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-selmode-bindings, list-selmode-bindings, show-selmode-bindings",
+  "desc": "show a list of all commands that may be executed in selection mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L547"
+ },
+ {
+  "id": "vile.command.describe_all_keys",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-all-keys, list-all-keys, show-all-keys",
+  "desc": "show a list of all keys, showing if they are bound to command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L552"
+ },
+ {
+  "id": "vile.command.describe_all_insmode_keys",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-all-insmode-keys, list-all-insmode-keys, show-all-insmode-keys",
+  "desc": "show a list of all insert-mode keys, showing if they are bound to command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L557"
+ },
+ {
+  "id": "vile.command.describe_all_cmdmode_keys",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-all-cmdmode-keys, list-all-cmdmode-keys, show-all-cmdmode-keys",
+  "desc": "show a list of all editing-keys, showing if they are bound to command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L562"
+ },
+ {
+  "id": "vile.command.describe_all_selmode_keys",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-all-selmode-keys, list-all-selmode-keys, show-all-selmode-keys",
+  "desc": "show a list of all selection-mode keys, showing if they are bound to command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L567"
+ },
+ {
+  "id": "vile.command.list_key_names",
+  "source": "vile",
+  "category": "command",
+  "name": "list-key-names, show-key-names",
+  "desc": "show a list of all function-keys that may be bound with #-syntax",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L572"
+ },
+ {
+  "id": "vile.command.list_colors",
+  "source": "vile",
+  "category": "command",
+  "name": "list-colors, show-colors",
+  "desc": "show a list of all colors, as mapped by $palette",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L576"
+ },
+ {
+  "id": "vile.command.list_motions",
+  "source": "vile",
+  "category": "command",
+  "name": "list-motions, describe-motions, show-motions",
+  "desc": "show a list of all motion commands",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L580"
+ },
+ {
+  "id": "vile.command.list_globals",
+  "source": "vile",
+  "category": "command",
+  "name": "list-globals, describe-globals, show-globals",
+  "desc": "show a list of all global commands",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L585"
+ },
+ {
+  "id": "vile.command.list_operators",
+  "source": "vile",
+  "category": "command",
+  "name": "list-operators, describe-operators, show-operators",
+  "desc": "show a list of all operator commands",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L590"
+ },
+ {
+  "id": "vile.command.list_color_schemes",
+  "source": "vile",
+  "category": "command",
+  "name": "list-color-schemes, show-color-schemes",
+  "desc": "show the color scheme parameters",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L595"
+ },
+ {
+  "id": "vile.command.show_printable",
+  "source": "vile",
+  "category": "command",
+  "name": "show-printable",
+  "desc": "show the printable characters, with types, use CNT to select system locale",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L599"
+ },
+ {
+  "id": "vile.command.show_wide_printable",
+  "source": "vile",
+  "category": "command",
+  "name": "show-wide-printable",
+  "desc": "show the wide printable characters, with types, use CNT to select page",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L602"
+ },
+ {
+  "id": "vile.command.apropos",
+  "source": "vile",
+  "category": "command",
+  "name": "apropos, list-commands-apropos-to",
+  "desc": "look up command names containing a string",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L605"
+ },
+ {
+  "id": "vile.command.describe_function",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-function, show-function",
+  "desc": "show a description and current bindings for a function",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L609"
+ },
+ {
+  "id": "vile.command.describe_key",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-key",
+  "desc": "show the function bound to a given key",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L613"
+ },
+ {
+  "id": "vile.command.describe_insmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-insmode-key",
+  "desc": "show the function bound to a given key in insert-mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L616"
+ },
+ {
+  "id": "vile.command.describe_cmdmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-cmdmode-key",
+  "desc": "show the function bound to a given key in command-mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L619"
+ },
+ {
+  "id": "vile.command.describe_selmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-selmode-key",
+  "desc": "show the function bound to a given key in selection-mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L622"
+ },
+ {
+  "id": "vile.command.repeat_last_cmd",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "repeat-last-cmd [.]",
+  "desc": "repeat the last text-changing command, CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L625"
+ },
+ {
+  "id": "vile.command.describe_functions",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-&functions, describe-user-functions",
+  "desc": "vile describe-&functions",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L629"
+ },
+ {
+  "id": "vile.command.describe_variables",
+  "source": "vile",
+  "category": "command",
+  "name": "describe-$variables, describe-state-variables",
+  "desc": "vile describe-$variables",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L632"
+ },
+ {
+  "id": "vile.command.eval",
+  "source": "vile",
+  "category": "command",
+  "name": "eval, execute-string",
+  "desc": "evaluate expression, reinterpret as a command (CNT as per command)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L635"
+ },
+ {
+  "id": "vile.command.ex",
+  "source": "vile",
+  "category": "command",
+  "name": "ex",
+  "desc": "entry point to the \\\"exile\\\" editor. unimplemented",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L639"
+ },
+ {
+  "id": "vile.command.execute_buffer",
+  "source": "vile",
+  "category": "command",
+  "name": "execute-buffer",
+  "desc": "run the given buffer as a script, CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L642"
+ },
+ {
+  "id": "vile.command.execute_file",
+  "source": "vile",
+  "category": "command",
+  "name": "execute-file, source",
+  "desc": "run the given file as a script, CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L645"
+ },
+ {
+  "id": "vile.command.execute_hypertext_command",
+  "source": "vile",
+  "category": "command",
+  "name": "execute-hypertext-command",
+  "desc": "run the hypertext command attached to the region under the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L649"
+ },
+ {
+  "id": "vile.command.show_hypertext_command",
+  "source": "vile",
+  "category": "command",
+  "name": "show-hypertext-command",
+  "desc": "show the hypertext command attached to the region under the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L652"
+ },
+ {
+  "id": "vile.command.execute_register",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-register [@]",
+  "desc": "execute the keystroke macro stored in the given named register CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L655"
+ },
+ {
+  "id": "vile.command.execute_procedure",
+  "source": "vile",
+  "category": "command",
+  "name": "execute-procedure, run",
+  "desc": "run the given named stored-procedure as a script, CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L659"
+ },
+ {
+  "id": "vile.command.grow_window",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "grow-window [V]",
+  "desc": "increase the size of the current window by CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L663"
+ },
+ {
+  "id": "vile.command.abort_command",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "abort-command [^[]",
+  "desc": "the abort key, normally bound to ESC; it terminates lots of things",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L667"
+ },
+ {
+  "id": "vile.command.flow_control_enable",
+  "source": "vile",
+  "category": "command",
+  "name": "flow-control-enable",
+  "desc": "enable software flow-control (disable with arg)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L671"
+ },
+ {
+  "id": "vile.command.forward_char_scan",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-char-scan [f]",
+  "desc": "scan right on the line for (CNT'th occurrence of) the given character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L674"
+ },
+ {
+  "id": "vile.command.forward_char_scan_up_to",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-char-scan-up-to [t]",
+  "desc": "scan right on the line up to but not including (CNT'th occurrence of) the given character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L678"
+ },
+ {
+  "id": "vile.command.e",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "e, E, edit-file, find-file [^X-e]",
+  "desc": "bring given (or under-cursor) file or existing buffer into window",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L682"
+ },
+ {
+  "id": "vile.command.e_2",
+  "source": "vile",
+  "category": "command",
+  "name": "e!, replace-with-file",
+  "desc": "replace the contents of the current buffer with the given file",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L689"
+ },
+ {
+  "id": "vile.command.change_file_name",
+  "source": "vile",
+  "category": "command",
+  "name": "change-file-name, f, file, filename",
+  "desc": "change the filename associated with the current buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L693"
+ },
+ {
+  "id": "vile.command.save_file",
+  "source": "vile",
+  "category": "command",
+  "name": "save-file, save-file!",
+  "desc": "save the contents of the current buffer to its associated filename",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L699"
+ },
+ {
+  "id": "vile.command.write_file",
+  "source": "vile",
+  "category": "command",
+  "name": "write-file, write-file!",
+  "desc": "syntax: \\\"write-file [name]\\\" - write contents of current buffer to its filename or to optional \\\"name\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L703"
+ },
+ {
+  "id": "vile.command.item",
+  "source": "vile",
+  "category": "command",
+  "name": "|, filter-buffer",
+  "desc": "pipe the entire buffer through an external filter command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L707"
+ },
+ {
+  "id": "vile.command.find_next_error",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "find-next-error [^X-^X]",
+  "desc": "move to the next \\\"error\\\" in the error-buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L711"
+ },
+ {
+  "id": "vile.command.find_next_error_buffer_name",
+  "source": "vile",
+  "category": "command",
+  "name": "find-next-error-buffer-name, error-buffer",
+  "desc": "set the name of the buffer used as the error-buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L715"
+ },
+ {
+  "id": "vile.command.rewind",
+  "source": "vile",
+  "category": "command",
+  "name": "rewind, rew!",
+  "desc": "go to first buffer in buffer list",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L719"
+ },
+ {
+  "id": "vile.command.first_nonwhite",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "first-nonwhite [^]",
+  "desc": "move to the first non-whitespace character on line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L723"
+ },
+ {
+  "id": "vile.command.incremental_search",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "incremental-search [^X-S]",
+  "desc": "search forward for a pattern entered character by character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L727"
+ },
+ {
+  "id": "vile.command.flip_character",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "flip-character [~]",
+  "desc": "exchange upper and lowercase for CNT characters, begin with current",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L731"
+ },
+ {
+  "id": "vile.command.delete_next_character",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-next-character [x FN-d]",
+  "desc": "delete CNT characters to the right",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L735"
+ },
+ {
+  "id": "vile.command.forward_half_page",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-half-page, next-half-page, down-half-page [^D]",
+  "desc": "move down CNT half screens",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L740"
+ },
+ {
+  "id": "vile.command.forward_character",
+  "source": "vile",
+  "category": "command",
+  "name": "forward-character, next-character",
+  "desc": "move CNT characters right, wrapping to next line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L746"
+ },
+ {
+  "id": "vile.command.forward_character_to_eol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-character-to-eol, next-character-to-eol, right-arrow [  l FN-C]",
+  "desc": "move CNT characters right, stopping at end of line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L750"
+ },
+ {
+  "id": "vile.command.forward_page",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-page, next-page, down-page [^F FN-n]",
+  "desc": "move down CNT full screens",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L758"
+ },
+ {
+  "id": "vile.command.forward_row",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-row, next-row [^X-^D]",
+  "desc": "move down CNT rows on the screen",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L765"
+ },
+ {
+  "id": "vile.command.forward_line",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-line, next-line, down-line, down-arrow [j ^J ^N FN-B]",
+  "desc": "move down CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L770"
+ },
+ {
+  "id": "vile.command.forward_line_at_bol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-line-at-bol, next-line-at-bol, down-line-at-bol [+ ^M]",
+  "desc": "move down CNT lines, to first non-white character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L780"
+ },
+ {
+  "id": "vile.command.forward_word",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-word, next-word [W]",
+  "desc": "move right by CNT \\\"big\\\" words",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L787"
+ },
+ {
+  "id": "vile.command.forward_punctuated_word",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-punctuated-word, next-punctuated-word [w]",
+  "desc": "move right by CNT \\\"small\\\" words",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L792"
+ },
+ {
+  "id": "vile.command.forward_word_end",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-word-end, next-word-end [E]",
+  "desc": "move right to the end of CNT \\\"big\\\" words",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L797"
+ },
+ {
+  "id": "vile.command.forward_punctuated_word_end",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-punctuated-word-end, next-punctuated-word-end [e]",
+  "desc": "move right to the end of CNT \\\"small\\\" words",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L802"
+ },
+ {
+  "id": "vile.command.hunt_forward",
+  "source": "vile",
+  "category": "command",
+  "name": "hunt-forward",
+  "desc": "search forward for CNT'th occurrence of previously entered pattern",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L807"
+ },
+ {
+  "id": "vile.command.search_forward",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "search-forward [/ FN-f]",
+  "desc": "search forward for CNT'th occurrence of fresh $identifier pattern",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L810"
+ },
+ {
+  "id": "vile.command.goto_matching_fence",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-matching-fence [%]",
+  "desc": "find partner for next (,),[,],{,},#if,#else,#endif,/*,*/",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L815"
+ },
+ {
+  "id": "vile.command.goto_matching_fence_behind",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-matching-fence-behind [^X-%]",
+  "desc": "find partner for previous (,),[,],{,} on line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L819"
+ },
+ {
+  "id": "vile.command.oglobals",
+  "source": "vile",
+  "category": "command",
+  "name": "oglobals",
+  "desc": "vile oglobals",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L823"
+ },
+ {
+  "id": "vile.command.whole_lines",
+  "source": "vile",
+  "category": "command",
+  "name": "whole-lines",
+  "desc": "move CNT whole lines. same as \\\"stuttering\\\" most operators",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L829"
+ },
+ {
+  "id": "vile.command.previous_paragraph",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-paragraph, back-paragraph, up-paragraph [{]",
+  "desc": "move to the start of CNT'th paragraph",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L836"
+ },
+ {
+  "id": "vile.command.forward_paragraph",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-paragraph, next-paragraph, down-paragraph [}]",
+  "desc": "move to the end of CNT'th paragraph",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L842"
+ },
+ {
+  "id": "vile.command.beginning_of_file",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "beginning-of-file, goto-beginning-of-file [FN-H]",
+  "desc": "move to the top of the buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L848"
+ },
+ {
+  "id": "vile.command.goto_end_of_file",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-end-of-file, end-of-file [FN-E]",
+  "desc": "move to the end of the buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L853"
+ },
+ {
+  "id": "vile.command.goto_bol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-bol, beginning-of-line, bol [0]",
+  "desc": "move to the very beginning of the line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L858"
+ },
+ {
+  "id": "vile.command.goto_eol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-eol, end-of-line, eol [$]",
+  "desc": "move to the very end of the CNT'th line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L864"
+ },
+ {
+  "id": "vile.command.goto_beginning_of_screen",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-beginning-of-screen, beginning-of-screen [H]",
+  "desc": "move to the CNT'th line on the screen",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L870"
+ },
+ {
+  "id": "vile.command.goto_middle_of_screen",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-middle-of-screen, middle-of-screen [M]",
+  "desc": "move to the line in the middle of the screen",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L875"
+ },
+ {
+  "id": "vile.command.goto_end_of_screen",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-end-of-screen, end-of-screen [L]",
+  "desc": "move to the CNT'th line from the bottom of the screen",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L880"
+ },
+ {
+  "id": "vile.command.previous_section",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-section, back-section, up-section [[]",
+  "desc": "move to the CNT'th previous start of a \\\"section\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L885"
+ },
+ {
+  "id": "vile.command.forward_section",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-section, next-section, down-section []]",
+  "desc": "move forward to the CNT'th start of a \\\"section\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L891"
+ },
+ {
+  "id": "vile.command.previous_sentence",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-sentence, back-sentence, up-sentence [(]",
+  "desc": "move to the CNT'th previous start of a \\\"sentence\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L897"
+ },
+ {
+  "id": "vile.command.forward_sentence",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "forward-sentence, next-sentence, down-sentence [)]",
+  "desc": "move to the CNT'th start of a \\\"sentence\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L903"
+ },
+ {
+  "id": "vile.command.ta",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "ta, tag, find-tag [^]]",
+  "desc": "look up the given (or under-cursor) name as a \\\"tag\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L909"
+ },
+ {
+  "id": "vile.command.goto_char",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-char [^X-G]",
+  "desc": "go to the CNT'th character. unspecified CNT means end of buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L915"
+ },
+ {
+  "id": "vile.command.goto_percent",
+  "source": "vile",
+  "category": "command",
+  "name": "goto-percent",
+  "desc": "go to the CNT'th percent of the file. unspecified CNT means end of buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L919"
+ },
+ {
+  "id": "vile.command.goto_column",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-column [|]",
+  "desc": "go to the CNT'th column on the line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L922"
+ },
+ {
+  "id": "vile.command.goto_line",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-line [G]",
+  "desc": "go to the CNT'th line. unspecified CNT means end of buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L926"
+ },
+ {
+  "id": "vile.command.goto_named_mark",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-named-mark [\\047]",
+  "desc": "move to line containing the mark, at first non-white character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L933"
+ },
+ {
+  "id": "vile.command.goto_named_mark_exact",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-named-mark-exact [`]",
+  "desc": "move to the given mark",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L938"
+ },
+ {
+  "id": "vile.command.goto_named_mark_rectangular",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "goto-named-mark-rectangular [\\0134]",
+  "desc": "move to the mark, implying a rectangle if used with an operator",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L942"
+ },
+ {
+  "id": "vile.command.h",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "h, help, list-help, show-help [^A-h ^X-h FN-? FN-m]",
+  "desc": "bring up a buffer containing lots of barely sorted information",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L946"
+ },
+ {
+  "id": "vile.command.historical_buffer",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "historical-buffer, _ [_]",
+  "desc": "visit the CNT'th previous buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L956"
+ },
+ {
+  "id": "vile.command.historical_buffer_to_current_window",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "historical-buffer-to-current-window [^X-_]",
+  "desc": "visit the CNT'th previous buffer and put it in the current window",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L961"
+ },
+ {
+  "id": "vile.command.insert_chars",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "insert-chars [FN-i i]",
+  "desc": "insert (CNT copies of) text before the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L965"
+ },
+ {
+  "id": "vile.command.insert_chars_no_autoindent",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "insert-chars-no-autoindent [^A-i]",
+  "desc": "insert (CNT copies of) text before the cursor, suppressing autoindent",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L970"
+ },
+ {
+  "id": "vile.command.insert_chars_at_bol",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "insert-chars-at-bol [I]",
+  "desc": "insert (CNT copies of) text before the first non-white char on line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L974"
+ },
+ {
+  "id": "vile.command.r",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "r, insert-file, read-file [^R]",
+  "desc": "read the given file into the current buffer at the current line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L978"
+ },
+ {
+  "id": "vile.command.insert_space",
+  "source": "vile",
+  "category": "command",
+  "name": "insert-space",
+  "desc": "insert CNT space character(s) at the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L984"
+ },
+ {
+  "id": "vile.command.insert_string",
+  "source": "vile",
+  "category": "command",
+  "name": "insert-string",
+  "desc": "insert (CNT copies of) the given string at the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L987"
+ },
+ {
+  "id": "vile.command.insert_number",
+  "source": "vile",
+  "category": "command",
+  "name": "insert-number",
+  "desc": "insert (CNT copies of) the given character-number at the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L990"
+ },
+ {
+  "id": "vile.command.join_lines",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "join-lines [J]",
+  "desc": "join CNT lines together with the current one",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L993"
+ },
+ {
+  "id": "vile.command.for_buffers",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "for-buffers, fb [^X-x]",
+  "desc": "for each buffer matched by the pattern, perform the command (CNT as per command)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L997"
+ },
+ {
+  "id": "vile.command.delete_buffer",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-buffer, kill-buffer, ki [^X-k]",
+  "desc": "eliminate the given or (CNT times) under-cursor buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1002"
+ },
+ {
+  "id": "vile.command.buffer_length",
+  "source": "vile",
+  "category": "command",
+  "name": "buffer-length, =",
+  "desc": "report number of lines in current buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1008"
+ },
+ {
+  "id": "vile.command.last_nonwhite",
+  "source": "vile",
+  "category": "command",
+  "name": "last-nonwhite",
+  "desc": "move to the last non-whitespace character on line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1012"
+ },
+ {
+  "id": "vile.command.list_buffers",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "list-buffers, show-buffers [^A-*]",
+  "desc": "show the current list of buffers. give CNT to force showing all",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1015"
+ },
+ {
+  "id": "vile.command.set_buffers",
+  "source": "vile",
+  "category": "command",
+  "name": "set-buffers, args",
+  "desc": "reset the current list of visible buffers.",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1020"
+ },
+ {
+  "id": "vile.command.force_set_buffers",
+  "source": "vile",
+  "category": "command",
+  "name": "force-set-buffers, args!",
+  "desc": "reset the current list of visible buffers, even if some are modified.",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1024"
+ },
+ {
+  "id": "vile.command.show_history",
+  "source": "vile",
+  "category": "command",
+  "name": "show-history",
+  "desc": "show the command history",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1028"
+ },
+ {
+  "id": "vile.command.put_as_lines_after",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "put-as-lines-after, put [^X-p]",
+  "desc": "insert CNT times from (un)named register, as whole lines, after current line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1031"
+ },
+ {
+  "id": "vile.command.put_as_lines_before",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "put-as-lines-before, Put [^X-P]",
+  "desc": "insert CNT times from (un)named register, as whole lines, before current line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1036"
+ },
+ {
+  "id": "vile.command.put_as_rectangle_after",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "put-as-rectangle-after, rput [^A-p]",
+  "desc": "insert CNT times from (un)named register, as a rectangle, after cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1041"
+ },
+ {
+  "id": "vile.command.put_as_rectangle_before",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "put-as-rectangle-before, rPut [^A-P]",
+  "desc": "insert CNT times from (un)named register, as a rectangle, in front of cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1046"
+ },
+ {
+  "id": "vile.command.undo_line_changes",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "undo-line-changes [U]",
+  "desc": "undo all changes made to most recently altered line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1051"
+ },
+ {
+  "id": "vile.command.load_register",
+  "source": "vile",
+  "category": "command",
+  "name": "load-register",
+  "desc": "load the given string into the currently named register. give CNT for full-lines.",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1055"
+ },
+ {
+  "id": "vile.command.load_plugin",
+  "source": "vile",
+  "category": "command",
+  "name": "load-plugin",
+  "desc": "try to load a plug-in from a shared-library file",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1058"
+ },
+ {
+  "id": "vile.command.show_registers",
+  "source": "vile",
+  "category": "command",
+  "name": "show-registers, showregisters, list-registers",
+  "desc": "show the contents of all of the named and unnamed registers",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1061"
+ },
+ {
+  "id": "vile.command.show_system_mapped_chars",
+  "source": "vile",
+  "category": "command",
+  "name": "show-system-mapped-chars",
+  "desc": "list the system function-key maps",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1066"
+ },
+ {
+  "id": "vile.command.map",
+  "source": "vile",
+  "category": "command",
+  "name": "map, show-mapped-chars",
+  "desc": "create a new map, or show list of the current command-mode maps",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1069"
+ },
+ {
+  "id": "vile.command.map_2",
+  "source": "vile",
+  "category": "command",
+  "name": "map!, show-mapped!-chars",
+  "desc": "create a new map, or show list of the current insert-mode maps",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1073"
+ },
+ {
+  "id": "vile.command.hide_menus",
+  "source": "vile",
+  "category": "command",
+  "name": "hide-menus",
+  "desc": "hide the menu-bar",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1077"
+ },
+ {
+  "id": "vile.command.remove_menus",
+  "source": "vile",
+  "category": "command",
+  "name": "remove-menus",
+  "desc": "remove the menus",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1080"
+ },
+ {
+  "id": "vile.command.show_menus",
+  "source": "vile",
+  "category": "command",
+  "name": "show-menus",
+  "desc": "display the menus, if hidden",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1083"
+ },
+ {
+  "id": "vile.command.load_menus",
+  "source": "vile",
+  "category": "command",
+  "name": "load-menus",
+  "desc": "load menus from external file",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1086"
+ },
+ {
+  "id": "vile.command.define_menu_entry",
+  "source": "vile",
+  "category": "command",
+  "name": "define-menu-entry",
+  "desc": "define a menu-entry",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1089"
+ },
+ {
+  "id": "vile.command.next_tag",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "next-tag [^A-^]]",
+  "desc": "search the tags file(s) for another location for the last tag",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1092"
+ },
+ {
+  "id": "vile.command.new_process_group",
+  "source": "vile",
+  "category": "command",
+  "name": "new-process-group",
+  "desc": "put editor into its own process group (X11 version only)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1096"
+ },
+ {
+  "id": "vile.command.noremap",
+  "source": "vile",
+  "category": "command",
+  "name": "noremap",
+  "desc": "create a new unremappable command-mode map",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1099"
+ },
+ {
+  "id": "vile.command.noremap_2",
+  "source": "vile",
+  "category": "command",
+  "name": "noremap!",
+  "desc": "create a new unremappable insert-mode map",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1102"
+ },
+ {
+  "id": "vile.command.cntl_a_prefix",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "cntl_a-prefix [^A]",
+  "desc": "the \\\"Control-A\\\" prefix, used when typing extended commands",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1105"
+ },
+ {
+  "id": "vile.command.move_next_window_down",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "move-next-window-down [^A-^E]",
+  "desc": "move next window down (or buffer up) by CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1109"
+ },
+ {
+  "id": "vile.command.move_next_window_up",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "move-next-window-up [^A-^Y]",
+  "desc": "move next window up (or buffer down) by CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1113"
+ },
+ {
+  "id": "vile.command.move_window_down",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "move-window-down [^E]",
+  "desc": "move window down (or buffer up) by CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1117"
+ },
+ {
+  "id": "vile.command.move_window_up",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "move-window-up [^Y]",
+  "desc": "move window up (or buffer down) by CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1121"
+ },
+ {
+  "id": "vile.command.move_window_right",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "move-window-right [^X-^R]",
+  "desc": "scroll window to right by CNT columns, half screen if CNT unspecified",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1125"
+ },
+ {
+  "id": "vile.command.move_window_left",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "move-window-left [^X-^L]",
+  "desc": "scroll window to left by CNT columns, half screen if CNT unspecified",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1129"
+ },
+ {
+  "id": "vile.command.n",
+  "source": "vile",
+  "category": "command",
+  "name": "n, n!, next-buffer",
+  "desc": "switch to next buffer (or the least-recently-visited, if \\\"autobuffer\\\" on",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1133"
+ },
+ {
+  "id": "vile.command.rename_buffer",
+  "source": "vile",
+  "category": "command",
+  "name": "rename-buffer",
+  "desc": "give the current buffer a new name",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1138"
+ },
+ {
+  "id": "vile.command.other_buffer_rename",
+  "source": "vile",
+  "category": "command",
+  "name": "other-buffer-rename",
+  "desc": "give the specified buffer a new name",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1141"
+ },
+ {
+  "id": "vile.command.newline",
+  "source": "vile",
+  "category": "command",
+  "name": "newline",
+  "desc": "insert a newline at the cursor, CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1144"
+ },
+ {
+  "id": "vile.command.screen_rows",
+  "source": "vile",
+  "category": "command",
+  "name": "screen-rows",
+  "desc": "tell the editor the screen has CNT rows",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1147"
+ },
+ {
+  "id": "vile.command.screen_columns",
+  "source": "vile",
+  "category": "command",
+  "name": "screen-columns",
+  "desc": "tell the editor the screen has CNT columns",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1150"
+ },
+ {
+  "id": "vile.command.next_window",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "next-window [^X-o]",
+  "desc": "move to the next window. repeat with CNT",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1153"
+ },
+ {
+  "id": "vile.command.nop",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "nop, do-nothing [^Q]",
+  "desc": "do nothing",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1157"
+ },
+ {
+  "id": "vile.command.execute_named_command",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "execute-named-command, : [:]",
+  "desc": "execute the given function, by name, applying CNT as its repeat-count",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1162"
+ },
+ {
+  "id": "vile.command.open_line_above_and_insert_chars",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "open-line-above-and-insert-chars, i [O]",
+  "desc": "insert text in CNT fresh blank line(s), before current line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1167"
+ },
+ {
+  "id": "vile.command.insert_indented_chars",
+  "source": "vile",
+  "category": "command",
+  "name": "insert-indented-chars, i!",
+  "desc": "insert text in CNT fresh blank line(s), before current line, toggle autoindent",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1172"
+ },
+ {
+  "id": "vile.command.open_line_above_no_autoindent",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "open-line-above-no-autoindent [^A-O]",
+  "desc": "insert text in CNT fresh blank line(s), before current, no autoindent",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1176"
+ },
+ {
+  "id": "vile.command.open_line_below_and_append_chars",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "open-line-below-and-append-chars, a [o]",
+  "desc": "insert text in CNT fresh blank line(s), after current line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1180"
+ },
+ {
+  "id": "vile.command.open_line_below_no_autoindent",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "open-line-below-no-autoindent [^A-o]",
+  "desc": "insert text in CNT fresh blank line(s), after current, no autoindent",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1185"
+ },
+ {
+  "id": "vile.command.open_rectangle",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "open-rectangle [^A-r]",
+  "desc": "open blank rectangular area specified by given motion",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1189"
+ },
+ {
+  "id": "vile.command.attribute_bold_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-bold-til [^A-B]",
+  "desc": "display text as bold in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1193"
+ },
+ {
+  "id": "vile.command.attribute_cntl_a_sequences_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-cntl_a-sequences-til, decode-attributes-til [^A-A]",
+  "desc": "display text as given by ^A sequences in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1197"
+ },
+ {
+  "id": "vile.command.encode_attributes_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "encode-attributes-til [^A-E]",
+  "desc": "encode attributes in the region as ^A sequences",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1202"
+ },
+ {
+  "id": "vile.command.attribute_directly",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-directly [^A-D]",
+  "desc": "directly attribute region using internal filter",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1206"
+ },
+ {
+  "id": "vile.command.attribute_from_filter_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-from-filter-til [^A-F]",
+  "desc": "read/apply ^A sequence attributes by filtering the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1210"
+ },
+ {
+  "id": "vile.command.attribute_hypertext_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-hypertext-til [^A-H]",
+  "desc": "attach hypertext command to region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1214"
+ },
+ {
+  "id": "vile.command.attribute_italic_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-italic-til [^A-I]",
+  "desc": "display text in italics in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1218"
+ },
+ {
+  "id": "vile.command.attribute_normal_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-normal-til, clear-attributes-til [^A-N]",
+  "desc": "display text normally in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1222"
+ },
+ {
+  "id": "vile.command.attribute_reverse_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-reverse-til [^A-R]",
+  "desc": "display text reversed in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1227"
+ },
+ {
+  "id": "vile.command.attribute_underline_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "attribute-underline-til [^A-U]",
+  "desc": "display text underlined in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1231"
+ },
+ {
+  "id": "vile.command.change_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "change-til, c, delete-and-insert-chars-til [c]",
+  "desc": "insert text, replacing that in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1235"
+ },
+ {
+  "id": "vile.command.change_indented_chars",
+  "source": "vile",
+  "category": "command",
+  "name": "change-indented-chars, c!",
+  "desc": "insert text, replacing that in the region, toggles autoindent",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1241"
+ },
+ {
+  "id": "vile.command.detab_lines_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "detab-lines-til [^A- ]",
+  "desc": "convert tabs to spaces in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1245"
+ },
+ {
+  "id": "vile.command.leading_detab_lines_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "leading-detab-lines-til [^X- ]",
+  "desc": "convert leading tabs to spaces in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1249"
+ },
+ {
+  "id": "vile.command.entab_lines_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "entab-lines-til [^A-^I]",
+  "desc": "convert spaces to tabs where possible in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1253"
+ },
+ {
+  "id": "vile.command.leading_entab_lines_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "leading-entab-lines-til [^X-^I]",
+  "desc": "convert leading spaces to tabs where possible in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1257"
+ },
+ {
+  "id": "vile.command.move_til",
+  "source": "vile",
+  "category": "command",
+  "name": "move-til, m",
+  "desc": "move text in the region to the given line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1261"
+ },
+ {
+  "id": "vile.command.change_lines_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "change-lines-til, delete-lines-and-insert-chars-til, ch [^X-c]",
+  "desc": "insert text, replacing that on the lines covered by the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1265"
+ },
+ {
+  "id": "vile.command.delete_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-til [d]",
+  "desc": "delete text in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1271"
+ },
+ {
+  "id": "vile.command.j",
+  "source": "vile",
+  "category": "command",
+  "name": "j, join-lines-til",
+  "desc": "join together lines in the region, adjusting whitespace at join",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1275"
+ },
+ {
+  "id": "vile.command.j_2",
+  "source": "vile",
+  "category": "command",
+  "name": "j!, join-exact-lines-til",
+  "desc": "join together lines in the region without whitespace adjustment",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1279"
+ },
+ {
+  "id": "vile.command.delete_lines_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-lines-til, d [^X-d]",
+  "desc": "delete lines covered by the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1283"
+ },
+ {
+  "id": "vile.command.filter_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "filter-til, ! [!]",
+  "desc": "pipe the text in the region through an external filter command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1288"
+ },
+ {
+  "id": "vile.command.format_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "format-til [^A-f ^A-j]",
+  "desc": "format (rejustify) the text in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1293"
+ },
+ {
+  "id": "vile.command.flip_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "flip-til, ~ [^A-~]",
+  "desc": "exchange upper and lowercase on characters in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1298"
+ },
+ {
+  "id": "vile.command.global",
+  "source": "vile",
+  "category": "command",
+  "name": "global, g, v!",
+  "desc": "perform command on all lines containing the given pattern",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1304"
+ },
+ {
+  "id": "vile.command.inverse_global",
+  "source": "vile",
+  "category": "command",
+  "name": "inverse-global, vglobal, g!, v",
+  "desc": "perform command on all lines not containing the given pattern",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1310"
+ },
+ {
+  "id": "vile.command.lower_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "lower-til, L [^A-l]",
+  "desc": "convert to lowercase all characters in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1316"
+ },
+ {
+  "id": "vile.command.list_lines_til",
+  "source": "vile",
+  "category": "command",
+  "name": "list-lines-til, l",
+  "desc": "show lines, making tabs and newlines visible",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1321"
+ },
+ {
+  "id": "vile.command.number_lines_til",
+  "source": "vile",
+  "category": "command",
+  "name": "number-lines-til, nu, #",
+  "desc": "show lines with their line numbers",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1325"
+ },
+ {
+  "id": "vile.command.print_lines_til",
+  "source": "vile",
+  "category": "command",
+  "name": "print-lines-til, p",
+  "desc": "show lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1330"
+ },
+ {
+  "id": "vile.command.print_prefixed_lines_til",
+  "source": "vile",
+  "category": "command",
+  "name": "print-prefixed-lines-til, pp",
+  "desc": "show lines with line numbers",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1334"
+ },
+ {
+  "id": "vile.command.select_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "select-til [^A-s]",
+  "desc": "select (and yank) the text in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1338"
+ },
+ {
+  "id": "vile.command.upper_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "upper-til, U [^A-u]",
+  "desc": "convert to uppercase all characters in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1342"
+ },
+ {
+  "id": "vile.command.shift_left_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "shift-left-til, < [<]",
+  "desc": "shift lines in the region left by one \\\"shiftwidth\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1347"
+ },
+ {
+  "id": "vile.command.shift_right_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "shift-right-til, > [>]",
+  "desc": "shift lines in the region right by one \\\"shiftwidth\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1352"
+ },
+ {
+  "id": "vile.command.substitute_til",
+  "source": "vile",
+  "category": "command",
+  "name": "substitute-til, s",
+  "desc": "perform a text substitution over the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1357"
+ },
+ {
+  "id": "vile.command.substitute_all_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "substitute-all-til [^X-s]",
+  "desc": "perform an all-occurrence text substitution over the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1361"
+ },
+ {
+  "id": "vile.command.trim_lines_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "trim-lines-til, trim [^A-t]",
+  "desc": "trim trailing whitespace from lines in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1365"
+ },
+ {
+  "id": "vile.command.blank_region",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "blank-region, blank [^A-b]",
+  "desc": "replace the region with whitespace",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1370"
+ },
+ {
+  "id": "vile.command.yank_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "yank-til [y]",
+  "desc": "get the region into the given named or unnamed register",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1375"
+ },
+ {
+  "id": "vile.command.yank_lines_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "yank-lines-til, y [^X-y]",
+  "desc": "get lines covered by region into given named or unnamed register",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1379"
+ },
+ {
+  "id": "vile.command.substitute_again_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "substitute-again-til, & [^A-&]",
+  "desc": "redo the previous text substitution over the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1384"
+ },
+ {
+  "id": "vile.command.transfer_til",
+  "source": "vile",
+  "category": "command",
+  "name": "transfer-til, t",
+  "desc": "copy text in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1389"
+ },
+ {
+  "id": "vile.command.w",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "w, w!, W, write-til [^W]",
+  "desc": "write from region to the given file. whole buffer by default",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1393"
+ },
+ {
+  "id": "vile.command.write_encoded_til",
+  "source": "vile",
+  "category": "command",
+  "name": "write-encoded-til",
+  "desc": "write attributed text from region to file. whole buffer by default",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1400"
+ },
+ {
+  "id": "vile.command.overwrite_chars",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "overwrite-chars [R]",
+  "desc": "replace text while inserting, character by character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1403"
+ },
+ {
+  "id": "vile.command.overwrite_string",
+  "source": "vile",
+  "category": "command",
+  "name": "overwrite-string",
+  "desc": "replace text at the cursor by the given string",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1407"
+ },
+ {
+  "id": "vile.command.overwrite_number",
+  "source": "vile",
+  "category": "command",
+  "name": "overwrite-number",
+  "desc": "replace text at the cursor by the given character-number",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1410"
+ },
+ {
+  "id": "vile.command.delete_other_windows",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-other-windows [^O ^X-1]",
+  "desc": "eliminate all windows except the current",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1413"
+ },
+ {
+  "id": "vile.command.perl",
+  "source": "vile",
+  "category": "command",
+  "name": "perl",
+  "desc": "run a perl command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1418"
+ },
+ {
+  "id": "vile.command.perldo_til",
+  "source": "vile",
+  "category": "command",
+  "name": "perldo-til, perldo",
+  "desc": "run a perl command on each line in a range",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1421"
+ },
+ {
+  "id": "vile.command.popd",
+  "source": "vile",
+  "category": "command",
+  "name": "popd",
+  "desc": "implements bash's popd semantics (i.e., cd `pop dirstack`)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1425"
+ },
+ {
+  "id": "vile.command.position_window",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "position-window [z]",
+  "desc": "reframe with cursor at center (.,M,m), top (CR,H,t), or bottom (-,L,b)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1428"
+ },
+ {
+  "id": "vile.command.p",
+  "source": "vile",
+  "category": "command",
+  "name": "P, previous-buffer",
+  "desc": "switch to previous buffer (or the most-recently-visited, if \\\"autobuffer\\\" on",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1432"
+ },
+ {
+  "id": "vile.command.previous_window",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "previous-window [^X-O]",
+  "desc": "move to the previous window. repeat with CNT",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1436"
+ },
+ {
+  "id": "vile.command.pushd",
+  "source": "vile",
+  "category": "command",
+  "name": "pushd",
+  "desc": "implements bash's pushd semantics (i.e., cd \\\"dir\\\", push \\\"dir\\\" on dirstack)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1440"
+ },
+ {
+  "id": "vile.command.capture_command",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "capture-command, pipe-command [^X-!]",
+  "desc": "run a command, capturing its output in the [Output] buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1443"
+ },
+ {
+  "id": "vile.command.put_after",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "put-after [p]",
+  "desc": "insert CNT copies of (un)named register, after cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1448"
+ },
+ {
+  "id": "vile.command.put_before",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "put-before [P]",
+  "desc": "insert CNT copies of (un)named register, before cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1452"
+ },
+ {
+  "id": "vile.command.pwd",
+  "source": "vile",
+  "category": "command",
+  "name": "pwd, print-directory",
+  "desc": "show current directory name",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1456"
+ },
+ {
+  "id": "vile.command.q",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "q, Q, exit, quit [Q ^X-^C]",
+  "desc": "leave the editor, if there are no modified buffers",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1460"
+ },
+ {
+  "id": "vile.command.quit_without_save",
+  "source": "vile",
+  "category": "command",
+  "name": "quit-without-save, q!, Q!",
+  "desc": "leave the editor, regardless of modified buffers",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1468"
+ },
+ {
+  "id": "vile.command.x",
+  "source": "vile",
+  "category": "command",
+  "name": "x, x!, xit, wwq, write-changed-buffers-and-quit, quick-exit",
+  "desc": "leave the editor, writing modified buffers as needed",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1473"
+ },
+ {
+  "id": "vile.command.quote_next_character",
+  "source": "vile",
+  "category": "command",
+  "name": "quote-next-character",
+  "desc": "insert the next character literally, CNT times",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1481"
+ },
+ {
+  "id": "vile.command.clear_and_redraw",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "clear-and-redraw [^L]",
+  "desc": "redraw the screen",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1484"
+ },
+ {
+  "id": "vile.command.remove_majormode",
+  "source": "vile",
+  "category": "command",
+  "name": "remove-majormode, remove-mode",
+  "desc": "delete the definition of a major mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1488"
+ },
+ {
+  "id": "vile.command.remove_submode",
+  "source": "vile",
+  "category": "command",
+  "name": "remove-submode",
+  "desc": "delete the special definition of a submode from a major mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1492"
+ },
+ {
+  "id": "vile.command.remove_scheme",
+  "source": "vile",
+  "category": "command",
+  "name": "remove-scheme",
+  "desc": "delete the given color scheme",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1495"
+ },
+ {
+  "id": "vile.command.redraw_display",
+  "source": "vile",
+  "category": "command",
+  "name": "redraw-display",
+  "desc": "redraw, cursor at center, or CNT'th line, or CNT'th from end if neg",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1498"
+ },
+ {
+  "id": "vile.command.repeat_char_scan",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "repeat-char-scan [;]",
+  "desc": "repeat the last forward character scan",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1501"
+ },
+ {
+  "id": "vile.command.replace_character",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "replace-character [r]",
+  "desc": "replace CNT characters at the cursor with the given character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1505"
+ },
+ {
+  "id": "vile.command.item_2",
+  "source": "vile",
+  "category": "command",
+  "name": "!!, rerun-shell-command",
+  "desc": "rerun the previously entered shell command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1509"
+ },
+ {
+  "id": "vile.command.resize_window",
+  "source": "vile",
+  "category": "command",
+  "name": "resize-window",
+  "desc": "change the current window to CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1513"
+ },
+ {
+  "id": "vile.command.restore_window",
+  "source": "vile",
+  "category": "command",
+  "name": "restore-window",
+  "desc": "return to window saved with \\\"save-window\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1516"
+ },
+ {
+  "id": "vile.command.reset_majormode",
+  "source": "vile",
+  "category": "command",
+  "name": "reset-majormode",
+  "desc": "recompute $majormode for the current buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1519"
+ },
+ {
+  "id": "vile.command.reverse_char_scan",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "reverse-char-scan [,]",
+  "desc": "repeat the last backward character scan",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1522"
+ },
+ {
+  "id": "vile.command.reverse_incremental_search",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "reverse-incremental-search [^X-R]",
+  "desc": "search backwards for a pattern entered character by character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1526"
+ },
+ {
+  "id": "vile.command.reverse_search",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "reverse-search [N]",
+  "desc": "search for previous pattern in opposite direction from before",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1530"
+ },
+ {
+  "id": "vile.command.select_all",
+  "source": "vile",
+  "category": "command",
+  "name": "select-all",
+  "desc": "select all text in current buffer and yank to unnamed buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1534"
+ },
+ {
+  "id": "vile.command.selection_clear",
+  "source": "vile",
+  "category": "command",
+  "name": "selection-clear",
+  "desc": "clear text selection's highlight attributes",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1537"
+ },
+ {
+  "id": "vile.command.selection",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "selection [^S ^A-S]",
+  "desc": "move to selection. if used with operator, region is the selection",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1540"
+ },
+ {
+  "id": "vile.command.screen_search_forward",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "screen-search-forward [^X-/]",
+  "desc": "search forward for $identifier pattern under cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1545"
+ },
+ {
+  "id": "vile.command.screen_search_reverse",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "screen-search-reverse [^X-?]",
+  "desc": "search backwards for $identifier pattern under cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1549"
+ },
+ {
+  "id": "vile.command.screen_search_pattern_grab",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "screen-search-pattern-grab [^A-/]",
+  "desc": "set search pattern to $identifier pattern under cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1553"
+ },
+ {
+  "id": "vile.command.set_char_class",
+  "source": "vile",
+  "category": "command",
+  "name": "set-char-class",
+  "desc": "add characters to class, given keyword and regular expression",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1557"
+ },
+ {
+  "id": "vile.command.delete_char_class",
+  "source": "vile",
+  "category": "command",
+  "name": "delete-char-class, unset-char-class",
+  "desc": "remove characters from class, given keyword and regular expression",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1560"
+ },
+ {
+  "id": "vile.command.reset_char_classes",
+  "source": "vile",
+  "category": "command",
+  "name": "reset-char-classes",
+  "desc": "remove user-defined character class changes",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1564"
+ },
+ {
+  "id": "vile.command.set_dos_mode",
+  "source": "vile",
+  "category": "command",
+  "name": "set-dos-mode, set-rs-crlf",
+  "desc": "force a \\\"dos\\\"-style buffer: trim CR characters, and set \\\"dos-mode\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1567"
+ },
+ {
+  "id": "vile.command.set_unix_mode",
+  "source": "vile",
+  "category": "command",
+  "name": "set-unix-mode, set-rs-lf",
+  "desc": "force a \\\"unix\\\"-style buffer: trim CR characters, and unset \\\"dos-mode\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1571"
+ },
+ {
+  "id": "vile.command.set_rs_cr",
+  "source": "vile",
+  "category": "command",
+  "name": "set-rs-cr",
+  "desc": "force a \\\"mac\\\"-style buffer: convert LF to CR, unset \\\"dos-mode\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1575"
+ },
+ {
+  "id": "vile.command.handle_tab",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "handle-tab, set-tab [^X-t]",
+  "desc": "set the tabstop setting to CNT. same as \\\"set tabstop=NN\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1578"
+ },
+ {
+  "id": "vile.command.set_terminal",
+  "source": "vile",
+  "category": "command",
+  "name": "set-terminal",
+  "desc": "change the value of a terminal special character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1583"
+ },
+ {
+  "id": "vile.command.setw",
+  "source": "vile",
+  "category": "command",
+  "name": "setw, set-window",
+  "desc": "set the current window to a specific buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1586"
+ },
+ {
+  "id": "vile.command.list_terminal_chars",
+  "source": "vile",
+  "category": "command",
+  "name": "list-terminal-chars, show-terminal-chars",
+  "desc": "show the values of the terminal special characters",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1590"
+ },
+ {
+  "id": "vile.command.list_undo_stack",
+  "source": "vile",
+  "category": "command",
+  "name": "list-undo-stack, show-undo-stack",
+  "desc": "show the contents of the undo-stack",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1594"
+ },
+ {
+  "id": "vile.command.sh",
+  "source": "vile",
+  "category": "command",
+  "name": "sh, shell, interactive-shell",
+  "desc": "start a sub-shell in which to run commands",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1598"
+ },
+ {
+  "id": "vile.command.save_window",
+  "source": "vile",
+  "category": "command",
+  "name": "save-window",
+  "desc": "mark a window for later return with \\\"restore-window\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1603"
+ },
+ {
+  "id": "vile.command.scroll_next_window_up",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "scroll-next-window-up [^A-^U]",
+  "desc": "move next window up by CNT half screens",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1606"
+ },
+ {
+  "id": "vile.command.scroll_next_window_down",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "scroll-next-window-down [^A-^D]",
+  "desc": "move next window down by CNT half screens",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1610"
+ },
+ {
+  "id": "vile.command.set_fill_column",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "set-fill-column [^X-f]",
+  "desc": "set the fillcol setting to CNT. same as \\\"set fillcol=NN\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1614"
+ },
+ {
+  "id": "vile.command.setenv",
+  "source": "vile",
+  "category": "command",
+  "name": "setenv, set-environment-variable",
+  "desc": "set and export a process environment variable",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1618"
+ },
+ {
+  "id": "vile.command.list_extra_colors",
+  "source": "vile",
+  "category": "command",
+  "name": "list-extra-colors, show-extra-colors",
+  "desc": "show extra colors, e.g., for modeline",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1622"
+ },
+ {
+  "id": "vile.command.setxcolors",
+  "source": "vile",
+  "category": "command",
+  "name": "setxcolors, set-extra-colors",
+  "desc": "set extra colors, e.g., for modeline",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1626"
+ },
+ {
+  "id": "vile.command.quoted_motion",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "quoted-motion [q FN-s]",
+  "desc": "start (and end) a selection using multiple motions, CNT is type (1)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1630"
+ },
+ {
+  "id": "vile.command.quoted_fullline_motion",
+  "source": "vile",
+  "category": "command",
+  "name": "quoted-fullline-motion",
+  "desc": "start (and end) a full-line selection using multiple motions (2)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1635"
+ },
+ {
+  "id": "vile.command.quoted_rectangular_motion",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "quoted-rectangular-motion [^A-q]",
+  "desc": "start (and end) a rectangular selection using multiple motions (3)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1638"
+ },
+ {
+  "id": "vile.command.set_crypt_key",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "set-crypt-key, X [^X-X]",
+  "desc": "set the encryption key on the current buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1642"
+ },
+ {
+  "id": "vile.command.setl",
+  "source": "vile",
+  "category": "command",
+  "name": "setl, set-mode",
+  "desc": "change the current buffer's local value of a mode setting",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1647"
+ },
+ {
+  "id": "vile.command.se",
+  "source": "vile",
+  "category": "command",
+  "name": "se, set, setg, set-global-mode",
+  "desc": "change the global value of a mode setting",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1651"
+ },
+ {
+  "id": "vile.command.set_named_mark",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "set-named-mark, k [m]",
+  "desc": "set the given named mark to the current cursor location",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1657"
+ },
+ {
+  "id": "vile.command.setv",
+  "source": "vile",
+  "category": "command",
+  "name": "setv, set-variable",
+  "desc": "set the given vile variable to a value",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1662"
+ },
+ {
+  "id": "vile.command.unsetv",
+  "source": "vile",
+  "category": "command",
+  "name": "unsetv, unset-variable",
+  "desc": "reset the given vile variable to an empty string or default-value",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1666"
+ },
+ {
+  "id": "vile.command.position",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "position [^G ^X-=]",
+  "desc": "report information about current buffer and character",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1670"
+ },
+ {
+  "id": "vile.command.modes",
+  "source": "vile",
+  "category": "command",
+  "name": "modes, show-modes, list-modes, setall, setgall, gmodes, show-global-modes, showmodes, showgmodes",
+  "desc": "report values of all mode settings",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1675"
+ },
+ {
+  "id": "vile.command.list_local_modes",
+  "source": "vile",
+  "category": "command",
+  "name": "list-local-modes, setlall, lmodes, show-local-modes, showlmodes",
+  "desc": "report values of local mode settings",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1686"
+ },
+ {
+  "id": "vile.command.list_majormodes",
+  "source": "vile",
+  "category": "command",
+  "name": "list-majormodes, show-majormodes",
+  "desc": "report values of all majormode settings (use CNT for verbose listing)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1693"
+ },
+ {
+  "id": "vile.command.show_variables",
+  "source": "vile",
+  "category": "command",
+  "name": "show-variables, list-variables, showvars",
+  "desc": "report values of all variables, built-in and user",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1697"
+ },
+ {
+  "id": "vile.command.show_system_variables",
+  "source": "vile",
+  "category": "command",
+  "name": "show-system-variables, list-$variables, list-system-variables",
+  "desc": "report values of all user variables",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1702"
+ },
+ {
+  "id": "vile.command.list_user_variables",
+  "source": "vile",
+  "category": "command",
+  "name": "list-user-variables, show-user-variables",
+  "desc": "report values of all user variables",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1707"
+ },
+ {
+  "id": "vile.command.version",
+  "source": "vile",
+  "category": "command",
+  "name": "version",
+  "desc": "report version information for the editor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1711"
+ },
+ {
+  "id": "vile.command.marks",
+  "source": "vile",
+  "category": "command",
+  "name": "marks, list-marks, show-marks",
+  "desc": "show named marks for the current buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1714"
+ },
+ {
+  "id": "vile.command.memory",
+  "source": "vile",
+  "category": "command",
+  "name": "memory",
+  "desc": "report on available memory",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1719"
+ },
+ {
+  "id": "vile.command.tags",
+  "source": "vile",
+  "category": "command",
+  "name": "tags, tagstack, list-tagstack, show-tagstack",
+  "desc": "show the stack of successive tag references",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1722"
+ },
+ {
+  "id": "vile.command.shrink_window",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "shrink-window [v]",
+  "desc": "decrease the size of the current window by CNT lines",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1728"
+ },
+ {
+  "id": "vile.command.exsource",
+  "source": "vile",
+  "category": "command",
+  "name": "exsource",
+  "desc": "source a file of ex commands",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1732"
+ },
+ {
+  "id": "vile.command.shell_command",
+  "source": "vile",
+  "category": "command",
+  "name": "shell-command",
+  "desc": "run a shell command",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1735"
+ },
+ {
+  "id": "vile.command.function_prefix",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "function-prefix [#]",
+  "desc": "prefix used to represent commands normally bound to function keys",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1738"
+ },
+ {
+  "id": "vile.command.split_current_window",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "split-current-window [^X-2]",
+  "desc": "split the window in half; CNT of 1 or 2 chooses which becomes current",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1742"
+ },
+ {
+  "id": "vile.command.store_macro",
+  "source": "vile",
+  "category": "command",
+  "name": "store-macro",
+  "desc": "store script text into CNT'th macro, up to line starting with ~endm",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1746"
+ },
+ {
+  "id": "vile.command.store_procedure",
+  "source": "vile",
+  "category": "command",
+  "name": "store-procedure",
+  "desc": "store script text into given named stored-procedure; give CNT for store-macro CNT",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1749"
+ },
+ {
+  "id": "vile.command.store_operator",
+  "source": "vile",
+  "category": "command",
+  "name": "store-operator",
+  "desc": "store script text into given named user-operator",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1752"
+ },
+ {
+  "id": "vile.command.substitute_again",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "substitute-again [&]",
+  "desc": "redo the previous text substitution",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1755"
+ },
+ {
+  "id": "vile.command.sync_file",
+  "source": "vile",
+  "category": "command",
+  "name": "sync-file",
+  "desc": "synchronize the current buffer's file in DevStudio's editor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1759"
+ },
+ {
+  "id": "vile.command.swap_clipboard_keys",
+  "source": "vile",
+  "category": "command",
+  "name": "swap-clipboard-keys",
+  "desc": "swap clipboard insert key mappings",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1762"
+ },
+ {
+  "id": "vile.command.item_3",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "*, toggle-buffer-list [*]",
+  "desc": "show or hide the buffer list. give CNT to force showing all",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1765"
+ },
+ {
+  "id": "vile.command.transpose_characters",
+  "source": "vile",
+  "category": "command",
+  "name": "transpose-characters",
+  "desc": "exchange the two characters under and to the left of the cursor",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1770"
+ },
+ {
+  "id": "vile.command.unbind_key",
+  "source": "vile",
+  "category": "command",
+  "name": "unbind-key",
+  "desc": "break the binding between a keystroke and a function",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1773"
+ },
+ {
+  "id": "vile.command.unbind_insmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "unbind-insmode-key",
+  "desc": "break the binding between a keystroke and a function in insert-mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1776"
+ },
+ {
+  "id": "vile.command.unbind_cmdmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "unbind-cmdmode-key",
+  "desc": "break the binding between a keystroke and a function in command-mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1779"
+ },
+ {
+  "id": "vile.command.unbind_selmode_key",
+  "source": "vile",
+  "category": "command",
+  "name": "unbind-selmode-key",
+  "desc": "break the binding between a keystroke and a function in selection-mode",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1782"
+ },
+ {
+  "id": "vile.command.undo_change",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "undo-change [u]",
+  "desc": "undo the last change made to a buffer; repeat to reapply the change",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1785"
+ },
+ {
+  "id": "vile.command.repeat_undo_change",
+  "source": "vile",
+  "category": "command",
+  "name": "repeat-undo-change",
+  "desc": "undo/redo more changes, continuing in \\\"direction\\\" of last undo/redo",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1789"
+ },
+ {
+  "id": "vile.command.undo_changes_backward",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "undo-changes-backward [^X-u]",
+  "desc": "undo changes made to a buffer; repeat to undo previous changes",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1792"
+ },
+ {
+  "id": "vile.command.redo_changes_forward",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "redo-changes-forward [^X-r]",
+  "desc": "redo changes made to a buffer, after they have been undone",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1796"
+ },
+ {
+  "id": "vile.command.unabbreviate",
+  "source": "vile",
+  "category": "command",
+  "name": "unabbreviate",
+  "desc": "delete an abbreviation",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1800"
+ },
+ {
+  "id": "vile.command.universal_argument",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "universal-argument [K]",
+  "desc": "supply a numeric CNT to a command. sets CNT to 4, 16, 64, 256, etc.",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1803"
+ },
+ {
+  "id": "vile.command.unimplemented_command",
+  "source": "vile",
+  "category": "command",
+  "name": "unimplemented-command",
+  "desc": "place holder for the todo list",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1807"
+ },
+ {
+  "id": "vile.command.unmark_buffer",
+  "source": "vile",
+  "category": "command",
+  "name": "unmark-buffer",
+  "desc": "clear the \\\"modified\\\" status of a buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1810"
+ },
+ {
+  "id": "vile.command.unmap",
+  "source": "vile",
+  "category": "command",
+  "name": "unmap",
+  "desc": "delete a command-mode mapping",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1813"
+ },
+ {
+  "id": "vile.command.unmap_2",
+  "source": "vile",
+  "category": "command",
+  "name": "unmap!",
+  "desc": "delete an insert-mode mapping",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1816"
+ },
+ {
+  "id": "vile.command.unmap_system_chars",
+  "source": "vile",
+  "category": "command",
+  "name": "unmap-system-chars",
+  "desc": "delete a system function-key mapping",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1819"
+ },
+ {
+  "id": "vile.command.tag_pop",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "tag-pop, pop [^X-^] ^T]",
+  "desc": "restore cursor and buffer to location before last tag lookup",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1822"
+ },
+ {
+  "id": "vile.command.update_screen",
+  "source": "vile",
+  "category": "command",
+  "name": "update-screen",
+  "desc": "force the screen to be updated; flushes all pending output",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1828"
+ },
+ {
+  "id": "vile.command.b",
+  "source": "vile",
+  "category": "command",
+  "name": "b, buffer, select-buffer",
+  "desc": "switch to the given buffer; will not look for a file by that name",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1831"
+ },
+ {
+  "id": "vile.command.b_2",
+  "source": "vile",
+  "category": "command",
+  "name": "B, edit-buffer",
+  "desc": "make or switch to the given buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1836"
+ },
+ {
+  "id": "vile.command.popup_buffer",
+  "source": "vile",
+  "category": "command",
+  "name": "popup-buffer, open-window",
+  "desc": "open window for the given buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1840"
+ },
+ {
+  "id": "vile.command.popdown_buffer",
+  "source": "vile",
+  "category": "command",
+  "name": "popdown-buffer, close-windows",
+  "desc": "close all windows for the given buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1844"
+ },
+ {
+  "id": "vile.command.use_register",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "use-register [\"]",
+  "desc": "name a register, for use with a following command which references it",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1848"
+ },
+ {
+  "id": "vile.command.beep",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "beep [FN-b]",
+  "desc": "force the terminal to ring (or flash, if \\\"set flash\\\" is active)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1852"
+ },
+ {
+  "id": "vile.command.visual",
+  "source": "vile",
+  "category": "command",
+  "name": "visual",
+  "desc": "switch from non-existent exile mode back to visual mode. unimplemented",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1856"
+ },
+ {
+  "id": "vile.command.ovglobals",
+  "source": "vile",
+  "category": "command",
+  "name": "ovglobals",
+  "desc": "vile ovglobals",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1859"
+ },
+ {
+  "id": "vile.command.view_file",
+  "source": "vile",
+  "category": "command",
+  "name": "view-file",
+  "desc": "bring given file or existing buffer into window, mark it \\\"view-only\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1861"
+ },
+ {
+  "id": "vile.command.dirs",
+  "source": "vile",
+  "category": "command",
+  "name": "dirs",
+  "desc": "list internal directory stack in scratch buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1864"
+ },
+ {
+  "id": "vile.command.dirs_add",
+  "source": "vile",
+  "category": "command",
+  "name": "dirs-add",
+  "desc": "add a dir to DirStack[top - 1]; cwd is unaffected",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1867"
+ },
+ {
+  "id": "vile.command.dirs_clear",
+  "source": "vile",
+  "category": "command",
+  "name": "dirs-clear",
+  "desc": "clear internal directory stack; cwd is unaffected",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1870"
+ },
+ {
+  "id": "vile.command.wait_file",
+  "source": "vile",
+  "category": "command",
+  "name": "wait-file",
+  "desc": "wait for file to grow larger than 0 bytes, timeout specified as arg",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1873"
+ },
+ {
+  "id": "vile.command.which_exec",
+  "source": "vile",
+  "category": "command",
+  "name": "which-exec",
+  "desc": "show which file would be exec'd from $PATH + $libdir-path, CNT for popup",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1876"
+ },
+ {
+  "id": "vile.command.which_source",
+  "source": "vile",
+  "category": "command",
+  "name": "which-source",
+  "desc": "show which file would be source'd from $startup-path, CNT for popup",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1879"
+ },
+ {
+  "id": "vile.command.purge_recent_files",
+  "source": "vile",
+  "category": "command",
+  "name": "purge-recent-files",
+  "desc": "purge winvile's recent file list",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1882"
+ },
+ {
+  "id": "vile.command.purge_recent_folders",
+  "source": "vile",
+  "category": "command",
+  "name": "purge-recent-folders",
+  "desc": "purge winvile's recent folder list",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1885"
+ },
+ {
+  "id": "vile.command.wincd",
+  "source": "vile",
+  "category": "command",
+  "name": "wincd",
+  "desc": "graphical CD",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1888"
+ },
+ {
+  "id": "vile.command.winopen_nocd",
+  "source": "vile",
+  "category": "command",
+  "name": "winopen-nocd",
+  "desc": "launch Windows common dialog box to open file(s), CWD is unmodified",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1891"
+ },
+ {
+  "id": "vile.command.winopen",
+  "source": "vile",
+  "category": "command",
+  "name": "winopen",
+  "desc": "launch Windows common dialog box to open file(s), CWD changes as side effect",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1894"
+ },
+ {
+  "id": "vile.command.winpage_setup",
+  "source": "vile",
+  "category": "command",
+  "name": "winpage-setup",
+  "desc": "launch Windows common page setup dialog",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1897"
+ },
+ {
+  "id": "vile.command.winprint",
+  "source": "vile",
+  "category": "command",
+  "name": "winprint",
+  "desc": "print current buffer or selection",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1900"
+ },
+ {
+  "id": "vile.command.winsave_nocd",
+  "source": "vile",
+  "category": "command",
+  "name": "winsave-nocd",
+  "desc": "launch Windows common dialog box to save current buffer, CWD is unmodified",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1903"
+ },
+ {
+  "id": "vile.command.winsave",
+  "source": "vile",
+  "category": "command",
+  "name": "winsave",
+  "desc": "launch Windows common dialog box to save current buffer, CWD changes as side effect",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1906"
+ },
+ {
+  "id": "vile.command.reset_rgb_palette",
+  "source": "vile",
+  "category": "command",
+  "name": "reset-rgb-palette",
+  "desc": "reset palette (see set-rgb-palette)",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1909"
+ },
+ {
+  "id": "vile.command.set_rgb_palette",
+  "source": "vile",
+  "category": "command",
+  "name": "set-rgb-palette",
+  "desc": "set palette with parameters colornum red green blue",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1912"
+ },
+ {
+  "id": "vile.command.count_words",
+  "source": "vile",
+  "category": "command",
+  "name": "count-words",
+  "desc": "count words, lines, and chars in the region",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1915"
+ },
+ {
+  "id": "vile.command.wall",
+  "source": "vile",
+  "category": "command",
+  "name": "wall, wall!, write-all-buffers",
+  "desc": "attempt to write all buffers whether or not marked \\\"modified\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1918"
+ },
+ {
+  "id": "vile.command.ww",
+  "source": "vile",
+  "category": "command",
+  "name": "ww, ww!, write-changed-buffers",
+  "desc": "attempt to write any buffers which are marked \\\"modified\\\"",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1923"
+ },
+ {
+  "id": "vile.command.wq",
+  "source": "vile",
+  "category": "command",
+  "name": "wq, wq!, Wq, WQ, write-file-and-quit",
+  "desc": "write the current buffer, and quit if no other buffers are modified",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1928"
+ },
+ {
+  "id": "vile.command.wrap_word",
+  "source": "vile",
+  "category": "command",
+  "name": "wrap-word",
+  "desc": "split line in two at first preceding word break. give CNT to trim blanks.",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1935"
+ },
+ {
+  "id": "vile.command.write_message",
+  "source": "vile",
+  "category": "command",
+  "name": "write-message",
+  "desc": "put a message on the message line",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1938"
+ },
+ {
+  "id": "vile.command.yank_line",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "yank-line [Y]",
+  "desc": "get the current line into the given named or unnamed register",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1941"
+ },
+ {
+  "id": "vile.command.copy_to_clipboard",
+  "source": "vile",
+  "category": "command",
+  "name": "copy-to-clipboard",
+  "desc": "copies the currently highlighted selection to the clipboard buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1948"
+ },
+ {
+  "id": "vile.command.paste_from_clipboard",
+  "source": "vile",
+  "category": "command",
+  "name": "paste-from-clipboard",
+  "desc": "pastes the contents of the cut buffer",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1951"
+ },
+ {
+  "id": "vile.command.paste_from_primary",
+  "source": "vile",
+  "category": "command",
+  "name": "paste-from-primary",
+  "desc": "pastes the contents of the primary selection",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1954"
+ },
+ {
+  "id": "vile.command.stuttered_write_all_and_quit",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "stuttered-write-all-and-quit [Z]",
+  "desc": "if repeated, leave the editor, writing modified buffers as needed",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L1963"
+ },
+ {
+  "id": "vile.command.copy_unnamed_reg_to_clipboard",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "copy-unnamed-reg-to-clipboard [ALT+INSERT]",
+  "desc": "copies the unnamed register selection to the windows clipboard",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L2014"
+ },
+ {
+  "id": "vile.command.cut_to_clipboard",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "cut-to-clipboard [SHIFT+DELETE]",
+  "desc": "cut the current selection to the unnamed register and windows clipboard",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L2018"
+ },
+ {
+  "id": "vile.command.paste_from_clipboard_2",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "paste-from-clipboard [SHIFT+INSERT]",
+  "desc": "paste the windows clipboard contents",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L2022"
+ },
+ {
+  "id": "vile.command.copy_to_clipboard_til",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "copy-to-clipboard-til [CTRL+INSERT]",
+  "desc": "copies the specified region to the windows clipboard",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L2026"
+ },
+ {
+  "id": "vile.command.delete_text_selection",
+  "source": "vile",
+  "category": "command-bound",
+  "name": "delete-text-selection [ALT+DELETE]",
+  "desc": "delete the current text selection to the unnamed register",
+  "doc_ref": "https://github.com/ThomasDickey/vile-snapshots/blob/master/cmdtbl#L2030"
+ }
+]
