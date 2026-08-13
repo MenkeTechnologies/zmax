@@ -545,6 +545,7 @@ impl MappableCommand {
         ediff_dotfile_and_template, "Diff the config file against the shipped template (SPC f e D)",
         compare_with_clipboard, "Diff the current buffer against the clipboard (JetBrains Compare with Clipboard)",
         transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
+        kill_whole_line, "Cut the whole line to the clipboard (emacs kill-whole-line, micro CutLine)",
         transpose_char, "Swap the two characters around the cursor (emacs transpose-chars, C-t)",
         transpose_line, "Swap the current line with the previous one (emacs transpose-lines, C-x C-t)",
         move_element_right, "Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right)",
@@ -48496,6 +48497,32 @@ fn xref_find_references_and_replace(cx: &mut Context) {
 
 /// Cut: copy the selection to the system clipboard, then delete it.
 fn cut_to_clipboard(cx: &mut Context) {
+    yank_to_clipboard(cx);
+    delete_selection(cx);
+}
+
+/// emacs `kill-whole-line` (`C-S-backspace`), micro `CutLine`, mcedit's line
+/// cut: take the whole line the cursor is on — newline included — into the
+/// clipboard and remove it. `kill_to_line_end` only takes what is ahead of the
+/// cursor, which is why these editors' line-cut had nothing to point at.
+fn kill_whole_line(cx: &mut Context) {
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let selection = doc.selection(view.id).clone().transform(|range| {
+            let line = range.cursor_line(text);
+            let start = text.line_to_char(line);
+            // The following line's start, so the newline goes with it; at the
+            // last line there is none to take, so stop at the end of the text.
+            let end = if line + 1 < text.len_lines() {
+                text.line_to_char(line + 1)
+            } else {
+                text.len_chars()
+            };
+            zmax_core::Range::new(start, end)
+        });
+        doc.set_selection(view.id, selection);
+    }
     yank_to_clipboard(cx);
     delete_selection(cx);
 }

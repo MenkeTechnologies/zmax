@@ -83,7 +83,7 @@ fn overrides() -> HashMap<Mode, KeyTrie> {
                 "C-c" => yank_to_clipboard,         // Copy
                 "C-x" => cut_to_clipboard,          // Cut
                 "C-v" => paste_clipboard_before,    // Paste
-                "C-k" => kill_to_line_end,          // CutLine
+                "C-k" => kill_whole_line,           // CutLine
                 "C-d" => duplicate_selection_down,  // Duplicate
                 "C-a" => select_all,                // SelectAll
                 "C-e" => command_mode,              // CommandMode
