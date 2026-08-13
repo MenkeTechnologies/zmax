@@ -62845,5 +62845,1629 @@
    "typable:set-option"
   ],
   "note": ":set writeany is read by zmax"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_spc",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-space"
+  ],
+  "note": "mg set-mark-command, via the GNU Emacs command of the same name (emacs.command.set_mark_command)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_b",
+  "status": "ported",
+  "evidence": [
+   "key:normal:h"
+  ],
+  "note": "mg backward-char, via the GNU Emacs command of the same name (emacs.command.backward_char)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_d",
+  "status": "ported",
+  "evidence": [
+   "key:normal:x"
+  ],
+  "note": "mg delete-char, via the GNU Emacs command of the same name (emacs.command.delete_char)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_f",
+  "status": "ported",
+  "evidence": [
+   "key:normal:l"
+  ],
+  "note": "mg forward-char, via the GNU Emacs command of the same name (emacs.command.forward_char)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_g",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-g"
+  ],
+  "note": "mg keyboard-quit, via the GNU Emacs command of the same name (emacs.command.keyboard_quit)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_h_2",
+  "status": "ported",
+  "evidence": [
+   "typable:apropos"
+  ],
+  "note": "mg apropos, via the GNU Emacs command of the same name (emacs.command.apropos)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_h_3",
+  "status": "ported",
+  "evidence": [
+   "static:describe_bindings"
+  ],
+  "note": "mg describe-bindings, via the GNU Emacs command of the same name (emacs.command.describe_bindings)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_h_4",
+  "status": "ported",
+  "evidence": [
+   "static:describe_key_briefly"
+  ],
+  "note": "mg describe-key-briefly, via the GNU Emacs command of the same name (emacs.command.describe_key_briefly)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_k",
+  "status": "ported",
+  "evidence": [
+   "key:insert:C-k"
+  ],
+  "note": "mg kill-line, via the GNU Emacs command of the same name (emacs.command.kill_line)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-l"
+  ],
+  "note": "mg recenter, via the GNU Emacs command of the same name (emacs.command.recenter)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_n",
+  "status": "ported",
+  "evidence": [
+   "key:normal:j"
+  ],
+  "note": "mg next-line, via the GNU Emacs command of the same name (emacs.command.next_line)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_o",
+  "status": "ported",
+  "evidence": [
+   "key:normal:o"
+  ],
+  "note": "mg open-line, via the GNU Emacs command of the same name (emacs.command.open_line)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:k"
+  ],
+  "note": "mg previous-line, via the GNU Emacs command of the same name (emacs.command.previous_line)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_q",
+  "status": "ported",
+  "evidence": [
+   "static:quoted_insert"
+  ],
+  "note": "mg quoted-insert, via the GNU Emacs command of the same name (emacs.command.quoted_insert)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_r",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "mg isearch-backward, via the GNU Emacs command of the same name (emacs.command.isearch_backward)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_s",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "mg isearch-forward, via the GNU Emacs command of the same name (emacs.command.isearch_forward)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_t",
+  "status": "ported",
+  "evidence": [
+   "typable:transpose-chars"
+  ],
+  "note": "mg transpose-chars, via the GNU Emacs command of the same name (emacs.command.transpose_chars)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_u",
+  "status": "ported",
+  "evidence": [
+   "static:universal_argument"
+  ],
+  "note": "mg universal-argument, via the GNU Emacs command of the same name (emacs.command.universal_argument)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_w",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "mg kill-region, via the GNU Emacs command of the same name (emacs.command.kill_region)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x",
+  "status": "ported",
+  "evidence": [
+   "static:list_buffers"
+  ],
+  "note": "mg list-buffers, via the GNU Emacs command of the same name (emacs.command.list_buffers)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_3",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": "mg find-file, via the GNU Emacs command of the same name (emacs.command.find_file)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_4",
+  "status": "ported",
+  "evidence": [
+   "static:dired_jump"
+  ],
+  "note": "mg dired-jump, via the GNU Emacs command of the same name (emacs.command.dired_jump)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_5",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-g"
+  ],
+  "note": "mg keyboard-quit, via the GNU Emacs command of the same name (emacs.command.keyboard_quit)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_6",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_lowercase"
+  ],
+  "note": "mg downcase-region, via the GNU Emacs command of the same name (emacs.command.downcase_region)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_7",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-blank-lines"
+  ],
+  "note": "mg delete-blank-lines, via the GNU Emacs command of the same name (emacs.command.delete_blank_lines)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_9",
+  "status": "ported",
+  "evidence": [
+   "typable:find-file-read-only"
+  ],
+  "note": "mg find-file-read-only, via the GNU Emacs command of the same name (emacs.command.find_file_read_only)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_10",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "mg save-buffer, via the GNU Emacs command of the same name (emacs.command.save_buffer)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_11",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_uppercase"
+  ],
+  "note": "mg upcase-region, via the GNU Emacs command of the same name (emacs.command.upcase_region)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_12",
+  "status": "ported",
+  "evidence": [
+   "static:find_file_replace_buffer"
+  ],
+  "note": "mg find-alternate-file, via the GNU Emacs command of the same name (emacs.command.find_alternate_file)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_13",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "mg write-file, via the GNU Emacs command of the same name (emacs.command.write_file)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_14",
+  "status": "ported",
+  "evidence": [
+   "static:flip_selections"
+  ],
+  "note": "mg exchange-point-and-mark, via the GNU Emacs command of the same name (emacs.command.exchange_point_and_mark)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_17",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "mg delete-window, via the GNU Emacs command of the same name (emacs.command.delete_window)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_18",
+  "status": "ported",
+  "evidence": [
+   "static:wonly"
+  ],
+  "note": "mg delete-other-windows, via the GNU Emacs command of the same name (emacs.command.delete_other_windows)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_20",
+  "status": "ported",
+  "evidence": [
+   "typable:vsplit"
+  ],
+  "note": "mg find-file-other-window, via the GNU Emacs command of the same name (emacs.command.find_file_other_window)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_21",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-g"
+  ],
+  "note": "mg keyboard-quit, via the GNU Emacs command of the same name (emacs.command.keyboard_quit)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_22",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_buffer_other_window"
+  ],
+  "note": "mg switch-to-buffer-other-window, via the GNU Emacs command of the same name (emacs.command.switch_to_buffer_other_window)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_23",
+  "status": "ported",
+  "evidence": [
+   "typable:vsplit"
+  ],
+  "note": "mg find-file-other-window, via the GNU Emacs command of the same name (emacs.command.find_file_other_window)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_24",
+  "status": "ported",
+  "evidence": [
+   "static:what_cursor_position"
+  ],
+  "note": "mg what-cursor-position, via the GNU Emacs command of the same name (emacs.command.what_cursor_position)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_25",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_taller"
+  ],
+  "note": "mg enlarge-window, via the GNU Emacs command of the same name (emacs.command.enlarge_window)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_26",
+  "status": "ported",
+  "evidence": [
+   "typable:next-error"
+  ],
+  "note": "mg next-error, via the GNU Emacs command of the same name (emacs.command.next_error)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_27",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_picker"
+  ],
+  "note": "mg switch-to-buffer, via the GNU Emacs command of the same name (emacs.command.switch_to_buffer)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_28",
+  "status": "ported",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "mg dired, via the GNU Emacs command of the same name (emacs.command.dired)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_30",
+  "status": "ported",
+  "evidence": [
+   "typable:set-fill-column"
+  ],
+  "note": "mg set-fill-column, via the GNU Emacs command of the same name (emacs.command.set_fill_column)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_31",
+  "status": "ported",
+  "evidence": [
+   "typable:goto"
+  ],
+  "note": "mg goto-line, via the GNU Emacs command of the same name (emacs.command.goto_line)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_32",
+  "status": "ported",
+  "evidence": [
+   "static:select_all"
+  ],
+  "note": "mg mark-whole-buffer, via the GNU Emacs command of the same name (emacs.command.mark_whole_buffer)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_33",
+  "status": "ported",
+  "evidence": [
+   "typable:insert-file"
+  ],
+  "note": "mg insert-file, via the GNU Emacs command of the same name (emacs.command.insert_file)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_34",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "mg kill-buffer, via the GNU Emacs command of the same name (emacs.command.kill_buffer)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_35",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "mg other-window, via the GNU Emacs command of the same name (emacs.command.other_window)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_36",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "mg other-window, via the GNU Emacs command of the same name (emacs.command.other_window)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_38",
+  "status": "ported",
+  "evidence": [
+   "typable:write-all"
+  ],
+  "note": "mg save-some-buffers, via the GNU Emacs command of the same name (emacs.command.save_some_buffers)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_x_39",
+  "status": "ported",
+  "evidence": [
+   "key:normal:u"
+  ],
+  "note": "mg undo, via the GNU Emacs command of the same name (emacs.command.undo)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c_y",
+  "status": "ported",
+  "evidence": [
+   "key:normal:p"
+  ],
+  "note": "mg yank, via the GNU Emacs command of the same name (emacs.command.yank)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_c_v",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_other_window"
+  ],
+  "note": "mg scroll-other-window, via the GNU Emacs command of the same name (emacs.command.scroll_other_window)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_spc",
+  "status": "ported",
+  "evidence": [
+   "typable:just-one-space"
+  ],
+  "note": "mg just-one-space, via the GNU Emacs command of the same name (emacs.command.just_one_space)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "mg shell-command, via the GNU Emacs command of the same name (emacs.command.shell_command)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_4",
+  "status": "ported",
+  "evidence": [
+   "static:query_replace"
+  ],
+  "note": "mg query-replace, via the GNU Emacs command of the same name (emacs.command.query_replace)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_5",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "mg beginning-of-buffer, via the GNU Emacs command of the same name (emacs.command.beginning_of_buffer)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_6",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_end"
+  ],
+  "note": "mg end-of-buffer, via the GNU Emacs command of the same name (emacs.command.end_of_buffer)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_7",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-horizontal-space"
+  ],
+  "note": "mg delete-horizontal-space, via the GNU Emacs command of the same name (emacs.command.delete_horizontal_space)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_b",
+  "status": "ported",
+  "evidence": [
+   "key:normal:b"
+  ],
+  "note": "mg backward-word, via the GNU Emacs command of the same name (emacs.command.backward_word)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_c",
+  "status": "ported",
+  "evidence": [
+   "static:capitalize_word"
+  ],
+  "note": "mg capitalize-word, via the GNU Emacs command of the same name (emacs.command.capitalize_word)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_d",
+  "status": "ported",
+  "evidence": [
+   "key:insert:A-d"
+  ],
+  "note": "mg kill-word, via the GNU Emacs command of the same name (emacs.command.kill_word)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_f",
+  "status": "ported",
+  "evidence": [
+   "key:normal:w"
+  ],
+  "note": "mg forward-word, via the GNU Emacs command of the same name (emacs.command.forward_word)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_h",
+  "status": "ported",
+  "evidence": [
+   "static:mark_paragraph"
+  ],
+  "note": "mg mark-paragraph, via the GNU Emacs command of the same name (emacs.command.mark_paragraph)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_l",
+  "status": "ported",
+  "evidence": [
+   "static:downcase_word"
+  ],
+  "note": "mg downcase-word, via the GNU Emacs command of the same name (emacs.command.downcase_word)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_m",
+  "status": "ported",
+  "evidence": [
+   "static:goto_first_nonwhitespace"
+  ],
+  "note": "mg back-to-indentation, via the GNU Emacs command of the same name (emacs.command.back_to_indentation)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_q",
+  "status": "ported",
+  "evidence": [
+   "typable:reflow"
+  ],
+  "note": "mg fill-paragraph, via the GNU Emacs command of the same name (emacs.command.fill_paragraph)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_r",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "mg search-backward, via the GNU Emacs command of the same name (emacs.command.search_backward)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_s",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "mg search-forward, via the GNU Emacs command of the same name (emacs.command.search_forward)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_t",
+  "status": "ported",
+  "evidence": [
+   "typable:transpose-words"
+  ],
+  "note": "mg transpose-words, via the GNU Emacs command of the same name (emacs.command.transpose_words)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_u",
+  "status": "ported",
+  "evidence": [
+   "static:upcase_word"
+  ],
+  "note": "mg upcase-word, via the GNU Emacs command of the same name (emacs.command.upcase_word)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_x",
+  "status": "ported",
+  "evidence": [
+   "static:command_palette"
+  ],
+  "note": "mg execute-extended-command, via the GNU Emacs command of the same name (emacs.command.execute_extended_command)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_z",
+  "status": "ported",
+  "evidence": [
+   "static:zap_to_char"
+  ],
+  "note": "mg zap-to-char, via the GNU Emacs command of the same name (emacs.command.zap_to_char)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_9",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "mg backward-paragraph, via the GNU Emacs command of the same name (emacs.command.backward_paragraph)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_10",
+  "status": "ported",
+  "evidence": [
+   "typable:pipe"
+  ],
+  "note": "mg shell-command-on-region, via the GNU Emacs command of the same name (emacs.command.shell_command_on_region)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_11",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "mg forward-paragraph, via the GNU Emacs command of the same name (emacs.command.forward_paragraph)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_12",
+  "status": "ported",
+  "evidence": [
+   "static:not_modified"
+  ],
+  "note": "mg not-modified, via the GNU Emacs command of the same name (emacs.command.not_modified)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.m_del",
+  "status": "ported",
+  "evidence": [
+   "key:insert:A-backspace"
+  ],
+  "note": "mg backward-kill-word, via the GNU Emacs command of the same name (emacs.command.backward_kill_word)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:u"
+  ],
+  "note": "mg undo, via the GNU Emacs command of the same name (emacs.command.undo)"
+ },
+ {
+  "spec_id": "mg.default-key-bindings.del",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "mg delete-backward-char, via the GNU Emacs command of the same name (emacs.command.delete_backward_char)"
+ },
+ {
+  "spec_id": "mg.mg-commands.apropos",
+  "status": "ported",
+  "evidence": [
+   "typable:apropos"
+  ],
+  "note": "mg apropos, via the GNU Emacs command of the same name (emacs.command.apropos)"
+ },
+ {
+  "spec_id": "mg.mg-commands.auto_fill_mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_auto_fill"
+  ],
+  "note": "mg auto-fill-mode, via the GNU Emacs command of the same name (emacs.command.auto_fill_mode)"
+ },
+ {
+  "spec_id": "mg.mg-commands.back_to_indentation",
+  "status": "ported",
+  "evidence": [
+   "static:goto_first_nonwhitespace"
+  ],
+  "note": "mg back-to-indentation, via the GNU Emacs command of the same name (emacs.command.back_to_indentation)"
+ },
+ {
+  "spec_id": "mg.mg-commands.backward_char",
+  "status": "ported",
+  "evidence": [
+   "key:normal:h"
+  ],
+  "note": "mg backward-char, via the GNU Emacs command of the same name (emacs.command.backward_char)"
+ },
+ {
+  "spec_id": "mg.mg-commands.backward_kill_word",
+  "status": "ported",
+  "evidence": [
+   "key:insert:A-backspace"
+  ],
+  "note": "mg backward-kill-word, via the GNU Emacs command of the same name (emacs.command.backward_kill_word)"
+ },
+ {
+  "spec_id": "mg.mg-commands.backward_paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "mg backward-paragraph, via the GNU Emacs command of the same name (emacs.command.backward_paragraph)"
+ },
+ {
+  "spec_id": "mg.mg-commands.backward_word",
+  "status": "ported",
+  "evidence": [
+   "key:normal:b"
+  ],
+  "note": "mg backward-word, via the GNU Emacs command of the same name (emacs.command.backward_word)"
+ },
+ {
+  "spec_id": "mg.mg-commands.beginning_of_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "mg beginning-of-buffer, via the GNU Emacs command of the same name (emacs.command.beginning_of_buffer)"
+ },
+ {
+  "spec_id": "mg.mg-commands.capitalize_word",
+  "status": "ported",
+  "evidence": [
+   "static:capitalize_word"
+  ],
+  "note": "mg capitalize-word, via the GNU Emacs command of the same name (emacs.command.capitalize_word)"
+ },
+ {
+  "spec_id": "mg.mg-commands.cd",
+  "status": "ported",
+  "evidence": [
+   "typable:cd"
+  ],
+  "note": "mg cd, via the GNU Emacs command of the same name (emacs.command.cd)"
+ },
+ {
+  "spec_id": "mg.mg-commands.column_number_mode",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_modeline_position"
+  ],
+  "note": "mg column-number-mode, via the GNU Emacs command of the same name (emacs.command.column_number_mode)"
+ },
+ {
+  "spec_id": "mg.mg-commands.delete_backward_char",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "mg delete-backward-char, via the GNU Emacs command of the same name (emacs.command.delete_backward_char)"
+ },
+ {
+  "spec_id": "mg.mg-commands.delete_blank_lines",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-blank-lines"
+  ],
+  "note": "mg delete-blank-lines, via the GNU Emacs command of the same name (emacs.command.delete_blank_lines)"
+ },
+ {
+  "spec_id": "mg.mg-commands.delete_char",
+  "status": "ported",
+  "evidence": [
+   "key:normal:x"
+  ],
+  "note": "mg delete-char, via the GNU Emacs command of the same name (emacs.command.delete_char)"
+ },
+ {
+  "spec_id": "mg.mg-commands.delete_horizontal_space",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-horizontal-space"
+  ],
+  "note": "mg delete-horizontal-space, via the GNU Emacs command of the same name (emacs.command.delete_horizontal_space)"
+ },
+ {
+  "spec_id": "mg.mg-commands.delete_other_windows",
+  "status": "ported",
+  "evidence": [
+   "static:wonly"
+  ],
+  "note": "mg delete-other-windows, via the GNU Emacs command of the same name (emacs.command.delete_other_windows)"
+ },
+ {
+  "spec_id": "mg.mg-commands.delete_window",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "mg delete-window, via the GNU Emacs command of the same name (emacs.command.delete_window)"
+ },
+ {
+  "spec_id": "mg.mg-commands.describe_bindings",
+  "status": "ported",
+  "evidence": [
+   "static:describe_bindings"
+  ],
+  "note": "mg describe-bindings, via the GNU Emacs command of the same name (emacs.command.describe_bindings)"
+ },
+ {
+  "spec_id": "mg.mg-commands.describe_key_briefly",
+  "status": "ported",
+  "evidence": [
+   "static:describe_key_briefly"
+  ],
+  "note": "mg describe-key-briefly, via the GNU Emacs command of the same name (emacs.command.describe_key_briefly)"
+ },
+ {
+  "spec_id": "mg.mg-commands.diff_buffer_with_file",
+  "status": "ported",
+  "evidence": [
+   "typable:diff-buffer-with-file"
+  ],
+  "note": "mg diff-buffer-with-file, via the GNU Emacs command of the same name (emacs.command.diff_buffer_with_file)"
+ },
+ {
+  "spec_id": "mg.mg-commands.digit_argument",
+  "status": "ported",
+  "evidence": [
+   "static:digit_argument"
+  ],
+  "note": "mg digit-argument, via the GNU Emacs command of the same name (emacs.command.digit_argument)"
+ },
+ {
+  "spec_id": "mg.mg-commands.dired_jump",
+  "status": "ported",
+  "evidence": [
+   "static:dired_jump"
+  ],
+  "note": "mg dired-jump, via the GNU Emacs command of the same name (emacs.command.dired_jump)"
+ },
+ {
+  "spec_id": "mg.mg-commands.downcase_region",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_lowercase"
+  ],
+  "note": "mg downcase-region, via the GNU Emacs command of the same name (emacs.command.downcase_region)"
+ },
+ {
+  "spec_id": "mg.mg-commands.downcase_word",
+  "status": "ported",
+  "evidence": [
+   "static:downcase_word"
+  ],
+  "note": "mg downcase-word, via the GNU Emacs command of the same name (emacs.command.downcase_word)"
+ },
+ {
+  "spec_id": "mg.mg-commands.emacs_version",
+  "status": "ported",
+  "evidence": [
+   "typable:emacs-version"
+  ],
+  "note": "mg emacs-version, via the GNU Emacs command of the same name (emacs.command.emacs_version)"
+ },
+ {
+  "spec_id": "mg.mg-commands.end_of_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_end"
+  ],
+  "note": "mg end-of-buffer, via the GNU Emacs command of the same name (emacs.command.end_of_buffer)"
+ },
+ {
+  "spec_id": "mg.mg-commands.enlarge_window",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_taller"
+  ],
+  "note": "mg enlarge-window, via the GNU Emacs command of the same name (emacs.command.enlarge_window)"
+ },
+ {
+  "spec_id": "mg.mg-commands.eval_expression",
+  "status": "ported",
+  "evidence": [
+   "typable:elisp"
+  ],
+  "note": "mg eval-expression, via the GNU Emacs command of the same name (emacs.command.eval_expression)"
+ },
+ {
+  "spec_id": "mg.mg-commands.exchange_point_and_mark",
+  "status": "ported",
+  "evidence": [
+   "static:flip_selections"
+  ],
+  "note": "mg exchange-point-and-mark, via the GNU Emacs command of the same name (emacs.command.exchange_point_and_mark)"
+ },
+ {
+  "spec_id": "mg.mg-commands.execute_extended_command",
+  "status": "ported",
+  "evidence": [
+   "static:command_palette"
+  ],
+  "note": "mg execute-extended-command, via the GNU Emacs command of the same name (emacs.command.execute_extended_command)"
+ },
+ {
+  "spec_id": "mg.mg-commands.fill_paragraph",
+  "status": "ported",
+  "evidence": [
+   "typable:reflow"
+  ],
+  "note": "mg fill-paragraph, via the GNU Emacs command of the same name (emacs.command.fill_paragraph)"
+ },
+ {
+  "spec_id": "mg.mg-commands.find_file",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": "mg find-file, via the GNU Emacs command of the same name (emacs.command.find_file)"
+ },
+ {
+  "spec_id": "mg.mg-commands.find_file_read_only",
+  "status": "ported",
+  "evidence": [
+   "typable:find-file-read-only"
+  ],
+  "note": "mg find-file-read-only, via the GNU Emacs command of the same name (emacs.command.find_file_read_only)"
+ },
+ {
+  "spec_id": "mg.mg-commands.find_alternate_file",
+  "status": "ported",
+  "evidence": [
+   "static:find_file_replace_buffer"
+  ],
+  "note": "mg find-alternate-file, via the GNU Emacs command of the same name (emacs.command.find_alternate_file)"
+ },
+ {
+  "spec_id": "mg.mg-commands.find_file_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:vsplit"
+  ],
+  "note": "mg find-file-other-window, via the GNU Emacs command of the same name (emacs.command.find_file_other_window)"
+ },
+ {
+  "spec_id": "mg.mg-commands.forward_char",
+  "status": "ported",
+  "evidence": [
+   "key:normal:l"
+  ],
+  "note": "mg forward-char, via the GNU Emacs command of the same name (emacs.command.forward_char)"
+ },
+ {
+  "spec_id": "mg.mg-commands.forward_paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "mg forward-paragraph, via the GNU Emacs command of the same name (emacs.command.forward_paragraph)"
+ },
+ {
+  "spec_id": "mg.mg-commands.forward_word",
+  "status": "ported",
+  "evidence": [
+   "key:normal:w"
+  ],
+  "note": "mg forward-word, via the GNU Emacs command of the same name (emacs.command.forward_word)"
+ },
+ {
+  "spec_id": "mg.mg-commands.goto_line",
+  "status": "ported",
+  "evidence": [
+   "typable:goto"
+  ],
+  "note": "mg goto-line, via the GNU Emacs command of the same name (emacs.command.goto_line)"
+ },
+ {
+  "spec_id": "mg.mg-commands.insert_file",
+  "status": "ported",
+  "evidence": [
+   "typable:insert-file"
+  ],
+  "note": "mg insert-file, via the GNU Emacs command of the same name (emacs.command.insert_file)"
+ },
+ {
+  "spec_id": "mg.mg-commands.isearch_backward",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "mg isearch-backward, via the GNU Emacs command of the same name (emacs.command.isearch_backward)"
+ },
+ {
+  "spec_id": "mg.mg-commands.isearch_forward",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "mg isearch-forward, via the GNU Emacs command of the same name (emacs.command.isearch_forward)"
+ },
+ {
+  "spec_id": "mg.mg-commands.just_one_space",
+  "status": "ported",
+  "evidence": [
+   "typable:just-one-space"
+  ],
+  "note": "mg just-one-space, via the GNU Emacs command of the same name (emacs.command.just_one_space)"
+ },
+ {
+  "spec_id": "mg.mg-commands.keyboard_quit",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-g"
+  ],
+  "note": "mg keyboard-quit, via the GNU Emacs command of the same name (emacs.command.keyboard_quit)"
+ },
+ {
+  "spec_id": "mg.mg-commands.kill_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "mg kill-buffer, via the GNU Emacs command of the same name (emacs.command.kill_buffer)"
+ },
+ {
+  "spec_id": "mg.mg-commands.kill_line",
+  "status": "ported",
+  "evidence": [
+   "key:insert:C-k"
+  ],
+  "note": "mg kill-line, via the GNU Emacs command of the same name (emacs.command.kill_line)"
+ },
+ {
+  "spec_id": "mg.mg-commands.kill_region",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "mg kill-region, via the GNU Emacs command of the same name (emacs.command.kill_region)"
+ },
+ {
+  "spec_id": "mg.mg-commands.kill_word",
+  "status": "ported",
+  "evidence": [
+   "key:insert:A-d"
+  ],
+  "note": "mg kill-word, via the GNU Emacs command of the same name (emacs.command.kill_word)"
+ },
+ {
+  "spec_id": "mg.mg-commands.line_number_mode",
+  "status": "ported",
+  "evidence": [
+   "static:line_number_mode"
+  ],
+  "note": "mg line-number-mode, via the GNU Emacs command of the same name (emacs.command.line_number_mode)"
+ },
+ {
+  "spec_id": "mg.mg-commands.list_buffers",
+  "status": "ported",
+  "evidence": [
+   "static:list_buffers"
+  ],
+  "note": "mg list-buffers, via the GNU Emacs command of the same name (emacs.command.list_buffers)"
+ },
+ {
+  "spec_id": "mg.mg-commands.load",
+  "status": "ported",
+  "evidence": [
+   "static:load"
+  ],
+  "note": "mg load, via the GNU Emacs command of the same name (emacs.command.load)"
+ },
+ {
+  "spec_id": "mg.mg-commands.mark_paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:mark_paragraph"
+  ],
+  "note": "mg mark-paragraph, via the GNU Emacs command of the same name (emacs.command.mark_paragraph)"
+ },
+ {
+  "spec_id": "mg.mg-commands.mark_whole_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:select_all"
+  ],
+  "note": "mg mark-whole-buffer, via the GNU Emacs command of the same name (emacs.command.mark_whole_buffer)"
+ },
+ {
+  "spec_id": "mg.mg-commands.negative_argument",
+  "status": "ported",
+  "evidence": [
+   "static:negative_argument"
+  ],
+  "note": "mg negative-argument, via the GNU Emacs command of the same name (emacs.command.negative_argument)"
+ },
+ {
+  "spec_id": "mg.mg-commands.next_line",
+  "status": "ported",
+  "evidence": [
+   "key:normal:j"
+  ],
+  "note": "mg next-line, via the GNU Emacs command of the same name (emacs.command.next_line)"
+ },
+ {
+  "spec_id": "mg.mg-commands.not_modified",
+  "status": "ported",
+  "evidence": [
+   "static:not_modified"
+  ],
+  "note": "mg not-modified, via the GNU Emacs command of the same name (emacs.command.not_modified)"
+ },
+ {
+  "spec_id": "mg.mg-commands.open_line",
+  "status": "ported",
+  "evidence": [
+   "key:normal:o"
+  ],
+  "note": "mg open-line, via the GNU Emacs command of the same name (emacs.command.open_line)"
+ },
+ {
+  "spec_id": "mg.mg-commands.other_window",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "mg other-window, via the GNU Emacs command of the same name (emacs.command.other_window)"
+ },
+ {
+  "spec_id": "mg.mg-commands.overwrite_mode",
+  "status": "ported",
+  "evidence": [
+   "static:overwrite_mode"
+  ],
+  "note": "mg overwrite-mode, via the GNU Emacs command of the same name (emacs.command.overwrite_mode)"
+ },
+ {
+  "spec_id": "mg.mg-commands.previous_line",
+  "status": "ported",
+  "evidence": [
+   "key:normal:k"
+  ],
+  "note": "mg previous-line, via the GNU Emacs command of the same name (emacs.command.previous_line)"
+ },
+ {
+  "spec_id": "mg.mg-commands.pwd",
+  "status": "ported",
+  "evidence": [
+   "typable:pwd"
+  ],
+  "note": "mg pwd, via the GNU Emacs command of the same name (emacs.command.pwd)"
+ },
+ {
+  "spec_id": "mg.mg-commands.query_replace",
+  "status": "ported",
+  "evidence": [
+   "static:query_replace"
+  ],
+  "note": "mg query-replace, via the GNU Emacs command of the same name (emacs.command.query_replace)"
+ },
+ {
+  "spec_id": "mg.mg-commands.replace_regexp",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "mg replace-regexp, via the GNU Emacs command of the same name (emacs.command.replace_regexp)"
+ },
+ {
+  "spec_id": "mg.mg-commands.replace_string",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "mg replace-string, via the GNU Emacs command of the same name (emacs.command.replace_string)"
+ },
+ {
+  "spec_id": "mg.mg-commands.query_replace_regexp",
+  "status": "ported",
+  "evidence": [
+   "static:query_replace_regexp"
+  ],
+  "note": "mg query-replace-regexp, via the GNU Emacs command of the same name (emacs.command.query_replace_regexp)"
+ },
+ {
+  "spec_id": "mg.mg-commands.quoted_insert",
+  "status": "ported",
+  "evidence": [
+   "static:quoted_insert"
+  ],
+  "note": "mg quoted-insert, via the GNU Emacs command of the same name (emacs.command.quoted_insert)"
+ },
+ {
+  "spec_id": "mg.mg-commands.re_search_backward",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "mg re-search-backward, via the GNU Emacs command of the same name (emacs.command.re_search_backward)"
+ },
+ {
+  "spec_id": "mg.mg-commands.re_search_forward",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "mg re-search-forward, via the GNU Emacs command of the same name (emacs.command.re_search_forward)"
+ },
+ {
+  "spec_id": "mg.mg-commands.recenter",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-l"
+  ],
+  "note": "mg recenter, via the GNU Emacs command of the same name (emacs.command.recenter)"
+ },
+ {
+  "spec_id": "mg.mg-commands.revert_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:reload"
+  ],
+  "note": "mg revert-buffer, via the GNU Emacs command of the same name (emacs.command.revert_buffer)"
+ },
+ {
+  "spec_id": "mg.mg-commands.save_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "mg save-buffer, via the GNU Emacs command of the same name (emacs.command.save_buffer)"
+ },
+ {
+  "spec_id": "mg.mg-commands.save_some_buffers",
+  "status": "ported",
+  "evidence": [
+   "typable:write-all"
+  ],
+  "note": "mg save-some-buffers, via the GNU Emacs command of the same name (emacs.command.save_some_buffers)"
+ },
+ {
+  "spec_id": "mg.mg-commands.scroll_other_window",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_other_window"
+  ],
+  "note": "mg scroll-other-window, via the GNU Emacs command of the same name (emacs.command.scroll_other_window)"
+ },
+ {
+  "spec_id": "mg.mg-commands.search_backward",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "mg search-backward, via the GNU Emacs command of the same name (emacs.command.search_backward)"
+ },
+ {
+  "spec_id": "mg.mg-commands.search_forward",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "mg search-forward, via the GNU Emacs command of the same name (emacs.command.search_forward)"
+ },
+ {
+  "spec_id": "mg.mg-commands.set_fill_column",
+  "status": "ported",
+  "evidence": [
+   "typable:set-fill-column"
+  ],
+  "note": "mg set-fill-column, via the GNU Emacs command of the same name (emacs.command.set_fill_column)"
+ },
+ {
+  "spec_id": "mg.mg-commands.set_mark_command",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-space"
+  ],
+  "note": "mg set-mark-command, via the GNU Emacs command of the same name (emacs.command.set_mark_command)"
+ },
+ {
+  "spec_id": "mg.mg-commands.shell_command",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "mg shell-command, via the GNU Emacs command of the same name (emacs.command.shell_command)"
+ },
+ {
+  "spec_id": "mg.mg-commands.shell_command_on_region",
+  "status": "ported",
+  "evidence": [
+   "typable:pipe"
+  ],
+  "note": "mg shell-command-on-region, via the GNU Emacs command of the same name (emacs.command.shell_command_on_region)"
+ },
+ {
+  "spec_id": "mg.mg-commands.switch_to_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_picker"
+  ],
+  "note": "mg switch-to-buffer, via the GNU Emacs command of the same name (emacs.command.switch_to_buffer)"
+ },
+ {
+  "spec_id": "mg.mg-commands.switch_to_buffer_other_window",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_buffer_other_window"
+  ],
+  "note": "mg switch-to-buffer-other-window, via the GNU Emacs command of the same name (emacs.command.switch_to_buffer_other_window)"
+ },
+ {
+  "spec_id": "mg.mg-commands.transpose_chars",
+  "status": "ported",
+  "evidence": [
+   "typable:transpose-chars"
+  ],
+  "note": "mg transpose-chars, via the GNU Emacs command of the same name (emacs.command.transpose_chars)"
+ },
+ {
+  "spec_id": "mg.mg-commands.transpose_paragraphs",
+  "status": "ported",
+  "evidence": [
+   "static:transpose_paragraph"
+  ],
+  "note": "mg transpose-paragraphs, via the GNU Emacs command of the same name (emacs.command.transpose_paragraphs)"
+ },
+ {
+  "spec_id": "mg.mg-commands.transpose_words",
+  "status": "ported",
+  "evidence": [
+   "typable:transpose-words"
+  ],
+  "note": "mg transpose-words, via the GNU Emacs command of the same name (emacs.command.transpose_words)"
+ },
+ {
+  "spec_id": "mg.mg-commands.undo",
+  "status": "ported",
+  "evidence": [
+   "key:normal:u"
+  ],
+  "note": "mg undo, via the GNU Emacs command of the same name (emacs.command.undo)"
+ },
+ {
+  "spec_id": "mg.mg-commands.universal_argument",
+  "status": "ported",
+  "evidence": [
+   "static:universal_argument"
+  ],
+  "note": "mg universal-argument, via the GNU Emacs command of the same name (emacs.command.universal_argument)"
+ },
+ {
+  "spec_id": "mg.mg-commands.upcase_region",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_uppercase"
+  ],
+  "note": "mg upcase-region, via the GNU Emacs command of the same name (emacs.command.upcase_region)"
+ },
+ {
+  "spec_id": "mg.mg-commands.upcase_word",
+  "status": "ported",
+  "evidence": [
+   "static:upcase_word"
+  ],
+  "note": "mg upcase-word, via the GNU Emacs command of the same name (emacs.command.upcase_word)"
+ },
+ {
+  "spec_id": "mg.mg-commands.visit_tags_table",
+  "status": "ported",
+  "evidence": [
+   "static:visit_tags_table"
+  ],
+  "note": "mg visit-tags-table, via the GNU Emacs command of the same name (emacs.command.visit_tags_table)"
+ },
+ {
+  "spec_id": "mg.mg-commands.what_cursor_position",
+  "status": "ported",
+  "evidence": [
+   "static:what_cursor_position"
+  ],
+  "note": "mg what-cursor-position, via the GNU Emacs command of the same name (emacs.command.what_cursor_position)"
+ },
+ {
+  "spec_id": "mg.mg-commands.write_file",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "mg write-file, via the GNU Emacs command of the same name (emacs.command.write_file)"
+ },
+ {
+  "spec_id": "mg.mg-commands.yank",
+  "status": "ported",
+  "evidence": [
+   "key:normal:p"
+  ],
+  "note": "mg yank, via the GNU Emacs command of the same name (emacs.command.yank)"
+ },
+ {
+  "spec_id": "mg.mg-commands.zap_to_char",
+  "status": "ported",
+  "evidence": [
+   "static:zap_to_char"
+  ],
+  "note": "mg zap-to-char, via the GNU Emacs command of the same name (emacs.command.zap_to_char)"
+ },
+ {
+  "spec_id": "mg.mg-commands.zap_up_to_char",
+  "status": "ported",
+  "evidence": [
+   "static:zap_up_to_char"
+  ],
+  "note": "mg zap-up-to-char, via the GNU Emacs command of the same name (emacs.command.zap_up_to_char)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.del",
+  "status": "ported",
+  "evidence": [
+   "key:dired:backspace"
+  ],
+  "note": "mg dired-unmark-backward, via the GNU Emacs command of the same name (emacs.command.dired_unmark_backward)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.ret",
+  "status": "ported",
+  "evidence": [
+   "key:dired:ret"
+  ],
+  "note": "mg dired-find-file, via the GNU Emacs command of the same name (emacs.command.dired_find_file)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.spc",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C-n"
+  ],
+  "note": "mg dired-next-line, via the GNU Emacs command of the same name (emacs.command.dired_next_line)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.item_2",
+  "status": "ported",
+  "evidence": [
+   "key:dired:+"
+  ],
+  "note": "mg dired-create-directory, via the GNU Emacs command of the same name (emacs.command.dired_create_directory)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.item_3",
+  "status": "ported",
+  "evidence": [
+   "key:dired:^"
+  ],
+  "note": "mg dired-up-directory, via the GNU Emacs command of the same name (emacs.command.dired_up_directory)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.c",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C"
+  ],
+  "note": "mg dired-do-copy, via the GNU Emacs command of the same name (emacs.command.dired_do_copy)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.d",
+  "status": "ported",
+  "evidence": [
+   "key:dired:d"
+  ],
+  "note": "mg dired-flag-file-deletion, via the GNU Emacs command of the same name (emacs.command.dired_flag_file_deletion)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.j",
+  "status": "ported",
+  "evidence": [
+   "key:dired:J"
+  ],
+  "note": "mg dired-goto-file, via the GNU Emacs command of the same name (emacs.command.dired_goto_file)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.o",
+  "status": "ported",
+  "evidence": [
+   "key:dired:o"
+  ],
+  "note": "mg dired-find-file-other-window, via the GNU Emacs command of the same name (emacs.command.dired_find_file_other_window)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.p",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C-p"
+  ],
+  "note": "mg dired-previous-line, via the GNU Emacs command of the same name (emacs.command.dired_previous_line)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.q",
+  "status": "ported",
+  "evidence": [
+   "static:quit_window"
+  ],
+  "note": "mg quit-window, via the GNU Emacs command of the same name (emacs.command.quit_window)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.r",
+  "status": "ported",
+  "evidence": [
+   "key:dired:R"
+  ],
+  "note": "mg dired-do-rename, via the GNU Emacs command of the same name (emacs.command.dired_do_rename)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.u",
+  "status": "ported",
+  "evidence": [
+   "key:dired:u"
+  ],
+  "note": "mg dired-unmark, via the GNU Emacs command of the same name (emacs.command.dired_unmark)"
+ },
+ {
+  "spec_id": "mg.mg-dired-key-bindings.x",
+  "status": "ported",
+  "evidence": [
+   "key:dired:x"
+  ],
+  "note": "mg dired-do-flagged-delete, via the GNU Emacs command of the same name (emacs.command.dired_do_flagged_delete)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_create_directory",
+  "status": "ported",
+  "evidence": [
+   "key:dired:+"
+  ],
+  "note": "mg dired-create-directory, via the GNU Emacs command of the same name (emacs.command.dired_create_directory)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_do_copy",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C"
+  ],
+  "note": "mg dired-do-copy, via the GNU Emacs command of the same name (emacs.command.dired_do_copy)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_do_flagged_delete",
+  "status": "ported",
+  "evidence": [
+   "key:dired:x"
+  ],
+  "note": "mg dired-do-flagged-delete, via the GNU Emacs command of the same name (emacs.command.dired_do_flagged_delete)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_do_rename",
+  "status": "ported",
+  "evidence": [
+   "key:dired:R"
+  ],
+  "note": "mg dired-do-rename, via the GNU Emacs command of the same name (emacs.command.dired_do_rename)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_find_file",
+  "status": "ported",
+  "evidence": [
+   "key:dired:ret"
+  ],
+  "note": "mg dired-find-file, via the GNU Emacs command of the same name (emacs.command.dired_find_file)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_flag_file_deletion",
+  "status": "ported",
+  "evidence": [
+   "key:dired:d"
+  ],
+  "note": "mg dired-flag-file-deletion, via the GNU Emacs command of the same name (emacs.command.dired_flag_file_deletion)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_find_file_other_window",
+  "status": "ported",
+  "evidence": [
+   "key:dired:o"
+  ],
+  "note": "mg dired-find-file-other-window, via the GNU Emacs command of the same name (emacs.command.dired_find_file_other_window)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_goto_file",
+  "status": "ported",
+  "evidence": [
+   "key:dired:J"
+  ],
+  "note": "mg dired-goto-file, via the GNU Emacs command of the same name (emacs.command.dired_goto_file)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_next_line",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C-n"
+  ],
+  "note": "mg dired-next-line, via the GNU Emacs command of the same name (emacs.command.dired_next_line)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_other_window",
+  "status": "partial",
+  "evidence": [
+   "static:dired_other_window"
+  ],
+  "note": "mg dired-other-window, via the GNU Emacs command of the same name (emacs.command.dired_other_window)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_previous_line",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C-p"
+  ],
+  "note": "mg dired-previous-line, via the GNU Emacs command of the same name (emacs.command.dired_previous_line)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_unmark",
+  "status": "ported",
+  "evidence": [
+   "key:dired:u"
+  ],
+  "note": "mg dired-unmark, via the GNU Emacs command of the same name (emacs.command.dired_unmark)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_unmark_backward",
+  "status": "ported",
+  "evidence": [
+   "key:dired:backspace"
+  ],
+  "note": "mg dired-unmark-backward, via the GNU Emacs command of the same name (emacs.command.dired_unmark_backward)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.dired_up_directory",
+  "status": "ported",
+  "evidence": [
+   "key:dired:^"
+  ],
+  "note": "mg dired-up-directory, via the GNU Emacs command of the same name (emacs.command.dired_up_directory)"
+ },
+ {
+  "spec_id": "mg.mg-dired-commands.quit_window",
+  "status": "ported",
+  "evidence": [
+   "static:quit_window"
+  ],
+  "note": "mg quit-window, via the GNU Emacs command of the same name (emacs.command.quit_window)"
  }
 ]
