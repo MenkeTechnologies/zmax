@@ -34687,6 +34687,85 @@ fn global(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     global_command(cx, args, event, false)
 }
 
+/// sam / vis structural regular expressions: `:x/re/ command` runs `command`
+/// over every match of `re`, `:y/re/ command` over every stretch between
+/// matches (`sam(1)` "Loops and Conditionals").
+///
+/// zmax holds every piece at once, so the loop becomes a selection set: the
+/// matches (or the gaps) become the selections and `command` — any `:` command —
+/// runs once over them. With no command the pieces are just selected, which is
+/// how sam's `x` is used interactively before deciding what to do with them.
+fn structural_command(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    between: bool,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // The pattern and the command it drives both contain spaces, so the whole
+    // remainder of the line is taken rather than a single token.
+    let joined = args.into_iter().collect::<Vec<_>>().join(" ");
+    let raw = joined.trim();
+    // vim already owns :x (write-quit) and :y (yank), so sam's loops keep their
+    // own names rather than shadowing two commands muscle memory depends on.
+    let name = if between { "structural-y" } else { "structural-x" };
+    let delim = raw
+        .chars()
+        .next()
+        .filter(|c| !c.is_alphanumeric() && !c.is_whitespace())
+        .ok_or_else(|| anyhow!("usage: :{name}/pattern/command"))?;
+    let body = &raw[delim.len_utf8()..];
+    let mut parts = body.splitn(2, delim);
+    let pattern = parts.next().unwrap_or("");
+    let command = parts.next().unwrap_or("").trim().to_string();
+    if pattern.is_empty() {
+        bail!("usage: :{name}/pattern/command");
+    }
+
+    // The structural helpers walk the rope directly, so this is the rope-aware
+    // regex engine rather than the `&str` one `:g` builds. The pattern is *not*
+    // put through the vim-magic translation `:g` and `/` use: sam and vis write
+    // ERE, where `+` and `?` are operators, and translating would turn `\w+`
+    // into a search for a literal plus.
+    let re = zmax_stdx::rope::RegexBuilder::new()
+        .syntax(zmax_stdx::rope::Config::new().multi_line(true))
+        .build(pattern)
+        .map_err(|e| anyhow!("invalid pattern: {e}"))?;
+
+    let pieces = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let selection = doc.selection(view.id);
+        if between {
+            crate::structural::between(text, selection, &re)
+        } else {
+            crate::structural::matches(text, selection, &re)
+        }
+    };
+    let Some(pieces) = pieces else {
+        bail!("{name}: no match");
+    };
+    let count = pieces.len();
+    let (view, doc) = current!(cx.editor);
+    doc.set_selection(view.id, pieces);
+
+    if command.is_empty() {
+        cx.editor.set_status(format!("{count} selection(s)"));
+        return Ok(());
+    }
+    execute_command_line(cx, &command, PromptEvent::Validate)
+}
+
+fn structural_x(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    structural_command(cx, args, event, false)
+}
+
+fn structural_y(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    structural_command(cx, args, event, true)
+}
+
 fn vglobal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     global_command(cx, args, event, true)
 }
@@ -60822,6 +60901,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "structural-x",
+        aliases: &["sx"],
+        doc: "sam/vis structural regex x: select every match, then run a command over them — :sx/\\w+/ d. (vim keeps :x = write-quit.)",
+        fun: structural_x,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "structural-y",
+        aliases: &[],
+        doc: "sam/vis structural regex y: select the stretches between matches — :structural-y/,/. (vim keeps :y = yank.)",
+        fun: structural_y,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },

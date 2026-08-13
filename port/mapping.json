@@ -56640,5 +56640,55 @@
    "typable:vglobal"
   ],
   "note": "ed V is the interactive form of v"
+ },
+ {
+  "spec_id": "sam.loops-and-conditionals.x",
+  "status": "ported",
+  "evidence": [
+   "typable:structural-x"
+  ],
+  "note": "sam x: every match becomes a selection and the command runs over them"
+ },
+ {
+  "spec_id": "sam.loops-and-conditionals.y",
+  "status": "ported",
+  "evidence": [
+   "typable:structural-y"
+  ],
+  "note": "sam y: the stretches between matches become the selections"
+ },
+ {
+  "spec_id": "sam.loops-and-conditionals.g",
+  "status": "partial",
+  "evidence": [
+   "static:keep_selections",
+   "static:remove_selections"
+  ],
+  "note": "sam g/v keep or drop the pieces that match; zmax has the filters but not the inline conditional form"
+ },
+ {
+  "spec_id": "vis.loops-and-conditionals.x",
+  "status": "ported",
+  "evidence": [
+   "typable:structural-x"
+  ],
+  "note": "vis inherits sam x"
+ },
+ {
+  "spec_id": "vis.loops-and-conditionals.y",
+  "status": "ported",
+  "evidence": [
+   "typable:structural-y"
+  ],
+  "note": "vis inherits sam y"
+ },
+ {
+  "spec_id": "vis.loops-and-conditionals.g",
+  "status": "partial",
+  "evidence": [
+   "static:keep_selections",
+   "static:remove_selections"
+  ],
+  "note": "as sam g/v"
  }
 ]
