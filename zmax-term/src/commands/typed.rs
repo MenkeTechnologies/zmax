@@ -34758,6 +34758,86 @@ fn structural_command(
     execute_command_line(cx, &command, PromptEvent::Validate)
 }
 
+/// The `:map` family. `keymap::vim_map` already parses these lines and keeps the
+/// overlay; this is what puts them on the command line, so a mapping can be made
+/// while editing rather than only from config or a vimscript file.
+///
+/// `register_map_line` wants the whole line including the command word, so the
+/// caller's own name is passed back in.
+fn map_command(
+    cx: &mut compositor::Context,
+    name: &str,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = format!("{name} {}", args.into_iter().collect::<Vec<_>>().join(" "));
+    match crate::keymap::vim_map::register_map_line(line.trim()) {
+        Ok(crate::keymap::vim_map::MapOutcome::Applied(what)) => {
+            // The overlay lives beside the keymap; the Application merges it onto
+            // `config.keys` and stores the result, which is what makes the new
+            // binding live for the next keypress.
+            cx.editor
+                .config_events
+                .0
+                .send(zmax_view::editor::ConfigEvent::ApplyUserMappings)?;
+            cx.editor.set_status(what);
+            Ok(())
+        }
+        Ok(crate::keymap::vim_map::MapOutcome::List(_)) => {
+            let lines = crate::keymap::vim_map::export_map_lines();
+            if lines.is_empty() {
+                cx.editor.set_status("no user mappings");
+            } else {
+                super::show_text_in_scratch(cx.editor, &format!("{}\n", lines.join("\n")));
+            }
+            Ok(())
+        }
+        Err(err) => bail!("{err}"),
+    }
+}
+
+/// One thin entry point per `:map`-family command word, so the command list
+/// carries the names vim users actually type.
+macro_rules! map_commands {
+    ($($fn_name:ident => $cmd:literal),* $(,)?) => {
+        $(
+            fn $fn_name(
+                cx: &mut compositor::Context,
+                args: Args,
+                event: PromptEvent,
+            ) -> anyhow::Result<()> {
+                map_command(cx, $cmd, args, event)
+            }
+        )*
+    };
+}
+
+map_commands! {
+    map_cmd => "map",
+    nmap_cmd => "nmap",
+    imap_cmd => "imap",
+    vmap_cmd => "vmap",
+    xmap_cmd => "xmap",
+    smap_cmd => "smap",
+    omap_cmd => "omap",
+    noremap_cmd => "noremap",
+    nnoremap_cmd => "nnoremap",
+    inoremap_cmd => "inoremap",
+    vnoremap_cmd => "vnoremap",
+    xnoremap_cmd => "xnoremap",
+    unmap_cmd => "unmap",
+    nunmap_cmd => "nunmap",
+    iunmap_cmd => "iunmap",
+    vunmap_cmd => "vunmap",
+    mapclear_cmd => "mapclear",
+    nmapclear_cmd => "nmapclear",
+    imapclear_cmd => "imapclear",
+    vmapclear_cmd => "vmapclear",
+}
+
 fn structural_x(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     structural_command(cx, args, event, false)
 }
@@ -62672,6 +62752,226 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "map",
+        aliases: &[],
+        doc: "Map a key in normal+select mode: :map <leader>w :write<CR>. With no rhs, list the mappings.",
+        fun: map_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nmap",
+        aliases: &[],
+        doc: "Map a key in normal mode (vim :nmap).",
+        fun: nmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "imap",
+        aliases: &[],
+        doc: "Map a key in insert mode (vim :imap).",
+        fun: imap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vmap",
+        aliases: &[],
+        doc: "Map a key in select/visual mode (vim :vmap).",
+        fun: vmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xmap",
+        aliases: &[],
+        doc: "Map a key in visual mode (vim :xmap).",
+        fun: xmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "smap",
+        aliases: &[],
+        doc: "Map a key in select mode (vim :smap).",
+        fun: smap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "omap",
+        aliases: &[],
+        doc: "Map a key in operator-pending mode; approximated by normal mode (vim :omap).",
+        fun: omap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "noremap",
+        aliases: &[],
+        doc: "Map a key without remapping the right-hand side (vim :noremap).",
+        fun: noremap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nnoremap",
+        aliases: &[],
+        doc: "Non-recursive normal-mode mapping (vim :nnoremap).",
+        fun: nnoremap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "inoremap",
+        aliases: &[],
+        doc: "Non-recursive insert-mode mapping (vim :inoremap).",
+        fun: inoremap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vnoremap",
+        aliases: &[],
+        doc: "Non-recursive select/visual-mode mapping (vim :vnoremap).",
+        fun: vnoremap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xnoremap",
+        aliases: &[],
+        doc: "Non-recursive visual-mode mapping (vim :xnoremap).",
+        fun: xnoremap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unmap",
+        aliases: &[],
+        doc: "Remove a normal+select mapping (vim :unmap).",
+        fun: unmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nunmap",
+        aliases: &[],
+        doc: "Remove a normal-mode mapping (vim :nunmap).",
+        fun: nunmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "iunmap",
+        aliases: &[],
+        doc: "Remove an insert-mode mapping (vim :iunmap).",
+        fun: iunmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vunmap",
+        aliases: &[],
+        doc: "Remove a select/visual-mode mapping (vim :vunmap).",
+        fun: vunmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mapclear",
+        aliases: &[],
+        doc: "Remove every normal+select mapping (vim :mapclear).",
+        fun: mapclear_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nmapclear",
+        aliases: &[],
+        doc: "Remove every normal-mode mapping (vim :nmapclear).",
+        fun: nmapclear_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "imapclear",
+        aliases: &[],
+        doc: "Remove every insert-mode mapping (vim :imapclear).",
+        fun: imapclear_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vmapclear",
+        aliases: &[],
+        doc: "Remove every select/visual-mode mapping (vim :vmapclear).",
+        fun: vmapclear_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
