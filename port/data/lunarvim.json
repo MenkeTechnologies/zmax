@@ -1,0 +1,218 @@
+[
+ {
+  "id": "lunarvim.keys-insert.a_j",
+  "source": "lunarvim",
+  "category": "keys-insert",
+  "name": "<A-j>",
+  "desc": "runs <Esc>:m .+1<CR>==gi",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L38"
+ },
+ {
+  "id": "lunarvim.keys-insert.a_k",
+  "source": "lunarvim",
+  "category": "keys-insert",
+  "name": "<A-k>",
+  "desc": "runs <Esc>:m .-2<CR>==gi",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L40"
+ },
+ {
+  "id": "lunarvim.keys-insert.a_up",
+  "source": "lunarvim",
+  "category": "keys-insert",
+  "name": "<A-Up>",
+  "desc": "runs <C-\\\\><C-N><C-w>k",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L42"
+ },
+ {
+  "id": "lunarvim.keys-insert.a_down",
+  "source": "lunarvim",
+  "category": "keys-insert",
+  "name": "<A-Down>",
+  "desc": "runs <C-\\\\><C-N><C-w>j",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L43"
+ },
+ {
+  "id": "lunarvim.keys-insert.a_left",
+  "source": "lunarvim",
+  "category": "keys-insert",
+  "name": "<A-Left>",
+  "desc": "runs <C-\\\\><C-N><C-w>h",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L44"
+ },
+ {
+  "id": "lunarvim.keys-insert.a_right",
+  "source": "lunarvim",
+  "category": "keys-insert",
+  "name": "<A-Right>",
+  "desc": "runs <C-\\\\><C-N><C-w>l",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L45"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_h",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-h>",
+  "desc": "runs <C-w>h",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L50"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_j",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-j>",
+  "desc": "runs <C-w>j",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L51"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_k",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-k>",
+  "desc": "runs <C-w>k",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L52"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_l",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-l>",
+  "desc": "runs <C-w>l",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L53"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_up",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-Up>",
+  "desc": "runs :resize -2<CR>",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L56"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_down",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-Down>",
+  "desc": "runs :resize +2<CR>",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L57"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_left",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-Left>",
+  "desc": "runs :vertical resize -2<CR>",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L58"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_right",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-Right>",
+  "desc": "runs :vertical resize +2<CR>",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L59"
+ },
+ {
+  "id": "lunarvim.keys-normal.a_j",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<A-j>",
+  "desc": "runs :m .+1<CR>==",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L62"
+ },
+ {
+  "id": "lunarvim.keys-normal.a_k",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<A-k>",
+  "desc": "runs :m .-2<CR>==",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L63"
+ },
+ {
+  "id": "lunarvim.keys-normal.q",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "]q",
+  "desc": "runs :cnext<CR>",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L66"
+ },
+ {
+  "id": "lunarvim.keys-normal.q_2",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "[q",
+  "desc": "runs :cprev<CR>",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L67"
+ },
+ {
+  "id": "lunarvim.keys-normal.c_q",
+  "source": "lunarvim",
+  "category": "keys-normal",
+  "name": "<C-q>",
+  "desc": "runs :call QuickFixToggle()<CR>",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L68"
+ },
+ {
+  "id": "lunarvim.keys-term.c_h",
+  "source": "lunarvim",
+  "category": "keys-term",
+  "name": "<C-h>",
+  "desc": "runs <C-\\\\><C-N><C-w>h",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L73"
+ },
+ {
+  "id": "lunarvim.keys-term.c_j",
+  "source": "lunarvim",
+  "category": "keys-term",
+  "name": "<C-j>",
+  "desc": "runs <C-\\\\><C-N><C-w>j",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L74"
+ },
+ {
+  "id": "lunarvim.keys-term.c_k",
+  "source": "lunarvim",
+  "category": "keys-term",
+  "name": "<C-k>",
+  "desc": "runs <C-\\\\><C-N><C-w>k",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L75"
+ },
+ {
+  "id": "lunarvim.keys-term.c_l",
+  "source": "lunarvim",
+  "category": "keys-term",
+  "name": "<C-l>",
+  "desc": "runs <C-\\\\><C-N><C-w>l",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L76"
+ },
+ {
+  "id": "lunarvim.keys-visual.key",
+  "source": "lunarvim",
+  "category": "keys-visual",
+  "name": "<",
+  "desc": "runs <gv",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L81"
+ },
+ {
+  "id": "lunarvim.keys-visual.key_2",
+  "source": "lunarvim",
+  "category": "keys-visual",
+  "name": ">",
+  "desc": "runs >gv",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L82"
+ },
+ {
+  "id": "lunarvim.keys-visual_block.a_j",
+  "source": "lunarvim",
+  "category": "keys-visual_block",
+  "name": "<A-j>",
+  "desc": "runs :m '>+1<CR>gv-gv",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L90"
+ },
+ {
+  "id": "lunarvim.keys-visual_block.a_k",
+  "source": "lunarvim",
+  "category": "keys-visual_block",
+  "name": "<A-k>",
+  "desc": "runs :m '<-2<CR>gv-gv",
+  "doc_ref": "https://github.com/LunarVim/LunarVim/blob/master/lua/lvim/keymappings.lua#L91"
+ }
+]
