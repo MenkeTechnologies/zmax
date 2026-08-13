@@ -117,6 +117,7 @@
 | `split_selection_on_newline` | Split selection on newlines | **helix, kakoune** — normal: `` <A-s> ``, select: `` <A-s> `` |
 | `merge_selections` | Merge selections | **helix** — normal: `` <A-minus> ``, select: `` <A-minus> ``<br>**kakoune** — normal: `` <A-+> ``, `` <A-minus> ``, select: `` <A-minus> `` |
 | `merge_consecutive_selections` | Merge consecutive selections | **helix, kakoune** — normal: `` <A-_> ``, select: `` <A-_> `` |
+| `save_as_prompt` | Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs) |  |
 | `select_first_last_chars` | Keep the first and last character of each selection (kakoune A-S) | **kakoune** — normal: `` <A-S> `` |
 | `copy_indent` | Copy the main selection's indent to the other selected lines (kakoune A-&) | **kakoune** — normal: `` <A-&> `` |
 | `set_numbered_bookmark` | Set a numbered bookmark on this line (ne SetBookmark) |  |

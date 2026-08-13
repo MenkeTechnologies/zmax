@@ -57005,11 +57005,11 @@
  },
  {
   "spec_id": "micro.action.saveas",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:write"
+   "static:save_as_prompt"
   ],
-  "note": "micro SaveAs: micro prompts for the new name; :write takes it as an argument"
+  "note": "micro SaveAs: prompts for the name, as those editors do"
  },
  {
   "spec_id": "micro.action.find",
@@ -60424,9 +60424,9 @@
   "spec_id": "ne.file-commands.saveas",
   "status": "ported",
   "evidence": [
-   "typable:write"
+   "static:save_as_prompt"
   ],
-  "note": "ne SaveAs"
+  "note": "ne SaveAs: prompts for the name, as those editors do"
  },
  {
   "spec_id": "ne.file-commands.saveall",
