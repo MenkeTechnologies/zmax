@@ -58290,5 +58290,1510 @@
    "static:remove_primary_selection"
   ],
   "note": "micro SkipMultiCursor: micro skips the match and moves on; remove_primary_selection only drops the cursor"
+ },
+ {
+  "spec_id": "nano.keys.m",
+  "status": "ported",
+  "evidence": [
+   "static:insert_newline"
+  ],
+  "note": "nano enter"
+ },
+ {
+  "spec_id": "nano.keys.enter",
+  "status": "ported",
+  "evidence": [
+   "static:insert_newline"
+  ],
+  "note": "nano enter"
+ },
+ {
+  "spec_id": "nano.keys.i",
+  "status": "ported",
+  "evidence": [
+   "static:insert_tab"
+  ],
+  "note": "nano tab"
+ },
+ {
+  "spec_id": "nano.keys.tab",
+  "status": "ported",
+  "evidence": [
+   "static:insert_tab"
+  ],
+  "note": "nano tab"
+ },
+ {
+  "spec_id": "nano.keys.q",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "nano exit"
+ },
+ {
+  "spec_id": "nano.keys.s",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "nano savefile"
+ },
+ {
+  "spec_id": "nano.keys.w",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "nano writeout"
+ },
+ {
+  "spec_id": "nano.keys.d",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "nano findprevious"
+ },
+ {
+  "spec_id": "nano.keys.g",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "nano findnext"
+ },
+ {
+  "spec_id": "nano.keys.r",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "nano replace"
+ },
+ {
+  "spec_id": "nano.keys.z",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "nano undo"
+ },
+ {
+  "spec_id": "nano.keys.y",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "nano redo"
+ },
+ {
+  "spec_id": "nano.keys.a",
+  "status": "ported",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "nano mark"
+ },
+ {
+  "spec_id": "nano.keys.x_2",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "nano exit"
+ },
+ {
+  "spec_id": "nano.keys.s_2",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "nano savefile"
+ },
+ {
+  "spec_id": "nano.keys.o_2",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "nano writeout"
+ },
+ {
+  "spec_id": "nano.keys.a_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "nano home"
+ },
+ {
+  "spec_id": "nano.keys.e",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "nano end"
+ },
+ {
+  "spec_id": "nano.keys.p_2",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "nano up"
+ },
+ {
+  "spec_id": "nano.keys.n",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "nano down"
+ },
+ {
+  "spec_id": "nano.keys.y_2",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "nano pageup"
+ },
+ {
+  "spec_id": "nano.keys.v_2",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "nano pagedown"
+ },
+ {
+  "spec_id": "nano.keys.h",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "nano backspace"
+ },
+ {
+  "spec_id": "nano.keys.d_2",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "nano delete"
+ },
+ {
+  "spec_id": "nano.keys.bsp",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "nano backspace"
+ },
+ {
+  "spec_id": "nano.keys.sh_del",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "nano backspace"
+ },
+ {
+  "spec_id": "nano.keys.del",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "nano delete"
+ },
+ {
+  "spec_id": "nano.keys.item",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "nano replace"
+ },
+ {
+  "spec_id": "nano.keys.m_r",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "nano replace"
+ },
+ {
+  "spec_id": "nano.keys.s_3",
+  "status": "ported",
+  "evidence": [
+   "static:flyspell_buffer"
+  ],
+  "note": "nano menu name"
+ },
+ {
+  "spec_id": "nano.keys.t_2",
+  "status": "ported",
+  "evidence": [
+   "static:flyspell_buffer"
+  ],
+  "note": "nano menu name"
+ },
+ {
+  "spec_id": "nano.keys.j",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "nano justify"
+ },
+ {
+  "spec_id": "nano.keys.y_3",
+  "status": "partial",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "zmax lints through the language server rather than an external linter run"
+ },
+ {
+  "spec_id": "nano.keys.o_3",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "nano formatter"
+ },
+ {
+  "spec_id": "nano.keys.pgup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "nano pageup"
+ },
+ {
+  "spec_id": "nano.keys.pgdn",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "nano pagedown"
+ },
+ {
+  "spec_id": "nano.keys.bsp_2",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "nano pageup"
+ },
+ {
+  "spec_id": "nano.keys.sh_del_2",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "nano pageup"
+ },
+ {
+  "spec_id": "nano.keys.space",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "nano pagedown"
+ },
+ {
+  "spec_id": "nano.keys.m_b",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "nano findprevious"
+ },
+ {
+  "spec_id": "nano.keys.m_f",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "nano findnext"
+ },
+ {
+  "spec_id": "nano.keys.m_w",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "nano findnext"
+ },
+ {
+  "spec_id": "nano.keys.m_q",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "nano findprevious"
+ },
+ {
+  "spec_id": "nano.keys.m_7",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "nano findbracket"
+ },
+ {
+  "spec_id": "nano.keys.m_a",
+  "status": "ported",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "nano mark"
+ },
+ {
+  "spec_id": "nano.keys.6",
+  "status": "ported",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "nano mark"
+ },
+ {
+  "spec_id": "nano.keys.item_3",
+  "status": "ported",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "nano mark"
+ },
+ {
+  "spec_id": "nano.keys.m_8",
+  "status": "ported",
+  "evidence": [
+   "static:indent"
+  ],
+  "note": "nano indent"
+ },
+ {
+  "spec_id": "nano.keys.m_9",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "nano unindent"
+ },
+ {
+  "spec_id": "nano.keys.sh_tab",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "nano unindent"
+ },
+ {
+  "spec_id": "nano.keys.m_10",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "nano recordmacro"
+ },
+ {
+  "spec_id": "nano.keys.m_11",
+  "status": "ported",
+  "evidence": [
+   "static:replay_macro"
+  ],
+  "note": "nano runmacro"
+ },
+ {
+  "spec_id": "nano.keys.m_u",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "nano undo"
+ },
+ {
+  "spec_id": "nano.keys.m_e",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "nano redo"
+ },
+ {
+  "spec_id": "nano.keys.m_3_2",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": "nano comment"
+ },
+ {
+  "spec_id": "nano.keys.xe2_x97_x82",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "nano left"
+ },
+ {
+  "spec_id": "nano.keys.xe2_x96_xb8",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "nano right"
+ },
+ {
+  "spec_id": "nano.keys.left",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "nano left"
+ },
+ {
+  "spec_id": "nano.keys.right",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "nano right"
+ },
+ {
+  "spec_id": "nano.keys.home_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "nano home"
+ },
+ {
+  "spec_id": "nano.keys.end_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "nano end"
+ },
+ {
+  "spec_id": "nano.keys.xe2_x96_xb4",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "nano up"
+ },
+ {
+  "spec_id": "nano.keys.xe2_x96_xbe",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "nano down"
+ },
+ {
+  "spec_id": "nano.keys.up",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "nano up"
+ },
+ {
+  "spec_id": "nano.keys.down",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "nano down"
+ },
+ {
+  "spec_id": "nano.keys.m_xe2_x96_xb4",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "nano scrollup"
+ },
+ {
+  "spec_id": "nano.keys.m_xe2_x96_xbe",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "nano scrolldown"
+ },
+ {
+  "spec_id": "nano.keys.m_up",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "nano scrollup"
+ },
+ {
+  "spec_id": "nano.keys.m_down",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "nano scrolldown"
+ },
+ {
+  "spec_id": "nano.keys.m_15",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "nano scrollup"
+ },
+ {
+  "spec_id": "nano.keys.m_16",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "nano scrollup"
+ },
+ {
+  "spec_id": "nano.keys.m_17",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "nano scrolldown"
+ },
+ {
+  "spec_id": "nano.keys.m_18",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "nano scrolldown"
+ },
+ {
+  "spec_id": "nano.keys.z_2",
+  "status": "ported",
+  "evidence": [
+   "static:suspend"
+  ],
+  "note": "nano suspend"
+ },
+ {
+  "spec_id": "nano.keys.m_h",
+  "status": "ported",
+  "evidence": [
+   "typable:help"
+  ],
+  "note": "nano help"
+ },
+ {
+  "spec_id": "nano.keys.l",
+  "status": "ported",
+  "evidence": [
+   "static:align_view_center"
+  ],
+  "note": "nano center"
+ },
+ {
+  "spec_id": "nano.keys.m_g_2",
+  "status": "ported",
+  "evidence": [
+   "typable:change-current-directory"
+  ],
+  "note": "nano gotodir"
+ },
+ {
+  "spec_id": "nano.keys.item_5",
+  "status": "ported",
+  "evidence": [
+   "typable:change-current-directory"
+  ],
+  "note": "nano gotodir"
+ },
+ {
+  "spec_id": "nano.keys.q_3",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close!"
+  ],
+  "note": "nano discardbuffer"
+ },
+ {
+  "spec_id": "nano.keys.c_3",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "nano exit"
+ },
+ {
+  "spec_id": "nano.keys.t_5",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "nano exit"
+ },
+ {
+  "spec_id": "nano.keys.g_2",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "nano exit"
+ },
+ {
+  "spec_id": "nano.keys.f1",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "nano exit"
+ },
+ {
+  "spec_id": "nano.keys.x_4",
+  "status": "ported",
+  "evidence": [
+   "static:normal_mode"
+  ],
+  "note": "nano cancel"
+ },
+ {
+  "spec_id": "nano.keys.f2",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "nano exit"
+ },
+ {
+  "spec_id": "nano.keys.f3",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "nano writeout"
+ },
+ {
+  "spec_id": "nano.keys.f4",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "nano justify"
+ },
+ {
+  "spec_id": "nano.keys.f7",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "nano pageup"
+ },
+ {
+  "spec_id": "nano.keys.f8",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "nano pagedown"
+ },
+ {
+  "spec_id": "nano.keys.f12",
+  "status": "ported",
+  "evidence": [
+   "static:flyspell_buffer"
+  ],
+  "note": "nano menu name"
+ },
+ {
+  "spec_id": "nano.function.help",
+  "status": "ported",
+  "evidence": [
+   "typable:help"
+  ],
+  "note": "nano help"
+ },
+ {
+  "spec_id": "nano.function.cancel",
+  "status": "ported",
+  "evidence": [
+   "static:normal_mode"
+  ],
+  "note": "nano cancel"
+ },
+ {
+  "spec_id": "nano.function.exit",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "nano exit"
+ },
+ {
+  "spec_id": "nano.function.writeout",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "nano writeout"
+ },
+ {
+  "spec_id": "nano.function.savefile",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "nano savefile"
+ },
+ {
+  "spec_id": "nano.function.insert",
+  "status": "ported",
+  "evidence": [
+   "typable:read"
+  ],
+  "note": "nano insert"
+ },
+ {
+  "spec_id": "nano.function.whereis",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "nano whereis"
+ },
+ {
+  "spec_id": "nano.function.wherewas",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "nano wherewas"
+ },
+ {
+  "spec_id": "nano.function.findprevious",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "nano findprevious"
+ },
+ {
+  "spec_id": "nano.function.findnext",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "nano findnext"
+ },
+ {
+  "spec_id": "nano.function.replace",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "nano replace"
+ },
+ {
+  "spec_id": "nano.function.cut",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_clipboard"
+  ],
+  "note": "nano cut"
+ },
+ {
+  "spec_id": "nano.function.copy",
+  "status": "ported",
+  "evidence": [
+   "static:yank_to_clipboard"
+  ],
+  "note": "nano copy"
+ },
+ {
+  "spec_id": "nano.function.paste",
+  "status": "ported",
+  "evidence": [
+   "static:paste_clipboard_before"
+  ],
+  "note": "nano paste"
+ },
+ {
+  "spec_id": "nano.function.zap",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "nano zap"
+ },
+ {
+  "spec_id": "nano.function.chopwordleft",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "nano chopwordleft"
+ },
+ {
+  "spec_id": "nano.function.chopwordright",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_forward"
+  ],
+  "note": "nano chopwordright"
+ },
+ {
+  "spec_id": "nano.function.cutrestoffile",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_last_line",
+   "static:delete_selection"
+  ],
+  "note": "nano cutrestoffile"
+ },
+ {
+  "spec_id": "nano.function.mark",
+  "status": "ported",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "nano mark"
+ },
+ {
+  "spec_id": "nano.function.location",
+  "status": "ported",
+  "evidence": [
+   "typable:stats"
+  ],
+  "note": "nano location"
+ },
+ {
+  "spec_id": "nano.function.wordcount",
+  "status": "ported",
+  "evidence": [
+   "static:count_words_region"
+  ],
+  "note": "nano wordcount"
+ },
+ {
+  "spec_id": "nano.function.execute",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "nano execute"
+ },
+ {
+  "spec_id": "nano.function.speller",
+  "status": "ported",
+  "evidence": [
+   "static:flyspell_buffer"
+  ],
+  "note": "nano speller"
+ },
+ {
+  "spec_id": "nano.function.formatter",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "nano formatter"
+ },
+ {
+  "spec_id": "nano.function.linter",
+  "status": "partial",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "zmax lints through the language server rather than an external linter run"
+ },
+ {
+  "spec_id": "nano.function.justify",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "nano justify"
+ },
+ {
+  "spec_id": "nano.function.indent",
+  "status": "ported",
+  "evidence": [
+   "static:indent"
+  ],
+  "note": "nano indent"
+ },
+ {
+  "spec_id": "nano.function.unindent",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "nano unindent"
+ },
+ {
+  "spec_id": "nano.function.comment",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": "nano comment"
+ },
+ {
+  "spec_id": "nano.function.complete",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "nano complete"
+ },
+ {
+  "spec_id": "nano.function.left",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "nano left"
+ },
+ {
+  "spec_id": "nano.function.right",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "nano right"
+ },
+ {
+  "spec_id": "nano.function.up",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "nano up"
+ },
+ {
+  "spec_id": "nano.function.down",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "nano down"
+ },
+ {
+  "spec_id": "nano.function.scrollup",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "nano scrollup"
+ },
+ {
+  "spec_id": "nano.function.scrolldown",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "nano scrolldown"
+ },
+ {
+  "spec_id": "nano.function.center",
+  "status": "ported",
+  "evidence": [
+   "static:align_view_center"
+  ],
+  "note": "nano center"
+ },
+ {
+  "spec_id": "nano.function.prevword",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "nano prevword"
+ },
+ {
+  "spec_id": "nano.function.nextword",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "nano nextword"
+ },
+ {
+  "spec_id": "nano.function.home",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "nano home"
+ },
+ {
+  "spec_id": "nano.function.end",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "nano end"
+ },
+ {
+  "spec_id": "nano.function.beginpara",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "nano beginpara"
+ },
+ {
+  "spec_id": "nano.function.endpara",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "nano endpara"
+ },
+ {
+  "spec_id": "nano.function.prevblock",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "nano prevblock"
+ },
+ {
+  "spec_id": "nano.function.nextblock",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "nano nextblock"
+ },
+ {
+  "spec_id": "nano.function.toprow",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": "nano toprow"
+ },
+ {
+  "spec_id": "nano.function.bottomrow",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_bottom"
+  ],
+  "note": "nano bottomrow"
+ },
+ {
+  "spec_id": "nano.function.pageup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "nano pageup"
+ },
+ {
+  "spec_id": "nano.function.pagedown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "nano pagedown"
+ },
+ {
+  "spec_id": "nano.function.firstline",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "nano firstline"
+ },
+ {
+  "spec_id": "nano.function.lastline",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "nano lastline"
+ },
+ {
+  "spec_id": "nano.function.gotoline",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line"
+  ],
+  "note": "nano gotoline"
+ },
+ {
+  "spec_id": "nano.function.findbracket",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "nano findbracket"
+ },
+ {
+  "spec_id": "nano.function.anchor",
+  "status": "ported",
+  "evidence": [
+   "static:save_selection"
+  ],
+  "note": "nano anchor"
+ },
+ {
+  "spec_id": "nano.function.prevanchor",
+  "status": "ported",
+  "evidence": [
+   "static:jump_backward"
+  ],
+  "note": "nano prevanchor"
+ },
+ {
+  "spec_id": "nano.function.nextanchor",
+  "status": "ported",
+  "evidence": [
+   "static:jump_forward"
+  ],
+  "note": "nano nextanchor"
+ },
+ {
+  "spec_id": "nano.function.prevbuf",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "nano prevbuf"
+ },
+ {
+  "spec_id": "nano.function.nextbuf",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "nano nextbuf"
+ },
+ {
+  "spec_id": "nano.function.tab",
+  "status": "ported",
+  "evidence": [
+   "static:insert_tab"
+  ],
+  "note": "nano tab"
+ },
+ {
+  "spec_id": "nano.function.enter",
+  "status": "ported",
+  "evidence": [
+   "static:insert_newline"
+  ],
+  "note": "nano enter"
+ },
+ {
+  "spec_id": "nano.function.delete",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "nano delete"
+ },
+ {
+  "spec_id": "nano.function.backspace",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "nano backspace"
+ },
+ {
+  "spec_id": "nano.function.recordmacro",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "nano recordmacro"
+ },
+ {
+  "spec_id": "nano.function.runmacro",
+  "status": "ported",
+  "evidence": [
+   "static:replay_macro"
+  ],
+  "note": "nano runmacro"
+ },
+ {
+  "spec_id": "nano.function.undo",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "nano undo"
+ },
+ {
+  "spec_id": "nano.function.redo",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "nano redo"
+ },
+ {
+  "spec_id": "nano.function.refresh",
+  "status": "ported",
+  "evidence": [
+   "typable:redraw"
+  ],
+  "note": "nano refresh"
+ },
+ {
+  "spec_id": "nano.function.suspend",
+  "status": "ported",
+  "evidence": [
+   "static:suspend"
+  ],
+  "note": "nano suspend"
+ },
+ {
+  "spec_id": "nano.function.casesens",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "a search option in zmax rather than a toggle inside the prompt"
+ },
+ {
+  "spec_id": "nano.function.regexp",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "zmax searches by regex always; nano makes it a prompt toggle"
+ },
+ {
+  "spec_id": "nano.function.backwards",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "nano backwards"
+ },
+ {
+  "spec_id": "nano.function.older",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "nano older"
+ },
+ {
+  "spec_id": "nano.function.newer",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "nano newer"
+ },
+ {
+  "spec_id": "nano.function.discardbuffer",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close!"
+  ],
+  "note": "nano discardbuffer"
+ },
+ {
+  "spec_id": "nano.function.browser",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "nano browser"
+ },
+ {
+  "spec_id": "nano.function.gotodir",
+  "status": "ported",
+  "evidence": [
+   "typable:change-current-directory"
+  ],
+  "note": "nano gotodir"
+ },
+ {
+  "spec_id": "nano.function.firstfile",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "nano firstfile"
+ },
+ {
+  "spec_id": "nano.function.lastfile",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "nano lastfile"
+ },
+ {
+  "spec_id": "nano.function.softwrap",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "soft wrap is an editor option in zmax"
+ },
+ {
+  "spec_id": "nano.function.linenumbers",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "nano linenumbers"
+ },
+ {
+  "spec_id": "nano.function.whitespacedisplay",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "nano whitespacedisplay"
+ },
+ {
+  "spec_id": "nano.function.smarthome",
+  "status": "ported",
+  "evidence": [
+   "static:goto_first_nonwhitespace"
+  ],
+  "note": "nano smarthome"
+ },
+ {
+  "spec_id": "nano.function.autoindent",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "nano autoindent"
+ },
+ {
+  "spec_id": "nano.function.tabstospaces",
+  "status": "ported",
+  "evidence": [
+   "static:convert_indent_to_spaces"
+  ],
+  "note": "nano tabstospaces"
+ },
+ {
+  "spec_id": "nano.function.mouse",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "nano mouse"
+ },
+ {
+  "spec_id": "nano.function.main",
+  "status": "ported",
+  "evidence": [
+   "static:normal_mode"
+  ],
+  "note": "nano menu name rather than an editing function"
+ },
+ {
+  "spec_id": "nano.function.help_2",
+  "status": "ported",
+  "evidence": [
+   "typable:help"
+  ],
+  "note": "nano help"
+ },
+ {
+  "spec_id": "nano.function.search",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "nano menu name"
+ },
+ {
+  "spec_id": "nano.function.replace_2",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "nano replace"
+ },
+ {
+  "spec_id": "nano.function.replacewith",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "the second half of nano's replace prompt"
+ },
+ {
+  "spec_id": "nano.function.gotoline_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line"
+  ],
+  "note": "nano gotoline"
+ },
+ {
+  "spec_id": "nano.function.writeout_2",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "nano writeout"
+ },
+ {
+  "spec_id": "nano.function.insert_2",
+  "status": "ported",
+  "evidence": [
+   "typable:read"
+  ],
+  "note": "nano insert"
+ },
+ {
+  "spec_id": "nano.function.browser_2",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "nano browser"
+ },
+ {
+  "spec_id": "nano.function.gotodir_2",
+  "status": "ported",
+  "evidence": [
+   "typable:change-current-directory"
+  ],
+  "note": "nano gotodir"
+ },
+ {
+  "spec_id": "nano.function.execute_2",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "nano execute"
+ },
+ {
+  "spec_id": "nano.function.spell",
+  "status": "ported",
+  "evidence": [
+   "static:flyspell_buffer"
+  ],
+  "note": "nano menu name"
+ },
+ {
+  "spec_id": "nano.function.linter_2",
+  "status": "partial",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "zmax lints through the language server rather than an external linter run"
  }
 ]
