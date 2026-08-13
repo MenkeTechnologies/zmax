@@ -60995,5 +60995,941 @@
    "typable:run-shell-command"
   ],
   "note": "ne Exec"
+ },
+ {
+  "spec_id": "dte.command-configuration.bind",
+  "status": "partial",
+  "evidence": [
+   "typable:keymap"
+  ],
+  "note": "dte binds a key from its rc file; zmax takes [keys.*] config or :keymap for the whole preset"
+ },
+ {
+  "spec_id": "dte.command-configuration.set",
+  "status": "ported",
+  "evidence": [
+   "typable:set-option"
+  ],
+  "note": "dte set"
+ },
+ {
+  "spec_id": "dte.command-configuration.ft",
+  "status": "ported",
+  "evidence": [
+   "typable:set-language"
+  ],
+  "note": "dte ft"
+ },
+ {
+  "spec_id": "dte.command-editor.quit",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "dte quit"
+ },
+ {
+  "spec_id": "dte.command-editor.suspend",
+  "status": "ported",
+  "evidence": [
+   "static:suspend"
+  ],
+  "note": "dte suspend"
+ },
+ {
+  "spec_id": "dte.command-editor.cd",
+  "status": "ported",
+  "evidence": [
+   "typable:change-current-directory"
+  ],
+  "note": "dte cd"
+ },
+ {
+  "spec_id": "dte.command-editor.refresh",
+  "status": "ported",
+  "evidence": [
+   "typable:redraw"
+  ],
+  "note": "dte refresh"
+ },
+ {
+  "spec_id": "dte.command-buffer_management.open",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": "dte open"
+ },
+ {
+  "spec_id": "dte.command-buffer_management.save",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "dte save"
+ },
+ {
+  "spec_id": "dte.command-buffer_management.close",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "dte close"
+ },
+ {
+  "spec_id": "dte.command-buffer_management.next",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "dte next"
+ },
+ {
+  "spec_id": "dte.command-buffer_management.prev",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "dte prev"
+ },
+ {
+  "spec_id": "dte.command-window_management.wsplit",
+  "status": "ported",
+  "evidence": [
+   "typable:hsplit"
+  ],
+  "note": "dte wsplit"
+ },
+ {
+  "spec_id": "dte.command-window_management.wclose",
+  "status": "ported",
+  "evidence": [
+   "typable:close"
+  ],
+  "note": "dte wclose"
+ },
+ {
+  "spec_id": "dte.command-window_management.wnext",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "dte wnext"
+ },
+ {
+  "spec_id": "dte.command-window_management.wprev",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view_reverse"
+  ],
+  "note": "dte wprev"
+ },
+ {
+  "spec_id": "dte.command-movement.left",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "dte left"
+ },
+ {
+  "spec_id": "dte.command-movement.right",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "dte right"
+ },
+ {
+  "spec_id": "dte.command-movement.up",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "dte up"
+ },
+ {
+  "spec_id": "dte.command-movement.down",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "dte down"
+ },
+ {
+  "spec_id": "dte.command-movement.pgup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "dte pgup"
+ },
+ {
+  "spec_id": "dte.command-movement.pgdown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "dte pgdown"
+ },
+ {
+  "spec_id": "dte.command-movement.blkup",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "dte blkup"
+ },
+ {
+  "spec_id": "dte.command-movement.blkdown",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "dte blkdown"
+ },
+ {
+  "spec_id": "dte.command-movement.word_fwd",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "dte word-fwd"
+ },
+ {
+  "spec_id": "dte.command-movement.word_bwd",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "dte word-bwd"
+ },
+ {
+  "spec_id": "dte.command-movement.bol",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "dte bol"
+ },
+ {
+  "spec_id": "dte.command-movement.eol",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "dte eol"
+ },
+ {
+  "spec_id": "dte.command-movement.bof",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "dte bof"
+ },
+ {
+  "spec_id": "dte.command-movement.eof",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "dte eof"
+ },
+ {
+  "spec_id": "dte.command-movement.scroll_up",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "dte scroll-up"
+ },
+ {
+  "spec_id": "dte.command-movement.scroll_down",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "dte scroll-down"
+ },
+ {
+  "spec_id": "dte.command-movement.scroll_pgup",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "dte scroll-pgup"
+ },
+ {
+  "spec_id": "dte.command-movement.scroll_pgdown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "dte scroll-pgdown"
+ },
+ {
+  "spec_id": "dte.command-movement.center_view",
+  "status": "ported",
+  "evidence": [
+   "static:align_view_center"
+  ],
+  "note": "dte center-view"
+ },
+ {
+  "spec_id": "dte.command-movement.match_bracket",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "dte match-bracket"
+ },
+ {
+  "spec_id": "dte.command-movement.search",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "dte search"
+ },
+ {
+  "spec_id": "dte.command-movement.line",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line"
+  ],
+  "note": "dte line"
+ },
+ {
+  "spec_id": "dte.command-movement.bookmark",
+  "status": "ported",
+  "evidence": [
+   "static:save_selection"
+  ],
+  "note": "dte bookmark"
+ },
+ {
+  "spec_id": "dte.command-movement.tag",
+  "status": "ported",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": "dte tag"
+ },
+ {
+  "spec_id": "dte.command-movement.msg",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "dte msg"
+ },
+ {
+  "spec_id": "dte.command-editing.cut",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_clipboard"
+  ],
+  "note": "dte cut"
+ },
+ {
+  "spec_id": "dte.command-editing.copy",
+  "status": "ported",
+  "evidence": [
+   "static:yank_to_clipboard"
+  ],
+  "note": "dte copy"
+ },
+ {
+  "spec_id": "dte.command-editing.paste",
+  "status": "ported",
+  "evidence": [
+   "static:paste_clipboard_before"
+  ],
+  "note": "dte paste"
+ },
+ {
+  "spec_id": "dte.command-editing.undo",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "dte undo"
+ },
+ {
+  "spec_id": "dte.command-editing.redo",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "dte redo"
+ },
+ {
+  "spec_id": "dte.command-editing.join",
+  "status": "ported",
+  "evidence": [
+   "static:join_selections"
+  ],
+  "note": "dte join"
+ },
+ {
+  "spec_id": "dte.command-editing.new_line",
+  "status": "ported",
+  "evidence": [
+   "static:open_below"
+  ],
+  "note": "dte new-line"
+ },
+ {
+  "spec_id": "dte.command-editing.delete",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "dte delete"
+ },
+ {
+  "spec_id": "dte.command-editing.erase",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "dte erase"
+ },
+ {
+  "spec_id": "dte.command-editing.delete_eol",
+  "status": "ported",
+  "evidence": [
+   "static:kill_to_line_end"
+  ],
+  "note": "dte delete-eol"
+ },
+ {
+  "spec_id": "dte.command-editing.erase_bol",
+  "status": "ported",
+  "evidence": [
+   "static:kill_to_line_start"
+  ],
+  "note": "dte erase-bol"
+ },
+ {
+  "spec_id": "dte.command-editing.delete_word",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_forward"
+  ],
+  "note": "dte delete-word"
+ },
+ {
+  "spec_id": "dte.command-editing.erase_word",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "dte erase-word"
+ },
+ {
+  "spec_id": "dte.command-editing.delete_line",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection_linewise"
+  ],
+  "note": "dte delete-line"
+ },
+ {
+  "spec_id": "dte.command-editing.case",
+  "status": "ported",
+  "evidence": [
+   "static:switch_case"
+  ],
+  "note": "dte case"
+ },
+ {
+  "spec_id": "dte.command-editing.insert",
+  "status": "ported",
+  "evidence": [
+   "static:insert_mode"
+  ],
+  "note": "dte insert"
+ },
+ {
+  "spec_id": "dte.command-editing.replace",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "dte replace"
+ },
+ {
+  "spec_id": "dte.command-editing.indent",
+  "status": "ported",
+  "evidence": [
+   "static:indent"
+  ],
+  "note": "dte indent"
+ },
+ {
+  "spec_id": "dte.command-editing.wrap_paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "dte wrap-paragraph"
+ },
+ {
+  "spec_id": "dte.command-editing.macro",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "dte macro"
+ },
+ {
+  "spec_id": "dte.command-editing.select",
+  "status": "ported",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "dte select"
+ },
+ {
+  "spec_id": "dte.command-editing.unselect",
+  "status": "ported",
+  "evidence": [
+   "static:collapse_selection"
+  ],
+  "note": "dte unselect"
+ },
+ {
+  "spec_id": "dte.command-external.exec",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": "dte exec"
+ },
+ {
+  "spec_id": "dte.command-external.compile",
+  "status": "ported",
+  "evidence": [
+   "typable:make"
+  ],
+  "note": "dte compile"
+ },
+ {
+  "spec_id": "dte.command-other.repeat",
+  "status": "ported",
+  "evidence": [
+   "static:repeat_last_motion"
+  ],
+  "note": "dte repeat"
+ },
+ {
+  "spec_id": "dte.command-other.toggle",
+  "status": "ported",
+  "evidence": [
+   "typable:toggle-option"
+  ],
+  "note": "dte toggle"
+ },
+ {
+  "spec_id": "vis.operators.c",
+  "status": "ported",
+  "evidence": [
+   "static:change_selection"
+  ],
+  "note": "vis c"
+ },
+ {
+  "spec_id": "vis.operators.d",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "vis d"
+ },
+ {
+  "spec_id": "vis.operators.item",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "vis <"
+ },
+ {
+  "spec_id": "vis.operators.item_2",
+  "status": "ported",
+  "evidence": [
+   "static:indent"
+  ],
+  "note": "vis >"
+ },
+ {
+  "spec_id": "vis.operators.y",
+  "status": "ported",
+  "evidence": [
+   "static:yank"
+  ],
+  "note": "vis y"
+ },
+ {
+  "spec_id": "vis.operators.item_3",
+  "status": "ported",
+  "evidence": [
+   "static:format_selections"
+  ],
+  "note": "vis ="
+ },
+ {
+  "spec_id": "vis.operators.gu",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_lowercase"
+  ],
+  "note": "vis gu"
+ },
+ {
+  "spec_id": "vis.operators.gu_2",
+  "status": "ported",
+  "evidence": [
+   "static:switch_to_uppercase"
+  ],
+  "note": "vis gU"
+ },
+ {
+  "spec_id": "vis.operators.g",
+  "status": "ported",
+  "evidence": [
+   "static:switch_case"
+  ],
+  "note": "vis g~"
+ },
+ {
+  "spec_id": "vis.operators.j",
+  "status": "ported",
+  "evidence": [
+   "static:join_selections"
+  ],
+  "note": "vis J"
+ },
+ {
+  "spec_id": "vis.operators.p",
+  "status": "ported",
+  "evidence": [
+   "static:paste_after"
+  ],
+  "note": "vis p"
+ },
+ {
+  "spec_id": "vis.operators.p_2",
+  "status": "ported",
+  "evidence": [
+   "static:paste_before"
+  ],
+  "note": "vis P"
+ },
+ {
+  "spec_id": "vis.motions.0",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "vis 0"
+ },
+ {
+  "spec_id": "vis.motions.b",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "vis b"
+ },
+ {
+  "spec_id": "vis.motions.b_2",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_long_word_start"
+  ],
+  "note": "vis B"
+ },
+ {
+  "spec_id": "vis.motions.item",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "vis $"
+ },
+ {
+  "spec_id": "vis.motions.e",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_end"
+  ],
+  "note": "vis e"
+ },
+ {
+  "spec_id": "vis.motions.e_2",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_long_word_end"
+  ],
+  "note": "vis E"
+ },
+ {
+  "spec_id": "vis.motions.f",
+  "status": "ported",
+  "evidence": [
+   "static:find_prev_char"
+  ],
+  "note": "vis F"
+ },
+ {
+  "spec_id": "vis.motions.f_2",
+  "status": "ported",
+  "evidence": [
+   "static:find_next_char"
+  ],
+  "note": "vis f"
+ },
+ {
+  "spec_id": "vis.motions.item_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_first_nonwhitespace"
+  ],
+  "note": "vis ^"
+ },
+ {
+  "spec_id": "vis.motions.gg",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "vis gg"
+ },
+ {
+  "spec_id": "vis.motions.g_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "vis G"
+ },
+ {
+  "spec_id": "vis.motions.gj",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_down"
+  ],
+  "note": "vis gj"
+ },
+ {
+  "spec_id": "vis.motions.gk",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_up"
+  ],
+  "note": "vis gk"
+ },
+ {
+  "spec_id": "vis.motions.h",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "vis h"
+ },
+ {
+  "spec_id": "vis.motions.h_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": "vis H"
+ },
+ {
+  "spec_id": "vis.motions.j",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "vis j"
+ },
+ {
+  "spec_id": "vis.motions.k",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "vis k"
+ },
+ {
+  "spec_id": "vis.motions.l",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "vis l"
+ },
+ {
+  "spec_id": "vis.motions.l_2",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_bottom"
+  ],
+  "note": "vis L"
+ },
+ {
+  "spec_id": "vis.motions.item_3",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "vis %"
+ },
+ {
+  "spec_id": "vis.motions.item_4",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "vis }"
+ },
+ {
+  "spec_id": "vis.motions.n",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "vis N"
+ },
+ {
+  "spec_id": "vis.motions.n_2",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "vis n"
+ },
+ {
+  "spec_id": "vis.motions.item_10",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "vis {"
+ },
+ {
+  "spec_id": "vis.motions.item_12",
+  "status": "ported",
+  "evidence": [
+   "static:repeat_last_motion"
+  ],
+  "note": "vis ;"
+ },
+ {
+  "spec_id": "vis.motions.item_14",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection_detect_word_boundaries"
+  ],
+  "note": "vis #"
+ },
+ {
+  "spec_id": "vis.motions.item_15",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection_detect_word_boundaries"
+  ],
+  "note": "vis *"
+ },
+ {
+  "spec_id": "vis.motions.t",
+  "status": "ported",
+  "evidence": [
+   "static:till_prev_char"
+  ],
+  "note": "vis T"
+ },
+ {
+  "spec_id": "vis.motions.t_2",
+  "status": "ported",
+  "evidence": [
+   "static:find_till_char"
+  ],
+  "note": "vis t"
+ },
+ {
+  "spec_id": "vis.motions.item_16",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": "vis ?"
+ },
+ {
+  "spec_id": "vis.motions.item_17",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "vis /"
+ },
+ {
+  "spec_id": "vis.motions.w",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "vis w"
+ },
+ {
+  "spec_id": "vis.motions.w_2",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_long_word_start"
+  ],
+  "note": "vis W"
+ },
+ {
+  "spec_id": "vis.text-objects.w",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "vis w"
+ },
+ {
+  "spec_id": "vis.text-objects.w_2",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_long_word_start"
+  ],
+  "note": "vis W"
+ },
+ {
+  "spec_id": "vis.text-objects.s",
+  "status": "ported",
+  "evidence": [
+   "static:select_regex"
+  ],
+  "note": "vis s"
+ },
+ {
+  "spec_id": "vis.text-objects.p",
+  "status": "ported",
+  "evidence": [
+   "static:paste_after"
+  ],
+  "note": "vis p"
+ },
+ {
+  "spec_id": "vis.text-objects.gn",
+  "status": "ported",
+  "evidence": [
+   "static:add_selection_to_next_match"
+  ],
+  "note": "vis gn"
  }
 ]
