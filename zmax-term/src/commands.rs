@@ -495,6 +495,7 @@ impl MappableCommand {
         split_selection_on_newline, "Split selection on newlines",
         merge_selections, "Merge selections",
         merge_consecutive_selections, "Merge consecutive selections",
+        save_as_prompt, "Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs)",
         select_first_last_chars, "Keep the first and last character of each selection (kakoune A-S)",
         copy_indent, "Copy the main selection's indent to the other selected lines (kakoune A-&)",
         set_numbered_bookmark, "Set a numbered bookmark on this line (ne SetBookmark)",
@@ -11246,6 +11247,26 @@ fn merge_consecutive_selections(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id).clone().merge_consecutive_ranges();
     doc.set_selection(view.id, selection);
+}
+
+/// micro `SaveAs`, mcedit `SaveAs`, ne `SaveAs`: ask for the name to write to.
+///
+/// zmax already had `:saveas <path>`, which takes the name as an argument —
+/// that is the whole difference these editors' rows were mapped partial on. This
+/// opens the command line already holding `saveas ` plus the current path, so
+/// the name can be edited and confirmed the way those editors prompt for it.
+fn save_as_prompt(cx: &mut Context) {
+    let current = doc!(cx.editor)
+        .path()
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    typed::command_mode(cx);
+    let line = format!("saveas {current}");
+    cx.callback.push(Box::new(move |compositor, cx| {
+        if let Some(prompt) = compositor.find::<Prompt>() {
+            prompt.set_line(line, cx.editor);
+        }
+    }));
 }
 
 /// kakoune `<a-S>`: keep the first and last character of each selection, which
