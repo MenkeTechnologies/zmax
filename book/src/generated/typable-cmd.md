@@ -1577,10 +1577,6 @@
 | `:xmapclear` | Remove every visual-mode mapping (vim :xmapclear). |
 | `:smapclear` | Remove every select-mode mapping (vim :smapclear). |
 | `:omapclear` | Remove every operator-pending mapping (vim :omapclear). |
-| `:cmap` | Map a key on the command line (vim :cmap). |
-| `:cnoremap` | Non-recursive command-line mapping (vim :cnoremap). |
-| `:cunmap` | Remove a command-line mapping (vim :cunmap). |
-| `:cmapclear` | Remove every command-line mapping (vim :cmapclear). |
 | `:map` | Map a key in normal+select mode: :map <leader>w :write<CR>. With no rhs, list the mappings. |
 | `:nmap` | Map a key in normal mode (vim :nmap). |
 | `:imap` | Map a key in insert mode (vim :imap). |
