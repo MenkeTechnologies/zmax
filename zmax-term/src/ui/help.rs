@@ -785,6 +785,679 @@ const TOPICS: &[(&str, &str)] = &[
       :browse <cmd> runs a command that wants a file name and picks the file\n\
       with the file picker.",
     ),
+    (
+        "Text statistics",
+        "Measurements that report rather than rewrite, so they are safe to run on\n\
+      anything.\n\n\
+      :wc            line, word and character counts, and the selection's\n\
+      :stats         count, sum, mean, min and max of the numbers selected\n\
+      :sum-column N  sum the Nth whitespace field down the selection\n\
+      :count-matches how many matches (and matching lines) a regex has\n\
+      :uniq-count    the lines collapsed to 'count line', by frequency\n\
+      :count-unique :unique-words :bases :crc32 :character-info",
+    ),
+    (
+        "Arithmetic over lines",
+        "Each of these treats every selected line as a number.\n\n\
+      :offset N     add N (negative subtracts)\n\
+      :scale F      multiply by a factor\n\
+      :clamp A B    hold each value inside a range\n\
+      :abs          absolute value\n\
+      :to-fixed N   round to N decimal places\n\
+      :running-total :running-max :running-min   cumulative down the column\n\
+      :increment-numbers N   add N to every integer in the selection instead\n\
+      :pad-numbers W         zero-pad every integer to W digits",
+    ),
+    (
+        "Fields & columns",
+        "Whitespace-separated data without leaving the buffer.\n\n\
+      :field N        keep the Nth field of each line (awk '{print $N}')\n\
+      :sum-fields     replace each line with its row total\n\
+      :avg-fields :max-fields :min-fields :range-fields   the other row summaries\n\
+      :transpose-grid rows become columns\n\
+      :align          align on a delimiter (or /regex/) so it shares a column\n\
+      :sort-by-field :sort-numeric-fields :sort-columns   see Sorting text",
+    ),
+    (
+        "Line surgery",
+        ":head N / :tail N     keep the first or last N lines of the selection\n\
+      :sample N            keep N random lines, in order\n\
+      :shuffle             reorder them randomly\n\
+      :dedup               drop every duplicate, keeping the first\n\
+      :dedup-adjacent      collapse runs of identical lines (uniq)\n\
+      :rotate-lines N      rotate the block by N\n\
+      :repeat-lines N      repeat each line N times\n\
+      :number-lines        prepend line numbers\n\
+      :seq A B [step]      insert a sequence instead of editing one",
+    ),
+    (
+        "Prose & typography",
+        ":smart-quotes          straight quotes to curly ones, in context\n\
+      :typographic-dashes   --- to an em dash, -- to an en dash, ... to an ellipsis\n\
+      :de-typography        all of that back to ASCII punctuation\n\
+      :unwrap-paragraphs    undo hard wrapping within each paragraph\n\
+      :reflow               hard-wrap the selection to a width\n\
+      :capitalize-lines :swapcase :cycle-case   letter case\n\
+      :quote-lines / :unquote-lines             quote each line",
+    ),
+    (
+        "Markdown authoring",
+        ":md-table            realign a pipe table and rebuild its separator row\n\
+      :code-fence [lang]  wrap the selection in a fenced code block\n\
+      :checkbox-list      turn the lines into a '- [ ]' task list\n\
+      :ordered-list       number them instead\n\
+      :markdown-link      make a link out of the selection\n\
+      :linkify            wrap bare URLs in link syntax\n\
+      :strip-markdown-links :strip-emphasis     the inverse\n\
+      :slugify-lines / :deslugify               headings to anchors and back",
+    ),
+    (
+        "HTML & templates",
+        ":emmet expands the emmet abbreviation before the cursor, which is the\n\
+      fastest way to write a block of markup.\n\n\
+      :wrap-tag <tag>     wrap each selection in a tag pair\n\
+      :wrap-with <text>   the general form, for anything else\n\
+      :to-html-list       lines to a <ul>; :from-html-list takes it back\n\
+      :csv-to-html-table  a table from CSV\n\
+      :strip-html-comments :unicode-escape :de-typography  tidy the result",
+    ),
+    (
+        "Encoding & escapes",
+        ":encoding              the buffer's character encoding\n\
+      :line-ending          LF or CRLF; :dos2unix and :unix2dos convert\n\
+      :base32-encode / :base32-decode\n\
+      :unicode-escape / :unicode-unescape   non-ASCII to \\u{…} and back\n\
+      :to-binary / :from-binary\n\
+      :dec-to-hex / :hex-to-dec / :bases\n\
+      :human-bytes          a byte count as 1.5 KiB\n\
+      :ordinal              1 to 1st, 22 to 22nd",
+    ),
+    (
+        "Ciphers & checksums",
+        ":caesar N       shift the letters by N (13 is ROT13, negatives go back)\n\
+      :rot47         rotate every printable ASCII character; self-inverse\n\
+      :morse-encode / :morse-decode\n\
+      :nato          spell the selection in the NATO alphabet\n\
+      :crc32         the checksum of the selection, in hex and decimal\n\
+      :encrypt / :decrypt   real encryption, with an age passphrase",
+    ),
+    (
+        "Inserting boilerplate",
+        ":uuid              a random UUID v4 at each cursor\n\
+      :lorem [N]        N words of placeholder text\n\
+      :date :datetime :timestamp   today, now, and the epoch\n\
+      :seq A B          a run of integers\n\
+      :insert-char      a character by name or code point\n\
+      :insert-file / :insert-file-literally / :insert-buffer\n\
+      :insert-output    a command's output before each selection\n\
+      :bat-template     a minimal batch-file skeleton",
+    ),
+    (
+        "Aligning & whitespace",
+        ":align [/re/]        line the selection up on a delimiter\n\
+      :retab :tabify :untabify    between tabs and spaces\n\
+      :indent-style        what this buffer uses\n\
+      :just-one-space :fixup-whitespace :cycle-spacing\n\
+      :squeeze-blank-lines :remove-blank-lines :trim-lines\n\
+      :pad-left / :pad-right N    pad to a width\n\
+      :center-region :reflow      centre and wrap",
+    ),
+    (
+        "Keeping & dropping lines",
+        ":filter <re>         keep only the lines matching (emacs keep-lines)\n\
+      :reject <re>        drop them instead (flush-lines)\n\
+      :copy-matching-lines / :kill-matching-lines   to the kill ring\n\
+      :count-matches      how many there are, without touching anything\n\
+      :global / :vglobal  run an Ex command on matching / non-matching lines\n\
+      :multi-occur        list matches across buffers",
+    ),
+    (
+        "Renaming & finding references",
+        ":rename-word     rename every whole-word use of the symbol here, in this\n\
+                       buffer, without a language server\n\
+      :grep-word      search the project for the word under the cursor\n\
+      :search-project search the project with ripgrep, jumpable in Run\n\
+      :project-replace  regex replace across every matching workspace file\n\
+      :Subvert        case-preserving substitute — foo/Foo/FOO all at once\n\
+      :todos          every TODO, FIXME, HACK, XXX, BUG and NOTE in the tree",
+    ),
+    (
+        "Transposing",
+        ":transpose-chars    swap the two characters around the cursor\n\
+      :transpose-words   the two words\n\
+      :transpose-regions the two selections\n\
+      :transpose-grid    a whitespace grid, rows for columns\n\
+      :rev               reverse the characters of each line\n\
+      :reverse           reverse the order of the lines",
+    ),
+    (
+        "The argument list",
+        "vim's list of files to work through.\n\n\
+      :args         show it, or set it from a glob\n\
+      :argadd :argedit :argdelete :argdedupe   change it\n\
+      :next :previous :first :last :argument   move through it\n\
+      :wnext :wprevious                        write, then move\n\
+      :argdo <cmd>  run a command over every file in it\n\
+      :snext :sprevious :srewind :slast :sargument  the split versions\n\
+      :all          open a window for each",
+    ),
+    (
+        "The buffer list",
+        ":buffers          list them (:ls and :files are the same command)\n\
+      :buffer N         go to one by number or name\n\
+      :bfirst :blast :bmodified :balt   go by position or state\n\
+      :badd :ball       add one, or open a window for each\n\
+      :bufdo <cmd>      run a command in every buffer\n\
+      :sbuffer :sbnext :sbprevious :sbfirst :sblast :sbmodified   in a split\n\
+      :buffer-close :buffer-close-others :buffer-close-all",
+    ),
+    (
+        "The quickfix list",
+        "Filled by :make, :compile, :grep and friends.\n\n\
+      :cnext :cprevious :cfirst :clast :cc N     move through it\n\
+      :cnfile :cpfile :cabove :cbelow :cbefore :cafter   by file and position\n\
+      :copen :cclose :cbottom :clist             the window and the listing\n\
+      :cdo / :cfdo <cmd>    run a command at every entry, or once per file\n\
+      :cbuffer :cgetbuffer :cexpr :cgetexpr :caddexpr :cfile :cgetfile\n\
+      :caddfile             fill it from a buffer, an expression or a file\n\
+      :colder :cnewer :chistory   the older lists are kept",
+    ),
+    (
+        "The location list",
+        "The same commands, per window: :lnext :lprevious :lfirst :llast :ll\n\
+      :lnfile :lNfile :lpfile :labove :lbelow :lbefore :lafter\n\
+      :lopen :lclose :lbottom :llist\n\
+      :ldo :lfdo\n\
+      :lbuffer :lgetbuffer :lexpr :lgetexpr :laddexpr :lfile :lgetfile\n\
+      :laddfile\n\
+      :lolder :lnewer :lhistory\n\n\
+      :lmake and :lgrep fill it where :make and :grep fill the quickfix list.",
+    ),
+    (
+        "Grep commands",
+        ":grep / :grepadd       run the external grep program into the quickfix list\n\
+      :lgrep / :lgrepadd    the same, into the location list\n\
+      :vimgrep / :vimgrepadd   search with the editor's own engine\n\
+      :lvimgrep / :lvimgrepadd\n\
+      :helpgrep / :lhelpgrep   search the help itself\n\
+      :search-project        ripgrep, straight into the Run console\n\
+      :grep-word             the word under the cursor, without typing it",
+    ),
+    (
+        "The tag stack",
+        ":tag <name>     jump to a tag; :tselect and :tjump choose between matches\n\
+      :tnext :tprevious :tfirst :tlast   walk the matches\n\
+      :pop            back up the stack; :tags shows how deep it is\n\
+      :stag :stselect :stjump            the same, in a split\n\
+      :ptag :ptselect :ptjump :ptnext :ptprevious :ptfirst :ptlast   in the\n\
+                     preview window (:pclose shuts it)\n\
+      :ltag           put the matches in the location list\n\
+      :regenerate-tags rebuilds the index",
+    ),
+    (
+        "Searching includes & definitions",
+        "vim's search through included files, useful in C-like trees.\n\n\
+      :ilist / :isearch    list or search identifiers in this file and its\n\
+                           includes; :ijump jumps to one, :isplit opens it in\n\
+                           a split\n\
+      :dlist / :dsearch / :djump / :dsplit   the same for macro definitions\n\
+      :checkpath           report which included files could not be found",
+    ),
+    (
+        "Tabs",
+        ":tabnew :tabclose :tabonly           open, close, keep one\n\
+      :tabnext :tabprevious :tabfirst :tablast :tab-switch   move between them\n\
+      :tabmove :tab-rename                 reorder and name\n\
+      :tabs                                list them\n\
+      :tabdo <cmd>                         run a command in each\n\
+      :tabfind                             open a file from the path in a tab\n\
+      :tab-undo :tab-recent :tab-bar-history-back :tab-bar-history-forward\n\
+                                           the tab bar's own history",
+    ),
+    (
+        "The preview window",
+        ":pedit <file>   open a file in the preview window without leaving this one\n\
+      :pbuffer        preview a buffer instead\n\
+      :psearch        preview the first match for a pattern in the include path\n\
+      :ptag :ptjump :ptselect :ptnext :ptprevious :ptfirst :ptlast :ppop\n\
+                      the tag commands, aimed at the preview window\n\
+      :pclose         shut it",
+    ),
+    (
+        "Window commands",
+        ":vsplit :hsplit :vsplit-new :hsplit-new   split, with or without a file\n\
+      :close :only                             close this one, or the rest\n\
+      :wincmd <key>                            any C-w command by name\n\
+      :windo <cmd>                             run a command in every window\n\
+      :resize :winsize :winpos                 size and position\n\
+      :aboveleft :belowright :leftabove :rightbelow :topleft :botright\n\
+                     modifiers that place the next split\n\
+      :vertical :horizontal :tab               and how it is oriented",
+    ),
+    (
+        "Registers & the clipboard",
+        ":registers          what every register holds\n\
+      :set-register / :clear-register\n\
+      :execute-register  run a register as a macro\n\
+      :kbd <keys> [reg]  put the key sequence a description denotes into a\n\
+                         register, so @reg replays it\n\
+      :clipboard-yank :clipboard-paste-after :clipboard-paste-before\n\
+      :clipboard-paste-replace         the system clipboard\n\
+      :primary-clipboard-yank and the primary-* family   X11's primary selection\n\
+      :yank-join :clipboard-yank-join  yank the lines joined into one\n\
+      :show-clipboard-provider         which tool is doing the work",
+    ),
+    (
+        "Pipes & embedded pipelines",
+        ":pipe and :pipe-to send each selection through a shell command, replacing\n\
+      it or ignoring the output.  :insert-output and :append-output put a\n\
+      command's output around the selection instead.\n\n\
+      The xpipe family does the same through the compiled-in interpreters, in\n\
+      process, with no subprocess at all: :xpipe filters each selection through\n\
+      a chain of stages, :xpipe-to ignores the output, and :xpipe-insert /\n\
+      :xpipe-append run a stage with no input and place what it prints.\n\
+      :shell-quote quotes a string safely before any of that.",
+    ),
+    (
+        "Vim script",
+        ":let :const :unlet :lockvar :unlockvar     variables\n\
+      :echo :echomsg :echoerr :echohl           output\n\
+      :eval :call :execute :defer               evaluation\n\
+      :source :runtime :scriptnames :scriptencoding   files of script\n\
+      :command :delcommand :comclear            user commands\n\
+      :redir                                    capture messages to a register\n\
+                                                or a file\n\
+      :messages                                 what has been printed\n\n\
+      :vim runs a line through the embedded vimscript interpreter directly.",
+    ),
+    (
+        "Script debugging & profiling",
+        ":debug <cmd>    run an Ex command under the script debugger\n\
+      :breakadd :breakdel :breaklist   breakpoints in script\n\
+      :debuggreedy    take debugger commands from the script itself\n\
+      :profile        start, func, file, pause, stop, dump\n\
+      :profdel        stop profiling something\n\
+      :syntime        profile syntax highlighting: on, off, clear, report\n\
+      :checkhealth    the health checks — clipboard, servers, grammars\n\
+      :log            zmax's own log file, read-only",
+    ),
+    (
+        "Autocommands",
+        ":autocmd defines one, :augroup groups them so they can be cleared as a\n\
+      set, and :doautocmd / :doautoall fire them by hand.  :noautocmd runs a\n\
+      command with none of them firing, which is the way to avoid a loop.\n\n\
+      :editorconfig applies the nearest .editorconfig to the buffer — the same\n\
+      job, done by a file instead of a script.",
+    ),
+    (
+        "Command modifiers",
+        "Words that go before another Ex command and change how it runs.\n\n\
+      :silent :unsilent :verbose      how much it says\n\
+      :confirm                        ask before anything is lost\n\
+      :hide                           do not warn about an unwritten buffer\n\
+      :keepalt :keepjumps :keepmarks :keeppatterns   leave the lists alone\n\
+      :lockmarks                      keep marks where they are\n\
+      :noswapfile                     no swap file for this one\n\
+      :browse                         pick the file with the file picker\n\
+      :sandbox                        refuse shelling out and writing files",
+    ),
+    (
+        "Ex line commands",
+        "The line-range commands, spelled out.\n\n\
+      :print :number :list :print-line-number   show lines\n\
+      :delete-lines :yank-lines :copy-lines :move-lines\n\
+      :indent-lines :dedent-lines\n\
+      :put :iput      put a register back\n\
+      :join           join the lines; :join-with uses a separator\n\
+      :normal <keys>  run normal-mode keys over the range\n\
+      :substitute     the classic; :smagic and :snomagic set the pattern rules",
+    ),
+    (
+        "Spelling word lists",
+        ":spellgood adds a word to the personal dictionary and :spellwrong marks it\n\
+      wrong; :spellrare marks it rare and :spellundo takes an entry back.\n\
+      :spelldump lists the whole dictionary, :spellinfo says where the files\n\
+      came from, and :mkspell compiles a word list into one.\n\
+      :spellrepall repeats the last correction everywhere in the buffer.",
+    ),
+    (
+        "Dictionaries & translation",
+        ":dictionary-search <word>    look a word up\n\
+      :dictionary-tooltip-mode    look up what is under the cursor as you move\n\
+      :Thesaurus                  pick a synonym\n\
+      :translate                  translate the word under the cursor, or given\n\
+                                  text, between the configured languages\n\
+      :translate-set-languages :translate-reverse   which way round\n\
+      :youdao-lookup              the Youdao dictionary",
+    ),
+    (
+        "Japanese & Chinese text",
+        ":migemo-search        turn romaji into a regex that matches Japanese\n\
+      :romaji-to-kana      romaji to hiragana\n\
+      :kana-to-katakana / :katakana-to-kana\n\
+      :chinese-conv-simplified / :chinese-conv-traditional\n\
+      :chinese-pinyin      the pinyin reading of the region",
+    ),
+    (
+        "Input methods",
+        ":list-input-methods and :describe-input-method say what is available;\n\
+      :activate-transient-input-method turns one on for a single insertion.\n\
+      :quail-translation-keymap and :quail-show-key explain what a key will\n\
+      produce in the active method.\n\n\
+      :modify-category-entry :standard-display-8bit :visual-order-cursor-movement\n\
+      cover the older, more awkward corners of the same problem.",
+    ),
+    (
+        "Characters & fonts",
+        ":character-info      everything about the character under the cursor\n\
+      :insert-char        insert one by name or code point\n\
+      :digraphs           vim's two-key sequences\n\
+      :unicode-fonts      a block sample sheet, to see what the terminal font\n\
+                          actually covers\n\
+      :unicode-fonts-char one character in every font that has it\n\
+      :strip-invisible    remove what should not have been there",
+    ),
+    (
+        "Files on disk",
+        ":write-region and :append-to-file write part of the buffer somewhere else;\n\
+      :read and :insert-file bring a file in (:insert-file-literally without\n\
+      any decoding).\n\n\
+      :delete-file :mkdir :copy-directory :list-directory\n\
+      :chmod-x :set-file-modes :make-symbolic-link :add-name-to-file\n\
+      :set-visited-file-name    keep the text, change what it writes to\n\
+      :sudo-edit / :sudo-write  when the file belongs to root\n\
+      :RevealInFinder           show it in the OS file manager",
+    ),
+    (
+        "Directories & the environment",
+        ":change-current-directory moves the editor; :show-directory says where it\n\
+      is.  :push-directory :pop-directory :show-directory-stack keep a stack,\n\
+      as the shell does.\n\n\
+      :dirs asks the shell where it actually is and resynchronises, and\n\
+      :shell-dirtrack-mode / :dirtrack-mode keep that automatic.\n\
+      :getenv / :setenv read and set variables for the editor and everything\n\
+      it starts.",
+    ),
+    (
+        "Scratch buffers",
+        ":Scratch opens an unnamed buffer, optionally in a language.  :new does the\n\
+      same in a split.\n\n\
+      :append-to-buffer :prepend-to-buffer :copy-to-buffer   move text into\n\
+      another buffer without a register\n\
+      :insert-buffer      the other direction\n\
+      :rename-buffer :rename-uniquely   naming\n\
+      :write-buffer-close write it and close it in one step",
+    ),
+    (
+        "Swap files & recovery",
+        ":preserve flushes the buffer to its swap file now; :recover replaces the\n\
+      buffer with what the swap file holds after a crash, and :swapname says\n\
+      which file that is.  :noswapfile runs one command without one.\n\n\
+      :checktime notices that a file changed underneath you, :reload rereads\n\
+      this buffer and :reload-all rereads every buffer.\n\
+      :ask-user-about-lock decides what happens when someone else has it.",
+    ),
+    (
+        "Sessions, views & state",
+        ":mksession writes the working directory and the buffer list to a file that\n\
+      :source restores; :mkview and :loadview do the same for one window's\n\
+      cursor and folds.  :mkvimrc and :mkexrc write the settings out.\n\n\
+      :wshada / :rshada carry the registers and every buffer's marks between\n\
+      runs, and :wundo / :rundo do it for the undo tree.\n\
+      :syncbind resynchronises scroll-bound windows.",
+    ),
+    (
+        "Local history",
+        ":LocalHistory picks a saved snapshot of this file and opens it — the\n\
+      editor keeps them itself, so it works on files that were never committed.\n\n\
+      :undolist lists the undo states, :undojoin makes the next change part of\n\
+      the last one, and :changes shows what changed where.\n\
+      :jumps and :clearjumps are the jump list; :RecentLocations is the same\n\
+      ring newest-first with context, and :history is the command line's.",
+    ),
+    (
+        "Git hunks & conflicts",
+        ":hunk-next :hunk-prev move between the gutter's hunks and :hunk-reset\n\
+      throws one away.\n\n\
+      :merge opens a three-pane view — ours, result, theirs — over a conflicted\n\
+      file.  :conflict-next / :conflict-prev walk the conflicts and\n\
+      :conflict-ours :conflict-theirs :conflict-both settle one.\n\n\
+      :git-stage / :git-unstage, :stash / :stash-pop, :update (write only if\n\
+      modified), :compare-ref (diff against any ref) and\n\
+      :vc-revision-other-window round it out.",
+    ),
+    (
+        "GDB & the gud layer",
+        ":gdb-breakpoints-buffer :gdb-threads-buffer :gdb-watch-buffer open the\n\
+      classic gud windows; :gdb-watch adds an expression and :gdb-var-delete\n\
+      removes one.  :gdb-save-window-configuration and\n\
+      :gdb-load-window-configuration keep the layout.\n\n\
+      :gud-def and :gud-call reach the underlying debugger directly, and\n\
+      :gud-tooltip-mode shows a value when the cursor rests on a name.\n\
+      :next-error :previous-error :first-error walk whatever produced the\n\
+      errors, with :next-error-follow-minor-mode and :next-error-select-buffer\n\
+      controlling which list that is.",
+    ),
+    (
+        "Language injection",
+        "A string can hold another language — SQL in Rust, HTML in JavaScript.\n\n\
+      :injections       the rules in force, defaults plus injections.toml\n\
+      :injection-info   what language the cursor is really in\n\
+      :inject-language  inject one into the string at point with a hint comment\n\
+      :edit-fragment    open the fragment in its own buffer, with its own\n\
+                        highlighting and its own language server\n\
+      :apply-fragment   write it back into the host string",
+    ),
+    (
+        "Tree-sitter inspection",
+        ":tree-sitter-scopes shows the scopes under the cursor, which is what theme\n\
+      work needs; :tree-sitter-highlight-name gives the one that decided the\n\
+      colour.  :tree-sitter-subtree prints the smallest subtree spanning the\n\
+      selection, and :tree-sitter-layers lists the parsers layered over the\n\
+      buffer.  :syntax reports what the buffer is being parsed as.",
+    ),
+    (
+        "Workspace trust",
+        "Language servers and workspace config do not run in an untrusted tree.\n\
+      :trust trusts this one, :workspace-trust does the same by name,\n\
+      :workspace-untrust revokes it and :workspace-exclude marks a tree that\n\
+      should never be asked about again.\n\n\
+      :lsp-health reports which servers are ready, initializing or absent and\n\
+      what each supports; :lsp-workspace-command runs a server's own command;\n\
+      :checkhealth checks the rest of the editor.",
+    ),
+    (
+        "Configuration files",
+        ":config-open opens config.toml and :config-open-workspace the one for this\n\
+      tree; :init-open opens the init script and :log-open the log.\n\
+      :config-reload applies changes without restarting.\n\n\
+      :options opens Preferences at the Settings tab, :set / :setlocal /\n\
+      :setglobal change one option, and :set-option :get-option :toggle-option\n\
+      do it by name.  :customize :customize-variable :customize-group\n\
+      :customize-apropos :customize-unsaved browse the same settings.",
+    ),
+    (
+        "Themes from the command line",
+        ":theme <name>       switch; :theme-next :theme-prev :theme-toggle cycle\n\
+      :Colors             pick one with the fuzzy finder\n\
+      :describe-theme     what a theme sets\n\
+      :disable-theme      back to the default\n\
+      :customize-face :set-face-foreground :set-face-background  one face\n\
+      :highlight          define a face outright\n\
+      :set-fringe-style :text-scale-pinch   the frame around the text\n\n\
+      Preferences ▸ Color Scheme does the same with a preview.",
+    ),
+    (
+        "Minor modes worth knowing",
+        ":nav-flash-mode           flash the cursor line after a jump\n\
+      :vim-empty-lines-mode    draw vim's ~ past the end of the buffer\n\
+      :blink-cursor-mode :selectric-mode   a blinking cursor, a typewriter click\n\
+      :repeat-mode             repeat a multi-key command with its last key\n\
+      :eldoc-mode              signature hints where the cursor is\n\
+      :completion-preview-mode the top candidate shown inline as you type\n\
+      :icomplete-mode :fido-mode   candidates on the prompt line while typing\n\
+      :rainbow-mode            paint colour literals in the colour they name\n\
+      :color-identifiers-mode  colour only what the grammar calls a variable\n\
+      :cua-mode                C-x cut, C-c copy, C-v paste",
+    ),
+    (
+        "Lisp editing",
+        "parinfer keeps parentheses and indentation in agreement, so one of them can\n\
+      be edited and the other follows.\n\n\
+      :parinfer-smart-mode   indentation and parens both, which is the default\n\
+      :parinfer-indent-mode  indentation decides the parens\n\
+      :parinfer-paren-mode   parens decide the indentation\n\
+      :parinfer-mode         toggle between smart and paren\n\
+      :parinfer-off          leave the text entirely alone",
+    ),
+    (
+        "The fzf.vim surface",
+        "Beyond :Files :Buffers :Rg :Lines :BLines :Tags :BTags :Commits :Maps\n\
+      :Helptags and :Snippets:\n\n\
+      :GFiles      git-tracked files only\n\
+      :Locate      locate(1)\n\
+      :History     recently opened files\n\
+      :Filetypes   pick a language and set the buffer's\n\
+      :BCommits    commits touching this file\n\
+      :Jumps :Marks :Windows   the jumplist, the marks, the open windows\n\
+      :Colors :Commands        themes and every : command\n\
+      :Todo        TODO markers across the tree\n\
+      :LocalHistory  the snapshots of this file",
+    ),
+    (
+        "Jupyter notebooks",
+        ":ein-notebooks lists a Jupyter server's notebooks over its REST API and\n\
+      :ein-open opens one.  :ein-kernels lists the running kernels, with\n\
+      :ein-kernel-start and :ein-kernel-stop controlling them.",
+    ),
+    (
+        "Language runtimes",
+        ":nvm-list and :nvm-use put an nvm-installed node on PATH for this editor\n\
+      session and everything it starts; :npm-scripts lists what package.json\n\
+      defines and :npm-run runs one.\n\n\
+      :conda-env-list :conda-activate :conda-deactivate :conda-env-current do\n\
+      the same for conda environments.",
+    ),
+    (
+        "Elasticsearch",
+        ":es-health reports cluster health, :es-indices and :es-nodes list what is\n\
+      there, :es-search runs a Lucene query against an index and :es-request\n\
+      sends a raw method, path and body.  The URL comes from ES_URL, or\n\
+      localhost:9200.",
+    ),
+    (
+        "Reference lookup",
+        ":Man <page>      a man page in the run console\n\
+      :dash-at-point   look the term up in Dash or Zeal\n\
+      :dash-at-point-with-docset / :dash-docsets   pick which docset\n\
+      :ietf-docs-open  an RFC or draft by name, or the word under the cursor\n\
+      :bat-cmd-help    help for a batch-file command\n\
+      :apropos         the editor's own commands and settings\n\
+      :exusage :viusage  vim's summary of Ex and Normal mode\n\
+      :helptags :helpclose   build the help index, shut the help window",
+    ),
+    (
+        "News & aggregators",
+        ":hackernews [feed]   top, new, best, ask, show or job, over the HN API\n\
+      :lobsters            the lobste.rs front page\n\
+      :reddit <sub>        a subreddit over the public JSON API;\n\
+                           :reddit-comments opens a thread\n\
+      :twitch-streams :twitch-search :twitch-open   live streams\n\
+      :streamlink          open a stream in a player\n\
+      :search-engine       search with a configured engine",
+    ),
+    (
+        "Ambient information",
+        ":weather and :weather-quick  a forecast, from OpenWeatherMap with a key or\n\
+                                   wttr.in without one\n\
+      :sun-times                  sunrise, sunset, solar noon and day length\n\
+      :uptime                     how long this editor has been running\n\
+      :wakatime                   today's coding time from the wakatime CLI\n\
+      :wakatime-summary :wakatime-dashboard :wakatime-heartbeat",
+    ),
+    (
+        "Dictation",
+        ":whisper-record records from the microphone and transcribes it with\n\
+      whisper.cpp; :whisper-file does the same for a file already on disk.\n\
+      :whisper-model selects or lists the model and :whisper-language sets the\n\
+      language it should expect.",
+    ),
+    (
+        "The browser bridge",
+        ":edit-server-start runs the Edit with Emacs server, so a textarea in the\n\
+      browser can be edited here.  :edit-server-pending lists the requests\n\
+      waiting, :edit-server-take claims one, :edit-server-finish sends the text\n\
+      back and :edit-server-stop shuts the server down.",
+    ),
+    (
+        "Timestamped notes",
+        ":denote creates an IDENTIFIER--title__keywords.org note and opens it, which\n\
+      makes the file name carry the metadata.  :denote-link inserts a link to\n\
+      another note, or lists them when given no argument.",
+    ),
+    (
+        "Thumbnails & media",
+        ":thumbs-mode shows a directory's images as a grid of labelled thumbnails.\n\
+      :image-mode-mark-file and :image-mode-unmark-file mark the ones worth\n\
+      keeping, and :image-mode-copy-file-name-as-kill puts a name on the kill\n\
+      ring.  :yank-media saves the clipboard's image next to the buffer and\n\
+      inserts the reference the language uses for it.",
+    ),
+    (
+        "Language modes",
+        ":set-language sets what the buffer is parsed and completed as, and\n\
+      :filetype reports it; :Filetypes picks one with the fuzzy finder.\n\n\
+      Some languages have their own command: :apache-mode :cfengine-mode\n\
+      :jr-mode :kivy-mode, and :text-mode / :normal-mode for the plain cases.",
+    ),
+    (
+        "More language runners",
+        ":factor-eval :factor-run-file :factor-listener :factor-vocab-words   Factor\n\
+      :mercury-compile :mercury-run                                       Mercury\n\
+      :powershell-run :powershell-eval :powershell-regexp-to-regex        PowerShell\n\
+      :bat-run :bat-labels :bat-template                                  batch files\n\
+      :sailfish-build :sailfish-install :sailfish-deploy                  Sailfish OS\n\n\
+      The compiled-in interpreters are a separate topic — see Embedded\n\
+      scripting — as are :perldo :rubydo :luado :pydo :py3do, which run a line\n\
+      of their language over every line of the buffer.",
+    ),
+    (
+        "Printing",
+        ":lpr-buffer sends the buffer to the printer and :lpr-region sends only the\n\
+      selection.  :print :number :list write lines to the message area instead,\n\
+      which is what to use when the destination is a terminal recording.",
+    ),
+    (
+        "Leaving & coming back",
+        ":quit :quit-all :write-quit :write-all :write-quit-all   the usual ways out\n\
+      :cquit           exit with a failing status, for git and friends\n\
+      :exit            write if modified, then quit\n\
+      :detach          leave the TUI and return to the shell, with the editor\n\
+                       still running in the background\n\
+      :reopen          reopen the file that was just closed\n\
+      :restart         restart the editor in place\n\n\
+      C-z (C-x C-z) suspends and hands the terminal back to the shell; fg\n\
+      brings it round again.",
+    ),
+    (
+        "The frame",
+        ":zen toggles the IDE workbench, which is the focus mode.\n\n\
+      :redraw :redrawstatus :redrawtabline :mode   force a repaint\n\
+      :winsize :winpos                             the editor area, in cells\n\
+      :text-scale-pinch                            zoom\n\
+      :sleep :noop                                 wait, and do nothing, which\n\
+                                                   scripts occasionally need\n\
+      :gui                                         fails; zmax is a TUI",
+    ),
+    (
+        "Vim packages & runtime files",
+        ":packadd loads a package from the pack directory now and :packloadall loads\n\
+      every one; :packdel removes one and :packupdate updates it.\n\
+      :package-menu-filter-upgradable narrows the list to what has an update.\n\n\
+      :runtime sources a file from every directory on the runtime path and\n\
+      :source runs one by name; :scriptnames lists what has been sourced.\n\
+      zmax's own native plugins are :zmax-native — see the Packages topic.",
+    ),
 ];
 
 pub struct HelpPanel {
@@ -1536,7 +2209,10 @@ mod tests {
         let with_keys = p.entries.iter().filter(|e| !e.keys.is_empty()).count();
         eprintln!("help: {cmds} commands, {topics} topics, {with_keys} with keybindings");
         assert!(cmds > 200, "expected the full command surface, got {cmds}");
-        assert!(topics >= 8);
+        assert!(
+            topics >= 140,
+            "the topic list should index the command surface, got {topics}"
+        );
         assert!(
             with_keys > 50,
             "expected many commands to show keys, got {with_keys}"
