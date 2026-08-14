@@ -121,6 +121,11 @@ fn overrides() -> HashMap<Mode, KeyTrie> {
         "A-o" => add_newline_below,
         "A-O" => add_newline_above,
 
+        // <a-p> / <a-P> paste every entry the register holds, not one per
+        // selection.
+        "A-p" => paste_all_after,
+        "A-P" => paste_all_before,
+
         // <a-S> keeps the two ends of each selection; <a-&> copies the main
         // selection's indent onto the other selected lines.
         "A-S" => select_first_last_chars,

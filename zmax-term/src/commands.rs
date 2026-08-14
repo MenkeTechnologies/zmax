@@ -495,6 +495,8 @@ impl MappableCommand {
         split_selection_on_newline, "Split selection on newlines",
         merge_selections, "Merge selections",
         merge_consecutive_selections, "Merge consecutive selections",
+        paste_all_after, "Paste every entry the register holds, after each selection (kakoune A-p)",
+        paste_all_before, "Paste every entry the register holds, before each selection (kakoune A-P)",
         save_as_prompt, "Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs)",
         select_first_last_chars, "Keep the first and last character of each selection (kakoune A-S)",
         copy_indent, "Copy the main selection's indent to the other selected lines (kakoune A-&)",
@@ -35596,6 +35598,64 @@ fn paste_after_cursor_after(cx: &mut Context) {
 /// vim `gP` — `P`, but the cursor rests after the pasted text instead of on it.
 fn paste_before_cursor_after(cx: &mut Context) {
     paste_with_rest(cx, Paste::Before, CursorRest::AfterText);
+}
+
+/// kakoune `<a-p>` / `<a-P>`: paste *every* entry the register holds, one after
+/// another, rather than one entry per selection.
+///
+/// `p` pairs the register's values with the selections — value 1 into selection
+/// 1, and so on. `<a-p>` instead joins them all and puts the lot at each
+/// selection, which is how a multi-selection yank is put back as a block.
+fn paste_all(cx: &mut Context, pos: Paste) {
+    let register = cx
+        .register
+        .unwrap_or(cx.editor.config().default_yank_register);
+    let values: Vec<String> = cx
+        .editor
+        .registers
+        .read(register, cx.editor)
+        .map(|values| values.map(|value| value.to_string()).collect())
+        .unwrap_or_default();
+    if values.is_empty() {
+        cx.editor.set_error(format!("register {register} is empty"));
+        return;
+    }
+    // One string, so every selection receives the whole set. Entries that are
+    // already whole lines keep their line endings; the rest are separated by
+    // the document's own, which is what kakoune pastes back.
+    // Read what the paste needs before borrowing the document mutably.
+    let count = cx.count();
+    let mode = cx.editor.mode();
+    let (view, doc) = current!(cx.editor);
+    let le = doc.line_ending.as_str();
+    let joined = values
+        .iter()
+        .map(|value| {
+            if get_line_ending_of_str(value).is_some() {
+                value.clone()
+            } else {
+                format!("{value}{le}")
+            }
+        })
+        .collect::<String>();
+    paste_impl(
+        &[joined],
+        doc,
+        view,
+        pos,
+        count,
+        mode,
+        CursorRest::OnText,
+    );
+    exit_select_mode(cx);
+}
+
+fn paste_all_after(cx: &mut Context) {
+    paste_all(cx, Paste::After);
+}
+
+fn paste_all_before(cx: &mut Context) {
+    paste_all(cx, Paste::Before);
 }
 
 fn paste_with_rest(cx: &mut Context, pos: Paste, rest: CursorRest) {
