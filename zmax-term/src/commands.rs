@@ -495,6 +495,7 @@ impl MappableCommand {
         split_selection_on_newline, "Split selection on newlines",
         merge_selections, "Merge selections",
         merge_consecutive_selections, "Merge consecutive selections",
+        toggle_auto_completion, "Turn the automatic completion pop-up on or off (kakoune insert C-o)",
         paste_all_after, "Paste every entry the register holds, after each selection (kakoune A-p)",
         paste_all_before, "Paste every entry the register holds, before each selection (kakoune A-P)",
         save_as_prompt, "Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs)",
@@ -11269,6 +11270,23 @@ fn save_as_prompt(cx: &mut Context) {
             prompt.set_line(line, cx.editor);
         }
     }));
+}
+
+/// kakoune insert-mode `<c-o>`: turn the automatic completion pop-up on or off
+/// for this session. Explicit completion (`<c-x>`, zmax's `completion`) still
+/// works while it is off — which is the point of the toggle.
+fn toggle_auto_completion(cx: &mut Context) {
+    let mut config = (*cx.editor.config()).clone();
+    config.auto_completion = !config.auto_completion;
+    let on = config.auto_completion;
+    cx.editor.config_events.0.send(
+        zmax_view::editor::ConfigEvent::Update(Box::new(config)),
+    ).ok();
+    cx.editor.set_status(if on {
+        "auto-completion on"
+    } else {
+        "auto-completion off (explicit completion still works)"
+    });
 }
 
 /// kakoune `<a-S>`: keep the first and last character of each selection, which

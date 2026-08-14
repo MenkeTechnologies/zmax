@@ -142,6 +142,25 @@ fn overrides() -> HashMap<Mode, KeyTrie> {
         "A-+" => merge_selections,
     });
 
+    // kakoune's insert mode: <c-v> takes the next keystroke literally, <a-;>
+    // drops to normal for exactly one command, and the completion family sits
+    // behind <c-x> with <c-o> toggling the automatic pop-up.
+    let insert = keymap!({ "Insert mode"
+        "C-v" => quoted_insert,
+        "A-;" => insert_command_normal,
+        "C-o" => toggle_auto_completion,
+        "C-n" => next_completion,
+        "C-p" => previous_completion,
+        "C-x" => { "Complete"
+            "C-x" => completion,
+            "f" => complete_filename,
+            "w" => complete_keyword,
+            "W" => complete_keyword,
+            "l" => complete_line,
+            "L" => complete_line,
+        },
+    });
+
     let select = keymap!({ "Select mode"
         "A-i" => select_textobject_inner,
         "A-a" => select_textobject_around,
@@ -162,6 +181,7 @@ fn overrides() -> HashMap<Mode, KeyTrie> {
     hashmap! {
         Mode::Normal => normal,
         Mode::Select => select,
+        Mode::Insert => insert,
     }
 }
 

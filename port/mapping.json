@@ -65695,5 +65695,93 @@
    "static:paste_all_before"
   ],
   "note": "paste all before the start of each selection, and select each pasted string"
+ },
+ {
+  "spec_id": "kakoune.insert-mode.c_v",
+  "status": "ported",
+  "evidence": [
+   "static:quoted_insert"
+  ],
+  "note": "kakoune insert <c-v> takes the next keystroke literally"
+ },
+ {
+  "spec_id": "kakoune.insert-mode.a",
+  "status": "ported",
+  "evidence": [
+   "static:insert_command_normal"
+  ],
+  "note": "kakoune insert <a-;> runs one normal-mode command, then returns"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_o",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_auto_completion"
+  ],
+  "note": "kakoune insert <c-o> toggles the automatic completion pop-up"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_n",
+  "status": "ported",
+  "evidence": [
+   "static:next_completion"
+  ],
+  "note": "next candidate"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_p",
+  "status": "ported",
+  "evidence": [
+   "static:previous_completion"
+  ],
+  "note": "previous candidate"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_x",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "explicit completion query"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_x_f",
+  "status": "ported",
+  "evidence": [
+   "static:complete_filename"
+  ],
+  "note": "explicit file completion"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_x_w",
+  "status": "ported",
+  "evidence": [
+   "static:complete_keyword"
+  ],
+  "note": "explicit word completion in this buffer"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_x_w_2",
+  "status": "partial",
+  "evidence": [
+   "static:complete_keyword"
+  ],
+  "note": "kakoune <c-x> W completes words from every buffer; zmax completes from this one"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_x_l",
+  "status": "ported",
+  "evidence": [
+   "static:complete_line"
+  ],
+  "note": "explicit line completion in this buffer"
+ },
+ {
+  "spec_id": "kakoune.insert-mode-completion.c_x_l_2",
+  "status": "partial",
+  "evidence": [
+   "static:complete_line"
+  ],
+  "note": "kakoune <c-x> L completes lines from every buffer; zmax completes from this one"
  }
 ]
