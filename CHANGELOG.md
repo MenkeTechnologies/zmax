@@ -417,6 +417,18 @@ Commands:
 
 Usability improvements:
 
+* **Help ▸ Topics now indexes the command surface**: 260 topics, up from 19.
+  Every typable command a topic names is checked against the registry by a test,
+  and every bare `snake_case` word against the static-command list, so a topic
+  cannot tell the reader to run something that does not exist — the check found
+  a `:debug-breakpoint` that was never registered and a dormant `:suspend`.
+  The topics cover the text tools, the quickfix/location/tag/argument/buffer
+  lists, vim script and its debugger, registers and pipes, git hunks and
+  conflicts, language injection, tree-sitter, workspace trust, the PlatformIO
+  and arduino-cli families in full, and the 361 supported languages; fourteen
+  answer what a command list cannot — where the files live, how
+  global/workspace/buffer settings resolve, and what carries over when coming
+  from vim, emacs, helix, kakoune, nano, micro or an IDE.
 * IDE layout (drawer widths, hidden/closed panels, folds, minimap) and the
   active colorscheme persist to appdata and are restored on `:ide`.
 * Auto-reload (vim `autoread`): externally changed files are reloaded, keeping
@@ -444,6 +456,23 @@ Usability improvements:
 
 Fixes:
 
+* The integrated terminal died on a resize. vt100 (the screen emulator) keeps
+  grid positions that go stale when a screen holding double-width characters is
+  reflowed into a narrower one, and dereferences them with `unwrap()` — so CJK
+  or emoji output plus a shrinking pane panicked the PTY reader thread, which
+  then stopped reading forever, poisoned the parser lock, and printed a
+  backtrace across the raw-mode screen. The parser is now fed through a wrapper
+  that catches the unwind and rebuilds the screen at the current size, never
+  goes below the two columns a wide character needs, uses a lock that cannot be
+  poisoned, and sends the message to `~/.zmax/zmax.log` instead of the display.
+* Preferences ▸ Run Configs and ▸ Dashboard ignored `transparent-background`.
+  Both filled their page with the setting applied and then painted over it —
+  the list and form blocks carried `ui.background` and their borders
+  `ui.window`, and each dashboard card cleared its own area first.
+* Switching from the Color Scheme tab to Keymap reverted the theme: the Keymap
+  tab writes a binding and refreshes the config, which re-applied `theme =`
+  from `config.toml` over the unsaved choice. The picked theme is now
+  remembered for the session until it is saved or replaced.
 * `swapfile` and `directory` (`swap-directory`) set in `config.toml` were inert
   for the whole session. The periodic swap writer runs from `DocumentDidChange`,
   which carries no editor, so both values are mirrored into statics — but the
