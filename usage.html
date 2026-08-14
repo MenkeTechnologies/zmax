@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d63bcbf0.js";
+            window.path_to_searchindex_js = "searchindex-9e1a15e4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -191,7 +191,7 @@ can be accessed via the command <code>zmax --tutor</code> or <code>:tutor</code>
 <a href="./keymap.html">key mappings</a> list.</p>
 </blockquote>
 <h2 id="modes"><a class="header" href="#modes">Modes</a></h2>
-<p>In the modal keymap presets (<code>spacemacs</code>, <code>vim</code>, <code>helix</code>), Zmax has different modes for different tasks. The <code>emacs</code> preset is modeless: it launches directly in insert mode, has no normal mode, and uses Emacs chords (<code>Ctrl-x</code>, <code>Ctrl-c</code>, <code>Meta</code>) instead. The main modes of the modal presets are:</p>
+<p>In the modal keymap presets (<code>spacemacs</code>, <code>vim</code>, <code>helix</code>, <code>kakoune</code>), Zmax has different modes for different tasks. The modeless presets — <code>emacs</code>, <code>cua</code>, <code>micro</code> and <code>nano</code> — launch directly in insert mode, have no normal mode, and use that editor’s chords instead (<code>Ctrl-x</code>/<code>Ctrl-c</code>/<code>Meta</code> for emacs, <code>Ctrl-s</code>/<code>Ctrl-q</code> for micro, <code>^O</code>/<code>^W</code>/<code>^K</code> for nano). The main modes of the modal presets are:</p>
 <ul>
 <li><a href="./keymap.html#normal-mode">Normal mode</a>: For navigation and editing commands. This is the mode the modal presets launch in.</li>
 <li><a href="./keymap.html#insert-mode">Insert mode</a>: For typing text directly into the document. Access by typing <code>i</code> in normal mode.</li>
@@ -201,7 +201,7 @@ can be accessed via the command <code>zmax --tutor</code> or <code>:tutor</code>
 <p>Buffers are in-memory representations of files. You can have multiple buffers open at once. Use <a href="./pickers.html">pickers</a> or commands like <code>:buffer-next</code> and <code>:buffer-previous</code> to open buffers or switch between them.</p>
 <h2 id="editing-model"><a class="header" href="#editing-model">Editing model</a></h2>
 <p>Zmax ships several <a href="./configuration.html#keymap-presets">keymap presets</a>. The default (<code>spacemacs</code>) and the <code>vim</code> preset use Vim’s <strong>operator → motion</strong> model: you press an action such as <code>d</code>, <code>c</code> or <code>y</code> and then the motion or text object it applies to (<code>dw</code>, <code>ciw</code>, <code>yy</code>). If you come from Vim, see <a href="./from-vim.html">Migrating from Vim</a>.</p>
-<p>The <code>helix</code> preset instead uses the Kakoune-inspired <strong>selection → action</strong> model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection.</p>
+<p>The <code>helix</code> and <code>kakoune</code> presets instead use the Kakoune <strong>selection → action</strong> model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection. The <code>kakoune</code> preset goes further and places the keys where kakoune itself does — view commands on <code>v</code>, text objects on <code>A-i</code>/<code>A-a</code>, selection registers on <code>Z</code>/<code>z</code>/<code>A-z</code>.</p>
 <h2 id="multiple-selections"><a class="header" href="#multiple-selections">Multiple selections</a></h2>
 <p>Also inspired by Kakoune, multiple selections are a core mode of interaction in Zmax. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (<code>c</code>) to edit them all at the same time.</p>
 <h2 id="motions"><a class="header" href="#motions">Motions</a></h2>

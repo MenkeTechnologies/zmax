@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d63bcbf0.js";
+            window.path_to_searchindex_js = "searchindex-9e1a15e4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -562,7 +562,7 @@ can be accessed via the command <code>zmax --tutor</code> or <code>:tutor</code>
 <a href="#keymap-1">key mappings</a> list.</p>
 </blockquote>
 <h2 id="modes"><a class="header" href="#modes">Modes</a></h2>
-<p>In the modal keymap presets (<code>spacemacs</code>, <code>vim</code>, <code>helix</code>), Zmax has different modes for different tasks. The <code>emacs</code> preset is modeless: it launches directly in insert mode, has no normal mode, and uses Emacs chords (<code>Ctrl-x</code>, <code>Ctrl-c</code>, <code>Meta</code>) instead. The main modes of the modal presets are:</p>
+<p>In the modal keymap presets (<code>spacemacs</code>, <code>vim</code>, <code>helix</code>, <code>kakoune</code>), Zmax has different modes for different tasks. The modeless presets — <code>emacs</code>, <code>cua</code>, <code>micro</code> and <code>nano</code> — launch directly in insert mode, have no normal mode, and use that editor’s chords instead (<code>Ctrl-x</code>/<code>Ctrl-c</code>/<code>Meta</code> for emacs, <code>Ctrl-s</code>/<code>Ctrl-q</code> for micro, <code>^O</code>/<code>^W</code>/<code>^K</code> for nano). The main modes of the modal presets are:</p>
 <ul>
 <li><a href="#normal-mode">Normal mode</a>: For navigation and editing commands. This is the mode the modal presets launch in.</li>
 <li><a href="#insert-mode">Insert mode</a>: For typing text directly into the document. Access by typing <code>i</code> in normal mode.</li>
@@ -572,7 +572,7 @@ can be accessed via the command <code>zmax --tutor</code> or <code>:tutor</code>
 <p>Buffers are in-memory representations of files. You can have multiple buffers open at once. Use <a href="#pickers">pickers</a> or commands like <code>:buffer-next</code> and <code>:buffer-previous</code> to open buffers or switch between them.</p>
 <h2 id="editing-model"><a class="header" href="#editing-model">Editing model</a></h2>
 <p>Zmax ships several <a href="#keymap-presets">keymap presets</a>. The default (<code>spacemacs</code>) and the <code>vim</code> preset use Vim’s <strong>operator → motion</strong> model: you press an action such as <code>d</code>, <code>c</code> or <code>y</code> and then the motion or text object it applies to (<code>dw</code>, <code>ciw</code>, <code>yy</code>). If you come from Vim, see <a href="#migrating-from-vim">Migrating from Vim</a>.</p>
-<p>The <code>helix</code> preset instead uses the Kakoune-inspired <strong>selection → action</strong> model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection.</p>
+<p>The <code>helix</code> and <code>kakoune</code> presets instead use the Kakoune <strong>selection → action</strong> model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection. The <code>kakoune</code> preset goes further and places the keys where kakoune itself does — view commands on <code>v</code>, text objects on <code>A-i</code>/<code>A-a</code>, selection registers on <code>Z</code>/<code>z</code>/<code>A-z</code>.</p>
 <h2 id="multiple-selections"><a class="header" href="#multiple-selections">Multiple selections</a></h2>
 <p>Also inspired by Kakoune, multiple selections are a core mode of interaction in Zmax. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (<code>c</code>) to edit them all at the same time.</p>
 <h2 id="motions"><a class="header" href="#motions">Motions</a></h2>
@@ -909,7 +909,7 @@ To jump backward in the jumplist, use <code>Ctrl-o</code>; to go forward, use <c
 <p>zmax ships four keymap presets, chosen with the <code>keymap</code> setting: <code>spacemacs</code> (the default), <code>vim</code>, <code>helix</code>, and <code>emacs</code>. The keys on this page are the <strong>modal</strong> presets (<code>spacemacs</code>, <code>vim</code>, <code>helix</code>); where they differ, the table cells note which preset a key belongs to. The <code>emacs</code> preset is modeless — you are always in insert mode, there is no normal mode, and commands are reached through Emacs chords (<code>Ctrl-x</code>, <code>Ctrl-c</code>, <code>Meta-</code>) — so the mode structure below does not describe it. For the exact keys each preset binds to every command, see the generated static-command table in the reference.</p>
 </blockquote>
 <h2 id="normal-mode"><a class="header" href="#normal-mode">Normal mode</a></h2>
-<p>Normal mode is the launch mode for the modal keymap presets — <code>spacemacs</code> (the default), <code>vim</code>, and <code>helix</code> — and you return to it from other modes by pressing the <code>Escape</code> key. The <code>emacs</code> preset is modeless: it launches in insert mode and has no normal mode, so the mappings in this section do not apply to it.</p>
+<p>Normal mode is the launch mode for the modal keymap presets — <code>spacemacs</code> (the default), <code>vim</code>, <code>helix</code> and <code>kakoune</code> — and you return to it from other modes by pressing the <code>Escape</code> key. The modeless presets (<code>emacs</code>, <code>cua</code>, <code>micro</code>, <code>nano</code>) launch in insert mode and have no normal mode, so the mappings in this section do not apply to them.</p>
 <h3 id="movement"><a class="header" href="#movement">Movement</a></h3>
 <blockquote>
 <p>NOTE: Unlike Vim, <code>f</code>, <code>F</code>, <code>t</code> and <code>T</code> are not confined to the current line.</p>
@@ -3464,6 +3464,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>split_selection_on_newline</code></td><td>Split selection on newlines</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-s&gt;</code>, select: <code>&lt;A-s&gt;</code></td></tr>
 <tr><td><code>merge_selections</code></td><td>Merge selections</td><td><strong>helix</strong> — normal: <code>&lt;A-minus&gt;</code>, select: <code>&lt;A-minus&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-+&gt;</code>, <code>&lt;A-minus&gt;</code>, select: <code>&lt;A-minus&gt;</code></td></tr>
 <tr><td><code>merge_consecutive_selections</code></td><td>Merge consecutive selections</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-_&gt;</code>, select: <code>&lt;A-_&gt;</code></td></tr>
+<tr><td><code>toggle_auto_completion</code></td><td>Turn the automatic completion pop-up on or off (kakoune insert C-o)</td><td><strong>kakoune</strong> — insert: <code>&lt;C-o&gt;</code></td></tr>
+<tr><td><code>paste_all_after</code></td><td>Paste every entry the register holds, after each selection (kakoune A-p)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-p&gt;</code></td></tr>
+<tr><td><code>paste_all_before</code></td><td>Paste every entry the register holds, before each selection (kakoune A-P)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-P&gt;</code></td></tr>
 <tr><td><code>save_as_prompt</code></td><td>Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs)</td><td></td></tr>
 <tr><td><code>select_first_last_chars</code></td><td>Keep the first and last character of each selection (kakoune A-S)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-S&gt;</code></td></tr>
 <tr><td><code>copy_indent</code></td><td>Copy the main selection’s indent to the other selected lines (kakoune A-&amp;)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-&amp;&gt;</code></td></tr>
@@ -4359,7 +4362,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>align_selections</code></td><td>Align selections in column</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xaa</code>, select: <code>&lt;space&gt;xaa</code><br><strong>helix, kakoune</strong> — normal: <code>&amp;</code>, select: <code>&amp;</code></td></tr>
 <tr><td><code>keep_primary_selection</code></td><td>Keep primary selection</td><td><strong>helix</strong> — normal: <code>,</code>, select: <code>,</code><br><strong>kakoune</strong> — normal: <code>,</code>, <code>&lt;space&gt;</code>, select: <code>,</code>, <code>&lt;space&gt;</code><br><strong>micro</strong> — normal: <code>&lt;A-c&gt;</code>, insert: <code>&lt;A-c&gt;</code></td></tr>
 <tr><td><code>remove_primary_selection</code></td><td>Remove primary selection</td><td><strong>helix</strong> — normal: <code>&lt;A-,&gt;</code>, select: <code>&lt;A-,&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-,&gt;</code>, <code>&lt;A-space&gt;</code>, select: <code>&lt;A-,&gt;</code>, <code>&lt;A-space&gt;</code><br><strong>micro</strong> — normal: <code>&lt;A-x&gt;</code>, insert: <code>&lt;A-x&gt;</code></td></tr>
-<tr><td><code>completion</code></td><td>Invoke completion popup</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-i&gt;</code>, <code>&lt;A-tab&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, select: <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code><br><strong>vim</strong> — insert: <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-x&gt;&lt;C-i&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-p&gt;</code><br><strong>helix, kakoune</strong> — insert: <code>&lt;C-x&gt;</code><br><strong>emacs, cua, micro, nano</strong> — normal: <code>&lt;A-tab&gt;</code>, insert: <code>&lt;A-tab&gt;</code></td></tr>
+<tr><td><code>completion</code></td><td>Invoke completion popup</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-i&gt;</code>, <code>&lt;A-tab&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, select: <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code><br><strong>vim</strong> — insert: <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-x&gt;&lt;C-i&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-p&gt;</code><br><strong>helix</strong> — insert: <code>&lt;C-x&gt;</code><br><strong>kakoune</strong> — insert: <code>&lt;C-x&gt;&lt;C-x&gt;</code><br><strong>emacs, cua, micro, nano</strong> — normal: <code>&lt;A-tab&gt;</code>, insert: <code>&lt;A-tab&gt;</code></td></tr>
 <tr><td><code>hover</code></td><td>Show docs for item under cursor</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;.</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, select: <code>K</code>, <code>&lt;C-h&gt;.</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, insert: <code>&lt;C-h&gt;.</code><br><strong>vim</strong> — select: <code>K</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;k</code>, select: <code>&lt;space&gt;k</code></td></tr>
 <tr><td><code>keyword_lookup</code></td><td>vim K: run keywordprg on the word under cursor, else LSP hover</td><td><strong>spacemacs, vim</strong> — normal: <code>K</code></td></tr>
 <tr><td><code>goto_first_nonwhitespace_down</code></td><td>vim _: first non-blank, count-1 lines down</td><td><strong>spacemacs, vim</strong> — normal: <code>_</code></td></tr>
@@ -4381,7 +4384,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>wildfire</code></td><td>Wildfire: select/expand to the closest text object</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;ret&gt;</code></td></tr>
 <tr><td><code>wildfire_shrink</code></td><td>Wildfire: shrink to the previously selected text object</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;backspace&gt;</code></td></tr>
 <tr><td><code>select_next_sibling</code></td><td>Select next sibling in the syntax tree</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;kL</code>, <code>&lt;space&gt;kl</code>, select: <code>&lt;space&gt;kL</code>, <code>&lt;space&gt;kl</code><br><strong>helix, kakoune</strong> — normal: <code>&lt;A-n&gt;</code>, <code>&lt;A-right&gt;</code>, select: <code>&lt;A-n&gt;</code>, <code>&lt;A-right&gt;</code></td></tr>
-<tr><td><code>select_prev_sibling</code></td><td>Select previous sibling the in syntax tree</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code>, select: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code><br><strong>helix, kakoune</strong> — normal: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code>, select: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code></td></tr>
+<tr><td><code>select_prev_sibling</code></td><td>Select previous sibling the in syntax tree</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code>, select: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code><br><strong>helix</strong> — normal: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code>, select: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-left&gt;</code>, select: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code></td></tr>
 <tr><td><code>select_all_siblings</code></td><td>Select all siblings of the current node</td><td><strong>helix</strong> — normal: <code>&lt;A-a&gt;</code>, select: <code>&lt;A-a&gt;</code></td></tr>
 <tr><td><code>select_all_children</code></td><td>Select all children of the current node</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-I&gt;</code>, <code>&lt;S-A-down&gt;</code>, select: <code>&lt;A-I&gt;</code>, <code>&lt;S-A-down&gt;</code></td></tr>
 <tr><td><code>jump_forward</code></td><td>Jump forward on jumplist</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;C-i&gt;</code>, <code>&lt;tab&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>&lt;C-i&gt;</code>, <code>&lt;tab&gt;</code>, select: <code>&lt;C-i&gt;</code>, <code>&lt;tab&gt;</code><br><strong>emacs, cua, micro, nano</strong> — insert: <code>&lt;A-C-,&gt;</code></td></tr>
@@ -4499,7 +4502,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>insert_char_by_code</code></td><td>Insert a character by Unicode code point (emacs insert-char, C-x 8 RET)</td><td></td></tr>
 <tr><td><code>backward_delete_char_untabify</code></td><td>Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify)</td><td></td></tr>
 <tr><td><code>insert_last_inserted_text</code></td><td>Insert the previously inserted text (vim i_CTRL-A)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-a&gt;</code></td></tr>
-<tr><td><code>insert_command_normal</code></td><td>Run one Normal-mode command, then return to Insert (vim i_CTRL-O)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-o&gt;</code></td></tr>
+<tr><td><code>insert_command_normal</code></td><td>Run one Normal-mode command, then return to Insert (vim i_CTRL-O)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-o&gt;</code><br><strong>kakoune</strong> — insert: <code>&lt;A-;&gt;</code></td></tr>
 <tr><td><code>insert_last_inserted_and_stop</code></td><td>Insert previously inserted text and stop insert (vim i_CTRL-@)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-@&gt;</code></td></tr>
 <tr><td><code>copy_between_registers</code></td><td>Copy between two registers</td><td></td></tr>
 <tr><td><code>copy_to_register</code></td><td>Copy the region into a register (emacs copy-to-register, C-x r s)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;rs</code>, select: <code>&lt;C-x&gt;rs</code>, insert: <code>&lt;C-x&gt;rs</code></td></tr>
@@ -5041,7 +5044,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>word_search_backward</code></td><td>Search backward for words, ignoring punctuation (emacs word-search-backward)</td><td></td></tr>
 <tr><td><code>fill_region_as_paragraph</code></td><td>Fill the region as a single paragraph (emacs fill-region-as-paragraph)</td><td></td></tr>
 <tr><td><code>indent_rigidly</code></td><td>Shift the region by N columns (emacs indent-rigidly)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;&lt;tab&gt;</code>, insert: <code>&lt;C-x&gt;&lt;tab&gt;</code></td></tr>
-<tr><td><code>quoted_insert</code></td><td>Insert the next key literally, control chars included (emacs quoted-insert)</td><td><strong>emacs, cua</strong> — insert: <code>&lt;C-q&gt;</code></td></tr>
+<tr><td><code>quoted_insert</code></td><td>Insert the next key literally, control chars included (emacs quoted-insert)</td><td><strong>kakoune</strong> — insert: <code>&lt;C-v&gt;</code><br><strong>emacs, cua</strong> — insert: <code>&lt;C-q&gt;</code></td></tr>
 <tr><td><code>foldout_zoom_subtree</code></td><td>Narrow to the outline subtree at point (emacs foldout-zoom-subtree)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-z&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-z&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-z&gt;</code></td></tr>
 <tr><td><code>foldout_exit_fold</code></td><td>Leave the zoomed subtree and widen (emacs foldout-exit-fold)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-x&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-x&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-x&gt;</code></td></tr>
 <tr><td><code>ff_find_related_file</code></td><td>Visit the related header/source file (emacs ff-find-related-file)</td><td></td></tr>
@@ -5280,8 +5283,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>paste_before_no_trailing_whitespace</code></td><td>Paste before without trailing whitespace (zP)</td><td><strong>spacemacs, vim</strong> — normal: <code>zP</code></td></tr>
 <tr><td><code>command_mode_count</code></td><td>Open the Ex line, with the count’s line range ({count}:)</td><td><strong>spacemacs, vim</strong> — normal: <code>:</code></td></tr>
 <tr><td><code>filter_equalprg</code></td><td>Filter the selection through ‘equalprg’, else reindent (v_=)</td><td></td></tr>
-<tr><td><code>complete_line</code></td><td>Complete a whole line (i_CTRL-X CTRL-L)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code></td></tr>
-<tr><td><code>complete_filename</code></td><td>Complete a file name (i_CTRL-X CTRL-F)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code></td></tr>
+<tr><td><code>complete_line</code></td><td>Complete a whole line (i_CTRL-X CTRL-L)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code><br><strong>kakoune</strong> — insert: <code>&lt;C-x&gt;L</code>, <code>&lt;C-x&gt;l</code></td></tr>
+<tr><td><code>complete_filename</code></td><td>Complete a file name (i_CTRL-X CTRL-F)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code><br><strong>kakoune</strong> — insert: <code>&lt;C-x&gt;f</code></td></tr>
 <tr><td><code>complete_dictionary</code></td><td>Complete from ‘dictionary’ (i_CTRL-X CTRL-K)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-k&gt;</code></td></tr>
 <tr><td><code>completion_at_point</code></td><td>Complete the partial word before point from the spelling dictionary (emacs completion-at-point in Text Mode, M-TAB)</td><td></td></tr>
 <tr><td><code>complete_tag</code></td><td>Complete a tag from the tags file (i_CTRL-X CTRL-])</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-]&gt;</code></td></tr>
@@ -5509,7 +5512,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>reposition_window</code></td><td>Scroll so the whole function at point is on screen (emacs reposition-window)</td><td><strong>emacs, cua, micro, nano</strong> — insert: <code>&lt;A-C-l&gt;</code></td></tr>
 <tr><td><code>load</code></td><td>Evaluate an elisp file in the embedded interpreter (emacs load)</td><td></td></tr>
 <tr><td><code>load_library</code></td><td>Load an elisp library by name from the load path (emacs load-library)</td><td></td></tr>
-<tr><td><code>complete_keyword</code></td><td>Complete the keyword before the cursor from the ‘complete’ sources (vim i_CTRL-N)</td><td></td></tr>
+<tr><td><code>complete_keyword</code></td><td>Complete the keyword before the cursor from the ‘complete’ sources (vim i_CTRL-N)</td><td><strong>kakoune</strong> — insert: <code>&lt;C-x&gt;W</code>, <code>&lt;C-x&gt;w</code></td></tr>
 <tr><td><code>show_paren_mode</code></td><td>Toggle highlighting of the paren matching the one at point (emacs show-paren-mode)</td><td></td></tr>
 <tr><td><code>show_paren_local_mode</code></td><td>Toggle paren-match highlighting in this buffer only (emacs show-paren-local-mode)</td><td></td></tr>
 <tr><td><code>hi_lock_mode</code></td><td>Toggle display of the interactive highlight-regexp patterns (emacs hi-lock-mode)</td><td></td></tr>
@@ -5548,8 +5551,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>diff_ediff_patch</code></td><td>Apply this patch and review it side by side (emacs diff-ediff-patch)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dfp</code>, select: <code>&lt;space&gt;Dfp</code></td></tr>
 <tr><td><code>ediff_patch_buffer</code></td><td>Patch a buffer with a patch buffer/file and review it (emacs ediff-patch-buffer, SPC D b p)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dbp</code>, select: <code>&lt;space&gt;Dbp</code></td></tr>
 <tr><td><code>diff_add_change_log_entry_other_window</code></td><td>Start a ChangeLog entry for the hunk at point (emacs add-change-log-entry-other-window, in Diff mode)</td><td></td></tr>
-<tr><td><code>next_completion</code></td><td>Move to the next completion candidate (emacs next-completion)</td><td></td></tr>
-<tr><td><code>previous_completion</code></td><td>Move to the previous completion candidate (emacs previous-completion, M-<up>)</up></td><td></td></tr>
+<tr><td><code>next_completion</code></td><td>Move to the next completion candidate (emacs next-completion)</td><td><strong>kakoune</strong> — insert: <code>&lt;C-n&gt;</code></td></tr>
+<tr><td><code>previous_completion</code></td><td>Move to the previous completion candidate (emacs previous-completion, M-<up>)</up></td><td><strong>kakoune</strong> — insert: <code>&lt;C-p&gt;</code></td></tr>
 <tr><td><code>term_line_mode</code></td><td>Terminal: edit input locally, Enter sends the line (emacs term-line-mode)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-j&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-j&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-j&gt;</code></td></tr>
 <tr><td><code>comint_completion_at_point</code></td><td>Shell buffer: complete the command or file name before point (emacs completion-at-point in Shell mode)</td><td></td></tr>
 <tr><td><code>window_configuration_to_register</code></td><td>Save the window configuration in a register (emacs window-configuration-to-register)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;rw</code>, select: <code>&lt;C-x&gt;rw</code>, insert: <code>&lt;C-x&gt;rw</code></td></tr>
@@ -7781,9 +7784,16 @@ See also <a href="https://github.com/MenkeTechnologies/zmax/issues/2380">#2380</
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="key-remapping-1"><a href="#key-remapping-1" class="header">Key remapping</a></h1>
 <h2 id="key-remapping"><a class="header" href="#key-remapping">Key remapping</a></h2>
-<p>Zmax currently supports one-way key remapping through a simple TOML configuration
-file. (More powerful solutions such as rebinding via commands will be
-available in the future).</p>
+<p>Keys can be remapped two ways: in the TOML configuration file described below,
+which is read at startup, and at runtime with vim’s <code>:map</code> family —
+<code>:map</code>, <code>:nmap</code>, <code>:imap</code>, <code>:vmap</code>, <code>:xmap</code>, <code>:smap</code>, <code>:omap</code>, their
+<code>noremap</code> forms, <code>:unmap</code> and the <code>mapclear</code> family. A <code>:map</code>-family command
+with no right-hand side lists the mappings currently in force, as vim does.</p>
+<p>The command line, the language (“keymap”) layer and the terminal panel each
+have their own mapping table, filled by <code>:cmap</code>, <code>:lmap</code> (also what
+<code>:set keymap={name}</code> loads) and <code>:tmap</code> respectively, with matching
+<code>unmap</code>/<code>mapclear</code> commands. Menus are defined with vim’s <code>:menu</code> family and
+run with <code>:emenu</code> or opened at the cursor with <code>:popup</code>.</p>
 <p>There are three kinds of commands that can be used in keymaps:</p>
 <ul>
 <li>Static commands: commands like <code>move_char_right</code> which are usually bound to
@@ -9053,12 +9063,12 @@ languages. It is only necessary when the node that increments the nesting level
 <p>Auto-generated by <code>scripts/gen_port_report.py</code>. Numerator is re-derived from zmax source on every run; denominator is the cited inventories under <code>port/data/</code>. Do not edit by hand.</p>
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
-<li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>5973</strong> (87.2%)</li>
-<li>Partial: <strong>407</strong> (5.9%)</li>
-<li>Absent: <strong>467</strong></li>
+<li>Denominator (cited feature items): <strong>9760</strong></li>
+<li>Ported: <strong>7576</strong> (77.6%)</li>
+<li>Partial: <strong>529</strong> (5.4%)</li>
+<li>Absent: <strong>1655</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2268 static commands, 2585 typable <code>:</code> commands, 4227 default keybindings</li>
+<li>zmax source surface: 2399 static commands, 2948 typable <code>:</code> commands, 4373 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9113,13 +9123,28 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th style="text-align: right">Total</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
+<tr><td>astronvim</td><td style="text-align: right">74</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">14.9%</td></tr>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">2505</td><td style="text-align: right">176</td><td style="text-align: right">83.2%</td></tr>
+<tr><td>dte</td><td style="text-align: right">116</td><td style="text-align: right">66</td><td style="text-align: right">1</td><td style="text-align: right">56.9%</td></tr>
+<tr><td>ed</td><td style="text-align: right">53</td><td style="text-align: right">26</td><td style="text-align: right">2</td><td style="text-align: right">49.1%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">2786</td><td style="text-align: right">207</td><td style="text-align: right">92.5%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">185</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">215</td><td style="text-align: right">3</td><td style="text-align: right">98.6%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1945</td><td style="text-align: right">130</td><td style="text-align: right">93.6%</td></tr>
-<tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">1065</td><td style="text-align: right">96</td><td style="text-align: right">82.2%</td></tr>
+<tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">115</td><td style="text-align: right">11</td><td style="text-align: right">35.1%</td></tr>
+<tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">56</td><td style="text-align: right">1</td><td style="text-align: right">56.0%</td></tr>
+<tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">22</td><td style="text-align: right">0</td><td style="text-align: right">81.5%</td></tr>
+<tr><td>mcedit</td><td style="text-align: right">95</td><td style="text-align: right">70</td><td style="text-align: right">5</td><td style="text-align: right">73.7%</td></tr>
+<tr><td>mg</td><td style="text-align: right">326</td><td style="text-align: right">201</td><td style="text-align: right">4</td><td style="text-align: right">61.7%</td></tr>
+<tr><td>micro</td><td style="text-align: right">272</td><td style="text-align: right">193</td><td style="text-align: right">7</td><td style="text-align: right">71.0%</td></tr>
+<tr><td>nano</td><td style="text-align: right">400</td><td style="text-align: right">188</td><td style="text-align: right">0</td><td style="text-align: right">47.0%</td></tr>
+<tr><td>ne</td><td style="text-align: right">140</td><td style="text-align: right">74</td><td style="text-align: right">1</td><td style="text-align: right">52.9%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1946</td><td style="text-align: right">131</td><td style="text-align: right">93.7%</td></tr>
+<tr><td>nvi</td><td style="text-align: right">284</td><td style="text-align: right">85</td><td style="text-align: right">29</td><td style="text-align: right">29.9%</td></tr>
+<tr><td>sam</td><td style="text-align: right">58</td><td style="text-align: right">4</td><td style="text-align: right">1</td><td style="text-align: right">6.9%</td></tr>
+<tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">1170</td><td style="text-align: right">123</td><td style="text-align: right">90.3%</td></tr>
+<tr><td>vile</td><td style="text-align: right">445</td><td style="text-align: right">51</td><td style="text-align: right">0</td><td style="text-align: right">11.5%</td></tr>
+<tr><td>vis</td><td style="text-align: right">195</td><td style="text-align: right">54</td><td style="text-align: right">1</td><td style="text-align: right">27.7%</td></tr>
 </tbody>
 </table>
 </div>
@@ -9130,13 +9155,31 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th>Category</th><th style="text-align: right">Total</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
+<tr><td>astronvim</td><td>keys-n</td><td style="text-align: right">67</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">16.4%</td></tr>
+<tr><td>astronvim</td><td>keys-t</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>astronvim</td><td>keys-v</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>astronvim</td><td>keys-x</td><td style="text-align: right">1</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>cursor</td><td>agent</td><td style="text-align: right">8</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>autocomplete</td><td style="text-align: right">3</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">1597</td><td style="text-align: right">95</td><td style="text-align: right">84.8%</td></tr>
-<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">908</td><td style="text-align: right">81</td><td style="text-align: right">80.6%</td></tr>
+<tr><td>dte</td><td>command-buffer_management</td><td style="text-align: right">7</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">71.4%</td></tr>
+<tr><td>dte</td><td>command-configuration</td><td style="text-align: right">9</td><td style="text-align: right">2</td><td style="text-align: right">1</td><td style="text-align: right">22.2%</td></tr>
+<tr><td>dte</td><td>command-editing</td><td style="text-align: right">23</td><td style="text-align: right">22</td><td style="text-align: right">0</td><td style="text-align: right">95.7%</td></tr>
+<tr><td>dte</td><td>command-editor</td><td style="text-align: right">5</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">80.0%</td></tr>
+<tr><td>dte</td><td>command-external</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>dte</td><td>command-movement</td><td style="text-align: right">27</td><td style="text-align: right">25</td><td style="text-align: right">0</td><td style="text-align: right">92.6%</td></tr>
+<tr><td>dte</td><td>command-other</td><td style="text-align: right">3</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">66.7%</td></tr>
+<tr><td>dte</td><td>command-window_management</td><td style="text-align: right">7</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">57.1%</td></tr>
+<tr><td>dte</td><td>keys-command</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>dte</td><td>keys-normal</td><td style="text-align: right">17</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>dte</td><td>keys-search</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>ed</td><td>asynchronous-events</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>ed</td><td>commands</td><td style="text-align: right">37</td><td style="text-align: right">26</td><td style="text-align: right">2</td><td style="text-align: right">70.3%</td></tr>
+<tr><td>ed</td><td>line-addressing</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">1751</td><td style="text-align: right">119</td><td style="text-align: right">92.9%</td></tr>
+<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">1035</td><td style="text-align: right">88</td><td style="text-align: right">91.8%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>diagnostics</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9181,16 +9224,103 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>vcs</td><td style="text-align: right">16</td><td style="text-align: right">16</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>kakoune</td><td>cancelling-operations</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>kakoune</td><td>changes</td><td style="text-align: right">46</td><td style="text-align: right">40</td><td style="text-align: right">2</td><td style="text-align: right">87.0%</td></tr>
+<tr><td>kakoune</td><td>changes-through-external-programs</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>kakoune</td><td>command</td><td style="text-align: right">110</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>kakoune</td><td>goto-commands</td><td style="text-align: right">13</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>kakoune</td><td>insert-mode</td><td style="text-align: right">10</td><td style="text-align: right">10</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>kakoune</td><td>insert-mode-completion</td><td style="text-align: right">9</td><td style="text-align: right">7</td><td style="text-align: right">2</td><td style="text-align: right">77.8%</td></tr>
+<tr><td>kakoune</td><td>jump-list</td><td style="text-align: right">3</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>kakoune</td><td>macros</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>kakoune</td><td>marks</td><td style="text-align: right">10</td><td style="text-align: right">9</td><td style="text-align: right">1</td><td style="text-align: right">90.0%</td></tr>
+<tr><td>kakoune</td><td>movement</td><td style="text-align: right">26</td><td style="text-align: right">23</td><td style="text-align: right">3</td><td style="text-align: right">88.5%</td></tr>
+<tr><td>kakoune</td><td>multiple-selections</td><td style="text-align: right">11</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>kakoune</td><td>object-selection</td><td style="text-align: right">28</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>kakoune</td><td>prompt-commands</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>kakoune</td><td>searching</td><td style="text-align: right">9</td><td style="text-align: right">6</td><td style="text-align: right">3</td><td style="text-align: right">66.7%</td></tr>
+<tr><td>kakoune</td><td>user-commands</td><td style="text-align: right">1</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>kakoune</td><td>view-commands</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>lazyvim</td><td>keys-i</td><td style="text-align: right">7</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">42.9%</td></tr>
+<tr><td>lazyvim</td><td>keys-n</td><td style="text-align: right">72</td><td style="text-align: right">40</td><td style="text-align: right">1</td><td style="text-align: right">55.6%</td></tr>
+<tr><td>lazyvim</td><td>keys-o</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>lazyvim</td><td>keys-s</td><td style="text-align: right">2</td><td style="text-align: right">1</td><td style="text-align: right">0</td><td style="text-align: right">50.0%</td></tr>
+<tr><td>lazyvim</td><td>keys-t</td><td style="text-align: right">2</td><td style="text-align: right">1</td><td style="text-align: right">0</td><td style="text-align: right">50.0%</td></tr>
+<tr><td>lazyvim</td><td>keys-v</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>lazyvim</td><td>keys-x</td><td style="text-align: right">13</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">53.8%</td></tr>
+<tr><td>lunarvim</td><td>keys-insert</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>lunarvim</td><td>keys-normal</td><td style="text-align: right">13</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">61.5%</td></tr>
+<tr><td>lunarvim</td><td>keys-term</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>lunarvim</td><td>keys-visual</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>lunarvim</td><td>keys-visual_block</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>mcedit</td><td>editor</td><td style="text-align: right">95</td><td style="text-align: right">70</td><td style="text-align: right">5</td><td style="text-align: right">73.7%</td></tr>
+<tr><td>mg</td><td>default-key-bindings</td><td style="text-align: right">109</td><td style="text-align: right">80</td><td style="text-align: right">0</td><td style="text-align: right">73.4%</td></tr>
+<tr><td>mg</td><td>mg-commands</td><td style="text-align: right">178</td><td style="text-align: right">93</td><td style="text-align: right">3</td><td style="text-align: right">52.2%</td></tr>
+<tr><td>mg</td><td>mg-dired-commands</td><td style="text-align: right">20</td><td style="text-align: right">14</td><td style="text-align: right">1</td><td style="text-align: right">70.0%</td></tr>
+<tr><td>mg</td><td>mg-dired-key-bindings</td><td style="text-align: right">19</td><td style="text-align: right">14</td><td style="text-align: right">0</td><td style="text-align: right">73.7%</td></tr>
+<tr><td>micro</td><td>action</td><td style="text-align: right">129</td><td style="text-align: right">104</td><td style="text-align: right">5</td><td style="text-align: right">80.6%</td></tr>
+<tr><td>micro</td><td>command</td><td style="text-align: right">39</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>micro</td><td>keys</td><td style="text-align: right">104</td><td style="text-align: right">89</td><td style="text-align: right">2</td><td style="text-align: right">85.6%</td></tr>
+<tr><td>nano</td><td>function</td><td style="text-align: right">121</td><td style="text-align: right">98</td><td style="text-align: right">0</td><td style="text-align: right">81.0%</td></tr>
+<tr><td>nano</td><td>keys</td><td style="text-align: right">217</td><td style="text-align: right">90</td><td style="text-align: right">0</td><td style="text-align: right">41.5%</td></tr>
+<tr><td>nano</td><td>option</td><td style="text-align: right">62</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>ne</td><td>clip-commands</td><td style="text-align: right">12</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">58.3%</td></tr>
+<tr><td>ne</td><td>document-commands</td><td style="text-align: right">8</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">87.5%</td></tr>
+<tr><td>ne</td><td>editing-commands</td><td style="text-align: right">10</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">90.0%</td></tr>
+<tr><td>ne</td><td>file-commands</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>ne</td><td>formatting-commands</td><td style="text-align: right">8</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">87.5%</td></tr>
+<tr><td>ne</td><td>macros-commands</td><td style="text-align: right">6</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">33.3%</td></tr>
+<tr><td>ne</td><td>navigation-commands</td><td style="text-align: right">28</td><td style="text-align: right">22</td><td style="text-align: right">0</td><td style="text-align: right">78.6%</td></tr>
+<tr><td>ne</td><td>preferences-commands</td><td style="text-align: right">34</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">8.8%</td></tr>
+<tr><td>ne</td><td>search-commands</td><td style="text-align: right">11</td><td style="text-align: right">8</td><td style="text-align: right">1</td><td style="text-align: right">72.7%</td></tr>
+<tr><td>ne</td><td>support-commands</td><td style="text-align: right">13</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">15.4%</td></tr>
+<tr><td>ne</td><td>undo-commands</td><td style="text-align: right">5</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">40.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">50</td><td style="text-align: right">3</td><td style="text-align: right">94.3%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">549</td><td style="text-align: right">10</td><td style="text-align: right">97.9%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">550</td><td style="text-align: right">11</td><td style="text-align: right">98.0%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">451</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">94</td><td style="text-align: right">4</td><td style="text-align: right">95.9%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">443</td><td style="text-align: right">36</td><td style="text-align: right">92.5%</td></tr>
 <tr><td>neovim</td><td>option</td><td style="text-align: right">350</td><td style="text-align: right">275</td><td style="text-align: right">75</td><td style="text-align: right">78.6%</td></tr>
 <tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">83</td><td style="text-align: right">2</td><td style="text-align: right">97.6%</td></tr>
-<tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">242</td><td style="text-align: right">26</td><td style="text-align: right">89.3%</td></tr>
-<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">782</td><td style="text-align: right">671</td><td style="text-align: right">38</td><td style="text-align: right">85.8%</td></tr>
-<tr><td>spacemacs</td><td>layer</td><td style="text-align: right">243</td><td style="text-align: right">152</td><td style="text-align: right">32</td><td style="text-align: right">62.6%</td></tr>
+<tr><td>nvi</td><td>asynchronous-events</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>nvi</td><td>ex-commands</td><td style="text-align: right">69</td><td style="text-align: right">16</td><td style="text-align: right">0</td><td style="text-align: right">23.2%</td></tr>
+<tr><td>nvi</td><td>fast-startup</td><td style="text-align: right">19</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>nvi</td><td>set-options</td><td style="text-align: right">84</td><td style="text-align: right">14</td><td style="text-align: right">27</td><td style="text-align: right">16.7%</td></tr>
+<tr><td>nvi</td><td>vi-commands</td><td style="text-align: right">96</td><td style="text-align: right">55</td><td style="text-align: right">2</td><td style="text-align: right">57.3%</td></tr>
+<tr><td>nvi</td><td>vi-text-input-commands</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>compound-addresses</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>display-commands</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>file-commands</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>i-o-commands</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>loops-and-conditionals</td><td style="text-align: right">5</td><td style="text-align: right">4</td><td style="text-align: right">1</td><td style="text-align: right">80.0%</td></tr>
+<tr><td>sam</td><td>manipulating-text</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>miscellany</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>simple-addresses</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>text-commands</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>sam</td><td>the-terminal</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">245</td><td style="text-align: right">26</td><td style="text-align: right">90.4%</td></tr>
+<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">782</td><td style="text-align: right">733</td><td style="text-align: right">49</td><td style="text-align: right">93.7%</td></tr>
+<tr><td>spacemacs</td><td>layer</td><td style="text-align: right">243</td><td style="text-align: right">192</td><td style="text-align: right">48</td><td style="text-align: right">79.0%</td></tr>
+<tr><td>vile</td><td>command</td><td style="text-align: right">211</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">7.1%</td></tr>
+<tr><td>vile</td><td>command-bound</td><td style="text-align: right">234</td><td style="text-align: right">36</td><td style="text-align: right">0</td><td style="text-align: right">15.4%</td></tr>
+<tr><td>vis</td><td>asynchronous-events</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>compound-addresses</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>display-commands</td><td style="text-align: right">1</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>file-and-window-management</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>i-o-commands</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>jump-list</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>loops-and-conditionals</td><td style="text-align: right">7</td><td style="text-align: right">4</td><td style="text-align: right">1</td><td style="text-align: right">57.1%</td></tr>
+<tr><td>vis</td><td>marks</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>motions</td><td style="text-align: right">51</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">64.7%</td></tr>
+<tr><td>vis</td><td>multiple-selections</td><td style="text-align: right">34</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>operators</td><td style="text-align: right">13</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">92.3%</td></tr>
+<tr><td>vis</td><td>registers</td><td style="text-align: right">10</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>runtime-key-mappings</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>set-options</td><td style="text-align: right">23</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>simple-addresses</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>text-commands</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
+<tr><td>vis</td><td>text-objects</td><td style="text-align: right">9</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">55.6%</td></tr>
+<tr><td>vis</td><td>undo-redo</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 </tbody>
 </table>
 </div>
@@ -9200,9 +9330,9 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline-1"><a class="header" href="#headline-1">Headline</a></h2>
 <ul>
 <li>Cited keybindings (denominator): <strong>3113</strong></li>
-<li>Ported: <strong>2706</strong> (86.9%)</li>
-<li>Partial: <strong>193</strong> (6.2%)</li>
-<li>Absent: <strong>214</strong></li>
+<li>Ported: <strong>2898</strong> (93.1%)</li>
+<li>Partial: <strong>211</strong> (6.8%)</li>
+<li>Absent: <strong>4</strong></li>
 </ul>
 <h2 id="by-source"><a class="header" href="#by-source">By source</a></h2>
 <div class="table-wrapper">
@@ -9211,10 +9341,10 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th style="text-align: right">Keybindings</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
-<tr><td>emacs</td><td style="text-align: right">1127</td><td style="text-align: right">908</td><td style="text-align: right">81</td><td style="text-align: right">80.6%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">1127</td><td style="text-align: right">1035</td><td style="text-align: right">88</td><td style="text-align: right">91.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">215</td><td style="text-align: right">3</td><td style="text-align: right">98.6%</td></tr>
 <tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">670</td><td style="text-align: right">45</td><td style="text-align: right">93.7%</td></tr>
-<tr><td>spacemacs</td><td style="text-align: right">1053</td><td style="text-align: right">913</td><td style="text-align: right">64</td><td style="text-align: right">86.7%</td></tr>
+<tr><td>spacemacs</td><td style="text-align: right">1053</td><td style="text-align: right">978</td><td style="text-align: right">75</td><td style="text-align: right">92.9%</td></tr>
 </tbody>
 </table>
 </div>
@@ -9225,7 +9355,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th>Category</th><th style="text-align: right">Keybindings</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
-<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">908</td><td style="text-align: right">81</td><td style="text-align: right">80.6%</td></tr>
+<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">1035</td><td style="text-align: right">88</td><td style="text-align: right">91.8%</td></tr>
 <tr><td>jetbrains</td><td>caret-navigation</td><td style="text-align: right">18</td><td style="text-align: right">18</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>code-analysis</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>code-folding</td><td style="text-align: right">8</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9247,8 +9377,8 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">94</td><td style="text-align: right">4</td><td style="text-align: right">95.9%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">443</td><td style="text-align: right">36</td><td style="text-align: right">92.5%</td></tr>
 <tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">83</td><td style="text-align: right">2</td><td style="text-align: right">97.6%</td></tr>
-<tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">242</td><td style="text-align: right">26</td><td style="text-align: right">89.3%</td></tr>
-<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">782</td><td style="text-align: right">671</td><td style="text-align: right">38</td><td style="text-align: right">85.8%</td></tr>
+<tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">245</td><td style="text-align: right">26</td><td style="text-align: right">90.4%</td></tr>
+<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">782</td><td style="text-align: right">733</td><td style="text-align: right">49</td><td style="text-align: right">93.7%</td></tr>
 </tbody>
 </table>
 </div>
