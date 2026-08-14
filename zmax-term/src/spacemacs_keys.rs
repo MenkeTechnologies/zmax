@@ -210,11 +210,11 @@ pub fn line_bands(path: &Path, mode: Smeargle) -> Vec<Option<usize>> {
                     // rank 0 is the oldest commit, `spread` the newest; a file
                     // touched by a single commit is all-newest.
                     let rank = distinct.partition_point(|d| d < t);
-                    Some(if spread == 0 {
-                        bands - 1
-                    } else {
-                        (rank * (bands - 1) / spread).min(bands - 1)
-                    })
+                    Some(
+                        (rank * (bands - 1))
+                            .checked_div(spread)
+                            .map_or(bands - 1, |band| band.min(bands - 1)),
+                    )
                 })
                 .collect()
         }

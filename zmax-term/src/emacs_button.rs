@@ -60,7 +60,6 @@ pub fn buttons(text: &str, is_command: &dyn Fn(&str) -> bool) -> Vec<Button> {
     let mut out = Vec::new();
     let mut start = 0usize; // char offset of the token being accumulated
     let mut token = String::new();
-    let mut idx = 0usize;
     let flush = |token: &mut String, start: usize, out: &mut Vec<Button>| {
         if !token.is_empty() {
             if let Some(b) = classify(token, start, is_command) {
@@ -69,7 +68,7 @@ pub fn buttons(text: &str, is_command: &dyn Fn(&str) -> bool) -> Vec<Button> {
             token.clear();
         }
     };
-    for ch in text.chars() {
+    for (idx, ch) in text.chars().enumerate() {
         if ch.is_whitespace() {
             flush(&mut token, start, &mut out);
             start = idx + 1;
@@ -79,7 +78,6 @@ pub fn buttons(text: &str, is_command: &dyn Fn(&str) -> bool) -> Vec<Button> {
             }
             token.push(ch);
         }
-        idx += 1;
     }
     flush(&mut token, start, &mut out);
     out

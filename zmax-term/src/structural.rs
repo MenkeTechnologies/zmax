@@ -69,7 +69,7 @@ fn scope(text: RopeSlice, within: &Selection) -> Vec<std::ops::Range<usize>> {
     // with no address means in vis, and what sam's `,x/re/` idiom spells out.
     let whole = within.len() == 1 && within.primary().len() <= 1;
     if whole {
-        return vec![0..text.len_chars()];
+        return std::iter::once(0..text.len_chars()).collect();
     }
     within
         .iter()

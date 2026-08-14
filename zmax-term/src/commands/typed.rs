@@ -10288,7 +10288,7 @@ fn ex_kbd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     let words: Vec<&str> = args.iter().map(|a| a.as_ref()).collect();
     // A trailing single-character word is the register to put the sequence in.
     let (keys, register) = match words.split_last() {
-        Some((last, head)) if head.len() >= 1 && last.chars().count() == 1 => {
+        Some((last, head)) if !head.is_empty() && last.chars().count() == 1 => {
             (head.join(" "), last.chars().next().unwrap())
         }
         _ => (words.join(" "), '@'),
@@ -33132,7 +33132,7 @@ fn ex_dictionary_tooltip_mode(
     if let Some(spec) = args.first().filter(|s| !s.trim().is_empty()) {
         let (host, port) = match spec.rsplit_once(':') {
             Some((h, p)) => (h, p.parse().unwrap_or(crate::dictionary::DEFAULT_PORT)),
-            None => (spec.as_ref(), crate::dictionary::DEFAULT_PORT),
+            None => (spec, crate::dictionary::DEFAULT_PORT),
         };
         crate::dictionary::set_server(host, port);
     }
