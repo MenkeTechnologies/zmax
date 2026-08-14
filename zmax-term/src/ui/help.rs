@@ -312,10 +312,14 @@ const TOPICS: &[(&str, &str)] = &[
     ),
     (
         "Debugging",
-        "A debug adapter (DAP) session runs inside the editor: :debug-start picks a\n\
-      configuration, :debug-breakpoint toggles one on the current line, and the\n\
-      IDE workbench's Debug tab shows frames, variables and the console.\n\
-      Run/debug configurations are edited in Preferences ▸ Run Configs.",
+        "A debug adapter (DAP) session runs inside the editor.  :debug-start runs a\n\
+      template with its parameters and :debug-remote attaches to an adapter over\n\
+      TCP; :debug-eval evaluates an expression in the stopped frame.\n\n\
+      F9 (SPC d b) toggles a breakpoint and SPC d B opens the breakpoint picker;\n\
+      S-F5 (SPC d d) launches and SPC d c continues.  The IDE workbench's Debug\n\
+      tab shows frames, variables and the console, and run/debug configurations\n\
+      are edited in Preferences ▸ Run Configs.\n\n\
+      :debug on its own is vim's script debugger, not the adapter.",
     ),
     (
         "Git",
@@ -398,6 +402,388 @@ const TOPICS: &[(&str, &str)] = &[
       you are reading indexes it.  Every command has a one-line description in\n\
       the Commands and Static commands sections here, with the keys that run it.\n\
       The book (book/src) covers the same ground in long form.",
+    ),
+    (
+        "Case & notation",
+        "Rewrites of the selection, one line or one word at a time.\n\n\
+      :to-snake :to-kebab :to-camel :to-pascal :to-constant   identifier case\n\
+      :to-ascii        fold accents and smart punctuation down to ASCII\n\
+      :to-binary       numbers to base 2; :dec-to-hex and :hex-to-dec convert\n\
+                       between decimal and hex\n\
+      :to-fixed N      format each numeric line to N decimal places\n\
+      :to-env-export   prefix each KEY=value line with 'export '\n\
+      :to-html-list   wrap the selected lines in an HTML <ul>",
+    ),
+    (
+        "Sorting text",
+        "Every one of these acts on the selected lines and replaces them in place.\n\n\
+      :sort-lines         plain lexicographic sort\n\
+      :sort-words         sort the words within the selection\n\
+      :sort-by-length     shortest line first\n\
+      :sort-by-field N    sort on the Nth whitespace field (default 1)\n\
+      :sort-numeric-fields  numeric sort on a field\n\
+      :sort-columns       sort by a column range rather than a field\n\
+      :sort-paragraphs :sort-pages  sort larger blocks, not lines\n\n\
+      :sort takes the flags, so it is the one to reach for when the rest do not\n\
+      fit.  :uniquify-lines drops duplicates, :uniq-count collapses them to counts by\n\
+      frequency, and :reverse turns the order round.",
+    ),
+    (
+        "Pulling things out of text",
+        "The extract family scans the selection and leaves one match per line.\n\n\
+      :extract-urls :extract-emails :extract-ips :extract-numbers\n\
+      :extract-quoted            everything inside quotes\n\
+      :extract-between A B       the substrings between two delimiters\n\
+      :extract <regex>           the general form; capture groups are kept\n\n\
+      For finding rather than rewriting, :multi-occur lists matches for a\n\
+      regexp across every buffer whose name matches a second regexp.",
+    ),
+    (
+        "Cleaning text up",
+        ":strip-invisible          drop zero-width and invisible Unicode\n\
+      :strip-line-numbers      remove pasted line numbers\n\
+      :strip-list-markers      remove bullet / numbered list markers\n\
+      :strip-markdown-links    keep the link text, drop the target\n\
+      :strip-emphasis          remove markdown * and _ emphasis\n\
+      :strip-html-comments     remove <!-- … -->\n\
+      :strip-export            remove 'export ' from shell assignments\n\n\
+      :delete-trailing-whitespace, :delete-blank-lines and\n\
+      :delete-horizontal-space handle whitespace itself.",
+    ),
+    (
+        "JSON",
+        "A whole toolkit that works on the selection, so it composes with multiple\n\
+      selections and with the shell pipe.\n\n\
+      :json-query users.0.name    replace the JSON with the value at a dot-path\n\
+      :json-flatten               flatten to greppable 'path = value' lines\n\
+      :json-pick / :json-omit     keep or drop fields\n\
+      :json-group-by city         group an array of objects by a field\n\
+      :json-sort :json-unique :json-keys :json-type :json-pluck\n\
+      :json-to-csv :json-to-toml :json-to-kv :json-to-lines\n\
+      :jsonl-to-json / :json-to-jsonl   between JSON and JSON Lines\n\
+      :json-validate              parse and report the first error\n\
+      :json-table                 render an array of objects as a table",
+    ),
+    (
+        "CSV & TSV",
+        ":csv-column N        keep only the Nth column (1-based)\n\
+      :csv-validate        check every row has the same field count\n\
+      :csv-to-tsv / :tsv-to-csv   change the delimiter\n\
+      :csv-to-html-table   first row becomes the header of an HTML table\n\
+      :lines-to-csv-row    join the selected lines into one RFC-4180 row\n\
+      :csv-row-to-lines    the inverse\n\
+      :json-to-csv         and back through :json-query for the other direction",
+    ),
+    (
+        "Numbers in a buffer",
+        ":calc <expr>          evaluate arithmetic, or every selection in place\n\
+      :percent-of-total     each numeric line as a percentage of the column total\n\
+      :diff-lines           each numeric line replaced by its delta from the last\n\
+      :running-total        the inverse of that\n\
+      :hexdump              render the selection as an xxd-style dump\n\
+      :hex                  the same in one direction only\n\
+      :rectangle-number-lines   number the lines of a rectangle, from N",
+    ),
+    (
+        "Rectangles",
+        "Column-shaped edits, as emacs's C-x r family does them.\n\n\
+      :string-rectangle          replace the rectangle's column span on every\n\
+                                 line with a string\n\
+      :string-insert-rectangle   insert it instead of replacing\n\
+      :rectangle-number-lines    number the lines, optionally from N with a\n\
+                                 format string\n\n\
+      Multiple cursors reach the same result: C on each line, then type.",
+    ),
+    (
+        "Abbreviations",
+        "Typed-word expansion, from both lineages.\n\n\
+      :iabbrev lhs rhs        vim's insert-mode abbreviation (:cabbrev for the\n\
+                              command line, :noreabbrev / :inoreabbrev for the\n\
+                              non-recursive forms)\n\
+      :unabbreviate           remove one; :abbreviate lists them\n\
+      :define-global-abbrev NAME EXPANSION   emacs's global table\n\
+      :define-mode-abbrev     the same, for this language only\n\
+      :abbrev-mode on|off     toggle expansion on a word separator\n\
+      :list-abbrevs :write-abbrev-file :read-abbrev-file :kill-all-abbrevs",
+    ),
+    (
+        "Comment boxes",
+        ":rebox redraws the selection as a comment box in the buffer's comment\n\
+      syntax; a style number picks the box.  :rebox-next and :rebox-prev cycle\n\
+      through the styles, :rebox-unbox takes the box away again, and\n\
+      :rebox-left / :rebox-center / :rebox-right set how the text sits inside.",
+    ),
+    (
+        "Highlighting",
+        "Highlights that stay until removed, over and above the syntax colours.\n\n\
+      :highlight-regexp <re>              add a persistent highlight\n\
+      :highlight-phrase                   the same, tolerant of line breaks\n\
+      :highlight-lines-matching-regexp    highlight whole lines\n\
+      :highlight-symbol-at-point          every whole-word use of this symbol\n\
+      :highlight-changes-mode             mark what has changed since opening\n\n\
+      :highlight defines a theme face directly, which is what the highlights\n\
+      above and the theme studio both write to.",
+    ),
+    (
+        "Fill, margins & justification",
+        ":set-fill-column N        wrap width (the cursor's column when N is left off)\n\
+      :set-left-margin / :set-right-margin\n\
+      :set-justification-left / -right / -center / -full / -none\n\
+      :fill-individual-paragraphs   fill each paragraph separately, splitting on\n\
+                                    indentation changes\n\
+      :fill-nonuniform-paragraphs   the same, splitting only on blank lines\n\n\
+      :set-face-foreground and :set-face-background change a face for the\n\
+      session without editing the theme.",
+    ),
+    (
+        "Org mode",
+        "Outlines, TODOs and an agenda over .org files.\n\n\
+      :org-cycle              fold or unfold this heading's subtree\n\
+      :org-fold-all / :org-unfold-all\n\
+      :org-todo               cycle none -> TODO -> DONE\n\
+      :org-priority           set the [#A] priority cookie\n\
+      :org-promote / :org-demote          change heading level\n\
+      :org-move-subtree-up / -down        move a whole subtree\n\
+      :org-schedule / :org-deadline       stamp a date on the heading\n\
+      :org-next-heading / :org-prev-heading\n\
+      :org-agenda             TODOs across open buffers and *.org files here,\n\
+                              grouped by scheduled and deadline date\n\
+      :org-capture            append a '* TODO <text>' line to inbox.org\n\
+      :org-agenda-file-to-front / :org-remove-file   manage the agenda list\n\
+      :org-export             export the buffer to Markdown",
+    ),
+    (
+        "Images",
+        ":image-mode draws the current image file in the terminal.\n\n\
+      :image-rotate :image-flip-horizontally :image-flip-vertically\n\
+      :image-increase-size / :image-decrease-size\n\
+      :image-transform-fit-to-window :image-transform-set-scale\n\
+      :image-transform-set-percent :image-transform-reset-to-original\n\
+      :image-next-file / :image-previous-file   walk the directory\n\n\
+      Animations: :image-next-frame :image-goto-frame :image-increase-speed\n\
+      :image-reverse-speed :image-reset-speed.  :image-save writes the result.",
+    ),
+    (
+        "Documents",
+        ":doc-view-mode renders a PDF, PostScript or DjVu page in the terminal.\n\n\
+      :doc-view-next-page / -previous-page / -first-page / -last-page\n\
+      :doc-view-goto-page N\n\
+      :doc-view-enlarge / :doc-view-shrink\n\
+      :doc-view-set-slice X Y W H    crop the page; :doc-view-reset-slice undoes\n\
+      :doc-view-search               search the extracted text\n\
+      :doc-view-open-text            open that text as a buffer instead",
+    ),
+    (
+        "The web",
+        ":eww <url> fetches a page and renders the HTML to text in a buffer;\n\
+      :eww-open-file does the same for a local file and :eww-search-words\n\
+      searches with the configured engine.\n\n\
+      :browse-url hands a URL to the system browser instead, and\n\
+      :xwidget-webkit-browse-url opens a real WebKit view where one is\n\
+      available (:xwidget-webkit-browse-history walks it).\n\n\
+      :quickurl-add name url stores a URL, :quickurl recalls one by name and\n\
+      :quickurl-list shows the table.",
+    ),
+    (
+        "Feeds, mail & news",
+        ":elfeed reads the RSS/Atom feeds listed in the elfeed feed file;\n\
+      :elfeed-add <url> [tags] adds one and :elfeed-feeds lists them.\n\n\
+      :compose-mail [to] [subject] opens a draft in message mode, where\n\
+      :message-goto-to :message-goto-subject :message-goto-cc :message-goto-bcc\n\
+      :message-goto-body and :message-insert-signature move around it, and\n\
+      :message-send / :message-send-and-exit deliver it.\n\n\
+      :gnus [server] opens the newsreader against an NNTP host or a spool.",
+    ),
+    (
+        "Chat",
+        ":irc-connect <host[:port]> <nick> registers with an IRC server;\n\
+      :irc-join joins a channel, :irc-say <target> <text> sends a message,\n\
+      :irc-view shows the traffic and :irc-quit disconnects.\n\n\
+      :slack-start [token] authenticates (or reads $SLACK_TOKEN),\n\
+      :slack-select-rooms picks the channels, :slack-buffer opens one,\n\
+      :slack-message posts and :slack-quit ends the session.",
+    ),
+    (
+        "Version control beyond git",
+        "The perforce commands shell out to p4: :p4-edit :p4-add :p4-delete\n\
+      :p4-revert :p4-submit :p4-shelve :p4-unshelve :p4-sync :p4-opened\n\
+      :p4-changes :p4-describe :p4-filelog :p4-diff :p4-blame :p4-resolve\n\
+      :p4-reconcile :p4-branches :p4-clients :p4-labels :p4-jobs :p4-users\n\
+      :p4-print :p4-where :p4-info, and :p4 runs anything else.\n\n\
+      :vc-root-version-diff diffs the tree against a revision for whichever\n\
+      backend the project uses.",
+    ),
+    (
+        "Diffing buffers",
+        ":diffthis shows the buffer's changes side by side against git HEAD, and\n\
+      :diffsplit opens another file beside it in diff mode.\n\
+      :diffupdate recomputes, :diffoff leaves diff mode.\n\n\
+      :diffput writes the hunk under the selection into the diff base, and\n\
+      :diffget (:reset-diff-change) resets the change under the cursor, so a\n\
+      difference can be settled by moving hunks rather than editing text.\n\
+      :diff-buffer-with-file compares what is on screen with what is on disk,\n\
+      and :diffpatch applies a patch file to the buffer.",
+    ),
+    (
+        "Compiling & the error list",
+        ":compile <command> runs it and collects the errors; :recompile repeats the\n\
+      last one.  :make and :lmake do the same through the make program, filling\n\
+      the quickfix and location lists respectively.\n\n\
+      :cnext :cprevious :copen :cclose walk and show the quickfix list;\n\
+      :lnext :lprevious :lopen :lclose do it for the location list.\n\
+      :caddbuffer and :laddbuffer read errors out of a buffer you already have.",
+    ),
+    (
+        "Tags",
+        ":regenerate-tags rebuilds the project's TAGS file with ctags -Re and visits\n\
+      it.  :tags shows the tag stack, :Tags and :BTags pick a tag with the fuzzy\n\
+      finder (project-wide and buffer-local), and :Helptags does the same for\n\
+      help topics.\n\n\
+      Language servers cover the same ground without an index — see the\n\
+      Language servers topic — but tags still work where no server exists.",
+    ),
+    (
+        "Embedded & remote hardware",
+        "PlatformIO: :pio-init scaffolds a project for a board, :pio-build compiles\n\
+      it into the compilation list, :pio-upload flashes it, :pio-lib-install\n\
+      adds a library and :pio-monitor opens the serial monitor.  The :pio-remote-* commands drive boards attached to another\n\
+      machine.  :pio passes anything else straight through.\n\n\
+      Arduino: :arduino-compile builds the sketch and :arduino-upload flashes\n\
+      it, both live in a terminal panel; the arduino-profile-* commands manage\n\
+      build profiles.\n\n\
+      :serial-term <port> [speed] opens a plain serial terminal on any device.",
+    ),
+    (
+        ".NET",
+        ":dotnet-build :dotnet-clean :dotnet-restore :dotnet-publish :dotnet-test\n\
+      run the SDK and collect errors into the compilation list.\n\
+      :dotnet-run and :dotnet-run-with-args run the project.\n\
+      :dotnet-add-package / :dotnet-add-reference change the project file,\n\
+      :dotnet-new scaffolds, and :dotnet-sln-new / -add / -remove / -list keep\n\
+      the solution in order.  :dotnet-goto-sln :dotnet-goto-csproj\n\
+      :dotnet-goto-fsproj open those files without searching for them.",
+    ),
+    (
+        "Machines & services",
+        ":vagrant-up :vagrant-halt :vagrant-suspend :vagrant-resume :vagrant-reload\n\
+      :vagrant-provision :vagrant-status :vagrant-ssh :vagrant-destroy drive a\n\
+      Vagrant box from the editor.\n\n\
+      :prodigy lists the services declared in prodigy.json with their state;\n\
+      :prodigy-start :prodigy-stop :prodigy-restart :prodigy-browse manage them.\n\n\
+      :zwire-host :zwire-sysinfo :zwire-hostinfo :zwire-exec :zwire-job\n\
+      :zwire-jobs :zwire-job-output reach machines over zwire, and :zwire-crawl\n\
+      inserts matching paths from a remote crawl at the cursor.",
+    ),
+    (
+        "Torrents",
+        ":transmission lists what a transmission-daemon is carrying, over its RPC\n\
+      API.  :transmission-add takes a magnet link, URL or file path.\n\
+      :transmission-start / -stop / -verify act on a torrent,\n\
+      :transmission-remove and :transmission-remove-delete take it away (with\n\
+      or without the data), :transmission-move relocates it, and\n\
+      :transmission-files / :transmission-peers show the detail.\n\
+      :transmission-limit-down :transmission-limit-up :transmission-turtle\n\
+      control the speed.",
+    ),
+    (
+        "Passwords & encryption",
+        ":pass-list shows the password-store tree; :pass-show prints an entry and\n\
+      :pass-copy puts it on the clipboard.  :pass-generate makes a new one,\n\
+      :pass-insert and :pass-edit change one, :pass-rename and :pass-remove\n\
+      move it, and :pass-init sets the store up.\n\
+      :pass-otp copies a one-time token; :pass-otp-uri and :pass-otp-insert\n\
+      add the secret.\n\n\
+      :encrypt encrypts the selection (or the buffer) with an age passphrase,\n\
+      replacing it in place with ASCII-armored ciphertext.",
+    ),
+    (
+        "Notes",
+        ":geeknote-find searches Evernote through the geeknote CLI,\n\
+      :geeknote-show opens a note, :geeknote-create writes one,\n\
+      :geeknote-move files it elsewhere, :geeknote-remove deletes it and\n\
+      :geeknote-notebooks lists the notebooks.\n\n\
+      For plain-text notes, org capture (see the Org mode topic) appends to an\n\
+      inbox file without leaving the buffer you are in.",
+    ),
+    (
+        "Music & sound",
+        ":alda-server-start starts the Alda server; :alda-play-buffer\n\
+      :alda-play-region :alda-play-block :alda-play-line play what you have\n\
+      written, and :alda-server-status checks on it.\n\n\
+      :extempore-connect attaches to a running Extempore process over TCP, then\n\
+      :extempore-send-definition :extempore-send-region :extempore-send-buffer\n\
+      evaluate live.  :tidal-run and :tidal-run-orbit do the same for TidalCycles\n\
+      (:tidal-hush stops everything).\n\n\
+      Players: :spotify-play-pause :spotify-next :spotify-search-track and the\n\
+      rest, and :pianobar-play-pause :pianobar-next :pianobar-love\n\
+      :pianobar-station.",
+    ),
+    (
+        "Numerical & statistical work",
+        ":octave-eval evaluates Octave code in a batch interpreter;\n\
+      :octave-run-file runs a script, :octave-send-buffer :octave-send-region\n\
+      :octave-send-line push what is on screen through it, and :octave-help /\n\
+      :octave-lookfor search the documentation.\n\n\
+      :rlang evaluates R, and :calc handles arithmetic without leaving the\n\
+      buffer.  See Embedded scripting for the twelve compiled-in interpreters.",
+    ),
+    (
+        "Sessions & desktops",
+        ":desktop-save records the file-visiting buffers and the cursor positions;\n\
+      :desktop-read reopens them, :desktop-revert rereads the file,\n\
+      :desktop-change-dir switches to another one and :desktop-clear closes the\n\
+      lot.\n\n\
+      Filesets are the named-group version: :filesets-define-pattern defines\n\
+      one as a regexp over a directory, :filesets-add-buffer and\n\
+      :filesets-remove-buffer maintain it by hand, :filesets-open visits every\n\
+      file in it, :filesets-close closes them, :filesets-run-cmd runs a command\n\
+      over each and :filesets-list shows what exists.",
+    ),
+    (
+        "Finding files fast",
+        ":file-cache-add-directory adds a directory's file names to the cache and\n\
+      :file-cache-add-directory-using-find walks a tree into it;\n\
+      :file-cache-add-file adds one, :file-cache-display shows the cache and\n\
+      :file-cache-clear-cache empties it.  Cached names complete anywhere a\n\
+      file name is asked for.\n\n\
+      :oldfiles picks from the files edited lately and :RecentLocations walks the\n\
+      jump ring newest-first with context, while the file picker (SPC f)\n\
+      searches the working tree directly.",
+    ),
+    (
+        "Mirrored files",
+        "Shadow copies keep a file in step across machines or directories.\n\
+      :shadow-define-cluster names a site, :shadow-define-literal-group ties\n\
+      specific files together and :shadow-define-regexp-group does it by\n\
+      pattern.  :shadow-shadows lists what is pending, :shadow-copy-files\n\
+      writes the copies and :shadow-cancel drops them.\n\
+      :shadow-initialize turns the whole mechanism on.",
+    ),
+    (
+        "Self-documentation",
+        ":apropos <re> lists commands and config variables matching a regexp;\n\
+      :apropos-command narrows it to commands, :apropos-variable and\n\
+      :apropos-user-option to settings, :apropos-value searches what those\n\
+      settings currently hold, and :apropos-documentation searches the\n\
+      descriptions rather than the names.\n\n\
+      This Help panel indexes the same data, and :help <name> jumps straight to\n\
+      an entry.",
+    ),
+    (
+        "Diversions",
+        ":xkcd fetches a strip, draws it in the terminal and prints its alt text;\n\
+      :xkcd-random :xkcd-next :xkcd-prev walk the archive, :xkcd-open opens the\n\
+      page and :xkcd-explain opens the explainer wiki.\n\n\
+      :tutor is the more useful place to spend the same five minutes.",
+    ),
+    (
+        "Safety & measurement",
+        ":sandbox <cmd> runs a command with shelling out and file writes refused,\n\
+      which is what to use for something pasted in from elsewhere.\n\n\
+      :profile start / func / file / pause / stop / dump measures where time\n\
+      goes in scripts and functions, as vim's profiler does.\n\
+      :browse <cmd> runs a command that wants a file name and picks the file\n\
+      with the file picker.",
     ),
 ];
 
@@ -1154,6 +1540,44 @@ mod tests {
         assert!(
             with_keys > 50,
             "expected many commands to show keys, got {with_keys}"
+        );
+    }
+
+    /// A topic that names a command the editor does not have is worse than no
+    /// topic: the reader types it and gets "no such command". This caught
+    /// `:debug-breakpoint`, which was never registered — the breakpoint is
+    /// toggled by a static command, not a typable one.
+    #[test]
+    fn every_command_a_topic_names_is_registered() {
+        let known: std::collections::HashSet<&str> = crate::commands::typed::TYPABLE_COMMAND_LIST
+            .iter()
+            .flat_map(|c| std::iter::once(c.name).chain(c.aliases.iter().copied()))
+            .collect();
+
+        let mut missing: Vec<(&str, String)> = Vec::new();
+        for (title, body) in TOPICS {
+            for (i, tail) in body.match_indices(':').map(|(i, _)| (i, &body[i + 1..])) {
+                // Skip prose that merely contains a colon — `http://`, and the
+                // `<host[:port]>` placeholder. A command reference starts a word.
+                if body[..i].ends_with(|c: char| c.is_alphanumeric() || c == '[') {
+                    continue;
+                }
+                let name: String = tail
+                    .chars()
+                    .take_while(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+                    .collect();
+                // A trailing `-` marks a family (`:pio-remote-*`), not a command.
+                if name.len() < 3 || name.ends_with('-') {
+                    continue;
+                }
+                if !known.contains(name.as_str()) {
+                    missing.push((title, name));
+                }
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "topics name commands that are not registered: {missing:?}"
         );
     }
 }
