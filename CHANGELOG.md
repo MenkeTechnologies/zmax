@@ -192,6 +192,44 @@ Changes in zmax.
 
 Features:
 
+* **Structural regular expressions**, from sam and vis. `:structural-x` (`:sx`)
+  turns every match of a regex into a selection and runs a command over the set;
+  `:structural-y` does the same for the stretches *between* matches; and
+  `:structural-X` / `:structural-Y` run a command in every file whose name does
+  (or does not) match. They are not spelled `:x` / `:y` because vim already owns
+  both. Not spelled as a loop either: zmax holds every piece at once, so the loop
+  is a selection set.
+* **Four more keymap presets.** `kakoune` puts the keys where kakoune does (view
+  commands on `v`/`V`, text objects on `A-i`/`A-a`, selection registers on
+  `Z`/`z`/`A-z`, `space` to reduce to the primary selection); `micro` and `nano`
+  are modeless presets built from those editors' own shipped default keymaps.
+  With `spacemacs`, `vim`, `helix`, `emacs` and `cua` that is eight.
+* **kakoune's selection registers and selection history.** `Z` writes the
+  selections into a register in kakoune's own `line.col,line.col` format, `z`
+  reads them back and `A-z` combines the two sets through the same seven-way
+  menu; `A-u` / `A-U` walk selection changes the way `u` / `U` walk text
+  changes. `A-S` keeps the two ends of each selection, `A-&` copies the main
+  selection's indent onto the others.
+* **Numbered bookmarks** (ne `SetBookmark`, mcedit's bookmark keys): ten slots
+  per document holding a line, distinct from emacs' named bookmarks and from the
+  jumplist. Going to one pushes the jumplist, so `<C-o>` still comes back.
+* `:lint` runs an external checker over the file (nano's linter; program from
+  `:set linter` or the argument, `%` is the path) and puts its messages in the
+  location list, so `:lnext` and `:lopen` walk them.
+* **kill-whole-line** (emacs, micro's `CutLine`, mcedit) takes the entire line,
+  newline included, to the clipboard; **transpose-chars** (emacs `C-t`, vile)
+  swaps the two characters around the cursor; **Save As** now prompts for the
+  name the way micro, mcedit and ne do.
+* Runtime key mapping: the `:map` family (`:map`, `:nmap`, `:imap`, `:vmap`,
+  `:xmap`, `:smap`, `:omap`, the `noremap` forms, `:unmap` and the `mapclear`
+  family) and vim's whole `:menu` family (`:menu`, `:emenu`, `:popup`,
+  `:unmenu` and the mode-prefixed variants) are reachable from the command line.
+  Both were implemented and unregistered.
+* The **port report** now measures zmax against thirty cited sources rather than
+  six: kakoune, vis, sam, ed, nvi, vile, mg, nano, micro, mcedit, ne, dte and the
+  Neovim distributions join vim/neovim, emacs, spacemacs, fzf.vim, JetBrains and
+  Cursor. Each is parsed from that editor's own primary source.
+
 * Native-plugin **package manager** — `:zmax-native add owner/repo` (aliased
   `:plugin`, ported from zshrs's `znative`). Installs compiled `cdylib` plugins
   from `owner/repo`, git URLs, or local paths into a content-addressed global
