@@ -365,10 +365,23 @@ impl Component for RunConfigPanel {
         self.field_hits.clear();
 
         let theme = &ctx.editor.theme;
-        let bg = to_rat_style(theme.get("ui.background"));
+        // The list and form blocks below paint this over most of the page, so it
+        // has to honour `transparent-background` too — clearing only the page
+        // fill left those two blocks opaque, which is the whole panel.
+        let mut bg_style = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            bg_style.bg = None;
+        }
+        let bg = to_rat_style(bg_style);
         let text = to_rat_style(theme.get("ui.text"));
         let dim = to_rat_style(theme.get("comment"));
-        let border = to_rat_style(theme.get("ui.window"));
+        // The block borders paint their own cells, so they need the setting too —
+        // otherwise a transparent page is outlined in opaque `ui.window` black.
+        let mut border_style = theme.get("ui.window");
+        if ctx.editor.config().transparent_background {
+            border_style.bg = None;
+        }
+        let border = to_rat_style(border_style);
         let sel = to_rat_style(theme.get("ui.selection")).add_modifier(RMod::BOLD);
         let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
         let key = to_rat_style(theme.get("keyword"));

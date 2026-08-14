@@ -90,8 +90,8 @@ const TOPICS: &[(&str, &str)] = &[
         "Welcome to zmax",
         "zmax is a hackable modal editor with a full IDE shell (project tree, structure, \
       problems, run window, git, minimap) and a vim-faithful keymap.\n\n\
-      • Four keymap presets: spacemacs (default), vim, helix, emacs.  Switch with\n\
-        :keymap <name> or in Preferences ▸ Keymap.\n\
+      • Eight keymap presets: spacemacs (default), vim, helix, kakoune, micro,\n\
+        nano, emacs, cua.  Switch with :keymap <name> or in Preferences ▸ Keymap.\n\
       • Press SPC (space) for the leader menu; press C-x for the emacs prefix.\n\
       • SPC , opens Preferences (Settings, Keymap, Color Scheme, Run Configs).\n\
       • SPC h opens this Help.\n\
@@ -229,6 +229,175 @@ const TOPICS: &[(&str, &str)] = &[
         "Operators d c y > < =  combine with motions and text objects:\n\
       diw / ciw word, di( / ci\" inside pair, dap paragraph, dat tag.\n\
       i = inside, a = around.  Counts repeat: 2daw, 3dd.  . repeats the change.",
+    ),
+    (
+        "Keymap presets",
+        "zmax ships eight presets; :keymap <name> switches at runtime, keymap = \"name\"\n\
+      in config.toml picks the one you start with.\n\n\
+      Modal:    spacemacs (default, vim keys + SPC leader + C-x), vim (pure),\n\
+                helix (selection → action), kakoune (helix keys placed where\n\
+                kakoune puts them: v/V view, A-i/A-a objects, Z/z/A-z registers).\n\
+      Modeless: emacs, cua (emacs + C-x cut / C-c copy / C-v paste),\n\
+                micro (C-s save, C-q quit, C-e command bar),\n\
+                nano (^O write out, ^W where is, ^K cut, ^U paste, ^X exit).",
+    ),
+    (
+        "Multiple selections",
+        "A cursor is a one-character selection, and most commands act on every one.\n\n\
+      C / A-C     add a cursor on the next / previous line\n\
+      s           select every regex match inside the selections\n\
+      S           split the selections on a regex\n\
+      A-k / A-K   keep / drop the selections matching a regex\n\
+      ,           reduce to the primary selection (space in the kakoune preset)\n\
+      A-,         drop the primary selection\n\
+      )  (        rotate which selection is primary; A-) A-( rotate the contents",
+    ),
+    (
+        "Structural regular expressions",
+        "sam and vis's x/y loops, over selections instead of a loop.\n\n\
+      :sx /re/ command          run the command over every match of re\n\
+      :structural-y /re/ cmd    …over the stretches *between* matches\n\
+      :sX /name-re/ command     run it in every file whose name matches\n\
+      :structural-Y /re/ cmd    …in every file whose name does not\n\n\
+      With no command the pieces are simply selected, which is how the loops get\n\
+      used interactively.  The pattern is ERE (\\w+ is a word), not vim magic.",
+    ),
+    (
+        "Selection registers & history",
+        "kakoune's selections-as-data, in the kakoune preset (and by command name in\n\
+      any preset).\n\n\
+      Z / z       save the selections into a register / restore them\n\
+      A-z         combine the register's selections with the current ones:\n\
+                  a append · u union · i intersection · < leftmost · > rightmost\n\
+                  + longest · - shortest\n\
+      A-u / A-U   undo / redo a *selection* change, leaving the text alone\n\
+      A-S         keep the first and last character of each selection\n\
+      A-& copy the main selection's indent onto the other selected lines",
+    ),
+    (
+        "Bookmarks & marks",
+        "Numbered bookmarks (ne / mcedit): ten per document, holding a line.\n\
+      Bind or run set_numbered_bookmark, then press 0–9; goto_numbered_bookmark\n\
+      returns to one and pushes the jumplist, so C-o comes back.\n\n\
+      vim marks: m{a-z} sets, '{a-z} jumps, :marks lists, :delmarks removes.\n\
+      Emacs bookmarks are the named, saved kind — see the bookmark_* commands.",
+    ),
+    (
+        "Key mapping at runtime",
+        ":map / :nmap / :imap / :vmap / :xmap / :smap / :omap and their noremap forms\n\
+      bind a key without restarting; :unmap and the mapclear family remove them.\n\
+      A map command with no right-hand side lists what is bound.\n\n\
+      :cmap  binds a key on the command line\n\
+      :lmap  binds a language ('keymap') key — :set keymap=<name> fills the same table\n\
+      :tmap  binds a key in the terminal panel\n\n\
+      Startup bindings live under [keys.<mode>] in config.toml, or in\n\
+      Preferences ▸ Keymap.",
+    ),
+    (
+        "Menus",
+        "vim's menu family is here: :menu File.Save :write<CR> defines an item,\n\
+      :emenu File.Save runs one by name, :popup File opens a subtree at the\n\
+      cursor, and :unmenu removes (\":unmenu *\" removes everything).  The\n\
+      mode-prefixed forms (:nmenu, :imenu, :amenu …) and :tmenu tooltips work\n\
+      as vim documents them.",
+    ),
+    (
+        "Language servers",
+        "Diagnostics, completion, hover and navigation come from the language server\n\
+      for the buffer's language — no plugin needed.\n\n\
+      gd goto definition · gr references · gi implementation · gy type definition\n\
+      K  hover · SPC k signature help · SPC a code actions · SPC r rename\n\
+      SPC d document diagnostics · SPC D workspace diagnostics\n\
+      :lsp-restart restarts a server, :lsp-stop stops one.",
+    ),
+    (
+        "Debugging",
+        "A debug adapter (DAP) session runs inside the editor: :debug-start picks a\n\
+      configuration, :debug-breakpoint toggles one on the current line, and the\n\
+      IDE workbench's Debug tab shows frames, variables and the console.\n\
+      Run/debug configurations are edited in Preferences ▸ Run Configs.",
+    ),
+    (
+        "Git",
+        ":magit opens the magit-style status buffer — stage, unstage, commit, push,\n\
+      pull, stash and branch from one place.  :blame annotates the current line,\n\
+      :diff shows the working-tree diff, and the gutter marks added, changed and\n\
+      removed lines as you type.  The IDE workbench has a Git tab with the same\n\
+      status list.",
+    ),
+    (
+        "Shell & terminal",
+        ":terminal opens a real PTY inside the editor.\n\n\
+      |    pipe each selection through a command and replace it with the output\n\
+      A-|  pipe each selection and ignore the output\n\
+      !    insert a command's output before the selection; A-! appends it\n\
+      $    keep the selections a command exits zero on\n\
+      :run-shell-command runs one without touching the buffer.",
+    ),
+    (
+        "Embedded scripting",
+        "Twelve interpreters are compiled in — no external runtime:\n\
+      :elisp :vim :awk :zsh :stryke :ruby :php :python :node :arb :tcl :rlang\n\n\
+      Each keeps state between calls, and :repl opens a panel fronting all of\n\
+      them.  Selections can be filtered through a script the same way they can\n\
+      through a shell command.",
+    ),
+    (
+        "Pickers & fuzzy finding",
+        "SPC f files · SPC b buffers · SPC / grep · SPC s symbols · SPC ? commands.\n\n\
+      The fzf.vim command surface is here too: :Files, :Buffers, :Rg, :Lines,\n\
+      :BLines, :Tags, :BTags, :Commits, :Maps, :Helptags, :Snippets.  Type to\n\
+      filter, Enter opens, and the preview pane follows the highlighted row.",
+    ),
+    (
+        "Snippets",
+        "Snippets live in ~/.zmax/snippets.toml as trigger, scope and body.  Type a\n\
+      trigger and expand it in insert mode, or pick one with :Snippets.  A body\n\
+      may carry tabstops (${1:name}, $0) and Tab moves between them once expanded.\n\
+      Language servers' own snippets arrive through completion.",
+    ),
+    (
+        "Formatting & linting",
+        "= reindents the selection and :format runs the language server's formatter.\n\
+      :lint runs an external checker over the file — set it with\n\
+      :set linter=<program> (% is replaced by the file's path) — and its messages\n\
+      land in the location list, so :lnext and :lopen walk them.\n\
+      :make builds and fills the compilation list; :cnext walks that one.",
+    ),
+    (
+        "The IDE workbench",
+        ":ide opens the workbench: project tree, structure outline, problems, run\n\
+      console, git, debug, registers, TODO, marks, jumps, recent files and a\n\
+      minimap stripe, with a powerline status bar across the bottom.\n\
+      F2 toggles it, Tab cycles focus, Esc returns to the editor.",
+    ),
+    (
+        "Undo, redo & history",
+        "u undoes, U (or C-r in the vim presets) redoes.  :undotree opens the tree of\n\
+      states — undo in zmax is a tree, so nothing is lost by undoing and typing.\n\
+      :earlier and :later move through the file's states by count or by time,\n\
+      and the history survives a restart when persistent undo is on.",
+    ),
+    (
+        "Tabs, splits & the dashboard",
+        ":tabnew opens a tab, :tabclose closes one, and the tabline across the top\n\
+      shows what is open.  Splits: C-w s / C-w v, C-w hjkl to move, C-w q to\n\
+      close.  Preferences ▸ Dashboard is a live system view — CPU, memory,\n\
+      processes, network, disks — rendered in the editor.",
+    ),
+    (
+        "Packages",
+        ":zmax-native add owner/repo installs a compiled native plugin into\n\
+      ~/.zmax/pkg and loads it without recompiling the editor; get, sync,\n\
+      remove, update, registry, info and gc manage the rest.  Plugins are\n\
+      SHA-256 pinned in installed.toml.",
+    ),
+    (
+        "Learning zmax",
+        ":tutor opens the built-in tutorial.  SPC h is this Help, and the Topics list\n\
+      you are reading indexes it.  Every command has a one-line description in\n\
+      the Commands and Static commands sections here, with the keys that run it.\n\
+      The book (book/src) covers the same ground in long form.",
     ),
 ];
 
