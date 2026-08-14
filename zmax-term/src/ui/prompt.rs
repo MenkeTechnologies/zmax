@@ -2480,7 +2480,27 @@ impl Component for Prompt {
                 self.recalculate_completion(cx.editor);
                 return EventResult::Consumed(None);
             }
-            Event::Key(event) => *event,
+            // vim `:cmap` — a command-line mapping replaces the key before the
+            // prompt's own handling sees it. The registry lives in
+            // `keymap::vim_map` because the command line is not a zmax mode;
+            // the common case (no mappings at all) costs one atomic read.
+            Event::Key(event) => {
+                if crate::keymap::vim_map::has_cmdline_mappings() {
+                    if let Some(mapped) = crate::keymap::vim_map::cmdline_mapping(*event) {
+                        for key in mapped {
+                            let result = self.handle_event(&Event::Key(key), cx);
+                            // A mapping whose rhs closes the prompt (`<CR>`)
+                            // must not have its remaining keys delivered to a
+                            // component that is gone.
+                            if !matches!(result, EventResult::Consumed(None)) {
+                                return result;
+                            }
+                        }
+                        return EventResult::Consumed(None);
+                    }
+                }
+                *event
+            }
             Event::Resize(..) => return EventResult::Consumed(None),
             // Prompt is a modal and should consume mouse events so clicks don't fall
             // through to the editor underneath. vim `c_<LeftMouse>` is the one that
