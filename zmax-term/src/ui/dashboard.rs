@@ -232,13 +232,15 @@ impl Component for DashboardPanel {
             });
         }
 
-        let theme = &ctx.editor.theme;
-        let mut page_bg = panel_bg(theme);
         // `transparent-background`: honor the setting; otherwise keep the opaque
-        // panel fallback so the desktop never shows through the dashboard.
-        if ctx.editor.config().transparent_background {
-            page_bg.bg = None;
-        }
+        // panel fallback so the desktop never shows through the dashboard. Recorded
+        // for the card helpers before any of them paints.
+        TRANSPARENT_FRAME.store(
+            ctx.editor.config().transparent_background,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+        let theme = &ctx.editor.theme;
+        let page_bg = panel_bg(theme);
         surface.clear_with(area, page_bg);
         if area.width < 24 || area.height < 8 {
             surface.set_stringn(
@@ -735,6 +737,13 @@ fn push_u(v: &mut VecDeque<u64>, x: u64) {
     }
 }
 
+/// Whether this frame is drawing with `transparent-background` on. The cards
+/// are painted by helpers that only receive the theme, and the setting lives on
+/// the editor config — so the render entry point records it here for them. Set
+/// once per frame, read by `panel_bg`.
+static TRANSPARENT_FRAME: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 /// An opaque background colour for the page. A transparent terminal + a theme
 /// whose `ui.background` has no colour would otherwise show the desktop straight
 /// through the dashboard's empty cells; fall back through the popup/menu scopes
@@ -749,8 +758,13 @@ fn panel_bg_color(theme: &zmax_view::Theme) -> zmax_view::graphics::Color {
         .unwrap_or(zmax_view::graphics::Color::Rgb(0x16, 0x18, 0x1e))
 }
 
-/// The opaque page background as a style.
+/// The page background as a style — opaque normally, and with no background at
+/// all when `transparent-background` is on, so the terminal shows through the
+/// cards as well as the page behind them.
 fn panel_bg(theme: &zmax_view::Theme) -> zmax_view::graphics::Style {
+    if TRANSPARENT_FRAME.load(std::sync::atomic::Ordering::Relaxed) {
+        return zmax_view::graphics::Style::default();
+    }
     zmax_view::graphics::Style::default().bg(panel_bg_color(theme))
 }
 
