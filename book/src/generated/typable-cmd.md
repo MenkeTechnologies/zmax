@@ -1534,6 +1534,41 @@
 | `:reflow` | Hard-wrap the current selection of lines to a given width. |
 | `:tree-sitter-subtree`, `:ts-subtree`, `:InspectTree` | Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree). |
 | `:config-reload` | Refresh user config. |
+| `:menu` | Define a menu item: :menu File.Save :write<CR> (vim :menu). |
+| `:noremenu` | Define a menu item whose rhs is not remapped (vim :noremenu). |
+| `:unmenu` | Remove a menu item or subtree; :unmenu * removes all (vim :unmenu). |
+| `:amenu` | Define a menu item for every mode (vim :amenu). |
+| `:anoremenu` | As :amenu, without remapping the rhs (vim :anoremenu). |
+| `:aunmenu` | Remove a menu item defined for every mode (vim :aunmenu). |
+| `:nmenu` | Define a normal-mode menu item (vim :nmenu). |
+| `:nnoremenu` | Normal-mode menu item, rhs not remapped (vim :nnoremenu). |
+| `:nunmenu` | Remove a normal-mode menu item (vim :nunmenu). |
+| `:vmenu` | Define a visual/select-mode menu item (vim :vmenu). |
+| `:vnoremenu` | Visual-mode menu item, rhs not remapped (vim :vnoremenu). |
+| `:vunmenu` | Remove a visual-mode menu item (vim :vunmenu). |
+| `:xmenu` | Define a visual-mode menu item (vim :xmenu). |
+| `:xnoremenu` | Visual-mode menu item, rhs not remapped (vim :xnoremenu). |
+| `:xunmenu` | Remove a visual-mode menu item (vim :xunmenu). |
+| `:smenu` | Define a select-mode menu item (vim :smenu). |
+| `:snoremenu` | Select-mode menu item, rhs not remapped (vim :snoremenu). |
+| `:sunmenu` | Remove a select-mode menu item (vim :sunmenu). |
+| `:omenu` | Define an operator-pending menu item (vim :omenu). |
+| `:onoremenu` | Operator-pending menu item, rhs not remapped (vim :onoremenu). |
+| `:ounmenu` | Remove an operator-pending menu item (vim :ounmenu). |
+| `:imenu` | Define an insert-mode menu item (vim :imenu). |
+| `:inoremenu` | Insert-mode menu item, rhs not remapped (vim :inoremenu). |
+| `:iunmenu` | Remove an insert-mode menu item (vim :iunmenu). |
+| `:cmenu` | Define a command-line menu item (vim :cmenu). |
+| `:cnoremenu` | Command-line menu item, rhs not remapped (vim :cnoremenu). |
+| `:cunmenu` | Remove a command-line menu item (vim :cunmenu). |
+| `:tlmenu` | Define a terminal-job menu item (vim :tlmenu). |
+| `:tlnoremenu` | Terminal-job menu item, rhs not remapped (vim :tlnoremenu). |
+| `:tlunmenu` | Remove a terminal-job menu item (vim :tlunmenu). |
+| `:tmenu` | Define a menu tooltip (vim :tmenu). |
+| `:tunmenu` | Remove a menu tooltip (vim :tunmenu). |
+| `:emenu` | Run a menu item by name: :emenu File.Save (vim :emenu). |
+| `:popup` | Open a menu as a pop-up at the cursor (vim :popup). |
+| `:menutranslate` | Translate a menu path for display (vim :menutranslate). |
 | `:cmap` | Map a key on the command line (vim :cmap). |
 | `:cnoremap` | Non-recursive command-line mapping (vim :cnoremap). |
 | `:cunmap` | Remove a command-line mapping (vim :cunmap). |

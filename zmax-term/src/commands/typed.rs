@@ -62925,6 +62925,391 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "menu",
+        aliases: &[],
+        doc: "Define a menu item: :menu File.Save :write<CR> (vim :menu).",
+        fun: ex_menu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "noremenu",
+        aliases: &[],
+        doc: "Define a menu item whose rhs is not remapped (vim :noremenu).",
+        fun: ex_noremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unmenu",
+        aliases: &[],
+        doc: "Remove a menu item or subtree; :unmenu * removes all (vim :unmenu).",
+        fun: ex_unmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "amenu",
+        aliases: &[],
+        doc: "Define a menu item for every mode (vim :amenu).",
+        fun: ex_amenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "anoremenu",
+        aliases: &[],
+        doc: "As :amenu, without remapping the rhs (vim :anoremenu).",
+        fun: ex_anoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "aunmenu",
+        aliases: &[],
+        doc: "Remove a menu item defined for every mode (vim :aunmenu).",
+        fun: ex_aunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nmenu",
+        aliases: &[],
+        doc: "Define a normal-mode menu item (vim :nmenu).",
+        fun: ex_nmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nnoremenu",
+        aliases: &[],
+        doc: "Normal-mode menu item, rhs not remapped (vim :nnoremenu).",
+        fun: ex_nnoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nunmenu",
+        aliases: &[],
+        doc: "Remove a normal-mode menu item (vim :nunmenu).",
+        fun: ex_nunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vmenu",
+        aliases: &[],
+        doc: "Define a visual/select-mode menu item (vim :vmenu).",
+        fun: ex_vmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vnoremenu",
+        aliases: &[],
+        doc: "Visual-mode menu item, rhs not remapped (vim :vnoremenu).",
+        fun: ex_vnoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vunmenu",
+        aliases: &[],
+        doc: "Remove a visual-mode menu item (vim :vunmenu).",
+        fun: ex_vunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xmenu",
+        aliases: &[],
+        doc: "Define a visual-mode menu item (vim :xmenu).",
+        fun: ex_xmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xnoremenu",
+        aliases: &[],
+        doc: "Visual-mode menu item, rhs not remapped (vim :xnoremenu).",
+        fun: ex_xnoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xunmenu",
+        aliases: &[],
+        doc: "Remove a visual-mode menu item (vim :xunmenu).",
+        fun: ex_xunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "smenu",
+        aliases: &[],
+        doc: "Define a select-mode menu item (vim :smenu).",
+        fun: ex_smenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "snoremenu",
+        aliases: &[],
+        doc: "Select-mode menu item, rhs not remapped (vim :snoremenu).",
+        fun: ex_snoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sunmenu",
+        aliases: &[],
+        doc: "Remove a select-mode menu item (vim :sunmenu).",
+        fun: ex_sunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "omenu",
+        aliases: &[],
+        doc: "Define an operator-pending menu item (vim :omenu).",
+        fun: ex_omenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "onoremenu",
+        aliases: &[],
+        doc: "Operator-pending menu item, rhs not remapped (vim :onoremenu).",
+        fun: ex_onoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ounmenu",
+        aliases: &[],
+        doc: "Remove an operator-pending menu item (vim :ounmenu).",
+        fun: ex_ounmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "imenu",
+        aliases: &[],
+        doc: "Define an insert-mode menu item (vim :imenu).",
+        fun: ex_imenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "inoremenu",
+        aliases: &[],
+        doc: "Insert-mode menu item, rhs not remapped (vim :inoremenu).",
+        fun: ex_inoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "iunmenu",
+        aliases: &[],
+        doc: "Remove an insert-mode menu item (vim :iunmenu).",
+        fun: ex_iunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cmenu",
+        aliases: &[],
+        doc: "Define a command-line menu item (vim :cmenu).",
+        fun: ex_cmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cnoremenu",
+        aliases: &[],
+        doc: "Command-line menu item, rhs not remapped (vim :cnoremenu).",
+        fun: ex_cnoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cunmenu",
+        aliases: &[],
+        doc: "Remove a command-line menu item (vim :cunmenu).",
+        fun: ex_cunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tlmenu",
+        aliases: &[],
+        doc: "Define a terminal-job menu item (vim :tlmenu).",
+        fun: ex_tlmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tlnoremenu",
+        aliases: &[],
+        doc: "Terminal-job menu item, rhs not remapped (vim :tlnoremenu).",
+        fun: ex_tlnoremenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tlunmenu",
+        aliases: &[],
+        doc: "Remove a terminal-job menu item (vim :tlunmenu).",
+        fun: ex_tlunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tmenu",
+        aliases: &[],
+        doc: "Define a menu tooltip (vim :tmenu).",
+        fun: ex_tmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tunmenu",
+        aliases: &[],
+        doc: "Remove a menu tooltip (vim :tunmenu).",
+        fun: ex_tunmenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "emenu",
+        aliases: &[],
+        doc: "Run a menu item by name: :emenu File.Save (vim :emenu).",
+        fun: ex_emenu,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "popup",
+        aliases: &[],
+        doc: "Open a menu as a pop-up at the cursor (vim :popup).",
+        fun: ex_popup,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "menutranslate",
+        aliases: &[],
+        doc: "Translate a menu path for display (vim :menutranslate).",
+        fun: ex_menutranslate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "cmap",
         aliases: &[],
         doc: "Map a key on the command line (vim :cmap).",
