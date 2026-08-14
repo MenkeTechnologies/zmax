@@ -1569,6 +1569,14 @@
 | `:emenu` | Run a menu item by name: :emenu File.Save (vim :emenu). |
 | `:popup` | Open a menu as a pop-up at the cursor (vim :popup). |
 | `:menutranslate` | Translate a menu path for display (vim :menutranslate). |
+| `:xunmap` | Remove a visual-mode mapping (vim :xunmap). |
+| `:sunmap` | Remove a select-mode mapping (vim :sunmap). |
+| `:ounmap` | Remove an operator-pending mapping (vim :ounmap). |
+| `:snoremap` | Non-recursive select-mode mapping (vim :snoremap). |
+| `:onoremap` | Non-recursive operator-pending mapping (vim :onoremap). |
+| `:xmapclear` | Remove every visual-mode mapping (vim :xmapclear). |
+| `:smapclear` | Remove every select-mode mapping (vim :smapclear). |
+| `:omapclear` | Remove every operator-pending mapping (vim :omapclear). |
 | `:cmap` | Map a key on the command line (vim :cmap). |
 | `:cnoremap` | Non-recursive command-line mapping (vim :cnoremap). |
 | `:cunmap` | Remove a command-line mapping (vim :cunmap). |
