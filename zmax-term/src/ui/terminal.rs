@@ -13,9 +13,10 @@
 //! Open: `:terminal` / the `terminal` command.
 
 use std::io::{Read, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use tui::buffer::Buffer as Surface;
 use zmax_view::{
@@ -26,8 +27,117 @@ use zmax_view::{
 
 use crate::compositor::{Component, Compositor, Context, Event, EventResult};
 
+/// The vt100 parser, wrapped so that a panic inside it cannot take the terminal
+/// with it.
+///
+/// vt100 0.15.2 indexes its grid with `unwrap()` in the drawing path, and those
+/// indices go stale when a screen holding double-width characters is made
+/// narrower — CJK or emoji output plus a shrinking pane is enough:
+///
+/// ```text
+/// let mut p = vt100::Parser::new(24, 80, 100);
+/// p.process("你".repeat(40).as_bytes());  // wide characters wrapping a row
+/// p.set_size(24, 17);                     // the pane got narrower
+/// p.process(b"ab");                       // -> unwrap() on None, screen.rs
+/// ```
+///
+/// Widening is safe, and so is a resize with only single-width characters on
+/// screen; it is the reflow of a wide character into a narrower row that leaves
+/// the position it later dereferences out of bounds.
+///
+/// The panic lands on the PTY reader thread, so without this wrapper the
+/// terminal stops reading output and never recovers. Feeding through
+/// [`Screen::feed`] catches the unwind and rebuilds the parser at the current
+/// size instead: the visible screen is lost (the shell redraws on its next
+/// prompt), the panel keeps working.
+struct Screen {
+    parser: Mutex<vt100::Parser>,
+    rows: AtomicU16,
+    cols: AtomicU16,
+    scrollback: usize,
+}
+
+thread_local! {
+    /// Set while a guarded parser call is running on this thread.
+    static QUIET: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Keep the caught panic's message off the screen. The default hook writes to
+/// stderr, which in raw mode paints over the editor — the report that led to
+/// this code was a vt100 backtrace scrawled across a running session. While a
+/// guarded call is in flight on this thread the message goes to the log
+/// instead; every other panic, on this thread or any other, is untouched.
+fn install_quiet_hook() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if QUIET.with(|q| q.get()) {
+                log::warn!("terminal: contained vt100 panic: {info}");
+            } else {
+                previous(info);
+            }
+        }));
+    });
+}
+
+impl Screen {
+    /// vt100 cannot represent a double-width character in one column and
+    /// panics outright on a zero-sized grid, so no dimension ever goes below 2.
+    const MIN: u16 = 2;
+
+    fn new(rows: u16, cols: u16, scrollback: usize) -> Self {
+        let (rows, cols) = (rows.max(Self::MIN), cols.max(Self::MIN));
+        Self {
+            parser: Mutex::new(vt100::Parser::new(rows, cols, scrollback)),
+            rows: AtomicU16::new(rows),
+            cols: AtomicU16::new(cols),
+            scrollback,
+        }
+    }
+
+    fn size(&self) -> (u16, u16) {
+        (
+            self.rows.load(Ordering::Relaxed),
+            self.cols.load(Ordering::Relaxed),
+        )
+    }
+
+    fn set_size(&self, rows: u16, cols: u16) {
+        let (rows, cols) = (rows.max(Self::MIN), cols.max(Self::MIN));
+        self.rows.store(rows, Ordering::Relaxed);
+        self.cols.store(cols, Ordering::Relaxed);
+        self.guarded("set_size", |p| p.set_size(rows, cols));
+    }
+
+    /// Parse `chunk` into the screen. Returns `false` if the parser had to be
+    /// rebuilt, which the caller can use to ask for a repaint.
+    fn feed(&self, chunk: &[u8]) -> bool {
+        self.guarded("process", |p| p.process(chunk))
+    }
+
+    /// Run `f` on the parser, replacing the parser with a fresh one if it
+    /// panics. `true` if it survived.
+    fn guarded(&self, what: &str, f: impl FnOnce(&mut vt100::Parser)) -> bool {
+        install_quiet_hook();
+        let mut p = self.parser.lock();
+        let ok = {
+            QUIET.with(|q| q.set(true));
+            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(&mut p)));
+            QUIET.with(|q| q.set(false));
+            r.is_ok()
+        };
+        if !ok {
+            let (rows, cols) = self.size();
+            log::warn!("terminal: vt100 panicked in {what}; resetting the {rows}x{cols} screen");
+            *p = vt100::Parser::new(rows, cols, self.scrollback);
+        }
+        ok
+    }
+}
+
 pub struct TerminalPanel {
-    parser: Arc<Mutex<vt100::Parser>>,
+    parser: Arc<Screen>,
     master: Box<dyn MasterPty + Send>,
     child: Box<dyn Child + Send + Sync>,
     writer: Box<dyn Write + Send>,
@@ -92,16 +202,14 @@ impl Pager {
 
     /// Feed held output into `parser` until a screenful has landed (then pause) or
     /// nothing is held. With paging off, everything held goes through at once.
-    fn pump(&self, parser: &Mutex<vt100::Parser>) {
+    fn pump(&self, parser: &Screen) {
         loop {
             if self.paused.load(Ordering::Relaxed) {
                 return;
             }
             let paging = self.on.load(Ordering::Relaxed);
             let chunk: Vec<u8> = {
-                let Ok(mut held) = self.held.lock() else {
-                    return;
-                };
+                let mut held = self.held.lock();
                 if held.is_empty() {
                     return;
                 }
@@ -116,9 +224,7 @@ impl Pager {
                 }
             };
             let ended_line = chunk.last() == Some(&b'\n');
-            if let Ok(mut p) = parser.lock() {
-                p.process(&chunk);
-            }
+            parser.feed(&chunk);
             if !paging {
                 self.fed.store(0, Ordering::Relaxed);
                 return;
@@ -136,7 +242,7 @@ impl Pager {
     }
 
     /// Let output flow again (a key was pressed at the `-- MORE --` prompt).
-    fn resume(&self, parser: &Mutex<vt100::Parser>) {
+    fn resume(&self, parser: &Screen) {
         self.paused.store(false, Ordering::Relaxed);
         self.fed.store(0, Ordering::Relaxed);
         self.pump(parser);
@@ -189,7 +295,7 @@ impl TerminalPanel {
 
         // vim `scrollback`: lines of terminal history kept above the screen.
         let scrollback = crate::commands::vim_opt_num("scrollback").unwrap_or(2000);
-        let parser = Arc::new(Mutex::new(vt100::Parser::new(rows, cols, scrollback)));
+        let parser = Arc::new(Screen::new(rows, cols, scrollback));
         let writer = pair
             .master
             .take_writer()
@@ -225,7 +331,8 @@ impl TerminalPanel {
                             if decoder.as_ref().map(|(e, _)| *e) != coding {
                                 decoder = coding.map(|e| (e, e.new_decoder()));
                             }
-                            if let Ok(mut held) = pager.held.lock() {
+                            {
+                                let mut held = pager.held.lock();
                                 match decoder.as_mut() {
                                     Some((_, dec)) => {
                                         let cap = dec
@@ -306,9 +413,7 @@ impl TerminalPanel {
             pixel_width: 0,
             pixel_height: 0,
         });
-        if let Ok(mut p) = self.parser.lock() {
-            p.set_size(self.rows, self.cols);
-        }
+        self.parser.set_size(self.rows, self.cols);
     }
 
     fn close() -> EventResult {
@@ -361,7 +466,8 @@ impl TerminalPanel {
     /// Scroll the terminal's scrollback view by `delta` lines (positive = back
     /// into history, negative = toward the live screen).
     fn scroll(&mut self, delta: isize) {
-        if let Ok(mut parser) = self.parser.lock() {
+        {
+            let mut parser = self.parser.parser.lock();
             let cur = parser.screen().scrollback() as isize;
             let next = (cur + delta).max(0) as usize;
             parser.set_scrollback(next);
@@ -552,10 +658,7 @@ impl Component for TerminalPanel {
         let grid = Rect::new(area.x, area.y + 1, area.width, area.height - 1);
         self.resize(grid.height, grid.width);
 
-        let parser = match self.parser.lock() {
-            Ok(p) => p,
-            Err(_) => return,
-        };
+        let parser = self.parser.parser.lock();
         let screen = parser.screen();
         for row in 0..grid.height {
             for col in 0..grid.width {
@@ -717,4 +820,65 @@ fn key_to_bytes(key: &KeyEvent) -> Option<Vec<u8>> {
         _ => return None,
     };
     Some(bytes)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    /// The crash this wrapper exists for: wide characters on screen, the pane
+    /// gets narrower, more output arrives. Upstream vt100 0.15.2 panics on the
+    /// third step; the terminal has to survive it and keep parsing.
+    #[test]
+    fn a_narrowing_resize_over_wide_characters_does_not_kill_the_terminal() {
+        let screen = Screen::new(24, 80, 100);
+        assert!(screen.feed("你".repeat(40).as_bytes()), "wide input parsed");
+
+        screen.set_size(24, 17);
+        // Whether or not this particular call unwinds inside vt100, it must
+        // return rather than propagate.
+        let survived = screen.feed(b"ab");
+
+        // The panel is still usable either way: the next output lands on the
+        // screen, on the rebuilt parser if the old one died.
+        assert!(
+            screen.feed(b"cd"),
+            "the screen still parses after the reset"
+        );
+        let parser = screen.parser.lock();
+        assert!(
+            parser.screen().contents().contains("cd"),
+            "expected the later output on screen, survived={survived}"
+        );
+    }
+
+    /// vt100 panics outright on a zero-sized grid, and cannot hold a
+    /// double-width character in a single column, so the size never gets there.
+    #[test]
+    fn the_screen_is_never_smaller_than_a_wide_character() {
+        let screen = Screen::new(0, 0, 0);
+        assert_eq!(screen.size(), (Screen::MIN, Screen::MIN));
+        assert!(
+            screen.feed("你好".as_bytes()),
+            "wide input on the smallest grid"
+        );
+
+        screen.set_size(1, 1);
+        assert_eq!(screen.size(), (Screen::MIN, Screen::MIN));
+        assert!(screen.feed("🙂".as_bytes()), "emoji on the smallest grid");
+    }
+
+    /// A resize that only widens, or that happens with plain text on screen, is
+    /// not the broken path — those must not be reported as panics.
+    #[test]
+    fn ordinary_resizes_are_untouched() {
+        let screen = Screen::new(24, 20, 100);
+        assert!(screen.feed(b"hello"));
+        screen.set_size(24, 60);
+        assert!(screen.feed(b" world"));
+        screen.set_size(10, 30);
+        assert!(screen.feed(b"!"));
+        let parser = screen.parser.lock();
+        assert!(parser.screen().contents().contains("hello world!"));
+    }
 }
