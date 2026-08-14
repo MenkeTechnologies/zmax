@@ -117,6 +117,7 @@
 | `split_selection_on_newline` | Split selection on newlines | **helix, kakoune** — normal: `` <A-s> ``, select: `` <A-s> `` |
 | `merge_selections` | Merge selections | **helix** — normal: `` <A-minus> ``, select: `` <A-minus> ``<br>**kakoune** — normal: `` <A-+> ``, `` <A-minus> ``, select: `` <A-minus> `` |
 | `merge_consecutive_selections` | Merge consecutive selections | **helix, kakoune** — normal: `` <A-_> ``, select: `` <A-_> `` |
+| `toggle_auto_completion` | Turn the automatic completion pop-up on or off (kakoune insert C-o) | **kakoune** — insert: `` <C-o> `` |
 | `paste_all_after` | Paste every entry the register holds, after each selection (kakoune A-p) | **kakoune** — normal: `` <A-p> `` |
 | `paste_all_before` | Paste every entry the register holds, before each selection (kakoune A-P) | **kakoune** — normal: `` <A-P> `` |
 | `save_as_prompt` | Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs) |  |
@@ -1014,7 +1015,7 @@
 | `align_selections` | Align selections in column | **spacemacs** — normal: `` <space>xaa ``, select: `` <space>xaa ``<br>**helix, kakoune** — normal: `` & ``, select: `` & `` |
 | `keep_primary_selection` | Keep primary selection | **helix** — normal: `` , ``, select: `` , ``<br>**kakoune** — normal: `` , ``, `` <space> ``, select: `` , ``, `` <space> ``<br>**micro** — normal: `` <A-c> ``, insert: `` <A-c> `` |
 | `remove_primary_selection` | Remove primary selection | **helix** — normal: `` <A-,> ``, select: `` <A-,> ``<br>**kakoune** — normal: `` <A-,> ``, `` <A-space> ``, select: `` <A-,> ``, `` <A-space> ``<br>**micro** — normal: `` <A-x> ``, insert: `` <A-x> `` |
-| `completion` | Invoke completion popup | **spacemacs** — normal: `` <A-C-i> ``, `` <A-tab> ``, `` <C-c>,l ``, `` <C-c>,<space> ``, select: `` <C-c>,l ``, `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,l ``, `` <C-c>,<space> ``<br>**vim** — insert: `` <C-n> ``, `` <C-p> ``, `` <C-x><C-i> ``, `` <C-x><C-n> ``, `` <C-x><C-p> ``<br>**helix, kakoune** — insert: `` <C-x> ``<br>**emacs, cua, micro, nano** — normal: `` <A-tab> ``, insert: `` <A-tab> `` |
+| `completion` | Invoke completion popup | **spacemacs** — normal: `` <A-C-i> ``, `` <A-tab> ``, `` <C-c>,l ``, `` <C-c>,<space> ``, select: `` <C-c>,l ``, `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,l ``, `` <C-c>,<space> ``<br>**vim** — insert: `` <C-n> ``, `` <C-p> ``, `` <C-x><C-i> ``, `` <C-x><C-n> ``, `` <C-x><C-p> ``<br>**helix** — insert: `` <C-x> ``<br>**kakoune** — insert: `` <C-x><C-x> ``<br>**emacs, cua, micro, nano** — normal: `` <A-tab> ``, insert: `` <A-tab> `` |
 | `hover` | Show docs for item under cursor | **spacemacs** — normal: `` <C-h>. ``, `` <space>lk ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, select: `` K ``, `` <C-h>. ``, `` <space>lk ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, insert: `` <C-h>. ``<br>**vim** — select: `` K ``<br>**helix** — normal: `` <space>k ``, select: `` <space>k `` |
 | `keyword_lookup` | vim K: run keywordprg on the word under cursor, else LSP hover | **spacemacs, vim** — normal: `` K `` |
 | `goto_first_nonwhitespace_down` | vim _: first non-blank, count-1 lines down | **spacemacs, vim** — normal: `` _ `` |
@@ -1154,7 +1155,7 @@
 | `insert_char_by_code` | Insert a character by Unicode code point (emacs insert-char, C-x 8 RET) |  |
 | `backward_delete_char_untabify` | Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify) |  |
 | `insert_last_inserted_text` | Insert the previously inserted text (vim i_CTRL-A) | **spacemacs, vim** — insert: `` <C-a> `` |
-| `insert_command_normal` | Run one Normal-mode command, then return to Insert (vim i_CTRL-O) | **spacemacs, vim** — insert: `` <C-o> `` |
+| `insert_command_normal` | Run one Normal-mode command, then return to Insert (vim i_CTRL-O) | **spacemacs, vim** — insert: `` <C-o> ``<br>**kakoune** — insert: `` <A-;> `` |
 | `insert_last_inserted_and_stop` | Insert previously inserted text and stop insert (vim i_CTRL-@) | **spacemacs, vim** — insert: `` <C-@> `` |
 | `copy_between_registers` | Copy between two registers |  |
 | `copy_to_register` | Copy the region into a register (emacs copy-to-register, C-x r s) | **spacemacs** — normal: `` <C-x>rs ``, select: `` <C-x>rs ``, insert: `` <C-x>rs `` |
@@ -1696,7 +1697,7 @@
 | `word_search_backward` | Search backward for words, ignoring punctuation (emacs word-search-backward) |  |
 | `fill_region_as_paragraph` | Fill the region as a single paragraph (emacs fill-region-as-paragraph) |  |
 | `indent_rigidly` | Shift the region by N columns (emacs indent-rigidly) | **spacemacs** — normal: `` <C-x><tab> ``, select: `` <C-x><tab> ``, insert: `` <C-x><tab> `` |
-| `quoted_insert` | Insert the next key literally, control chars included (emacs quoted-insert) | **emacs, cua** — insert: `` <C-q> `` |
+| `quoted_insert` | Insert the next key literally, control chars included (emacs quoted-insert) | **kakoune** — insert: `` <C-v> ``<br>**emacs, cua** — insert: `` <C-q> `` |
 | `foldout_zoom_subtree` | Narrow to the outline subtree at point (emacs foldout-zoom-subtree) | **spacemacs** — normal: `` <C-c><C-z> ``, select: `` <C-c><C-z> ``, insert: `` <C-c><C-z> `` |
 | `foldout_exit_fold` | Leave the zoomed subtree and widen (emacs foldout-exit-fold) | **spacemacs** — normal: `` <C-c><C-x> ``, select: `` <C-c><C-x> ``, insert: `` <C-c><C-x> `` |
 | `ff_find_related_file` | Visit the related header/source file (emacs ff-find-related-file) |  |
@@ -1935,8 +1936,8 @@
 | `paste_before_no_trailing_whitespace` | Paste before without trailing whitespace (zP) | **spacemacs, vim** — normal: `` zP `` |
 | `command_mode_count` | Open the Ex line, with the count's line range ({count}:) | **spacemacs, vim** — normal: `` : `` |
 | `filter_equalprg` | Filter the selection through 'equalprg', else reindent (v_=) |  |
-| `complete_line` | Complete a whole line (i_CTRL-X CTRL-L) | **vim** — insert: `` <C-x><C-l> `` |
-| `complete_filename` | Complete a file name (i_CTRL-X CTRL-F) | **vim** — insert: `` <C-x><C-f> `` |
+| `complete_line` | Complete a whole line (i_CTRL-X CTRL-L) | **vim** — insert: `` <C-x><C-l> ``<br>**kakoune** — insert: `` <C-x>L ``, `` <C-x>l `` |
+| `complete_filename` | Complete a file name (i_CTRL-X CTRL-F) | **vim** — insert: `` <C-x><C-f> ``<br>**kakoune** — insert: `` <C-x>f `` |
 | `complete_dictionary` | Complete from 'dictionary' (i_CTRL-X CTRL-K) | **vim** — insert: `` <C-x><C-k> `` |
 | `completion_at_point` | Complete the partial word before point from the spelling dictionary (emacs completion-at-point in Text Mode, M-TAB) |  |
 | `complete_tag` | Complete a tag from the tags file (i_CTRL-X CTRL-]) | **vim** — insert: `` <C-x><C-]> `` |
@@ -2164,7 +2165,7 @@
 | `reposition_window` | Scroll so the whole function at point is on screen (emacs reposition-window) | **emacs, cua, micro, nano** — insert: `` <A-C-l> `` |
 | `load` | Evaluate an elisp file in the embedded interpreter (emacs load) |  |
 | `load_library` | Load an elisp library by name from the load path (emacs load-library) |  |
-| `complete_keyword` | Complete the keyword before the cursor from the 'complete' sources (vim i_CTRL-N) |  |
+| `complete_keyword` | Complete the keyword before the cursor from the 'complete' sources (vim i_CTRL-N) | **kakoune** — insert: `` <C-x>W ``, `` <C-x>w `` |
 | `show_paren_mode` | Toggle highlighting of the paren matching the one at point (emacs show-paren-mode) |  |
 | `show_paren_local_mode` | Toggle paren-match highlighting in this buffer only (emacs show-paren-local-mode) |  |
 | `hi_lock_mode` | Toggle display of the interactive highlight-regexp patterns (emacs hi-lock-mode) |  |
@@ -2203,8 +2204,8 @@
 | `diff_ediff_patch` | Apply this patch and review it side by side (emacs diff-ediff-patch) | **spacemacs** — normal: `` <space>Dfp ``, select: `` <space>Dfp `` |
 | `ediff_patch_buffer` | Patch a buffer with a patch buffer/file and review it (emacs ediff-patch-buffer, SPC D b p) | **spacemacs** — normal: `` <space>Dbp ``, select: `` <space>Dbp `` |
 | `diff_add_change_log_entry_other_window` | Start a ChangeLog entry for the hunk at point (emacs add-change-log-entry-other-window, in Diff mode) |  |
-| `next_completion` | Move to the next completion candidate (emacs next-completion) |  |
-| `previous_completion` | Move to the previous completion candidate (emacs previous-completion, M-<up>) |  |
+| `next_completion` | Move to the next completion candidate (emacs next-completion) | **kakoune** — insert: `` <C-n> `` |
+| `previous_completion` | Move to the previous completion candidate (emacs previous-completion, M-<up>) | **kakoune** — insert: `` <C-p> `` |
 | `term_line_mode` | Terminal: edit input locally, Enter sends the line (emacs term-line-mode) | **spacemacs** — normal: `` <C-c><C-j> ``, select: `` <C-c><C-j> ``, insert: `` <C-c><C-j> `` |
 | `comint_completion_at_point` | Shell buffer: complete the command or file name before point (emacs completion-at-point in Shell mode) |  |
 | `window_configuration_to_register` | Save the window configuration in a register (emacs window-configuration-to-register) | **spacemacs** — normal: `` <C-x>rw ``, select: `` <C-x>rw ``, insert: `` <C-x>rw `` |
