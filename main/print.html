@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-494fc51a.js";
+            window.path_to_searchindex_js = "searchindex-ec3b35aa.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -3130,6 +3130,41 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:reflow</code></td><td>Hard-wrap the current selection of lines to a given width.</td></tr>
 <tr><td><code>:tree-sitter-subtree</code>, <code>:ts-subtree</code>, <code>:InspectTree</code></td><td>Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree).</td></tr>
 <tr><td><code>:config-reload</code></td><td>Refresh user config.</td></tr>
+<tr><td><code>:menu</code></td><td>Define a menu item: :menu File.Save :write<cr> (vim :menu).</cr></td></tr>
+<tr><td><code>:noremenu</code></td><td>Define a menu item whose rhs is not remapped (vim :noremenu).</td></tr>
+<tr><td><code>:unmenu</code></td><td>Remove a menu item or subtree; :unmenu * removes all (vim :unmenu).</td></tr>
+<tr><td><code>:amenu</code></td><td>Define a menu item for every mode (vim :amenu).</td></tr>
+<tr><td><code>:anoremenu</code></td><td>As :amenu, without remapping the rhs (vim :anoremenu).</td></tr>
+<tr><td><code>:aunmenu</code></td><td>Remove a menu item defined for every mode (vim :aunmenu).</td></tr>
+<tr><td><code>:nmenu</code></td><td>Define a normal-mode menu item (vim :nmenu).</td></tr>
+<tr><td><code>:nnoremenu</code></td><td>Normal-mode menu item, rhs not remapped (vim :nnoremenu).</td></tr>
+<tr><td><code>:nunmenu</code></td><td>Remove a normal-mode menu item (vim :nunmenu).</td></tr>
+<tr><td><code>:vmenu</code></td><td>Define a visual/select-mode menu item (vim :vmenu).</td></tr>
+<tr><td><code>:vnoremenu</code></td><td>Visual-mode menu item, rhs not remapped (vim :vnoremenu).</td></tr>
+<tr><td><code>:vunmenu</code></td><td>Remove a visual-mode menu item (vim :vunmenu).</td></tr>
+<tr><td><code>:xmenu</code></td><td>Define a visual-mode menu item (vim :xmenu).</td></tr>
+<tr><td><code>:xnoremenu</code></td><td>Visual-mode menu item, rhs not remapped (vim :xnoremenu).</td></tr>
+<tr><td><code>:xunmenu</code></td><td>Remove a visual-mode menu item (vim :xunmenu).</td></tr>
+<tr><td><code>:smenu</code></td><td>Define a select-mode menu item (vim :smenu).</td></tr>
+<tr><td><code>:snoremenu</code></td><td>Select-mode menu item, rhs not remapped (vim :snoremenu).</td></tr>
+<tr><td><code>:sunmenu</code></td><td>Remove a select-mode menu item (vim :sunmenu).</td></tr>
+<tr><td><code>:omenu</code></td><td>Define an operator-pending menu item (vim :omenu).</td></tr>
+<tr><td><code>:onoremenu</code></td><td>Operator-pending menu item, rhs not remapped (vim :onoremenu).</td></tr>
+<tr><td><code>:ounmenu</code></td><td>Remove an operator-pending menu item (vim :ounmenu).</td></tr>
+<tr><td><code>:imenu</code></td><td>Define an insert-mode menu item (vim :imenu).</td></tr>
+<tr><td><code>:inoremenu</code></td><td>Insert-mode menu item, rhs not remapped (vim :inoremenu).</td></tr>
+<tr><td><code>:iunmenu</code></td><td>Remove an insert-mode menu item (vim :iunmenu).</td></tr>
+<tr><td><code>:cmenu</code></td><td>Define a command-line menu item (vim :cmenu).</td></tr>
+<tr><td><code>:cnoremenu</code></td><td>Command-line menu item, rhs not remapped (vim :cnoremenu).</td></tr>
+<tr><td><code>:cunmenu</code></td><td>Remove a command-line menu item (vim :cunmenu).</td></tr>
+<tr><td><code>:tlmenu</code></td><td>Define a terminal-job menu item (vim :tlmenu).</td></tr>
+<tr><td><code>:tlnoremenu</code></td><td>Terminal-job menu item, rhs not remapped (vim :tlnoremenu).</td></tr>
+<tr><td><code>:tlunmenu</code></td><td>Remove a terminal-job menu item (vim :tlunmenu).</td></tr>
+<tr><td><code>:tmenu</code></td><td>Define a menu tooltip (vim :tmenu).</td></tr>
+<tr><td><code>:tunmenu</code></td><td>Remove a menu tooltip (vim :tunmenu).</td></tr>
+<tr><td><code>:emenu</code></td><td>Run a menu item by name: :emenu File.Save (vim :emenu).</td></tr>
+<tr><td><code>:popup</code></td><td>Open a menu as a pop-up at the cursor (vim :popup).</td></tr>
+<tr><td><code>:menutranslate</code></td><td>Translate a menu path for display (vim :menutranslate).</td></tr>
 <tr><td><code>:cmap</code></td><td>Map a key on the command line (vim :cmap).</td></tr>
 <tr><td><code>:cnoremap</code></td><td>Non-recursive command-line mapping (vim :cnoremap).</td></tr>
 <tr><td><code>:cunmap</code></td><td>Remove a command-line mapping (vim :cunmap).</td></tr>
