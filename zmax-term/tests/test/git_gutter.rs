@@ -14,11 +14,15 @@ fn git(args: &[&str], cwd: &Path) {
         .env("GIT_AUTHOR_EMAIL", "test@example.com")
         .env("GIT_COMMITTER_NAME", "test")
         .env("GIT_COMMITTER_EMAIL", "test@example.com")
-        .env("GIT_CONFIG_COUNT", "2")
+        .env("GIT_CONFIG_COUNT", "3")
         .env("GIT_CONFIG_KEY_0", "commit.gpgsign")
         .env("GIT_CONFIG_VALUE_0", "false")
         .env("GIT_CONFIG_KEY_1", "init.defaultBranch")
         .env("GIT_CONFIG_VALUE_1", "main")
+        // `submodule add` from a local path is refused by default since the
+        // CVE-2022-39253 fix; the submodule test below needs it.
+        .env("GIT_CONFIG_KEY_2", "protocol.file.allow")
+        .env("GIT_CONFIG_VALUE_2", "always")
         .output()
         .expect("run git");
     assert!(
@@ -176,6 +180,114 @@ async fn external_commit_clears_the_gutter_through_the_watcher() -> anyhow::Resu
     assert_eq!(
         hunks, 0,
         "a commit made outside the editor left the gutter showing stale hunks"
+    );
+    assert_eq!(
+        app.editor
+            .document_by_path(&path)
+            .unwrap()
+            .text()
+            .to_string(),
+        "one\nTWO\n",
+        "the watcher must not have touched the buffer text"
+    );
+    Ok(())
+}
+
+/// The same chain, in the layout that actually broke: the editor is launched at
+/// a **superproject** root, the buffer belongs to one of its **submodules**, and
+/// the commit is made inside that submodule.
+///
+/// A submodule keeps no `.git` directory of its own — its refs live in
+/// `<super>/.git/modules/<path>/refs/heads/<branch>`. The watcher discovers the
+/// superproject's `.git` (that is the repo of the directory it was pointed at),
+/// so the ref write arrives as `modules/<path>/refs/heads/<branch>` relative to
+/// it. Matching branch tips only at the *start* of that relative path classified
+/// the write as irrelevant, no refresh was dispatched, and the gutter kept
+/// diffing against the submodule's pre-commit HEAD indefinitely.
+#[tokio::test(flavor = "multi_thread")]
+async fn external_commit_in_a_submodule_clears_the_gutter() -> anyhow::Result<()> {
+    let tmp = tempfile::tempdir()?;
+    let tmp = tmp.path().canonicalize()?;
+
+    // The repository the submodule is cloned from.
+    let origin = tmp.join("sub_origin");
+    std::fs::create_dir(&origin)?;
+    git(&["init"], &origin);
+    std::fs::write(origin.join("file.txt"), "one\ntwo\n")?;
+    git(&["add", "-A"], &origin);
+    git(&["commit", "-m", "first"], &origin);
+
+    // The superproject, with that repository as a submodule at `sub/`.
+    let root = tmp.join("super");
+    std::fs::create_dir(&root)?;
+    git(&["init"], &root);
+    std::fs::write(root.join("top.txt"), "top\n")?;
+    git(&["add", "-A"], &root);
+    git(&["commit", "-m", "super first"], &root);
+    git(&["submodule", "add", "../sub_origin", "sub"], &root);
+    git(&["commit", "-m", "add submodule"], &root);
+
+    // The submodule's git dir is not `sub/.git` — that is a file pointing here.
+    let sub = root.join("sub");
+    assert!(
+        root.join(".git/modules/sub").is_dir(),
+        "the submodule's refs must live under the superproject's .git for this test to mean anything"
+    );
+
+    // An uncommitted change inside the submodule: one hunk.
+    let path = sub.join("file.txt");
+    std::fs::write(&path, "one\nTWO\n")?;
+
+    // Auto-reload off, so this test can only pass through the path it is about:
+    // a classified HEAD move re-fetching the diff base. Left on, a buffer reload
+    // would refresh the base as a side effect and the test would pass even with
+    // the submodule's ref writes misclassified — which is exactly what it did
+    // before this line existed.
+    let mut config = Config::default();
+    config.editor.auto_reload = false;
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(path.clone(), None)
+        .build()?;
+    helpers::run_event_loop_until_idle(&mut app).await;
+    assert_eq!(hunks_settling_at(&app, &path, 1).await, 1);
+
+    // The watcher is pointed at the *superproject* — the launch directory of an
+    // editor opened at the top of a repo-of-submodules.
+    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+    let watch_root = root.clone();
+    let handle = tokio::runtime::Handle::current();
+    std::thread::spawn(move || {
+        let _runtime = handle.enter();
+        zmax_term::file_watcher::run_blocking(watch_root, ready_tx);
+    });
+    ready_rx
+        .recv_timeout(Duration::from_secs(30))
+        .expect("watcher established its watches");
+
+    // Another terminal commits inside the submodule. Nothing in either working
+    // tree changes; the only write is to `<super>/.git/modules/sub/`.
+    git(&["commit", "-am", "external"], &sub);
+
+    let pumped = tokio::time::timeout(Duration::from_secs(60), async {
+        loop {
+            helpers::run_event_loop_until_idle(&mut app).await;
+            if current_hunks(&app, &path) == 0 {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await;
+    let hunks = current_hunks(&app, &path);
+    assert!(
+        pumped.is_ok() || hunks == 0,
+        "timed out waiting for the watcher's refresh"
+    );
+
+    assert_eq!(
+        hunks, 0,
+        "a commit inside a submodule left the gutter showing stale hunks"
     );
     assert_eq!(
         app.editor

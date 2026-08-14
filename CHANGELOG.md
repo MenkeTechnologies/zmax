@@ -456,6 +456,24 @@ Usability improvements:
 
 Fixes:
 
+* Committing in a submodule from another terminal left every open buffer of
+  that submodule showing its pre-commit gutter hunks. A submodule keeps no
+  `.git` directory — its refs live in `<superproject>/.git/modules/<path>/` — so
+  when the editor is launched at the superproject root (a repo of submodules),
+  the ref write arrives as `modules/<path>/refs/heads/<branch>` relative to the
+  git directory the watcher discovered, and the branch-tip match, anchored at
+  the start of that path, rejected it. Branch tips are now recognised anywhere
+  in the path, the longest matching git directory wins, and each workspace's git
+  directories are discovered even when its worktree already sits inside a live
+  recursive watch. A fetch (`refs/remotes/**`) and staging (`.git/index`) still
+  move nothing and still trigger nothing.
+* The filesystem watcher could postpone every refresh indefinitely while the
+  machine was busy. Each arriving event extended the burst it coalesces by
+  another 150ms, with no ceiling, so a tree that never fell quiet for that long
+  — `cargo build` writing `target/`, an install populating `node_modules` —
+  starved the refresh for the whole duration, and the events doing the extending
+  were ones the watcher then discarded as ignored. A burst is now flushed at
+  500ms however busy the tree stays.
 * The integrated terminal died on a resize. vt100 (the screen emulator) keeps
   grid positions that go stale when a screen holding double-width characters is
   reflowed into a narrower one, and dereferences them with `unwrap()` — so CJK
