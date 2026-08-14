@@ -1458,6 +1458,648 @@ const TOPICS: &[(&str, &str)] = &[
       :source runs one by name; :scriptnames lists what has been sourced.\n\
       zmax's own native plugins are :zmax-native — see the Packages topic.",
     ),
+    (
+        "PlatformIO: building",
+        ":pio-build compiles the project and routes errors to the compilation list;\n\
+      the flag variants carry the flag in the name.\n\n\
+      :pio-build-verbose :pio-build-silent :pio-build-no-auto-clean\n\
+      :pio-run-jobs N      build with N parallel jobs\n\
+      :pio-target <name>   any build target, live in a terminal panel\n\
+      :pio-list-targets    what those targets are\n\
+      :pio-nobuild :pio-clean :pio-cleanall\n\
+      :pio-size            the program size report\n\
+      :pio-envdump         the resolved build environment\n\
+      :pio-env :pio-build-conf   which environment and config file to use\n\
+      :pio-exec            build and run the native program\n\
+      :pio-compiledb       a compile_commands.json for other tools\n\
+      :pio-ci              build a standalone tree in an isolated project",
+    ),
+    (
+        "PlatformIO: uploading & the monitor",
+        ":pio-upload flashes the board and :pio-upload-monitor opens the monitor\n\
+      straight after.  :pio-upload-to picks the port.\n\n\
+      :pio-buildfs :pio-uploadfs :pio-uploadeep   filesystem and EEPROM images\n\
+      :pio-bootloader :pio-fuses                  the parts below the sketch\n\
+      :pio-monitor                                the serial monitor\n\
+      :pio-monitor-filter :pio-monitor-filters-clear :pio-monitor-eol\n\
+      :pio-monitor-parity :pio-monitor-rts :pio-monitor-dtr :pio-monitor-echo\n\
+      :pio-monitor-raw :pio-monitor-encoding :pio-monitor-flow\n\
+      :pio-monitor-reconnect :pio-monitor-quiet :pio-monitor-exit-char\n\
+      :pio-monitor-menu-char                      how it behaves\n\
+      :pio-plotter                                graph the monitor's numbers\n\
+      :embedded-baud                              the project's baud rate",
+    ),
+    (
+        "PlatformIO: boards & projects",
+        ":pio-boards searches the board database and :pio-boards-json gives the\n\
+      machine-readable form; :pio-boards-installed lists what is already here.\n\n\
+      :pio-init                scaffold a project for a board\n\
+      :pio-init-no-deps :pio-init-ide :pio-init-sample :pio-init-option\n\
+      :pio-init-env-prefix     how that scaffolding is shaped\n\
+      :pio-devices             connected devices; :pio-device-serial,\n\
+                               :pio-device-logical and :pio-device-mdns split\n\
+                               them by kind\n\
+      :pio-home                the PlatformIO Home GUI",
+    ),
+    (
+        "PlatformIO: libraries & packages",
+        ":pio-lib-install adds a library; :pio-lib-install-nosave leaves the project\n\
+      file alone.  :pio-lib-list :pio-lib-show :pio-lib-search :pio-lib-outdated\n\
+      :pio-lib-update :pio-lib-uninstall cover the rest.\n\n\
+      Packages are the general form: :pio-pkg-install-force\n\
+      :pio-pkg-install-global :pio-pkg-install-skip-deps\n\
+      :pio-pkg-list-libraries :pio-pkg-list-platforms :pio-pkg-list-tools\n\
+      :pio-pkg-list-global :pio-pkg-update-global\n\
+      :pio-pkg-search-page :pio-pkg-search-sort :pio-pkg-show-type\n\
+      :pio-pkg-exec :pio-pkg-exec-pkg :pio-pkg-exec-call   run a packaged tool\n\
+      :pio-pkg-pack :pio-pkg-publish :pio-pkg-unpublish :pio-pkg-unpublish-undo\n\
+      :pio-platform-install :pio-tool-install",
+    ),
+    (
+        "PlatformIO: testing & analysis",
+        ":pio-test runs the unit tests; the variants set one flag each.\n\n\
+      :pio-test-filter :pio-test-ignore :pio-test-verbose :pio-test-no-reset\n\
+      :pio-test-without-building :pio-test-without-uploading\n\
+      :pio-test-without-testing\n\
+      :pio-test-port :pio-test-upload-port :pio-test-monitor-dtr\n\
+      :pio-test-monitor-rts :pio-test-conf\n\
+      :pio-test-json :pio-test-json-path :pio-test-junit   machine-readable output\n\
+      :pio-list-tests\n\n\
+      :pio-check is static analysis into the compilation list, with\n\
+      :pio-check-severity :pio-check-flags :pio-check-fail-on\n\
+      :pio-check-skip-packages :pio-check-src-filters :pio-check-silent\n\
+      :pio-check-verbose :pio-check-json :pio-check-conf.",
+    ),
+    (
+        "PlatformIO: debugging & maintenance",
+        ":pio-debug starts a debug session; :pio-debug-interface :pio-debug-load-mode\n\
+      :pio-debug-verbose :pio-debug-conf tune it.\n\n\
+      :pio-project-config :pio-project-config-json :pio-project-config-lint\n\
+      :pio-project-metadata :pio-project-metadata-json :pio-project-metadata-path\n\
+      :pio-system-info :pio-system-info-json :pio-system-completion\n\
+      :pio-system-prune :pio-prune-cache :pio-prune-core :pio-prune-platform\n\
+      :pio-prune-dry-run\n\
+      :pio-settings-get :pio-settings-set :pio-settings-reset\n\
+      :pio-upgrade :pio-upgrade-dev :pio-upgrade-deps-only",
+    ),
+    (
+        "PlatformIO: remote devices",
+        "A board attached to another machine, driven from here.\n\n\
+      :pio-remote-agent-start :pio-remote-agent-start-named :pio-remote-agent-list\n\
+      :pio-remote-devices    what those agents can see\n\
+      :pio-remote-run :pio-remote-run-force\n\
+      :pio-remote-test :pio-remote-update\n\
+      :pio-remote-monitor    the serial monitor, over the network",
+    ),
+    (
+        "PlatformIO: accounts & teams",
+        ":pio-account-login :pio-account-logout :pio-account-show :pio-account-token\n\
+      :pio-account-register :pio-account-password :pio-account-update\n\
+      :pio-account-forgot :pio-account-destroy\n\n\
+      :pio-org-list :pio-org-create :pio-org-add :pio-org-remove\n\
+      :pio-org-update :pio-org-destroy\n\
+      :pio-team-list :pio-team-create :pio-team-add :pio-team-remove\n\
+      :pio-team-update :pio-team-destroy\n\
+      :pio-access-list :pio-access-grant :pio-access-revoke\n\
+      :pio-access-public :pio-access-private",
+    ),
+    (
+        "Arduino: compiling",
+        ":arduino-compile builds the sketch live in a terminal panel; each variant\n\
+      adds one arduino-cli flag.\n\n\
+      :arduino-compile-verbose :arduino-compile-quiet :arduino-compile-warnings\n\
+      :arduino-compile-clean :arduino-compile-jobs N\n\
+      :arduino-compile-properties :arduino-compile-build-property\n\
+      :arduino-compile-board-options :arduino-compile-output-dir\n\
+      :arduino-compile-preprocess :arduino-compile-debug-opt\n\
+      :arduino-compile-profile :arduino-compile-dump-profile\n\
+      :arduino-compile-export\n\
+      :arduino-compiledb   a compile_commands.json for other tools",
+    ),
+    (
+        "Arduino: uploading, monitor & debug",
+        ":arduino-upload compiles and flashes; :arduino-upload-verify checks what\n\
+      landed.  :arduino-upload-programmer :arduino-upload-dir\n\
+      :arduino-upload-file :arduino-upload-verbose pick how.\n\n\
+      :arduino-monitor      the serial monitor, with :arduino-monitor-raw\n\
+                            :arduino-monitor-timestamp :arduino-monitor-quiet\n\
+                            :arduino-monitor-describe\n\
+      :arduino-plotter      graph what it prints\n\
+      :arduino-debug :arduino-debug-info :arduino-debug-programmer\n\
+      :arduino-burn-bootloader",
+    ),
+    (
+        "Arduino: boards, ports & sketches",
+        ":arduino-boards lists the known boards and :arduino-boards-hidden includes\n\
+      the ones normally kept back; :arduino-board-list-watch keeps watching as\n\
+      boards come and go.\n\n\
+      :arduino-board-info :arduino-board-details-full :arduino-board-search\n\
+      :arduino-board-programmers :arduino-board-attach\n\
+      :arduino-ports        pick the serial port from what is connected\n\
+      :arduino-new-sketch\n\
+      :arduino-sketch-archive :arduino-sketch-archive-full   zip the sketch",
+    ),
+    (
+        "Arduino: cores & libraries",
+        "Cores are board support packages: :arduino-core-list :arduino-core-list-all\n\
+      :arduino-core-list-updatable :arduino-core-search :arduino-core-install\n\
+      :arduino-core-uninstall :arduino-core-upgrade :arduino-core-download\n\
+      :arduino-core-update-index.\n\n\
+      Libraries: :arduino-lib-list :arduino-lib-list-all\n\
+      :arduino-lib-list-updatable :arduino-lib-search :arduino-lib-search-names\n\
+      :arduino-lib-install :arduino-lib-install-git :arduino-lib-install-zip\n\
+      :arduino-lib-install-no-deps :arduino-lib-uninstall :arduino-lib-upgrade\n\
+      :arduino-lib-deps :arduino-lib-examples :arduino-lib-download\n\
+      :arduino-lib-update-index.\n\n\
+      :arduino-outdated :arduino-update :arduino-update-outdated :arduino-upgrade\n\
+      cover both at once.",
+    ),
+    (
+        "Arduino: configuration & the CLI",
+        ":arduino-config shows the configuration; :arduino-config-get\n\
+      :arduino-config-set :arduino-config-add :arduino-config-remove\n\
+      :arduino-config-delete :arduino-config-init change it.\n\n\
+      Build profiles: :arduino-profile-create :arduino-profile-set-default\n\
+      :arduino-profile-lib-add :arduino-profile-lib-remove\n\n\
+      :arduino-cli runs any arduino-cli command, :arduino-daemon runs it as a\n\
+      gRPC daemon, :arduino-completion prints a completion script,\n\
+      :arduino-cache-clean empties the download cache and :arduino-version says\n\
+      which CLI is being used.",
+    ),
+    (
+        "Key mapping: the whole table",
+        "Beyond :map and :unmap, every mode has its own three commands.\n\n\
+      :noremap :nnoremap :inoremap :vnoremap :xnoremap :snoremap :onoremap\n\
+                     non-recursive, per mode\n\
+      :nunmap :iunmap :vunmap :xunmap :sunmap :ounmap :cunmap :lunmap :tunmap\n\
+                     remove one\n\
+      :mapclear :nmapclear :imapclear :vmapclear :xmapclear :smapclear\n\
+      :omapclear :cmapclear :lmapclear :tmapclear   remove all of them\n\
+      :loadkeymap    load a keymap file's worth, in a sourced script",
+    ),
+    (
+        "Menus: the whole table",
+        ":menu and :emenu are the common ones; the rest exist so a menu item can be\n\
+      defined for one mode only, or defined without recursion.\n\n\
+      :nmenu :imenu :vmenu :xmenu :smenu :omenu :cmenu :tlmenu :amenu\n\
+      :nnoremenu :inoremenu :vnoremenu :xnoremenu :snoremenu :onoremenu\n\
+      :cnoremenu :tlnoremenu :anoremenu :noremenu\n\
+      :nunmenu :iunmenu :vunmenu :xunmenu :sunmenu :ounmenu :cunmenu\n\
+      :tlunmenu :tunmenu :aunmenu\n\
+      :menutranslate   translate a menu path for display",
+    ),
+    (
+        "Clearing abbreviations",
+        ":cnoreabbrev defines a non-recursive command-line abbreviation, matching\n\
+      :inoreabbrev and :noreabbrev.\n\n\
+      :iunabbreviate :cunabbreviate remove one from insert or command mode, and\n\
+      :abclear :iabclear :cabclear clear the whole table for a mode.\n\
+      :expand-region-abbrevs expands every abbrev in the selection at once.",
+    ),
+    (
+        "Search highlighting & signs",
+        ":nohlsearch clears the search highlight until the next search.\n\n\
+      :match highlights a pattern in its own group (:match none clears it), and\n\
+      :2match / :3match are the second and third groups.\n\
+      :unhighlight-regexp removes a Hi-Lock highlight,\n\
+      :hi-lock-find-patterns activates the ones written in a comment at the top\n\
+      of the file and :hi-lock-write-interactive-patterns writes the current\n\
+      ones out in that form.\n\n\
+      :sign defines, places, unplaces, lists and jumps to gutter signs.",
+    ),
+    (
+        "Folding by command",
+        ":fold folds a range, :foldopen and :foldclose open and close one, and\n\
+      :folddoopen / :folddoclosed run a command on the open or closed lines.\n\n\
+      :outline-hide-by-heading-regexp folds every heading matching a regexp and\n\
+      :outline-show-by-heading-regexp unfolds them, which is the fastest way\n\
+      through a large outline.  :org-cycle does the same for org headings.",
+    ),
+    (
+        "Running a script file",
+        "Vim's interpreter commands run a snippet, and the -file forms run a file.\n\n\
+      :lua / :luafile        :perl / :perlfile\n\
+      :python / :pyfile      :py3 / :py3file      :pyx / :pyxfile\n\
+      :ruby / :rubyfile\n\n\
+      :perldo :rubydo :luado :pydo :py3do run their language once per line over\n\
+      the buffer.  The compiled-in interpreters are separate — see Embedded\n\
+      scripting — and do not need the language installed.",
+    ),
+    (
+        "File-local variables",
+        ":add-file-local-variable writes a setting into the file's Local Variables\n\
+      block, so it travels with the file; :delete-file-local-variable takes it\n\
+      out.  :add-file-local-variable-prop-line and\n\
+      :delete-file-local-variable-prop-line use the first line instead, which\n\
+      is where a mode line usually goes.\n\n\
+      :editorconfig applies the nearest .editorconfig, and :setlocal changes a\n\
+      setting for this buffer without writing anything.",
+    ),
+    (
+        "Opening a file",
+        ":open takes a path; :find searches the path option for it and :sfind does\n\
+      that in a split.  :view and :sview open read-only.\n\
+      :drop jumps to the window already editing a file, opening it only if no\n\
+      window has it, which is what an external tool should call.\n\
+      :tabfind opens the found file in a tab, and :visual leaves Ex mode.",
+    ),
+    (
+        "Editing by command",
+        "Line edits that need no keystrokes, so they work from a script.\n\n\
+      :append :insert :change   type lines in, ending with a lone '.'\n\
+      :duplicate-line :dl       duplicate, delete\n\
+      :move-line-down :move-line-up\n\
+      :left :right :center      align lines to a width\n\
+      :change-case              the symbol under the cursor, to any case\n\
+      :split-line :comment-box :repeat\n\
+      :undo :redo               and :earlier / :later by time",
+    ),
+    (
+        "Going to a place",
+        ":goto <n> and :goto-line-relative <n> take a line number, absolute or from\n\
+      the start of the narrowed region.  :goto-offset and :goto-byte take a\n\
+      character or byte position instead.\n\n\
+      :cc and :ll jump to the numbered quickfix or location entry, :mark sets a\n\
+      mark by name, and :z prints a window of lines around the cursor into a\n\
+      scratch buffer.",
+    ),
+    (
+        "More text conversions",
+        ":json-unflatten     rebuild nested JSON from 'path = value' lines\n\
+      :toml-to-json      TOML to pretty JSON\n\
+      :lines-to-json     the lines as a JSON array of strings\n\
+      :kv-to-json        key=value or key: value lines as an object\n\
+      :sql-in            a SQL IN-list from the lines\n\
+      :remove-trailing-commas / :add-trailing-commas   between JSON5 and JSON\n\
+      :after <delim> / :before <delim>   keep one side of each line\n\
+      :natural-sort      file2 before file10\n\
+      :sum               sum, mean, min, max and count, in the status line",
+    ),
+    (
+        "The primary selection",
+        "X11 keeps a second clipboard holding whatever was last selected with the\n\
+      mouse.  :primary-clipboard-yank and :primary-clipboard-yank-join put text\n\
+      there, and :primary-clipboard-paste-after :primary-clipboard-paste-before\n\
+      :primary-clipboard-paste-replace read it back.\n\
+      :show-clipboard-provider says which external tool is being used for both.",
+    ),
+    (
+        "Projects",
+        ":projectile-test-project runs the project's test command in its root and\n\
+      :test-buffer runs only this file's tests; :test-function runs the one test\n\
+      named, defaulting to the identifier under the cursor.\n\n\
+      :projectile-invalidate-cache makes the next file search rescan the tree,\n\
+      and :projectile-regenerate-tags rebuilds the tag index.\n\
+      :run runs the project in the Run tool window.",
+    ),
+    (
+        "Media players",
+        ":spotify-play-pause :spotify-next :spotify-previous :spotify-status\n\
+      :spotify-search-track :spotify-search-album :spotify-search-artist\n\
+      :spotify-play-uri :spotify-quit\n\n\
+      :pianobar :pianobar-play-pause :pianobar-next :pianobar-love\n\
+      :pianobar-ban :pianobar-tired :pianobar-station :pianobar-info\n\
+      :pianobar-output :pianobar-quit\n\n\
+      :tidal-start :tidal-run :tidal-run-orbit :tidal-hush :tidal-stop-orbit\n\
+      :tidal-output :tidal-quit\n\
+      :streamlink :streamlink-qualities   for video",
+    ),
+    (
+        "Wikis & the social web",
+        ":confluence-page fetches a page by space and title over the REST API;\n\
+      :confluence-search searches and :confluence-export exports.\n\n\
+      :twitter shows the timeline, with :twitter-user :twitter-search and\n\
+      :twitter-post.\n\
+      :jabber-send sends an XMPP message to a JID, :jabber-send-muc posts to a\n\
+      room and :jabber-accounts lists the configured accounts.",
+    ),
+    (
+        "DjVu documents",
+        ":djvu-text extracts a DjVu document's text, :djvu-pages lists the pages and\n\
+      :djvu-outline the outline.  :djvu-occur searches the extracted text and\n\
+      :djvu-export-page writes one page out.\n\n\
+      The doc-view commands render the pages themselves — see Documents — and\n\
+      :doc-view-clear-cache throws the rendered images away.",
+    ),
+    (
+        "Colouring identifiers",
+        ":rainbow-mode paints a colour literal in the colour it names.\n\n\
+      :rainbow-identifiers-mode gives every identifier a colour derived from\n\
+      its name, so the same name is always the same colour;\n\
+      :global-rainbow-identifiers-mode does it everywhere.\n\
+      :color-identifiers-mode limits that to what the grammar calls a variable,\n\
+      with :global-color-identifiers-mode for every buffer.\n\
+      :rainbow-identifiers-saturation and :rainbow-identifiers-lightness tune\n\
+      how strong the colours are.",
+    ),
+    (
+        "The minibuffer & prompts",
+        ":icomplete-mode and :icomplete-vertical-mode show candidates while typing;\n\
+      :fido-mode adds ido's habit of taking the top candidate on Enter.\n\
+      :global-completion-preview-mode previews the top candidate inline in\n\
+      every buffer.\n\n\
+      :minibuffer-electric-default-mode hides the default once you type,\n\
+      :minibuffer-depth-indicate-mode shows recursive prompts, and\n\
+      :file-name-shadow-mode dims the part of a path that later components\n\
+      override.\n\
+      :temp-buffer-resize-mode sizes a temporary window to its contents.",
+    ),
+    (
+        "Paragraph layout",
+        ":set-justification-left :set-justification-right :set-justification-center\n\
+      :set-justification-full :set-justification-none\n\
+      :increase-left-margin :decrease-left-margin\n\
+      :use-hard-newlines   mark typed newlines as hard, so filling keeps them\n\
+      :paragraph-indent-minor-mode :paragraph-indent-text-mode\n\
+                           treat an indented line as a new paragraph",
+    ),
+    (
+        "Buffer menus",
+        ":bs-show lists the buffers under the bs settings and :bs-customize changes\n\
+      them; :msb-mode groups the mouse buffer menu by language.\n\
+      :buffer-next and :buffer-previous cycle without the list.\n\
+      :auto-compression-mode opens compressed files as though they were plain.",
+    ),
+    (
+        "Bookmark files",
+        ":bookmark-write saves the named bookmarks to a file and :bookmark-load\n\
+      reads one back, so a set of positions can be kept per project or shared.\n\
+      :multi-occur-in-matching-buffers lists matches across every buffer whose\n\
+      name matches, which is the fastest way to survey what a bookmark set\n\
+      points at.",
+    ),
+    (
+        "Directory stack & filesets",
+        ":shell-pushd-tohome :shell-pushd-dextract :shell-pushd-dunique change how\n\
+      the shell's pushd behaves inside the editor's terminals.\n\
+      :filesets-init loads the fileset definitions at startup and\n\
+      :filesets-delete removes one.",
+    ),
+    (
+        "Mail attachments",
+        ":compose-mail-other-window opens the draft in a split instead of the\n\
+      current window.  :mml-attach-file attaches a file as a MIME part, and\n\
+      :message-kill-buffer throws the draft away without sending it.",
+    ),
+    (
+        "Web widgets",
+        ":xwidget-webkit-mode opens a real WebKit view where one is available, with\n\
+      :xwidget-webkit-edit-mode for typing into the page and\n\
+      :xwidget-webkit-isearch-mode for searching it.\n\n\
+      :quickurl-browse shows a stored URL so it can be opened,\n\
+      :search-engines lists the configured engines and their templates,\n\
+      :bug-reference-url-format sets the tracker a bug number points at and\n\
+      :debbugs-browse-mode points them at GNU debbugs.\n\
+      :elfeed-show fetches one feed entry's page as text, and\n\
+      :hackernews-item shows a story with its comments; :reddit-main opens the\n\
+      front page.",
+    ),
+    (
+        "Media playback in the buffer",
+        ":image-previous-frame steps an animation back and :image-decrease-speed\n\
+      slows it down, with :image-next-frame :image-goto-frame\n\
+      :image-increase-speed :image-reverse-speed :image-reset-speed for the\n\
+      rest.\n\n\
+      :doc-view-previous-page :doc-view-first-page :doc-view-last-page walk a\n\
+      document, :doc-view-show-tooltip explains what is under the cursor and\n\
+      :doc-view-set-slice-using-mouse crops by dragging.",
+    ),
+    (
+        "Man pages",
+        ":Man opens a page in the run console.  :Man-next-manpage and\n\
+      :Man-previous-manpage move between the pages a search matched, which is\n\
+      how to walk section 1 and section 3 versions of the same name.",
+    ),
+    (
+        "Perforce housekeeping",
+        "Beyond the everyday :p4-edit and :p4-submit: :p4-refresh re-reads a file\n\
+      from the depot, throwing local changes away, and :p4-files lists what the\n\
+      depot holds.  :p4 runs any other p4 command.",
+    ),
+    (
+        "Replace modes",
+        ":startreplace enters Replace mode, where typing overwrites; :startgreplace\n\
+      enters Virtual Replace mode, which keeps the layout of tabs.\n\
+      R does the same from the keyboard, and :substitute is the version that\n\
+      takes a pattern instead.",
+    ),
+    (
+        "Diagnostics",
+        ":yank-diagnostic copies the diagnostic under the cursor to a register or\n\
+      the clipboard, which is what to use before searching for an error.\n\
+      :lsp reports the language servers for this buffer and :lsp-health the\n\
+      state of all of them.\n\
+      :toggle-debug-on-error makes a failing command open a backtrace instead\n\
+      of printing one line.",
+    ),
+    (
+        "The build program",
+        ":compiler selects what :make runs by setting makeprg — :compiler cargo, and\n\
+      the error format follows.  :make then fills the quickfix list and\n\
+      :lmake the location list.\n\
+      :run runs the project in the Run tool window instead, which keeps the\n\
+      output live rather than parsed.",
+    ),
+    (
+        "Floating windows",
+        ":fclose closes the topmost floating window — a picker, a popup or a panel —\n\
+      without touching the buffer underneath, which is the reliable way out of\n\
+      a stack of them.  Esc does the same from the keyboard.",
+    ),
+    (
+        "Tab keys",
+        ":tab-bar-select-tab-modifiers binds a modifier with 0 to 9 to select tabs\n\
+      by number, so Alt-3 goes to the third tab; passing nil unbinds them.\n\
+      :tab-switch takes a name or number, and :tabs lists what is open.",
+    ),
+    (
+        "The snippet library",
+        ":snippets opens the library editor, where a snippet's trigger, scope and\n\
+      body are created, changed and deleted; the file behind it is\n\
+      snippets.toml.  :Snippets picks one with the fuzzy finder and inserts it.",
+    ),
+    (
+        "The calendar",
+        ":calendar-hebrew-list-yahrzeits lists the Gregorian dates a Hebrew death\n\
+      date falls on over a span of years.  Org's agenda covers the ordinary\n\
+      calendar — see Org mode — and :date :datetime :timestamp insert today.",
+    ),
+    (
+        "Version & intro",
+        ":version shows the version and the compiled feature summary, which is what\n\
+      a bug report needs; :emacs-version gives the emacs compatibility level\n\
+      that the emacs commands report.\n\
+      :intro shows the introductory message, and :log opens the log file.",
+    ),
+    (
+        "Reviewing history",
+        ":log-view-toggle-entry-display expands a commit in the log view to its full\n\
+      message, and :vc-edit-next-command makes the next version-control command\n\
+      prompt for its arguments instead of assuming them.\n\
+      :BCommits picks a commit touching this file, and :compare-ref diffs the\n\
+      buffer against any ref.",
+    ),
+    (
+        "Structural regex commands",
+        ":structural-x runs a command over every match of a pattern and\n\
+      :structural-y over the stretches between them; :structural-X and\n\
+      :structural-Y do the same across files, by file name.\n\
+      :sx and :sX are the short names.  With no command the pieces are simply\n\
+      selected — see Structural regular expressions for what that is for.",
+    ),
+    (
+        "Where zmax keeps its files",
+        "Everything lives under one dotted home directory rather than being spread\n\
+      across XDG locations.\n\n\
+      ~/.zmax/config.toml      settings, keys, themes\n\
+      ~/.zmax/languages.toml   language and language-server configuration\n\
+      ~/.zmax/snippets.toml    the snippet library\n\
+      ~/.zmax/zmax.log         the log\n\
+      ~/.zmax/runtime/         an overlay over the shipped runtime — themes,\n\
+                               queries, grammars\n\n\
+      A project can override both files from .zmax/config.toml and\n\
+      .zmax/languages.toml in its own root.\n\
+      :config-open :config-open-workspace :init-open :log-open open them, and\n\
+      :config-reload applies a change without restarting.",
+    ),
+    (
+        "Global, workspace & buffer settings",
+        "Three levels, narrowest wins.\n\n\
+      :set / :setglobal    everything, from now on\n\
+      :setlocal            this buffer only\n\
+      .zmax/config.toml    this project, every time it is opened\n\
+      a Local Variables block   this file, wherever it is opened from —\n\
+                                :add-file-local-variable writes one\n\n\
+      A project's config and its language servers do not run until the tree is\n\
+      trusted: :trust, or :workspace-exclude to stop being asked.",
+    ),
+    (
+        "Coming from vim",
+        "Set keymap = \"vim\" in config.toml, or run :keymap vim, and the keys are\n\
+      vim's with nothing added.  The spacemacs default is the same keys plus a\n\
+      SPC leader and the C-x prefix, so it is worth trying first.\n\n\
+      What carries over: Ex commands and their ranges, registers and marks,\n\
+      macros, text objects, :map and friends, autocommands, vimscript through\n\
+      :vim, and the quickfix, location, tag, argument and buffer lists.\n\n\
+      What is different: selections come first, so a cursor is a one-character\n\
+      selection and every command acts on all of them; undo is a tree, not a\n\
+      line; language servers do what a plugin used to.",
+    ),
+    (
+        "Coming from emacs",
+        "Set keymap = \"emacs\" for the modeless keys, or \"cua\" to get C-x cut, C-c\n\
+      copy and C-v paste on top of them.\n\n\
+      The command names are the emacs ones — :apropos :customize :bookmark-load\n\
+      :transpose-words :fill-individual-paragraphs :string-rectangle :multi-occur\n\
+      :abbrev-mode :desktop-save :shadow-copy-files — and the emacs minor modes\n\
+      are here as commands too, listed under Minor modes worth knowing.\n\
+      :elisp runs elisp in a compiled-in interpreter, with no emacs installed.\n\
+      :emacs-version reports the compatibility level the emacs commands claim.",
+    ),
+    (
+        "Coming from helix or kakoune",
+        "keymap = \"helix\" is helix's own layout; keymap = \"kakoune\" is that model\n\
+      with kakoune's key placement — v and V for the view, A-i and A-a for text\n\
+      objects, Z z A-z for the selection registers.\n\n\
+      zmax's editing core is the same selection-first model, so the muscle\n\
+      memory transfers directly.  What is added: the whole Ex command surface,\n\
+      the IDE workbench, the embedded interpreters, and structural regexes.",
+    ),
+    (
+        "Coming from nano or micro",
+        "keymap = \"nano\" gives ^O write out, ^W where is, ^K cut, ^U paste and ^X\n\
+      exit; keymap = \"micro\" gives C-s save, C-q quit and C-e for the command\n\
+      bar.  Neither has modes, so typing simply types.\n\n\
+      Everything else in this Help is still reachable by name from the command\n\
+      bar, which is the point of starting here: the keys stay familiar while\n\
+      the commands are learned one at a time.",
+    ),
+    (
+        "Coming from an IDE",
+        "The commands with JetBrains names do what those menu items do.\n\n\
+      :ide / :zen            the workbench, and focus mode\n\
+      :RecentLocations       the jump ring, newest first, with context\n\
+      :LocalHistory          snapshots of this file, kept by the editor\n\
+      :Todo                  TODO markers across the tree\n\
+      :project-replace       replace in files\n\
+      :compare-ref           compare with branch\n\
+      :edit-fragment / :inject-language   edit an injected language\n\
+      :RevealInFinder        reveal in file manager\n\
+      :run / :debug-start    the run and debug configurations, which\n\
+                             Preferences ▸ Run Configs edits",
+    ),
+    (
+        "Reporting a problem",
+        ":version         the version and the compiled feature summary\n\
+      :checkhealth     clipboard, language servers, grammars\n\
+      :lsp-health      which servers are ready, and what they support\n\
+      :log             the log file, read-only\n\
+      :toggle-debug-on-error   make a failing command show its backtrace\n\
+      :profile / :syntime      when the problem is that something is slow\n\n\
+      A report is most useful with the :version output, what was typed, and the\n\
+      last lines of the log.",
+    ),
+    (
+        "Ranges & counts",
+        "Every Ex command takes a range: :10,20delete-lines, :%format,\n\
+      :.,+5indent-lines, and 'a,'b for a marked span.  % is the whole buffer\n\
+      and . is the cursor's line.\n\n\
+      :global and :vglobal turn a pattern into the range instead, and\n\
+      :structural-x turns a pattern into many ranges — see Structural regular\n\
+      expressions.\n\
+      From the keyboard, a count goes before the operator: 3dd, 5j, 2ciw.",
+    ),
+    (
+        "In process or out",
+        "Anything that shells out costs a process; zmax has an in-process route for\n\
+      most of it.\n\n\
+      | and :pipe run a shell command per selection\n\
+      :xpipe runs a chain of compiled-in interpreter stages instead, with no\n\
+      process at all — the awk, ruby, php, python and stryke engines are\n\
+      linked in\n\
+      :sandbox runs something that should not be trusted with either\n\n\
+      The text tools in this Help — sorting, JSON, fields, encodings — are\n\
+      native Rust, so they are the cheapest option of the three.",
+    ),
+    (
+        "Live coding",
+        ":extempore-run starts the Extempore binary and :extempore-connect attaches\n\
+      to one already running over TCP; :extempore-send-definition\n\
+      :extempore-send-region :extempore-send-buffer evaluate into the running\n\
+      process and :extempore-disconnect lets go.\n\n\
+      :tidal-start and :tidal-run do the same for TidalCycles patterns, and\n\
+      :alda-play-buffer for written scores.",
+    ),
+    (
+        "Locale & the editor process",
+        ":language sets the locale for the editor and every process it starts, and\n\
+      reports it when given no argument; :encoding is the buffer's encoding\n\
+      rather than the process's.\n\n\
+      :getenv and :setenv change any other variable the same way, which is how\n\
+      :conda-activate and :nvm-use work.\n\
+      :normal-erase-is-backspace-mode swaps which of Backspace and Delete\n\
+      erases backwards, when the terminal disagrees with the keyboard.",
+    ),
+    (
+        "Sharing a link to the code",
+        ":reveal opens this repository's page on GitHub, GitLab, Bitbucket or\n\
+      wherever its remote points, which is the fastest way to hand someone a\n\
+      link.  :browse-url opens any other URL, :quickurl-add stores one under a\n\
+      name and :quickurl recalls it.\n\
+      :move moves the buffer and its file to another path, keeping the buffer\n\
+      open on it.",
+    ),
+    (
+        "Odds & ends",
+        "Commands that fit nowhere else but are worth knowing.\n\n\
+      :split-on <sep>      split the selected lines into one item per separator\n\
+      :org-move-subtree-down / :org-move-subtree-up\n\
+      :dotnet-sln-add :dotnet-sln-remove :dotnet-sln-list   solution membership\n\
+      :transmission-stop :transmission-verify\n\
+      :0debuggreedy        undo :debuggreedy\n\
+      :2match :3match      the second and third highlight groups\n\
+      :tutor               the tutorial, which is the one to run first",
+    ),
 ];
 
 pub struct HelpPanel {
