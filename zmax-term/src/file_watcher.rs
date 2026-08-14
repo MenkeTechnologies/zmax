@@ -23,6 +23,10 @@
 //! * **git ref paths** ([`is_head_move`]) — HEAD moved, so every open buffer's
 //!   diff base (HEAD's blob) is stale; re-fetch it via
 //!   [`commands::refresh_all_diff_bases`](crate::commands::refresh_all_diff_bases).
+//!
+//! The platform watcher is not the only source, because it can stop delivering
+//! without saying so — see [`poll`], which checks the same two things directly
+//! every [`POLL_INTERVAL`] and reports only what actually moved.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -45,6 +49,12 @@ static SENDER: OnceLock<mpsc::Sender<Msg>> = OnceLock::new();
 /// to skip a root already covered by an existing recursive watch, so feeding the
 /// same open buffers every event-loop tick is close to free.
 static ROOTS: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
+
+/// Every open buffer's file, refreshed by the event loop through
+/// [`track_open_files`] and read by the watcher thread's poll tick. Shared
+/// rather than sent down the channel because the poll wants the *current* set,
+/// not a queue of every set it has ever been.
+static OPEN_FILES: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
 
 /// A message the watcher loop consumes: either a filesystem event forwarded from
 /// `notify`, or a request to start watching another root (a buffer opened from a
@@ -80,6 +90,18 @@ pub fn watch_workspaces<'a>(roots: impl Iterator<Item = &'a Path>) {
         }
         known.push(root.to_path_buf());
         let _ = tx.send(Msg::AddRoot(root.to_path_buf()));
+    }
+}
+
+/// Record the files currently open in buffers, so the watcher thread's poll tick
+/// can notice a change the platform watcher never reported. Called from the
+/// event loop next to [`watch_workspaces`]; writes only when the set actually
+/// changed, so the common tick is one lock and a comparison.
+pub fn track_open_files<'a>(paths: impl Iterator<Item = &'a Path>) {
+    let current: Vec<PathBuf> = paths.map(Path::to_path_buf).collect();
+    let mut open = OPEN_FILES.lock().unwrap_or_else(|p| p.into_inner());
+    if *open != current {
+        *open = current;
     }
 }
 
@@ -229,45 +251,71 @@ fn run(root: PathBuf, tx: mpsc::Sender<Msg>, rx: mpsc::Receiver<Msg>, ready: mps
     // Every watch is live: changes from here on are reported.
     let _ = ready.send(());
 
+    // Snapshot of what the poll tick last saw on disk, so it can report only
+    // genuine changes. Empty until the first tick fills it in.
+    let mut seen = Snapshot::default();
+
     // Keep `watcher` alive for the lifetime of this thread.
     loop {
-        // Block until something happens.
-        let first = match rx.recv() {
-            Ok(msg) => msg,
-            Err(_) => return, // sender dropped — watcher gone
-        };
-
         let mut relevant = false;
         let mut head_moved = false;
         let mut changed: Vec<PathBuf> = Vec::new();
-        apply(
-            first,
-            &mut watcher,
-            &mut watched,
-            &mut git_dirs,
-            &mut relevant,
-            &mut head_moved,
-            &mut changed,
-        );
 
-        // Coalesce a burst (e.g. a `git checkout` touching many files) into one
-        // refresh so we don't rebuild the tree dozens of times. This also lets
-        // git finish its ref-lock dance (write `refs/heads/x.lock`, rename it
-        // over `refs/heads/x`) before we read HEAD back.
-        let started = Instant::now();
-        while let Some(window) = burst_window(started, Instant::now()) {
-            let Ok(msg) = rx.recv_timeout(window) else {
-                break;
-            };
-            apply(
-                msg,
-                &mut watcher,
-                &mut watched,
-                &mut git_dirs,
-                &mut relevant,
-                &mut head_moved,
-                &mut changed,
-            );
+        // Wait for an event, but never longer than a poll interval: the platform
+        // watcher is not trustworthy enough to be the only source. See [`poll`].
+        match rx.recv_timeout(POLL_INTERVAL) {
+            Ok(first) => {
+                apply(
+                    first,
+                    &mut watcher,
+                    &mut watched,
+                    &mut git_dirs,
+                    &mut relevant,
+                    &mut head_moved,
+                    &mut changed,
+                );
+
+                // Coalesce a burst (e.g. a `git checkout` touching many files)
+                // into one refresh so we don't rebuild the tree dozens of times.
+                // This also lets git finish its ref-lock dance (write
+                // `refs/heads/x.lock`, rename it over `refs/heads/x`) before we
+                // read HEAD back.
+                let started = Instant::now();
+                while let Some(window) = burst_window(started, Instant::now()) {
+                    let Ok(msg) = rx.recv_timeout(window) else {
+                        break;
+                    };
+                    apply(
+                        msg,
+                        &mut watcher,
+                        &mut watched,
+                        &mut git_dirs,
+                        &mut relevant,
+                        &mut head_moved,
+                        &mut changed,
+                    );
+                }
+                // The burst may have moved HEAD or touched a buffer's file; fold
+                // that into the snapshot so the next tick does not report it a
+                // second time.
+                poll(
+                    &mut seen,
+                    &git_dirs,
+                    &mut false,
+                    &mut false,
+                    &mut Vec::new(),
+                );
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                poll(
+                    &mut seen,
+                    &git_dirs,
+                    &mut relevant,
+                    &mut head_moved,
+                    &mut changed,
+                );
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => return, // watcher gone
         }
 
         if relevant || head_moved {
@@ -292,6 +340,111 @@ fn run(root: PathBuf, tx: mpsc::Sender<Msg>, rx: mpsc::Receiver<Msg>, ready: mps
                     view.refresh_file_tree();
                 }
             });
+        }
+    }
+}
+
+/// How often the watcher thread checks the filesystem itself, independently of
+/// anything the platform reports. See [`poll`].
+const POLL_INTERVAL: Duration = Duration::from_secs(2);
+
+/// What the last poll tick saw on disk: each open buffer's file modification
+/// time, and each git directory's HEAD (the `HEAD` file's contents plus the
+/// modification time of whatever it resolves to). A change in either is what
+/// makes a tick report something.
+#[derive(Default)]
+struct Snapshot {
+    files: Vec<(PathBuf, std::time::SystemTime)>,
+    heads: Vec<(PathBuf, HeadState)>,
+}
+
+/// A git directory's HEAD as a poll tick can cheaply observe it: the contents of
+/// `HEAD` (which branch, or which commit when detached) and the modification
+/// time of the branch tip it names. Comparing both catches a checkout (contents
+/// change) and a commit on the same branch (tip changes).
+#[derive(PartialEq, Eq)]
+struct HeadState {
+    head: String,
+    tip: Option<std::time::SystemTime>,
+}
+
+impl Snapshot {
+    /// Replace `key`'s entry in `entries`, returning whether it differed from
+    /// what was there. A key seen for the first time is recorded and reported as
+    /// unchanged — the first tick establishes the baseline, it does not refresh
+    /// the world.
+    fn update<T: PartialEq>(entries: &mut Vec<(PathBuf, T)>, key: &Path, value: T) -> bool {
+        match entries.iter_mut().find(|(path, _)| path == key) {
+            Some((_, current)) => {
+                let changed = *current != value;
+                *current = value;
+                changed
+            }
+            None => {
+                entries.push((key.to_path_buf(), value));
+                false
+            }
+        }
+    }
+}
+
+/// Read a git directory's HEAD state, or `None` when it cannot be read at all.
+fn head_state(git_dir: &Path) -> Option<HeadState> {
+    let head = std::fs::read_to_string(git_dir.join("HEAD")).ok()?;
+    // `ref: refs/heads/<branch>` — a detached HEAD holds the commit id instead,
+    // and that id changing is itself the whole signal, so there is no tip.
+    let tip = head
+        .strip_prefix("ref:")
+        .map(str::trim)
+        .map(|reference| git_dir.join(reference))
+        .and_then(|tip| std::fs::metadata(tip).ok())
+        .and_then(|meta| meta.modified().ok());
+    Some(HeadState {
+        head: head.trim().to_owned(),
+        tip,
+    })
+}
+
+/// Check the filesystem directly: every open buffer's file, and every known git
+/// directory's HEAD. Sets the same flags an event would.
+///
+/// This exists because the platform watcher cannot be trusted to be the only
+/// source. On macOS an `fseventsd` that wedges — which a full disk is enough to
+/// cause — stops delivering to every client on the volume while still accepting
+/// their streams, and a stream does not survive the daemon being restarted
+/// either. There is nothing to detect and no error to report: the editor simply
+/// stops seeing external commits and external edits, indistinguishably from a
+/// filesystem where nothing is happening. A tick costs one `stat` per open
+/// buffer plus one small read per git directory, and reports nothing when
+/// nothing moved, so the cost of not needing it is negligible.
+fn poll(
+    seen: &mut Snapshot,
+    git_dirs: &[PathBuf],
+    relevant: &mut bool,
+    head_moved: &mut bool,
+    changed: &mut Vec<PathBuf>,
+) {
+    let open = OPEN_FILES.lock().unwrap_or_else(|p| p.into_inner());
+    for path in open.iter() {
+        let Ok(mtime) = std::fs::metadata(path).and_then(|meta| meta.modified()) else {
+            continue; // deleted or unreadable: the buffer keeps what it has
+        };
+        if Snapshot::update(&mut seen.files, path, mtime) {
+            *relevant = true;
+            changed.push(path.clone());
+        }
+    }
+    // Forget files no longer open, so a session that visits thousands of buffers
+    // over days does not carry an entry for every one of them.
+    seen.files.retain(|(path, _)| open.contains(path));
+    drop(open);
+
+    for git_dir in git_dirs {
+        let Some(state) = head_state(git_dir) else {
+            continue;
+        };
+        if Snapshot::update(&mut seen.heads, git_dir, state) {
+            *head_moved = true;
         }
     }
 }
@@ -453,7 +606,10 @@ fn event_is_relevant(event: &notify::Result<notify::Event>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{apply, burst_window, changed_paths, event_moves_head, is_head_move, Msg};
+    use super::{
+        apply, burst_window, changed_paths, event_moves_head, is_head_move, poll, Msg, Snapshot,
+        OPEN_FILES,
+    };
     use std::path::{Path, PathBuf};
     use std::process::Command;
     use std::sync::mpsc;
@@ -570,6 +726,94 @@ mod tests {
         }
     }
 
+    /// The poll tick is the editor's guarantee that it sees external changes
+    /// even when the platform watcher reports nothing at all — a wedged
+    /// `fseventsd`, a daemon restart that invalidates live streams, a path the
+    /// backend does not cover. The first tick only establishes a baseline; a
+    /// later write must be reported exactly once.
+    #[test]
+    fn a_poll_tick_reports_external_writes_without_any_platform_event() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let file = dir.path().join("buffer.txt");
+        std::fs::write(&file, "one\n").expect("write");
+        *OPEN_FILES.lock().unwrap() = vec![file.clone()];
+
+        let mut seen = Snapshot::default();
+        let poll_once = |seen: &mut Snapshot| {
+            let (mut relevant, mut head_moved, mut changed) = (false, false, Vec::new());
+            poll(seen, &[], &mut relevant, &mut head_moved, &mut changed);
+            (relevant, changed)
+        };
+
+        let (relevant, changed) = poll_once(&mut seen);
+        assert!(
+            !relevant && changed.is_empty(),
+            "the first tick records what is on disk; it must not claim a change"
+        );
+
+        // A different process writes the file. No event is delivered to anyone.
+        std::thread::sleep(Duration::from_millis(20));
+        std::fs::write(&file, "one\ntwo\n").expect("write");
+
+        let (relevant, changed) = poll_once(&mut seen);
+        assert!(
+            relevant,
+            "the write must be noticed without a platform event"
+        );
+        assert_eq!(changed, vec![file.clone()]);
+
+        let (relevant, changed) = poll_once(&mut seen);
+        assert!(
+            !relevant && changed.is_empty(),
+            "the same write must not be reported again on the next tick"
+        );
+
+        OPEN_FILES.lock().unwrap().clear();
+    }
+
+    /// The other half: a commit made while the platform watcher is silent must
+    /// still refresh the gutters, which means noticing HEAD by reading it.
+    #[test]
+    fn a_poll_tick_notices_a_commit_the_platform_never_reported() {
+        let tmp = tempfile::tempdir().expect("temp dir");
+        let root = tmp.path().canonicalize().expect("canonicalize");
+        git(&["init"], &root);
+        git(&["config", "user.email", "test@example.com"], &root);
+        git(&["config", "user.name", "test"], &root);
+        git(&["config", "commit.gpgsign", "false"], &root);
+        std::fs::write(root.join("file.txt"), "one\n").expect("write");
+        git(&["add", "-A"], &root);
+        git(&["commit", "-m", "first"], &root);
+
+        let git_dirs = [root.join(".git")];
+        let mut seen = Snapshot::default();
+        let poll_once = |seen: &mut Snapshot| {
+            let (mut relevant, mut head_moved, mut changed) = (false, false, Vec::new());
+            poll(
+                seen,
+                &git_dirs,
+                &mut relevant,
+                &mut head_moved,
+                &mut changed,
+            );
+            head_moved
+        };
+
+        assert!(!poll_once(&mut seen), "the first tick is the baseline");
+
+        std::thread::sleep(Duration::from_millis(20));
+        git(&["commit", "--allow-empty", "-m", "external"], &root);
+
+        assert!(
+            poll_once(&mut seen),
+            "a commit moved the branch tip — the gutters' diff base is now stale"
+        );
+        assert!(
+            !poll_once(&mut seen),
+            "HEAD has not moved again; a settled repo must stay quiet"
+        );
+    }
+
     fn modify_event(paths: &[&str]) -> notify::Result<notify::Event> {
         let mut event =
             notify::Event::new(notify::EventKind::Modify(notify::event::ModifyKind::Any));
@@ -651,7 +895,7 @@ mod tests {
         for path in [
             "/meta/.git/modules/zmax/refs/heads/main", // commit inside the submodule
             "/meta/.git/modules/zmax/refs/heads/main.lock",
-            "/meta/.git/modules/zmax/HEAD",      // checkout inside the submodule
+            "/meta/.git/modules/zmax/HEAD", // checkout inside the submodule
             "/meta/.git/modules/zmax/ORIG_HEAD", // rebase / reset inside it
         ] {
             assert!(

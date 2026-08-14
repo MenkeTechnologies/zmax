@@ -691,6 +691,12 @@ impl Application {
             crate::file_watcher::watch_workspaces(
                 self.editor.documents().map(|doc| doc.workspace_root()),
             );
+            // ...and covering every open buffer's file, which the watcher thread
+            // stats on its own schedule so a platform watcher that has silently
+            // stopped delivering cannot strand the editor on stale content.
+            crate::file_watcher::track_open_files(
+                self.editor.documents().filter_map(|doc| doc.path()),
+            );
 
             if self.editor.should_close() {
                 // emacs `desktop-save-mode`: the desktop (every file-visiting

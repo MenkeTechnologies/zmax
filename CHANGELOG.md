@@ -467,6 +467,17 @@ Fixes:
   directories are discovered even when its worktree already sits inside a live
   recursive watch. A fetch (`refs/remotes/**`) and staging (`.git/index`) still
   move nothing and still trigger nothing.
+* External edits and commits are no longer invisible when the platform's own
+  file-change notifications stop arriving. On macOS an `fseventsd` that wedges —
+  a full disk is enough to cause it — keeps accepting every client's stream and
+  delivers nothing on the volume from then on, and a live stream does not
+  survive the daemon being restarted either; there is no error and nothing to
+  detect, so the editor simply stops seeing the outside world while looking
+  perfectly healthy. The watcher thread now also checks directly every two
+  seconds: one `stat` per open buffer, and each git directory's `HEAD` plus the
+  modification time of the branch tip it names. Anything that genuinely moved
+  takes the same path an event would, and a quiet tree costs a handful of
+  `stat` calls with no redraw.
 * The filesystem watcher could postpone every refresh indefinitely while the
   machine was busy. Each arriving event extended the burst it coalesces by
   another 150ms, with no ceiling, so a tree that never fell quiet for that long
