@@ -33074,7 +33074,7 @@ fn ex_temp_buffer_resize_mode(
     Ok(())
 }
 
-/// emacs `normal-erase-is-backspace-mode`: which of <backspace> / <delete>
+/// emacs `normal-erase-is-backspace-mode`: which of `<backspace>` / `<delete>`
 /// erases backwards. On (the default) is the usual arrangement; off swaps them,
 /// which is the remedy the manual's "DEL Does Not Delete" node prescribes.
 fn ex_normal_erase_is_backspace_mode(
