@@ -310,7 +310,10 @@ mod tests {
     #[test]
     fn invalid_values_are_rejected_before_they_are_stored() {
         assert!(set("bs-dont-show-regexp", "(").is_err(), "bad regexp");
-        assert!(set("bs-minimal-buffer-name-column", "wide").is_err(), "not a number");
+        assert!(
+            set("bs-minimal-buffer-name-column", "wide").is_err(),
+            "not a number"
+        );
         assert!(set("bs-show-size", "maybe").is_err(), "not a boolean");
         assert!(set("bs-no-such-variable", "t").is_err(), "unknown variable");
         // An unparseable pattern that somehow reached the config still matches

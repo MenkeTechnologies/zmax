@@ -42,12 +42,7 @@ pub fn get(doc: DocumentId, slot: u8) -> Option<usize> {
 
 /// ne `UnsetBookmark`: forget one slot. Returns whether there was one.
 pub fn unset(doc: DocumentId, slot: u8) -> bool {
-    with(|slots| {
-        slots
-            .get_mut(&doc)
-            .and_then(|d| d.remove(&slot))
-            .is_some()
-    })
+    with(|slots| slots.get_mut(&doc).and_then(|d| d.remove(&slot)).is_some())
 }
 
 /// Every slot a document holds, lowest digit first — for listing them.

@@ -2,9 +2,9 @@ pub mod default;
 pub mod emacs;
 pub mod kakoune;
 pub mod macros;
+pub mod major_mode;
 pub mod micro;
 pub mod nano;
-pub mod major_mode;
 pub mod spacemacs;
 pub mod vim;
 pub mod vim_map;
@@ -18,7 +18,16 @@ pub use spacemacs::default;
 
 /// The keymap preset names selectable via `keymap = "..."` in config.toml and
 /// the `:keymap` command.
-pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "kakoune", "emacs", "cua", "micro", "nano"];
+pub const PRESETS: &[&str] = &[
+    "spacemacs",
+    "vim",
+    "helix",
+    "kakoune",
+    "emacs",
+    "cua",
+    "micro",
+    "nano",
+];
 
 /// The keymap preset currently in force. `Config::keymap` is the authority, but
 /// it lives in the app-level config that only `Application` can reach; commands

@@ -192,9 +192,7 @@ pub fn word_at(line: &str, col: usize) -> Option<String> {
     }
     let word: String = chars[start..end].iter().collect();
     // A bare number or punctuation run is not a headword.
-    word.chars()
-        .any(|c| c.is_alphabetic())
-        .then_some(word)
+    word.chars().any(|c| c.is_alphabetic()).then_some(word)
 }
 
 /// Look `word` up on the configured DICT server. Blocking — callers run it on a
@@ -277,7 +275,10 @@ mod tests {
         let defs = parse_definitions(REPLY);
         assert_eq!(defs.len(), 2);
         assert_eq!(defs[0].word, "emacs");
-        assert_eq!(defs[0].database, "The Collaborative International Dictionary");
+        assert_eq!(
+            defs[0].database,
+            "The Collaborative International Dictionary"
+        );
         assert!(defs[0].text.starts_with("Emacs \\Em\"acs\\, n."));
         assert!(defs[0].text.ends_with("An extensible text editor."));
         assert_eq!(defs[1].database, "WordNet (r) 3.0");

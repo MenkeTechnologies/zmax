@@ -24,13 +24,17 @@ use zmax_view::DocumentId;
 /// when the buffer is saved, which is the point at which "changed" stops being
 /// interesting).
 fn state() -> &'static Mutex<HashMap<DocumentId, Rope>> {
-    static STATE: std::sync::OnceLock<Mutex<HashMap<DocumentId, Rope>>> = std::sync::OnceLock::new();
+    static STATE: std::sync::OnceLock<Mutex<HashMap<DocumentId, Rope>>> =
+        std::sync::OnceLock::new();
     STATE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Whether `highlight-changes-mode` is on for `doc`.
 pub fn enabled(doc: DocumentId) -> bool {
-    state().lock().map(|s| s.contains_key(&doc)).unwrap_or(false)
+    state()
+        .lock()
+        .map(|s| s.contains_key(&doc))
+        .unwrap_or(false)
 }
 
 /// Emacs `M-x highlight-changes-mode`: toggle it for `doc`, snapshotting `text`

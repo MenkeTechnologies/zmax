@@ -24,7 +24,10 @@ pub fn first_and_last(selection: &Selection) -> Selection {
         ranges.push(Range::new(from, from + 1));
         ranges.push(Range::new(to - 1, to));
     }
-    Selection::new(ranges.into(), selection.primary_index().min(ranges_len_guard(selection)))
+    Selection::new(
+        ranges.into(),
+        selection.primary_index().min(ranges_len_guard(selection)),
+    )
 }
 
 /// The primary index has to stay inside the new range list; splitting grows it,
@@ -88,11 +91,7 @@ pub fn copy_indent_changes(
         if existing == indent {
             continue;
         }
-        changes.push((
-            start,
-            start + existing.chars().count(),
-            indent.to_string(),
-        ));
+        changes.push((start, start + existing.chars().count(), indent.to_string()));
     }
     changes
 }
@@ -131,10 +130,7 @@ mod test {
     #[test]
     fn every_selection_gets_split() {
         let rope = Rope::from("alpha beta gamma\n");
-        let selection = Selection::new(
-            vec![Range::new(0, 5), Range::new(11, 16)].into(),
-            0,
-        );
+        let selection = Selection::new(vec![Range::new(0, 5), Range::new(11, 16)].into(), 0);
         let ends = first_and_last(&selection);
         assert_eq!(texts(&rope, &ends), ["a", "a", "g", "a"]);
     }

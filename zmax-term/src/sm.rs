@@ -178,7 +178,12 @@ pub fn http_post_json(url: &str, headers: &[(&str, &str)], body: &Value) -> Resu
 /// `(code, header, body)`.
 pub fn split_status_error(err: &str) -> Option<(u16, String, String)> {
     let mut parts = err.split('\u{1}');
-    let code = parts.next()?.trim_start_matches("http ").trim().parse().ok()?;
+    let code = parts
+        .next()?
+        .trim_start_matches("http ")
+        .trim()
+        .parse()
+        .ok()?;
     Some((
         code,
         parts.next()?.to_string(),

@@ -35,8 +35,7 @@ static SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS: std::sync::atomic::AtomicBool =
 /// treats a numeric prefix of zero as "off"; the caller does that decoding and
 /// passes the resulting boolean here.
 pub fn set_suppress_bold_inverse_default_colors(suppress: bool) {
-    SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS
-        .store(suppress, std::sync::atomic::Ordering::Relaxed);
+    SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS.store(suppress, std::sync::atomic::Ordering::Relaxed);
 }
 
 /// Whether boldness of faces with inverse default colors is currently suppressed.

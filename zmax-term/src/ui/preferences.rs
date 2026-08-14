@@ -161,10 +161,7 @@ impl Component for PreferencesPanel {
             // TAB / S-TAB in the customization buffer are Emacs `widget-keymap`'s
             // widget-forward / widget-backward. Only the Settings page is that
             // buffer; the other pages keep whatever Tab means to them.
-            if k.code == KeyCode::Tab
-                && self.tab == 0
-                && !k.modifiers.contains(KeyModifiers::ALT)
-            {
+            if k.code == KeyCode::Tab && self.tab == 0 && !k.modifiers.contains(KeyModifiers::ALT) {
                 if k.modifiers.contains(KeyModifiers::SHIFT) {
                     self.widget_backward();
                 } else {

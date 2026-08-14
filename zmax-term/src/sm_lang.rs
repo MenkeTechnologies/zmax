@@ -218,7 +218,11 @@ pub fn alda_play_code(args: &[&str]) -> Result<Outcome, String> {
     if let Some(msg) = ensure_server()? {
         return Ok(Outcome::status(msg));
     }
-    let (ok, out) = run_capture("alda", &["play", "--history", history, "--code", code], None)?;
+    let (ok, out) = run_capture(
+        "alda",
+        &["play", "--history", history, "--code", code],
+        None,
+    )?;
     Ok(paged("alda play --code", ok, &out))
 }
 
@@ -332,7 +336,10 @@ pub fn extempore_connect(args: &[&str]) -> Result<Outcome, String> {
     } else {
         Ok(Outcome::page(
             status,
-            format!("{}{banner}", sm::heading(&format!("extempore {host}:{port}"))),
+            format!(
+                "{}{banner}",
+                sm::heading(&format!("extempore {host}:{port}"))
+            ),
         ))
     }
 }
@@ -351,9 +358,14 @@ pub fn extempore_send(args: &[&str]) -> Result<Outcome, String> {
     let reply = send_form(&host, port, code)?;
     let title = format!("extempore {host}:{port}");
     if reply.trim().is_empty() {
-        Ok(Outcome::status(format!("{title}: sent, no reply within 250ms")))
+        Ok(Outcome::status(format!(
+            "{title}: sent, no reply within 250ms"
+        )))
     } else {
-        Ok(Outcome::page(title.clone(), format!("{}{reply}", sm::heading(&title))))
+        Ok(Outcome::page(
+            title.clone(),
+            format!("{}{reply}", sm::heading(&title)),
+        ))
     }
 }
 
@@ -481,7 +493,9 @@ fn mercury_module(path: &str) -> Result<String, String> {
         .ok_or_else(|| format!("mercury: no file name in `{path}`"))?;
     let stem = name.split('.').next().unwrap_or("");
     if stem.is_empty() {
-        return Err(format!("mercury: cannot derive a module name from `{path}`"));
+        return Err(format!(
+            "mercury: cannot derive a module name from `{path}`"
+        ));
     }
     Ok(stem.to_string())
 }
@@ -681,8 +695,12 @@ fn scan_labels(text: &str) -> Vec<Label> {
     let mut labels: Vec<Label> = Vec::new();
     let mut index: Vec<String> = Vec::new(); // lowercase keys, parallel to labels
 
-    let record = |key: String, spelling: &str, line: usize, is_def: bool,
-                      labels: &mut Vec<Label>, index: &mut Vec<String>| {
+    let record = |key: String,
+                  spelling: &str,
+                  line: usize,
+                  is_def: bool,
+                  labels: &mut Vec<Label>,
+                  index: &mut Vec<String>| {
         let pos = match index.iter().position(|k| *k == key) {
             Some(p) => p,
             None => {
@@ -837,7 +855,11 @@ pub fn powershell_run(args: &[&str]) -> Result<Outcome, String> {
 pub fn powershell_eval(args: &[&str]) -> Result<Outcome, String> {
     let source = need(args, 0, "powershell source to evaluate")?;
     let program = powershell_binary()?;
-    let (ok, out) = run_capture(program, &["-NoLogo", "-NoProfile", "-Command", source], None)?;
+    let (ok, out) = run_capture(
+        program,
+        &["-NoLogo", "-NoProfile", "-Command", source],
+        None,
+    )?;
     Ok(paged(&format!("{program} -Command"), ok, &out))
 }
 
@@ -850,7 +872,9 @@ pub fn powershell_eval(args: &[&str]) -> Result<Outcome, String> {
 /// Upstream does *not* touch `\{`, `\}`, `\_<` or `\_>`; those are left alone
 /// here for the same reason.
 fn regexp_to_regex(text: &str) -> String {
-    text.replace("\\(", "(").replace("\\)", ")").replace("\\|", "|")
+    text.replace("\\(", "(")
+        .replace("\\)", ")")
+        .replace("\\|", "|")
 }
 
 /// `powershell-regexp-to-regex`: rewrite an emacs regexp (typically
@@ -916,10 +940,7 @@ mod tests {
     #[test]
     fn powershell_regexp_to_regex_drops_emacs_group_escapes() {
         // regexp-opt output, the documented input.
-        assert_eq!(
-            regexp_to_regex("\\(?:foo\\|bar\\)"),
-            "(?:foo|bar)"
-        );
+        assert_eq!(regexp_to_regex("\\(?:foo\\|bar\\)"), "(?:foo|bar)");
         assert_eq!(regexp_to_regex("\\(a\\|b\\|c\\)"), "(a|b|c)");
         // An escaped backslash before a paren keeps one backslash, matching
         // emacs' left-to-right non-overlapping scan.
@@ -948,7 +969,10 @@ mod tests {
                       echo usage: x.bat name\n";
         let labels = scan_labels(script);
 
-        let build = labels.iter().find(|l| l.name.eq_ignore_ascii_case("build")).unwrap();
+        let build = labels
+            .iter()
+            .find(|l| l.name.eq_ignore_ascii_case("build"))
+            .unwrap();
         assert_eq!(build.defs, vec![7]);
         // `call :build` on line 4 and the case-insensitive `goto BUILD` on 11.
         assert_eq!(build.refs, vec![4, 11]);
@@ -991,7 +1015,10 @@ mod tests {
         assert!(line_refs("call other.bat").is_empty());
         assert_eq!(line_refs("call :sub"), vec!["sub".to_string()]);
         assert_eq!(line_refs("goto:eof"), vec!["eof".to_string()]);
-        assert_eq!(line_refs("if errorlevel 1 goto fail"), vec!["fail".to_string()]);
+        assert_eq!(
+            line_refs("if errorlevel 1 goto fail"),
+            vec!["fail".to_string()]
+        );
     }
 
     #[test]

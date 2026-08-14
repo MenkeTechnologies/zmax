@@ -263,7 +263,10 @@ impl XwidgetWebkit {
         let view_id = {
             let (view, doc) = current!(cx.editor);
             let hay = doc.text().to_string().to_lowercase();
-            let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+            let cursor = doc
+                .selection(view.id)
+                .primary()
+                .cursor(doc.text().slice(..));
             // The selection is in chars; `str::find` answers in bytes.
             let byte_of = |ch: usize| {
                 hay.char_indices()
@@ -477,11 +480,11 @@ pub fn ex_edit_mode(cx: &mut Context, _args: Args, event: PromptEvent) -> anyhow
         return Ok(());
     }
     let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
-        |editor: &mut Editor, compositor: &mut Compositor| {
-            match compositor.find_id::<XwidgetWebkit>(ID) {
-                Some(view) => view.toggle_edit(editor),
-                None => editor.set_error("xwidget-webkit-edit-mode: no WebKit buffer"),
-            }
+        |editor: &mut Editor, compositor: &mut Compositor| match compositor
+            .find_id::<XwidgetWebkit>(ID)
+        {
+            Some(view) => view.toggle_edit(editor),
+            None => editor.set_error("xwidget-webkit-edit-mode: no WebKit buffer"),
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
@@ -495,14 +498,14 @@ pub fn ex_isearch_mode(cx: &mut Context, _args: Args, event: PromptEvent) -> any
         return Ok(());
     }
     let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
-        |editor: &mut Editor, compositor: &mut Compositor| {
-            match compositor.find_id::<XwidgetWebkit>(ID) {
-                Some(view) => {
-                    view.start_isearch(false);
-                    editor.set_status("Webkit I-search: (C-s next, C-r previous, RET exits)");
-                }
-                None => editor.set_error("xwidget-webkit-isearch-mode: no WebKit buffer"),
+        |editor: &mut Editor, compositor: &mut Compositor| match compositor
+            .find_id::<XwidgetWebkit>(ID)
+        {
+            Some(view) => {
+                view.start_isearch(false);
+                editor.set_status("Webkit I-search: (C-s next, C-r previous, RET exits)");
             }
+            None => editor.set_error("xwidget-webkit-isearch-mode: no WebKit buffer"),
         },
     ));
     cx.jobs.callback(async move { Ok(call) });

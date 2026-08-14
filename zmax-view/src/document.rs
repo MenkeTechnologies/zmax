@@ -4146,7 +4146,10 @@ mod test {
         doc.set_selection(view, Selection::point(0));
         doc.set_selection(view, Selection::point(0));
         doc.set_selection(view, Selection::point(0));
-        assert!(!doc.undo_selection(view), "nothing changed, nothing to undo");
+        assert!(
+            !doc.undo_selection(view),
+            "nothing changed, nothing to undo"
+        );
     }
 
     #[test]

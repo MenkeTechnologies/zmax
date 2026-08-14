@@ -370,7 +370,12 @@ impl BufferMenu {
             self.status = "buffer-menu: no buffer at point".to_string();
             return;
         };
-        let Some(row) = self.menu.rows().iter().find(|r| self.doc_for(r.key) == Some(id)) else {
+        let Some(row) = self
+            .menu
+            .rows()
+            .iter()
+            .find(|r| self.doc_for(r.key) == Some(id))
+        else {
             return;
         };
         if row.file.is_empty() {

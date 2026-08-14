@@ -2202,7 +2202,10 @@ impl EditorView {
     /// derived from its own text. The `Variables` mode keeps only the words the
     /// grammar parses as an identifier/variable node, which is the distinction
     /// between the two emacs modes.
-    pub fn doc_identifier_color_highlights(doc: &Document, view: &View) -> Option<OverlayHighlights> {
+    pub fn doc_identifier_color_highlights(
+        doc: &Document,
+        view: &View,
+    ) -> Option<OverlayHighlights> {
         let mode = crate::rainbow::ident_mode(doc.id())?;
         let text = doc.text().slice(..);
         let (first_line, last_line) = Self::visible_lines(doc, view);
@@ -2980,7 +2983,11 @@ impl EditorView {
         let mut y = area.y;
 
         if crate::emacs_frame::menu_bar() {
-            let row = Rect { y, height: 1, ..area };
+            let row = Rect {
+                y,
+                height: 1,
+                ..area
+            };
             let titles = crate::commands::menu_bar_titles();
             self.menu_bar_hits = Self::render_button_row(
                 row,
@@ -2994,7 +3001,11 @@ impl EditorView {
         }
 
         if crate::emacs_frame::tool_bar() {
-            let row = Rect { y, height: 1, ..area };
+            let row = Rect {
+                y,
+                height: 1,
+                ..area
+            };
             self.tool_bar_hits = Self::render_button_row(
                 row,
                 surface,
@@ -3009,7 +3020,11 @@ impl EditorView {
         }
 
         if crate::emacs_frame::modifier_bar() {
-            let row = Rect { y, height: 1, ..area };
+            let row = Rect {
+                y,
+                height: 1,
+                ..area
+            };
             // A latched modifier is drawn lit, which is how emacs shows that the
             // next key will carry it.
             let sticky = crate::emacs_frame::sticky_modifiers();
@@ -4470,8 +4485,8 @@ impl EditorView {
                                 .collect::<Vec<_>>()
                                 .join("\n\n---\n\n");
                             let contents = crate::ui::Markdown::new(body, loader);
-                            let popup =
-                                crate::ui::Popup::new("dictionary-tooltip", contents).auto_close(true);
+                            let popup = crate::ui::Popup::new("dictionary-tooltip", contents)
+                                .auto_close(true);
                             compositor.replace_or_push("dictionary-tooltip", popup);
                         }
                         Err(e) => editor.set_status(format!("dictionary: {e}")),
@@ -4542,19 +4557,18 @@ impl EditorView {
         // A window's own tool bar, on its top row.
         let hit = cxt.editor.tree.views().find_map(|(view, _)| {
             let bar = view.window_tool_bar_area();
-            (bar.height > 0 && row == bar.y && column >= bar.x && column < bar.right())
-                .then(|| {
-                    (
-                        view.id,
-                        Self::button_hit(
-                            bar,
-                            crate::emacs_frame::WINDOW_TOOL_BAR_BUTTONS
-                                .iter()
-                                .map(|(label, _)| *label),
-                            column,
-                        ),
-                    )
-                })
+            (bar.height > 0 && row == bar.y && column >= bar.x && column < bar.right()).then(|| {
+                (
+                    view.id,
+                    Self::button_hit(
+                        bar,
+                        crate::emacs_frame::WINDOW_TOOL_BAR_BUTTONS
+                            .iter()
+                            .map(|(label, _)| *label),
+                        column,
+                    ),
+                )
+            })
         });
         if let Some((view_id, index)) = hit {
             cxt.editor.focus(view_id);
@@ -4588,12 +4602,7 @@ impl EditorView {
                 && column == bar.x
                 && row >= bar.y
                 && row < bar.bottom())
-            .then(|| {
-                (
-                    view.id,
-                    (row - bar.y) as f64 / bar.height.max(1) as f64,
-                )
-            })
+            .then(|| (view.id, (row - bar.y) as f64 / bar.height.max(1) as f64))
         })
     }
 
@@ -5245,8 +5254,7 @@ impl EditorView {
                         // it the only one.
                         if modifiers == KeyModifiers::CONTROL {
                             cxt.editor.last_mouse_screen = Some((row, column));
-                            commands::MappableCommand::mouse_split_window_horizontally
-                                .execute(cxt);
+                            commands::MappableCommand::mouse_split_window_horizontally.execute(cxt);
                         } else {
                             cxt.editor.focus(view_id);
                             commands::MappableCommand::wonly.execute(cxt);
@@ -5972,8 +5980,7 @@ impl Component for EditorView {
         self.render_frame_bars(frame_bars, surface, cx);
 
         if draw_bufferline {
-            let bar = ide_bufrow
-                .unwrap_or_else(|| area.clip_top(frame_bars.height).with_height(1));
+            let bar = ide_bufrow.unwrap_or_else(|| area.clip_top(frame_bars.height).with_height(1));
             // vim `tabline`: a format string replaces the tab bar's contents.
             match crate::commands::typed::vim_opt_str("tabline") {
                 Some(fmt) => {

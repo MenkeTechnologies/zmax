@@ -50,7 +50,9 @@ fn segments(name: &str) -> Vec<String> {
 /// (`["gruvbox"]`, false).
 fn pattern(name: &str) -> (Vec<String>, bool) {
     let mut segs = segments(name);
-    let pos = segs.iter().position(|s| VARIANT_TOKENS.contains(&s.as_str()));
+    let pos = segs
+        .iter()
+        .position(|s| VARIANT_TOKENS.contains(&s.as_str()));
     match pos {
         Some(i) => {
             segs[i] = "%".to_string();
@@ -160,5 +162,4 @@ mod tests {
             "mirage is not a light/dark segment, so it names its own family"
         );
     }
-
 }

@@ -741,8 +741,7 @@ fn push_u(v: &mut VecDeque<u64>, x: u64) {
 /// are painted by helpers that only receive the theme, and the setting lives on
 /// the editor config — so the render entry point records it here for them. Set
 /// once per frame, read by `panel_bg`.
-static TRANSPARENT_FRAME: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
+static TRANSPARENT_FRAME: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// An opaque background colour for the page. A transparent terminal + a theme
 /// whose `ui.background` has no colour would otherwise show the desktop straight

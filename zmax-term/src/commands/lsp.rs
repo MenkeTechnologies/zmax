@@ -1703,9 +1703,8 @@ pub fn hover(cx: &mut Context) {
                 let echo = hovers
                     .iter()
                     .map(|(name, hover)| {
-                        let body = crate::ui::lsp::hover::hover_contents_to_string(
-                            hover.contents.clone(),
-                        );
+                        let body =
+                            crate::ui::lsp::hover::hover_contents_to_string(hover.contents.clone());
                         format!("{name}: {body}")
                     })
                     .collect::<Vec<_>>()

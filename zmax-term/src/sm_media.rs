@@ -429,7 +429,10 @@ pub fn pianobar_station(args: &[&str]) -> Result<Outcome, String> {
                 format!("pianobar: selected station {number}")
             }))
         }
-        None => pianobar_key("s", "station prompt open — run :pianobar-output for the list"),
+        None => pianobar_key(
+            "s",
+            "station prompt open — run :pianobar-output for the list",
+        ),
     }
 }
 
@@ -544,7 +547,12 @@ pub fn spotify_play_pause(_args: &[&str]) -> Result<Outcome, String> {
 
 /// Skip to the next track. `args` is unused.
 pub fn spotify_next(_args: &[&str]) -> Result<Outcome, String> {
-    spotify_control("next track", "next", "org.mpris.MediaPlayer2.Player", "Next")
+    spotify_control(
+        "next track",
+        "next",
+        "org.mpris.MediaPlayer2.Player",
+        "Next",
+    )
 }
 
 /// Go back to the previous track. `args` is unused.
@@ -585,11 +593,7 @@ pub fn spotify_status(_args: &[&str]) -> Result<Outcome, String> {
     }
     if sm::have("playerctl") {
         let state = playerctl(&["status"]).unwrap_or_else(|_| "unknown".to_string());
-        let track = playerctl(&[
-            "metadata",
-            "--format",
-            "{{title}} — {{artist}} — {{album}}",
-        ])?;
+        let track = playerctl(&["metadata", "--format", "{{title}} — {{artist}} — {{album}}"])?;
         return Ok(Outcome::status(format!("spotify: {track} [{state}]")));
     }
     // Without playerctl, read the two MPRIS properties directly. dbus-send's
@@ -648,7 +652,10 @@ fn spotify_token() -> Result<String, String> {
                 .to_string(),
         );
     }
-    let auth = format!("Authorization: Basic {}", base64(format!("{id}:{secret}").as_bytes()));
+    let auth = format!(
+        "Authorization: Basic {}",
+        base64(format!("{id}:{secret}").as_bytes())
+    );
     let body = sm::run(
         "curl",
         &[
@@ -668,7 +675,12 @@ fn spotify_token() -> Result<String, String> {
     let token = json
         .get("access_token")
         .and_then(Value::as_str)
-        .ok_or_else(|| format!("no access_token in token response: {}", sm::ellipsize(&body, 160)))?
+        .ok_or_else(|| {
+            format!(
+                "no access_token in token response: {}",
+                sm::ellipsize(&body, 160)
+            )
+        })?
         .to_string();
     let ttl = json
         .get("expires_in")
@@ -750,7 +762,10 @@ fn render_search(kind: &str, query: &str, json: &Value) -> (String, String) {
 fn spotify_search(kind: &str, args: &[&str]) -> Result<Outcome, String> {
     let query = joined(args);
     if query.is_empty() {
-        return Err(format!("usage: spotify-search-{}: <query>", &kind[..kind.len() - 1]));
+        return Err(format!(
+            "usage: spotify-search-{}: <query>",
+            &kind[..kind.len() - 1]
+        ));
     }
     let token = spotify_token()?;
     let url = format!(
@@ -876,7 +891,10 @@ fn tidal_boot_path() -> Result<PathBuf, String> {
     if let Some(path) = env_opt("TIDAL_BOOT_PATH") {
         let path = PathBuf::from(path);
         if !path.is_file() {
-            return Err(format!("$TIDAL_BOOT_PATH: {} is not a file", path.display()));
+            return Err(format!(
+                "$TIDAL_BOOT_PATH: {} is not a file",
+                path.display()
+            ));
         }
         return Ok(path);
     }
@@ -1282,9 +1300,7 @@ pub fn edit_server_start(args: &[&str]) -> Result<Outcome, String> {
         }
         EDIT_RUNNING.store(false, Ordering::SeqCst);
     });
-    Ok(Outcome::status(format!(
-        "edit-server: listening on {addr}"
-    )))
+    Ok(Outcome::status(format!("edit-server: listening on {addr}")))
 }
 
 /// Stop accepting and close every pending connection. `args` is unused.
@@ -1304,7 +1320,9 @@ pub fn edit_server_stop(_args: &[&str]) -> Result<Outcome, String> {
         let _ = poke.shutdown(Shutdown::Both);
     }
     let dropped = {
-        let mut pending = EDIT_PENDING.lock().map_err(|_| "edit-server state poisoned")?;
+        let mut pending = EDIT_PENDING
+            .lock()
+            .map_err(|_| "edit-server state poisoned")?;
         let count = pending.len();
         for (_, _, stream) in pending.drain(..) {
             let _ = stream.shutdown(Shutdown::Both);
@@ -1318,7 +1336,9 @@ pub fn edit_server_stop(_args: &[&str]) -> Result<Outcome, String> {
 
 /// Page the pending edit ids with the first line of each body. `args` is unused.
 pub fn edit_server_pending(_args: &[&str]) -> Result<Outcome, String> {
-    let pending = EDIT_PENDING.lock().map_err(|_| "edit-server state poisoned")?;
+    let pending = EDIT_PENDING
+        .lock()
+        .map_err(|_| "edit-server state poisoned")?;
     if pending.is_empty() {
         return Ok(Outcome::status("edit-server: nothing pending"));
     }
@@ -1342,7 +1362,9 @@ pub fn edit_server_take(args: &[&str]) -> Result<Outcome, String> {
         Some(text) => text.parse::<u64>().map_err(|_| format!("bad id: {text}"))?,
         None => 0,
     };
-    let pending = EDIT_PENDING.lock().map_err(|_| "edit-server state poisoned")?;
+    let pending = EDIT_PENDING
+        .lock()
+        .map_err(|_| "edit-server state poisoned")?;
     let entry = if id == 0 {
         pending.first()
     } else {
@@ -1356,7 +1378,10 @@ pub fn edit_server_take(args: &[&str]) -> Result<Outcome, String> {
         });
     };
     Ok(Outcome::page(
-        format!("edit-server: request {pid} ({} chars)", body.chars().count()),
+        format!(
+            "edit-server: request {pid} ({} chars)",
+            body.chars().count()
+        ),
         body.clone(),
     ))
 }
@@ -1375,7 +1400,9 @@ pub fn edit_server_finish(args: &[&str]) -> Result<Outcome, String> {
         .map_err(|_| format!("bad id: {}", args[0]))?;
     let text = args.get(1).copied().unwrap_or("");
     let mut stream = {
-        let mut pending = EDIT_PENDING.lock().map_err(|_| "edit-server state poisoned")?;
+        let mut pending = EDIT_PENDING
+            .lock()
+            .map_err(|_| "edit-server state poisoned")?;
         let index = pending
             .iter()
             .position(|(pid, _, _)| *pid == id)
@@ -1448,10 +1475,7 @@ pub fn ein_notebooks(args: &[&str]) -> Result<Outcome, String> {
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_else(|| vec![json.clone()]);
-    let mut page = sm::heading(&format!(
-        "Jupyter contents: /{}",
-        path.trim_matches('/')
-    ));
+    let mut page = sm::heading(&format!("Jupyter contents: /{}", path.trim_matches('/')));
     for entry in &entries {
         page.push_str(&format!(
             "{:<10} {:<20} {}\n",
@@ -1649,8 +1673,10 @@ fn chinese_convert(
     if sm::have("cconv") {
         return sm::run_with_stdin("cconv", &["-f", cconv_from, "-t", cconv_to], text);
     }
-    Err("neither `opencc` nor `cconv` found on PATH — install one of them to convert Chinese text"
-        .to_string())
+    Err(
+        "neither `opencc` nor `cconv` found on PATH — install one of them to convert Chinese text"
+            .to_string(),
+    )
 }
 
 /// Convert traditional Chinese to simplified. `args` is the text.
@@ -1727,7 +1753,12 @@ fn render_youdao(word: &str, json: &Value) -> String {
                 .into_iter()
                 .flatten()
             {
-                for tr in translation.get("tr").and_then(Value::as_array).into_iter().flatten() {
+                for tr in translation
+                    .get("tr")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
+                {
                     let line = tr.get("l").map(|l| jtext(l.get("i"))).unwrap_or_default();
                     if !line.trim().is_empty() {
                         page.push_str(&format!("  {}\n", line.trim()));
@@ -2084,9 +2115,7 @@ fn romaji_to_hiragana(input: &str) -> String {
 fn hiragana_to_katakana(s: &str) -> String {
     s.chars()
         .map(|c| match c as u32 {
-            0x3041..=0x3096 | 0x309D..=0x309E => {
-                char::from_u32(c as u32 + 0x60).unwrap_or(c)
-            }
+            0x3041..=0x3096 | 0x309D..=0x309E => char::from_u32(c as u32 + 0x60).unwrap_or(c),
             _ => c,
         })
         .collect()
@@ -2097,9 +2126,7 @@ fn hiragana_to_katakana(s: &str) -> String {
 fn katakana_to_hiragana(s: &str) -> String {
     s.chars()
         .map(|c| match c as u32 {
-            0x30A1..=0x30F6 | 0x30FD..=0x30FE => {
-                char::from_u32(c as u32 - 0x60).unwrap_or(c)
-            }
+            0x30A1..=0x30F6 | 0x30FD..=0x30FE => char::from_u32(c as u32 - 0x60).unwrap_or(c),
             _ => c,
         })
         .collect()
@@ -2375,7 +2402,10 @@ mod tests {
 
     #[test]
     fn tidal_wraps_blocks_the_way_tidal_el_does() {
-        assert_eq!(tidal_block("d1 $ sound \"bd\""), ":{\nd1 $ sound \"bd\"\n:}\n");
+        assert_eq!(
+            tidal_block("d1 $ sound \"bd\""),
+            ":{\nd1 $ sound \"bd\"\n:}\n"
+        );
         assert_eq!(
             tidal_block(" mapM_ ($ silence) [d3]\n"),
             ":{\n mapM_ ($ silence) [d3]\n:}\n"
