@@ -2100,6 +2100,790 @@ const TOPICS: &[(&str, &str)] = &[
       :2match :3match      the second and third highlight groups\n\
       :tutor               the tutorial, which is the one to run first",
     ),
+    (
+        "AI assistance",
+        "The AI commands work on the selection, or the buffer when nothing is\n\
+      selected.  ai_chat asks about it, ai_inline_edit rewrites it in place with\n\
+      ai_accept_edit confirming the preview, ai_explain explains it and\n\
+      ai_generate_tests writes tests for it.  ai_fix takes the diagnostics on\n\
+      the line, ai_commit_message writes the commit, ai_terminal_command turns a\n\
+      sentence into a shell command, and ai_agent runs a task on its own.\n\
+      The context commands add material for the model to read.\n\n\
+      The whole family, under SPC a:\nai_accept_edit ai_add_file_context ai_agent ai_agent_review ai_apply_block\n\
+      ai_chat ai_chat_panel ai_codebase_context ai_commit_message ai_complete\n\
+      ai_docs_context ai_explain ai_fix ai_generate_tests ai_inline_edit\n\
+      ai_inline_edit_preview ai_model_picker ai_revert_agent ai_symbol_context\n\
+      ai_terminal_command ai_web_context",
+    ),
+    (
+        "Keyboard macros",
+        "Recording and replaying keystrokes, with a ring of the recent macros rather\n\
+      than one slot.  kmacro_end_or_call_macro (F4) ends the recording, or calls\n\
+      the last macro when nothing is being recorded, and kmacro_bind_to_key\n\
+      reports the config line that would bind it permanently.\n\nkmacro_add_counter kmacro_bind_to_key kmacro_call_ring_2nd\n\
+      kmacro_edit_lossage kmacro_edit_macro kmacro_end_macro\n\
+      kmacro_end_or_call_macro kmacro_end_or_call_macro_repeat\n\
+      kmacro_insert_counter kmacro_name_last_macro kmacro_redisplay\n\
+      kmacro_ring_delete kmacro_ring_next kmacro_ring_prev kmacro_ring_swap\n\
+      kmacro_ring_view kmacro_set_counter kmacro_set_format\n\
+      kmacro_start_macro_or_insert_counter kmacro_step_edit_macro\n\
+      kmacro_to_register",
+    ),
+    (
+        "The macro ring",
+        "kmacro_menu lists the recorded macros so they can be marked, deleted,\n\
+      copied and edited like any other list.\n\nkmacro_menu kmacro_menu_do_copy kmacro_menu_do_delete\n\
+      kmacro_menu_do_flagged_delete kmacro_menu_edit_column\n\
+      kmacro_menu_edit_counter kmacro_menu_edit_format kmacro_menu_edit_keys\n\
+      kmacro_menu_edit_position kmacro_menu_flag_for_deletion kmacro_menu_mark\n\
+      kmacro_menu_transpose kmacro_menu_unmark kmacro_menu_unmark_all\n\
+      kmacro_menu_unmark_backward",
+    ),
+    (
+        "Incremental search",
+        "Emacs-style search that narrows as you type, with the search string itself\n\
+      as the thing being edited.  isearch_occur turns the current pattern into a\n\
+      list of every match, and isearch_query_replace hands it to a replace,\n\
+      which is why the search is worth finishing before deciding what to do.\n\nisearch_abort isearch_cancel isearch_char_by_name isearch_complete\n\
+      isearch_del_char isearch_delete_char isearch_edit_string\n\
+      isearch_emoji_by_name isearch_exit isearch_forward_symbol\n\
+      isearch_forward_symbol_at_point isearch_forward_thing_at_point\n\
+      isearch_forward_word isearch_help_map\n\
+      isearch_highlight_lines_matching_regexp isearch_highlight_regexp\n\
+      isearch_occur isearch_query_replace isearch_query_replace_regexp\n\
+      isearch_quote_char isearch_ring_advance isearch_ring_retreat\n\
+      isearch_toggle_case_fold isearch_toggle_char_fold\n\
+      isearch_toggle_input_method isearch_toggle_invisible\n\
+      isearch_toggle_lax_whitespace isearch_toggle_regexp\n\
+      isearch_toggle_specified_input_method isearch_toggle_symbol\n\
+      isearch_toggle_word isearch_transient_input_method isearch_yank_char\n\
+      isearch_yank_kill isearch_yank_line isearch_yank_pop isearch_yank_symbol\n\
+      isearch_yank_symbol_or_char isearch_yank_until_char isearch_yank_word\n\
+      isearch_yank_word_or_char isearch_yank_x_selection",
+    ),
+    (
+        "Drawing with picture mode",
+        "picture_mode makes the buffer behave like a drawing surface: typing\n\
+      overwrites rather than inserts, and the movement commands set which way\n\
+      the cursor travels after each character — including the four diagonals,\n\
+      which is what makes box and arrow drawing practical.\n\npicture_backward_clear_column picture_clear_column picture_clear_line\n\
+      picture_clear_rectangle_to_register picture_mode picture_motion\n\
+      picture_motion_reverse picture_movement_down picture_movement_left\n\
+      picture_movement_ne picture_movement_nw picture_movement_right\n\
+      picture_movement_se picture_movement_sw picture_movement_up\n\
+      picture_open_line picture_set_tab_stops picture_tab picture_tab_search\n\
+      picture_yank_rectangle picture_yank_rectangle_from_register",
+    ),
+    (
+        "ASCII tables",
+        "table_recognize finds the table drawn at the cursor and treats it as a\n\
+      table from then on, so cells reflow and split as they are edited;\n\
+      table_capture turns plain text into one, and table_release turns it back.\n\ntable_capture table_fixed_width_mode table_generate_source\n\
+      table_heighten_cell table_insert_sequence table_justify table_narrow_cell\n\
+      table_query_dimension table_recognize table_recognize_cell\n\
+      table_recognize_region table_recognize_table table_release\n\
+      table_shorten_cell table_span_cell table_split_cell\n\
+      table_split_cell_horizontally table_split_cell_vertically\n\
+      table_to_csv_selection table_unrecognize table_unrecognize_cell\n\
+      table_unrecognize_region table_unrecognize_table table_widen_cell",
+    ),
+    (
+        "Aligning at a character",
+        "align_current aligns the region into columns section by section, and the\n\
+      align_at_* commands align on one specific character without asking.\n\
+      align_at_regex takes any pattern; the typable :align does the same from\n\
+      the command line.\n\nalign_at_ampersand align_at_arithmetic align_at_bar align_at_colon\n\
+      align_at_comma align_at_dot align_at_equals align_at_lbrace\n\
+      align_at_lbracket align_at_lparen align_at_rbrace align_at_rbracket\n\
+      align_at_regex align_at_rparen align_at_semicolon align_current\n\
+      align_entire align_highlight_rule align_left_at_char align_right_at_char\n\
+      align_selections align_unhighlight_rule",
+    ),
+    (
+        "Process buffers",
+        "comint is the machinery behind every buffer with a program running in it —\n\
+      a shell, a REPL, a debugger.  comint_run starts one, and the rest are the\n\
+      keys that make such a buffer usable: history, prompts, signals, and\n\
+      getting at what was typed or printed before.\n\ncomint_bol_or_process_mark comint_completion_at_point\n\
+      comint_continue_subjob comint_copy_old_input comint_delchar_or_maybe_eof\n\
+      comint_delete_output comint_dynamic_list_filename\n\
+      comint_dynamic_list_input_ring comint_get_next_from_history\n\
+      comint_history_isearch_backward_regexp comint_insert_previous_argument\n\
+      comint_interrupt_subjob comint_kill_input comint_kill_subjob\n\
+      comint_magic_space comint_next_prompt comint_previous_prompt\n\
+      comint_quit_subjob comint_run comint_send_invisible comint_shell\n\
+      comint_show_maximum_output comint_show_output comint_stop_subjob\n\
+      comint_strip_ctrl_m comint_truncate_buffer comint_write_output",
+    ),
+    (
+        "The calendar",
+        "A calendar that moves by day, week, month and year, and knows about the\n\
+      other calendars in use around the world — Hebrew, Islamic, Chinese,\n\
+      Bahai, Coptic, Ethiopic, French Revolutionary, Julian, Mayan, Persian and\n\
+      ISO — with a goto and a print command for each.\n\ncalendar_bahai_goto_date calendar_bahai_print_date\n\
+      calendar_chinese_goto_date calendar_chinese_print_date\n\
+      calendar_coptic_goto_date calendar_coptic_print_date\n\
+      calendar_count_days_region calendar_day_of_year\n\
+      calendar_ethiopic_goto_date calendar_ethiopic_print_date\n\
+      calendar_french_goto_date calendar_french_print_date\n\
+      calendar_goto_day_of_year calendar_hebrew_goto_date\n\
+      calendar_hebrew_print_date calendar_islamic_goto_date\n\
+      calendar_islamic_print_date calendar_iso_goto_week calendar_iso_print_date\n\
+      calendar_julian_goto_date calendar_julian_print_date calendar_mark_today\n\
+      calendar_mayan_goto_long_count calendar_mayan_print_date\n\
+      calendar_other_month calendar_persian_goto_date\n\
+      calendar_persian_print_date calendar_print_other_dates calendar_redraw\n\
+      calendar_scroll_left calendar_scroll_right calendar_set_date_style\n\
+      calendar_star_date calendar_unmark",
+    ),
+    (
+        "Holidays & the sky",
+        "The holiday commands list what falls in a range and mark it on the\n\
+      calendar; the astronomical ones answer the questions a calendar cannot —\n\
+      sunrise, sunset, the phases of the moon, the equinoxes and solstices.\n\ncalendar_astro_goto_day_number calendar_astro_print_day_number\n\
+      calendar_list_holidays calendar_lunar_phases calendar_sunrise_sunset\n\
+      diary_astro_day_number diary_lunar_phases diary_sunrise_sunset\n\
+      holiday_list",
+    ),
+    (
+        "Diary entries",
+        "A diary is a plain text file of dated lines; these commands insert an entry\n\
+      for the day, the week, the month, the year or an anniversary, in whichever\n\
+      calendar the date belongs to.\n\ndiary_bahai_insert_anniversary_entry diary_bahai_insert_entry\n\
+      diary_bahai_insert_monthly_entry diary_bahai_insert_yearly_entry\n\
+      diary_chinese_insert_anniversary_entry diary_chinese_insert_entry\n\
+      diary_chinese_insert_monthly_entry diary_chinese_insert_yearly_entry\n\
+      diary_hebrew_insert_anniversary_entry diary_hebrew_insert_entry\n\
+      diary_hebrew_insert_monthly_entry diary_hebrew_insert_yearly_entry\n\
+      diary_insert_anniversary_entry diary_insert_block_entry\n\
+      diary_insert_cyclic_entry diary_insert_entry diary_insert_monthly_entry\n\
+      diary_insert_weekly_entry diary_insert_yearly_entry\n\
+      diary_islamic_insert_anniversary_entry diary_islamic_insert_entry\n\
+      diary_islamic_insert_monthly_entry diary_islamic_insert_yearly_entry",
+    ),
+    (
+        "Reading the diary",
+        "The listing and marking commands pull the day's entries out of the file and\n\
+      show them next to the calendar; diary_fancy_display is the readable form.\n\ndiary_bahai_date diary_bahai_list_entries diary_bahai_mark_entries\n\
+      diary_chinese_date diary_chinese_list_entries diary_chinese_mark_entries\n\
+      diary_coptic_date diary_day_of_year diary_ethiopic_date\n\
+      diary_fancy_display diary_french_date diary_hebrew_birthday\n\
+      diary_hebrew_date diary_hebrew_list_entries diary_hebrew_mark_entries\n\
+      diary_hebrew_omer diary_hebrew_parasha diary_hebrew_rosh_hodesh\n\
+      diary_hebrew_sabbath_candles diary_hebrew_yahrzeit\n\
+      diary_include_other_diary_files diary_islamic_date\n\
+      diary_islamic_list_entries diary_islamic_mark_entries diary_list_entries\n\
+      diary_mail_entries diary_mark_entries diary_mark_included_diary_files\n\
+      diary_print_entries diary_show_all_entries diary_simple_display\n\
+      diary_sort_entries diary_view_entries",
+    ),
+    (
+        "Version control, the emacs way",
+        "vc_next_action is the whole of version control in one key: it does whatever\n\
+      the file's state calls for next — register it, stage it, commit it.  The\n\
+      rest are the commands for when that is not what you want.\n\nvc_annotate vc_create_branch vc_create_tag vc_delete_file vc_dir\n\
+      vc_dir_mark vc_dir_mark_all_files vc_dir_mark_by_regexp\n\
+      vc_dir_mark_registered_files vc_ediff vc_ignore vc_insert_headers\n\
+      vc_log_incoming vc_log_outgoing vc_log_search vc_next_action\n\
+      vc_prepare_patch vc_print_branch_log vc_print_log vc_print_root_log\n\
+      vc_pull vc_push vc_refresh_state vc_region_history vc_register\n\
+      vc_rename_file vc_retrieve_tag vc_revert vc_root_diff vc_state_refresh\n\
+      vc_switch_branch vc_update_change_log",
+    ),
+    (
+        "The package menu",
+        "The package list, with the marking-and-executing habit the rest of emacs\n\
+      uses: mark what should be installed or deleted, then execute the marks.\n\npackage_activate_all package_browse_url package_delete package_install\n\
+      package_install_file package_menu_describe_package package_menu_execute\n\
+      package_menu_filter_by_archive package_menu_filter_by_description\n\
+      package_menu_filter_by_keyword package_menu_filter_by_name\n\
+      package_menu_filter_by_name_or_description package_menu_filter_by_regexp\n\
+      package_menu_filter_by_status package_menu_filter_by_version\n\
+      package_menu_filter_clear package_menu_filter_marked\n\
+      package_menu_filter_upgradable package_menu_hide_package\n\
+      package_menu_mark_delete package_menu_mark_install\n\
+      package_menu_mark_obsolete_for_deletion package_menu_mark_unmark\n\
+      package_menu_mark_upgrades package_menu_quick_help\n\
+      package_menu_sort_by_name package_menu_sort_by_stars\n\
+      package_menu_sort_by_status package_menu_toggle_hiding\n\
+      package_quickstart_refresh package_recompile package_recompile_all\n\
+      package_refresh_contents package_report_bug package_search package_upgrade\n\
+      package_upgrade_all package_vc_checkout package_vc_install\n\
+      package_vc_install_from_checkout package_vc_prepare_patch\n\
+      package_vc_rebuild",
+    ),
+    (
+        "Ediff",
+        "A two- or three-way diff driven from a control panel rather than a buffer,\n\
+      moving hunk by hunk and copying between the sides.\n\nediff_3_buffers ediff_3_files ediff_buffer ediff_directories\n\
+      ediff_directories3 ediff_directory_revisions ediff_documentation\n\
+      ediff_dotfile_and_template ediff_file ediff_merge_directories\n\
+      ediff_merge_directories_with_ancestor ediff_merge_file\n\
+      ediff_merge_revisions ediff_merge_revisions_with_ancestor\n\
+      ediff_patch_buffer ediff_regions ediff_regions_wordwise\n\
+      ediff_show_registry ediff_windows",
+    ),
+    (
+        "Debug adapter commands",
+        "The DAP session's own commands, which are what the Debug tab and the F-keys\n\
+      call.  dap_launch starts the target and dap_toggle_breakpoint is on F9.\n\ndap_breakpoints_picker dap_continue dap_disable_exceptions\n\
+      dap_edit_condition dap_edit_log dap_enable_exceptions dap_launch dap_next\n\
+      dap_pause dap_remove_breakpoint dap_restart dap_run_to_cursor dap_step_in\n\
+      dap_step_out dap_switch_stack_frame dap_switch_thread dap_terminate\n\
+      dap_toggle_breakpoint dap_variables",
+    ),
+    (
+        "Gnus commands",
+        "The newsreader's group, summary and article commands.\n\ngnus_group_exit gnus_group_kill_group gnus_group_list_all_groups\n\
+      gnus_group_list_groups gnus_group_list_killed gnus_group_list_zombies\n\
+      gnus_group_next_unread_group gnus_group_prev_unread_group\n\
+      gnus_group_read_group gnus_group_toggle_subscription_at_point\n\
+      gnus_summary_exit gnus_summary_isearch_article gnus_summary_next_page\n\
+      gnus_summary_next_unread_article gnus_summary_prev_page\n\
+      gnus_summary_prev_unread_article gnus_summary_search_article_backward\n\
+      gnus_summary_search_article_forward",
+    ),
+    (
+        "Moving between windows",
+        "windmove picks the window by direction rather than by cycling, so the\n\
+      window above is always the same key regardless of how many are open.\n\nwindmove_default_keybindings windmove_delete_default_keybindings\n\
+      windmove_delete_down windmove_delete_left windmove_delete_right\n\
+      windmove_delete_up windmove_display_default_keybindings\n\
+      windmove_display_down windmove_display_left windmove_display_new_frame\n\
+      windmove_display_new_tab windmove_display_right\n\
+      windmove_display_same_window windmove_display_up\n\
+      windmove_swap_states_default_keybindings",
+    ),
+    (
+        "Window layouts",
+        "A layout is the arrangement of windows and what is in them.  layout_save\n\
+      writes them to disk, so a project's arrangement survives a restart.\n\nlayout_add_buffers layout_create layout_default layout_delete\n\
+      layout_goto_1 layout_goto_2 layout_goto_3 layout_goto_4 layout_goto_5\n\
+      layout_goto_6 layout_goto_7 layout_goto_8 layout_goto_9 layout_last\n\
+      layout_load layout_next layout_prev layout_rename layout_save",
+    ),
+    (
+        "Outline mode",
+        "Headings and bodies in any language, folded by level.  outline_show_all\n\
+      reveals everything; the rest hide and show by level, by subtree, or by\n\
+      what is at the cursor.\n\noutline_backward_same_level outline_cycle outline_cycle_buffer\n\
+      outline_forward_same_level outline_hide_body\n\
+      outline_hide_by_heading_regexp outline_hide_entry outline_hide_leaves\n\
+      outline_hide_other outline_hide_sublevels outline_hide_subtree\n\
+      outline_minor_mode outline_mode outline_next_visible_heading\n\
+      outline_previous_visible_heading outline_show_all outline_show_branches\n\
+      outline_show_by_heading_regexp outline_show_children outline_show_entry\n\
+      outline_show_subtree outline_up_heading",
+    ),
+    (
+        "The mouse",
+        "The mouse is fully wired, in the emacs sense rather than the IDE sense:\n\
+      mouse_save_then_kill extends the region to the click and copies it, and\n\
+      clicking again kills it.\n\nmouse_avoidance_mode mouse_buffer_menu mouse_goto_tag mouse_paste_after\n\
+      mouse_paste_before mouse_pop_tag mouse_save_then_kill mouse_scroll_left\n\
+      mouse_scroll_page_down mouse_scroll_page_left mouse_scroll_page_right\n\
+      mouse_scroll_page_up mouse_scroll_right mouse_search_word_backward\n\
+      mouse_search_word_forward mouse_secondary_save_then_kill\n\
+      mouse_select_window mouse_set_point mouse_set_region mouse_set_secondary\n\
+      mouse_split_window_horizontally mouse_split_window_vertically\n\
+      mouse_start_secondary mouse_wheel_mode mouse_wheel_text_scale\n\
+      mouse_yank_at_click mouse_yank_primary mouse_yank_secondary",
+    ),
+    (
+        "Describing what is bound",
+        "describe_key (C-h k) takes a key and reports the command it runs with its\n\
+      documentation, which is the fastest way to answer 'what did I just press'.\n\
+      The rest describe the other things a key could have been.\n\ndescribe_bindings describe_categories describe_char describe_character_set\n\
+      describe_coding_system describe_command describe_copying\n\
+      describe_current_modes describe_diagnostics_checker describe_distribution\n\
+      describe_face describe_fontset describe_function describe_gnu_project\n\
+      describe_input_method describe_key describe_key_briefly describe_keymap\n\
+      describe_language_environment describe_language_package\n\
+      describe_no_warranty describe_package describe_prefix_bindings\n\
+      describe_repeat_maps describe_symbol describe_syntax\n\
+      describe_text_properties describe_variable",
+    ),
+    (
+        "Going to a place in the file",
+        "The goto commands that take a position rather than a kind of thing.\n\ngoto_address_mode goto_buffer_window goto_byte goto_char goto_column\n\
+      goto_define_from_cursor goto_define_from_start goto_file goto_file_end\n\
+      goto_file_hsplit goto_file_new_tab goto_file_other_frame\n\
+      goto_file_readonly goto_file_start goto_file_vsplit goto_followup_to\n\
+      goto_keyword_line_from_cursor goto_keyword_line_from_start goto_line\n\
+      goto_line_end goto_line_end_newline goto_line_middle goto_line_start\n\
+      goto_mark goto_mark_line goto_mark_line_nojump goto_mark_nojump\n\
+      goto_newer_change goto_numbered_bookmark goto_older_change\n\
+      goto_preview_window goto_reply_to goto_visual_line_end\n\
+      goto_visual_line_start goto_window_1 goto_window_2 goto_window_3\n\
+      goto_window_4 goto_window_5 goto_window_6 goto_window_7 goto_window_8\n\
+      goto_window_9 goto_window_bottom goto_window_center goto_window_top\n\
+      goto_word",
+    ),
+    (
+        "Going to the next thing",
+        "Every one of these takes a kind of syntactic object and moves to the next\n\
+      or previous one, so they compose with counts the way w and b do.\n\ngoto_next_buffer goto_next_change goto_next_class goto_next_close_paren\n\
+      goto_next_comment goto_next_conflict goto_next_diag goto_next_entry\n\
+      goto_next_function goto_next_mark goto_next_mark_line goto_next_paragraph\n\
+      goto_next_parameter goto_next_preproc goto_next_section\n\
+      goto_next_spell_error goto_next_tabpage goto_next_tabstop goto_next_test\n\
+      goto_next_unmatched_brace goto_next_unmatched_paren goto_next_xml_element\n\
+      goto_prev_change goto_prev_class goto_prev_comment goto_prev_conflict\n\
+      goto_prev_diag goto_prev_entry goto_prev_function goto_prev_mark\n\
+      goto_prev_mark_line goto_prev_open_paren goto_prev_paragraph\n\
+      goto_prev_parameter goto_prev_preproc goto_prev_section\n\
+      goto_prev_spell_error goto_prev_tabstop goto_prev_test\n\
+      goto_prev_unmatched_brace goto_prev_unmatched_paren goto_prev_xml_element\n\
+      goto_previous_buffer goto_previous_tabpage",
+    ),
+    (
+        "Going to the definition",
+        "What a language server answers, plus the first and last of the things the\n\
+      editor tracks itself — changes, diagnostics, tab pages, modified files.\n\ngoto_declaration goto_definition goto_first_change goto_first_diag\n\
+      goto_first_nonwhitespace goto_first_nonwhitespace_down goto_first_tabpage\n\
+      goto_implementation goto_last_accessed_file goto_last_change\n\
+      goto_last_diag goto_last_line goto_last_modification\n\
+      goto_last_modified_file goto_last_tabpage goto_line_last_nonblank\n\
+      goto_reference goto_type_definition goto_visual_first_nonwhitespace",
+    ),
+    (
+        "Selecting things",
+        "A selection is the unit every command acts on, so most of the work is in\n\
+      making the right one.\n\nselect_all select_all_children select_all_instances select_all_occurrences\n\
+      select_all_siblings select_down_key select_end_key select_first_last_chars\n\
+      select_frame_by_name select_gn_match select_gn_match_prev select_home_key\n\
+      select_in select_left_key select_line_above select_line_below select_mode\n\
+      select_next_sibling select_page_down_key select_page_up_key\n\
+      select_paragraph_backward_vim select_paragraph_backward_vim_linewise\n\
+      select_paragraph_forward_vim select_paragraph_forward_vim_linewise\n\
+      select_pasted_text select_prev_sibling\n\
+      select_references_to_symbol_under_cursor select_regex select_register\n\
+      select_right_key select_textobject_around select_textobject_inner\n\
+      select_up_key",
+    ),
+    (
+        "Extending a selection",
+        "Every movement has an extend form that keeps the anchor where it is, which\n\
+      is how a selection grows without leaving normal mode.\n\nextend_backward_exclusive_vim extend_char_left extend_char_right\n\
+      extend_chars_left_vim extend_chars_right_vim extend_forward_exclusive_vim\n\
+      extend_line extend_line_above extend_line_above_linewise extend_line_below\n\
+      extend_line_below_linewise extend_line_down extend_line_up\n\
+      extend_next_char extend_next_long_word_end extend_next_long_word_start\n\
+      extend_next_paragraph extend_next_sub_word_end extend_next_sub_word_start\n\
+      extend_next_word_end extend_next_word_start extend_page_down\n\
+      extend_page_up extend_parent_node_end extend_parent_node_start\n\
+      extend_prev_char extend_prev_long_word_end extend_prev_long_word_start\n\
+      extend_prev_paragraph extend_prev_sub_word_end extend_prev_sub_word_start\n\
+      extend_prev_word_end extend_prev_word_start extend_search_next\n\
+      extend_search_next_vim extend_search_prev extend_search_prev_vim\n\
+      extend_till_char extend_till_prev_char extend_to_char extend_to_column\n\
+      extend_to_file_end extend_to_file_start extend_to_first_nonwhitespace\n\
+      extend_to_last_line extend_to_line_bounds extend_to_line_end\n\
+      extend_to_line_end_newline extend_to_line_start extend_to_visual_line_end\n\
+      extend_to_visual_line_start extend_to_word extend_visual_line_down\n\
+      extend_visual_line_up",
+    ),
+    (
+        "Moving the cursor",
+        "The movement primitives themselves, by character, word, line, paragraph and\n\
+      visual line.\n\nmove_char_left move_char_right move_element_left move_element_right\n\
+      move_file_refactor move_file_to_trash move_line_down move_line_up\n\
+      move_next_long_word_end move_next_long_word_start move_next_sub_word_end\n\
+      move_next_sub_word_start move_next_word_end move_next_word_start\n\
+      move_parent_node_end move_parent_node_start move_prev_long_word_end\n\
+      move_prev_long_word_start move_prev_sub_word_end move_prev_sub_word_start\n\
+      move_prev_word_end move_prev_word_start move_sentence_backward\n\
+      move_sentence_forward move_text_line_down move_text_line_up\n\
+      move_to_opposite_group move_to_window_line_top_bottom\n\
+      move_visual_line_down move_visual_line_up",
+    ),
+    (
+        "Copying & killing",
+        "Copying to a register, to the clipboard, and to the emacs kill ring, which\n\
+      are three different places with three sets of commands.\n\ncopy_all_buffer_links copy_as_format copy_as_format_asciidoc\n\
+      copy_as_format_bitbucket copy_as_format_disqus copy_as_format_github\n\
+      copy_as_format_gitlab copy_as_format_hipchat copy_as_format_html\n\
+      copy_as_format_jira copy_as_format_markdown copy_as_format_mediawiki\n\
+      copy_as_format_org_mode copy_as_format_pod copy_as_format_rst\n\
+      copy_as_format_slack copy_as_format_telegram copy_as_format_whatsapp\n\
+      copy_between_registers copy_char_above copy_char_below copy_diagnostic\n\
+      copy_dir_locals_to_file_locals copy_dir_locals_to_file_locals_prop_line\n\
+      copy_file copy_file_locals_to_dir_locals copy_indent copy_last_keys\n\
+      copy_rectangle_as_kill copy_rectangle_to_register copy_reference\n\
+      copy_region_as_kill copy_remote_url copy_selection_on_next_line\n\
+      copy_selection_on_prev_line copy_system_info copy_to_register copy_version\n\
+      kill_buffers_by_regex kill_compilation kill_local_variable kill_rectangle\n\
+      kill_ring_deindent_mode kill_sentence kill_sexp kill_some_buffers\n\
+      kill_to_line_end kill_to_line_start kill_whole_line yank_file_dir\n\
+      yank_file_name yank_file_path yank_file_path_with_line\n\
+      yank_file_path_with_line_col yank_find_char_backward\n\
+      yank_find_char_forward yank_from_kill_ring yank_joined\n\
+      yank_joined_to_clipboard yank_joined_to_primary_clipboard\n\
+      yank_main_selection_to_clipboard yank_main_selection_to_primary_clipboard\n\
+      yank_no_trailing_whitespace yank_pop yank_rectangle yank_textobject\n\
+      yank_textobject_around yank_textobject_inner yank_till_char_backward\n\
+      yank_till_char_forward yank_to_clipboard yank_to_mark yank_to_mark_line\n\
+      yank_to_primary_clipboard yank_to_search_backward yank_to_search_forward",
+    ),
+    (
+        "Deleting",
+        "Deleting by object, by direction and by what surrounds the cursor.\n\ndelete_char_backward delete_char_forward delete_chars_backward_vim\n\
+      delete_chars_forward_vim delete_dir_local_variable delete_file\n\
+      delete_find_char_backward delete_find_char_forward delete_frame\n\
+      delete_other_frames delete_rectangle delete_selection\n\
+      delete_selection_linewise delete_selection_mode delete_selection_noyank\n\
+      delete_textobject_around delete_textobject_inner delete_till_char_backward\n\
+      delete_till_char_forward delete_to_mark delete_to_mark_line\n\
+      delete_to_search_backward delete_to_search_forward\n\
+      delete_whitespace_rectangle delete_window_and_buffer delete_word_backward\n\
+      delete_word_forward",
+    ),
+    (
+        "Toggles",
+        "Everything that is either on or off, one command each — there is no\n\
+      settings dialog to hunt through, and each of these is bindable.\n\ntoggle_abbrev_mode toggle_ai_autocomplete toggle_ai_privacy\n\
+      toggle_auto_completion toggle_auto_fill toggle_auto_highlight\n\
+      toggle_auto_reveal toggle_auto_revert toggle_blame_annotate\n\
+      toggle_block_comments toggle_bottom_zoom toggle_centered_cursor\n\
+      toggle_column_indexing toggle_comments toggle_diagnostics\n\
+      toggle_drawer_mid toggle_electric_pair toggle_fill_column\n\
+      toggle_follow_mode toggle_frame_fullscreen toggle_frame_maximized\n\
+      toggle_frame_tab_bar toggle_fringe toggle_hl_line toggle_ide\n\
+      toggle_indent_guides toggle_inlay_hints toggle_inline_blame\n\
+      toggle_input_method toggle_lang_keymap toggle_line_comments\n\
+      toggle_line_numbers toggle_long_line_marker toggle_modeline_major_mode\n\
+      toggle_modeline_minor_modes toggle_modeline_new_version\n\
+      toggle_modeline_org_clock toggle_modeline_position\n\
+      toggle_modeline_responsive toggle_modeline_vcs toggle_readonly\n\
+      toggle_replace_mode toggle_revins toggle_scroll_bar\n\
+      toggle_smooth_scrolling toggle_soft_wrap toggle_subword toggle_superword\n\
+      toggle_syntax_highlighting toggle_system_monitor toggle_test_file\n\
+      toggle_tilde_fringe toggle_value_selection toggle_whitespace_render\n\
+      toggle_window_dedication",
+    ),
+    (
+        "Folding commands",
+        "Folds by level, by syntax and by hand.\n\nfold_close fold_close_all fold_close_recursive fold_comments fold_create\n\
+      fold_delete fold_delete_all fold_less fold_more fold_next fold_open\n\
+      fold_open_all fold_open_recursive fold_prev fold_toggle",
+    ),
+    (
+        "C and C++ helpers",
+        "The cc-mode commands: indentation by syntactic context, moving by\n\
+      preprocessor conditional, and the electric characters that reindent as\n\
+      they are typed.\n\nc_backslash_region c_backward_conditional c_beginning_of_defun\n\
+      c_beginning_of_statement c_context_line_break c_end_of_defun\n\
+      c_end_of_statement c_fill_paragraph c_forward_conditional c_guess\n\
+      c_guess_install c_hungry_delete_backwards c_hungry_delete_forward\n\
+      c_indent_defun c_indent_exp c_indent_line_or_region c_macro_expand\n\
+      c_mark_function c_set_style c_show_syntactic_information\n\
+      c_toggle_auto_newline c_toggle_electric_state c_toggle_hungry_state\n\
+      c_ts_mode_indent_defun c_ts_mode_set_style c_up_conditional",
+    ),
+    (
+        "TeX helpers",
+        "Environments, sections, macros and the compile-view cycle.\n\nlatex_close_block latex_electric_env_pair_mode latex_insert_block\n\
+      latex_mode tex_bibtex_file tex_buffer tex_compile tex_file\n\
+      tex_insert_braces tex_insert_quote tex_kill_job tex_mode tex_print\n\
+      tex_recenter_output_buffer tex_region tex_terminate_paragraph tex_validate\n\
+      tex_view",
+    ),
+    (
+        "Org commands",
+        "The org commands as keys rather than as : commands — the same operations\n\
+      the Org mode topic lists, bound where org binds them.\n\norg_agenda org_capture org_clock_toggle org_cycle org_deadline org_demote\n\
+      org_fold_all org_metadown org_metaleft org_metaright org_metaup org_mode\n\
+      org_next_heading org_prev_heading org_priority org_promote org_schedule\n\
+      org_shifttab org_todo org_unfold_all",
+    ),
+    (
+        "Inserting",
+        "Insert mode's own commands, and the ones that insert something computed.\n\ninsert_abbrevs insert_at_last_insert insert_at_line_end\n\
+      insert_at_line_start insert_char_by_code insert_char_interactive\n\
+      insert_command_normal insert_digraph insert_kbd_macro\n\
+      insert_kill_entered_vim insert_last_inserted_and_stop\n\
+      insert_last_inserted_text insert_lorem_list insert_lorem_paragraph\n\
+      insert_lorem_sentence insert_mode insert_newline insert_password_numerical\n\
+      insert_password_paranoid insert_password_phonetic insert_password_simple\n\
+      insert_password_strong insert_register insert_spell_suggest insert_tab\n\
+      insert_toc insert_unindent insert_uuid_v1 insert_uuid_v4",
+    ),
+    (
+        "Scrolling & the view",
+        "Moving the text under the cursor rather than the cursor through the text.\n\nalign_view_bottom align_view_center align_view_middle align_view_top\n\
+      scroll_bar_drag scroll_bar_mode scroll_column_left scroll_column_right\n\
+      scroll_cursor_to_left_edge scroll_cursor_to_right_edge scroll_down\n\
+      scroll_half_column_left scroll_half_column_right scroll_line_above_window\n\
+      scroll_line_below_window scroll_other_window scroll_other_window_down\n\
+      scroll_up view_buffer view_buffer_other_window view_echo_area_messages\n\
+      view_emacs_debugging view_emacs_faq view_emacs_problems view_emacs_todo\n\
+      view_exit view_external_packages view_file view_file_at_rev\n\
+      view_hello_file view_lossage view_mode view_order_manuals view_quit\n\
+      view_register",
+    ),
+    (
+        "Buffer commands",
+        "Switching, listing, killing and reverting buffers, and the ones that act on\n\
+      every buffer at once.\n\nbuffer_line_picker buffer_menu buffer_picker buffer_swap_window_1\n\
+      buffer_swap_window_2 buffer_swap_window_3 buffer_swap_window_4\n\
+      buffer_swap_window_5 buffer_swap_window_6 buffer_swap_window_7\n\
+      buffer_swap_window_8 buffer_swap_window_9 buffer_to_window_1\n\
+      buffer_to_window_2 buffer_to_window_3 buffer_to_window_4\n\
+      buffer_to_window_5 buffer_to_window_6 buffer_to_window_7\n\
+      buffer_to_window_8 buffer_to_window_9 kill_buffers_by_regex",
+    ),
+    (
+        "Diff commands",
+        "Hunks in the gutter, and the three-way merge.\n\nconflict_take_all_ours conflict_take_all_theirs\n\
+      diff_add_change_log_entries_other_window\n\
+      diff_add_change_log_entry_other_window diff_apply_buffer diff_apply_hunk\n\
+      diff_backup diff_buffers diff_context_to_unified\n\
+      diff_delete_trailing_whitespace diff_ediff_patch diff_file_kill\n\
+      diff_hunk_kill diff_ignore_whitespace_hunk diff_refresh_hunk\n\
+      diff_restrict_view diff_reverse_direction diff_split_hunk\n\
+      diff_unified_to_context",
+    ),
+    (
+        "Vim compatibility commands",
+        "The vim behaviours that have no emacs or helix equivalent, kept under their\n\
+      own names so the vim keymap can bind them.\n\nvim_change_line vim_find_next_char vim_find_prev_char vim_find_till_char\n\
+      vim_move_next_long_word_end vim_move_next_long_word_start\n\
+      vim_move_next_word_end vim_move_next_word_start\n\
+      vim_move_prev_long_word_end vim_move_prev_long_word_start\n\
+      vim_move_prev_word_end vim_move_prev_word_start vim_record_macro\n\
+      vim_replay_macro vim_sleep vim_till_prev_char",
+    ),
+    (
+        "Changing text",
+        "Replacing what is selected, and the case and increment operators.\n\nchange_find_char_backward change_find_char_forward change_log_goto_source\n\
+      change_log_merge change_log_mode change_selection change_selection_noyank\n\
+      change_signature change_textobject_around change_textobject_inner\n\
+      change_till_char_backward change_till_char_forward change_to_mark\n\
+      change_to_mark_line change_to_search_backward change_to_search_forward\n\
+      decrement decrement_sequential increment increment_register\n\
+      increment_sequential replace_chars_vim replace_mode\n\
+      replace_selections_with_clipboard\n\
+      replace_selections_with_primary_clipboard replace_with_yanked",
+    ),
+    (
+        "Finding",
+        "Character search, the pickers, and the search-under-cursor commands.\n\nfind_char_backward_label find_char_forward_label find_file_at_point\n\
+      find_file_other_frame find_file_other_tab find_file_other_window\n\
+      find_file_read_only find_file_read_only_other_frame\n\
+      find_file_replace_buffer find_grep find_next_char find_prev_char\n\
+      find_sibling_file find_tag_other_window find_till_char search_everywhere\n\
+      search_history_picker search_in_files search_next search_next_vim\n\
+      search_prev search_prev_vim search_selection\n\
+      search_selection_detect_word_boundaries",
+    ),
+    (
+        "Setting things",
+        "The commands that set a value rather than toggling it.\n\nset_buffer_file_coding_system set_buffer_process_coding_system\n\
+      set_file_name_coding_system set_fill_prefix set_fontset_font\n\
+      set_frame_name set_goal_column set_input_method set_keyboard_coding_system\n\
+      set_language_environment set_locale_environment set_mark set_mark_command\n\
+      set_next_selection_coding_system set_numbered_bookmark\n\
+      set_selection_coding_system set_selective_display\n\
+      set_terminal_coding_system",
+    ),
+    (
+        "Languages: what is supported",
+        "zmax parses 361 languages with tree-sitter and ships a default language\n\
+      server for 206 of them, so most files work with nothing installed but the\n\
+      server itself.\n\n\
+      346 have syntax highlighting\n\
+      150 have tree-sitter textobjects — the m menu's function, class and\n\
+          parameter objects\n\
+      142 have automatic indentation\n\
+      71 have code-navigation tags, for jumping without a server\n\
+      88 have rainbow brackets\n\n\
+      :set-language changes what a buffer is treated as, :filetype reports it,\n\
+      and languages.toml overrides any of it — globally in the config directory\n\
+      or per project.",
+    ),
+    (
+        "Languages with a language server",
+        "The server named is the default; languages.toml can point at another, or at\n\
+      several.  :lsp-health says which are actually running.\n\nada (ada_language_server) agda (als) amber (amber-lsp)\n\
+      asciidoc (ltex-ls-plus) astro (astro-ls) autohotkey (autohotkey_lsp)\n\
+      awk (awk-language-server) bash (zshrs) bass (bass)\n\
+      beancount (beancount-language-server) bibtex (texlab)\n\
+      bicep (bicep-langserver) bitbake (bitbake-language-server)\n\
+      blueprint (blueprint-compiler) c (clangd) c-sharp (roslyn-language-server)\n\
+      c3 (c3-lsp) cabal (haskell-language-server-wrapper)\n\
+      cairo (cairo-language-server) circom (circom-lsp) clarity (clarinet)\n\
+      clojure (clojure-lsp) cmake (neocmakelsp) codeql (codeql)\n\
+      coffeescript (coffeesense-language-server) common-lisp (cl-lsp)\n\
+      coq (coq-lsp) cpp (clangd) cross-config (taplo) crystal (crystalline)\n\
+      css (vscode-css-language-server) cue (cue) d (serve-d) dart (dart)\n\
+      debian (debian-lsp) devicetree (dts-lsp) dhall (dhall-lsp-server)\n\
+      docker-bake (docker-language-server)\n\
+      docker-compose (docker-compose-langserver) dockerfile (docker-langserver)\n\
+      dot (dot-language-server) drools (drools-lsp) earthfile (earthlyls)\n\
+      ebnf (ebnfer) eiffel (eiffel-language-server) elixir (elixir-ls)\n\
+      elm (elm-language-server) elvish (elvish) erlang (erlang_ls)\n\
+      faust (faustlsp) fennel (fennel-ls) fish (fish-lsp) forth (forth-lsp)\n\
+      fortran (fortls) fountain (fountain-lsp-server) fsharp (fsautocomplete)\n\
+      gas (asm-lsp) git-cliff-config (taplo) git-commit (commit-lsp)\n\
+      github-action (actions-languageserver) gitlab-ci (yaml-language-server)\n\
+      gjs (typescript-language-server) gleam (gleam)\n\
+      glimmer (ember-language-server) glsl (glsl_analyzer) go (gopls)\n\
+      gomod (gopls) gotmpl (gopls) gowork (gopls) gpr (ada_language_server)\n\
+      graphql (graphql-lsp) groovy (groovy-language-server)\n\
+      gts (typescript-language-server) hare (hare-lsp)\n\
+      haskell (haskell-language-server-wrapper)\n\
+      haskell-literate (haskell-language-server-wrapper) hcl (terraform-ls)\n\
+      hdl (hdls) heex (elixir-ls) helm (helm_ls)\n\
+      html (vscode-html-language-server) htmldjango (djlsp) http (kulala-ls)\n\
+      hy (hyuga) hyprlang (hyprls) idris (idris2-lsp) java (jdtls)\n\
+      javascript (typescript-language-server) jjconfig (taplo) jq (jq-lsp)\n\
+      json (vscode-json-language-server) json-ld (vscode-json-language-server)\n\
+      jsonc (vscode-json-language-server) jsonnet (jsonnet-language-server)\n\
+      jsx (typescript-language-server) julia (julia) just (just-lsp)\n\
+      kcl (kcl-language-server) koka (koka) kotlin (kotlin-language-server)\n\
+      koto (koto-ls) latex (texlab) lean (lake)\n\
+      less (vscode-css-language-server) lua (lua-language-server)\n\
+      luau (luau-lsp) markdoc (markdoc-ls) markdown (marksman)\n\
+      mermaid (merman-lsp) meson (mesonlsp) mint (mint) miseconfig (taplo)\n\
+      mojo (pixi) nasm (asm-lsp) nginx (nginx-language-server) nickel (nls)\n\
+      nim (nimlangserver) nix (nil) nu (nu) ocaml (ocamllsp)\n\
+      ocaml-interface (ocamllsp) octave (octave-lsp) odin (ols) opencl (clangd)\n\
+      openscad (openscad-lsp) org (ltex-ls-plus) pact (pact-lsp) pascal (pasls)\n\
+      perl (perlnavigator) pest (pest-language-server) php (intelephense)\n\
+      pkgbuild (termux-language-server) pkl (pkl-lsp) plantuml (plantuml-lsp)\n\
+      ponylang (pony-lsp) powershell (pwsh) prisma (prisma-language-server)\n\
+      prolog (swipl) protobuf (buf) puppet (puppet-languageserver)\n\
+      purescript (purescript-language-server) python (ty) qml (qmlls)\n\
+      quint (quint-language-server) r (R) racket (racket)\n\
+      raku (raku-language-server) reason (reason-language-server) rego (regols)\n\
+      rescript (rescript-language-server) ripple (ripple-language-server)\n\
+      rmarkdown (R) robot (robotcode) ron (ron-lsp) rshtml (rshtml-analyzer)\n\
+      rst (python3) ruby (ruby-lsp) rust (rust-analyzer) scala (metals)\n\
+      scheme (guile-lsp-server) scss (vscode-css-language-server) slang (slangd)\n\
+      slint (slint-lsp) sls (salt_lsp_server) smali (smalisp) smithy (cs)\n\
+      sml (millet-ls) snakemake (pylsp) solidity (solc)\n\
+      sourcepawn (sourcepawn-studio) spade (swim)\n\
+      sparql (sparql-language-server) sql (sqls) starlark (starpls)\n\
+      stryke (stryke) styx (styx) svelte (svelteserver) sway (forc)\n\
+      swift (sourcekit-lsp) systemd (systemd-lsp) systemverilog (svlangserver)\n\
+      teal (teal-language-server) templ (templ) text (ltex-ls-plus)\n\
+      tfvars (terraform-ls) tilt (tilt) toml (taplo) tsq (ts_query_ls)\n\
+      tsx (typescript-language-server) turtle (turtle-language-server)\n\
+      typescript (typescript-language-server) typespec (tsp-server)\n\
+      typst (tinymist) v (v-analyzer) vala (vala-language-server)\n\
+      verilog (verible-verilog-ls) vhdl (vhdl_ls) vue (vue-language-server)\n\
+      wat (wat_server) wgsl (wgsl-analyzer) wikitext (wikitext-lsp)\n\
+      woodpecker-ci (yaml-language-server) yaml (yaml-language-server)\n\
+      yang (yang-language-server) yara (yls) zig (zls)",
+    ),
+    (
+        "Languages with textobjects",
+        "These are the languages where the m menu's function, class, parameter,\n\
+      comment and test objects work, because the grammar has the queries for\n\
+      them.\n\nada adl amber awk bash basic blade c c-sharp caddyfile cairo clojure cmake\n\
+      codeql common-lisp concerto cpp cross-config crystal css cylc d dart dhall\n\
+      docker-bake docker-compose dockerfile doxyfile earthfile eiffel elixir elm\n\
+      env erlang fga fish freebasic gas gdscript git-cliff-config git-commit\n\
+      git-config github-action gitlab-ci gjs gleam glsl go godot-resource\n\
+      graphql gren gts hare haskell hcl heex hocon html hurl inko java\n\
+      javascript jjconfig jq json json-ld json5 jsonc jsx julia just kdl kotlin\n\
+      koto latex llvm llvm-mir lua luau mail matlab miseconfig mojo nasm\n\
+      nestedtext nim nix nu ocaml odin ohm opencl pascal penrose perl pest php\n\
+      picat pkgbuild po ponylang prisma properties protobuf purescript python\n\
+      qml r raku rescript robots.txt rshtml ruby rust rust-format-args-macro\n\
+      sage scala scheme shellcheckrc slang slint solidity sourcepawn sql\n\
+      starlark styx svelte sway swift tablegen tact textproto tilt toml tsx\n\
+      typescript typespec typst unison v vala verilog vue wesl wgsl\n\
+      woodpecker-ci wren xml yaml zig",
+    ),
+    (
+        "Languages with auto-indent",
+        "Where a new line indents itself from the syntax rather than from the\n\
+      previous line.\n\nadl amber bash basic c c-sharp caddyfile cairo capnp clojure cmake\n\
+      concerto cpon cpp crystal css cylc cython d dart docker-bake\n\
+      docker-compose doxyfile earthfile eiffel elixir erlang fga fish fortran\n\
+      freebasic gdscript github-action gitlab-ci gjs glsl go gts hcl hocon html\n\
+      hurl hyprlang inko janet java javascript jjconfig json json-ld json5 jsonc\n\
+      jsx julia just kconfig kdl koka kotlin koto latex ld less llvm llvm-mir\n\
+      llvm-mir-yaml lua luau make matlab meson miseconfig mojo move msbuild\n\
+      nestedtext nickel nim nix nu ocaml odin ohm opencl perl pest php picat\n\
+      pkgbuild pkl ponylang prolog protobuf ptx python qml quarto r racket raku\n\
+      rmarkdown robot ron ruby rust rust-format-args-macro scala scheme scss\n\
+      slang slint smali snakemake spade starlark styx svelte sway swift tablegen\n\
+      tact tcl textproto tfvars tilt tolk toml tql tsx typescript typespec\n\
+      unison v vue wgsl wit woodpecker-ci wren xml yaml yuck zig",
+    ),
+    (
+        "Languages with navigation tags",
+        "Jump to a definition without a language server running.\n\namber bash basic c c-sharp clojure common-lisp cpp crystal cython dart\n\
+      docker-bake doxyfile elisp elixir elm erlang freebasic gdscript git-config\n\
+      gitlab-ci gjs glsl go godot-resource gts haskell haxe hyprlang ini inko\n\
+      java javascript jsx julia just kdl kotlin lua markdown nix perl php\n\
+      php-only picat protobuf python r raku ripple robots.txt ron rst ruby rust\n\
+      scala scheme slisp spicedb strictdoc svelte swift systemd toml tsx\n\
+      typescript typst unison wgsl woodpecker-ci zig",
+    ),
+    (
+        "Languages with rainbow brackets",
+        "Nested brackets coloured by depth.\n\namber bash blade c c-sharp clojure cmake common-lisp cpp cross-config\n\
+      crystal css dart docker-bake elixir elm erlang fennel fsharp gdscript\n\
+      git-cliff-config github-action gitlab-ci gleam glsl go go-format-string\n\
+      graphql groovy haskell hcl html janet java javascript json json-ld json5\n\
+      jsonc jsx julia kdl kotlin koto less lua mail nearley nim nix ocaml perl\n\
+      php picat powershell python r racket raku regex ripple ron ruby rust\n\
+      rust-format-args-macro scala scheme scss solidity spade sql starlark styx\n\
+      svelte swift tilt toml tsq tsx typescript unison vim wgsl woodpecker-ci\n\
+      xml yaml yuck zig",
+    ),
+    (
+        "Every language: A to F",
+        "The full list, as :set-language spells them.\n\nada adl agda alda alloy amber apache asciidoc astro autohotkey awk bash\n\
+      basic bass batch beancount bibtex bicep bitbake blade blueprint bovex c\n\
+      c-sharp c3 cabal caddyfile cairo capnp cel cfengine chuck circom clarity\n\
+      clojure cmake codeql coffeescript comment common-lisp concerto coq cpon\n\
+      cpp cross-config crystal css csv cue cylc cython d dart dbml debian\n\
+      devicetree dhall diff djot docker-bake docker-compose dockerfile dot\n\
+      doxyfile drools dtd dune dunstrc earthfile ebnf edoc eex eiffel ejs elisp\n\
+      elixir elm elvish embedded-perl env erb erlang esdl factor faust fennel\n\
+      fga fidl fish flatbuffers forth fortran fountain freebasic fsharp",
+    ),
+    (
+        "Every language: G to M",
+        "The full list, continued.\n\ngas gdscript gemini gherkin ghostty git-attributes git-cliff-config\n\
+      git-commit git-config git-ignore git-notes git-rebase github-action\n\
+      gitlab-ci gjs gleam glimmer glsl gn gnuplot go go-format-string\n\
+      godot-resource gomod gotmpl gowork gpr graphql gren groovy gts hare\n\
+      haskell haskell-literate haskell-persistent haxe hcl hdl heex helm hocon\n\
+      hoon hosts html htmldjango http hurl hy hyprlang idris iex ini ink inko\n\
+      janet java javascript jinja jjconfig jjdescription jjrevset jjtemplate jq\n\
+      jr jsdoc json json-ld json5 jsonc jsonnet jsx julia just kcl kconfig kdl\n\
+      kivy klog koka kotlin koto latex ld ldif lean ledger less llvm llvm-mir\n\
+      llvm-mir-yaml log lpf lua lua-format-string luap luau mail make markdoc\n\
+      markdown markdown-rustdoc markdown.inline matlab mercury mermaid meson\n\
+      mint miseconfig mojo move msbuild",
+    ),
+    (
+        "Every language: N to S",
+        "The full list, continued.\n\nnasm nearley nestedtext nginx nickel nim nix nu nunjucks ocaml\n\
+      ocaml-interface octave odin ohm opencl openscad org pact pascal passwd pem\n\
+      penrose perl pest php php-only picat pip-requirements pkgbuild pkl\n\
+      plantuml po pod ponylang powershell prisma prolog properties protobuf\n\
+      proverif prql ptx pug puppet purescript python qml qmv quarto quint r\n\
+      racket raku reason regex rego rescript ripple rmarkdown robot robots.txt\n\
+      ron rpmspec rshtml rst ruby rust rust-format-args rust-format-args-macro\n\
+      sage scala scfg scheme scss shellcheckrc slang slint slisp sls smali\n\
+      smithy sml snakemake solidity sourcepawn spade sparql spicedb sql\n\
+      ssh_client_config starlark strace strictdoc stryke styx supercollider\n\
+      svelte sway swift systemd systemverilog",
+    ),
+    (
+        "Every language: T to Z",
+        "The full list, concluded.\n\nt32 tablegen tact task tcl teal templ tera text textproto tfvars thrift\n\
+      tilt tlaplus todotxt tolk toml tql tsq tsx turtle twig typescript typespec\n\
+      typst ungrammar unison uxntal v vala vento verilog vhdl vhs vim vue wast\n\
+      wat webc werk wesl wgsl wikitext wit woodpecker-ci wren xit xml xtc yaml\n\
+      yang yara yuck zig",
+    ),
 ];
 
 pub struct HelpPanel {
@@ -2896,6 +3680,59 @@ mod tests {
         assert!(
             missing.is_empty(),
             "topics name commands that are not registered: {missing:?}"
+        );
+    }
+
+    /// The same guarantee for the static commands, which topics name without a
+    /// leading `:`. Any bare `snake_case` word in a topic body has to be a real
+    /// static command — the alternative is a topic that tells the reader to
+    /// press a key that runs nothing.
+    #[test]
+    fn every_static_command_a_topic_names_is_registered() {
+        let known: std::collections::HashSet<&str> =
+            crate::commands::MappableCommand::STATIC_COMMAND_LIST
+                .iter()
+                .map(|c| c.name())
+                .collect();
+        // Prose that happens to be snake_case: file names and shell variables.
+        const NOT_COMMANDS: &[&str] = &["compile_commands", "title__keywords"];
+        // Language names and language-server names are snake_case too, and the
+        // language topics are generated from this table — so read the same table
+        // rather than keeping a hand-written list of exceptions beside it.
+        let lang_table = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../book/src/generated/lang-support.md"
+        ))
+        .expect("the generated language table should be in the repo");
+        let from_table: std::collections::HashSet<String> = lang_table
+            .lines()
+            .filter(|l| l.starts_with("| "))
+            .flat_map(|l| l.split(['|', '`', ',', ' ']))
+            .map(|w| w.trim().to_string())
+            .filter(|w| w.contains('_'))
+            .collect();
+
+        let mut missing: Vec<(&str, String)> = Vec::new();
+        for (title, body) in TOPICS {
+            for word in body.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')) {
+                if !word.contains('_') || word.starts_with('_') || word.ends_with('_') {
+                    continue;
+                }
+                if word.chars().next().is_none_or(|c| !c.is_ascii_lowercase()) {
+                    continue;
+                }
+                if known.contains(word)
+                    || NOT_COMMANDS.contains(&word)
+                    || from_table.contains(word)
+                {
+                    continue;
+                }
+                missing.push((title, word.to_string()));
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "topics name static commands that are not registered: {missing:?}"
         );
     }
 }
