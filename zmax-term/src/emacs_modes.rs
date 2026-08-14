@@ -6,12 +6,12 @@
 //! * [`toggle_blink_cursor`] flips the DECSCUSR sequence the terminal backends
 //!   emit between the steady and the blinking variant of the current shape.
 //! * [`erase_translate`] is `normal-erase-is-backspace-mode`: with the mode off
-//!   the <backspace> and <delete> key events swap before the keymap sees them.
+//!   the `<backspace>` and `<delete>` key events swap before the keymap sees them.
 //! * [`temp_buffer_resize`] is `temp-buffer-resize-mode`: a temporary display
 //!   (`show_text_in_scratch`) opens in its own split sized to its contents.
 //! * [`use_hard_newlines`] is `use-hard-newlines`: RET/`open-line` mark the
 //!   newlines they insert `hard`, and the fill commands refuse to remove one.
-//! * [`cua_mode_target`] is `cua-mode`: the keymap preset to switch to, and the
+//! * [`toggle_cua_mode`] is `cua-mode`: the keymap preset to switch to, and the
 //!   one to come back to when the mode is turned off.
 
 use std::collections::HashSet;
@@ -61,12 +61,12 @@ pub fn toggle_tooltip_mode() -> bool {
 // ── normal-erase-is-backspace-mode ──────────────────────────────────────────
 
 /// Emacs `normal-erase-is-backspace`: `t` (the default) is the mode where
-/// <backspace> erases the character *before* point and <delete> the one after
+/// `<backspace>` erases the character *before* point and `<delete>` the one after
 /// it. `nil` is the other mode the manual's "DEL Does Not Delete" node
-/// describes, where <backspace> deletes forward instead.
+/// describes, where `<backspace>` deletes forward instead.
 static NORMAL_ERASE_IS_BACKSPACE: AtomicBool = AtomicBool::new(true);
 
-/// Whether <backspace> erases backwards (Emacs `normal-erase-is-backspace`).
+/// Whether `<backspace>` erases backwards (Emacs `normal-erase-is-backspace`).
 pub fn normal_erase_is_backspace() -> bool {
     NORMAL_ERASE_IS_BACKSPACE.load(Ordering::Relaxed)
 }
@@ -83,7 +83,7 @@ pub fn set_normal_erase_is_backspace(on: bool) {
 }
 
 /// The key translation the mode performs, applied before the keymap is
-/// consulted: with the mode off, <backspace> and <delete> trade places, which is
+/// consulted: with the mode off, `<backspace>` and `<delete>` trade places, which is
 /// exactly what `(normal-erase-is-backspace-mode 0)` rebinds them to. Pure.
 pub fn erase_translate(event: KeyEvent) -> KeyEvent {
     if normal_erase_is_backspace() {
