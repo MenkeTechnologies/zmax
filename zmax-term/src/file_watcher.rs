@@ -27,7 +27,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Mutex, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use notify::{RecursiveMode, Watcher};
 
@@ -55,9 +55,17 @@ enum Msg {
     AddRoot(PathBuf),
 }
 
-/// Add each workspace root not already under a live watch, so external edits and
-/// commits to buffers opened outside the launch directory are seen. Cheap to call
-/// on every event-loop tick: one lock, and roots already covered are skipped.
+/// Hand every workspace root to the watcher once, so external edits and commits
+/// to buffers opened outside the launch directory are seen. Cheap to call on
+/// every event-loop tick: one lock, and a root already handed over is skipped.
+///
+/// Deliberately deduplicated by *exact* root, not by containment: a workspace
+/// whose worktree sits inside an already-watched tree can still keep its refs
+/// somewhere else entirely — a submodule's git dir is `<super>/.git/modules/…`,
+/// a linked worktree's refs live in its common dir, `--separate-git-dir` puts
+/// them anywhere at all. [`register_root`] skips the redundant recursive watch
+/// but still discovers those git dirs, which is what classifies a later ref
+/// write as a HEAD move.
 ///
 /// No-op until [`spawn`] has installed the watcher; the launch-dir watch covers
 /// the common case until then, and the reconcile call fires again next tick.
@@ -67,8 +75,8 @@ pub fn watch_workspaces<'a>(roots: impl Iterator<Item = &'a Path>) {
     };
     let mut known = ROOTS.lock().unwrap_or_else(|p| p.into_inner());
     for root in roots {
-        if known.iter().any(|w| root.starts_with(w)) {
-            continue; // already inside a live recursive watch
+        if known.iter().any(|w| w == root) {
+            continue; // already handed to the watcher
         }
         known.push(root.to_path_buf());
         let _ = tx.send(Msg::AddRoot(root.to_path_buf()));
@@ -173,20 +181,26 @@ fn watch_git_dirs(watcher: &mut dyn Watcher, root: &Path) -> Vec<PathBuf> {
 
 /// Start watching `root` recursively (plus its git ref dirs), tracking it in
 /// `watched` and folding its git dirs into `git_dirs` for [`is_head_move`].
-/// A root already covered by an existing recursive watch is skipped, so an added
-/// workspace that lives under one already watched costs nothing.
+///
+/// A root already covered by an existing recursive watch skips the redundant
+/// `watch` call — but *not* the git-dir discovery, because containment of the
+/// worktree says nothing about where that workspace keeps its refs (a
+/// submodule's git dir is `<super>/.git/modules/<path>`, a linked worktree's
+/// refs live in its common dir). Skipping discovery there left those ref writes
+/// unwatched and unclassified, so a commit in a submodule never refreshed the
+/// gutters of its open buffers.
 fn register_root(
     watcher: &mut dyn Watcher,
     root: PathBuf,
     watched: &mut Vec<PathBuf>,
     git_dirs: &mut Vec<PathBuf>,
 ) {
-    if watched.iter().any(|w| root.starts_with(w)) {
-        return;
-    }
-    if let Err(err) = watcher.watch(&root, RecursiveMode::Recursive) {
-        log::warn!("could not watch {}: {err}", root.display());
-        return;
+    let covered = watched.iter().any(|w| root.starts_with(w));
+    if !covered {
+        if let Err(err) = watcher.watch(&root, RecursiveMode::Recursive) {
+            log::warn!("could not watch {}: {err}", root.display());
+            return;
+        }
     }
     git_dirs.append(&mut watch_git_dirs(watcher, &root));
     git_dirs.sort();
@@ -240,7 +254,11 @@ fn run(root: PathBuf, tx: mpsc::Sender<Msg>, rx: mpsc::Receiver<Msg>, ready: mps
         // refresh so we don't rebuild the tree dozens of times. This also lets
         // git finish its ref-lock dance (write `refs/heads/x.lock`, rename it
         // over `refs/heads/x`) before we read HEAD back.
-        while let Ok(msg) = rx.recv_timeout(Duration::from_millis(150)) {
+        let started = Instant::now();
+        while let Some(window) = burst_window(started, Instant::now()) {
+            let Ok(msg) = rx.recv_timeout(window) else {
+                break;
+            };
             apply(
                 msg,
                 &mut watcher,
@@ -276,6 +294,30 @@ fn run(root: PathBuf, tx: mpsc::Sender<Msg>, rx: mpsc::Receiver<Msg>, ready: mps
             });
         }
     }
+}
+
+/// Quiet period that ends a burst: no further event for this long flushes the
+/// pending refresh.
+const BURST_QUIET: Duration = Duration::from_millis(150);
+
+/// Hard ceiling on a burst, however busy the tree stays. Without it a burst is
+/// extended by *every* arriving event, and a tree that never falls quiet for
+/// 150ms — a `cargo build` writing `target/`, a `node_modules` install, several
+/// builds at once — postpones the refresh for as long as the churn lasts. The
+/// events driving it are ones we then discard as ignored, so the editor would
+/// sit on stale gutters and unreloaded buffers precisely while the machine is
+/// busiest.
+const BURST_CAP: Duration = Duration::from_millis(500);
+
+/// How long the burst that began at `started` may keep waiting for more events,
+/// or `None` once it has run long enough and must be flushed now.
+fn burst_window(started: Instant, now: Instant) -> Option<Duration> {
+    let elapsed = now.saturating_duration_since(started);
+    let left = BURST_CAP.checked_sub(elapsed)?;
+    if left.is_zero() {
+        return None;
+    }
+    Some(BURST_QUIET.min(left))
 }
 
 /// Fold one [`Msg`] into the pending-refresh state. A filesystem event updates
@@ -339,7 +381,25 @@ fn is_head_move(path: &Path, git_dirs: &[PathBuf]) -> bool {
     ) {
         return true;
     }
-    rel.starts_with("refs/heads")
+    holds_branch_tip(rel)
+}
+
+/// True when `rel` — a path already known to live inside a git directory —
+/// holds a branch tip, i.e. contains the consecutive components `refs/heads`.
+///
+/// Anchoring at the start (`rel.starts_with("refs/heads")`) is not enough: a
+/// submodule's git dir is `<super>/.git/modules/<path>`, so when the
+/// superproject's `.git` is the git dir we recognized, a commit inside the
+/// submodule arrives as `modules/<path>/refs/heads/<branch>` and was classified
+/// as irrelevant — the exact case where every open buffer belongs to a submodule
+/// of the repo the editor was launched from.
+///
+/// `refs/remotes/**` still does not match, so a fetch remains a non-event.
+fn holds_branch_tip(rel: &Path) -> bool {
+    let components: Vec<_> = rel.components().map(|c| c.as_os_str()).collect();
+    components
+        .windows(2)
+        .any(|pair| pair[0] == "refs" && pair[1] == "heads")
 }
 
 /// The portion of `path` below the git directory it lives in, or `None` when it
@@ -351,7 +411,14 @@ fn is_head_move(path: &Path, git_dirs: &[PathBuf]) -> bool {
 /// worktree's `<main>/.git/worktrees/<name>/HEAD`, whose tail still ends in the
 /// file name keyed on above.
 fn strip_git_dir<'a>(path: &'a Path, git_dirs: &[PathBuf]) -> Option<&'a Path> {
-    if let Some(rel) = git_dirs.iter().find_map(|dir| path.strip_prefix(dir).ok()) {
+    // Longest match wins (shortest remainder): with both a superproject's
+    // `.git` and a submodule's `.git/modules/<path>` known, the submodule's is
+    // the one that makes `refs/heads/<branch>` the remainder.
+    if let Some(rel) = git_dirs
+        .iter()
+        .filter_map(|dir| path.strip_prefix(dir).ok())
+        .min_by_key(|rel| rel.components().count())
+    {
         return Some(rel);
     }
     let mut components = path.components();
@@ -386,7 +453,7 @@ fn event_is_relevant(event: &notify::Result<notify::Event>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{apply, changed_paths, event_moves_head, is_head_move, Msg};
+    use super::{apply, burst_window, changed_paths, event_moves_head, is_head_move, Msg};
     use std::path::{Path, PathBuf};
     use std::process::Command;
     use std::sync::mpsc;
@@ -472,6 +539,37 @@ mod tests {
         );
     }
 
+    /// A burst must be flushed even when the tree never falls quiet. The old
+    /// loop waited 150ms *per event*, so an unbroken stream — `cargo build`
+    /// writing `target/`, which is this editor's own normal working condition —
+    /// extended the wait indefinitely and the refresh never ran. The window must
+    /// shrink toward the cap and then close.
+    #[test]
+    fn a_burst_is_capped_however_busy_the_tree_stays() {
+        let started = Instant::now();
+
+        assert_eq!(
+            burst_window(started, started),
+            Some(super::BURST_QUIET),
+            "a fresh burst waits the full quiet period"
+        );
+
+        let nearly_done = started + super::BURST_CAP - Duration::from_millis(20);
+        assert_eq!(
+            burst_window(started, nearly_done),
+            Some(Duration::from_millis(20)),
+            "close to the cap, the wait is trimmed to what is left of it"
+        );
+
+        for elapsed in [super::BURST_CAP, super::BURST_CAP + Duration::from_secs(9)] {
+            assert_eq!(
+                burst_window(started, started + elapsed),
+                None,
+                "past the cap the burst must flush instead of waiting for quiet"
+            );
+        }
+    }
+
     fn modify_event(paths: &[&str]) -> notify::Result<notify::Event> {
         let mut event =
             notify::Event::new(notify::EventKind::Modify(notify::event::ModifyKind::Any));
@@ -539,6 +637,62 @@ mod tests {
                 "{path} should not refresh"
             );
         }
+    }
+
+    /// The submodule bug: every MenkeTech repo is a shell of submodules, so the
+    /// buffers open in the editor usually belong to one while the git dir the
+    /// watcher discovered is the *superproject's* `.git`. A commit inside the
+    /// submodule then writes `<super>/.git/modules/<path>/refs/heads/<branch>`,
+    /// which the old start-anchored match classified as irrelevant — the gutters
+    /// kept showing pre-commit hunks until the buffer was reopened.
+    #[test]
+    fn head_moves_in_a_submodule_under_the_superproject_git_dir() {
+        let super_git = [PathBuf::from("/meta/.git")];
+        for path in [
+            "/meta/.git/modules/zmax/refs/heads/main", // commit inside the submodule
+            "/meta/.git/modules/zmax/refs/heads/main.lock",
+            "/meta/.git/modules/zmax/HEAD",      // checkout inside the submodule
+            "/meta/.git/modules/zmax/ORIG_HEAD", // rebase / reset inside it
+        ] {
+            assert!(
+                is_head_move(Path::new(path), &super_git),
+                "{path} moves a submodule's HEAD and must refresh the gutters"
+            );
+        }
+
+        for path in [
+            "/meta/.git/modules/zmax/index",                    // staging only
+            "/meta/.git/modules/zmax/refs/remotes/origin/main", // fetch only
+            "/meta/.git/modules/zmax/objects/ab/cdef",          // object churn
+        ] {
+            assert!(
+                !is_head_move(Path::new(path), &super_git),
+                "{path} leaves HEAD where it is and must not refresh"
+            );
+        }
+    }
+
+    /// With both the superproject's git dir and the submodule's own known, the
+    /// longest match must win — stripping the shorter one first would leave
+    /// `modules/zmax/...` and lose the `HEAD`/`ORIG_HEAD` file-name match.
+    #[test]
+    fn the_longest_git_dir_match_wins() {
+        let git_dirs = [
+            PathBuf::from("/meta/.git"),
+            PathBuf::from("/meta/.git/modules/zmax"),
+        ];
+        assert!(is_head_move(
+            Path::new("/meta/.git/modules/zmax/HEAD"),
+            &git_dirs
+        ));
+        assert!(is_head_move(
+            Path::new("/meta/.git/modules/zmax/refs/heads/main"),
+            &git_dirs
+        ));
+        assert!(!is_head_move(
+            Path::new("/meta/.git/modules/zmax/index"),
+            &git_dirs
+        ));
     }
 
     /// A git dir that is not named `.git` (`--separate-git-dir`, submodules) is
