@@ -188,7 +188,10 @@ pub enum Completion {
     },
     /// `file-cache-non-unique-message`: several cached names share this prefix,
     /// which has been extended as far as they agree.
-    Ambiguous { prefix: String, matches: Vec<String> },
+    Ambiguous {
+        prefix: String,
+        matches: Vec<String>,
+    },
     /// `file-cache-no-match-message`.
     NoMatch,
 }
@@ -297,7 +300,8 @@ fn expand(name: &str, dirs: &[PathBuf], _typed_dir: &str, index: usize) -> Compl
 /// name the same place (`file-cache-canonical-directory`: a cached directory has
 /// no trailing slash, a typed one does).
 fn same_directory(cached: &Path, typed: &str) -> bool {
-    !typed.is_empty() && cached.to_string_lossy().trim_end_matches('/') == typed.trim_end_matches('/')
+    !typed.is_empty()
+        && cached.to_string_lossy().trim_end_matches('/') == typed.trim_end_matches('/')
 }
 
 /// The longest prefix every candidate shares (`completion-try-completion`).

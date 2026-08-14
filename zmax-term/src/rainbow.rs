@@ -175,7 +175,11 @@ pub fn identifier_color(name: &str) -> (u8, u8, u8) {
     }
     let (lightness, saturation) = lab_params();
     let angle = 2.0 * std::f64::consts::PI * (hash % COLOR_COUNT) as f64 / COLOR_COUNT as f64;
-    lab_to_rgb(lightness, saturation * angle.cos(), saturation * angle.sin())
+    lab_to_rgb(
+        lightness,
+        saturation * angle.cos(),
+        saturation * angle.sin(),
+    )
 }
 
 /// CIE L\*a\*b\* (D65) to 8-bit sRGB, clamped — rainbow-identifiers'
@@ -193,11 +197,7 @@ fn lab_to_rgb(l: f64, a: f64, b: f64) -> (u8, u8, u8) {
         }
     };
     // D65 white point.
-    let (x, y, z) = (
-        0.950_47 * finv(fx),
-        1.0 * finv(fy),
-        1.088_83 * finv(fz),
-    );
+    let (x, y, z) = (0.950_47 * finv(fx), 1.0 * finv(fy), 1.088_83 * finv(fz));
     let linear = [
         3.240_454_2 * x - 1.537_138_5 * y - 0.498_531_4 * z,
         -0.969_266_0 * x + 1.876_010_8 * y + 0.041_556_0 * z,
@@ -324,7 +324,8 @@ fn functional_literal(kind: &str, rest: &[char]) -> Option<(usize, (u8, u8, u8))
     if parts.len() < 3 {
         return None;
     }
-    let num = |s: &str| -> Option<f64> { s.trim().trim_end_matches(['%', 'd', 'e', 'g']).parse().ok() };
+    let num =
+        |s: &str| -> Option<f64> { s.trim().trim_end_matches(['%', 'd', 'e', 'g']).parse().ok() };
     let rgb = if kind.starts_with("rgb") {
         let comp = |s: &str| -> Option<u8> {
             let v = num(s)?;
@@ -439,7 +440,13 @@ fn named_color(lower: &str) -> Option<(u8, u8, u8)> {
     NAMED_COLORS
         .iter()
         .find(|(n, _)| *n == lower)
-        .map(|(_, v)| (((v >> 16) & 0xff) as u8, ((v >> 8) & 0xff) as u8, (v & 0xff) as u8))
+        .map(|(_, v)| {
+            (
+                ((v >> 16) & 0xff) as u8,
+                ((v >> 8) & 0xff) as u8,
+                (v & 0xff) as u8,
+            )
+        })
 }
 
 /// Identifier-shaped words in `text`, as `(start, end, text)` character ranges.

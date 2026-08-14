@@ -257,13 +257,17 @@ pub fn last_wheel_up() -> Option<bool> {
 /// Remember which modifier `tab-bar-select-tab-modifiers` last installed, so the
 /// command can un-install it before installing another.
 pub fn take_select_tab_modifier() -> String {
-    let mut slot = SELECT_TAB_MODIFIERS.lock().unwrap_or_else(|e| e.into_inner());
+    let mut slot = SELECT_TAB_MODIFIERS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     std::mem::take(&mut *slot)
 }
 
 /// Record the modifier `tab-bar-select-tab-modifiers` installed.
 pub fn set_select_tab_modifier(m: &str) {
-    let mut slot = SELECT_TAB_MODIFIERS.lock().unwrap_or_else(|e| e.into_inner());
+    let mut slot = SELECT_TAB_MODIFIERS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     *slot = m.to_string();
 }
 

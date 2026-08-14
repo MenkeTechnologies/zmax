@@ -239,9 +239,11 @@ fn toml_to_json(v: &toml::Value) -> serde_json::Value {
         toml::Value::Boolean(b) => J::Bool(*b),
         toml::Value::Datetime(d) => J::String(d.to_string()),
         toml::Value::Array(a) => J::Array(a.iter().map(toml_to_json).collect()),
-        toml::Value::Table(t) => {
-            J::Object(t.iter().map(|(k, v)| (k.clone(), toml_to_json(v))).collect())
-        }
+        toml::Value::Table(t) => J::Object(
+            t.iter()
+                .map(|(k, v)| (k.clone(), toml_to_json(v)))
+                .collect(),
+        ),
     }
 }
 
@@ -251,11 +253,9 @@ fn toml_to_json(v: &toml::Value) -> serde_json::Value {
 fn set_for_session(cx: &mut Context, path: &[String], val: toml::Value, was: &toml::Value) {
     let key = dotted(path);
     match crate::commands::typed::apply_config_value(cx, &key, toml_to_json(&val)) {
-        Ok(()) => crate::commands::custom_note_set(
-            &key,
-            was.to_string().trim(),
-            val.to_string().trim(),
-        ),
+        Ok(()) => {
+            crate::commands::custom_note_set(&key, was.to_string().trim(), val.to_string().trim())
+        }
         Err(e) => cx.editor.set_error(format!("{key}: {e}")),
     }
 }
@@ -1086,7 +1086,8 @@ impl Component for SettingsPanel {
         } else if !self.comp.is_empty() {
             format!(" {}", self.comp.join("  "))
         } else if self.editing {
-            " type a value · M-TAB complete · ⏎ set for this session · C-x C-s save · Esc cancel".into()
+            " type a value · M-TAB complete · ⏎ set for this session · C-x C-s save · Esc cancel"
+                .into()
         } else if self.filtering {
             " type to filter · ⏎/Esc done".into()
         } else {

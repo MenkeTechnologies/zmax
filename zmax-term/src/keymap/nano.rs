@@ -63,7 +63,9 @@ fn add_command(root: &mut KeyTrieNode, path: &[KeyEvent], label: &str, cmd: &str
 }
 
 fn keys_of(s: &str) -> Vec<KeyEvent> {
-    s.split(' ').map(|k| k.parse().expect("valid key")).collect()
+    s.split(' ')
+        .map(|k| k.parse().expect("valid key"))
+        .collect()
 }
 
 fn overrides() -> HashMap<Mode, KeyTrie> {
@@ -129,14 +131,14 @@ mod test {
     fn the_help_bar_chords_do_what_the_help_bar_says() {
         let keys = default();
         for (press, expected) in [
-            ("C-w", "search"),           // ^W Where Is
-            ("C-k", "kill_to_line_end"), // ^K Cut
+            ("C-w", "search"),                 // ^W Where Is
+            ("C-k", "kill_to_line_end"),       // ^K Cut
             ("C-u", "paste_clipboard_before"), // ^U Paste
-            ("C-j", "format_selections"), // ^J Justify
-            ("C-y", "page_up"),          // ^Y Prev Page
-            ("C-v", "page_down"),        // ^V Next Page
-            ("A-u", "undo"),             // M-U Undo
-            ("A-e", "redo"),             // M-E Redo
+            ("C-j", "format_selections"),      // ^J Justify
+            ("C-y", "page_up"),                // ^Y Prev Page
+            ("C-v", "page_down"),              // ^V Next Page
+            ("A-u", "undo"),                   // M-U Undo
+            ("A-e", "redo"),                   // M-E Redo
         ] {
             assert_eq!(
                 cmd(&keys, Mode::Insert, press).as_deref(),
@@ -150,7 +152,11 @@ mod test {
     fn write_out_read_and_exit_are_grafted_typables() {
         let keys = default();
         for mode in [Mode::Insert, Mode::Normal] {
-            assert_eq!(cmd(&keys, mode, "C-o").as_deref(), Some("write"), "{mode:?}");
+            assert_eq!(
+                cmd(&keys, mode, "C-o").as_deref(),
+                Some("write"),
+                "{mode:?}"
+            );
             assert_eq!(cmd(&keys, mode, "C-x").as_deref(), Some("quit"), "{mode:?}");
             assert_eq!(cmd(&keys, mode, "C-r").as_deref(), Some("read"), "{mode:?}");
         }

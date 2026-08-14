@@ -163,7 +163,11 @@ pub fn forward(buttons: &[Button], pos: usize, n: isize, wrap: bool) -> Option<u
         let next = if step > 0 {
             buttons.iter().find(|b| b.start > cur).map(|b| b.start)
         } else {
-            buttons.iter().rev().find(|b| b.start < cur).map(|b| b.start)
+            buttons
+                .iter()
+                .rev()
+                .find(|b| b.start < cur)
+                .map(|b| b.start)
         };
         cur = match next {
             Some(p) => p,
@@ -234,7 +238,11 @@ mod tests {
         assert_eq!(forward(&bs, first, 2, true), Some(last));
         // Past the last button, a wrapping call continues from the first.
         assert_eq!(forward(&bs, last, 1, true), Some(first));
-        assert_eq!(forward(&bs, last, 1, false), None, "no wrap: no next button");
+        assert_eq!(
+            forward(&bs, last, 1, false),
+            None,
+            "no wrap: no next button"
+        );
         assert_eq!(forward(&bs, first, -1, true), Some(last));
         assert_eq!(forward(&bs, first, -1, false), None);
         // n = 0 moves to the start of the button at point.

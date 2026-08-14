@@ -73,10 +73,10 @@ const RTL_RANGES: &[(u32, u32)] = &[
     (0x0712, 0x072F),
     (0x074D, 0x07A5), // Syriac, Thaana
     (0x07B1, 0x07BF),
-    (0x07C0, 0x08FF), // NKo, Samaritan, Mandaic, Arabic Extended-A
-    (0xFB1D, 0xFB4F), // Hebrew presentation forms
-    (0xFB50, 0xFDFF), // Arabic presentation forms A
-    (0xFE70, 0xFEFC), // Arabic presentation forms B
+    (0x07C0, 0x08FF),   // NKo, Samaritan, Mandaic, Arabic Extended-A
+    (0xFB1D, 0xFB4F),   // Hebrew presentation forms
+    (0xFB50, 0xFDFF),   // Arabic presentation forms A
+    (0xFE70, 0xFEFC),   // Arabic presentation forms B
     (0x10800, 0x10FFF), // Cypriot … Old Hungarian and friends
     (0x1E800, 0x1EFFF), // Mende Kikakui, Adlam, Arabic Mathematical
 ];
@@ -306,12 +306,7 @@ pub fn visual_order(line: &[char], base: Direction) -> Vec<usize> {
 /// `visual-order-cursor-movement` is non-nil: they move to the character that is
 /// physically to the left or right, which in reordered text can be many buffer
 /// positions away.
-pub fn visual_neighbor(
-    line: &[char],
-    from: usize,
-    base: Direction,
-    right: bool,
-) -> Option<usize> {
+pub fn visual_neighbor(line: &[char], from: usize, base: Direction, right: bool) -> Option<usize> {
     if from >= line.len() {
         // Past the last character: the caller is at the end of the line; step
         // in from whichever visual edge that is.
@@ -393,7 +388,10 @@ mod tests {
             Some(5)
         );
         // The rightmost character of the line has no right neighbour.
-        assert_eq!(visual_neighbor(&line, 4, Direction::LeftToRight, true), None);
+        assert_eq!(
+            visual_neighbor(&line, 4, Direction::LeftToRight, true),
+            None
+        );
     }
 
     #[test]
@@ -405,6 +403,9 @@ mod tests {
             visual_neighbor(&line, 0, Direction::LeftToRight, true),
             Some(1)
         );
-        assert_eq!(visual_neighbor(&line, 0, Direction::LeftToRight, false), None);
+        assert_eq!(
+            visual_neighbor(&line, 0, Direction::LeftToRight, false),
+            None
+        );
     }
 }

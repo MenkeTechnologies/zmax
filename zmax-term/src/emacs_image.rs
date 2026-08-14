@@ -387,9 +387,8 @@ pub fn ex_yank_media(cx: &mut Context, _args: Args, event: PromptEvent) -> anyho
         ),
     };
     insert_at_cursors(cx, &text);
-    cx.editor.set_status(format!(
-        "yank-media: saved {shown} ({bytes} bytes){note}"
-    ));
+    cx.editor
+        .set_status(format!("yank-media: saved {shown} ({bytes} bytes){note}"));
     Ok(())
 }
 

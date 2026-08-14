@@ -3721,9 +3721,7 @@ mod tests {
                 if word.chars().next().is_none_or(|c| !c.is_ascii_lowercase()) {
                     continue;
                 }
-                if known.contains(word)
-                    || NOT_COMMANDS.contains(&word)
-                    || from_table.contains(word)
+                if known.contains(word) || NOT_COMMANDS.contains(&word) || from_table.contains(word)
                 {
                     continue;
                 }

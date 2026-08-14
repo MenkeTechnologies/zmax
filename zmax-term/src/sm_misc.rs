@@ -356,7 +356,8 @@ pub fn unicode_sample_sheet() -> String {
         .map(|(n, _)| n.chars().count())
         .max()
         .unwrap_or(0);
-    let mut out = crate::sm::heading("Unicode block coverage — samples drawn by your terminal font");
+    let mut out =
+        crate::sm::heading("Unicode block coverage — samples drawn by your terminal font");
     out.push_str(
         "Each row is one block. A box, a blank, or a row whose columns do not line\n\
          up means your terminal font does not cover that block: the fix is a font\n\
@@ -426,7 +427,9 @@ mod tests {
 
     #[test]
     fn every_sampled_block_has_samples_and_the_sheet_lists_them_all() {
-        assert!(SAMPLE_BLOCKS.iter().all(|(n, s)| !n.is_empty() && !s.is_empty()));
+        assert!(SAMPLE_BLOCKS
+            .iter()
+            .all(|(n, s)| !n.is_empty() && !s.is_empty()));
         let sheet = unicode_sample_sheet();
         for (name, _) in SAMPLE_BLOCKS {
             assert!(sheet.contains(name), "{name} missing from the sheet");

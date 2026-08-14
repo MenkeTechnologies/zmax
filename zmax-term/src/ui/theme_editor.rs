@@ -357,9 +357,9 @@ impl ThemeEditor {
                         |_c: &mut crate::compositor::Compositor, cx: &mut Context| {
                             let name = cx.editor.theme.name().to_string();
                             match crate::emacs_custom::save_theme_choice(&name) {
-                                Ok(()) => {
-                                    cx.editor.set_status(format!("Saved theme settings: {name}"))
-                                }
+                                Ok(()) => cx
+                                    .editor
+                                    .set_status(format!("Saved theme settings: {name}")),
                                 Err(e) => cx.editor.set_error(format!("custom-theme-save: {e}")),
                             }
                         },
@@ -423,7 +423,9 @@ impl Component for ThemeEditor {
         if std::mem::take(&mut self.pending_ctrl_x) {
             if key.code == KeyCode::Char('s') && key.modifiers.contains(KeyModifiers::CONTROL) {
                 match self.save_theme_settings(cx) {
-                    Ok(name) => cx.editor.set_status(format!("Saved theme settings: {name}")),
+                    Ok(name) => cx
+                        .editor
+                        .set_status(format!("Saved theme settings: {name}")),
                     Err(e) => cx.editor.set_error(format!("custom-theme-save: {e}")),
                 }
             }

@@ -2719,9 +2719,7 @@ impl Component for Prompt {
             // key keeps its vim meaning (`c_CTRL-^`, further down).
             ctrl!('^') if isearch => {
                 return EventResult::Consumed(Some(Box::new(|compositor, _cx| {
-                    compositor.push(Box::new(
-                        crate::commands::specified_input_method_prompt(),
-                    ));
+                    compositor.push(Box::new(crate::commands::specified_input_method_prompt()));
                 })));
             }
             // `isearch-transient-input-method` (`C-x \`): the next character typed

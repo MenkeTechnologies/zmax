@@ -11279,9 +11279,11 @@ fn toggle_auto_completion(cx: &mut Context) {
     let mut config = (*cx.editor.config()).clone();
     config.auto_completion = !config.auto_completion;
     let on = config.auto_completion;
-    cx.editor.config_events.0.send(
-        zmax_view::editor::ConfigEvent::Update(Box::new(config)),
-    ).ok();
+    cx.editor
+        .config_events
+        .0
+        .send(zmax_view::editor::ConfigEvent::Update(Box::new(config)))
+        .ok();
     cx.editor.set_status(if on {
         "auto-completion on"
     } else {
@@ -11318,7 +11320,8 @@ fn copy_indent(cx: &mut Context) {
     );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
-    cx.editor.set_status(format!("copied indent to {count} line(s)"));
+    cx.editor
+        .set_status(format!("copied indent to {count} line(s)"));
 }
 
 /// ne `SetBookmark`, mcedit's bookmark key: remember the current line in one of
@@ -11340,7 +11343,11 @@ fn set_numbered_bookmark(cx: &mut Context) {
         let id = doc.id();
         let replaced = crate::numbered_bookmarks::set(id, slot, line);
         cx.editor.set_status(match replaced {
-            Some(old) => format!("bookmark {slot} moved from line {} to {}", old + 1, line + 1),
+            Some(old) => format!(
+                "bookmark {slot} moved from line {} to {}",
+                old + 1,
+                line + 1
+            ),
             None => format!("bookmark {slot} set at line {}", line + 1),
         });
     })
@@ -11388,10 +11395,7 @@ fn goto_numbered_bookmark(cx: &mut Context) {
 
 /// ne `UnsetBookmark`: forget one of the document's numbered slots.
 fn unset_numbered_bookmark(cx: &mut Context) {
-    cx.editor.autoinfo = Some(Info::new(
-        "Unset bookmark",
-        &[("0-9", "forget that slot")],
-    ));
+    cx.editor.autoinfo = Some(Info::new("Unset bookmark", &[("0-9", "forget that slot")]));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         let Some(slot) = event.char().and_then(crate::numbered_bookmarks::slot_of) else {
@@ -11469,9 +11473,9 @@ fn restore_selections_from_register(cx: &mut Context) {
         Some(selection) => doc.set_selection(view.id, selection),
         // Kakoune leaves the selections alone rather than emptying them when the
         // register holds nothing this buffer can be selected by.
-        None => cx
-            .editor
-            .set_error(format!("register {register} holds no selection for this buffer")),
+        None => cx.editor.set_error(format!(
+            "register {register} holds no selection for this buffer"
+        )),
     }
 }
 
@@ -11493,7 +11497,10 @@ fn combine_selections_from_register(cx: &mut Context) {
     ));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
-        let Some(op) = event.char().and_then(selection_registers::Combine::from_key) else {
+        let Some(op) = event
+            .char()
+            .and_then(selection_registers::Combine::from_key)
+        else {
             return;
         };
         let Some(descs) = selection_register_descs(cx, register) else {
@@ -11502,14 +11509,17 @@ fn combine_selections_from_register(cx: &mut Context) {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let Some(stored) = selection_registers::decode(text, &descs) else {
-            cx.editor
-                .set_error(format!("register {register} holds no selection for this buffer"));
+            cx.editor.set_error(format!(
+                "register {register} holds no selection for this buffer"
+            ));
             return;
         };
         let current = doc.selection(view.id).clone();
         match selection_registers::combine(text, &current, &stored, op) {
             Some(selection) => doc.set_selection(view.id, selection),
-            None => cx.editor.set_error("no selections survived the combination"),
+            None => cx
+                .editor
+                .set_error("no selections survived the combination"),
         }
     })
 }
@@ -14172,7 +14182,10 @@ fn transpose_paragraph(cx: &mut Context) {
 /// the character work since before this command existed; nothing was calling it.
 fn transpose_char(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
-    let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     let text = doc.text().to_string();
     let Some((swapped, new_cursor)) = zmax_core::region_ops::transpose_chars(&text, cursor) else {
         cx.editor.set_status("nothing to transpose");
@@ -18960,7 +18973,8 @@ pub(crate) fn img_shell_quote(s: &str) -> String {
 
 /// The terminal image-viewer fallback chain, rendering the file in shell var `$i`
 /// with the first available tool. Shared by image display and doc-view.
-pub(crate) const IMG_VIEWER_CHAIN: &str = "chafa \"$i\" || kitty +kitten icat \"$i\" || imgcat \"$i\" \
+pub(crate) const IMG_VIEWER_CHAIN: &str =
+    "chafa \"$i\" || kitty +kitten icat \"$i\" || imgcat \"$i\" \
                                 || viu \"$i\" || timg \"$i\" || catimg \"$i\"";
 
 /// Emacs `image-converter--extra-converters`: suffix (no leading dot, lowercased)
@@ -26939,13 +26953,12 @@ fn gnus_action<F>(cx: &mut Context, f: F)
 where
     F: FnOnce(&mut crate::ui::gnus::Gnus, &mut compositor::Context) + Send + 'static,
 {
-    cx.callback
-        .push(Box::new(
-            move |compositor, cx| match compositor.find::<crate::ui::gnus::Gnus>() {
-                Some(reader) => f(reader, cx),
-                None => cx.editor.set_error("No Gnus reader (open it with `gnus`)"),
-            },
-        ));
+    cx.callback.push(Box::new(
+        move |compositor, cx| match compositor.find::<crate::ui::gnus::Gnus>() {
+            Some(reader) => f(reader, cx),
+            None => cx.editor.set_error("No Gnus reader (open it with `gnus`)"),
+        },
+    ));
 }
 
 /// Emacs `gnus-group-exit` (`q` in the group buffer): write `.newsrc` and quit.
@@ -26973,9 +26986,7 @@ fn gnus_group_read_group(cx: &mut Context) {
 /// Emacs `gnus-group-list-groups` (`l`, `A s`): subscribed groups with unread
 /// articles — the default listing.
 fn gnus_group_list_groups(cx: &mut Context) {
-    gnus_action(cx, |reader, _cx| {
-        reader.list(crate::gnus::Listing::Unread)
-    });
+    gnus_action(cx, |reader, _cx| reader.list(crate::gnus::Listing::Unread));
 }
 
 /// Emacs `gnus-group-list-all-groups` (`L`, `A u`): every subscribed and
@@ -26986,16 +26997,12 @@ fn gnus_group_list_all_groups(cx: &mut Context) {
 
 /// Emacs `gnus-group-list-killed` (`A k`).
 fn gnus_group_list_killed(cx: &mut Context) {
-    gnus_action(cx, |reader, _cx| {
-        reader.list(crate::gnus::Listing::Killed)
-    });
+    gnus_action(cx, |reader, _cx| reader.list(crate::gnus::Listing::Killed));
 }
 
 /// Emacs `gnus-group-list-zombies` (`A z`).
 fn gnus_group_list_zombies(cx: &mut Context) {
-    gnus_action(cx, |reader, _cx| {
-        reader.list(crate::gnus::Listing::Zombies)
-    });
+    gnus_action(cx, |reader, _cx| reader.list(crate::gnus::Listing::Zombies));
 }
 
 /// Emacs `gnus-group-next-unread-group` (`n`).
@@ -31853,8 +31860,7 @@ fn char_category_set(cx: &mut Context) {
 /// category as arguments instead of reading the category from a key.
 fn modify_category_entry(cx: &mut Context) {
     let Some(ch) = char_after_point(cx.editor) else {
-        cx.editor
-            .set_error("modify-category-entry: end of buffer");
+        cx.editor.set_error("modify-category-entry: end of buffer");
         return;
     };
     let reset = cx.prefix_arg().is_some();
@@ -35656,15 +35662,7 @@ fn paste_all(cx: &mut Context, pos: Paste) {
             }
         })
         .collect::<String>();
-    paste_impl(
-        &[joined],
-        doc,
-        view,
-        pos,
-        count,
-        mode,
-        CursorRest::OnText,
-    );
+    paste_impl(&[joined], doc, view, pos, count, mode, CursorRest::OnText);
     exit_select_mode(cx);
 }
 
@@ -36519,8 +36517,7 @@ fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
                 .map(|pos| pos - range.from())
                 .collect();
             let chars: Vec<char> = fragment.chars().collect();
-            let segments =
-                crate::emacs_modes::hard_newline_segments(chars.len(), &breaks);
+            let segments = crate::emacs_modes::hard_newline_segments(chars.len(), &breaks);
             let mut out = String::with_capacity(fragment.len());
             for (i, seg) in segments.iter().enumerate() {
                 if i > 0 {
@@ -47762,7 +47759,10 @@ fn set_fontset_font(cx: &mut Context) {
 /// The menu-bar titles in order, for the menu-bar row the frame draws when
 /// `menu-bar-mode` is on. The index of a title is what a click resolves to.
 pub(crate) fn menu_bar_titles() -> Vec<&'static str> {
-    menu_bar_tree().into_iter().map(|(title, _)| title).collect()
+    menu_bar_tree()
+        .into_iter()
+        .map(|(title, _)| title)
+        .collect()
 }
 
 /// Drop down one menu of the menu bar — what clicking its title on the menu-bar
@@ -59652,14 +59652,15 @@ fn with_dired<F>(cx: &mut Context, f: F)
 where
     F: FnOnce(&mut crate::ui::dired::Dired, &mut compositor::Context) + Send + 'static,
 {
-    cx.callback.push(Box::new(move |compositor, cx| {
-        match compositor.find::<crate::ui::dired::Dired>() {
-            Some(dired) => f(dired, cx),
-            None => cx
-                .editor
-                .set_error("No Dired buffer (open one with `dired`)"),
-        }
-    }));
+    cx.callback
+        .push(Box::new(
+            move |compositor, cx| match compositor.find::<crate::ui::dired::Dired>() {
+                Some(dired) => f(dired, cx),
+                None => cx
+                    .editor
+                    .set_error("No Dired buffer (open one with `dired`)"),
+            },
+        ));
 }
 
 /// Emacs `dired-click-to-select-mode`: toggle the minor mode that repurposes
@@ -59886,13 +59887,14 @@ fn help_panel_action<F>(cx: &mut Context, f: F)
 where
     F: FnOnce(&mut crate::ui::help::HelpPanel, &mut compositor::Context) + Send + 'static,
 {
-    cx.callback
-        .push(Box::new(move |compositor, cx| match help_panel(compositor) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        match help_panel(compositor) {
             Some(panel) => f(panel, cx),
             None => cx
                 .editor
                 .set_error("No *Help* window (open it with `help`)"),
-        }));
+        }
+    }));
 }
 
 /// Run `f` on the live customization buffer (the Preferences page's Settings
@@ -59904,14 +59906,15 @@ where
         + Send
         + 'static,
 {
-    cx.callback.push(Box::new(move |compositor, cx| {
-        match compositor.find::<crate::ui::preferences::PreferencesPanel>() {
+    cx.callback
+        .push(Box::new(move |compositor, cx| match compositor
+            .find::<crate::ui::preferences::PreferencesPanel>(
+        ) {
             Some(prefs) => f(prefs, cx),
             None => cx
                 .editor
                 .set_error("No customization buffer (open it with `customize`)"),
-        }
-    }));
+        }));
 }
 
 /// Emacs `help-mode`: "Major mode for viewing help text and navigating references
@@ -59976,10 +59979,12 @@ fn help_find_source(cx: &mut Context) {
 fn document_buttons(editor: &Editor) -> (Vec<crate::emacs_button::Button>, usize) {
     let (view, doc) = current_ref!(editor);
     let text = doc.text().to_string();
-    let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     let is_file = doc.path().is_some();
-    let is_command =
-        move |word: &str| !is_file && word.parse::<MappableCommand>().is_ok();
+    let is_command = move |word: &str| !is_file && word.parse::<MappableCommand>().is_ok();
     (crate::emacs_button::buttons(&text, &is_command), cursor)
 }
 
@@ -63296,9 +63301,8 @@ fn input_method_show_guidance(editor: &mut Editor, doc_id: DocumentId) {
         let Some(state) = states.get(&doc_id) else {
             return;
         };
-        (state.candidates.len() > 1).then(|| {
-            crate::emacs_input::guidance(&state.key, &state.candidates, state.index)
-        })
+        (state.candidates.len() > 1)
+            .then(|| crate::emacs_input::guidance(&state.key, &state.candidates, state.index))
     };
     if let Some(guidance) = guidance {
         editor.set_status(guidance);
@@ -63638,10 +63642,7 @@ fn input_method_transient_off(editor: &mut Editor, doc_id: DocumentId) {
     let previous = state.previous;
     match previous {
         Some(method) => {
-            states.insert(
-                doc_id,
-                InputMethodState::new(method, false, None),
-            );
+            states.insert(doc_id, InputMethodState::new(method, false, None));
         }
         None => {
             states.remove(&doc_id);
@@ -63680,10 +63681,7 @@ fn input_method_transient_on(editor: &mut Editor, method: &'static InputMethod) 
         Some(state) => Some(state.method),
         None => None,
     };
-    states.insert(
-        doc_id,
-        InputMethodState::new(method, true, previous),
-    );
+    states.insert(doc_id, InputMethodState::new(method, true, previous));
     drop(states);
     editor.set_status(format!(
         "Transient input method: {} ({}) — enter one character",
@@ -63923,11 +63921,14 @@ fn toggle_input_method(cx: &mut Context) {
 /// string that stands for it in the mode line and the language it is for.
 fn list_input_methods(cx: &mut Context) {
     let current = current_input_method(doc!(cx.editor).id());
-    let mut out = String::from(
-        "Input methods (M-x set-input-method, C-x RET C-\\, or C-\\ to toggle)\n\n",
-    );
+    let mut out =
+        String::from("Input methods (M-x set-input-method, C-x RET C-\\, or C-\\ to toggle)\n\n");
     for method in INPUT_METHODS {
-        let mark = if current == Some(method.name) { '*' } else { ' ' };
+        let mark = if current == Some(method.name) {
+            '*'
+        } else {
+            ' '
+        };
         out.push_str(&format!(
             "{mark} {:<18} {:<14} mode line: {}\n",
             method.name, method.language, method.title
@@ -63961,7 +63962,8 @@ fn quail_show_key(cx: &mut Context) {
         let text = doc.text();
         let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
         if cursor >= text.len_chars() {
-            cx.editor.set_error("quail-show-key: no character after point");
+            cx.editor
+                .set_error("quail-show-key: no character after point");
             return;
         }
         text.char(cursor)
@@ -64042,7 +64044,10 @@ fn bidi_char_move(cx: &mut Context, right: bool) {
     let count = cx.count();
     let direction = {
         let (view, doc) = current_ref!(cx.editor);
-        let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+        let pos = doc
+            .selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..));
         paragraph_direction_at(doc.text(), pos)
     };
     if !visual_order_cursor_movement() {
@@ -64884,8 +64889,7 @@ fn visit_tags_table(cx: &mut Context) {
 /// reason it is not a usable table. Shared with `Buffer-menu-visit-tags-table`
 /// (`t` in the Buffer Menu), which visits the file of the buffer at point.
 pub(crate) fn set_tags_table(path: &std::path::Path) -> Result<usize, String> {
-    let src =
-        std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let src = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let table = zmax_core::etags::parse(&src);
     let tags: usize = table.iter().map(|f| f.tags.len()).sum();
     if tags == 0 {
@@ -68854,8 +68858,20 @@ fn grep_prompt(cx: &mut Context, label: &'static str, recursive: bool, fixed_dir
 /// default list is the data directories of the version-control systems it knows,
 /// plus the usual build output.
 const GREP_FIND_IGNORED_DIRECTORIES: &[&str] = &[
-    "SCCS", "RCS", "CVS", "MCVS", ".src", ".svn", ".git", ".hg", ".bzr", "_MTN", "_darcs", "{arch}",
-    "node_modules", "target",
+    "SCCS",
+    "RCS",
+    "CVS",
+    "MCVS",
+    ".src",
+    ".svn",
+    ".git",
+    ".hg",
+    ".bzr",
+    "_MTN",
+    "_darcs",
+    "{arch}",
+    "node_modules",
+    "target",
 ];
 
 /// Emacs `rgrep`: grep recursively under a directory you name, restricted to the
@@ -73508,7 +73524,8 @@ fn toggle_tilde_fringe(cx: &mut Context) {
 /// Spacemacs `SPC t m n` (`nyan-mode`): draw the scroll-position cat in the mode
 /// line.
 fn nyan_mode(cx: &mut Context) {
-    let on = !crate::ui::statusline::NYAN_MODE.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    let on =
+        !crate::ui::statusline::NYAN_MODE.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
     cx.editor.set_status(format!(
         "Nyan mode {}",
         if on { "enabled" } else { "disabled" }
@@ -73599,9 +73616,7 @@ fn locate_library(cx: &mut Context) {
                 let _ = cx.editor.registers.write('+', vec![text.clone()]);
                 cx.editor.set_status(format!("Library is file {text}"));
             }
-            None => cx
-                .editor
-                .set_error(format!("Can't find library: {name}")),
+            None => cx.editor.set_error(format!("Can't find library: {name}")),
         }
     });
 }
@@ -73707,8 +73722,7 @@ fn ediff_merge_directories(cx: &mut Context) {
             let files = match files {
                 Ok(f) => f,
                 Err(e) => {
-                    cx.editor
-                        .set_error(format!("ediff-merge-directories: {e}"));
+                    cx.editor.set_error(format!("ediff-merge-directories: {e}"));
                     return;
                 }
             };
@@ -73737,10 +73751,7 @@ fn ediff_merge_directories(cx: &mut Context) {
                     .set_status("ediff-merge-directories: no files common to both directories");
                 return;
             }
-            let mut out = format!(
-                "ediff-merge-directories: {} + {}\n\n",
-                args[0], args[1]
-            );
+            let mut out = format!("ediff-merge-directories: {} + {}\n\n", args[0], args[1]);
             let section = |out: &mut String, title: &str, files: &[&str]| {
                 out.push_str(title);
                 out.push('\n');
@@ -73755,11 +73766,7 @@ fn ediff_merge_directories(cx: &mut Context) {
                 }
                 out.push('\n');
             };
-            section(
-                &mut out,
-                "Merge (SPC D m f f on the two paths):",
-                &common,
-            );
+            section(&mut out, "Merge (SPC D m f f on the two paths):", &common);
             section(&mut out, "Only in A — nothing to merge with:", &only_a);
             section(&mut out, "Only in B — nothing to merge with:", &only_b);
             show_text_in_scratch(cx.editor, &out);
@@ -73782,7 +73789,9 @@ fn ediff_show_registry(cx: &mut Context) {
         for (n, title) in sessions.iter().rev().enumerate() {
             out.push_str(&format!("{:>3}. {title}\n", n + 1));
         }
-        out.push_str("\nSessions are listed newest first; the topmost open view is the current one.\n");
+        out.push_str(
+            "\nSessions are listed newest first; the topmost open view is the current one.\n",
+        );
     }
     show_text_in_scratch(cx.editor, &out);
 }
@@ -73841,10 +73850,7 @@ fn git_link_select_remote(cx: &mut Context) {
 /// commit message away and close the commit buffer without committing.
 fn log_edit_kill_buffer(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
-        if compositor
-            .find::<crate::ui::magit::MagitCommit>()
-            .is_none()
-        {
+        if compositor.find::<crate::ui::magit::MagitCommit>().is_none() {
             cx.editor
                 .set_error("No commit message buffer (start one with `c` in vc-dir)");
             return;
@@ -73864,8 +73870,9 @@ fn describe_face(cx: &mut Context) {
         let name = input.trim();
         let theme = &cx.editor.theme;
         if !theme.scopes().iter().any(|s| s == name) {
-            cx.editor
-                .set_error(format!("describe-face: no face named `{name}` in this theme"));
+            cx.editor.set_error(format!(
+                "describe-face: no face named `{name}` in this theme"
+            ));
             return;
         }
         let style = theme.get(name);
@@ -73913,7 +73920,8 @@ fn help_follow_symbol(cx: &mut Context) {
         .to_string()
     };
     if word.trim().is_empty() {
-        cx.editor.set_error("help-follow-symbol: no symbol at point");
+        cx.editor
+            .set_error("help-follow-symbol: no symbol at point");
         return;
     }
     let symbol = word.trim().to_string();
@@ -73943,16 +73951,17 @@ fn package_menu_sort_by_stars(cx: &mut Context) {
 /// Ask the open package menu to sort by `column`, flipping the order when it is
 /// already the sorted column — `tabulated-list-sort`'s behaviour.
 fn package_menu_sort(cx: &mut Context, column: crate::ui::package_menu::SortColumn) {
-    cx.callback.push(Box::new(move |compositor, cx| {
-        match compositor.find::<crate::ui::package_menu::PackageMenuView>() {
+    cx.callback
+        .push(Box::new(move |compositor, cx| match compositor
+            .find::<crate::ui::package_menu::PackageMenuView>(
+        ) {
             Some(view) => {
                 let label = view.sort_by(column);
                 cx.editor
                     .set_status(format!("package-menu: sorted by {label}"));
             }
             None => cx.editor.set_error(PACKAGE_MENU_EMPTY),
-        }
-    }));
+        }));
 }
 
 /// Paradox `f r` (`paradox-filter-regexp`): keep only the packages whose name or
@@ -74190,8 +74199,7 @@ pub(crate) fn specified_input_method_prompt() -> crate::ui::prompt::Prompt {
             if !typed::toggle_lang_arg(false) {
                 typed::toggle_lang_arg(false);
             }
-            cx.editor
-                .set_status(format!("I-search [{}]", input.trim()));
+            cx.editor.set_status(format!("I-search [{}]", input.trim()));
         },
     )
 }
@@ -74214,30 +74222,34 @@ fn isearch_transient_input_method(cx: &mut Context) {
 /// asks with `yes`/`no` rather than `y`/`n`, the third argument in Emacs.
 fn command_query(cx: &mut Context) {
     let yes_no = cx.prefix_arg().is_some();
-    prompt_then(cx, "Query command (NAME question…): ", move |cx, input| {
-        // `(command-query 'end-of-buffer "Do you really want to …?")` — the
-        // command first, the question after it. A name on its own takes the
-        // query off the command again.
-        let (name, question) = match input.split_once(char::is_whitespace) {
-            Some((name, question)) => (name, question.trim()),
-            None => (input, ""),
-        };
-        let name = name.trim().replace('-', "_");
-        if !MappableCommand::STATIC_COMMAND_LIST
-            .iter()
-            .any(|c| c.name() == name)
-        {
-            cx.editor
-                .set_error(format!("command-query: no such command: {name}"));
-            return;
-        }
-        emacs_misc::set_command_query(&name, question, yes_no);
-        cx.editor.set_status(if question.is_empty() {
-            format!("command-query: {name} no longer asks")
-        } else {
-            format!("command-query: {name} will ask first")
-        });
-    });
+    prompt_then(
+        cx,
+        "Query command (NAME question…): ",
+        move |cx, input| {
+            // `(command-query 'end-of-buffer "Do you really want to …?")` — the
+            // command first, the question after it. A name on its own takes the
+            // query off the command again.
+            let (name, question) = match input.split_once(char::is_whitespace) {
+                Some((name, question)) => (name, question.trim()),
+                None => (input, ""),
+            };
+            let name = name.trim().replace('-', "_");
+            if !MappableCommand::STATIC_COMMAND_LIST
+                .iter()
+                .any(|c| c.name() == name)
+            {
+                cx.editor
+                    .set_error(format!("command-query: no such command: {name}"));
+                return;
+            }
+            emacs_misc::set_command_query(&name, question, yes_no);
+            cx.editor.set_status(if question.is_empty() {
+                format!("command-query: {name} no longer asks")
+            } else {
+                format!("command-query: {name} will ask first")
+            });
+        },
+    );
 }
 
 /// Ask a registered `command-query` question. Answering yes lets the command
@@ -74256,7 +74268,8 @@ fn ask_command_query(cx: &mut Context, name: &str, question: &str, yes_no: bool)
                 command.clone().execute(cx);
             }
         } else {
-            cx.editor.set_status(format!("{} cancelled", name.replace('_', "-")));
+            cx.editor
+                .set_status(format!("{} cancelled", name.replace('_', "-")));
         }
     });
 }
@@ -74276,7 +74289,10 @@ fn connection_local_set_profile_variables(cx: &mut Context) {
                 return;
             };
             let vars: Vec<(String, String)> = words
-                .filter_map(|w| w.split_once('=').map(|(k, v)| (k.to_string(), v.to_string())))
+                .filter_map(|w| {
+                    w.split_once('=')
+                        .map(|(k, v)| (k.to_string(), v.to_string()))
+                })
                 .collect();
             let n = vars.len();
             emacs_misc::set_profile_variables(profile, vars);
@@ -74417,7 +74433,8 @@ fn indent_line_function(cx: &mut Context) {
 }
 
 /// The indent functions `indent-line-function` may be set to.
-const INDENT_LINE_FUNCTIONS: &[&str] = &["indent-according-to-mode", "indent-relative", "insert-tab"];
+const INDENT_LINE_FUNCTIONS: &[&str] =
+    &["indent-according-to-mode", "indent-relative", "insert-tab"];
 
 /// Emacs `indent-line-function`, buffer-local in Emacs and global here (zmax has
 /// one indent style per language already; this is the override on top of it).
@@ -74497,7 +74514,10 @@ fn undo_in_region(cx: &mut Context) {
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     let end = (from + old.chars().count()).min(doc.text().len_chars());
-    doc.set_selection(view.id, Selection::new(vec![Range::new(from, end)].into(), 0));
+    doc.set_selection(
+        view.id,
+        Selection::new(vec![Range::new(from, end)].into(), 0),
+    );
     cx.editor.set_status("Undo in region");
 }
 

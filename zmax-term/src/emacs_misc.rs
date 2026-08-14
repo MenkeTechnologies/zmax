@@ -252,7 +252,9 @@ pub fn variables_for(conn: &Connection) -> Vec<(String, String)> {
             continue;
         }
         for name in names {
-            let Some(vars) = table.get(name) else { continue };
+            let Some(vars) = table.get(name) else {
+                continue;
+            };
             for (var, value) in vars {
                 match out.iter_mut().find(|(v, _)| v == var) {
                     Some(slot) => slot.1 = value.clone(),
@@ -293,9 +295,15 @@ pub fn termscript_path() -> Option<PathBuf> {
 /// Append one painted screen to the open termscript. Silently does nothing when
 /// no script is open — this runs on every redraw.
 pub fn termscript_write(screen: &str) {
-    let Some(path) = termscript_path() else { return };
+    let Some(path) = termscript_path() else {
+        return;
+    };
     use std::io::Write;
-    if let Ok(mut f) = std::fs::OpenOptions::new().append(true).create(true).open(path) {
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(path)
+    {
         let _ = f.write_all(screen.as_bytes());
     }
 }
@@ -457,7 +465,10 @@ mod tests {
             "remote-terminfo",
             vec![("system-uses-terminfo".into(), "t".into())],
         );
-        set_profile_variables("remote-ksh", vec![("shell-file-name".into(), "/bin/ksh".into())]);
+        set_profile_variables(
+            "remote-ksh",
+            vec![("shell-file-name".into(), "/bin/ksh".into())],
+        );
         set_profile_variables(
             "remote-bash",
             vec![("shell-file-name".into(), "/bin/bash".into())],

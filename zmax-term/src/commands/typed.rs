@@ -4697,8 +4697,8 @@ fn gdb_load_window_configuration(
         return Ok(());
     }
     let path = gdb_window_config_path(&args);
-    let config =
-        crate::gud::read_config(&path).map_err(|e| anyhow!("gdb-load-window-configuration: {e}"))?;
+    let config = crate::gud::read_config(&path)
+        .map_err(|e| anyhow!("gdb-load-window-configuration: {e}"))?;
     let windows = crate::gud::restore(cx.editor, &config)
         .map_err(|e| anyhow!("gdb-load-window-configuration: {e}"))?;
     cx.editor.set_status(format!(
@@ -4813,10 +4813,7 @@ fn gdb_var_delete_cmd(
     }
     let expr = args.join(" ");
     if expr.trim().is_empty() {
-        bail!(
-            "gdb-var-delete: which expression? ({})",
-            watched.join(", ")
-        );
+        bail!("gdb-var-delete: which expression? ({})", watched.join(", "));
     }
     if crate::gud::watch_remove(expr.trim()) {
         cx.editor
@@ -4876,11 +4873,11 @@ fn next_error_follow_minor_mode_cmd(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let on = match minor_mode_arg(&args).map_err(|e| anyhow!("next-error-follow-minor-mode: {e}"))?
-    {
-        Some(on) => crate::gud::set_next_error_follow(on),
-        None => crate::gud::toggle_next_error_follow(),
-    };
+    let on =
+        match minor_mode_arg(&args).map_err(|e| anyhow!("next-error-follow-minor-mode: {e}"))? {
+            Some(on) => crate::gud::set_next_error_follow(on),
+            None => crate::gud::toggle_next_error_follow(),
+        };
     cx.editor.set_status(if on {
         "next-error-follow-minor-mode enabled"
     } else {
@@ -4916,10 +4913,8 @@ fn next_error_select_buffer_cmd(
         )
     })?;
     crate::gud::set_error_source(source);
-    cx.editor.set_status(format!(
-        "next-error-select-buffer: {}",
-        source.name()
-    ));
+    cx.editor
+        .set_status(format!("next-error-select-buffer: {}", source.name()));
     Ok(())
 }
 
@@ -4935,17 +4930,17 @@ fn log_view_toggle_entry_display_cmd(
         return Ok(());
     }
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
-        |editor: &mut Editor, compositor: &mut Compositor| {
-            match compositor.find::<crate::ui::magit::MagitLog>() {
-                Some(log) => {
-                    if let Some(status) = log.toggle_entry_display() {
-                        editor.set_status(status);
-                    }
+        |editor: &mut Editor, compositor: &mut Compositor| match compositor
+            .find::<crate::ui::magit::MagitLog>(
+        ) {
+            Some(log) => {
+                if let Some(status) = log.toggle_entry_display() {
+                    editor.set_status(status);
                 }
-                None => editor.set_error(
-                    "log-view-toggle-entry-display: no log buffer (open one with :magit then `l`)",
-                ),
             }
+            None => editor.set_error(
+                "log-view-toggle-entry-display: no log buffer (open one with :magit then `l`)",
+            ),
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
@@ -4964,16 +4959,14 @@ fn vc_edit_next_command_cmd(
         return Ok(());
     }
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
-        |editor: &mut Editor, compositor: &mut Compositor| {
-            match compositor.find::<crate::ui::magit::MagitStatus>() {
-                Some(status) => {
-                    status.arm_edit_next();
-                    editor.set_status("the next git command will be opened for editing");
-                }
-                None => {
-                    editor.set_error("vc-edit-next-command: no VC buffer (open one with :magit)")
-                }
+        |editor: &mut Editor, compositor: &mut Compositor| match compositor
+            .find::<crate::ui::magit::MagitStatus>(
+        ) {
+            Some(status) => {
+                status.arm_edit_next();
+                editor.set_status("the next git command will be opened for editing");
             }
+            None => editor.set_error("vc-edit-next-command: no VC buffer (open one with :magit)"),
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
@@ -4986,11 +4979,7 @@ fn vc_edit_next_command_cmd(
 /// `<key>` is the last key of the chord, so `:gud-def flush C-e "flush %f"`
 /// answers `C-x C-a C-e`. The binding is installed through the same runtime
 /// mapping overlay `:map` uses, so it survives a keymap-preset switch.
-fn gud_def_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn gud_def_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -30708,7 +30697,9 @@ fn ex_describe_input_method(
     let quail_name = match (given, quail_current) {
         ("", Some(name)) => Some(name.to_string()),
         ("", None) => None,
-        (name, _) => super::input_method_help_text(name).is_some().then(|| name.to_string()),
+        (name, _) => super::input_method_help_text(name)
+            .is_some()
+            .then(|| name.to_string()),
     };
     if let Some(help) = quail_name.and_then(|name| super::input_method_help_text(&name)) {
         super::show_text_in_scratch(cx.editor, &help);
@@ -30843,7 +30834,11 @@ fn ex_list_input_methods(
     let quail_current = super::current_input_method(doc!(cx.editor).id());
     out.push_str("\nQuail input methods (set-input-method, C-x RET C-\\):\n\n");
     for (name, language, title, rules) in super::input_method_summaries() {
-        let mark = if quail_current == Some(name) { '*' } else { ' ' };
+        let mark = if quail_current == Some(name) {
+            '*'
+        } else {
+            ' '
+        };
         out.push_str(&format!(
             "{mark} {name:<20} {language:<14} mode line: {title}   ({rules} key sequences)\n"
         ));
@@ -34766,7 +34761,11 @@ fn structural_command(
     let raw = joined.trim();
     // vim already owns :x (write-quit) and :y (yank), so sam's loops keep their
     // own names rather than shadowing two commands muscle memory depends on.
-    let name = if between { "structural-y" } else { "structural-x" };
+    let name = if between {
+        "structural-y"
+    } else {
+        "structural-x"
+    };
     let delim = raw
         .chars()
         .next()
@@ -34919,7 +34918,11 @@ fn structural_files(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let name = if invert { "structural-Y" } else { "structural-X" };
+    let name = if invert {
+        "structural-Y"
+    } else {
+        "structural-X"
+    };
     let joined = args.into_iter().collect::<Vec<_>>().join(" ");
     let raw = joined.trim();
     let delim = raw
@@ -34981,11 +34984,19 @@ fn structural_y_files(
     structural_files(cx, args, event, true)
 }
 
-fn structural_x(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn structural_x(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     structural_command(cx, args, event, false)
 }
 
-fn structural_y(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn structural_y(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     structural_command(cx, args, event, true)
 }
 
@@ -39531,7 +39542,11 @@ fn customize_face(
 /// sessions, which is what "Save for future sessions" does in the Customize
 /// buffer. `:bs-customize settings` opens the Settings page filtered to `bs` for
 /// the pointer-driven route.
-fn bs_customize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn bs_customize(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -39732,9 +39747,10 @@ fn filesets_add_buffer(
         true => cx
             .editor
             .set_status(format!("filesets: added {} to `{name}`", file.display())),
-        false => cx
-            .editor
-            .set_status(format!("filesets: `{}` is already in `{name}`", file.display())),
+        false => cx.editor.set_status(format!(
+            "filesets: `{}` is already in `{name}`",
+            file.display()
+        )),
     }
     Ok(())
 }
@@ -39761,9 +39777,10 @@ fn filesets_remove_buffer(
     let file = buffer_file(cx.editor)?;
     let name = name.to_string();
     match crate::filesets::remove_buffer(&name, &file).map_err(|e| anyhow!("{e}"))? {
-        true => cx
-            .editor
-            .set_status(format!("filesets: removed {} from `{name}`", file.display())),
+        true => cx.editor.set_status(format!(
+            "filesets: removed {} from `{name}`",
+            file.display()
+        )),
         false => cx
             .editor
             .set_status(format!("filesets: `{}` is not in `{name}`", file.display())),
@@ -39772,7 +39789,11 @@ fn filesets_remove_buffer(
 }
 
 /// emacs `filesets-open`: "visit all the files in a fileset".
-fn filesets_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn filesets_open(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -39815,9 +39836,7 @@ fn filesets_close(
         .editor
         .documents()
         .filter(|doc| {
-            doc.path()
-                .is_some_and(|p| files.iter().any(|f| f == p))
-                && !doc.is_modified()
+            doc.path().is_some_and(|p| files.iter().any(|f| f == p)) && !doc.is_modified()
         })
         .map(|doc| doc.id())
         .collect();
@@ -40010,8 +40029,8 @@ fn file_cache_add_directory_using_find(
         return Ok(());
     };
     let dir = std::path::PathBuf::from(zmax_stdx::path::expand_tilde(std::path::Path::new(dir)));
-    let added =
-        crate::file_cache::add_directory_recursively(&dir, args.get(1)).map_err(|e| anyhow!("{e}"))?;
+    let added = crate::file_cache::add_directory_recursively(&dir, args.get(1))
+        .map_err(|e| anyhow!("{e}"))?;
     cx.editor.set_status(format!(
         "Filecache: cached {added} file name(s), {} in the cache",
         crate::file_cache::len()
@@ -40163,7 +40182,11 @@ fn shadow_define_regexp_group(
     let Some(regexp) = args.first() else {
         bail!("usage: :shadow-define-regexp-group <regexp> <site> <site…>");
     };
-    let sites: Vec<String> = args.iter().skip(1).map(|a| a.as_ref().to_string()).collect();
+    let sites: Vec<String> = args
+        .iter()
+        .skip(1)
+        .map(|a| a.as_ref().to_string())
+        .collect();
     let n = crate::shadow::define_regexp_group(regexp, &sites).map_err(|e| anyhow!("{e}"))?;
     cx.editor
         .set_status(format!("shadow: regexp group over {n} site(s)"));
@@ -40287,7 +40310,9 @@ fn shell_pushd_dextract(
         return Ok(());
     }
     let on = parse_mode_arg(args.first())?;
-    set_pushd_option(cx, "shell-pushd-dextract", on, |c, v| c.set_pushd_dextract(v));
+    set_pushd_option(cx, "shell-pushd-dextract", on, |c, v| {
+        c.set_pushd_dextract(v)
+    });
     Ok(())
 }
 
@@ -45130,7 +45155,6 @@ fn spell_good(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
-
 // ── spacemacs layer commands ────────────────────────────────────────────────
 //
 // The layers ported from spacemacs' `+tools`, `+web-services`, `+music`,
@@ -45293,7 +45317,10 @@ fn sm_replace_selection_or_buffer(cx: &mut compositor::Context, replacement: &st
 }
 
 /// Show a layer outcome that carries no page.
-fn sm_status(cx: &mut compositor::Context, out: Result<crate::sm::Outcome, String>) -> anyhow::Result<()> {
+fn sm_status(
+    cx: &mut compositor::Context,
+    out: Result<crate::sm::Outcome, String>,
+) -> anyhow::Result<()> {
     let out = out.map_err(|e| anyhow!("{e}"))?;
     if let Some(page) = out.page {
         super::show_text_in_scratch(cx.editor, &page);
@@ -45762,11 +45789,19 @@ fn sm_rebox_shift(
     Ok(())
 }
 
-fn sm_rebox_right(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_rebox_right(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     sm_rebox_shift(cx, args, event, 1)
 }
 
-fn sm_rebox_left(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_rebox_left(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     sm_rebox_shift(cx, args, event, -1)
 }
 
@@ -45783,7 +45818,10 @@ fn sm_parinfer_mode_name(mode: crate::parinfer::Mode) -> &'static str {
 
 /// Run parinfer over the buffer in `mode` and write the result back, keeping the
 /// cursor where parinfer put it.
-fn sm_parinfer_run(cx: &mut compositor::Context, mode: crate::parinfer::Mode) -> anyhow::Result<()> {
+fn sm_parinfer_run(
+    cx: &mut compositor::Context,
+    mode: crate::parinfer::Mode,
+) -> anyhow::Result<()> {
     let (text, cursor_line, cursor_x) = {
         let (view, doc) = current_ref!(cx.editor);
         let rope = doc.text().slice(..);
@@ -45913,8 +45951,11 @@ fn sm_rainbow_mode(
         return Ok(());
     }
     let on = crate::rainbow::toggle_rainbow(doc!(cx.editor).id());
-    cx.editor
-        .set_status(if on { "rainbow-mode on" } else { "rainbow-mode off" });
+    cx.editor.set_status(if on {
+        "rainbow-mode on"
+    } else {
+        "rainbow-mode off"
+    });
     Ok(())
 }
 
@@ -46016,7 +46057,10 @@ fn sm_lab_adjust(
         ),
     };
     let (value, what) = if saturation {
-        (crate::rainbow::adjust_saturation(delta, reset), "saturation")
+        (
+            crate::rainbow::adjust_saturation(delta, reset),
+            "saturation",
+        )
     } else {
         (crate::rainbow::adjust_lightness(delta, reset), "lightness")
     };
@@ -46144,17 +46188,44 @@ sm_layer_cmd!(ex_sm_prodigy_restart, crate::sm_tools::prodigy_restart);
 sm_layer_cmd!(ex_sm_prodigy_browse, crate::sm_tools::prodigy_browse);
 sm_layer_cmd!(ex_sm_transmission, crate::sm_tools::transmission_list);
 sm_layer_cmd!(ex_sm_transmission_add, crate::sm_tools::transmission_add);
-sm_layer_cmd!(ex_sm_transmission_remove, crate::sm_tools::transmission_remove);
-sm_layer_cmd!(ex_sm_transmission_remove_delete, crate::sm_tools::transmission_remove_delete);
-sm_layer_cmd!(ex_sm_transmission_start, crate::sm_tools::transmission_start);
+sm_layer_cmd!(
+    ex_sm_transmission_remove,
+    crate::sm_tools::transmission_remove
+);
+sm_layer_cmd!(
+    ex_sm_transmission_remove_delete,
+    crate::sm_tools::transmission_remove_delete
+);
+sm_layer_cmd!(
+    ex_sm_transmission_start,
+    crate::sm_tools::transmission_start
+);
 sm_layer_cmd!(ex_sm_transmission_stop, crate::sm_tools::transmission_stop);
-sm_layer_cmd!(ex_sm_transmission_verify, crate::sm_tools::transmission_verify);
+sm_layer_cmd!(
+    ex_sm_transmission_verify,
+    crate::sm_tools::transmission_verify
+);
 sm_layer_cmd!(ex_sm_transmission_move, crate::sm_tools::transmission_move);
-sm_layer_cmd!(ex_sm_transmission_limit_down, crate::sm_tools::transmission_limit_down);
-sm_layer_cmd!(ex_sm_transmission_limit_up, crate::sm_tools::transmission_limit_up);
-sm_layer_cmd!(ex_sm_transmission_turtle, crate::sm_tools::transmission_turtle);
-sm_layer_cmd!(ex_sm_transmission_files, crate::sm_tools::transmission_files);
-sm_layer_cmd!(ex_sm_transmission_peers, crate::sm_tools::transmission_peers);
+sm_layer_cmd!(
+    ex_sm_transmission_limit_down,
+    crate::sm_tools::transmission_limit_down
+);
+sm_layer_cmd!(
+    ex_sm_transmission_limit_up,
+    crate::sm_tools::transmission_limit_up
+);
+sm_layer_cmd!(
+    ex_sm_transmission_turtle,
+    crate::sm_tools::transmission_turtle
+);
+sm_layer_cmd!(
+    ex_sm_transmission_files,
+    crate::sm_tools::transmission_files
+);
+sm_layer_cmd!(
+    ex_sm_transmission_peers,
+    crate::sm_tools::transmission_peers
+);
 sm_layer_cmd!(ex_sm_vagrant_up, crate::sm_tools::vagrant_up);
 sm_layer_cmd!(ex_sm_vagrant_halt, crate::sm_tools::vagrant_halt);
 sm_layer_cmd!(ex_sm_vagrant_suspend, crate::sm_tools::vagrant_suspend);
@@ -46208,7 +46279,10 @@ sm_layer_cmd!(ex_sm_p4_jobs, crate::sm_tools::p4_jobs);
 sm_layer_cmd!(ex_sm_p4_labels, crate::sm_tools::p4_labels);
 sm_layer_cmd!(ex_sm_p4_clients, crate::sm_tools::p4_clients);
 sm_layer_cmd!(ex_sm_dash_at_point, crate::sm_tools::dash_at_point);
-sm_layer_cmd!(ex_sm_dash_at_point_with_docset, crate::sm_tools::dash_at_point_with_docset);
+sm_layer_cmd!(
+    ex_sm_dash_at_point_with_docset,
+    crate::sm_tools::dash_at_point_with_docset
+);
 sm_layer_cmd!(ex_sm_dash_docsets, crate::sm_tools::dash_docsets);
 sm_layer_cmd!(ex_sm_djvu_text, crate::sm_tools::djvu_text);
 sm_layer_cmd!(ex_sm_djvu_pages, crate::sm_tools::djvu_pages);
@@ -46228,7 +46302,10 @@ sm_layer_cmd!(ex_sm_reddit_comments, crate::sm_web::reddit_comments);
 sm_layer_cmd!(ex_sm_twitch_search, crate::sm_web::twitch_search);
 sm_layer_cmd!(ex_sm_twitch_streams, crate::sm_web::twitch_streams);
 sm_layer_cmd!(ex_sm_streamlink, crate::sm_web::streamlink_open);
-sm_layer_cmd!(ex_sm_streamlink_qualities, crate::sm_web::streamlink_qualities);
+sm_layer_cmd!(
+    ex_sm_streamlink_qualities,
+    crate::sm_web::streamlink_qualities
+);
 sm_layer_cmd!(ex_sm_search_engines, crate::sm_web::search_engine_list);
 sm_layer_cmd!(ex_sm_wakatime, crate::sm_web::wakatime_status);
 sm_layer_cmd!(ex_sm_wakatime_heartbeat, crate::sm_web::wakatime_heartbeat);
@@ -46262,7 +46339,10 @@ sm_layer_url_cmd!(ex_sm_wakatime_dashboard, crate::sm_web::wakatime_dashboard);
 sm_layer_url_cmd!(ex_sm_xkcd_open, crate::sm_web::xkcd_open);
 sm_layer_url_cmd!(ex_sm_xkcd_explain, crate::sm_web::xkcd_explain);
 sm_layer_cmd!(ex_sm_extempore_connect, crate::sm_lang::extempore_connect);
-sm_layer_cmd!(ex_sm_extempore_disconnect, crate::sm_lang::extempore_disconnect);
+sm_layer_cmd!(
+    ex_sm_extempore_disconnect,
+    crate::sm_lang::extempore_disconnect
+);
 sm_layer_cmd!(ex_sm_extempore_run, crate::sm_lang::extempore_run);
 sm_layer_cmd!(ex_sm_alda_server_status, crate::sm_lang::alda_server_status);
 sm_layer_cmd!(ex_sm_alda_server_start, crate::sm_lang::alda_server_start);
@@ -46278,11 +46358,14 @@ sm_layer_cmd!(ex_sm_bat_cmd_help, crate::sm_lang::bat_cmd_help);
 sm_layer_cmd!(ex_sm_powershell_run, crate::sm_lang::powershell_run);
 sm_layer_cmd!(ex_sm_powershell_eval, crate::sm_lang::powershell_eval);
 
-
 /* ── media / intl layers needing the buffer ─────────────────────────────── */
 
 /// `SPC m RET` — send the block around the cursor to TidalCycles.
-fn sm_tidal_run(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_tidal_run(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -46291,7 +46374,11 @@ fn sm_tidal_run(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
 }
 
 /// `SPC m r N` — send the block around the cursor as orbit `N`.
-fn sm_tidal_run_orbit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_tidal_run_orbit(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -46304,12 +46391,20 @@ fn sm_tidal_run_orbit(cx: &mut compositor::Context, args: Args, event: PromptEve
 }
 
 /// Take the oldest pending browser edit and open it in a scratch buffer.
-fn sm_edit_server_take(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_edit_server_take(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     sm_layer(cx, args, event, crate::sm_media::edit_server_take)
 }
 
 /// Answer a pending browser edit with the buffer's current text.
-fn sm_edit_server_finish(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_edit_server_finish(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -46335,15 +46430,27 @@ fn sm_chinese_conv(
     Ok(())
 }
 
-fn sm_chinese_simplified(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_chinese_simplified(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     sm_chinese_conv(cx, event, crate::sm_media::chinese_to_simplified)
 }
 
-fn sm_chinese_traditional(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_chinese_traditional(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     sm_chinese_conv(cx, event, crate::sm_media::chinese_to_traditional)
 }
 
-fn sm_chinese_pinyin(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_chinese_pinyin(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -46352,19 +46459,34 @@ fn sm_chinese_pinyin(cx: &mut compositor::Context, _args: Args, event: PromptEve
 }
 
 /// SKK's romaji input, applied to the region: rewrite it as hiragana.
-fn sm_romaji_to_kana(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_romaji_to_kana(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     sm_chinese_conv(cx, event, crate::sm_media::romaji_to_kana)
 }
 
-fn sm_kana_to_katakana(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_kana_to_katakana(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     sm_chinese_conv(cx, event, crate::sm_media::kana_to_katakana)
 }
 
-fn sm_katakana_to_kana(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sm_katakana_to_kana(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     sm_chinese_conv(cx, event, crate::sm_media::katakana_to_kana)
 }
 sm_layer_cmd!(ex_sm_pianobar, crate::sm_media::pianobar_start);
-sm_layer_cmd!(ex_sm_pianobar_play_pause, crate::sm_media::pianobar_play_pause);
+sm_layer_cmd!(
+    ex_sm_pianobar_play_pause,
+    crate::sm_media::pianobar_play_pause
+);
 sm_layer_cmd!(ex_sm_pianobar_next, crate::sm_media::pianobar_next);
 sm_layer_cmd!(ex_sm_pianobar_love, crate::sm_media::pianobar_love);
 sm_layer_cmd!(ex_sm_pianobar_ban, crate::sm_media::pianobar_ban);
@@ -46373,14 +46495,26 @@ sm_layer_cmd!(ex_sm_pianobar_station, crate::sm_media::pianobar_station);
 sm_layer_cmd!(ex_sm_pianobar_info, crate::sm_media::pianobar_info);
 sm_layer_cmd!(ex_sm_pianobar_quit, crate::sm_media::pianobar_quit);
 sm_layer_cmd!(ex_sm_pianobar_output, crate::sm_media::pianobar_output);
-sm_layer_cmd!(ex_sm_spotify_play_pause, crate::sm_media::spotify_play_pause);
+sm_layer_cmd!(
+    ex_sm_spotify_play_pause,
+    crate::sm_media::spotify_play_pause
+);
 sm_layer_cmd!(ex_sm_spotify_next, crate::sm_media::spotify_next);
 sm_layer_cmd!(ex_sm_spotify_previous, crate::sm_media::spotify_previous);
 sm_layer_cmd!(ex_sm_spotify_quit, crate::sm_media::spotify_quit);
 sm_layer_cmd!(ex_sm_spotify_status, crate::sm_media::spotify_status);
-sm_layer_cmd!(ex_sm_spotify_search_track, crate::sm_media::spotify_search_track);
-sm_layer_cmd!(ex_sm_spotify_search_album, crate::sm_media::spotify_search_album);
-sm_layer_cmd!(ex_sm_spotify_search_artist, crate::sm_media::spotify_search_artist);
+sm_layer_cmd!(
+    ex_sm_spotify_search_track,
+    crate::sm_media::spotify_search_track
+);
+sm_layer_cmd!(
+    ex_sm_spotify_search_album,
+    crate::sm_media::spotify_search_album
+);
+sm_layer_cmd!(
+    ex_sm_spotify_search_artist,
+    crate::sm_media::spotify_search_artist
+);
 sm_layer_cmd!(ex_sm_spotify_play_uri, crate::sm_media::spotify_play_uri);
 sm_layer_cmd!(ex_sm_tidal_start, crate::sm_media::tidal_start);
 sm_layer_cmd!(ex_sm_tidal_quit, crate::sm_media::tidal_quit);
@@ -46392,7 +46526,10 @@ sm_layer_cmd!(ex_sm_jabber_send_muc, crate::sm_media::jabber_send_muc);
 sm_layer_cmd!(ex_sm_jabber_accounts, crate::sm_media::jabber_accounts);
 sm_layer_cmd!(ex_sm_edit_server_start, crate::sm_media::edit_server_start);
 sm_layer_cmd!(ex_sm_edit_server_stop, crate::sm_media::edit_server_stop);
-sm_layer_cmd!(ex_sm_edit_server_pending, crate::sm_media::edit_server_pending);
+sm_layer_cmd!(
+    ex_sm_edit_server_pending,
+    crate::sm_media::edit_server_pending
+);
 sm_layer_cmd!(ex_sm_ein_notebooks, crate::sm_media::ein_notebooks);
 sm_layer_cmd!(ex_sm_ein_open, crate::sm_media::ein_open);
 sm_layer_cmd!(ex_sm_ein_kernels, crate::sm_media::ein_kernels);

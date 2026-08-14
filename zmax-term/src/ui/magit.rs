@@ -4487,7 +4487,8 @@ impl MagitForge {
             return;
         };
         if t.kind != TopicKind::Pr {
-            cx.editor.set_status("only pull requests can be checked out");
+            cx.editor
+                .set_status("only pull requests can be checked out");
             return;
         }
         let num = t.number.to_string();
@@ -4567,7 +4568,8 @@ impl MagitForge {
         }
         let (mut known, topics) = load_forge_marks(&self.repo_dir);
         if known.contains(&name) {
-            cx.editor.set_status(format!("mark `{name}` already exists"));
+            cx.editor
+                .set_status(format!("mark `{name}` already exists"));
             return;
         }
         known.push(name.clone());
@@ -4672,11 +4674,8 @@ impl MagitForge {
         };
         match gh_run(&self.repo_dir, &args) {
             Ok(()) => {
-                cx.editor.set_status(format!(
-                    "#{} is now {}",
-                    t.number,
-                    text.trim()
-                ));
+                cx.editor
+                    .set_status(format!("#{} is now {}", t.number, text.trim()));
                 self.refresh();
             }
             Err(e) => cx.editor.set_error(format!("gh {sub}: {e}")),
@@ -4835,17 +4834,17 @@ impl Component for MagitForge {
             key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
             // The Spacemacs `SPC m …` forge map, which in zmax lives in the topic
             // list's own keymap because the list is a modal component.
-            key!('l') => self.begin_labels(cx),   // forge-edit-topic-labels
-            key!('m') => self.begin_marks(cx),    // SPC m m : edit topic marks
+            key!('l') => self.begin_labels(cx), // forge-edit-topic-labels
+            key!('m') => self.begin_marks(cx),  // SPC m m : edit topic marks
             key!('M') => self.begin_create_mark(cx), // SPC m M : create a mark
-            key!('n') => self.begin_note(cx),     // SPC m n : personal note
-            key!('u') => self.copy_url(cx),       // SPC m u : copy the topic URL
-            key!('b') => self.browse_topic(cx),   // SPC m b : browse the topic
+            key!('n') => self.begin_note(cx),   // SPC m n : personal note
+            key!('u') => self.copy_url(cx),     // SPC m u : copy the topic URL
+            key!('b') => self.browse_topic(cx), // SPC m b : browse the topic
             key!('C') => self.checkout_pullreq(cx), // SPC m C : checkout the PR
             key!('r') => self.begin_reviewers(cx), // SPC m r : review requests
-            key!('s') => self.begin_state(cx),    // SPC m s : topic state
-            key!('t') => self.begin_title(cx),    // SPC m t : topic title
-            key!('d') => self.toggle_draft(cx),   // SPC m d : toggle draft
+            key!('s') => self.begin_state(cx),  // SPC m s : topic state
+            key!('t') => self.begin_title(cx),  // SPC m t : topic title
+            key!('d') => self.toggle_draft(cx), // SPC m d : toggle draft
             key!('e') => {
                 if let Some(cb) = self.edit_post() {
                     return EventResult::Consumed(Some(cb));

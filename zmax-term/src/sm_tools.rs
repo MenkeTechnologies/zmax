@@ -221,7 +221,9 @@ pub fn pass_otp_insert(args: &[&str]) -> Result<Outcome, String> {
     let entry = args[0];
     let uri = args[1..].join(" ");
     sm::run_with_stdin("pass", &["otp", "insert", "-f", entry], &format!("{uri}\n"))?;
-    Ok(Outcome::status(format!("pass: stored otp secret for {entry}")))
+    Ok(Outcome::status(format!(
+        "pass: stored otp secret for {entry}"
+    )))
 }
 
 // ---------------------------------------------------------------------------
@@ -293,15 +295,9 @@ fn parse_services(text: &str) -> Result<Vec<Service>, String> {
             name: name.to_string(),
             command: command.to_string(),
             args: strings("args"),
-            cwd: entry
-                .get("cwd")
-                .and_then(Value::as_str)
-                .map(str::to_string),
+            cwd: entry.get("cwd").and_then(Value::as_str).map(str::to_string),
             tags: strings("tags"),
-            url: entry
-                .get("url")
-                .and_then(Value::as_str)
-                .map(str::to_string),
+            url: entry.get("url").and_then(Value::as_str).map(str::to_string),
         });
     }
     Ok(out)
@@ -344,9 +340,7 @@ fn pid_alive(pid: u32) -> bool {
 fn running_pid(name: &str) -> Option<u32> {
     let mut reg = PRODIGY_PIDS.lock().unwrap_or_else(|e| e.into_inner());
     reg.retain(|(_, pid)| pid_alive(*pid));
-    reg.iter()
-        .find(|(n, _)| n == name)
-        .map(|(_, pid)| *pid)
+    reg.iter().find(|(n, _)| n == name).map(|(_, pid)| *pid)
 }
 
 /// Table of declared services and their state. An optional arg filters by name
@@ -419,7 +413,9 @@ pub fn prodigy_start(args: &[&str]) -> Result<Outcome, String> {
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .push((name.to_string(), pid));
-    Ok(Outcome::status(format!("prodigy: started {name} (pid {pid})")))
+    Ok(Outcome::status(format!(
+        "prodigy: started {name} (pid {pid})"
+    )))
 }
 
 /// `kill -TERM <pid>` for the registered pid, then drop it from the registry.
@@ -432,7 +428,9 @@ pub fn prodigy_stop(args: &[&str]) -> Result<Outcome, String> {
         .unwrap_or_else(|e| e.into_inner())
         .retain(|(n, _)| n != name);
     result?;
-    Ok(Outcome::status(format!("prodigy: stopped {name} (pid {pid})")))
+    Ok(Outcome::status(format!(
+        "prodigy: stopped {name} (pid {pid})"
+    )))
 }
 
 /// Stop (when running) then start.
@@ -833,8 +831,15 @@ pub fn transmission_files(args: &[&str]) -> Result<Outcome, String> {
     let mut body = format!("{:>5}  {:>12} {:>12}  {}\n", "DONE", "GOT", "SIZE", "FILE");
     for f in &files {
         let length = f.get("length").and_then(Value::as_f64).unwrap_or(0.0);
-        let got = f.get("bytesCompleted").and_then(Value::as_f64).unwrap_or(0.0);
-        let pct = if length > 0.0 { got / length * 100.0 } else { 0.0 };
+        let got = f
+            .get("bytesCompleted")
+            .and_then(Value::as_f64)
+            .unwrap_or(0.0);
+        let pct = if length > 0.0 {
+            got / length * 100.0
+        } else {
+            0.0
+        };
         body.push_str(&format!(
             "{pct:>4.0}%  {got:>12.0} {length:>12.0}  {}\n",
             sm::ellipsize(f.get("name").and_then(Value::as_str).unwrap_or(""), 70)
@@ -1032,8 +1037,8 @@ pub fn conda_activate(args: &[&str]) -> Result<Outcome, String> {
     let name = arg(args, 0, "conda-activate <env>")?;
     let conda = conda_bin()?;
     let listing = sm::run(&conda, &["env", "list"])?;
-    let prefix = conda_env_prefix(&listing, name)
-        .ok_or_else(|| format!("conda: no env named `{name}`"))?;
+    let prefix =
+        conda_env_prefix(&listing, name).ok_or_else(|| format!("conda: no env named `{name}`"))?;
     let bin = format!("{prefix}/bin");
     if !Path::new(&bin).is_dir() {
         return Err(format!("conda: {bin} does not exist"));
@@ -1062,7 +1067,9 @@ pub fn conda_activate(args: &[&str]) -> Result<Outcome, String> {
         .lock()
         .unwrap_or_else(|e| e.into_inner()) = Some(prefix.clone());
 
-    Ok(Outcome::status(format!("conda: activated {name} ({prefix})")))
+    Ok(Outcome::status(format!(
+        "conda: activated {name} ({prefix})"
+    )))
 }
 
 /// Undo [`conda_activate`]: restore the pre-activation PATH (or, failing that,
@@ -1180,10 +1187,7 @@ pub fn es_search(args: &[&str]) -> Result<Outcome, String> {
     }
     Ok(Outcome::page(
         format!("es: {} hit(s) of {total} in {index}", hits.len()),
-        format!(
-            "{}{body}",
-            sm::heading(&format!("es {index}: {query}"))
-        ),
+        format!("{}{body}", sm::heading(&format!("es {index}: {query}"))),
     ))
 }
 
@@ -1217,7 +1221,10 @@ pub fn es_request(args: &[&str]) -> Result<Outcome, String> {
             ))
         }
     };
-    Ok(output_page(&format!("es {method} /{}", path.trim_start_matches('/')), out))
+    Ok(output_page(
+        &format!("es {method} /{}", path.trim_start_matches('/')),
+        out,
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -1272,7 +1279,11 @@ pub fn quickurl_list(_args: &[&str]) -> Result<Outcome, String> {
         body.push_str(&format!("{name:<24} {url}\n"));
     }
     Ok(Outcome::page(
-        format!("quickurl: {} entr{}", rows.len(), if rows.len() == 1 { "y" } else { "ies" }),
+        format!(
+            "quickurl: {} entr{}",
+            rows.len(),
+            if rows.len() == 1 { "y" } else { "ies" }
+        ),
         format!("{}{body}", sm::heading("quickurl")),
     ))
 }
@@ -1604,10 +1615,7 @@ pub fn dash_at_point_with_docset(args: &[&str]) -> Result<Outcome, String> {
 pub fn dash_docsets(_args: &[&str]) -> Result<Outcome, String> {
     let mut dirs: Vec<PathBuf> = Vec::new();
     if on_macos() {
-        dirs.push(
-            home()
-                .join("Library/Application Support/Dash/DocSets"),
-        );
+        dirs.push(home().join("Library/Application Support/Dash/DocSets"));
     }
     match std::env::var_os("XDG_DATA_HOME") {
         Some(xdg) => dirs.push(PathBuf::from(xdg).join("Zeal/Zeal/docsets")),
@@ -1729,7 +1737,11 @@ pub fn djvu_occur(args: &[&str]) -> Result<Outcome, String> {
     }
     Ok(Outcome::page(
         format!("djvu: {} hit(s) for `{}`", hits.len(), args[1..].join(" ")),
-        format!("{}{}\n", sm::heading(&format!("occur: {file}")), hits.join("\n")),
+        format!(
+            "{}{}\n",
+            sm::heading(&format!("occur: {file}")),
+            hits.join("\n")
+        ),
     ))
 }
 

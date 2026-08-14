@@ -87,7 +87,10 @@ fn jstr<'a>(v: &'a Value, key: &str) -> &'a str {
 /// way depending on the endpoint).
 fn jnum(v: &Value, key: &str) -> i64 {
     match v.get(key) {
-        Some(Value::Number(n)) => n.as_i64().or_else(|| n.as_f64().map(|f| f as i64)).unwrap_or(0),
+        Some(Value::Number(n)) => n
+            .as_i64()
+            .or_else(|| n.as_f64().map(|f| f as i64))
+            .unwrap_or(0),
         _ => 0,
     }
 }
@@ -283,7 +286,11 @@ pub fn hackernews_item(args: &[&str]) -> Result<Outcome, String> {
 
     let item = hn_item(id)?;
     let title = jstr(&item, "title");
-    let mut page = sm::heading(if title.is_empty() { "Hacker News item" } else { title });
+    let mut page = sm::heading(if title.is_empty() {
+        "Hacker News item"
+    } else {
+        title
+    });
     page.push_str(&format!(
         "{} pts, {} comments, by {}\n{}\nhttps://news.ycombinator.com/item?id={id}\n\n",
         jnum(&item, "score"),
@@ -309,7 +316,11 @@ pub fn hackernews_item(args: &[&str]) -> Result<Outcome, String> {
                 if c.get("deleted").and_then(Value::as_bool).unwrap_or(false) {
                     continue;
                 }
-                page.push_str(&format!("{}:\n{}\n\n", jstr(&c, "by"), html_text(jstr(&c, "text"))));
+                page.push_str(&format!(
+                    "{}:\n{}\n\n",
+                    jstr(&c, "by"),
+                    html_text(jstr(&c, "text"))
+                ));
             }
             Err(e) => page.push_str(&format!("<comment {kid} failed: {e}>\n\n")),
         }
@@ -429,7 +440,9 @@ pub fn reddit_view_sub(args: &[&str]) -> Result<Outcome, String> {
     let sub = args
         .first()
         .copied()
-        .ok_or_else(|| "usage: reddit-view-sub <subreddit> [hot|new|top|rising] [limit]".to_string())?
+        .ok_or_else(|| {
+            "usage: reddit-view-sub <subreddit> [hot|new|top|rising] [limit]".to_string()
+        })?
         .trim_start_matches("r/");
     let sort = args.get(1).copied().unwrap_or("hot");
     if !["hot", "new", "top", "rising"].contains(&sort) {
@@ -590,7 +603,10 @@ pub fn twitch_search(args: &[&str]) -> Result<Outcome, String> {
         return Err("usage: twitch-search <query>".to_string());
     }
     let (client_id, auth) = twitch_credentials()?;
-    let headers = [("Client-Id", client_id.as_str()), ("Authorization", auth.as_str())];
+    let headers = [
+        ("Client-Id", client_id.as_str()),
+        ("Authorization", auth.as_str()),
+    ];
     let query = args.join(" ");
     let doc = sm::http_get_json(
         &format!(
@@ -625,7 +641,10 @@ pub fn twitch_search(args: &[&str]) -> Result<Outcome, String> {
 /// first resolved through `helix/games?name=`.
 pub fn twitch_streams(args: &[&str]) -> Result<Outcome, String> {
     let (client_id, auth) = twitch_credentials()?;
-    let headers = [("Client-Id", client_id.as_str()), ("Authorization", auth.as_str())];
+    let headers = [
+        ("Client-Id", client_id.as_str()),
+        ("Authorization", auth.as_str()),
+    ];
 
     let (url, title) = if args.is_empty() {
         (
@@ -781,16 +800,25 @@ pub const SEARCH_ENGINES: &[(&str, &str)] = &[
     ("github", "https://github.com/search?q={}"),
     ("gitlab", "https://gitlab.com/search?search={}"),
     ("stackoverflow", "https://stackoverflow.com/search?q={}"),
-    ("wikipedia", "https://en.wikipedia.org/w/index.php?search={}"),
+    (
+        "wikipedia",
+        "https://en.wikipedia.org/w/index.php?search={}",
+    ),
     ("youtube", "https://www.youtube.com/results?search_query={}"),
     ("amazon", "https://www.amazon.{tld}/s?k={}"),
     ("rust-docs", "https://docs.rs/releases/search?query={}"),
     ("crates.io", "https://crates.io/search?q={}"),
     ("mdn", "https://developer.mozilla.org/en-US/search?q={}"),
     ("npm", "https://www.npmjs.com/search?q={}"),
-    ("arch-wiki", "https://wiki.archlinux.org/index.php?search={}"),
+    (
+        "arch-wiki",
+        "https://wiki.archlinux.org/index.php?search={}",
+    ),
     ("wolfram-alpha", "https://www.wolframalpha.com/input/?i={}"),
-    ("google-images", "https://www.google.com/search?tbm=isch&q={}"),
+    (
+        "google-images",
+        "https://www.google.com/search?tbm=isch&q={}",
+    ),
     ("google-maps", "https://maps.google.com/maps?q={}"),
     ("twitter", "https://twitter.com/search?q={}"),
     ("reddit", "https://www.reddit.com/search?q={}"),
@@ -818,7 +846,13 @@ fn engine_key(key: &str) -> String {
     let folded: String = key
         .trim()
         .chars()
-        .map(|c| if c == '_' { '-' } else { c.to_ascii_lowercase() })
+        .map(|c| {
+            if c == '_' {
+                '-'
+            } else {
+                c.to_ascii_lowercase()
+            }
+        })
         .collect();
     match folded.as_str() {
         "ddg" | "duck-duck-go" | "duckduck" => "duckduckgo".to_string(),
@@ -893,12 +927,14 @@ pub fn search_engine(args: &[&str]) -> Result<Outcome, String> {
         return Err("usage: search-engine <engine> <query…>".to_string());
     }
     let query = args[1..].join(" ");
-    search_engine_url(engine, &query).map(Outcome::status).ok_or_else(|| {
-        format!(
-            "search-engine: unknown engine `{engine}` — did you mean: {}",
-            nearest_engines(engine)
-        )
-    })
+    search_engine_url(engine, &query)
+        .map(Outcome::status)
+        .ok_or_else(|| {
+            format!(
+                "search-engine: unknown engine `{engine}` — did you mean: {}",
+                nearest_engines(engine)
+            )
+        })
 }
 
 // ───────────────────────────── wakatime layer ─────────────────────────────
@@ -936,7 +972,9 @@ pub fn wakatime_heartbeat(args: &[&str]) -> Result<Outcome, String> {
         wakatime_binary()?,
         &["--entity", file, "--plugin", "zmax", "--write"],
     )?;
-    Ok(Outcome::status(format!("wakatime: heartbeat sent for {file}")))
+    Ok(Outcome::status(format!(
+        "wakatime: heartbeat sent for {file}"
+    )))
 }
 
 /// `wakatime-dashboard` — the dashboard URL for the caller to open.
@@ -1075,7 +1113,11 @@ pub fn to_confluence_wiki(src: &str) -> String {
 
         // Tables: a run of `|…|` lines, the first of which is the header.
         if trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.len() > 2 {
-            let cells: Vec<&str> = trimmed.trim_matches('|').split('|').map(str::trim).collect();
+            let cells: Vec<&str> = trimmed
+                .trim_matches('|')
+                .split('|')
+                .map(str::trim)
+                .collect();
             let separator = cells
                 .iter()
                 .all(|c| !c.is_empty() && c.chars().all(|ch| ch == '-' || ch == ':' || ch == '+'));
@@ -1093,13 +1135,19 @@ pub fn to_confluence_wiki(src: &str) -> String {
         // ATX headings.
         let hashes = trimmed.chars().take_while(|c| *c == '#').count();
         if (1..=6).contains(&hashes) && trimmed[hashes..].starts_with(' ') {
-            out.push(format!("h{hashes}. {}", convert_inline(trimmed[hashes..].trim())));
+            out.push(format!(
+                "h{hashes}. {}",
+                convert_inline(trimmed[hashes..].trim())
+            ));
             continue;
         }
         // Org headings, which must start at column 0.
         let stars = line.chars().take_while(|c| *c == '*').count();
         if (1..=6).contains(&stars) && line.starts_with('*') && line[stars..].starts_with(' ') {
-            out.push(format!("h{stars}. {}", convert_inline(line[stars..].trim())));
+            out.push(format!(
+                "h{stars}. {}",
+                convert_inline(line[stars..].trim())
+            ));
             continue;
         }
 
@@ -1108,11 +1156,19 @@ pub fn to_confluence_wiki(src: &str) -> String {
             .strip_prefix("- ")
             .or_else(|| trimmed.strip_prefix("+ "))
         {
-            out.push(format!("{} {}", "*".repeat(depth), convert_inline(rest.trim())));
+            out.push(format!(
+                "{} {}",
+                "*".repeat(depth),
+                convert_inline(rest.trim())
+            ));
             continue;
         }
         if let Some(rest) = strip_ordered_marker(trimmed) {
-            out.push(format!("{} {}", "#".repeat(depth), convert_inline(rest.trim())));
+            out.push(format!(
+                "{} {}",
+                "#".repeat(depth),
+                convert_inline(rest.trim())
+            ));
             continue;
         }
 
@@ -1139,7 +1195,8 @@ fn find_char(chars: &[char], from: usize, needle: char) -> Option<usize> {
 
 /// Index of the next occurrence of the two-char `needle` at or after `from`.
 fn find_pair(chars: &[char], from: usize, needle: [char; 2]) -> Option<usize> {
-    (from..chars.len().saturating_sub(1)).find(|&i| chars[i] == needle[0] && chars[i + 1] == needle[1])
+    (from..chars.len().saturating_sub(1))
+        .find(|&i| chars[i] == needle[0] && chars[i + 1] == needle[1])
 }
 
 /// Apply the inline markup conversions of [`to_confluence_wiki`] in one
@@ -1202,7 +1259,12 @@ fn convert_inline(src: &str) -> String {
         // org /italic/ → _italic_, only at a word boundary and never across a
         // `:` so that `https://…` is left intact.
         let word_start = i == 0 || ch[i - 1].is_whitespace() || ch[i - 1] == '(';
-        if c == '/' && word_start && ch.get(i + 1).is_some_and(|n| !n.is_whitespace() && *n != '/') {
+        if c == '/'
+            && word_start
+            && ch
+                .get(i + 1)
+                .is_some_and(|n| !n.is_whitespace() && *n != '/')
+        {
             if let Some(end) = find_char(&ch, i + 1, '/') {
                 let closes = ch
                     .get(end + 1)
@@ -1278,10 +1340,7 @@ pub fn confluence_page(args: &[&str]) -> Result<Outcome, String> {
         jstr(page_json, "id")
     ));
     page.push_str(&html_text(body));
-    Ok(Outcome::page(
-        format!("confluence: {space}/{title}"),
-        page,
-    ))
+    Ok(Outcome::page(format!("confluence: {space}/{title}"), page))
 }
 
 /// `confluence-search` — CQL full-text search, 25 results.
@@ -1344,7 +1403,11 @@ pub fn geeknote_find(args: &[&str]) -> Result<Outcome, String> {
         return Err("usage: geeknote-find <query…>".to_string());
     }
     let query = args.join(" ");
-    geeknote("find", &["--search", &query], &format!("geeknote find `{query}`"))
+    geeknote(
+        "find",
+        &["--search", &query],
+        &format!("geeknote find `{query}`"),
+    )
 }
 
 /// `geeknote-show` — print one note by title.
@@ -1508,7 +1571,10 @@ pub fn twitter_user(args: &[&str]) -> Result<Outcome, String> {
         &headers,
     )?;
     let (n, page) = twitter_render(&doc, &format!("Twitter — @{handle}"));
-    Ok(Outcome::page(format!("twitter @{handle}: {n} tweets"), page))
+    Ok(Outcome::page(
+        format!("twitter @{handle}: {n} tweets"),
+        page,
+    ))
 }
 
 /// `twitter-search` — the recent-search endpoint (last 7 days).
@@ -1541,7 +1607,10 @@ pub fn twitter_post(args: &[&str]) -> Result<Outcome, String> {
         &[("Authorization", auth.as_str())],
         &serde_json::json!({ "text": text }),
     )?;
-    let id = doc.get("data").map(|d| jstr(d, "id").to_string()).unwrap_or_default();
+    let id = doc
+        .get("data")
+        .map(|d| jstr(d, "id").to_string())
+        .unwrap_or_default();
     Ok(Outcome::status(format!("twitter: posted {id}")))
 }
 
@@ -1571,8 +1640,10 @@ fn whisper_binary() -> Result<String, String> {
     if sm::have("whisper") {
         return Ok("whisper".to_string());
     }
-    Err("no whisper binary found — install whisper.cpp (`whisper-cli`) or set $WHISPER_CPP_DIR"
-        .to_string())
+    Err(
+        "no whisper binary found — install whisper.cpp (`whisper-cli`) or set $WHISPER_CPP_DIR"
+            .to_string(),
+    )
 }
 
 /// The model file: `$WHISPER_MODEL`, else the base English model under
@@ -1581,8 +1652,9 @@ fn whisper_model_path() -> Result<PathBuf, String> {
     if let Some(model) = env_opt("WHISPER_MODEL") {
         return Ok(PathBuf::from(model));
     }
-    let dir = env_opt("WHISPER_CPP_DIR")
-        .ok_or_else(|| "$WHISPER_MODEL is unset and $WHISPER_CPP_DIR gives no default".to_string())?;
+    let dir = env_opt("WHISPER_CPP_DIR").ok_or_else(|| {
+        "$WHISPER_MODEL is unset and $WHISPER_CPP_DIR gives no default".to_string()
+    })?;
     let path = Path::new(&dir).join("models").join("ggml-base.en.bin");
     if path.is_file() {
         Ok(path)
@@ -1605,7 +1677,9 @@ fn whisper_prepare_wav(input: &Path) -> Result<PathBuf, String> {
         return Ok(input.to_path_buf());
     }
     if !sm::have("ffmpeg") {
-        return Err("`ffmpeg` not found on PATH — it converts the input to 16 kHz mono wav".to_string());
+        return Err(
+            "`ffmpeg` not found on PATH — it converts the input to 16 kHz mono wav".to_string(),
+        );
     }
     let out = std::env::temp_dir().join(format!("zmax-whisper-{}.wav", std::process::id()));
     let out_str = out.to_string_lossy().into_owned();
@@ -1744,8 +1818,20 @@ pub fn whisper_record(args: &[&str]) -> Result<Outcome, String> {
     sm::run(
         "ffmpeg",
         &[
-            "-y", "-f", format, "-i", device, "-t", &secs, "-ar", "16000", "-ac", "1", "-c:a",
-            "pcm_s16le", &out_str,
+            "-y",
+            "-f",
+            format,
+            "-i",
+            device,
+            "-t",
+            &secs,
+            "-ar",
+            "16000",
+            "-ac",
+            "1",
+            "-c:a",
+            "pcm_s16le",
+            &out_str,
         ],
     )?;
     let text = whisper_transcribe(&out, args.get(1).copied())?;
@@ -1858,7 +1944,11 @@ pub fn xkcd_random(_args: &[&str]) -> Result<Outcome, String> {
 pub fn xkcd_next(_args: &[&str]) -> Result<Outcome, String> {
     let latest = xkcd_latest()?;
     let last = LAST_XKCD.load(Ordering::Relaxed);
-    let next = if last == 0 { latest } else { (last + 1).min(latest) };
+    let next = if last == 0 {
+        latest
+    } else {
+        (last + 1).min(latest)
+    };
     xkcd_show(Some(next))
 }
 
@@ -2015,7 +2105,8 @@ pub fn parse_feed(xml: &str) -> (String, Vec<FeedEntry>) {
         });
     }
     for entry in elements(xml, "entry") {
-        let link = element_attr(entry, "link", "href").unwrap_or_else(|| element_text(entry, "link"));
+        let link =
+            element_attr(entry, "link", "href").unwrap_or_else(|| element_text(entry, "link"));
         let date = {
             let updated = element_text(entry, "updated");
             if updated.is_empty() {
@@ -2205,7 +2296,10 @@ pub fn elfeed_feeds(_args: &[&str]) -> Result<Outcome, String> {
     for (url, tags) in &feeds {
         page.push_str(&format!("{url}  [{}]\n", tags.join(" ")));
     }
-    Ok(Outcome::page(format!("elfeed: {} feeds", feeds.len()), page))
+    Ok(Outcome::page(
+        format!("elfeed: {} feeds", feeds.len()),
+        page,
+    ))
 }
 
 /// `elfeed-show-entry` — fetch one entry's page and show it as text.
@@ -2300,7 +2394,10 @@ pub fn weather(args: &[&str]) -> Result<Outcome, String> {
                 .and_then(|w| w.first())
                 .map(|w| jstr(w, "description").to_string())
                 .unwrap_or_default();
-            page.push_str(&format!("  {:5}  {temp:6.1}{degree}  {desc}\n", &time[..5.min(time.len())]));
+            page.push_str(&format!(
+                "  {:5}  {temp:6.1}{degree}  {desc}\n",
+                &time[..5.min(time.len())]
+            ));
         }
         return Ok(Outcome::page(
             format!("weather {city}: {} slots (openweathermap)", list.len()),
@@ -2397,7 +2494,11 @@ pub fn weather_quick(args: &[&str]) -> Result<Outcome, String> {
         .ok_or_else(|| "weather-quick: no current condition in wttr.in reply".to_string())?;
     let temp = jstr(
         current,
-        if units == "imperial" { "temp_F" } else { "temp_C" },
+        if units == "imperial" {
+            "temp_F"
+        } else {
+            "temp_C"
+        },
     );
     let desc = current
         .get("weatherDesc")
@@ -2405,7 +2506,9 @@ pub fn weather_quick(args: &[&str]) -> Result<Outcome, String> {
         .and_then(|w| w.first())
         .map(|w| jstr(w, "value").trim().to_string())
         .unwrap_or_default();
-    Ok(Outcome::status(format!("{location}: {temp}{degree} {desc}")))
+    Ok(Outcome::status(format!(
+        "{location}: {temp}{degree} {desc}"
+    )))
 }
 
 /// `sun-times` — sunrise, sunset, solar noon and day length for a coordinate.
@@ -2474,8 +2577,14 @@ mod tests {
 
     #[test]
     fn strip_tags_removes_markup_but_not_entities() {
-        assert_eq!(strip_tags("<b>bold</b> &amp; <a href=\"x\">link</a>"), "bold &amp; link");
-        assert_eq!(strip_tags("<li>one</li><li>two</li>").trim(), "one\n\n\n\ntwo");
+        assert_eq!(
+            strip_tags("<b>bold</b> &amp; <a href=\"x\">link</a>"),
+            "bold &amp; link"
+        );
+        assert_eq!(
+            strip_tags("<li>one</li><li>two</li>").trim(),
+            "one\n\n\n\ntwo"
+        );
     }
 
     #[test]
@@ -2537,7 +2646,10 @@ mod tests {
     #[test]
     fn date_key_orders_both_stamp_formats() {
         assert_eq!(date_key("2025-06-10T12:00:00Z"), 20_250_610_120_000);
-        assert_eq!(date_key("Tue, 10 Jun 2025 12:00:00 GMT"), 20_250_610_120_000);
+        assert_eq!(
+            date_key("Tue, 10 Jun 2025 12:00:00 GMT"),
+            20_250_610_120_000
+        );
         assert_eq!(date_key("10 Jun 2025 12:00:00 +0000"), 20_250_610_120_000);
         assert_eq!(date_key("not a date"), 0);
     }
@@ -2568,8 +2680,14 @@ h3. Org Third
 
     #[test]
     fn confluence_inline_markup() {
-        assert_eq!(to_confluence_wiki("**bold** and *bold*"), "*bold* and *bold*");
-        assert_eq!(to_confluence_wiki("/italic/ and _italic_"), "_italic_ and _italic_");
+        assert_eq!(
+            to_confluence_wiki("**bold** and *bold*"),
+            "*bold* and *bold*"
+        );
+        assert_eq!(
+            to_confluence_wiki("/italic/ and _italic_"),
+            "_italic_ and _italic_"
+        );
         assert_eq!(to_confluence_wiki("call `foo()` now"), "call {{foo()}} now");
         assert_eq!(
             to_confluence_wiki("see [docs](https://e.com/d)"),
@@ -2593,7 +2711,10 @@ h3. Org Third
             to_confluence_wiki(src),
             "{code:rust}\nlet x = *y;\n{code}\ntail"
         );
-        assert_eq!(to_confluence_wiki("```\nplain\n```"), "{code}\nplain\n{code}");
+        assert_eq!(
+            to_confluence_wiki("```\nplain\n```"),
+            "{code}\nplain\n{code}"
+        );
     }
 
     #[test]
@@ -2603,8 +2724,14 @@ h3. Org Third
             Some("https://github.com/search?q=ripgrep%20tool".to_string())
         );
         // Aliases and separator/case folding resolve to the same entry.
-        assert_eq!(search_engine_url("GH", "x"), search_engine_url("github", "x"));
-        assert_eq!(search_engine_url("ddg", "x"), search_engine_url("duckduckgo", "x"));
+        assert_eq!(
+            search_engine_url("GH", "x"),
+            search_engine_url("github", "x")
+        );
+        assert_eq!(
+            search_engine_url("ddg", "x"),
+            search_engine_url("duckduckgo", "x")
+        );
         assert!(search_engine_url("nope", "x").is_none());
         // Amazon's TLD is substituted, defaulting to `com`.
         std::env::remove_var("SEARCH_ENGINE_AMAZON_TLD");

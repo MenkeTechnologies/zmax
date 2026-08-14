@@ -289,7 +289,11 @@ mod tests {
         set_org_clock(None);
         assert_eq!(org_clock_text(), None, "no clock, construct off");
         set_org_clock(Some("Write the port".into()));
-        assert_eq!(org_clock_text(), None, "clock runs but the construct is off");
+        assert_eq!(
+            org_clock_text(),
+            None,
+            "clock runs but the construct is off"
+        );
         assert!(toggle_modeline_org_clock());
         assert!(org_clock_text().unwrap().ends_with("Write the port"));
         set_org_clock(None);

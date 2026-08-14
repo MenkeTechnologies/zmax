@@ -96,8 +96,14 @@ impl DocView {
     /// buffer of its own. Returns whether the overlay should close, since only
     /// the toggle does. Matched on the raw [`KeyCode`] for the same reason
     /// [`Self::dispatch_c_key`] is: these are only reachable behind `C-c`.
-    fn dispatch_ctrl_c_key(&mut self, cx: &mut Context, key: KeyEvent) -> (bool, anyhow::Result<()>) {
-        let ctrl = key.modifiers.contains(zmax_view::keyboard::KeyModifiers::CONTROL);
+    fn dispatch_ctrl_c_key(
+        &mut self,
+        cx: &mut Context,
+        key: KeyEvent,
+    ) -> (bool, anyhow::Result<()>) {
+        let ctrl = key
+            .modifiers
+            .contains(zmax_view::keyboard::KeyModifiers::CONTROL);
         match key.code {
             KeyCode::Char('c') if ctrl => {
                 cx.editor.set_status("doc-view: text display");

@@ -65,7 +65,9 @@ fn add_command(root: &mut KeyTrieNode, path: &[KeyEvent], label: &str, cmd: &str
 }
 
 fn keys_of(s: &str) -> Vec<KeyEvent> {
-    s.split(' ').map(|k| k.parse().expect("valid key")).collect()
+    s.split(' ')
+        .map(|k| k.parse().expect("valid key"))
+        .collect()
 }
 
 fn overrides() -> HashMap<Mode, KeyTrie> {
@@ -157,7 +159,11 @@ mod test {
         // Save and quit are `:` commands, so they arrive through the graft
         // rather than the macro — and micro's user presses them in either mode.
         for mode in [Mode::Insert, Mode::Normal] {
-            assert_eq!(cmd(&keys, mode, "C-s").as_deref(), Some("write"), "{mode:?}");
+            assert_eq!(
+                cmd(&keys, mode, "C-s").as_deref(),
+                Some("write"),
+                "{mode:?}"
+            );
             assert_eq!(cmd(&keys, mode, "C-q").as_deref(), Some("quit"), "{mode:?}");
             assert_eq!(cmd(&keys, mode, "F2").as_deref(), Some("write"), "{mode:?}");
         }

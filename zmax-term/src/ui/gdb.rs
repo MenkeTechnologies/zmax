@@ -239,8 +239,10 @@ impl GdbBreakpoints {
             move |compositor: &mut Compositor, cx: &mut Context| {
                 compositor.pop();
                 if cx.editor.open(&path, Action::Replace).is_err() {
-                    cx.editor
-                        .set_error(format!("gdb-goto-breakpoint: cannot open {}", path.display()));
+                    cx.editor.set_error(format!(
+                        "gdb-goto-breakpoint: cannot open {}",
+                        path.display()
+                    ));
                     return;
                 }
                 let (view, doc) = current!(cx.editor);
@@ -313,12 +315,8 @@ impl Component for GdbBreakpoints {
         self.status.clear();
         match key {
             key!('q') | key!(Esc) => return EventResult::Consumed(Some(close())),
-            key!('j') | key!('n') | key!(Down) => {
-                move_cursor(&mut self.cursor, self.rows.len(), 1)
-            }
-            key!('k') | key!('p') | key!(Up) => {
-                move_cursor(&mut self.cursor, self.rows.len(), -1)
-            }
+            key!('j') | key!('n') | key!(Down) => move_cursor(&mut self.cursor, self.rows.len(), 1),
+            key!('k') | key!('p') | key!(Up) => move_cursor(&mut self.cursor, self.rows.len(), -1),
             key!('g') => self.refresh(cx.editor),
             key!('D') => self.delete(cx),
             key!(' ') => self.toggle_enabled(cx),
@@ -450,9 +448,7 @@ impl GdbThreads {
         self.current = debugger.thread_id;
         let threads: Vec<zmax_dap::Thread> = zmax_lsp::block_on(debugger.threads())
             .ok()
-            .and_then(|v| {
-                serde_json::from_value::<zmax_dap::requests::ThreadsResponse>(v).ok()
-            })
+            .and_then(|v| serde_json::from_value::<zmax_dap::requests::ThreadsResponse>(v).ok())
             .map(|r| r.threads)
             .unwrap_or_default();
         self.rows = threads
@@ -479,7 +475,9 @@ impl GdbThreads {
         show: fn(&mut crate::commands::Context),
     ) -> Option<Callback> {
         let id = self.rows.get(self.cursor)?.id;
-        zmax_lsp::block_on(zmax_view::handlers::dap::select_thread_id(cx.editor, id, true));
+        zmax_lsp::block_on(zmax_view::handlers::dap::select_thread_id(
+            cx.editor, id, true,
+        ));
         self.current = Some(id);
         self.status = format!("{what} for thread {id}");
         run_command(cx, show)
@@ -495,12 +493,8 @@ impl Component for GdbThreads {
         self.status.clear();
         match key {
             key!('q') | key!(Esc) => return EventResult::Consumed(Some(close())),
-            key!('j') | key!('n') | key!(Down) => {
-                move_cursor(&mut self.cursor, self.rows.len(), 1)
-            }
-            key!('k') | key!('p') | key!(Up) => {
-                move_cursor(&mut self.cursor, self.rows.len(), -1)
-            }
+            key!('j') | key!('n') | key!(Down) => move_cursor(&mut self.cursor, self.rows.len(), 1),
+            key!('k') | key!('p') | key!(Up) => move_cursor(&mut self.cursor, self.rows.len(), -1),
             key!('g') => self.refresh(cx.editor),
             // The four per-thread data buffers of the Emacs Threads buffer.
             key!('d') => {
@@ -605,7 +599,11 @@ impl Component for GdbThreads {
             } else {
                 text_style
             };
-            let marker = if self.current == Some(row.id) { '*' } else { ' ' };
+            let marker = if self.current == Some(row.id) {
+                '*'
+            } else {
+                ' '
+            };
             let line = format!("{marker} {:>4}  {}  ({})", row.id, row.name, row.state);
             surface.set_stringn(area.x, y, &line, area.width as usize, style);
         }
@@ -716,12 +714,8 @@ impl Component for GdbWatch {
         self.status.clear();
         match key {
             key!('q') | key!(Esc) => return EventResult::Consumed(Some(close())),
-            key!('j') | key!('n') | key!(Down) => {
-                move_cursor(&mut self.cursor, self.rows.len(), 1)
-            }
-            key!('k') | key!('p') | key!(Up) => {
-                move_cursor(&mut self.cursor, self.rows.len(), -1)
-            }
+            key!('j') | key!('n') | key!(Down) => move_cursor(&mut self.cursor, self.rows.len(), 1),
+            key!('k') | key!('p') | key!(Up) => move_cursor(&mut self.cursor, self.rows.len(), -1),
             key!('g') => self.refresh(cx.editor),
             // `gdb-var-delete`: stop watching the expression on this line.
             key!('D') => {

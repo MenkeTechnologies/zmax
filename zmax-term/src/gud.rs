@@ -176,9 +176,7 @@ pub fn selected_frame_id(editor: &zmax_view::Editor) -> Option<usize> {
     let debugger = editor.debug_adapters.get_active_client()?;
     let thread_id = debugger.thread_id?;
     let frames = debugger.stack_frames.get(&thread_id)?;
-    frames
-        .get(debugger.active_frame.unwrap_or(0))
-        .map(|f| f.id)
+    frames.get(debugger.active_frame.unwrap_or(0)).map(|f| f.id)
 }
 
 /// `gdb-edit-value`: assign `value` to the lvalue `expr`. Uses DAP
@@ -550,8 +548,7 @@ pub fn write_config(path: &Path, cfg: &WinConfig) -> Result<(), String> {
 
 /// Read a configuration written by [`write_config`].
 pub fn read_config(path: &Path) -> Result<WinConfig, String> {
-    let text =
-        std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
     serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))
 }
 
@@ -621,13 +618,7 @@ mod tests {
         let doc = zmax_view::DocumentId::default();
         let mut docs = vec![None, Some(doc)].into_iter();
         let shape = to_shape(&cfg, &mut docs).unwrap();
-        assert!(matches!(
-            shape,
-            TreeShape::Leaf {
-                focused: true,
-                ..
-            }
-        ));
+        assert!(matches!(shape, TreeShape::Leaf { focused: true, .. }));
 
         // Every leaf failing leaves nothing to build.
         let mut docs = vec![None, None].into_iter();

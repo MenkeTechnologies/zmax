@@ -866,7 +866,10 @@ mod tests {
         for mode in [Mode::Indent, Mode::Paren, Mode::Smart] {
             assert_eq!(run(src, mode), src, "{mode:?}");
         }
-        assert_eq!(run("no trailing newline", Mode::Indent), "no trailing newline");
+        assert_eq!(
+            run("no trailing newline", Mode::Indent),
+            "no trailing newline"
+        );
         assert_eq!(run("", Mode::Indent), "");
     }
 
@@ -919,10 +922,7 @@ mod tests {
         };
         let src = "(a)\n  b\n";
         // Indent mode moves the close paren onto the cursor line.
-        assert_eq!(
-            process(src, Mode::Indent, &opts).text,
-            "(a\n  b)\n"
-        );
+        assert_eq!(process(src, Mode::Indent, &opts).text, "(a\n  b)\n");
         // Smart mode refuses to create a paren the user did not type.
         assert_eq!(process(src, Mode::Smart, &opts).text, src);
     }
