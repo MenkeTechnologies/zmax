@@ -345,7 +345,7 @@ fn lstrip(s: &str) -> &str {
 fn pad_to(s: &mut String, n: usize) {
     let len = s.chars().count();
     if len < n {
-        s.extend(std::iter::repeat(' ').take(n - len));
+        s.extend(std::iter::repeat_n(' ', n - len));
     }
 }
 
@@ -549,7 +549,7 @@ pub fn boxed(text: &str, code: u16, comment: &str, width: usize) -> Result<Strin
         let mut line = nw.clone();
         if p.nn.is_some() || p.ne.is_some() {
             let fill = right.saturating_sub(nw.len());
-            line.extend(std::iter::repeat(p.nn.unwrap_or(' ')).take(fill));
+            line.extend(std::iter::repeat_n(p.nn.unwrap_or(' '), fill));
             line.push_str(p.ne.as_deref().unwrap_or(""));
             pad_to(&mut line, total);
         }
@@ -572,7 +572,7 @@ pub fn boxed(text: &str, code: u16, comment: &str, width: usize) -> Result<Strin
         let mut line = sw.clone();
         if p.ss.is_some() || p.se.is_some() {
             let fill = right.saturating_sub(sw.len());
-            line.extend(std::iter::repeat(p.ss.unwrap_or(' ')).take(fill));
+            line.extend(std::iter::repeat_n(p.ss.unwrap_or(' '), fill));
             line.push_str(p.se.as_deref().unwrap_or(""));
             pad_to(&mut line, total);
         }

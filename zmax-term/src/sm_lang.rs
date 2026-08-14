@@ -541,7 +541,7 @@ pub fn mercury_run(args: &[&str]) -> Result<Outcome, String> {
 /// The flags that turn `octave` into a batch evaluator: no GUI, no banner.
 const OCTAVE_FLAGS: [&str; 2] = ["--no-gui", "--quiet"];
 
-fn octave_eval_args<'a>(code: &'a str) -> [&'a str; 4] {
+fn octave_eval_args(code: &str) -> [&str; 4] {
     [OCTAVE_FLAGS[0], OCTAVE_FLAGS[1], "--eval", code]
 }
 

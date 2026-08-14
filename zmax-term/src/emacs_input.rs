@@ -2799,7 +2799,7 @@ pub const TEX_RULES: &[(&str, &str)] = &[
     ("\\\"<", "«"),
     ("\\frqq", "»"),
     ("\\\">", "»"),
-    ("\\-", "­"),
+    ("\\-", "\u{AD}"),
     ("\\textmu", "µ"),
     ("\\textfractionsolidus", "⁄"),
     ("\\textbigcircle", "⃝"),

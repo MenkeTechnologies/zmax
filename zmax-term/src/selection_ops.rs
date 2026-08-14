@@ -118,7 +118,6 @@ mod test {
 
     #[test]
     fn a_short_selection_is_already_its_ends() {
-        let rope = Rope::from("ab\n");
         // One and two characters wide: nothing to split.
         for range in [Range::new(0, 1), Range::new(0, 2)] {
             let selection = Selection::new(vec![range].into(), 0);

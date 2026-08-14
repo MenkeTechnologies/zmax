@@ -2277,7 +2277,7 @@ impl EditorView {
         let end = text.line_to_char((flashing + 1).min(text.len_lines()));
         Some(OverlayHighlights::Homogeneous {
             highlight,
-            ranges: vec![start..end],
+            ranges: std::iter::once(start..end).collect(),
         })
     }
 

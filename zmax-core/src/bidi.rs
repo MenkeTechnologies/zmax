@@ -184,7 +184,7 @@ fn levels(line: &[char], base: Direction) -> Vec<u8> {
     let mut levels: Vec<Option<u8>> = classes
         .iter()
         .map(|cls| match cls {
-            Class::Left => Some(if base_level % 2 == 0 {
+            Class::Left => Some(if base_level.is_multiple_of(2) {
                 base_level
             } else {
                 base_level + 1
@@ -196,7 +196,7 @@ fn levels(line: &[char], base: Direction) -> Vec<u8> {
             }),
             // A number is always laid out left-to-right, one level above the
             // right-to-left run it may sit in.
-            Class::EuropeanNumber | Class::ArabicNumber => Some(if base_level % 2 == 0 {
+            Class::EuropeanNumber | Class::ArabicNumber => Some(if base_level.is_multiple_of(2) {
                 base_level
             } else {
                 base_level + 1

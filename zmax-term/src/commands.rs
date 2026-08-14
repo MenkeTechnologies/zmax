@@ -47934,7 +47934,7 @@ fn mouse_wheel_text_scale(cx: &mut Context) {
 fn tty_suppress_bold_inverse_default_colors(cx: &mut Context) {
     // Emacs reads the argument as "zero means off, anything else means on"; a
     // bare invocation (no count) turns it on.
-    let on = cx.count.map_or(true, |c| c.get() != 0);
+    let on = cx.count.is_none_or(|c| c.get() != 0);
     tui::backend::set_suppress_bold_inverse_default_colors(on);
     cx.editor.set_status(if on {
         "Bold with inverse default colors suppressed"
@@ -57170,7 +57170,6 @@ mod preproc_nav_tests {
 mod insert_generator_tests {
     use super::*;
 
-    #[test]
     /// Emacs `isearch-yank-pop-only` replaces the kill the last yank appended
     /// rather than appending a second one, so the search string grows by the
     /// replacement alone (isearch.el:2659-2661).
@@ -57194,6 +57193,7 @@ mod insert_generator_tests {
         assert_eq!(raw, "x");
     }
 
+    #[test]
     fn rectangle_bounds_normalizes_corners() {
         // already ordered
         assert_eq!(rectangle_bounds((1, 2), (4, 6)), (1, 4, 2, 6));
