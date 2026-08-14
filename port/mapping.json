@@ -65679,5 +65679,21 @@
    "static:copy_indent"
   ],
   "note": "kakoune <a-&> copies the main selection’s indent to the other selected lines"
+ },
+ {
+  "spec_id": "kakoune.changes.a_p",
+  "status": "ported",
+  "evidence": [
+   "static:paste_all_after"
+  ],
+  "note": "paste all after the end of each selection, and select each pasted string"
+ },
+ {
+  "spec_id": "kakoune.changes.a_p_2",
+  "status": "ported",
+  "evidence": [
+   "static:paste_all_before"
+  ],
+  "note": "paste all before the start of each selection, and select each pasted string"
  }
 ]

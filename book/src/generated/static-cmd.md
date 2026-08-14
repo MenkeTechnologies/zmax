@@ -117,6 +117,8 @@
 | `split_selection_on_newline` | Split selection on newlines | **helix, kakoune** — normal: `` <A-s> ``, select: `` <A-s> `` |
 | `merge_selections` | Merge selections | **helix** — normal: `` <A-minus> ``, select: `` <A-minus> ``<br>**kakoune** — normal: `` <A-+> ``, `` <A-minus> ``, select: `` <A-minus> `` |
 | `merge_consecutive_selections` | Merge consecutive selections | **helix, kakoune** — normal: `` <A-_> ``, select: `` <A-_> `` |
+| `paste_all_after` | Paste every entry the register holds, after each selection (kakoune A-p) | **kakoune** — normal: `` <A-p> `` |
+| `paste_all_before` | Paste every entry the register holds, before each selection (kakoune A-P) | **kakoune** — normal: `` <A-P> `` |
 | `save_as_prompt` | Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs) |  |
 | `select_first_last_chars` | Keep the first and last character of each selection (kakoune A-S) | **kakoune** — normal: `` <A-S> `` |
 | `copy_indent` | Copy the main selection's indent to the other selected lines (kakoune A-&) | **kakoune** — normal: `` <A-&> `` |
@@ -1034,7 +1036,7 @@
 | `wildfire` | Wildfire: select/expand to the closest text object | **spacemacs, vim** — normal: `` <ret> `` |
 | `wildfire_shrink` | Wildfire: shrink to the previously selected text object | **spacemacs, vim** — normal: `` <backspace> `` |
 | `select_next_sibling` | Select next sibling in the syntax tree | **spacemacs** — normal: `` <space>kL ``, `` <space>kl ``, select: `` <space>kL ``, `` <space>kl ``<br>**helix, kakoune** — normal: `` <A-n> ``, `` <A-right> ``, select: `` <A-n> ``, `` <A-right> `` |
-| `select_prev_sibling` | Select previous sibling the in syntax tree | **spacemacs** — normal: `` <space>kH ``, `` <space>kh ``, select: `` <space>kH ``, `` <space>kh ``<br>**helix, kakoune** — normal: `` <A-p> ``, `` <A-left> ``, select: `` <A-p> ``, `` <A-left> `` |
+| `select_prev_sibling` | Select previous sibling the in syntax tree | **spacemacs** — normal: `` <space>kH ``, `` <space>kh ``, select: `` <space>kH ``, `` <space>kh ``<br>**helix** — normal: `` <A-p> ``, `` <A-left> ``, select: `` <A-p> ``, `` <A-left> ``<br>**kakoune** — normal: `` <A-left> ``, select: `` <A-p> ``, `` <A-left> `` |
 | `select_all_siblings` | Select all siblings of the current node | **helix** — normal: `` <A-a> ``, select: `` <A-a> `` |
 | `select_all_children` | Select all children of the current node | **helix, kakoune** — normal: `` <A-I> ``, `` <S-A-down> ``, select: `` <A-I> ``, `` <S-A-down> `` |
 | `jump_forward` | Jump forward on jumplist | **spacemacs, vim** — normal: `` <C-i> ``, `` <tab> ``<br>**helix, kakoune** — normal: `` <C-i> ``, `` <tab> ``, select: `` <C-i> ``, `` <tab> ``<br>**emacs, cua, micro, nano** — insert: `` <A-C-,> `` |
