@@ -293,6 +293,12 @@ impl Application {
             match editor.theme_loader.load(name) {
                 Ok(theme) if true_color || theme.is_16_color() => {
                     let _ = editor.set_theme(theme);
+                    // The restored theme is this session's theme. Without
+                    // recording it, the first config refresh — writing a keymap
+                    // binding, :config-reload, the config watcher — would load
+                    // `theme =` from config.toml instead and visibly change the
+                    // colours out from under the user.
+                    crate::ui::theme_editor::set_session_theme(Some(name.to_string()));
                 }
                 Ok(_) => {}
                 Err(e) => log::warn!("failed to restore saved theme `{}` - {}", name, e),
@@ -1062,6 +1068,16 @@ impl Application {
         // loaded under the current color support.
         if config.editor.sync_zwire_theme {
             if let Some(theme) = crate::zwire::resolve_theme(editor, true_color) {
+                let _ = editor.set_theme(theme);
+                return;
+            }
+        }
+        // A theme enabled for this session from the colour-scheme editor outlives
+        // an unrelated config refresh — writing a keymap binding refreshes the
+        // config, and that used to snap the colours back to `theme =` mid-edit.
+        // `C-x C-s` clears the override by writing the choice to config.toml.
+        if let Some(name) = crate::ui::theme_editor::session_theme() {
+            if let Ok(theme) = editor.theme_loader.load(&name) {
                 let _ = editor.set_theme(theme);
                 return;
             }
