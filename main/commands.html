@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-89876a68.js";
+            window.path_to_searchindex_js = "searchindex-bc293f31.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -2069,6 +2069,7 @@
 <tr><td><code>split_selection_on_newline</code></td><td>Split selection on newlines</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-s&gt;</code>, select: <code>&lt;A-s&gt;</code></td></tr>
 <tr><td><code>merge_selections</code></td><td>Merge selections</td><td><strong>helix</strong> — normal: <code>&lt;A-minus&gt;</code>, select: <code>&lt;A-minus&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-+&gt;</code>, <code>&lt;A-minus&gt;</code>, select: <code>&lt;A-minus&gt;</code></td></tr>
 <tr><td><code>merge_consecutive_selections</code></td><td>Merge consecutive selections</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-_&gt;</code>, select: <code>&lt;A-_&gt;</code></td></tr>
+<tr><td><code>toggle_auto_completion</code></td><td>Turn the automatic completion pop-up on or off (kakoune insert C-o)</td><td><strong>kakoune</strong> — insert: <code>&lt;C-o&gt;</code></td></tr>
 <tr><td><code>paste_all_after</code></td><td>Paste every entry the register holds, after each selection (kakoune A-p)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-p&gt;</code></td></tr>
 <tr><td><code>paste_all_before</code></td><td>Paste every entry the register holds, before each selection (kakoune A-P)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-P&gt;</code></td></tr>
 <tr><td><code>save_as_prompt</code></td><td>Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs)</td><td></td></tr>
@@ -2966,7 +2967,7 @@
 <tr><td><code>align_selections</code></td><td>Align selections in column</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xaa</code>, select: <code>&lt;space&gt;xaa</code><br><strong>helix, kakoune</strong> — normal: <code>&amp;</code>, select: <code>&amp;</code></td></tr>
 <tr><td><code>keep_primary_selection</code></td><td>Keep primary selection</td><td><strong>helix</strong> — normal: <code>,</code>, select: <code>,</code><br><strong>kakoune</strong> — normal: <code>,</code>, <code>&lt;space&gt;</code>, select: <code>,</code>, <code>&lt;space&gt;</code><br><strong>micro</strong> — normal: <code>&lt;A-c&gt;</code>, insert: <code>&lt;A-c&gt;</code></td></tr>
 <tr><td><code>remove_primary_selection</code></td><td>Remove primary selection</td><td><strong>helix</strong> — normal: <code>&lt;A-,&gt;</code>, select: <code>&lt;A-,&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-,&gt;</code>, <code>&lt;A-space&gt;</code>, select: <code>&lt;A-,&gt;</code>, <code>&lt;A-space&gt;</code><br><strong>micro</strong> — normal: <code>&lt;A-x&gt;</code>, insert: <code>&lt;A-x&gt;</code></td></tr>
-<tr><td><code>completion</code></td><td>Invoke completion popup</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-i&gt;</code>, <code>&lt;A-tab&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, select: <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code><br><strong>vim</strong> — insert: <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-x&gt;&lt;C-i&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-p&gt;</code><br><strong>helix, kakoune</strong> — insert: <code>&lt;C-x&gt;</code><br><strong>emacs, cua, micro, nano</strong> — normal: <code>&lt;A-tab&gt;</code>, insert: <code>&lt;A-tab&gt;</code></td></tr>
+<tr><td><code>completion</code></td><td>Invoke completion popup</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-i&gt;</code>, <code>&lt;A-tab&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, select: <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code><br><strong>vim</strong> — insert: <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-x&gt;&lt;C-i&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-p&gt;</code><br><strong>helix</strong> — insert: <code>&lt;C-x&gt;</code><br><strong>kakoune</strong> — insert: <code>&lt;C-x&gt;&lt;C-x&gt;</code><br><strong>emacs, cua, micro, nano</strong> — normal: <code>&lt;A-tab&gt;</code>, insert: <code>&lt;A-tab&gt;</code></td></tr>
 <tr><td><code>hover</code></td><td>Show docs for item under cursor</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;.</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, select: <code>K</code>, <code>&lt;C-h&gt;.</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, insert: <code>&lt;C-h&gt;.</code><br><strong>vim</strong> — select: <code>K</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;k</code>, select: <code>&lt;space&gt;k</code></td></tr>
 <tr><td><code>keyword_lookup</code></td><td>vim K: run keywordprg on the word under cursor, else LSP hover</td><td><strong>spacemacs, vim</strong> — normal: <code>K</code></td></tr>
 <tr><td><code>goto_first_nonwhitespace_down</code></td><td>vim _: first non-blank, count-1 lines down</td><td><strong>spacemacs, vim</strong> — normal: <code>_</code></td></tr>
@@ -3106,7 +3107,7 @@
 <tr><td><code>insert_char_by_code</code></td><td>Insert a character by Unicode code point (emacs insert-char, C-x 8 RET)</td><td></td></tr>
 <tr><td><code>backward_delete_char_untabify</code></td><td>Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify)</td><td></td></tr>
 <tr><td><code>insert_last_inserted_text</code></td><td>Insert the previously inserted text (vim i_CTRL-A)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-a&gt;</code></td></tr>
-<tr><td><code>insert_command_normal</code></td><td>Run one Normal-mode command, then return to Insert (vim i_CTRL-O)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-o&gt;</code></td></tr>
+<tr><td><code>insert_command_normal</code></td><td>Run one Normal-mode command, then return to Insert (vim i_CTRL-O)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-o&gt;</code><br><strong>kakoune</strong> — insert: <code>&lt;A-;&gt;</code></td></tr>
 <tr><td><code>insert_last_inserted_and_stop</code></td><td>Insert previously inserted text and stop insert (vim i_CTRL-@)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-@&gt;</code></td></tr>
 <tr><td><code>copy_between_registers</code></td><td>Copy between two registers</td><td></td></tr>
 <tr><td><code>copy_to_register</code></td><td>Copy the region into a register (emacs copy-to-register, C-x r s)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;rs</code>, select: <code>&lt;C-x&gt;rs</code>, insert: <code>&lt;C-x&gt;rs</code></td></tr>
@@ -3648,7 +3649,7 @@
 <tr><td><code>word_search_backward</code></td><td>Search backward for words, ignoring punctuation (emacs word-search-backward)</td><td></td></tr>
 <tr><td><code>fill_region_as_paragraph</code></td><td>Fill the region as a single paragraph (emacs fill-region-as-paragraph)</td><td></td></tr>
 <tr><td><code>indent_rigidly</code></td><td>Shift the region by N columns (emacs indent-rigidly)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;&lt;tab&gt;</code>, insert: <code>&lt;C-x&gt;&lt;tab&gt;</code></td></tr>
-<tr><td><code>quoted_insert</code></td><td>Insert the next key literally, control chars included (emacs quoted-insert)</td><td><strong>emacs, cua</strong> — insert: <code>&lt;C-q&gt;</code></td></tr>
+<tr><td><code>quoted_insert</code></td><td>Insert the next key literally, control chars included (emacs quoted-insert)</td><td><strong>kakoune</strong> — insert: <code>&lt;C-v&gt;</code><br><strong>emacs, cua</strong> — insert: <code>&lt;C-q&gt;</code></td></tr>
 <tr><td><code>foldout_zoom_subtree</code></td><td>Narrow to the outline subtree at point (emacs foldout-zoom-subtree)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-z&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-z&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-z&gt;</code></td></tr>
 <tr><td><code>foldout_exit_fold</code></td><td>Leave the zoomed subtree and widen (emacs foldout-exit-fold)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-x&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-x&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-x&gt;</code></td></tr>
 <tr><td><code>ff_find_related_file</code></td><td>Visit the related header/source file (emacs ff-find-related-file)</td><td></td></tr>
@@ -3887,8 +3888,8 @@
 <tr><td><code>paste_before_no_trailing_whitespace</code></td><td>Paste before without trailing whitespace (zP)</td><td><strong>spacemacs, vim</strong> — normal: <code>zP</code></td></tr>
 <tr><td><code>command_mode_count</code></td><td>Open the Ex line, with the count’s line range ({count}:)</td><td><strong>spacemacs, vim</strong> — normal: <code>:</code></td></tr>
 <tr><td><code>filter_equalprg</code></td><td>Filter the selection through ‘equalprg’, else reindent (v_=)</td><td></td></tr>
-<tr><td><code>complete_line</code></td><td>Complete a whole line (i_CTRL-X CTRL-L)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code></td></tr>
-<tr><td><code>complete_filename</code></td><td>Complete a file name (i_CTRL-X CTRL-F)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code></td></tr>
+<tr><td><code>complete_line</code></td><td>Complete a whole line (i_CTRL-X CTRL-L)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code><br><strong>kakoune</strong> — insert: <code>&lt;C-x&gt;L</code>, <code>&lt;C-x&gt;l</code></td></tr>
+<tr><td><code>complete_filename</code></td><td>Complete a file name (i_CTRL-X CTRL-F)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code><br><strong>kakoune</strong> — insert: <code>&lt;C-x&gt;f</code></td></tr>
 <tr><td><code>complete_dictionary</code></td><td>Complete from ‘dictionary’ (i_CTRL-X CTRL-K)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-k&gt;</code></td></tr>
 <tr><td><code>completion_at_point</code></td><td>Complete the partial word before point from the spelling dictionary (emacs completion-at-point in Text Mode, M-TAB)</td><td></td></tr>
 <tr><td><code>complete_tag</code></td><td>Complete a tag from the tags file (i_CTRL-X CTRL-])</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-]&gt;</code></td></tr>
@@ -4116,7 +4117,7 @@
 <tr><td><code>reposition_window</code></td><td>Scroll so the whole function at point is on screen (emacs reposition-window)</td><td><strong>emacs, cua, micro, nano</strong> — insert: <code>&lt;A-C-l&gt;</code></td></tr>
 <tr><td><code>load</code></td><td>Evaluate an elisp file in the embedded interpreter (emacs load)</td><td></td></tr>
 <tr><td><code>load_library</code></td><td>Load an elisp library by name from the load path (emacs load-library)</td><td></td></tr>
-<tr><td><code>complete_keyword</code></td><td>Complete the keyword before the cursor from the ‘complete’ sources (vim i_CTRL-N)</td><td></td></tr>
+<tr><td><code>complete_keyword</code></td><td>Complete the keyword before the cursor from the ‘complete’ sources (vim i_CTRL-N)</td><td><strong>kakoune</strong> — insert: <code>&lt;C-x&gt;W</code>, <code>&lt;C-x&gt;w</code></td></tr>
 <tr><td><code>show_paren_mode</code></td><td>Toggle highlighting of the paren matching the one at point (emacs show-paren-mode)</td><td></td></tr>
 <tr><td><code>show_paren_local_mode</code></td><td>Toggle paren-match highlighting in this buffer only (emacs show-paren-local-mode)</td><td></td></tr>
 <tr><td><code>hi_lock_mode</code></td><td>Toggle display of the interactive highlight-regexp patterns (emacs hi-lock-mode)</td><td></td></tr>
@@ -4155,8 +4156,8 @@
 <tr><td><code>diff_ediff_patch</code></td><td>Apply this patch and review it side by side (emacs diff-ediff-patch)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dfp</code>, select: <code>&lt;space&gt;Dfp</code></td></tr>
 <tr><td><code>ediff_patch_buffer</code></td><td>Patch a buffer with a patch buffer/file and review it (emacs ediff-patch-buffer, SPC D b p)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dbp</code>, select: <code>&lt;space&gt;Dbp</code></td></tr>
 <tr><td><code>diff_add_change_log_entry_other_window</code></td><td>Start a ChangeLog entry for the hunk at point (emacs add-change-log-entry-other-window, in Diff mode)</td><td></td></tr>
-<tr><td><code>next_completion</code></td><td>Move to the next completion candidate (emacs next-completion)</td><td></td></tr>
-<tr><td><code>previous_completion</code></td><td>Move to the previous completion candidate (emacs previous-completion, M-<up>)</up></td><td></td></tr>
+<tr><td><code>next_completion</code></td><td>Move to the next completion candidate (emacs next-completion)</td><td><strong>kakoune</strong> — insert: <code>&lt;C-n&gt;</code></td></tr>
+<tr><td><code>previous_completion</code></td><td>Move to the previous completion candidate (emacs previous-completion, M-<up>)</up></td><td><strong>kakoune</strong> — insert: <code>&lt;C-p&gt;</code></td></tr>
 <tr><td><code>term_line_mode</code></td><td>Terminal: edit input locally, Enter sends the line (emacs term-line-mode)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-j&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-j&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-j&gt;</code></td></tr>
 <tr><td><code>comint_completion_at_point</code></td><td>Shell buffer: complete the command or file name before point (emacs completion-at-point in Shell mode)</td><td></td></tr>
 <tr><td><code>window_configuration_to_register</code></td><td>Save the window configuration in a register (emacs window-configuration-to-register)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;rw</code>, select: <code>&lt;C-x&gt;rw</code>, insert: <code>&lt;C-x&gt;rw</code></td></tr>
