@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-525441fc.js";
+            window.path_to_searchindex_js = "searchindex-89876a68.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -2069,6 +2069,8 @@
 <tr><td><code>split_selection_on_newline</code></td><td>Split selection on newlines</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-s&gt;</code>, select: <code>&lt;A-s&gt;</code></td></tr>
 <tr><td><code>merge_selections</code></td><td>Merge selections</td><td><strong>helix</strong> — normal: <code>&lt;A-minus&gt;</code>, select: <code>&lt;A-minus&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-+&gt;</code>, <code>&lt;A-minus&gt;</code>, select: <code>&lt;A-minus&gt;</code></td></tr>
 <tr><td><code>merge_consecutive_selections</code></td><td>Merge consecutive selections</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-_&gt;</code>, select: <code>&lt;A-_&gt;</code></td></tr>
+<tr><td><code>paste_all_after</code></td><td>Paste every entry the register holds, after each selection (kakoune A-p)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-p&gt;</code></td></tr>
+<tr><td><code>paste_all_before</code></td><td>Paste every entry the register holds, before each selection (kakoune A-P)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-P&gt;</code></td></tr>
 <tr><td><code>save_as_prompt</code></td><td>Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs)</td><td></td></tr>
 <tr><td><code>select_first_last_chars</code></td><td>Keep the first and last character of each selection (kakoune A-S)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-S&gt;</code></td></tr>
 <tr><td><code>copy_indent</code></td><td>Copy the main selection’s indent to the other selected lines (kakoune A-&amp;)</td><td><strong>kakoune</strong> — normal: <code>&lt;A-&amp;&gt;</code></td></tr>
@@ -2986,7 +2988,7 @@
 <tr><td><code>wildfire</code></td><td>Wildfire: select/expand to the closest text object</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;ret&gt;</code></td></tr>
 <tr><td><code>wildfire_shrink</code></td><td>Wildfire: shrink to the previously selected text object</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;backspace&gt;</code></td></tr>
 <tr><td><code>select_next_sibling</code></td><td>Select next sibling in the syntax tree</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;kL</code>, <code>&lt;space&gt;kl</code>, select: <code>&lt;space&gt;kL</code>, <code>&lt;space&gt;kl</code><br><strong>helix, kakoune</strong> — normal: <code>&lt;A-n&gt;</code>, <code>&lt;A-right&gt;</code>, select: <code>&lt;A-n&gt;</code>, <code>&lt;A-right&gt;</code></td></tr>
-<tr><td><code>select_prev_sibling</code></td><td>Select previous sibling the in syntax tree</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code>, select: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code><br><strong>helix, kakoune</strong> — normal: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code>, select: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code></td></tr>
+<tr><td><code>select_prev_sibling</code></td><td>Select previous sibling the in syntax tree</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code>, select: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code><br><strong>helix</strong> — normal: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code>, select: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-left&gt;</code>, select: <code>&lt;A-p&gt;</code>, <code>&lt;A-left&gt;</code></td></tr>
 <tr><td><code>select_all_siblings</code></td><td>Select all siblings of the current node</td><td><strong>helix</strong> — normal: <code>&lt;A-a&gt;</code>, select: <code>&lt;A-a&gt;</code></td></tr>
 <tr><td><code>select_all_children</code></td><td>Select all children of the current node</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-I&gt;</code>, <code>&lt;S-A-down&gt;</code>, select: <code>&lt;A-I&gt;</code>, <code>&lt;S-A-down&gt;</code></td></tr>
 <tr><td><code>jump_forward</code></td><td>Jump forward on jumplist</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;C-i&gt;</code>, <code>&lt;tab&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>&lt;C-i&gt;</code>, <code>&lt;tab&gt;</code>, select: <code>&lt;C-i&gt;</code>, <code>&lt;tab&gt;</code><br><strong>emacs, cua, micro, nano</strong> — insert: <code>&lt;A-C-,&gt;</code></td></tr>
