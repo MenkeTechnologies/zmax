@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ec3b35aa.js";
+            window.path_to_searchindex_js = "searchindex-f50e13e3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -3165,6 +3165,14 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:emenu</code></td><td>Run a menu item by name: :emenu File.Save (vim :emenu).</td></tr>
 <tr><td><code>:popup</code></td><td>Open a menu as a pop-up at the cursor (vim :popup).</td></tr>
 <tr><td><code>:menutranslate</code></td><td>Translate a menu path for display (vim :menutranslate).</td></tr>
+<tr><td><code>:xunmap</code></td><td>Remove a visual-mode mapping (vim :xunmap).</td></tr>
+<tr><td><code>:sunmap</code></td><td>Remove a select-mode mapping (vim :sunmap).</td></tr>
+<tr><td><code>:ounmap</code></td><td>Remove an operator-pending mapping (vim :ounmap).</td></tr>
+<tr><td><code>:snoremap</code></td><td>Non-recursive select-mode mapping (vim :snoremap).</td></tr>
+<tr><td><code>:onoremap</code></td><td>Non-recursive operator-pending mapping (vim :onoremap).</td></tr>
+<tr><td><code>:xmapclear</code></td><td>Remove every visual-mode mapping (vim :xmapclear).</td></tr>
+<tr><td><code>:smapclear</code></td><td>Remove every select-mode mapping (vim :smapclear).</td></tr>
+<tr><td><code>:omapclear</code></td><td>Remove every operator-pending mapping (vim :omapclear).</td></tr>
 <tr><td><code>:cmap</code></td><td>Map a key on the command line (vim :cmap).</td></tr>
 <tr><td><code>:cnoremap</code></td><td>Non-recursive command-line mapping (vim :cnoremap).</td></tr>
 <tr><td><code>:cunmap</code></td><td>Remove a command-line mapping (vim :cunmap).</td></tr>
