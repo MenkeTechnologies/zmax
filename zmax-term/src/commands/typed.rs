@@ -34868,6 +34868,14 @@ macro_rules! map_commands {
 }
 
 map_commands! {
+    xunmap_cmd => "xunmap",
+    sunmap_cmd => "sunmap",
+    ounmap_cmd => "ounmap",
+    snoremap_cmd => "snoremap",
+    onoremap_cmd => "onoremap",
+    xmapclear_cmd => "xmapclear",
+    smapclear_cmd => "smapclear",
+    omapclear_cmd => "omapclear",
     cmap_cmd => "cmap",
     cnoremap_cmd => "cnoremap",
     cunmap_cmd => "cunmap",
@@ -63303,6 +63311,94 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Translate a menu path for display (vim :menutranslate).",
         fun: ex_menutranslate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xunmap",
+        aliases: &[],
+        doc: "Remove a visual-mode mapping (vim :xunmap).",
+        fun: xunmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sunmap",
+        aliases: &[],
+        doc: "Remove a select-mode mapping (vim :sunmap).",
+        fun: sunmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ounmap",
+        aliases: &[],
+        doc: "Remove an operator-pending mapping (vim :ounmap).",
+        fun: ounmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "snoremap",
+        aliases: &[],
+        doc: "Non-recursive select-mode mapping (vim :snoremap).",
+        fun: snoremap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "onoremap",
+        aliases: &[],
+        doc: "Non-recursive operator-pending mapping (vim :onoremap).",
+        fun: onoremap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xmapclear",
+        aliases: &[],
+        doc: "Remove every visual-mode mapping (vim :xmapclear).",
+        fun: xmapclear_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "smapclear",
+        aliases: &[],
+        doc: "Remove every select-mode mapping (vim :smapclear).",
+        fun: smapclear_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "omapclear",
+        aliases: &[],
+        doc: "Remove every operator-pending mapping (vim :omapclear).",
+        fun: omapclear_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
