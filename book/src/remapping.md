@@ -1,8 +1,16 @@
 ## Key remapping
 
-Zmax currently supports one-way key remapping through a simple TOML configuration
-file. (More powerful solutions such as rebinding via commands will be
-available in the future).
+Keys can be remapped two ways: in the TOML configuration file described below,
+which is read at startup, and at runtime with vim's `:map` family —
+`:map`, `:nmap`, `:imap`, `:vmap`, `:xmap`, `:smap`, `:omap`, their
+`noremap` forms, `:unmap` and the `mapclear` family. A `:map`-family command
+with no right-hand side lists the mappings currently in force, as vim does.
+
+The command line, the language ("keymap") layer and the terminal panel each
+have their own mapping table, filled by `:cmap`, `:lmap` (also what
+`:set keymap={name}` loads) and `:tmap` respectively, with matching
+`unmap`/`mapclear` commands. Menus are defined with vim's `:menu` family and
+run with `:emenu` or opened at the cursor with `:popup`.
 
 There are three kinds of commands that can be used in keymaps:
 

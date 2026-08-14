@@ -1,10 +1,12 @@
 # zmax port tracking
 
 This directory holds the **port report** infrastructure: the instrument that
-measures how much of the Vim/Neovim + Emacs + Spacemacs + fzf.vim + JetBrains
-(IntelliJ IDEA) feature surface zmax implements. zmax starts from a
-modal core and is being built out toward the union of those editors; this report
-tracks that build-out.
+measures how much of the *other terminal editors'* feature surface zmax
+implements — the vim, emacs and helix families it descends from, and the rest of
+the field beside them: kakoune, vis, sam, ed, nvi, vile, mg, nano, micro, mcedit,
+ne, dte, the Neovim distributions, fzf.vim, JetBrains and Cursor. zmax starts
+from a modal core and is being built out toward the union of those editors; this
+report tracks that build-out.
 
 ## Layout
 
@@ -30,6 +32,20 @@ tracks that build-out.
 | `spacemacs_bindings.json` | Spacemacs `doc/DOCUMENTATION.org` |
 | `spacemacs_layers.json` | Spacemacs `layers/` git tree |
 | `fzf_vim.json` | junegunn/fzf.vim — Commands reference |
+| `kakoune.json` | kakoune `doc/pages/keys.asciidoc` + `commands.asciidoc` (menu keys carry their prefix: `g h`, `<a-z> u`) |
+| `vis.json` | `vis(1)` — its vi side and the sam command language |
+| `sam.json` | plan9port `sam(1)` |
+| `ed.json` | OpenBSD `ed(1)` |
+| `nvi.json` | nvi2 `vi(1)` — vi commands, ex commands, set options |
+| `vile.json` | vile `cmdtbl` — the table vile's own build generates its command and key tables from |
+| `mg.json` | `mg(1)` — its command list, default bindings and dired keys |
+| `nano.json` | nano `src/global.c` (the default keymap, both the classic and modern schemes) + `doc/nanorc.5` |
+| `micro.json` | micro `runtime/help/keybindings.md` + `commands.md` |
+| `mcedit.json` | Midnight Commander `misc/mc.default.keymap` — the keymap mc ships |
+| `ne.json` | ne `doc/ne.texinfo` — one item per `@cmindex` node |
+| `dte.json` | dte `docs/dte.md` key bindings + `docs/dterc.md` commands |
+| `lazyvim.json`, `astronvim.json`, `lunarvim.json` | each distribution's own Lua keymap (`map(…)` calls, `maps.n[…]` tables, `normal_mode` tables) |
+| `cursor.json` | Cursor — keyboard shortcut reference |
 | `jetbrains_keymap.json` | JetBrains IntelliJ IDEA — macOS Default Keymap reference (`jetbrains.com/help/idea/reference-keymap-mac-default.html`) |
 | `functionality.json` | **Primary measure.** A curated taxonomy of distinct editor *capabilities*, deduplicated across the sources above — one row per feature, not per source. The report leads with this; the per-source rows are secondary muscle-memory-compatibility views. Includes capabilities zmax lacks (absent) so the denominator stays fair. |
 

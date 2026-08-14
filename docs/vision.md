@@ -43,9 +43,13 @@ can `brew install`.**
 
 Coverage is not asserted by hand; it is **re-derived from zmax source on every
 report run** and measured against the *exhaustive, cited* feature inventories of
-Vim/Neovim, Emacs, Spacemacs, and JetBrains (parsed from each tool's own
-documentation). A mapping that points at non-existent code is flagged as broken,
-not counted. See [`port/README.md`](../port/README.md) for the honesty contract.
+the other terminal editors — Vim/Neovim, Emacs, Spacemacs and JetBrains, and
+beside them kakoune, vis, sam, ed, nvi, vile, mg, nano, micro, mcedit, ne, dte
+and the Neovim distributions — each parsed from that tool's own documentation or,
+where its docs are prose, from the table its build reads (vile's `cmdtbl`,
+nano's `src/global.c`, mc's shipped keymap). A mapping that points at
+non-existent code is flagged as broken, not counted. See
+[`port/README.md`](../port/README.md) for the honesty contract.
 
 The headline measure is **functionality coverage** — distinct editor
 *capabilities*, counted once regardless of how many ancestor editors expose the

@@ -9,7 +9,7 @@ can be accessed via the command `zmax --tutor` or `:tutor`.
 
 ## Modes
 
-In the modal keymap presets (`spacemacs`, `vim`, `helix`), Zmax has different modes for different tasks. The `emacs` preset is modeless: it launches directly in insert mode, has no normal mode, and uses Emacs chords (`Ctrl-x`, `Ctrl-c`, `Meta`) instead. The main modes of the modal presets are:
+In the modal keymap presets (`spacemacs`, `vim`, `helix`, `kakoune`), Zmax has different modes for different tasks. The modeless presets — `emacs`, `cua`, `micro` and `nano` — launch directly in insert mode, have no normal mode, and use that editor's chords instead (`Ctrl-x`/`Ctrl-c`/`Meta` for emacs, `Ctrl-s`/`Ctrl-q` for micro, `^O`/`^W`/`^K` for nano). The main modes of the modal presets are:
 
 * [Normal mode](./keymap.md#normal-mode): For navigation and editing commands. This is the mode the modal presets launch in.
 * [Insert mode](./keymap.md#insert-mode): For typing text directly into the document. Access by typing `i` in normal mode.
@@ -23,7 +23,7 @@ Buffers are in-memory representations of files. You can have multiple buffers op
 
 Zmax ships several [keymap presets](./configuration.md#keymap-presets). The default (`spacemacs`) and the `vim` preset use Vim's **operator → motion** model: you press an action such as `d`, `c` or `y` and then the motion or text object it applies to (`dw`, `ciw`, `yy`). If you come from Vim, see [Migrating from Vim](./from-vim.md).
 
-The `helix` preset instead uses the Kakoune-inspired **selection → action** model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection.
+The `helix` and `kakoune` presets instead use the Kakoune **selection → action** model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection. The `kakoune` preset goes further and places the keys where kakoune itself does — view commands on `v`, text objects on `A-i`/`A-a`, selection registers on `Z`/`z`/`A-z`.
 
 ## Multiple selections
 
