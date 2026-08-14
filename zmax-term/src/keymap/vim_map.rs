@@ -50,12 +50,34 @@ struct MapState {
     /// `(<Plug>Name, its rhs KeyTrie)`, so `nmap x <Plug>Name` resolves. A Vec
     /// (not a map) keeps the `static` constructor const; the table is small.
     plugs: Vec<(String, KeyTrie)>,
+    /// vim `:cmap` — command-line mappings. The command line is not one of
+    /// zmax's modes (it is the prompt component), so these cannot live in the
+    /// keymap overlay; the prompt reads them from here instead.
+    cmdline: Vec<(KeyEvent, Vec<KeyEvent>)>,
 }
 
 static STATE: Mutex<MapState> = Mutex::new(MapState {
     mappings: Vec::new(),
     plugs: Vec::new(),
+    cmdline: Vec::new(),
 });
+
+/// The keys a command-line mapping turns `key` into, if one is recorded.
+/// Consulted by the prompt on every keypress.
+pub fn cmdline_mapping(key: KeyEvent) -> Option<Vec<KeyEvent>> {
+    let st = STATE.lock().unwrap_or_else(|e| e.into_inner());
+    st.cmdline
+        .iter()
+        .find(|(lhs, _)| *lhs == key)
+        .map(|(_, rhs)| rhs.clone())
+}
+
+/// Whether any command-line mapping exists — lets the prompt skip the lookup
+/// entirely in the overwhelmingly common case of none.
+pub fn has_cmdline_mappings() -> bool {
+    let st = STATE.lock().unwrap_or_else(|e| e.into_inner());
+    !st.cmdline.is_empty()
+}
 
 /// Parse and record one `:map`-family command line (the whole line, including
 /// the command word, e.g. `nnoremap <silent> <leader>x :Foo<CR>`). Returns a
@@ -86,9 +108,19 @@ pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
     let rest = line[cmd_end..].trim();
     let (modes, unmap, clear, _noremap) =
         mode_from_cmd(cmd).ok_or_else(|| format!("`{cmd}` is not a supported map command"))?;
+    // An empty mode list is the marker mode_from_cmd uses for the c-prefixed
+    // commands: they bind on the command line rather than in a mode.
+    let cmdline = modes.is_empty();
 
     if clear {
         let mut st = STATE.lock().unwrap();
+        if cmdline {
+            let count = st.cmdline.len();
+            st.cmdline.clear();
+            return Ok(MapOutcome::Applied(format!(
+                "cmapclear ({count} command-line mapping(s))"
+            )));
+        }
         st.mappings.retain(|m| !shares_mode(&m.modes, &modes));
         return Ok(MapOutcome::Applied(format!(
             "mapclear ({})",
@@ -102,6 +134,9 @@ pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
     // exactly as vim does, rather than doing nothing.
     if rest.is_empty() {
         return Ok(MapOutcome::List(modes));
+    }
+    if cmdline {
+        return register_cmdline_map(rest, unmap, clear);
     }
     let (lhs_raw, rhs_raw) = match rest.find(char::is_whitespace) {
         Some(i) => (&rest[..i], rest[i..].trim()),
@@ -148,6 +183,49 @@ pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
         "{} {lhs_raw}",
         modes_desc(&modes)
     )))
+}
+
+/// Record (or remove) one command-line mapping — vim `:cmap` / `:cnoremap` /
+/// `:cunmap`.
+///
+/// The lhs must be a single key. vim allows a sequence there, but the prompt
+/// has no pending-key state to hold a half-typed one, and a mapping that fires
+/// on the first key of a sequence would eat characters the user meant to type —
+/// so a multi-key lhs is refused rather than half-supported.
+fn register_cmdline_map(rest: &str, unmap: bool, _clear: bool) -> Result<MapOutcome, String> {
+    let (lhs_raw, rhs_raw) = match rest.find(char::is_whitespace) {
+        Some(i) => (&rest[..i], rest[i..].trim()),
+        None => (rest, ""),
+    };
+    let lhs = parse_macro(&vim_keys_to_zmax(lhs_raw))
+        .map_err(|e| format!("bad lhs `{lhs_raw}`: {e}"))?;
+    let [lhs] = lhs[..] else {
+        return Err(format!(
+            "cmap: `{lhs_raw}` is more than one key; the command line maps single keys"
+        ));
+    };
+
+    let mut st = STATE.lock().unwrap_or_else(|e| e.into_inner());
+    if unmap {
+        let had = st.cmdline.iter().any(|(k, _)| *k == lhs);
+        st.cmdline.retain(|(k, _)| *k != lhs);
+        return Ok(MapOutcome::Applied(if had {
+            format!("cunmap {lhs_raw}")
+        } else {
+            format!("no command-line mapping for {lhs_raw}")
+        }));
+    }
+    if rhs_raw.is_empty() {
+        return Ok(MapOutcome::List(Vec::new()));
+    }
+    let rhs =
+        parse_macro(&vim_keys_to_zmax(rhs_raw)).map_err(|e| format!("bad rhs `{rhs_raw}`: {e}"))?;
+    if rhs.is_empty() {
+        return Err(format!("rhs `{rhs_raw}` produced no keys"));
+    }
+    st.cmdline.retain(|(k, _)| *k != lhs);
+    st.cmdline.push((lhs, rhs));
+    Ok(MapOutcome::Applied(format!("cmap {lhs_raw} -> {rhs_raw}")))
 }
 
 /// Merge every recorded runtime mapping on top of `keys` (the live
@@ -230,8 +308,12 @@ fn mode_from_cmd(cmd: &str) -> Option<(Vec<Mode>, bool, bool, bool)> {
         "v" | "x" | "s" => vec![Mode::Select],
         // Operator-pending has no zmax equivalent; approximate with Normal.
         "o" => vec![Mode::Normal],
-        // Cmdline / terminal / lang maps: no zmax mode.
-        "c" | "t" | "l" => return None,
+        // vim`s cmdline maps have no zmax *mode* — the command line is the
+        // prompt component — so they are recorded separately; the caller
+        // recognises them by the empty mode list. Terminal and language maps
+        // have no equivalent at all.
+        "c" => Vec::new(),
+        "t" | "l" => return None,
         _ => return None,
     };
     Some((modes, unmap, clear, noremap))
@@ -459,8 +541,40 @@ mod tests {
             mode_from_cmd("map").unwrap().0,
             vec![Mode::Normal, Mode::Select]
         );
-        assert!(mode_from_cmd("cnoremap").is_none()); // cmdline: no zmax mode
+        // The c-prefixed commands are recognised, and carry an empty mode list:
+        // the command line is the prompt rather than a zmax mode, so they are
+        // recorded in their own registry (see `register_cmdline_map`).
+        assert!(mode_from_cmd("cnoremap").unwrap().0.is_empty());
+        assert!(mode_from_cmd("cmap").unwrap().0.is_empty());
+        // Terminal and language maps have no zmax equivalent at all.
+        assert!(mode_from_cmd("tnoremap").is_none());
+        assert!(mode_from_cmd("lmap").is_none());
         assert!(mode_from_cmd("nnoremap").unwrap().3); // noremap flag
+    }
+
+    /// `:cmap` records a single-key command-line mapping; a sequence lhs is
+    /// refused rather than half-supported, since the prompt has no pending-key
+    /// state to hold one.
+    #[test]
+    fn cmdline_mappings_are_single_key() {
+        let _serial = TEST_GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        let _ = register_map_line("cmapclear");
+        assert!(!has_cmdline_mappings());
+
+        assert!(register_map_line("cmap <C-a> write").is_ok());
+        assert!(has_cmdline_mappings());
+        let lhs = parse_macro("<C-a>").unwrap()[0];
+        let rhs = cmdline_mapping(lhs).expect("the mapping is recorded");
+        assert_eq!(rhs, parse_macro("write").unwrap());
+
+        // A key with no mapping stays untouched.
+        assert!(cmdline_mapping(parse_macro("<C-b>").unwrap()[0]).is_none());
+
+        assert!(register_map_line("cmap ab cd").is_err(), "multi-key lhs");
+
+        assert!(register_map_line("cunmap <C-a>").is_ok());
+        assert!(cmdline_mapping(lhs).is_none());
+        assert!(!has_cmdline_mappings());
     }
 
     // Serializes tests that mutate the process-global STATE.mappings (they run

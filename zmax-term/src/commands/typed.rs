@@ -34868,6 +34868,10 @@ macro_rules! map_commands {
 }
 
 map_commands! {
+    cmap_cmd => "cmap",
+    cnoremap_cmd => "cnoremap",
+    cunmap_cmd => "cunmap",
+    cmapclear_cmd => "cmapclear",
     map_cmd => "map",
     nmap_cmd => "nmap",
     imap_cmd => "imap",
@@ -62917,6 +62921,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cmap",
+        aliases: &[],
+        doc: "Map a key on the command line (vim :cmap).",
+        fun: cmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cnoremap",
+        aliases: &[],
+        doc: "Non-recursive command-line mapping (vim :cnoremap).",
+        fun: cnoremap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cunmap",
+        aliases: &[],
+        doc: "Remove a command-line mapping (vim :cunmap).",
+        fun: cunmap_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cmapclear",
+        aliases: &[],
+        doc: "Remove every command-line mapping (vim :cmapclear).",
+        fun: cmapclear_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },

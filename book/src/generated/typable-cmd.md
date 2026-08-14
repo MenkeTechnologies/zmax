@@ -1534,6 +1534,10 @@
 | `:reflow` | Hard-wrap the current selection of lines to a given width. |
 | `:tree-sitter-subtree`, `:ts-subtree`, `:InspectTree` | Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree). |
 | `:config-reload` | Refresh user config. |
+| `:cmap` | Map a key on the command line (vim :cmap). |
+| `:cnoremap` | Non-recursive command-line mapping (vim :cnoremap). |
+| `:cunmap` | Remove a command-line mapping (vim :cunmap). |
+| `:cmapclear` | Remove every command-line mapping (vim :cmapclear). |
 | `:map` | Map a key in normal+select mode: :map <leader>w :write<CR>. With no rhs, list the mappings. |
 | `:nmap` | Map a key in normal mode (vim :nmap). |
 | `:imap` | Map a key in insert mode (vim :imap). |
