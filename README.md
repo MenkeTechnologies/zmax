@@ -29,9 +29,12 @@ scripting languages — all in one static binary, working on first launch with n
 same thing here. See [`docs/vision.md`](docs/vision.md) for the full design goal
 and an honest, source-derived account of how far it's met.
 
-zmax targets **vim/emacs semantics**.  There are four keymap presets — **spacemacs** (default), **vim**,
-**helix**, and **emacs** — selectable with `keymap = "..."` in `config.toml` or
-`:keymap <name>` at runtime. The default spacemacs keymap is vim keys (the keys
+zmax targets **vim/emacs semantics**.  The keymap presets — **spacemacs** (default), **vim**,
+**helix**, **kakoune**, **micro**, **nano**, **emacs** and **cua** — are
+selectable with `keymap = "..."` in `config.toml` or
+`:keymap <name>` at runtime (the list is `keymap::PRESETS`; the book's
+[configuration page](book/src/configuration.md#keymap-presets) describes what
+each one starts in and where its leader lives). The default spacemacs keymap is vim keys (the keys
 you press are the keys vim binds, including operator-pending edits `dd`, `dw`,
 `cw`, `yy` emulated on the Zmax engine) plus the `SPC` leader and the Emacs
 `C-x` prefix — both open a which-key popup. The pure `vim` preset drops the
@@ -41,9 +44,13 @@ JetBrains functionality is layered on top throughout.
 ## Port report
 
 Coverage is tracked by a port report measuring zmax against the
-**exhaustive, cited** feature surface of Vim/Neovim, Emacs, and Spacemacs —
-inventory items parsed from the Neovim runtime docs, the GNU Emacs manual
-indexes, and the Spacemacs documentation.
+**exhaustive, cited** feature surface of the other terminal editors — Vim/Neovim,
+Emacs and Spacemacs, plus kakoune, vis, sam, ed, nvi, vile, mg, nano, micro,
+mcedit, ne, dte, the Neovim distributions (LazyVim, AstroNvim, LunarVim),
+fzf.vim, JetBrains and Cursor. Every inventory item is parsed from that tool's
+own primary source: the Neovim runtime docs, the GNU Emacs manual indexes,
+kakoune's `doc/pages`, vile's `cmdtbl`, nano's `src/global.c`, mc's shipped
+keymap, ne's texinfo manual, and so on — never hand-written.
 
 Live numbers (denominator, ported, partial, per-source breakdown, and item
 detail) are in the generated report — never hardcoded here, so they cannot go
