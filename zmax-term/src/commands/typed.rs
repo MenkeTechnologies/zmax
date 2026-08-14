@@ -7486,6 +7486,10 @@ fn theme(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
                     bail!("Unsupported theme: theme requires true color support");
                 }
                 cx.editor.set_theme(theme)?;
+                // `:theme` changes the theme for this session; a later config
+                // refresh (writing a keymap binding, :config-reload, the file
+                // watcher) must not snap it back to `theme =` in config.toml.
+                crate::ui::theme_editor::set_session_theme(Some(theme_name.to_string()));
             } else {
                 let name = cx.editor.theme.name().to_string();
 

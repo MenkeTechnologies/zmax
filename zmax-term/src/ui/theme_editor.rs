@@ -124,6 +124,28 @@ impl Default for ThemeEditor {
     }
 }
 
+/// The theme enabled for *this session only* — set when the colour-scheme
+/// editor applies one, cleared when it is saved to `config.toml` (or when the
+/// user reverts). Emacs' `*Custom Themes*` buffer works the same way: activating
+/// a theme enables it now, and `C-x C-s` is what makes it outlive the session.
+///
+/// The Application consults this on every config refresh so an unrelated reload
+/// — writing a keymap binding, `:config-reload`, the config file watcher — does
+/// not snap the colours back to the configured theme mid-edit.
+static SESSION_THEME: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Record (or clear) the session's theme override.
+pub fn set_session_theme(name: Option<String>) {
+    if let Ok(mut slot) = SESSION_THEME.lock() {
+        *slot = name;
+    }
+}
+
+/// The session's theme override, if the colour-scheme editor set one.
+pub fn session_theme() -> Option<String> {
+    SESSION_THEME.lock().ok().and_then(|slot| slot.clone())
+}
+
 impl ThemeEditor {
     pub fn new() -> Self {
         let themes = crate::commands::typed::all_theme_names();
@@ -160,6 +182,11 @@ impl ThemeEditor {
         if let Ok(theme) = cx.editor.theme_loader.load(name) {
             let _ = cx.editor.set_theme(theme);
             self.theme_unsaved = true;
+            // Remember it process-wide: a config refresh from anywhere else (the
+            // Keymap tab writes a binding and refreshes, `:config-reload`, the
+            // file watcher) re-applies `theme =` from config.toml, which would
+            // otherwise throw this session's choice away mid-edit.
+            set_session_theme(Some(name.to_string()));
             // reseed scope colors from the newly-active theme
             self.colors = SCOPES
                 .iter()
@@ -185,6 +212,9 @@ impl ThemeEditor {
         let name = cx.editor.theme.name().to_string();
         crate::emacs_custom::save_theme_choice(&name)?;
         self.theme_unsaved = false;
+        // config.toml now names it, so the session override has nothing left to
+        // protect.
+        set_session_theme(None);
         Ok(name)
     }
 

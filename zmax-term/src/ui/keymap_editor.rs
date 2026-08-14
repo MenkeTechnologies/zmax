@@ -166,6 +166,9 @@ pub struct KeymapEditor {
     row_hits: Vec<(u16, u16, u16, usize)>,
     field_hits: Vec<(u16, u16, u16, usize)>,
     btn_hits: Vec<(u16, u16, u16, u8)>, // 0 add, 1 delete, 2 capture, 3 browse-toggle
+    /// Bumped whenever a binding is written or removed, so a caller can tell a
+    /// mouse click that changed the keymap from one that only moved the cursor.
+    revision: u64,
 }
 
 /// Every binding in the default keymap as (mode, chord, command), sorted.
@@ -217,6 +220,7 @@ impl KeymapEditor {
             row_hits: Vec::new(),
             field_hits: Vec::new(),
             btn_hits: Vec::new(),
+            revision: 0,
         }
     }
 
@@ -236,6 +240,9 @@ impl KeymapEditor {
     }
 
     fn persist(&mut self) {
+        // Every write to config.toml goes through here, so this is where the
+        // revision the mouse path watches gets bumped.
+        self.revision = self.revision.wrapping_add(1);
         // Rebuild the keys tables from `binds`, leaving other config keys intact.
         if !self.cfg.is_table() {
             self.cfg = toml::Value::Table(Default::default());
@@ -385,8 +392,15 @@ impl Component for KeymapEditor {
         let key: KeyEvent = match event {
             Event::Key(k) => *k,
             Event::Mouse(ev) => {
+                // Only a mouse action that actually wrote a binding needs the
+                // config reloaded; refreshing on every click (and every move)
+                // re-read config.toml constantly, which threw away anything the
+                // session had changed but not saved.
+                let before = self.revision;
                 let r = self.handle_mouse(ev.column, ev.row, ev.kind);
-                reload(cx);
+                if self.revision != before {
+                    reload(cx);
+                }
                 return r;
             }
             _ => return EventResult::Ignored(None),
