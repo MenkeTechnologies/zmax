@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-0cfe857b.js";
+            window.path_to_searchindex_js = "searchindex-809de72a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -205,6 +205,10 @@ Linux and macOS, or <code>%userprofile%\src\</code> on Windows.</p>
 <li>The <a href="https://git-scm.com/">Git version control system</a></li>
 <li>A C++14 compatible compiler to build the tree-sitter grammars, for example GCC or Clang</li>
 </ul>
+<p>Grammars that ship only <code>src/grammar.json</code> — some upstreams gitignore the
+generated parser and expect <code>tree-sitter generate</code> to run first — have their
+<code>src/parser.c</code> generated during the build from that JSON. Neither the
+<code>tree-sitter</code> CLI nor a JavaScript runtime is needed.</p>
 <p>If you are using the <code>musl-libc</code> standard library instead of <code>glibc</code> the following environment variable must be set during the build to ensure tree-sitter grammars can be loaded correctly:</p>
 <pre><code class="language-sh">RUSTFLAGS="-C target-feature=-crt-static"
 </code></pre>
