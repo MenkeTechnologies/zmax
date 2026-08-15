@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-0cfe857b.js";
+            window.path_to_searchindex_js = "searchindex-b6dfdf39.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -6546,11 +6546,12 @@ behaves the way it does in Vim rather than approximating it:</p>
 </table>
 </div>
 <p><code>'foldmethod'</code> owns the buffer — <code>manual</code>, <code>marker</code>, <code>indent</code>, <code>expr</code> and
-<code>syntax</code> are all implemented, with no fallback chain between them. The
-supporting options work as in Vim: <code>'foldlevel'</code>, <code>'foldlevelstart'</code>
-(applied wherever folds are built, not only on <code>:set foldmethod</code>),
-<code>'foldcolumn'</code> (the fold column is in the default gutter layout),
-<code>'foldenable'</code>, <code>'foldexpr'</code> and <code>'foldmarker'</code>.</p>
+<code>syntax</code> are all implemented, with no fallback chain between them. Folds are
+built when a buffer is loaded, so its fold column is populated from the first
+redraw; <code>:set foldmethod=</code> also builds them for every buffer already open that
+has none. The supporting options work as in Vim: <code>'foldlevel'</code>,
+<code>'foldlevelstart'</code> (applied wherever folds are built, not only on <code>:set foldmethod</code>), <code>'foldcolumn'</code> (the fold column is in the default gutter
+layout), <code>'foldenable'</code>, <code>'foldexpr'</code> and <code>'foldmarker'</code>.</p>
 <p>These keys are bound in the <code>vim</code> and <code>spacemacs</code> presets. The default
 (<code>helix</code>) preset leaves <code>z</code> as a pure view-mode prefix — see
 <a href="#view-mode">keymap</a>.</p>
