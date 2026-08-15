@@ -294,6 +294,28 @@ pub fn diagnostic<'doc>(
     )
 }
 
+/// Which mark wins the single gutter column when several land on one line —
+/// lower rank wins. The order runs from "the user put it there by hand" down to
+/// "recomputed from wherever the cursor is right now": named marks, then the
+/// numbered file marks, then the last-jump pair (`'` before its `` ` `` twin,
+/// which always holds the same position), then the automatic edit marks, and
+/// last the sentence/paragraph bounds that move on every cursor step.
+fn mark_rank(ch: char) -> u8 {
+    match ch {
+        c if c.is_ascii_alphabetic() => 0,
+        '0'..='9' => 1,
+        '\'' => 2,
+        '`' => 3,
+        '.' => 4,
+        '^' => 5,
+        '<' | '>' => 6,
+        '[' | ']' => 7,
+        // `(`/`)`/`{`/`}` — computed from the cursor, so never worth hiding a
+        // real mark for.
+        _ => 8,
+    }
+}
+
 /// Markology: render the full vim mark set in the gutter, one char per line.
 ///
 /// Stored marks (`a`-`z`, `A`-`Z`, `^`, `<`, `>`, and the auto-tracked `.`/`[`/`]`) come from the
@@ -316,12 +338,28 @@ pub fn marks<'doc>(
     let slice = text.slice(..);
     let len = text.len_chars();
     let mut by_line: HashMap<usize, char> = HashMap::new();
-    // Explicit marks set last keep priority (named marks beat computed sentence/paragraph).
-    let mut put = |line: usize, ch: char| {
-        by_line.insert(line, ch);
+    // One column, many marks per line: keep the most interesting one by rank
+    // rather than whichever happened to be inserted last. Insertion order was
+    // decided by `HashMap` iteration over the document's marks, so a line
+    // carrying several marks — every edit leaves `.`, `[` and `]` on one line,
+    // and a jump leaves `'` and `` ` `` on one — rendered a different one run to
+    // run, which is why `'` (the jump the user is looking for) kept losing to
+    // its `` ` `` twin.
+    let mut put = |line: usize, ch: char| match by_line.entry(line) {
+        std::collections::hash_map::Entry::Occupied(mut e) => {
+            // Rank first, then the mark char itself, so even two marks of the
+            // same class (`a` and `b`, `[` and `]`) pick the same winner on
+            // every redraw.
+            if (mark_rank(ch), ch) < (mark_rank(*e.get()), *e.get()) {
+                e.insert(ch);
+            }
+        }
+        std::collections::hash_map::Entry::Vacant(e) => {
+            e.insert(ch);
+        }
     };
 
-    // Cursor-relative computed marks (lowest priority — inserted first).
+    // Cursor-relative computed marks (`mark_rank` puts them last).
     let range = doc.selection(view.id).primary();
     let sent = textobject::textobject_sentence(slice, range, TextObject::Around, 1);
     put(slice.char_to_line(sent.from().min(len)), '(');
@@ -349,7 +387,7 @@ pub fn marks<'doc>(
         put(text.char_to_line(sel.primary().head.min(len)), '\'');
     }
 
-    // Stored marks (named + ^ < > . [ ]) — highest priority.
+    // Stored marks (named + ` ' ^ < > . [ ]).
     for (ch, pos) in doc.marks_iter() {
         put(text.char_to_line(pos.min(len)), ch);
     }
@@ -707,6 +745,36 @@ mod tests {
     use crate::document::Document;
     use crate::editor::{Config, GutterConfig, GutterLineNumbersConfig};
     use crate::graphics::Rect;
+
+    /// The marks gutter has one column and a line routinely carries several
+    /// marks: every edit leaves `.`, `[` and `]` together, and every jump leaves
+    /// `'` and its `` ` `` twin together. Which one shows must not depend on
+    /// `HashMap` iteration order — that is what dropped `'` from the gutter on
+    /// some redraws even though the mark was set.
+    #[test]
+    fn mark_rank_picks_the_same_winner_every_time() {
+        let winner = |marks: &[char]| {
+            *marks
+                .iter()
+                .min_by_key(|&&ch| (mark_rank(ch), ch))
+                .expect("non-empty")
+        };
+
+        // A jump sets both halves of the pair to one position; `''` is the one
+        // vim documents and the one to show.
+        assert_eq!(winner(&['`', '\'']), '\'');
+        // The change marks all land together after an edit — `.` is the useful one.
+        assert_eq!(winner(&['[', ']', '.']), '.');
+        // A hand-set mark outranks anything automatic, and the sentence and
+        // paragraph bounds — recomputed from the cursor on every keystroke —
+        // never hide a stored mark.
+        assert_eq!(winner(&['.', 'a']), 'a');
+        assert_eq!(winner(&['{', '}', '(', ')', '^']), '^');
+        assert_eq!(winner(&['}', '\'']), '\'');
+        // Same-class collisions resolve by mark char, not by hash order.
+        assert_eq!(winner(&['b', 'a']), 'a');
+        assert_eq!(winner(&[']', '[']), '[');
+    }
 
     #[test]
     fn foldcolumn_marks_closed_open_and_inner_lines() {

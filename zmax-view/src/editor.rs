@@ -1124,11 +1124,12 @@ pub enum StartupScreen {
 #[serde(rename_all = "kebab-case")]
 pub enum BufferLine {
     /// Don't render bufferline
-    #[default]
     Never,
     /// Always render
     Always,
-    /// Only if multiple buffers are open
+    /// Only if multiple buffers are open — vim's `showtabline=1`, and the
+    /// default: one buffer needs no tab bar, several do.
+    #[default]
     Multiple,
 }
 
