@@ -70,6 +70,48 @@ async fn b_lands_on_prev_word_first_char() -> anyhow::Result<()> {
     Ok(())
 }
 
+// Regression: `w`/`b` crossing a line break landed on the next/previous line's
+// indent whitespace (the `\t`) because the underlying Helix motions treat the
+// first char after a line ending as a word boundary. vim only ever rests on a
+// blank at column 0 of an empty line, so both motions must land on a word.
+#[tokio::test(flavor = "multi_thread")]
+async fn w_across_newline_lands_on_word_not_indent() -> anyhow::Result<()> {
+    // from the last word of the line -> 'b' of "bar", not the leading tab.
+    test_with_config(vim(), ("#[f|]#oo\n\tbar\n", "w", "foo\n\t#[b|]#ar\n")).await?;
+    // from the last char of the line, same target.
+    test_with_config(vim(), ("fo#[o|]#\n\tbar\n", "w", "foo\n\t#[b|]#ar\n")).await?;
+    // space indent behaves the same.
+    test_with_config(vim(), ("#[f|]#oo\n    bar\n", "w", "foo\n    #[b|]#ar\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn b_across_newline_lands_on_word_not_indent() -> anyhow::Result<()> {
+    // from the first word of an indented line -> 'f' of "foo" on the line above.
+    test_with_config(vim(), ("foo\n\t#[b|]#ar\n", "b", "#[f|]#oo\n\tbar\n")).await?;
+    // space indent behaves the same.
+    test_with_config(vim(), ("foo\n    #[b|]#ar\n", "b", "#[f|]#oo\n    bar\n")).await?;
+    // mid-word first goes to this word's own start.
+    test_with_config(vim(), ("foo\n\tba#[r|]#\n", "b", "foo\n\t#[b|]#ar\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn w_and_b_stop_on_empty_line() -> anyhow::Result<()> {
+    // vim: an empty line is a word for `w`/`b` — the one blank they rest on.
+    test_with_config(vim(), ("#[f|]#oo\n\nbar\n", "w", "foo\n#[\n|]#bar\n")).await?;
+    test_with_config(vim(), ("foo\n\n#[b|]#ar\n", "b", "foo\n#[\n|]#bar\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn big_w_and_b_across_newline_land_on_word() -> anyhow::Result<()> {
+    // `W`/`B` (WORDs: punctuation joins the token) cross a line break the same way.
+    test_with_config(vim(), ("#[a|]#.b\n\t.foo\n", "W", "a.b\n\t#[.|]#foo\n")).await?;
+    test_with_config(vim(), ("a.b\n\t#[.|]#foo\n", "B", "#[a|]#.b\n\t.foo\n")).await?;
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn ge_lands_on_prev_word_last_char() -> anyhow::Result<()> {
     // vim `ge` from the start of "baz": onto 'r', the last char of "bar", not the

@@ -194,41 +194,105 @@ pub fn move_next_word_start(slice: RopeSlice, range: Range, count: usize) -> Ran
     word_move(slice, range, count, WordMotionTarget::NextWordStart)
 }
 
-/// vim `w`/`W`: move to the start of the next word as a point (vim's caret is a
-/// point, not a Helix selection).
-///
-/// [`move_next_word_start`] first extends the range to cover the grapheme under
-/// the cursor (Helix block-cursor semantics) before searching. When that
-/// grapheme is the last whitespace immediately before a token, the extended
-/// start lands exactly on the token's first char, so Helix treats that boundary
-/// as already-consumed and advances an *extra* token — landing on `=` instead of
-/// `fetch` for `\tfetch = …`. vim lands on the first token. Helix signals this
-/// case by moving the range anchor forward past the origin to the true next word
-/// start; take that anchor instead of the overshot head. Done per single step so
-/// `count` composes correctly (passing `count` into Helix's internal loop chains
-/// anchors and reintroduces the overshoot).
-fn next_word_start_vim(slice: RopeSlice, mut pos: usize, count: usize, long: bool) -> usize {
-    let step = if long {
-        move_next_long_word_start
-    } else {
-        move_next_word_start
-    };
+// ---- vim word-start motions (`w`/`W`/`b`/`B`) ------------------------------
+//
+// Ported from vim's `fwd_word()` / `bck_word()` (search.c) instead of adapting
+// Helix's `word_move`. Helix's motions are selection-shaped: they treat the char
+// right after a line ending as a boundary and hand it back as the range anchor,
+// so a `w`/`b` that crosses a line break lands on the next/previous line's
+// indent whitespace (`\t`) rather than on a word. vim never rests on a blank
+// except at column 0 of an empty line.
+//
+// vim walks a cursor one character at a time over a buffer where the end-of-line
+// NUL is a real position of class 0. In a rope that NUL *is* the line-ending
+// char index, so vim's `inc()`/`dec()` are exactly `pos + 1` / `pos - 1` and the
+// ports below stay 1:1 with the C.
+
+/// vim `cls()`: 0 = blank (whitespace, line ending, end of buffer), 2 = keyword
+/// char, 1 = any other non-blank. For a WORD (`long`) every non-blank is 1.
+fn vim_cls(slice: RopeSlice, pos: usize, long: bool) -> u8 {
+    if pos >= slice.len_chars() {
+        return 0; // vim: the NUL past the last line is class 0
+    }
+    match categorize_char(slice.char(pos)) {
+        CharCategory::Eol | CharCategory::Whitespace => 0,
+        _ if long => 1,
+        CharCategory::Word => 2,
+        _ => 1,
+    }
+}
+
+/// vim `curwin->w_cursor.col == 0 && *ml_get_curline() == NUL`: the cursor sits
+/// at column 0 of an empty line — the one blank that `w`/`b` stop on.
+fn vim_on_empty_line(slice: RopeSlice, pos: usize) -> bool {
+    pos < slice.len_chars()
+        && char_is_line_ending(slice.char(pos))
+        && slice.line_to_char(slice.char_to_line(pos)) == pos
+}
+
+/// Port of vim `fwd_word()` (search.c) with `eol = FALSE` — the `w`/`W` motion.
+fn vim_fwd_word(slice: RopeSlice, mut pos: usize, count: usize, long: bool) -> usize {
+    let len = slice.len_chars();
     for _ in 0..count {
-        let moved = step(slice, Range::point(pos), 1);
-        let next = if moved.anchor > pos {
-            moved.anchor
-        } else {
-            moved.head
-        };
-        if next == pos {
+        let sclass = vim_cls(slice, pos, long);
+
+        // "We always move at least one character" (inc_cursor()).
+        if pos >= len {
             break;
         }
-        pos = next;
+        pos += 1;
+
+        // Go one char past the end of the current word (if we started on one).
+        if sclass != 0 {
+            while pos < len && vim_cls(slice, pos, long) == sclass {
+                pos += 1;
+            }
+        }
+
+        // Go to the next non-blank; an empty line is itself a stop.
+        while pos < len && vim_cls(slice, pos, long) == 0 {
+            if vim_on_empty_line(slice, pos) {
+                break;
+            }
+            pos += 1;
+        }
     }
     pos
 }
 
-/// vim `w` caret. See `next_word_start_vim`.
+/// Port of vim `bck_word()` (search.c) with `stop = FALSE` — the `b`/`B` motion.
+fn vim_bck_word(slice: RopeSlice, mut pos: usize, count: usize, long: bool) -> usize {
+    'word: for _ in 0..count {
+        if pos == 0 {
+            break; // dec_cursor() == -1 -> FAIL, cursor stays put
+        }
+        pos -= 1;
+
+        // Skip the blanks before the word. Stop on an empty line.
+        while vim_cls(slice, pos, long) == 0 {
+            if vim_on_empty_line(slice, pos) {
+                continue 'word; // vim's `goto finished`: this is the target
+            }
+            if pos == 0 {
+                return 0;
+            }
+            pos -= 1;
+        }
+
+        // Move backward to the start of this word (skip_chars()).
+        let cclass = vim_cls(slice, pos, long);
+        while vim_cls(slice, pos, long) == cclass {
+            if pos == 0 {
+                return 0; // skip_chars() hit the buffer start: no overshoot
+            }
+            pos -= 1;
+        }
+        pos += 1; // overshot - forward one
+    }
+    pos
+}
+
+/// vim `w` caret. See [`vim_fwd_word`].
 ///
 /// Start from the visual caret ([`Range::cursor`]), not `range.head`: in normal
 /// mode the cursor is a 1-wide block whose head sits one grapheme past the caret,
@@ -236,17 +300,22 @@ fn next_word_start_vim(slice: RopeSlice, mut pos: usize, count: usize, long: boo
 /// token's first char and the search would skip it. `cursor()` collapses back to
 /// the caret (and equals `head` for a point range, so unit tests are unaffected).
 pub fn move_next_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
-    Range::point(next_word_start_vim(
-        slice,
-        range.cursor(slice),
-        count,
-        false,
-    ))
+    Range::point(vim_fwd_word(slice, range.cursor(slice), count, false))
 }
 
-/// vim `W` caret. See `next_word_start_vim`.
+/// vim `W` caret. See [`vim_fwd_word`].
 pub fn move_next_long_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
-    Range::point(next_word_start_vim(slice, range.cursor(slice), count, true))
+    Range::point(vim_fwd_word(slice, range.cursor(slice), count, true))
+}
+
+/// vim `b` caret. See [`vim_bck_word`].
+pub fn move_prev_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
+    Range::point(vim_bck_word(slice, range.cursor(slice), count, false))
+}
+
+/// vim `B` caret. See [`vim_bck_word`].
+pub fn move_prev_long_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
+    Range::point(vim_bck_word(slice, range.cursor(slice), count, true))
 }
 
 pub fn move_next_word_end(slice: RopeSlice, range: Range, count: usize) -> Range {
@@ -1544,6 +1613,73 @@ mod test {
             assert_eq!(
                 range.head, expected,
                 "W case failed: [{:?}] cursor={} count={}",
+                sample, cursor, count
+            );
+        }
+    }
+
+    #[test]
+    fn test_vim_word_start_caret_across_lines() {
+        // `w`/`b` must cross a line break onto a *word*, never onto the indent
+        // whitespace of the line they land in — vim only rests on a blank at
+        // column 0 of an empty line.
+        // `foo\n\tbar`:   f0 o1 o2 \n3 \t4 b5 a6 r7
+        // `foo bar\n  baz\n\nqux`:
+        //   f0 o1 o2 ' '3 b4 a5 r6 \n7 ' '8 ' '9 b10 a11 z12 \n13 \n14 q15 u16 x17
+        let w = [
+            ("foo\n\tbar", 0, 1, 5),  // from `foo` over the newline -> `bar`, not `\t`
+            ("foo\n\tbar", 2, 1, 5),  // last char of the line -> `bar`
+            ("foo\n    bar", 0, 1, 8), // space indent -> `bar`
+            ("foo bar\n  baz\n\nqux", 4, 1, 10), // -> `baz`
+            ("foo bar\n  baz\n\nqux", 10, 1, 14), // empty line is a stop
+            ("foo bar\n  baz\n\nqux", 14, 1, 15), // off the empty line -> `qux`
+            ("foo bar\n  baz\n\nqux", 4, 3, 15),  // count composes across both
+        ];
+        for (sample, cursor, count, expected) in w {
+            let range =
+                move_next_word_start_vim(Rope::from(sample).slice(..), Range::point(cursor), count);
+            assert_eq!(
+                range.head, expected,
+                "w case failed: [{:?}] cursor={} count={}",
+                sample, cursor, count
+            );
+        }
+
+        let b = [
+            ("foo\n\tbar", 5, 1, 0),  // from `bar` back over the newline -> `foo`
+            ("foo\n\tbar", 7, 1, 5),  // inside `bar` -> its own start
+            ("foo\n    bar", 8, 1, 0), // space indent -> `foo`
+            ("foo bar\n  baz\n\nqux", 10, 1, 4), // `baz` -> `bar`
+            ("foo bar\n  baz\n\nqux", 15, 1, 14), // `qux` -> the empty line
+            ("foo bar\n  baz\n\nqux", 14, 1, 10), // empty line -> `baz`
+            ("foo bar\n  baz\n\nqux", 15, 3, 4), // count composes: empty line, `baz`, `bar`
+            ("foo bar", 0, 1, 0),                // start of buffer: stay put
+        ];
+        for (sample, cursor, count, expected) in b {
+            let range =
+                move_prev_word_start_vim(Rope::from(sample).slice(..), Range::point(cursor), count);
+            assert_eq!(
+                range.head, expected,
+                "b case failed: [{:?}] cursor={} count={}",
+                sample, cursor, count
+            );
+        }
+
+        // `B`: punctuation joins the token, so `.foo` is one WORD.
+        // `a.b\n\t.foo bar`: a0 .1 b2 \n3 \t4 .5 f6 o7 o8 ' '9 b10 a11 r12
+        let big = [
+            ("a.b\n\t.foo bar", 10, 1, 5), // `bar` -> `.foo`, not the `\t`
+            ("a.b\n\t.foo bar", 5, 1, 0),  // `.foo` -> `a.b` on the line before
+        ];
+        for (sample, cursor, count, expected) in big {
+            let range = move_prev_long_word_start_vim(
+                Rope::from(sample).slice(..),
+                Range::point(cursor),
+                count,
+            );
+            assert_eq!(
+                range.head, expected,
+                "B case failed: [{:?}] cursor={} count={}",
                 sample, cursor, count
             );
         }

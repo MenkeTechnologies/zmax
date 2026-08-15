@@ -3161,9 +3161,10 @@ fn shift_right_key(cx: &mut Context) {
     keymodel_startsel(cx, extend_char_right, subword_w);
 }
 
-/// vim `<S-Left>`: select a character left, or the default word-backward move.
+/// vim `<S-Left>`: select a character left, or the default word-backward move
+/// (`b`, matching `<S-Right>`'s `w`).
 fn shift_left_key(cx: &mut Context) {
-    keymodel_startsel(cx, extend_char_left, move_prev_word_start);
+    keymodel_startsel(cx, extend_char_left, subword_b);
 }
 
 /// vim `<S-Down>`: select a line down, or the default page down (`CTRL-F`).
@@ -6116,7 +6117,7 @@ fn vim_move_next_word_start(cx: &mut Context) {
 }
 
 fn vim_move_prev_word_start(cx: &mut Context) {
-    move_word_vim_impl(cx, movement::move_prev_word_start, false)
+    move_word_vim_impl(cx, movement::move_prev_word_start_vim, false)
 }
 
 fn vim_move_next_word_end(cx: &mut Context) {
@@ -6132,7 +6133,7 @@ fn vim_move_next_long_word_start(cx: &mut Context) {
 }
 
 fn vim_move_prev_long_word_start(cx: &mut Context) {
-    move_word_vim_impl(cx, movement::move_prev_long_word_start, false)
+    move_word_vim_impl(cx, movement::move_prev_long_word_start_vim, false)
 }
 
 fn vim_move_next_long_word_end(cx: &mut Context) {
@@ -50788,17 +50789,43 @@ fn foldmethod_ranges(
 /// `zf` or set a 'foldmethod'. That is vim's behaviour: `:set foldmethod=indent`
 /// (or `syntax`) is what turns folding on for a buffer.
 fn ensure_folds(cx: &mut Context) {
-    {
-        let (_view, doc) = current!(cx.editor);
-        if !doc.folds().is_empty() {
-            return;
-        }
+    let doc_id = doc!(cx.editor).id();
+    materialize_folds(cx.editor, doc_id);
+}
+
+/// Build `doc_id`'s folds from the current 'foldmethod' if it has none yet — the
+/// doc-id form of [`ensure_folds`], usable outside a command's `Context`.
+///
+/// vim evaluates 'foldmethod' when a buffer is *loaded*, so its fold column is
+/// drawn from the first redraw. Here folds were only ever materialised by a `z`
+/// command or by `:set foldmethod=`/`foldlevel=`, all of which act on the current
+/// document, so every other buffer kept an empty fold set and rendered a blank
+/// 'foldcolumn' until you folded in it. [`register_fold_hooks`] closes that by
+/// running this on `DocumentDidOpen`.
+pub(crate) fn materialize_folds(editor: &mut Editor, doc_id: DocumentId) {
+    let method = typed::vim_opt_str("foldmethod").unwrap_or_else(|| "manual".to_string());
+    materialize_folds_with(editor, doc_id, &method);
+}
+
+/// [`materialize_folds`] for a 'foldmethod' the caller already knows — used by
+/// `:set foldmethod=` so it never depends on when the option store is written.
+fn materialize_folds_with(editor: &mut Editor, doc_id: DocumentId, method: &str) {
+    // vim's default: `manual` defines no folds until `zf`, so skip the scan.
+    if method == "manual" {
+        return;
     }
-    let ranges = computed_fold_ranges(cx);
+    let loader = editor.syn_loader.load_full();
+    let Some(doc) = editor.document_mut(doc_id) else {
+        return;
+    };
+    // Never clobber folds the buffer already has (hand-made `zf` ones included).
+    if !doc.folds().is_empty() {
+        return;
+    }
+    let ranges = foldmethod_ranges(doc, &loader, method);
     if ranges.is_empty() {
         return;
     }
-    let (_view, doc) = current!(cx.editor);
     let last = doc.text().len_lines().saturating_sub(1);
     let folds = doc.folds_mut();
     for (start, end) in ranges {
@@ -50806,6 +50833,20 @@ fn ensure_folds(cx: &mut Context) {
     }
     folds.clamp(last);
     apply_fold_start_level(folds);
+}
+
+/// Compute a buffer's folds as soon as it is opened, so its 'foldcolumn' is
+/// populated on the first redraw instead of after the first fold command.
+///
+/// Registered after the modeline hook so a `vim: fdm=marker` line in the file is
+/// already in effect when the folds are built.
+pub fn register_fold_hooks() {
+    use zmax_event::register_hook;
+    use zmax_view::events::DocumentDidOpen;
+    register_hook!(move |event: &mut DocumentDidOpen<'_>| {
+        materialize_folds(event.editor, event.doc);
+        Ok(())
+    });
 }
 
 /// vim `'foldlevelstart'` / `'foldlevel'`: the level a buffer's folds open at.
@@ -50876,6 +50917,26 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
     // 'foldlevel' half, so with the default foldlevelstart=-1 the folds stayed
     // as `create` left them (closed) whatever 'foldlevel' said.
     apply_fold_start_level(folds);
+
+    // Every *other* open buffer gets the same treatment if it has no folds yet.
+    // 'foldmethod' is one global option here, and zmax opens the files named on
+    // the command line *before* it runs the init scripts, so a `:set
+    // foldmethod=…` in a vimrc reaches this with every argv buffer already
+    // loaded. Rebuilding only the current one left all the others with an empty
+    // fold set — and so a blank 'foldcolumn' — until a `z` command happened to
+    // run `ensure_folds` in them. Buffers opened after this point are covered by
+    // the `DocumentDidOpen` hook instead.
+    let current = doc!(cx.editor).id();
+    let others: Vec<DocumentId> = cx
+        .editor
+        .documents()
+        .map(|d| d.id())
+        .filter(|id| *id != current)
+        .collect();
+    for id in others {
+        materialize_folds_with(cx.editor, id, method);
+    }
+
     cx.editor
         .set_status(format!("foldmethod={method}: {count} fold(s)"));
 }
@@ -53303,7 +53364,7 @@ fn toggle_auto_fill(cx: &mut Context) {
 // and behavior is identical. This keeps the core motion fns untouched.
 fn subword_w(cx: &mut Context) {
     if cx.editor.superword {
-        move_word_vim_impl(cx, movement::move_next_long_word_start, false)
+        move_word_vim_impl(cx, movement::move_next_long_word_start_vim, false)
     } else if cx.editor.subword {
         // vim-faithful landing (ON the next sub-word start), like vim_move_*.
         move_word_vim_impl(cx, movement::move_next_sub_word_start, false)
@@ -53313,7 +53374,7 @@ fn subword_w(cx: &mut Context) {
 }
 fn subword_b(cx: &mut Context) {
     if cx.editor.superword {
-        move_word_vim_impl(cx, movement::move_prev_long_word_start, false)
+        move_word_vim_impl(cx, movement::move_prev_long_word_start_vim, false)
     } else if cx.editor.subword {
         move_word_vim_impl(cx, movement::move_prev_sub_word_start, false)
     } else {

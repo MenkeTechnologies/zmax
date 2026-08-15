@@ -77,6 +77,9 @@ pub fn setup(config: Arc<ArcSwap<Config>>) -> Handlers {
     workspace_trust::register_hooks(&handlers);
     recent_files::register_hooks(&handlers);
     crate::vim_modeline::register_hooks();
+    // After the modeline hook: a `vim: fdm=marker` line must be in effect before
+    // the buffer's folds are built.
+    crate::commands::register_fold_hooks();
     crate::vim_conceal::register_hooks();
     crate::vim_swap::register_hooks(&editor_config);
     closed_files::register_hooks(&handlers);
