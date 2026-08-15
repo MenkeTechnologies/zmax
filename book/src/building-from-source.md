@@ -19,6 +19,11 @@ Linux and macOS, or `%userprofile%\src\` on Windows.
 - The [Git version control system](https://git-scm.com/)
 - A C++14 compatible compiler to build the tree-sitter grammars, for example GCC or Clang
 
+Grammars that ship only `src/grammar.json` — some upstreams gitignore the
+generated parser and expect `tree-sitter generate` to run first — have their
+`src/parser.c` generated during the build from that JSON. Neither the
+`tree-sitter` CLI nor a JavaScript runtime is needed.
+
 If you are using the `musl-libc` standard library instead of `glibc` the following environment variable must be set during the build to ensure tree-sitter grammars can be loaded correctly:
 
 ```sh

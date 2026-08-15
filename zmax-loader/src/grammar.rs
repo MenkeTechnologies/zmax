@@ -194,6 +194,15 @@ pub fn build_grammars(target: Option<String>, strict: bool) -> Result<()> {
 
     println!("Building {} grammars", grammars.len());
 
+    // A worker thread that panics never sends a result, so its grammar used to
+    // drop out of the summary entirely: the counts came up one short and the
+    // build reported success while a grammar had blown up mid-way. Keep the
+    // requested ids so those can be reported as the failures they are.
+    let requested: HashSet<String> = grammars
+        .iter()
+        .map(|grammar| grammar.grammar_id.clone())
+        .collect();
+
     let counter = Arc::clone(&counter);
     let results = run_parallel(grammars, move |grammar| {
         let current = counter.fetch_add(1, Ordering::Relaxed) + 1;
@@ -208,13 +217,26 @@ pub fn build_grammars(target: Option<String>, strict: bool) -> Result<()> {
     let mut errors = Vec::new();
     let mut already_built = 0;
     let mut built = Vec::new();
+    let mut reported = HashSet::new();
 
     for (grammar_id, res) in results {
+        reported.insert(grammar_id.clone());
         match res {
             Ok(BuildStatus::AlreadyBuilt) => already_built += 1,
             Ok(BuildStatus::Built) => built.push(grammar_id),
             Err(e) => errors.push((grammar_id, e)),
         }
+    }
+
+    // Grammars whose worker never reported: the job panicked (the panic message
+    // is on stderr above). Counting them as failures keeps the summary honest.
+    let mut panicked: Vec<&String> = requested.difference(&reported).collect();
+    panicked.sort_unstable();
+    for grammar_id in panicked {
+        errors.push((
+            grammar_id.clone(),
+            anyhow!("build panicked, see the panic message above"),
+        ));
     }
 
     built.sort_unstable();
@@ -538,7 +560,94 @@ fn build_grammar(grammar: GrammarConfiguration, target: Option<&str>) -> Result<
     }
     .join("src");
 
+    generate_parser_if_missing(&path)
+        .with_context(|| format!("Failed to generate a parser in {}", path.display()))?;
+
     build_tree_sitter_library(&path, grammar, target)
+}
+
+/// Write `src/parser.c` (and the headers it includes) when the grammar ships
+/// only `src/grammar.json`.
+///
+/// Not every grammar checks its generated parser in — upstreams that gitignore
+/// `src/*` expect `tree-sitter generate` to run before the build (the raku
+/// grammar, a fork of tree-sitter-perl, is one). The compile step feeds
+/// `parser.c` straight to the C compiler, so those grammars failed with
+/// `clang++: no such file or directory: …/src/parser.c`.
+///
+/// The grammar's *dumped JSON* is what gets read here, so this needs neither the
+/// `tree-sitter` CLI nor a JS runtime to evaluate `grammar.js`. A grammar that
+/// ships `parser.c` never reaches the generator.
+fn generate_parser_if_missing(src_path: &Path) -> Result<()> {
+    let parser_path = src_path.join("parser.c");
+    if parser_path.exists() {
+        return Ok(());
+    }
+    let grammar_json_path = src_path.join("grammar.json");
+    if !grammar_json_path.exists() {
+        // Nothing to generate from — let the compile step report the missing
+        // parser, which is the more useful error for a broken checkout.
+        return Ok(());
+    }
+
+    let grammar_json = fs::read_to_string(&grammar_json_path)
+        .with_context(|| format!("Failed to read {}", grammar_json_path.display()))?;
+    let (_language_name, parser_c) = tree_sitter_generate::generate_parser_for_grammar(
+        &grammar_json,
+        Some(grammar_semantic_version(src_path)),
+    )
+    .map_err(|err| anyhow!("{err}"))?;
+    fs::write(&parser_path, parser_c)
+        .with_context(|| format!("Failed to write {}", parser_path.display()))?;
+
+    // `tree-sitter generate` also drops its runtime headers next to the parser;
+    // a grammar that never generates locally can be missing them (raku ships
+    // only `alloc.h`, while its scanner includes `array.h` and `parser.h`).
+    // Existing headers are left alone — a grammar may ship a patched copy.
+    let header_dir = src_path.join("tree_sitter");
+    fs::create_dir_all(&header_dir)
+        .with_context(|| format!("Failed to create {}", header_dir.display()))?;
+    for (name, contents) in [
+        ("parser.h", tree_sitter_generate::PARSER_HEADER),
+        ("array.h", tree_sitter_generate::ARRAY_HEADER),
+        ("alloc.h", tree_sitter_generate::ALLOC_HEADER),
+    ] {
+        let header_path = header_dir.join(name);
+        if !header_path.exists() {
+            fs::write(&header_path, contents)
+                .with_context(|| format!("Failed to write {}", header_path.display()))?;
+        }
+    }
+    Ok(())
+}
+
+/// The grammar's `metadata.version` from its `tree-sitter.json`, which the
+/// generator embeds in the parser. ABI 15 requires one — without it the
+/// generator panics with "Metadata is required to generate ABI version 15" —
+/// and the `tree-sitter` CLI reads it from exactly this file. Grammars that
+/// predate `tree-sitter.json` get `0.0.0`; the value is metadata only, read back
+/// through `ts_language_metadata`, and never affects parsing.
+fn grammar_semantic_version(src_path: &Path) -> (u8, u8, u8) {
+    let config_path = src_path
+        .parent()
+        .unwrap_or(src_path)
+        .join("tree-sitter.json");
+    let parsed = fs::read_to_string(config_path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .and_then(|json| json["metadata"]["version"].as_str().map(str::to_owned));
+
+    let Some(version) = parsed else {
+        return (0, 0, 0);
+    };
+    let mut parts = version
+        .split('.')
+        .map(|part| part.trim().parse::<u8>().unwrap_or(0));
+    (
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+    )
 }
 
 fn build_tree_sitter_library(
@@ -754,4 +863,86 @@ fn mtime(path: &Path) -> Result<SystemTime> {
 pub fn load_runtime_file(language: &str, filename: &str) -> Result<String, std::io::Error> {
     let path = crate::runtime_file(PathBuf::new().join("queries").join(language).join(filename));
     std::fs::read_to_string(path)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    /// A grammar with one rule, enough to drive the generator end to end.
+    const MINIMAL_GRAMMAR_JSON: &str = r#"{
+        "name": "zmaxtest",
+        "rules": { "source_file": { "type": "STRING", "value": "a" } }
+    }"#;
+
+    fn grammar_dir(version: Option<&str>) -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("src")).unwrap();
+        if let Some(version) = version {
+            fs::write(
+                dir.path().join("tree-sitter.json"),
+                format!(r#"{{ "metadata": {{ "version": "{version}" }} }}"#),
+            )
+            .unwrap();
+        }
+        dir
+    }
+
+    #[test]
+    fn semantic_version_comes_from_tree_sitter_json() {
+        let dir = grammar_dir(Some("1.2.3"));
+        assert_eq!(grammar_semantic_version(&dir.path().join("src")), (1, 2, 3));
+
+        // Short and unparseable values degrade to zeros rather than failing the
+        // build: the version is metadata, not something parsing depends on.
+        let dir = grammar_dir(Some("2"));
+        assert_eq!(grammar_semantic_version(&dir.path().join("src")), (2, 0, 0));
+        let dir = grammar_dir(Some("not.a.version"));
+        assert_eq!(grammar_semantic_version(&dir.path().join("src")), (0, 0, 0));
+
+        // No `tree-sitter.json` at all (grammars that predate it).
+        let dir = grammar_dir(None);
+        assert_eq!(grammar_semantic_version(&dir.path().join("src")), (0, 0, 0));
+    }
+
+    /// The generator refuses to emit ABI 15 without a version — it panics with
+    /// "Metadata is required to generate ABI version 15" — so this also pins
+    /// that `grammar_semantic_version` is actually being handed to it.
+    #[test]
+    fn parser_is_generated_from_grammar_json() {
+        let dir = grammar_dir(Some("1.0.0"));
+        let src = dir.path().join("src");
+        fs::write(src.join("grammar.json"), MINIMAL_GRAMMAR_JSON).unwrap();
+
+        generate_parser_if_missing(&src).unwrap();
+
+        let parser = fs::read_to_string(src.join("parser.c")).unwrap();
+        // tree-house loads ABI 13..=15 (`MIN_COMPATIBLE_ABI_VERSION` /
+        // `ABI_VERSION` in tree-house-bindings' `grammar.rs`), and the generator
+        // emits its own `ABI_VERSION_MAX`. Pin the value so a generator bump to
+        // ABI 16 fails here instead of at grammar-load time.
+        assert!(
+            parser.contains("#define LANGUAGE_VERSION 15"),
+            "generated parser must declare an ABI tree-house accepts (13..=15)"
+        );
+        // The headers the generated parser and a scanner include.
+        assert!(src.join("tree_sitter/parser.h").exists());
+        assert!(src.join("tree_sitter/array.h").exists());
+        assert!(src.join("tree_sitter/alloc.h").exists());
+    }
+
+    #[test]
+    fn existing_parser_is_never_overwritten() {
+        let dir = grammar_dir(Some("1.0.0"));
+        let src = dir.path().join("src");
+        fs::write(src.join("grammar.json"), MINIMAL_GRAMMAR_JSON).unwrap();
+        fs::write(src.join("parser.c"), "/* checked in by the grammar */").unwrap();
+
+        generate_parser_if_missing(&src).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(src.join("parser.c")).unwrap(),
+            "/* checked in by the grammar */"
+        );
+    }
 }
