@@ -50,11 +50,13 @@ see [The `helix` preset](#the-helix-preset) at the bottom.
   | `zX` | Re-apply `'foldlevel'`, discarding manual opens and closes |
 
   `'foldmethod'` owns the buffer — `manual`, `marker`, `indent`, `expr` and
-  `syntax` are all implemented, with no fallback chain between them. The
-  supporting options work as in Vim: `'foldlevel'`, `'foldlevelstart'`
-  (applied wherever folds are built, not only on `:set foldmethod`),
-  `'foldcolumn'` (the fold column is in the default gutter layout),
-  `'foldenable'`, `'foldexpr'` and `'foldmarker'`.
+  `syntax` are all implemented, with no fallback chain between them. Folds are
+  built when a buffer is loaded, so its fold column is populated from the first
+  redraw; `:set foldmethod=` also builds them for every buffer already open that
+  has none. The supporting options work as in Vim: `'foldlevel'`,
+  `'foldlevelstart'` (applied wherever folds are built, not only on `:set
+  foldmethod`), `'foldcolumn'` (the fold column is in the default gutter
+  layout), `'foldenable'`, `'foldexpr'` and `'foldmarker'`.
 
   These keys are bound in the `vim` and `spacemacs` presets. The default
   (`helix`) preset leaves `z` as a pure view-mode prefix — see
