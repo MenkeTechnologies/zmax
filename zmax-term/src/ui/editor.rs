@@ -3041,85 +3041,250 @@ impl EditorView {
         }
     }
 
+    /// Columns a tabline string occupies once drawn.
+    fn str_width(s: &str) -> u16 {
+        s.width() as u16
+    }
+
+    /// Index of the first buffer the tabline shows, so the current one is always
+    /// on screen: the row scrolls by whole pills, keeping as many buffers to the
+    /// left of the current one as still fit. `widths` are the drawn pill widths,
+    /// `budget` the columns the pills may use.
+    fn bufferline_scroll(widths: &[u16], current: Option<usize>, budget: u16) -> usize {
+        let Some(current) = current else { return 0 };
+        // Walk back from the current buffer while its predecessors fit, then show
+        // from there — the same window airline slides along its tabline.
+        let mut first = current;
+        let mut used = widths.get(current).copied().unwrap_or(0);
+        while first > 0 {
+            let next = used + widths[first - 1];
+            if next > budget {
+                break;
+            }
+            used = next;
+            first -= 1;
+        }
+        first
+    }
+
+    /// vim-airline's tabline: the open buffers as powerline pills across the top
+    /// row, the current one in the accent colour, `…` where the row runs out of
+    /// buffers to show, and airline's right-hand `buffers` label.
+    ///
+    /// The pills carry the same click targets the plain bufferline had — the tab
+    /// body switches, the `×` closes, the trailing `+` opens a scratch buffer —
+    /// so the hit boxes this returns keep their meaning: `(start, end, close_x,
+    /// doc)` with the close zone at `close_x..end`.
     pub fn render_bufferline(
         editor: &Editor,
         viewport: Rect,
         surface: &mut Surface,
     ) -> (BufferlineTabs, (u16, u16)) {
+        const SEP_R: &str = "\u{e0b0}"; //  pill → pill, points right
+        const SEP_R_THIN: &str = "\u{e0b1}"; //  same-coloured neighbours
+        const SEP_L: &str = "\u{e0b2}"; //  fill → label, points left
+        const LABEL: &str = " buffers ";
+
         let scratch = PathBuf::from(SCRATCH_BUFFER_NAME); // default filename to use for scratch buffer
-        surface.clear_with(
-            viewport,
+        let fill_style = editor
+            .theme
+            .try_get("ui.bufferline.background")
+            .unwrap_or_else(|| editor.theme.get("ui.statusline"));
+        surface.clear_with(viewport, fill_style);
+
+        // A pill's separator is drawn in the pill's own background, so a theme
+        // that gives the bufferline a foreground only would draw every arrow
+        // invisibly. Borrow the matching status line background in that case.
+        let with_bg = |style: Style, fallback: &str| match style.bg {
+            Some(_) => style,
+            None => match editor.theme.get(fallback).bg {
+                Some(bg) => style.bg(bg),
+                None => style,
+            },
+        };
+        let active_style = with_bg(
             editor
                 .theme
-                .try_get("ui.bufferline.background")
-                .unwrap_or_else(|| editor.theme.get("ui.statusline")),
+                .try_get("ui.bufferline.active")
+                .unwrap_or_else(|| editor.theme.get("ui.statusline.active")),
+            "ui.statusline.active",
         );
-
-        let bufferline_active = editor
+        let inactive_style = with_bg(
+            editor
+                .theme
+                .try_get("ui.bufferline")
+                .unwrap_or_else(|| editor.theme.get("ui.statusline.inactive")),
+            "ui.statusline.inactive",
+        );
+        // airline paints its tabline label in the mode colour; fall back to the
+        // active pill's colours for themes that don't style the mode.
+        let label_style = editor
             .theme
-            .try_get("ui.bufferline.active")
-            .unwrap_or_else(|| editor.theme.get("ui.statusline.active"));
-
-        let bufferline_inactive = editor
-            .theme
-            .try_get("ui.bufferline")
-            .unwrap_or_else(|| editor.theme.get("ui.statusline.inactive"));
-
-        let mut x = viewport.x;
-        let mut tabs = Vec::new();
-        let current_doc = view!(editor).doc;
-
-        for doc in editor.documents() {
-            let fname = doc
-                .path()
-                .unwrap_or(&scratch)
-                .file_name()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default();
-
-            let style = if current_doc == doc.id() {
-                bufferline_active
+            .try_get("ui.statusline.normal")
+            .unwrap_or(active_style);
+        let fill = fill_style.bg;
+        // airline's two separators: the solid arrow where the colour changes, and
+        // the thin one between neighbours that share a background — a solid arrow
+        // there would be drawn in its own background colour and vanish.
+        let sep = |from: Style, to_bg: Option<Color>| {
+            let from_bg = from.bg.or(fill);
+            let to_bg = to_bg.or(fill);
+            if from_bg == to_bg {
+                let mut style = Style::default();
+                style.fg = from.fg.or(fill);
+                style.bg = from_bg;
+                (SEP_R_THIN, style)
             } else {
-                bufferline_inactive
-            };
+                let mut style = Style::default();
+                style.fg = from_bg;
+                style.bg = to_bg;
+                (SEP_R, style)
+            }
+        };
 
-            let glyph = super::icons::file_icon(fname);
-            let text = format!(
-                " {} {}{} ",
-                glyph,
-                fname,
-                if doc.is_modified() { "[+]" } else { "" }
-            );
-            let used_width = viewport.x.saturating_sub(x);
-            let rem_width = surface.area.width.saturating_sub(used_width);
+        let current_doc = view!(editor).doc;
+        let entries: Vec<(zmax_view::DocumentId, String)> = editor
+            .documents()
+            .map(|doc| {
+                let fname = doc
+                    .path()
+                    .unwrap_or(&scratch)
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_str()
+                    .unwrap_or_default();
+                (
+                    doc.id(),
+                    format!(
+                        " {} {}{} ",
+                        super::icons::file_icon(fname),
+                        fname,
+                        if doc.is_modified() { "[+]" } else { "" }
+                    ),
+                )
+            })
+            .collect();
+        let current = entries.iter().position(|(id, _)| *id == current_doc);
 
-            let start = x;
-            // tab label
-            let after = surface
-                .set_stringn(x, viewport.y, &text, rem_width as usize, style)
-                .0;
-            // clickable close button
-            let close_x = after;
-            let rem2 = (surface.area.right()).saturating_sub(close_x) as usize;
+        // The label sits at the right edge and the pills get what is left of the
+        // row. Everything below measures against this budget, so a long list
+        // scrolls instead of running under the label.
+        let right_edge = viewport.right();
+        let label_width = Self::str_width(LABEL) + 1; // + its  separator
+        let pills_end = right_edge.saturating_sub(label_width).max(viewport.x);
+
+        // Pill widths: the label, the `×` close cell, and the  that follows.
+        let widths: Vec<u16> = entries
+            .iter()
+            .map(|(_, text)| Self::str_width(text) + Self::str_width("× ") + 1)
+            .collect();
+        let first = Self::bufferline_scroll(&widths, current, pills_end.saturating_sub(viewport.x));
+
+        let mut tabs = Vec::new();
+        let mut x = viewport.x;
+        // `‹` where buffers are scrolled off the left, so the row never lies
+        // about being the whole list.
+        if first > 0 && x < pills_end {
             x = surface
-                .set_stringn(close_x, viewport.y, "× ", rem2, style)
+                .set_stringn(x, viewport.y, "‹", (pills_end - x) as usize, inactive_style)
                 .0;
-            tabs.push((start, x, close_x, doc.id()));
-
-            if x >= surface.area.right() {
+        }
+        let mut overflow = false;
+        for (i, (doc_id, text)) in entries.iter().enumerate().skip(first) {
+            if x + widths[i] > pills_end {
+                overflow = true;
                 break;
             }
+            let style = if *doc_id == current_doc {
+                active_style
+            } else {
+                inactive_style
+            };
+            let start = x;
+            let close_x = surface
+                .set_stringn(x, viewport.y, text, (pills_end - x) as usize, style)
+                .0;
+            x = surface
+                .set_stringn(
+                    close_x,
+                    viewport.y,
+                    "× ",
+                    (pills_end - close_x) as usize,
+                    style,
+                )
+                .0;
+            tabs.push((start, x, close_x, *doc_id));
+            // The separator takes the next pill's background so the two pills
+            // meet in one solid arrow, exactly as the powerline status bar joins
+            // its segments.
+            // At the end of the row (or where the next pill no longer fits) it
+            // fades into the bar's own fill instead.
+            let next_fits = widths.get(i + 1).is_some_and(|w| x + 1 + w <= pills_end);
+            let next_bg = match entries.get(i + 1) {
+                Some((id, _)) if next_fits => {
+                    if *id == current_doc {
+                        active_style.bg
+                    } else {
+                        inactive_style.bg
+                    }
+                }
+                _ => fill,
+            };
+            let (glyph, sep_style) = sep(style, next_bg);
+            x = surface
+                .set_stringn(
+                    x,
+                    viewport.y,
+                    glyph,
+                    (pills_end.saturating_sub(x)) as usize,
+                    sep_style,
+                )
+                .0;
         }
-        // trailing "+" new-buffer button
-        let new_start = x;
-        let new_style = editor
-            .theme
-            .try_get("ui.bufferline")
-            .unwrap_or_else(|| editor.theme.get("ui.statusline.inactive"));
-        let rem = surface.area.right().saturating_sub(x) as usize;
-        x = surface.set_stringn(x, viewport.y, " + ", rem, new_style).0;
-        (tabs, (new_start, x))
+        if overflow && x < pills_end {
+            x = surface
+                .set_stringn(x, viewport.y, "…", (pills_end - x) as usize, inactive_style)
+                .0;
+        }
+
+        // Trailing "+" new-buffer button, only when the row still has room for it.
+        let new_btn = if x + Self::str_width(" + ") <= pills_end {
+            let start = x;
+            x = surface
+                .set_stringn(x, viewport.y, " + ", (pills_end - x) as usize, inactive_style)
+                .0;
+            (start, x)
+        } else {
+            (0, 0)
+        };
+
+        // airline's right-hand label, drawn last so it always owns its columns.
+        // Its separator points the other way: it comes out of the bar's fill and
+        // into the label, so it wears the label's background as its foreground.
+        let label_x = right_edge.saturating_sub(label_width);
+        if label_x >= viewport.x {
+            let mut label_sep = Style::default();
+            label_sep.fg = label_style.bg.or(fill);
+            label_sep.bg = fill;
+            let after = surface
+                .set_stringn(
+                    label_x,
+                    viewport.y,
+                    SEP_L,
+                    (right_edge - label_x) as usize,
+                    label_sep,
+                )
+                .0;
+            surface.set_stringn(
+                after,
+                viewport.y,
+                LABEL,
+                (right_edge - after) as usize,
+                label_style,
+            );
+        }
+
+        (tabs, new_btn)
     }
 
     pub fn render_gutter<'d>(
@@ -6189,6 +6354,28 @@ mod tests {
         // A prefix of a name must not match it (`eo` is not `eob`).
         assert_eq!(parse_fillchar(value, "eo"), None);
         assert_eq!(parse_fillchar("", "vert"), None);
+    }
+
+    /// The tabline can only draw the buffers that fit, so the window it shows has
+    /// to contain the current one — otherwise opening the tenth buffer leaves the
+    /// bar pointing at the first nine and no way to see where you are.
+    #[test]
+    fn bufferline_scrolls_to_keep_the_current_buffer_visible() {
+        let widths = [10u16; 8];
+        // Everything fits: no scroll, whatever is current.
+        assert_eq!(EditorView::bufferline_scroll(&widths, Some(7), 80), 0);
+        // Room for three pills: the current one is the last shown, with as many
+        // of its predecessors as still fit.
+        assert_eq!(EditorView::bufferline_scroll(&widths, Some(7), 30), 5);
+        assert_eq!(EditorView::bufferline_scroll(&widths, Some(2), 30), 0);
+        // A budget too small even for one pill still starts at the current one,
+        // so the row degrades to "nothing fits" rather than showing the wrong end.
+        assert_eq!(EditorView::bufferline_scroll(&widths, Some(4), 5), 4);
+        // No current buffer (no open document) — start at the beginning.
+        assert_eq!(EditorView::bufferline_scroll(&widths, None, 30), 0);
+        // Uneven pills: a long name pushes fewer neighbours into view.
+        let mixed = [8u16, 40, 8, 8];
+        assert_eq!(EditorView::bufferline_scroll(&mixed, Some(3), 30), 2);
     }
 
     #[test]

@@ -34717,8 +34717,15 @@ fn undo(cx: &mut Context) {
     }
 }
 
-/// Put the cursor on the first non-blank of the line the last change started on
-/// (the `[` mark), which is where vim leaves it after an undo or redo.
+/// Put the cursor where vim leaves it after an undo: on the column the cursor
+/// had before the change when the undo lands on that same line, and on the first
+/// non-blank of the first restored line otherwise.
+///
+/// vim `u_undoredo` (undo.c): `curwin->w_cursor.col = curhead->uh_cursor.col` when
+/// `curhead->uh_cursor.lnum == curwin->w_cursor.lnum`, else `beginline(BL_SOL |
+/// BL_FIX)`. `uh_cursor` is the cursor saved when the change started, which for an
+/// operator is the start of the operated text — so `ci"` + `u` puts the cursor on
+/// the first character of the restored string, not on the start of the line.
 fn vim_undo_cursor(view: &View, doc: &mut Document) {
     // `Document::mark` clamps to the text, which matters here: the change that is
     // being reverted may have been longer than what is left.
@@ -34728,11 +34735,31 @@ fn vim_undo_cursor(view: &View, doc: &mut Document) {
     let text = doc.text().slice(..);
     let line = text.char_to_line(start);
     let line_start = text.line_to_char(line);
-    let pos = text
+    let first_non_blank = text
         .line(line)
         .first_non_whitespace_char()
         .map(|p| p + line_start)
         .unwrap_or(line_start);
+
+    // The inverse transaction carries the selection from before the change (this
+    // is vim's `uh_cursor`) and `apply_impl` has already restored it, so the
+    // selection now names where the change started.
+    let saved = doc.selection(view.id).primary();
+    // A linewise operator (`dd`, `>>`, `S`) leaves a whole-line range behind, and
+    // vim never saves a cursor past the indent for one — `ddu` lands on the first
+    // non-blank, not in the middle of the line, and never on the line ending
+    // where the raw inverse transaction would put it.
+    let next_line_start = if line + 1 < text.len_lines() {
+        text.line_to_char(line + 1)
+    } else {
+        text.len_chars()
+    };
+    let linewise = saved.from() == line_start && saved.to() >= next_line_start;
+    let pos = if text.char_to_line(saved.from()) == line && !linewise {
+        saved.from()
+    } else {
+        first_non_blank
+    };
     doc.set_selection(view.id, Selection::point(pos));
 }
 

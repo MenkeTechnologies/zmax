@@ -55,7 +55,7 @@
 | `transparent-background` | Don't paint the `ui.background` fill (editor surface, gutter/sign column, and the IDE file-tree sidebar), letting the terminal's own (e.g. translucent/blurred) background show through. Themed chrome — statusline, breadcrumbs, panel status bars — keeps its own colors | `false` |
 | `undercurl` | Whether to override automatic detection of terminal undercurl support in the event of a false negative | `false` |
 | `rulers` | List of column positions at which to display the rulers. Can be overridden by language specific `rulers` in `languages.toml` file | `[]` |
-| `bufferline` | Renders a line at the top of the editor displaying open buffers. Can be `always`, `never` or `multiple` (only shown if more than one buffer is in use) | `"never"` |
+| `bufferline` | Renders a vim-airline style tab bar at the top of the editor listing the open buffers. Can be `always`, `never` or `multiple` (only shown if more than one buffer is in use). Same setting as vim's `:set showtabline=2\|0\|1` | `"multiple"` |
 | `color-modes` | Whether to color the mode indicator with different colors depending on the mode itself | `false` |
 | `text-width` | Maximum line length. Used for the `:reflow` command and soft-wrapping if `soft-wrap.wrap-at-text-width` is set | `80` |
 | `workspace-lsp-roots` | Directories relative to the workspace root that are treated as LSP roots. Should only be set in `.zmax/config.toml` | `[]` |

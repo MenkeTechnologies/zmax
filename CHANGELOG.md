@@ -417,6 +417,15 @@ Commands:
 
 Usability improvements:
 
+* **The tab bar is on whenever more than one buffer is open**, and it is now
+  vim-airline's tabline: the buffers as powerline pills, the current one in the
+  accent colour, a `[+]` on the modified ones, `‹` and `…` where the row runs out
+  of buffers to show, and airline's right-hand `buffers` label. The row scrolls
+  by whole pills so the buffer you are in is always on it. `bufferline` defaults
+  to `"multiple"` (it was `"never"`), which is vim's own `showtabline=1`; turn it
+  off with `:set showtabline=0`, `[editor] bufferline = "never"`, or the
+  `tab-bar-mode` / `global-tab-line-mode` toggles. Clicking still switches, `×`
+  still closes and `+` still opens a scratch buffer.
 * **Help ▸ Topics now indexes the command surface**: 260 topics, up from 19.
   Every typable command a topic names is checked against the registry by a test,
   and every bare `snake_case` word against the static-command list, so a topic
@@ -456,6 +465,21 @@ Usability improvements:
 
 Fixes:
 
+* `u` after a change operator now leaves the cursor on the first character of
+  the restored text instead of at the start of the line: `ci"` then `u` puts it
+  back on the `b` of `"bar"`, where vim puts it. Vim restores the column the
+  cursor had when the change started (`u_undoredo`: `curwin->w_cursor.col =
+  curhead->uh_cursor.col`) and only falls back to the line's first non-blank
+  when the undo lands on a different line; zmax took that fallback for every
+  undo. The linewise landing is unchanged — `dd` then `u` still goes to the
+  first non-blank, which is what vim's linewise operators save.
+* The marks gutter showed `` ` `` instead of `'` on the last-jump line, at
+  random. A jump sets both marks to one position and an edit leaves `.`, `[` and
+  `]` on one line, but only one of them fits the single gutter column and the
+  winner was decided by hash order, so it could differ between redraws. Marks
+  now rank: hand-set letters, then the numbered file marks, then `'`, then the
+  automatic edit marks, and last the sentence/paragraph bounds that move with the
+  cursor.
 * Committing in a submodule from another terminal left every open buffer of
   that submodule showing its pre-commit gutter hunks. A submodule keeps no
   `.git` directory — its refs live in `<superproject>/.git/modules/<path>/` — so

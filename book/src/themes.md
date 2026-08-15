@@ -341,12 +341,12 @@ These scopes are used for theming the editor interface:
 | `ui.linenr.selected`              | Line number for the line the cursor is on                                                      |
 | `ui.statusline`                   | Statusline                                                                                     |
 | `ui.statusline.inactive`          | Statusline (unfocused document)                                                                |
-| `ui.statusline.normal`            | Statusline mode during normal mode ([only if `editor.color-modes` is enabled][editor-section]) |
+| `ui.statusline.normal`            | Statusline mode during normal mode ([only if `editor.color-modes` is enabled][editor-section]); also the buffer line's right-hand `buffers` label |
 | `ui.statusline.insert`            | Statusline mode during insert mode ([only if `editor.color-modes` is enabled][editor-section]) |
 | `ui.statusline.select`            | Statusline mode during select mode ([only if `editor.color-modes` is enabled][editor-section]) |
 | `ui.statusline.separator`         | Separator character in statusline                                                              |
-| `ui.bufferline`                   | Style for the buffer line                                                                      |
-| `ui.bufferline.active`            | Style for the active buffer in buffer line                                                     |
+| `ui.bufferline`                   | Style for the inactive buffers in the buffer line (falls back to `ui.statusline.inactive` for the background its powerline separator is drawn in) |
+| `ui.bufferline.active`            | Style for the active buffer in buffer line (background falls back to `ui.statusline.active`)   |
 | `ui.bufferline.background`        | Style for bufferline background                                                                |
 | `ui.popup`                        | Documentation popups (e.g. hover docs)                                                         |
 | `ui.popup.info`                   | Prompt for multiple key options                                                                |
