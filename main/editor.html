@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-9e1a15e4.js";
+            window.path_to_searchindex_js = "searchindex-0cfe857b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -245,7 +245,7 @@
 <tr><td><code>transparent-background</code></td><td>Don’t paint the <code>ui.background</code> fill (editor surface, gutter/sign column, and the IDE file-tree sidebar), letting the terminal’s own (e.g. translucent/blurred) background show through. Themed chrome — statusline, breadcrumbs, panel status bars — keeps its own colors</td><td><code>false</code></td></tr>
 <tr><td><code>undercurl</code></td><td>Whether to override automatic detection of terminal undercurl support in the event of a false negative</td><td><code>false</code></td></tr>
 <tr><td><code>rulers</code></td><td>List of column positions at which to display the rulers. Can be overridden by language specific <code>rulers</code> in <code>languages.toml</code> file</td><td><code>[]</code></td></tr>
-<tr><td><code>bufferline</code></td><td>Renders a line at the top of the editor displaying open buffers. Can be <code>always</code>, <code>never</code> or <code>multiple</code> (only shown if more than one buffer is in use)</td><td><code>"never"</code></td></tr>
+<tr><td><code>bufferline</code></td><td>Renders a vim-airline style tab bar at the top of the editor listing the open buffers. Can be <code>always</code>, <code>never</code> or <code>multiple</code> (only shown if more than one buffer is in use). Same setting as vim’s <code>:set showtabline=2|0|1</code></td><td><code>"multiple"</code></td></tr>
 <tr><td><code>color-modes</code></td><td>Whether to color the mode indicator with different colors depending on the mode itself</td><td><code>false</code></td></tr>
 <tr><td><code>text-width</code></td><td>Maximum line length. Used for the <code>:reflow</code> command and soft-wrapping if <code>soft-wrap.wrap-at-text-width</code> is set</td><td><code>80</code></td></tr>
 <tr><td><code>workspace-lsp-roots</code></td><td>Directories relative to the workspace root that are treated as LSP roots. Should only be set in <code>.zmax/config.toml</code></td><td><code>[]</code></td></tr>
