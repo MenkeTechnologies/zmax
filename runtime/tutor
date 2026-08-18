@@ -2780,13 +2780,13 @@ letters! that is not good grammar. you can fix this.
  :hex <path> views a file other than the current buffer, and
  SPC f h opens the picker straight into the hex view.
 
- Tab switches between the hex and the text column, editing
- either one, and C-s writes the bytes back to the file.
+ It opens in nav mode; i or R starts editing, Tab switches
+ between the hex and text columns, and C-s writes the bytes
+ back to the file.
 
  :hexdump is the transform-library cousin: it rewrites the
  selection as a hex dump inside the buffer, which is handy for
  pasting bytes into a bug report.
-
 
 
 

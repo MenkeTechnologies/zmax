@@ -197,7 +197,7 @@ leaving the editor:
   date-aware agenda.
 - **Transform library** — 200+ selection-transform `:` commands: JSON/CSV/TOML
   reshaping, number/stats ops, identifier-case conversion, encoders
-  (Base32/Base64/Caesar/Morse/CRC32), extraction (URLs/emails/numbers),
+  (Base32/Caesar/Morse/CRC32/rot47), extraction (URLs/emails/numbers),
   Markdown/typography, line ops (`:align`/`:reflow`/`:dedup`/`:sort-by-field`),
   and generators (`:uuid`/`:lorem`/`:date`/`:seq`) — each running on the
   selection (or whole buffer). When a transform needs real logic, drop to the
@@ -207,10 +207,11 @@ leaving the editor:
   whole layout persists to appdata.
 - **Integrated terminal** (`:terminal`) — a PTY shell in a pane, with a `C-\`
   window leader for split/focus and click-to-focus across panes.
-- **Comint shell** (`:comint-shell`, emacs `M-x shell`) — a line-oriented
-  subprocess buffer: type a command, `Enter` runs it, output streams into the
-  scrollback; `M-p`/`M-n` walk the input history, `C-c` interrupts, `F12`
-  detaches. The dumb-terminal REPL model behind inferior-lisp / `gud`.
+- **Comint shell** (`comint_shell` from the command palette, emacs `M-x shell`)
+  — a line-oriented subprocess buffer: type a command, `Enter` runs it, output
+  streams into the scrollback; `M-p`/`M-n` walk the input history, `C-c`
+  interrupts, `F12` detaches. The dumb-terminal REPL model behind
+  inferior-lisp / `gud`.
 - **Help browser** (`:help`, `SPC h h`) — searchable across every command, key,
   and topic; `SPC h` describe-* routes symbol lookups through LSP hover.
 - **Start screen** — a startify-style recent-files page (frecency + MRU) shown

@@ -49361,7 +49361,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "hex",
         aliases: &["hexview", "hexedit"],
-        doc: "Open a read-only xxd-style hex viewer of a file's raw bytes (optional path; defaults to the buffer's file).",
+        doc: "Open the xxd-style hex editor on a file's raw bytes (optional path; defaults to the buffer's file). Nav mode; i/R edits, Tab switches column, C-s writes the bytes back.",
         fun: hex,
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
