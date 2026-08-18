@@ -73,11 +73,12 @@ builds by default):
 | Feature     | Default | Effect |
 | ----------- | ------- | ------ |
 | `git`       | yes     | Git integration in the VCS gutter/diff layer (`zmax-vcs/git`). |
-| `scripting` | yes     | The [embedded scripting languages](./scripting.md) and the REPL — elisp, vimscript and awk, plus zsh, stryke, ruby, php, python, node and arb on unix. Pulls in the interpreter crates. |
+| `scripting` | yes     | The [embedded scripting languages](./scripting.md) and the REPL — elisp, vimscript and awk, plus zsh, stryke, ruby, php, python, node, arb, tcl and rlang on unix — twelve in all. Pulls in the interpreter crates. |
 | `unicode-lines` | no  | Treat Unicode line separators (e.g. `U+2028`) as line breaks. |
 
 To build **without the embedded scripting languages** — dropping every
-interpreter crate (`elisprs`, `vimlrs`, `awkrs`, `zshrs`, `strykelang`) from the
+interpreter crate (`elisprs`, `vimlrs`, `awkrs`, `zshrs`, `strykelang`, `rubylang`,
+`phplang`, `pythonrs`, `nodejs`, `arb`, `tclrs`, `rlang`) from the
 dependency graph for a leaner, faster build — disable default features and re-add
 just the ones you want:
 
