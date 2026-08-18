@@ -368,6 +368,15 @@ pub struct EditorView {
     /// The window whose vertical scroll bar `mouse-1` is currently dragging.
     /// Emacs scrolls the window continuously while the button is held.
     scroll_bar_drag: Option<zmax_view::ViewId>,
+    /// vim 'mousetime': where and when the last left button press landed, so the
+    /// next one can be recognized as the second/third/fourth click of a multi
+    /// click (`<2-LeftMouse>`, `<3-LeftMouse>`, `<4-LeftMouse>`).
+    /// `(column, row, when)`.
+    last_click: Option<(u16, u16, std::time::Instant)>,
+    /// How many clicks in a row have landed on `last_click`'s cell: 1 for a plain
+    /// click, up to 4. vim never counts past 4 — the fifth click starts over
+    /// (`orig_num_clicks != 4` in its increment condition, src/mouse.c).
+    click_count: u8,
 }
 
 use super::ide::{Ide, IdeAction};
@@ -475,6 +484,8 @@ impl EditorView {
             modifier_bar_hits: Vec::new(),
             modifier_bar_y: 0,
             scroll_bar_drag: None,
+            last_click: None,
+            click_count: 0,
         }
     }
 
@@ -3540,7 +3551,25 @@ impl EditorView {
         // before the keymap is consulted, so a Greek/Cyrillic/Dvorak layout drives
         // every binding — built-in or user. Insert-mode text is left alone (that is
         // what `:lmap` / 'iminsert' are for).
-        let event = crate::commands::typed::langmap_translate(event, mode);
+        //
+        // vim 'langremap' (`lrm`, default off) gates that: "When off, setting
+        // 'langmap' does not apply to characters resulting from a mapping"
+        // (options.txt). vim's gate is `(p_lrm || (!p_lrm && KeyTyped))`
+        // (src/macros.h, `LANGMAP_ADJUST`), i.e. a key only reaches 'langmap' if
+        // the user typed it or the option is on. zmax's "was typed" is "no macro
+        // is replaying": a `:map` rhs key sequence (`MappableCommand::Macro`) and
+        // a `@q` register both feed their keys back through this same handler with
+        // `Editor::macro_replaying` marked for the duration, so that flag is what
+        // separates a typed key from a mapping-produced one. (vim additionally
+        // never langmaps *stuffed* keys — register execution — even under
+        // 'langremap'; both kinds of replay look identical at this boundary, so
+        // `:set langremap` translates both here.)
+        let key_typed = cxt.editor.macro_replaying.is_empty();
+        let event = if key_typed || crate::commands::typed::vim_opt_bool("langremap") {
+            crate::commands::typed::langmap_translate(event, mode)
+        } else {
+            event
+        };
         // Emacs `normal-erase-is-backspace-mode`: with the mode off, <backspace>
         // and <delete> trade places before anything looks them up.
         let event = crate::emacs_modes::erase_translate(event);
@@ -4771,6 +4800,35 @@ impl EditorView {
         })
     }
 
+    /// vim 'mousetime' (`mouset`, default 500): "Defines the maximum time in msec
+    /// between two mouse clicks for the second click to be recognized as a multi
+    /// click" (options.txt). Records this left-button press and returns the click
+    /// count it makes. vim's own condition (src/mouse.c, `orig_num_clicks`) is:
+    /// same button, less than 'mousetime' since the previous press, the previous
+    /// count not already 4, and the same screen row *and* column — anything else
+    /// restarts at 1, and the fifth click in a row is a plain click again.
+    fn count_click(&mut self, column: u16, row: u16) -> u8 {
+        let now = std::time::Instant::now();
+        let mousetime = std::time::Duration::from_millis(
+            crate::commands::typed::vim_opt_num("mousetime")
+                .or_else(|| crate::commands::typed::vim_opt_num("mouset"))
+                .unwrap_or(500) as u64,
+        );
+        self.click_count = match self.last_click {
+            Some((last_column, last_row, when))
+                if last_column == column
+                    && last_row == row
+                    && self.click_count != 4
+                    && now.duration_since(when) < mousetime =>
+            {
+                self.click_count + 1
+            }
+            _ => 1,
+        };
+        self.last_click = Some((column, row, now));
+        self.click_count
+    }
+
     fn handle_mouse_event(
         &mut self,
         event: &MouseEvent,
@@ -4823,6 +4881,10 @@ impl EditorView {
 
         match kind {
             MouseEventKind::Down(MouseButton::Left) => {
+                // vim 'mousetime': how many clicks in a row this press makes. Every
+                // press of the button counts, wherever it landed — a press
+                // somewhere else is what ends a multi click.
+                let clicks = self.count_click(column, row);
                 // emacs's frame bars own their rows: a click on the menu bar drops
                 // that menu down, a click on the tool bar or modifier bar presses
                 // that button.
@@ -4888,6 +4950,75 @@ impl EditorView {
                     // Emacs's mouse commands take the click as their argument
                     // (`(interactive "e")`); this is that argument.
                     let doc_id = doc.id();
+
+                    // vim `<2-LeftMouse>`/`<3-LeftMouse>`/`<4-LeftMouse>`
+                    // (term.txt *double-click*): "For selecting text, extra clicks
+                    // extend the selection: double = word or % match, triple =
+                    // line, quadruple = rectangular block". Only the unmodified
+                    // button multi-clicks — the Ctrl/Shift/Alt clicks below keep
+                    // their own single-click meanings — and the click still places
+                    // the cursor first, exactly as a single click does.
+                    if modifiers.is_empty() && clicks > 1 {
+                        let selected = {
+                            let text = doc.text().slice(..);
+                            if clicks == 2 {
+                                // "A double click on a character that has a match
+                                // selects until that match (like using v%)."
+                                // Anything else selects the word under the click,
+                                // whose bounds are the same word categories `viw`
+                                // uses. (vim additionally turns the selection
+                                // linewise when the match is an #if/#else/#endif
+                                // block; zmax's `%` has no preprocessor matching to
+                                // build that on.)
+                                let matched = doc.syntax().map_or_else(
+                                    || {
+                                        zmax_core::match_brackets::find_matching_bracket_plaintext(
+                                            text, pos,
+                                        )
+                                    },
+                                    |syntax| {
+                                        zmax_core::match_brackets::find_matching_bracket_fuzzy(
+                                            syntax, text, pos,
+                                        )
+                                    },
+                                );
+                                match matched {
+                                    Some(to) => Range::point(pos).put_cursor(text, to, true),
+                                    None => zmax_core::textobject::textobject_word(
+                                        text,
+                                        Range::point(pos),
+                                        zmax_core::textobject::TextObject::Inside,
+                                        1,
+                                        false,
+                                    ),
+                                }
+                            } else {
+                                // The triple/quadruple click only anchors the
+                                // cursor — the whole-line span and the rectangle
+                                // are derived by the Visual sub-mode entered below.
+                                Range::point(pos)
+                            }
+                        };
+                        doc.set_selection(view_id, Selection::single(selected.anchor, selected.head));
+                        // Visual-line and visual-block are mutually exclusive and
+                        // both commands below are toggles, so whatever the previous
+                        // click left has to go first — otherwise a triple click
+                        // after a triple click would *leave* Visual instead of
+                        // re-anchoring it on the new line.
+                        cxt.editor.visual_line = None;
+                        cxt.editor.block = None;
+                        cxt.editor.last_mouse_pos = Some((doc_id, pos));
+                        match clicks {
+                            3 => commands::MappableCommand::visual_line_mode.execute(cxt),
+                            4 => commands::MappableCommand::visual_block_mode.execute(cxt),
+                            _ => commands::MappableCommand::select_mode.execute(cxt),
+                        }
+                        if view_id != prev_view_id {
+                            self.clear_completion(cxt.editor);
+                        }
+                        cxt.editor.ensure_cursor_in_view(view_id);
+                        return EventResult::Consumed(None);
+                    }
 
                     if modifiers == KeyModifiers::CONTROL {
                         editor.last_mouse_pos = Some((doc_id, pos));

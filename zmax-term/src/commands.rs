@@ -651,6 +651,7 @@ impl MappableCommand {
         toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
         toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
+        ediff_backup, "Two-pane ediff of this file against its backup file (emacs ediff-backup, SPC D B)",
         ediff_documentation, "Show the Ediff manual and the ediff sessions this build ships (ediff-documentation, SPC D h)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_directories, "Compare two directories: list same-name files that differ or are unique, open ediff on one (emacs ediff-directories, SPC D d d)",
@@ -800,6 +801,7 @@ impl MappableCommand {
         append_mode, "Append after selection",
         replace_mode, "Enter Replace mode (overtype)",
         virtual_replace_mode, "Enter Virtual Replace mode, overtyping in screen space (vim gR)",
+        virtual_replace_char, "Replace {count} virtual characters in screen space with the next key (vim gr)",
         command_mode, "Enter command mode",
         ex_mode, "Enter Ex mode: type : commands one after another until :visual (vim gQ)",
         file_picker, "Open file picker",
@@ -1794,6 +1796,7 @@ impl MappableCommand {
         fold_close_recursive, "Close fold under cursor and all nested folds (IntelliJ Collapse Recursively)",
         fold_open_all, "Open all folds (zR)",
         fold_close_all, "Close all folds (zM)",
+        fold_reapply_level, "Undo hand-opened and hand-closed folds: re-apply foldlevel (zX)",
         fold_more, "Fold more: close one more level of nested folds (zm)",
         fold_less, "Fold less: open one more level of nested folds (zr)",
         fold_delete, "Delete fold under cursor (zd)",
@@ -1877,6 +1880,7 @@ impl MappableCommand {
         fold_prev, "Move to previous fold (zk)",
         goto_line_last_nonblank, "Goto last non-blank on line (g_)",
         goto_line_middle, "Goto middle of text line (gM)",
+        goto_screen_line_middle, "Goto half a screenwidth right of the screen line's start (gm)",
         goto_byte, "Goto byte {count} in buffer (go)",
         goto_prev_unmatched_paren, "Goto previous unmatched ( ([()",
         goto_prev_unmatched_brace, "Goto previous unmatched { ([{)",
@@ -2323,6 +2327,7 @@ impl MappableCommand {
         complete_thesaurus, "Complete from 'thesaurus' (i_CTRL-X CTRL-T)",
         complete_register_word, "Complete a word from the registers (i_CTRL-X CTRL-R)",
         complete_define, "Complete a defined identifier (i_CTRL-X CTRL-D)",
+        complete_included, "Complete a keyword from this file and the files it includes (i_CTRL-X CTRL-I)",
         complete_user_func, "Complete with 'completefunc' (i_CTRL-X CTRL-U)",
         complete_omni_func, "Complete with 'omnifunc' (i_CTRL-X CTRL-O)",
         operator_func, "Call 'operatorfunc' on the selection (g@)",
@@ -2560,6 +2565,7 @@ impl MappableCommand {
         rgrep, "Recursive grep under a directory, filtered by a file glob (emacs rgrep)",
         lgrep, "Grep the files of one directory, not its subdirectories (emacs lgrep)",
         grep_find, "Recursive grep from the project root (emacs grep-find)",
+        hs_minor_mode, "Toggle Hideshow minor mode, which enables the hideshow commands (emacs hs-minor-mode)",
         hs_hide_level, "Fold every block at a nesting depth you name (emacs hs-hide-level)",
         hs_show_region, "Unfold every fold overlapping the selection (emacs hs-show-region)",
         string_rectangle, "Replace each line's rectangle segment with a string you type (emacs string-rectangle)",
@@ -2715,6 +2721,7 @@ impl MappableCommand {
         delete_frame, "Delete the displayed frame (emacs delete-frame)",
         delete_other_frames, "Delete every frame but this one (emacs delete-other-frames)",
         other_frame, "Display the next frame (emacs other-frame)",
+        previous_frame, "Display the previous frame (spacemacs [t)",
         undelete_frame, "Bring back the most recently deleted frame (emacs undelete-frame)",
         undelete_frame_mode, "Record deleted frames so undelete-frame can bring them back (emacs undelete-frame-mode)",
         select_frame_by_name, "Pick a frame by name and display it (emacs select-frame-by-name)",
@@ -3802,25 +3809,95 @@ fn goto_line_last_nonblank(cx: &mut Context) {
     doc.set_selection(view.id, selection);
 }
 
-// vim `gM`: to the character at the middle of the text line (by length).
-/// vim `gm`: half a SCREEN width from the start of the line — not the middle of
-/// the text — clamped to the line's last character (`:h gm`). Any line shorter
-/// than half the window therefore lands on its final character, which is the
-/// case this used to get wrong: it went to the middle of the text instead.
+/// vim `gM`: "Like `g0`, but to halfway the text of the line" (motion.txt), and
+/// with a count a *percentage* of it: "10gM" is near the start of the line,
+/// "90gM" near the end. vim's `nv_g_cmd` case 'M' measures the line with
+/// `linetabsize()` — display cells, so a tab counts for its stop and a wide
+/// character for two — then `coladvance()`s to `width * count0 / 100` when the
+/// count is in 1..=100 and to `width / 2` otherwise (normal.c).
+///
+/// Not to be confused with `gm`, which measures the *window*, not the text; that
+/// is `goto_screen_line_middle`.
+// `visual_coords_at_pos`/`pos_at_visual_coords` ignore softwrap, which is exactly
+// what `linetabsize()`/`coladvance()` do: `gM` measures the line's text, so a
+// wrapped line is still one line's worth of columns to it.
+#[allow(deprecated)]
 fn goto_line_middle(cx: &mut Context) {
-    let (view, doc) = current!(cx.editor);
-    let half = usize::from(view.inner_width(doc) / 2);
-    let text = doc.text().slice(..);
+    use zmax_core::{pos_at_visual_coords, visual_coords_at_pos, Position};
+
+    let count = cx.count.map(|c| c.get());
     let extend = cx.editor.mode == Mode::Select;
+    let (view, doc) = current!(cx.editor);
+    let tab_width = doc.tab_width();
+    let text = doc.text().slice(..);
     let selection = doc.selection(view.id).clone().transform(|range| {
         let line = range.cursor_line(text);
         let start = text.line_to_char(line);
         let end = line_end_char_index(&text, line);
+        // `linetabsize()`: the display width of the line's text.
+        let width = visual_coords_at_pos(text, end, tab_width).col;
+        let col = match count {
+            // vim only reads the count as a percentage while it is one; 0 and
+            // anything over 100 fall back to halfway.
+            Some(n) if (1..=100).contains(&n) => width * n / 100,
+            _ => width / 2,
+        };
+        // `coladvance()`: the grapheme covering that display column, so landing
+        // inside a tab rests on the tab itself.
+        let pos = pos_at_visual_coords(text, Position::new(line, col), tab_width);
         // The last character, not the line ending; an empty line stays put.
         let last = end.saturating_sub(1).max(start);
-        let pos = start.saturating_add(half).min(last);
-        range.put_cursor(text, pos, extend)
+        range.put_cursor(text, pos.min(last), extend)
     });
+    doc.set_selection(view.id, selection);
+}
+
+/// vim `gm`: "Like `g0`, but half a screenwidth to the right (or as much as
+/// possible)" (motion.txt). vim's `nv_g_home_m_cmd` starts from the virtual
+/// column of the screen line's first character and adds half the window's text
+/// width, then `coladvance()`s there — so this measures the *window*, never the
+/// line's text (that is `gM`, `goto_line_middle`), and a line shorter than half
+/// a window lands on its final character.
+fn goto_screen_line_middle(cx: &mut Context) {
+    // Step one is literally `g0`: on a soft-wrapped line the half-width is
+    // measured from the start of the screen line the cursor is on, not from the
+    // start of the buffer line.
+    let movement = if cx.editor.mode == Mode::Select {
+        Movement::Extend
+    } else {
+        Movement::Move
+    };
+    goto_visual_line_impl(cx, false, movement);
+
+    let extend = cx.editor.mode == Mode::Select;
+    let (view, doc) = current!(cx.editor);
+    let inner_width = view.inner_width(doc);
+    let half = usize::from(inner_width / 2);
+    let text_fmt = doc.text_format(inner_width, None, Some(view.id));
+    let annotations = view.text_annotations(doc, None);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let start_of_screen_line = range.cursor(text);
+        // Half a screenwidth in *display* columns — the formatter expands tabs
+        // and counts wide characters, as vim's coladvance() does.
+        let (pos, _) = char_idx_at_visual_offset(
+            text,
+            start_of_screen_line,
+            0,
+            half,
+            &text_fmt,
+            &annotations,
+        );
+        // "or as much as possible": rest on the line's last character rather
+        // than on its line ending; an empty line stays put.
+        let line = text.char_to_line(start_of_screen_line);
+        let line_start = text.line_to_char(line);
+        let last = line_end_char_index(&text, line)
+            .saturating_sub(1)
+            .max(line_start);
+        range.put_cursor(text, pos.min(last), extend)
+    });
+    drop(annotations);
     doc.set_selection(view.id, selection);
 }
 
@@ -6773,23 +6850,34 @@ fn find_char_then(
     // now but cleared by the time this fires, so without carrying it `"adfx`
     // deleted correctly yet stored to the default register, not a.
     let register = cx.register;
+    // vim's `nv_csearch` does `if (searchc(cap, t_cmd) == FAIL) clearopbeep()`
+    // (vim normal.c), so a find that matches nothing throws the pending operator
+    // away: `dfz` with no `z` further along the line beeps and leaves the buffer
+    // exactly as it was. The motion below runs inside `apply_motion`, so it
+    // reports back through this cell for the operator dispatch to read. It
+    // starts `true` so the `<CR>` line-ending motion, which has no notion of a
+    // miss, keeps behaving as it does today.
+    let matched = std::rc::Rc::new(std::cell::Cell::new(true));
 
     // need to wait for next key
     // TODO: should this be done by grapheme rather than char?  For example,
     // we can't properly handle the line-ending CRLF case here in terms of char.
     cx.on_next_key(move |cx, event| {
+        let target_char = match event.code {
+            KeyCode::Tab => Some('\t'),
+            KeyCode::Char(ch) => Some(ch),
+            _ => None,
+        };
         let motion: Motion = if event.code == KeyCode::Enter {
             Box::new(move |editor: &mut Editor| {
                 find_char_line_ending_motion(editor, count, direction, inclusive, extend);
             })
-        } else if let Some(ch) = match event.code {
-            KeyCode::Tab => Some('\t'),
-            KeyCode::Char(ch) => Some(ch),
-            _ => None,
-        } {
+        } else if let Some(ch) = target_char {
             // remember this find so `,` can repeat it in the opposite direction
             cx.editor.last_find = Some((ch, inclusive, matches!(direction, Direction::Forward)));
+            let found = matched.clone();
             Box::new(move |editor: &mut Editor| {
+                found.set(false);
                 let (view, doc) = current!(editor);
                 let text = doc.text().slice(..);
 
@@ -6797,11 +6885,25 @@ fn find_char_then(
                     let cursor_anchor = range.cursor(text);
                     let cursor_head = next_grapheme_boundary(text, cursor_anchor);
 
-                    // Exclusive search skips the next char after cursor to enable repeated application
+                    // Exclusive search skips the next char after cursor to enable
+                    // repeated application: helix repeats the whole motion
+                    // (`A-.`), so `t` has to start past its own landing spot or
+                    // it can never advance. vim's *initial* press must not skip:
+                    // searchc() steps one character away and tests it with
+                    // `stop == TRUE` (vim search.c), so `ta` with the `a`
+                    // already next to the cursor matches and the `col -= dir`
+                    // backup puts the cursor straight back where it was. The
+                    // skip is `;`/`,`-only there — searchc clears `stop` just
+                    // for the repeat when 'cpoptions' has no ';' (options.txt
+                    // cpo-;) — and `apply_find_char` is where zmax keeps it.
+                    // `line_bounded` is set by exactly the vim f/F/t/T callers,
+                    // so it is what selects the vim rule here.
                     let search_start_pos = match (inclusive, direction) {
                         (true, Direction::Forward) => cursor_head,
                         (true, Direction::Backward) => cursor_anchor,
+                        (false, Direction::Forward) if line_bounded => cursor_head,
                         (false, Direction::Forward) => cursor_head + 1,
+                        (false, Direction::Backward) if line_bounded => cursor_anchor,
                         (false, Direction::Backward) => cursor_anchor.saturating_sub(1),
                     };
 
@@ -6818,6 +6920,7 @@ fn find_char_then(
                         (false, Direction::Backward) => pos + 1,
                     })
                     .map_or(range, |pos| {
+                        found.set(true);
                         if extend {
                             range.put_cursor(text, pos, true)
                         } else {
@@ -6833,6 +6936,17 @@ fn find_char_then(
         };
 
         cx.editor.apply_motion(motion);
+        // No match on the line: vim beeps and `clearopbeep()` drops the pending
+        // operator, so `dfz` / `d9fa` must not delete the character under the
+        // cursor. The bare motion already did the right thing (it stayed put),
+        // so only the operator path needs the abort — and it says why, since a
+        // silently swallowed `d` is indistinguishable from a dropped keypress.
+        if !matched.get() {
+            if let (true, Some(ch)) = (after.is_some(), target_char) {
+                cx.editor.set_error(format!("Character not found: {ch}"));
+            }
+            return;
+        }
         // vim's backward finds are exclusive under an operator: `dFa` deletes back
         // to the `a` and leaves the character under the cursor. The motion above
         // ends in `put_cursor(.., true)`, which pushes the anchor one grapheme
@@ -11659,6 +11773,19 @@ fn rsearch(cx: &mut Context) {
     searcher(cx, Direction::Backward)
 }
 
+/// The character span of every line `from..to` touches, ends included — the span
+/// a *linewise* motion covers. `to` is a cursor position, so the line it sits on
+/// belongs to the span even when it is that line's first character; that is the
+/// case `Range::line_range` gets wrong, because it walks one grapheme back from
+/// the selection's end before asking which line it is on.
+fn linewise_char_span(text: RopeSlice, from: usize, to: usize) -> (usize, usize) {
+    let (l0, l1) = (text.char_to_line(from), text.char_to_line(to));
+    (
+        text.line_to_char(l0),
+        text.line_to_char((l1 + 1).min(text.len_lines())),
+    )
+}
+
 /// What to do with the span a `d/pat` / `c/pat` / `y/pat` motion covers.
 #[derive(Clone, Copy)]
 enum SearchOperator {
@@ -11761,7 +11888,23 @@ fn operator_search(cx: &mut Context, direction: Direction, op: SearchOperator) {
                 if inclusive {
                     to = graphemes::next_grapheme_boundary(text, to);
                 }
-                doc.set_selection(view.id, Selection::single(from, to));
+                if linewise {
+                    // A bare `[±]N` offset makes the motion linewise
+                    // (pattern.txt search-offset), and the offset line is part
+                    // of the span in both directions: `d/gamma/+1` takes the
+                    // line below the match as well. The span has to be built
+                    // from line numbers here rather than left to the
+                    // `extend_to_line_bounds` below, because that walks back one
+                    // grapheme from the selection end first (Range::line_range),
+                    // which drops the target line whenever the offset lands on
+                    // its first character — i.e. on every unindented line. With
+                    // the whole lines already selected that call is idempotent
+                    // and still does its own job of taking closed folds whole.
+                    let (start, end) = linewise_char_span(text, from, to);
+                    doc.set_selection(view.id, Selection::single(start, end));
+                } else {
+                    doc.set_selection(view.id, Selection::single(from, to));
+                }
             }
             let mut ctx = Context {
                 register: yank_register,
@@ -13119,8 +13262,49 @@ fn isearch_char_by_name(cx: &mut Context) {
     });
 }
 
+/// Emacs `isearch-emoji-by-name` (`C-x 8 e RET` while searching): "Read an Emoji
+/// name and add it to the search string COUNT times. COUNT (interactively, the
+/// prefix argument) defaults to 1. The command accepts Unicode names like
+/// \"smiling face\" or \"heart with arrow\", and completion is available"
+/// (isearch.el).
+///
+/// Emacs reads the name with `emoji--read-emoji`, a completing read over the
+/// Unicode emoji names; zmax's equivalent is the fuzzy picker `emoji_list`
+/// drives over the same `EMOJI` table. The difference from
+/// `isearch_char_by_name`, which this used to call, is the alphabet: that one
+/// takes a two-character digraph mnemonic and knows nothing about emoji names.
 fn isearch_emoji_by_name(cx: &mut Context) {
-    isearch_char_by_name(cx);
+    type Emoji = (&'static str, &'static str, &'static str, &'static str);
+
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search");
+        return;
+    }
+    // `(interactive "p")`: no argument means one copy.
+    let count = cx
+        .prefix_arg()
+        .map_or(1, |arg| arg.value().max(1).min(i64::from(u16::MAX)) as usize);
+
+    let columns = [
+        ui::PickerColumn::new("emoji", |e: &Emoji, _: &()| e.0.into()),
+        ui::PickerColumn::new("name", |e: &Emoji, _: &()| e.1.into()),
+        ui::PickerColumn::new("group", |e: &Emoji, _: &()| e.2.into()),
+        ui::PickerColumn::new("subgroup", |e: &Emoji, _: &()| e.3.into()),
+    ];
+    // Column 1 is the name: that is what the search box matches on, as emacs's
+    // completing read does.
+    let picker = Picker::new(
+        columns,
+        1,
+        EMOJI.to_vec(),
+        (),
+        move |cx, emoji: &Emoji, _action| {
+            // `(apply 'concat (make-list count emoji))`, and the glyph goes in
+            // whole — a ZWJ sequence is one emoji, not several.
+            isearch_append(cx.editor, &emoji.0.repeat(count));
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// The current search pattern (built from the session, else the `/` register).
@@ -15876,12 +16060,22 @@ fn reverse_keymap_bindings(keymap: &crate::keymap::ReverseKeymap, name: &str) ->
         .unwrap_or_default()
 }
 
-/// Spacemacs `SPC D h` (`ediff-documentation`): open the Ediff manual. Emacs
-/// sends the Info reader to the `(ediff)Top` node; zmax has no Info reader, so
-/// the manual's introduction goes into a scratch buffer, followed by the ediff
-/// commands this build ships with their current bindings — read from the static
-/// command table and the live keymap, so the list cannot drift.
+/// Spacemacs `SPC D h` (`ediff-documentation`): open the Ediff manual. Emacs's
+/// body is `(info "ediff")` plus an optional `Info-goto-node`, i.e. the real
+/// manual in the Info reader — so that is what this shows when `info(1)` and the
+/// ediff manual are installed.
+///
+/// When they are not, the fallback is the manual's introduction in a scratch
+/// buffer followed by the ediff commands this build ships with their current
+/// bindings — read from the static command table and the live keymap, so the
+/// list cannot drift. (Emacs's NODE argument is not in its `(interactive)`
+/// spec — only a Lisp caller can pass one — so there is nothing to prompt for.)
 fn ediff_documentation(cx: &mut Context) {
+    if let Some(content) = render_info_node("(ediff)Top") {
+        show_text_in_scratch(cx.editor, &content);
+        cx.editor.set_status("ediff documentation ((ediff)Top)");
+        return;
+    }
     cx.callback.push(Box::new(
         move |compositor: &mut Compositor, cx: &mut compositor::Context| {
             let keymap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()
@@ -15944,6 +16138,72 @@ fn ediff_file(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// Emacs `ediff-backup` (Spacemacs `SPC D B`): "Run Ediff on FILE and its backup
+/// file. Uses the latest backup, if there are several numerical backups. If this
+/// file is a backup, `ediff' it with its original" (ediff.el), ending in
+/// `(ediff-files bak ori)` — a two-pane session with the backup as A and the
+/// original as B.
+///
+/// The file pair is the one `diff-backup` computes; ediff.el says so itself
+/// ("The code is taken from `diff-backup'"). What differs is the presentation,
+/// and that is the whole point of the command: side-by-side panes you step
+/// through, not a unified diff in a scratch buffer. `diff_backup` is still the
+/// unified-diff one, because that is what emacs's `diff-backup` shows.
+///
+/// B is the buffer's text rather than the file on disk, as `ediff_file` does, so
+/// unsaved changes are part of the comparison.
+fn ediff_backup(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("ediff-backup: buffer is not visiting a file");
+        return;
+    };
+    // `(if (backup-file-name-p file) (setq bak file ori (file-name-sans-versions
+    // file)) (setq bak (diff-latest-backup-file file) ori file))`: sitting *in*
+    // a backup compares it against the original it was made from.
+    let name = path.to_string_lossy().into_owned();
+    let backup = match name.strip_suffix('~') {
+        Some(_) => path.clone(),
+        None => std::path::PathBuf::from(format!("{name}~")),
+    };
+    if !backup.is_file() {
+        cx.editor
+            .set_error(format!("ediff-backup: no backup found for {name}"));
+        return;
+    }
+    let other = match std::fs::read_to_string(&backup) {
+        Ok(s) => s,
+        Err(e) => {
+            cx.editor
+                .set_error(format!("ediff-backup: read {}: {e}", backup.display()));
+            return;
+        }
+    };
+    let (cur_name, cur_text, cur_id) = {
+        let doc = doc!(cx.editor);
+        (
+            doc.display_name().into_owned(),
+            doc.text().to_string(),
+            doc.id(),
+        )
+    };
+    // Comparison only: `read_only` is what stops a resolved row from being
+    // written back, which matters here because pane A is a file on disk.
+    let view = crate::ui::merge::DiffView::new(
+        format!("{} ⇔ {}", backup.display(), cur_name),
+        cur_id,
+        &other,
+        &cur_text,
+    )
+    .read_only();
+    let call = crate::job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
 }
 
 /// 3-way ediff: prompt for three space-separated file paths (A B C, where C is
@@ -37106,6 +37366,50 @@ fn replace_chars_vim(cx: &mut Context) {
     })
 }
 
+/// vim `gr{char}`: "Replace the virtual characters under the cursor with {char}.
+/// This replaces in screen space, not file space. See |gR| and
+/// |Virtual-Replace-mode| for more details. As with |r| a count may be given"
+/// (change.txt). So this is one keystroke of `virtual_replace_mode` without ever
+/// entering the mode: each overtype goes through the same screen-space path, so
+/// a `<Tab>` under the cursor is eaten one column at a time and the text after
+/// it keeps its columns.
+///
+/// change.txt also says {char} "can be entered like with |r|, but characters
+/// that have a special meaning in Insert mode, such as most CTRL-keys, cannot be
+/// used" — hence only a plain character and `<Tab>` are accepted. `<CR>` is one
+/// of those Insert-mode specials (it splits the line rather than overtyping) and
+/// is not modeled.
+///
+/// Unbound by default: nvim's own LSP defaults take `gr` (change.txt
+/// *gr-default*: "Nvim creates |lsp-defaults| mappings which may inhibit the
+/// builtin behavior of |gr|"), and zmax follows them with `g r` =>
+/// `goto_reference`, so this is reached by name or from a user keymap.
+fn virtual_replace_char(cx: &mut Context) {
+    let count = cx.count();
+    cx.on_next_key(move |cx, event| {
+        let ch = match event.code {
+            KeyCode::Char(ch) => ch,
+            KeyCode::Tab => '\t',
+            _ => return,
+        };
+        for _ in 0..count {
+            insert::virtual_overtype_char_impl(cx, ch);
+        }
+        // Each overtype leaves the cursor one past what it wrote, as typing in
+        // the mode does. `gr` is a Normal-mode command, so the cursor comes back
+        // onto the last replaced character — the same resting place `r` uses and
+        // the one leaving `gR` with <Esc> ends on.
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let selection = doc.selection(view.id).clone().transform(|range| {
+            let cursor = range.cursor(text);
+            let last = graphemes::prev_grapheme_boundary(text, cursor);
+            Range::new(last, cursor)
+        });
+        doc.set_selection(view.id, selection);
+    })
+}
+
 /// Shared implementation of vim `J` (with a separating space) and `gJ` (raw).
 /// Joins `count` lines (minimum two) below each cursor and leaves the cursor on
 /// the join, matching vim.
@@ -44747,10 +45051,23 @@ fn goto_prev_spell_error(cx: &mut Context) {
     goto_spell_error(cx, false);
 }
 
+/// The word the `zg`/`zG`/`zw`/`zW`/`zug`/`zuG` family acts on, as
+/// `(start, end, word)`.
+///
+/// spell.txt (`zg`): "In Visual mode the selected characters are added as a
+/// word (including white space!)." So in Select mode the primary selection's
+/// fragment is taken verbatim — no word-boundary scan, no trimming — and only
+/// outside it does the word under the cursor apply.
 fn spell_word_under_cursor(cx: &mut Context) -> Option<(usize, usize, String)> {
+    let mode = cx.editor.mode;
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
-    let pos = doc.selection(view.id).primary().cursor(text);
+    let primary = doc.selection(view.id).primary();
+    if mode == Mode::Select && !primary.is_empty() {
+        let (from, to) = (primary.from(), primary.to());
+        return Some((from, to, text.slice(from..to).to_string()));
+    }
+    let pos = primary.cursor(text);
     spell_word_at(text, pos)
 }
 
@@ -48711,13 +49028,32 @@ fn xref_find_definitions_other_window(cx: &mut Context) {
 /// existing window and splits only when this is the sole one; it runs after the
 /// node renders, so a failure leaves the layout untouched.
 fn info_search_other_window(cx: &mut Context) {
-    match render_info_node("(dir)Top") {
+    // `(interactive (list (if current-prefix-arg (read-file-name "Info file
+    // name: " nil nil t)) ...))`: the argument is read only under a prefix
+    // argument, so a bare `C-h 4 i` goes straight to the directory node while
+    // `C-u C-h 4 i` asks which file or node to open — `(ediff)Top`, `emacs`, and
+    // so on, whatever `info(1)` accepts.
+    if cx.prefix_arg().is_none() {
+        info_node_in_other_window(cx.editor, "(dir)Top");
+        return;
+    }
+    prompt_then(cx, "Info file name: ", |cx, input| {
+        info_node_in_other_window(cx.editor, input);
+    });
+}
+
+/// Render one Info node and show it in another window — the body
+/// `info-other-window` shares between its prompted and unprompted forms. The
+/// window is chosen by [`display_other_window`] *after* the node renders, so a
+/// node that does not exist leaves the layout untouched.
+fn info_node_in_other_window(editor: &mut Editor, node: &str) {
+    match render_info_node(node) {
         Some(content) => {
-            display_other_window(cx.editor);
-            show_text_in_scratch(cx.editor, &content);
-            cx.editor.set_status("info (dir)Top");
+            display_other_window(editor);
+            show_text_in_scratch(editor, &content);
+            editor.set_status(format!("info {node}"));
         }
-        None => cx.editor.set_error("could not open info node (dir)Top"),
+        None => editor.set_error(format!("could not open info node {node}")),
     }
 }
 
@@ -51060,6 +51396,34 @@ fn fold_close_all(cx: &mut Context) {
         folds.clamp(last);
     }
     doc.folds_mut().close_all();
+    fold_snap_cursor(view, doc);
+}
+
+/// vim `zX`: "Undo manually opened and closed folds: re-apply 'foldlevel'. Also
+/// forces recomputing folds, like |zx|" (fold.txt).
+///
+/// This is *not* `zM`. Re-applying the level recomputes every fold's closed flag
+/// from the buffer's current 'foldlevel', so a fold shallower than the level
+/// that was closed by hand with `zc` opens again, and one deeper than it that
+/// was opened by hand with `zo` closes again. `zM` is only the special case of
+/// level 0, which is why binding `zX` to it threw away the level.
+fn fold_reapply_level(cx: &mut Context) {
+    // "Also forces recomputing folds": merge the current 'foldmethod' ranges in
+    // first, the same way `zM` does and for the same reason — folds hold fixed
+    // line numbers, so after an edit the stale ones straddle the recomputed
+    // regions and only an evicting merge brings the buffer back in step.
+    let ranges = computed_fold_ranges(cx);
+    let (view, doc) = current!(cx.editor);
+    if !ranges.is_empty() {
+        let last = doc.text().len_lines().saturating_sub(1);
+        let folds = doc.folds_mut();
+        for (start, end) in ranges {
+            folds.create_evicting(start, end);
+        }
+        folds.clamp(last);
+    }
+    let level = doc.folds().level();
+    doc.folds_mut().set_level(level);
     fold_snap_cursor(view, doc);
 }
 
@@ -56556,6 +56920,38 @@ fn complete_define(cx: &mut Context) {
         .into_iter()
         .collect();
     complete_from(cx, start, sorted(candidates), "defined identifier");
+}
+
+/// vim `i_CTRL-X CTRL-I`: complete a keyword from the current file *and the
+/// files it includes* (insert.txt lists this source as "keywords in the current
+/// and included files"). The include set is the 'include'-driven one
+/// [`included_files`] builds, the same source the `i` item of 'complete' uses,
+/// so a `#include "foo.h"` line makes `foo.h`'s identifiers completable.
+///
+/// Unlike plain `CTRL-N` this never consults the LSP: vim's sub-modes are
+/// separate keys precisely because each has one fixed source.
+fn complete_included(cx: &mut Context) {
+    let (start, prefix) = keyword_before_cursor(cx.editor);
+    if prefix.is_empty() {
+        return;
+    }
+    let mut texts = vec![doc!(cx.editor).text().to_string()];
+    for path in included_files(cx.editor) {
+        if let Ok(text) = std::fs::read_to_string(path) {
+            texts.push(text);
+        }
+    }
+    // Longer than what is typed: a candidate identical to the prefix would
+    // complete to nothing, which is why `complete_keyword` filters the same way.
+    let candidates: Vec<String> = texts
+        .iter()
+        .flat_map(|text| text.split(|c: char| !char_is_word(c)))
+        .filter(|word| word.len() > prefix.len() && word.starts_with(&prefix))
+        .map(str::to_string)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    complete_from(cx, start, sorted(candidates), "included file keyword");
 }
 
 /// Candidates read best in a picker when they are ordered; the sources build them
@@ -63762,13 +64158,14 @@ fn input_method_chunk_inserted(editor: &mut Editor, doc_id: DocumentId) {
 fn input_method_transient_on(editor: &mut Editor, method: &'static InputMethod) {
     let doc_id = doc!(editor).id();
     let mut states = input_method_states().lock().unwrap();
-    // A transient method that is already running keeps *its* saved predecessor;
-    // re-activating must not make the transient method its own "previous".
-    let previous = match states.get(&doc_id) {
-        Some(state) if state.transient => state.previous,
-        Some(state) => Some(state.method),
-        None => None,
-    };
+    // mule-cmds.el sets the predecessor unconditionally:
+    // `(setq previous-transient-input-method current-input-method)`, whatever
+    // that method is. So a second `C-x \` before anything is typed records the
+    // transient method itself as its own predecessor, and the chunk hook then
+    // "restores" it — i.e. it stays on. That is upstream's behaviour and the one
+    // ported here; keeping the first saved predecessor instead would restore a
+    // method emacs has already forgotten.
+    let previous = states.get(&doc_id).map(|state| state.method);
     states.insert(doc_id, InputMethodState::new(method, true, previous));
     drop(states);
     editor.set_status(format!(
@@ -67394,14 +67791,32 @@ fn fortran_window_create(cx: &mut Context) {
 /// `fortran-window-create` instead — the marker stays up and you carry on
 /// editing with it, which is the difference the manual draws between the two.
 fn fortran_window_create_momentarily(cx: &mut Context) {
-    if cx.prefix_arg().is_some() {
+    // `(interactive "p")` makes a missing argument 1, and the docstring says
+    // "Optional ARG non-nil and non-unity disables the momentary feature" — so
+    // `C-u 1 C-c C-w` is still momentary, only a different number is not.
+    if cx.prefix_arg().is_some_and(|arg| arg.value() != 1) {
         fortran_window_create(cx);
         return;
     }
     fortran_window_create(cx);
-    cx.on_next_key(move |cx, _event| {
+    // `(message "Type SPC to continue editing.")` — the marker is up only while
+    // this prompt is, so say how to take it down.
+    cx.editor.set_status("Type SPC to continue editing.");
+    cx.on_next_key(move |cx, event| {
+        // `save-window-excursion` restores the layout as soon as the read
+        // returns, before the pushed-back event is acted on.
         edit_live_config(cx, |c| c.rulers.retain(|r| *r != 72));
-        cx.editor.set_status("column 72 marker removed");
+        // `(or (equal char ?\s) (push char unread-command-events))`: SPC is
+        // consumed by the prompt, and any other key is put back so it runs as
+        // the command it would have been. Re-dispatching through the compositor
+        // is zmax's `unread-command-events`.
+        if event.code == KeyCode::Char(' ') && event.modifiers.is_empty() {
+            cx.editor.set_status("column 72 marker removed");
+            return;
+        }
+        cx.callback.push(Box::new(move |compositor, cx| {
+            compositor.handle_event(&crate::compositor::Event::Key(event), cx);
+        }));
     });
 }
 
@@ -68983,6 +69398,62 @@ fn grep_find(cx: &mut Context) {
 // Emacs Hideshow (`hs-minor-mode`'s commands), over the document's fold state.
 // ---------------------------------------------------------------------------
 
+/// The documents `hs-minor-mode` is turned on in. hideshow.el declares it with
+/// `define-minor-mode`, i.e. buffer-local: the mode is on where you turned it
+/// on, not everywhere.
+fn hs_docs() -> &'static std::sync::Mutex<std::collections::HashSet<DocumentId>> {
+    static DOCS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<DocumentId>>> =
+        std::sync::OnceLock::new();
+    DOCS.get_or_init(Default::default)
+}
+
+/// hideshow.el's `hs-life-goes-on`: "Evaluate BODY forms if variable
+/// `hs-minor-mode' is non-nil." Every hideshow command is wrapped in it, so with
+/// the mode off they do nothing at all — which is what makes `hs-minor-mode` a
+/// mode rather than a menu of commands.
+///
+/// Emacs is silent about the refusal; in a terminal a key that does nothing and
+/// says nothing is indistinguishable from a dropped keypress, so this reports it
+/// on stderr's line, the status area.
+fn hs_life_goes_on(cx: &mut Context) -> bool {
+    let id = doc!(cx.editor).id();
+    let on = hs_docs().lock().map(|d| d.contains(&id)).unwrap_or(false);
+    if !on {
+        cx.editor
+            .set_error("Hideshow minor mode is not enabled in this buffer (hs-minor-mode)");
+    }
+    on
+}
+
+/// Emacs `hs-minor-mode`: "Minor mode to selectively hide/show code and comment
+/// blocks" (hideshow.el). Turning it on is what enables the hideshow commands —
+/// the `C-c @` chords exist either way, exactly as the keymap does in Emacs, but
+/// the commands themselves check the mode (`hs-life-goes-on`).
+///
+/// Emacs's own exit clears its `invisible 'hs` overlays, i.e. reveals what
+/// hideshow hid and nothing else. zmax folds through the shared fold engine and
+/// cannot tell a hideshow fold from a `zf` one, so turning the mode off leaves
+/// the folds alone rather than opening folds hideshow never made.
+fn hs_minor_mode(cx: &mut Context) {
+    let id = doc!(cx.editor).id();
+    let Ok(mut docs) = hs_docs().lock() else {
+        cx.editor.set_error("hs-minor-mode: state is poisoned");
+        return;
+    };
+    let on = if docs.remove(&id) {
+        false
+    } else {
+        docs.insert(id);
+        true
+    };
+    drop(docs);
+    cx.editor.set_status(if on {
+        "Hideshow mode enabled"
+    } else {
+        "Hideshow mode disabled"
+    });
+}
+
 /// The syntax-tree block nodes of `doc` at nesting depth `level` (1 = outermost),
 /// as the `(first, last)` line ranges to fold. A "block" is any node spanning
 /// more than one line — the same definition `hs-hide-level` uses via
@@ -69022,6 +69493,9 @@ fn hs_blocks_at_level(doc: &Document, level: usize) -> Vec<(usize, usize)> {
 /// Emacs `hs-hide-level`: hide every block at the nesting depth you name (with a
 /// prefix arg in Emacs; zmax prompts), leaving shallower blocks open.
 fn hs_hide_level(cx: &mut Context) {
+    if !hs_life_goes_on(cx) {
+        return;
+    }
     let level = cx.count.map_or(0, |c| c.get());
     if level > 0 {
         return hs_hide_level_n(cx, level);
@@ -69072,6 +69546,9 @@ fn hs_hide_level_n(cx: &mut Context, level: usize) {
 /// Emacs `hs-show-region`: reveal everything inside the selection — every fold
 /// that overlaps it is opened.
 fn hs_show_region(cx: &mut Context) {
+    if !hs_life_goes_on(cx) {
+        return;
+    }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let range = doc.selection(view.id).primary();
@@ -70828,6 +71305,20 @@ fn other_frame(cx: &mut Context) {
     cx.editor.switch_frame(next);
 }
 
+/// Spacemacs `[ t`: display the *previous* frame — `other_frame` walked the ring
+/// the other way. Same ring, same wrap, same "only one frame" report; stepping
+/// back by `count` is `(current + n - count % n) % n` so a count larger than the
+/// ring still lands inside it.
+fn previous_frame(cx: &mut Context) {
+    let n = cx.editor.frame_count();
+    if n < 2 {
+        cx.editor.set_status("only one frame");
+        return;
+    }
+    let prev = (cx.editor.current_frame() + n - cx.count() % n) % n;
+    cx.editor.switch_frame(prev);
+}
+
 /// emacs `undelete-frame`: bring back the frame most recently deleted while
 /// `undelete-frame-mode` was on. With the mode off, emacs records nothing and
 /// there is nothing to bring back — same here.
@@ -71535,14 +72026,23 @@ pub(crate) fn mouse_save_then_kill(cx: &mut Context) {
 /// ring's top is inserted there.
 pub(crate) fn mouse_yank_at_click(cx: &mut Context) {
     mouse_set_point(cx);
-    let register = cx.editor.config().mouse_yank_register;
+    // vim's `["x]<MiddleMouse>` (change.txt) is the same gesture: "Put the text
+    // from a register before the cursor [count] times. Uses the "* register,
+    // unless another is specified." So an explicit `"x` prefix wins and the
+    // clipboard/primary register is only the default.
+    let register = cx
+        .register
+        .unwrap_or_else(|| cx.editor.config().mouse_yank_register);
     let count = cx.count();
     paste(
         cx.editor,
         register,
         Paste::Before,
         count,
-        CursorRest::OnText,
+        // "Leaves the cursor at the end of the new text" (change.txt) — the same
+        // resting place as `gP`, not `P`. emacs's `mouse-yank-at-click` agrees:
+        // it calls `yank`, which leaves point after the inserted text.
+        CursorRest::AfterText,
     );
 }
 
@@ -71654,6 +72154,11 @@ fn context_menu_open(cx: &mut Context) {
 }
 
 fn hs_toggle_hiding(cx: &mut Context) {
+    // `hs-toggle-hiding` is wrapped in `hs-life-goes-on` like the rest of the
+    // hideshow commands, so it too is inert until the mode is on.
+    if !hs_life_goes_on(cx) {
+        return;
+    }
     crate::emacs_mouse::hs_toggle_hiding(cx)
 }
 
@@ -72064,6 +72569,39 @@ mod gap_command_tests {
         assert_eq!(reindent_block("x", "\t"), "\tx");
         // Nothing but whitespace has no first non-blank to anchor on: unchanged.
         assert_eq!(reindent_block("   \n", "\t"), "   \n");
+    }
+
+    /// A bare `[±]N` search offset makes `d`/`c`/`y` + `/` linewise
+    /// (pattern.txt), and the offset's own line is part of the span. On an
+    /// unindented buffer the offset lands on that line's *first character*, so
+    /// deriving the span from `Range::line_range` — which steps one grapheme
+    /// back from the selection end first — stops a line short in both
+    /// directions: `d/gamma/+1` would leave the line below the match behind and
+    /// `d/gamma/-1` the line above it.
+    #[test]
+    fn linewise_span_covers_the_line_the_search_offset_landed_on() {
+        let text = Rope::from("alpha\nbeta\ngamma\ndelta\n");
+        let slice = text.slice(..);
+
+        // Forward, `0d/gamma/+1` from line 0: the cursor ends on the first
+        // character of "delta", and everything through that line goes.
+        let delta = slice.line_to_char(3);
+        assert_eq!(linewise_char_span(slice, 0, delta), (0, slice.len_chars()));
+
+        // Backward-reaching offset, `0d/gamma/-1`: the span ends on the first
+        // character of "beta" and must still take that whole line, leaving
+        // "gamma\ndelta\n" behind.
+        let beta = slice.line_to_char(1);
+        assert_eq!(
+            linewise_char_span(slice, 0, beta),
+            (0, slice.line_to_char(2))
+        );
+
+        // Both ends inside one line is still that whole line.
+        assert_eq!(
+            linewise_char_span(slice, beta + 1, beta + 2),
+            (beta, slice.line_to_char(2))
+        );
     }
 
     /// vim 'keymodel' is a comma list, and its default is empty — so the shifted

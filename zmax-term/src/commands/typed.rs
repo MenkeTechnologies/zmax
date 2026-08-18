@@ -1294,6 +1294,25 @@ pub(crate) fn indentexpr_column(
     }
 }
 
+/// vim 'lispoptions' (`lop`) — whether 'indentexpr' drives Lisp indenting.
+/// options.txt: "expr:1 use 'indentexpr' for Lisp indenting when it is set /
+/// expr:0 do not use 'indentexpr' for Lisp indenting (default)". Upstream
+/// compares the *whole* option value against the one supported item — nvim
+/// indent.c `use_indentexpr_for_lisp()`:
+///   `curbuf->b_p_lisp && curbuf->b_p_inde.type != kCallbackNone
+///    && strcmp(curbuf->b_p_lop, "expr:1") == 0`
+/// — so `lispoptions=expr:1,foo` does *not* enable it, and neither does the
+/// empty default. With 'lisp' on and expr:0 the built-in Lisp indenter wins even
+/// when 'indentexpr' is set (change.c open_line takes the lisp branch first).
+pub(crate) fn use_indentexpr_for_lisp() -> bool {
+    zmax_core::indent::lisp_enabled()
+        && vim_opt_str_alias("indentexpr", "inde").is_some_and(|e| !e.trim().is_empty())
+        && vim_opt_str_alias("lispoptions", "lop")
+            .as_deref()
+            .map(str::trim)
+            == Some("expr:1")
+}
+
 /// vim 'operatorfunc' — the function `g@` calls, with the kind of the region it
 /// operates on (`'char'`, `'line'` or `'block'`). vim marks the region with `'[`
 /// and `']` first; the function then reads the text through those marks. Returns
@@ -1766,7 +1785,11 @@ const DEFAULT_INDENT_KEYS: &str = "0{,0},0),0],:,0#,!^F,o,O,e";
 /// insert-mode self-insert, *after* the character is in the buffer (so a `}`
 /// dedents the line it now sits on).
 pub(crate) fn reindent_on_type(cx: &mut super::Context, c: char) {
-    let indentexpr = vim_opt_str_alias("indentexpr", "inde").is_some_and(|e| !e.trim().is_empty());
+    // 'lisp' with the default 'lispoptions' (expr:0) takes 'indentexpr' out of
+    // play entirely ([`use_indentexpr_for_lisp`]), so 'indentkeys' has nothing to
+    // drive: vim's Lisp indenter runs on <Enter>/`cc`/`S`, not on a typed key.
+    let indentexpr = vim_opt_str_alias("indentexpr", "inde").is_some_and(|e| !e.trim().is_empty())
+        && !(zmax_core::indent::lisp_enabled() && !use_indentexpr_for_lisp());
     let cindent = zmax_core::indent::cindent_enabled();
     if !indentexpr && !cindent {
         return;
@@ -1798,8 +1821,16 @@ pub(crate) fn reindent_on_type(cx: &mut super::Context, c: char) {
 /// Re-indent one line with the indenter the options select: 'indentexpr' when it
 /// is set (vim gives it precedence), else vim's C indenter. The line's leading
 /// whitespace is replaced; the cursor keeps its position in the text.
+///
+/// 'lisp' is the exception to "'indentexpr' first": with 'lisp' on, 'indentexpr'
+/// only gets a say when 'lispoptions' is `expr:1` ([`use_indentexpr_for_lisp`]).
+/// Otherwise the Lisp indenter runs, which `cindent_column_for_line` reaches
+/// through `zmax_core::indent::vim_indent_for_newline`.
 fn reindent_line(cx: &mut super::Context, line: usize) {
-    let from_expr = {
+    let lisp_owns_indent = zmax_core::indent::lisp_enabled() && !use_indentexpr_for_lisp();
+    let from_expr = if lisp_owns_indent {
+        None
+    } else {
         let mut ccx = compositor::Context {
             editor: cx.editor,
             jobs: cx.jobs,
@@ -3528,27 +3559,160 @@ fn parse_tags_file(path: &std::path::Path, base: &std::path::Path) -> Vec<TagEnt
         Ok(t) => t,
         Err(_) => return Vec::new(),
     };
-    let mut out = Vec::new();
-    for line in text.lines() {
-        if line.is_empty() || line.starts_with("!_TAG_") {
-            continue;
-        }
-        let mut it = line.splitn(3, '\t');
-        let (name, file, rest) = match (it.next(), it.next(), it.next()) {
-            (Some(n), Some(f), Some(r)) => (n, f, r),
-            _ => continue,
-        };
-        let p = std::path::Path::new(file);
-        let file_path = if p.is_absolute() {
+    text.lines()
+        .filter_map(|line| parse_tag_line(line, base))
+        .collect()
+}
+
+/// One `name<Tab>file<Tab>address` line of a tags file, with the entry path
+/// resolved against `base`. `None` for the `!_TAG_` metadata lines and for any
+/// line without the three fields.
+fn parse_tag_line(line: &str, base: &std::path::Path) -> Option<TagEntry> {
+    if line.is_empty() || line.starts_with("!_TAG_") {
+        return None;
+    }
+    let mut it = line.splitn(3, '\t');
+    let (name, file, rest) = (it.next()?, it.next()?, it.next()?);
+    let p = std::path::Path::new(file);
+    Some(TagEntry {
+        name: name.to_string(),
+        file: if p.is_absolute() {
             p.to_path_buf()
         } else {
             base.join(p)
-        };
-        out.push(TagEntry {
-            name: name.to_string(),
-            file: file_path,
-            address: parse_tag_address(rest),
-        });
+        },
+        address: parse_tag_address(rest),
+    })
+}
+
+/// The order a tags file declares itself to be in, from its
+/// `!_TAG_FILE_SORTED\t<n>` pseudo-tag.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum TagSorted {
+    /// `0` — not sorted; vim searches it linearly whatever 'tagbsearch' says.
+    Unsorted,
+    /// `1`, or no pseudo-tag at all: sorted on ASCII byte value. vim's
+    /// `findtags_start_state_handler` treats a missing header as sorted —
+    /// "When no "!_TAG_" is found, default to binary search" (tag.c).
+    Ascii,
+    /// `2` — case-fold sorted (`sort -f`, ctags `--sort=foldcase`). options.txt
+    /// 'tagbsearch': "Note that case must be folded to uppercase for this to
+    /// work."
+    FoldCase,
+}
+
+/// Read the `!_TAG_FILE_SORTED` pseudo-tag out of a tags file's header. vim ends
+/// the header at the first line that sorts below `!_TAG_` (tag.c
+/// `findtags_start_state_handler`), which for a well-formed file is the first
+/// real tag.
+fn tags_file_sorted(text: &str) -> TagSorted {
+    for line in text.lines() {
+        if !line.starts_with('!') {
+            break;
+        }
+        if let Some(rest) = line.strip_prefix("!_TAG_FILE_SORTED\t") {
+            return match rest.as_bytes().first() {
+                Some(b'0') => TagSorted::Unsorted,
+                Some(b'2') => TagSorted::FoldCase,
+                Some(b'1') => TagSorted::Ascii,
+                // An unrecognized flag is not a promise of any order, so vim
+                // falls back to a linear search for that file (tag.c: the final
+                // `else { st->state = TS_LINEAR; }`).
+                _ => TagSorted::Unsorted,
+            };
+        }
+    }
+    TagSorted::Ascii
+}
+
+/// The key a tags file is sorted on: the tag name, cut to 'taglength' when that
+/// is set (`tl` 0 = the whole name) and folded to uppercase for a case-fold
+/// sorted file. Cutting is order-preserving, so the entries that share a cut key
+/// still form one contiguous run.
+fn tag_sort_key(name: &str, fold: bool, tl: usize) -> String {
+    let cut: String = if tl > 0 {
+        name.chars().take(tl).collect()
+    } else {
+        name.to_string()
+    };
+    if fold {
+        cut.to_uppercase()
+    } else {
+        cut
+    }
+}
+
+/// Binary-search a sorted tags file for the run of lines whose tag name is
+/// `name`, and return that run. This is vim's 'tagbsearch' (default on): jump to
+/// the middle of the file, back up to the start of that line, compare, and once
+/// a match is found walk back to the first one and forward to the last —
+/// tag.c's `TS_BINARY` → `TS_SKIP_BACK` → `TS_STEP_FORWARD` states. The caller
+/// still filters the run with [`tag_name_matches`], so 'tagcase' and 'taglength'
+/// decide what actually matches; the comparison here only has to agree with the
+/// order the file claims, which is why a case-fold sorted file compares folded.
+fn tag_bsearch_lines<'a>(text: &'a str, name: &str, fold: bool, tl: usize) -> Vec<&'a str> {
+    let key = tag_sort_key(name, fold, tl);
+    // The line containing byte `at`, as (start, end) offsets — `end` excludes the
+    // newline.
+    let line_at = |at: usize| -> (usize, usize) {
+        // The midpoint is an arbitrary byte offset and a tags file may hold UTF-8
+        // names, so step back to a character boundary before slicing.
+        let mut at = at;
+        while at > 0 && !text.is_char_boundary(at) {
+            at -= 1;
+        }
+        let start = text[..at].rfind('\n').map_or(0, |i| i + 1);
+        let end = text[at..].find('\n').map_or(text.len(), |i| at + i);
+        (start, end)
+    };
+    let cmp = |start: usize, end: usize| -> std::cmp::Ordering {
+        let line = &text[start..end];
+        let entry = line.split('\t').next().unwrap_or(line);
+        tag_sort_key(entry, fold, tl).cmp(&key)
+    };
+
+    // `lo` is a line start, `hi` is one past the last byte still in play.
+    let (mut lo, mut hi) = (0usize, text.len());
+    let mut hit = None;
+    while lo < hi {
+        let (start, end) = line_at(lo + (hi - lo) / 2);
+        match cmp(start, end) {
+            std::cmp::Ordering::Equal => {
+                hit = Some((start, end));
+                break;
+            }
+            // This line sorts before the tag: continue after it. `end + 1` is
+            // past the midpoint, so the range always shrinks.
+            std::cmp::Ordering::Less => lo = (end + 1).min(hi),
+            // It sorts after: everything from this line on is out.
+            std::cmp::Ordering::Greater => hi = start,
+        }
+    }
+    let Some((start, _end)) = hit else {
+        return Vec::new();
+    };
+
+    // Walk back to the first line of the run, then forward to the last.
+    let mut first = start;
+    while first > 0 {
+        let (s, e) = line_at(first - 1);
+        if cmp(s, e) != std::cmp::Ordering::Equal {
+            break;
+        }
+        first = s;
+    }
+    let mut out = Vec::new();
+    let mut at = first;
+    loop {
+        let (s, e) = line_at(at);
+        if cmp(s, e) != std::cmp::Ordering::Equal {
+            break;
+        }
+        out.push(&text[s..e]);
+        if e >= text.len() {
+            break;
+        }
+        at = e + 1;
     }
     out
 }
@@ -3710,19 +3874,28 @@ fn tag_jump_cmd(
     Ok(())
 }
 
+/// Whether a tag lookup ignores case, under vim `tagcase` and `ignorecase`.
+/// Split out of [`tag_name_matches`] because 'tagbsearch' needs the same answer:
+/// a binary search over an ASCII-sorted file cannot ignore case, so vim drops to
+/// a linear search for it (tag.c: "Binary search won't work for ignoring case,
+/// use linear search").
+fn tag_case_ignored(name: &str, tagcase: &str, ignorecase: bool) -> bool {
+    match tagcase {
+        "ignore" => true,
+        "match" => false,
+        "smart" => ignorecase && !name.chars().any(char::is_uppercase),
+        // vim's default `followic` (and `followscs`, which follows smartcase too).
+        _ => ignorecase,
+    }
+}
+
 /// Whether a tags-file entry named `entry` is the tag the user asked for, under
 /// vim `tagcase` (`match` = case-sensitive, `ignore` = case-insensitive,
 /// `followic` = follow `ignorecase`, `smart` = follow `ignorecase` unless the
 /// typed name has an uppercase letter) and `taglength` (only the first N
 /// characters are significant; 0 = the whole name). Pure — unit tested.
 fn tag_name_matches(entry: &str, name: &str, tagcase: &str, ignorecase: bool, tl: usize) -> bool {
-    let ignore = match tagcase {
-        "ignore" => true,
-        "match" => false,
-        "smart" => ignorecase && !name.chars().any(char::is_uppercase),
-        // vim's default `followic` (and `followscs`, which follows smartcase too).
-        _ => ignorecase,
-    };
+    let ignore = tag_case_ignored(name, tagcase, ignorecase);
     let cut = |s: &str| -> String {
         let s = if tl > 0 {
             s.chars().take(tl).collect::<String>()
@@ -3798,8 +3971,34 @@ fn resolve_tag_matches(cx: &mut compositor::Context, name: &str) -> anyhow::Resu
     let tagcase = vim_opt_str("tagcase").unwrap_or_else(|| "followic".to_string());
     let ignorecase = vim_opt_bool("ignorecase");
     let tl = vim_opt_num("taglength").unwrap_or(0);
-    let matches: Vec<TagEntry> = parse_tags_file(&file, &base)
+    let text = std::fs::read_to_string(&file).unwrap_or_default();
+    let sorted = tags_file_sorted(&text);
+    // vim 'tagbsearch' (default on): binary-search a file that claims to be
+    // sorted, and drop to the linear scan exactly where vim does — the option
+    // off, `!_TAG_FILE_SORTED 0` or an unrecognized flag, and an ignore-case
+    // lookup against an ASCII-sorted file (tag.c: "Binary search won't work for
+    // ignoring case"). A case-fold sorted file (flag `2`) keeps the binary search
+    // when case is ignored, which is what options.txt promises: "If a tag file
+    // indicates that it is case-fold sorted, the second, linear search can be
+    // avoided when case is ignored."
+    //
+    // A file that says it is sorted but is not is vim's documented failure mode,
+    // not ours: the binary search can miss those tags, and the option exists so
+    // the user can say so (`:set notagbsearch`).
+    let bsearch = vim_opt_bool_alias("tagbsearch", "tbs")
+        && match sorted {
+            TagSorted::Unsorted => false,
+            TagSorted::Ascii => !tag_case_ignored(name, &tagcase, ignorecase),
+            TagSorted::FoldCase => true,
+        };
+    let lines: Vec<&str> = if bsearch {
+        tag_bsearch_lines(&text, name, sorted == TagSorted::FoldCase, tl)
+    } else {
+        text.lines().collect()
+    };
+    let matches: Vec<TagEntry> = lines
         .into_iter()
+        .filter_map(|line| parse_tag_line(line, &base))
         .filter(|e| tag_name_matches(&e.name, name, &tagcase, ignorecase, tl))
         .collect();
     if matches.is_empty() {
@@ -24941,6 +25140,18 @@ pub(crate) fn vim_opt_str_alias(full: &str, abbrev: &str) -> Option<String> {
     vim_opt_str(full).or_else(|| vim_opt_str(abbrev))
 }
 
+/// [`vim_opt_bool`] under either spelling: `:set notbs` stores under the
+/// abbreviation, `:set notagbsearch` under the full name, and only the full name
+/// carries the compiled default — so the abbreviation is read only when the user
+/// actually set it.
+pub(crate) fn vim_opt_bool_alias(full: &str, abbrev: &str) -> bool {
+    if VIM_OPTION_STORE.with(|s| s.borrow().contains_key(abbrev)) {
+        vim_opt_bool(abbrev)
+    } else {
+        vim_opt_bool(full)
+    }
+}
+
 /// vim `cpoptions` (`cpo`): whether flag `f` is present. The default value is
 /// vim's own `aABceFs_`, so a flag the user never mentioned still answers with
 /// vim's default.
@@ -25444,6 +25655,32 @@ fn vim_opt_canonical(tok: &str) -> (String, String) {
     (t.to_string(), "on".to_string())
 }
 
+/// nvim's `validate_num_option` (option.c) for the number options whose range
+/// zmax can honour, keyed by the canonical `:set` name (either spelling — the
+/// store keeps whichever the user typed).
+///
+/// `Err(())` rejects the token, which fails the whole `:set` line with
+/// "E474: Invalid argument: <token>". `Ok(Some(v))` is a value nvim rewrites
+/// before storing it; `Ok(None)` stores the value as typed.
+fn vim_num_option_fixup(name: &str, value: &str) -> Result<Option<&'static str>, ()> {
+    match name {
+        // 'pyxversion': "As only Python 3 is supported, this always has the value
+        // 3. Setting any other value is an error." (options.txt). nvim's
+        // `case kOptPyxversion` maps 0 — "use whichever version is available" —
+        // onto 3 and rejects everything else, so `:set pyxversion=2` fails at the
+        // `:set` rather than leaving `:pyx` quietly running Python 3 under a
+        // stored 2. zmax's `:pyx`/`:pyxfile`/`:pyxdo` are Python 3 by
+        // construction (they alias the `:py3*` commands), which is exactly what
+        // the only reachable value means.
+        "pyxversion" | "pyx" => match value.trim() {
+            "0" => Ok(Some("3")),
+            "3" => Ok(None),
+            _ => Err(()),
+        },
+        _ => Ok(None),
+    }
+}
+
 /// `:set` with vim-compatible syntax (`:set nu`, `:set nowrap`, `:set tw=80`,
 /// `:set cursorline`), falling back to native `:set key value`.
 fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -25496,6 +25733,14 @@ fn vim_set_scoped(
                 cx.editor.set_status(format!("  {opt}={shown}"));
                 continue;
             }
+            // Read-only options are rejected here too: `:setglobal channel=5`
+            // runs the same value validator upstream and fails the line.
+            let (canon, _) = vim_opt_canonical(tok.trim_end_matches(['&', '!']));
+            if crate::commands::vim_options_data::VIM_READONLY_OPTIONS.contains(&canon.as_str())
+                && (tok.contains(['=', ':']) || tok.ends_with('&'))
+            {
+                return Err(anyhow!("E474: Invalid argument: {tok}"));
+            }
             if let Some(opt) = tok.strip_suffix('&') {
                 let (canon, _) = vim_opt_canonical(opt);
                 VIM_OPTION_GLOBAL.with(|s| {
@@ -25504,6 +25749,13 @@ fn vim_set_scoped(
                 continue;
             }
             let (store_name, store_value) = vim_opt_canonical(tok);
+            // Same range check as `:set` — `:setglobal pyxversion=2` is an error
+            // upstream too, and `=0` is rewritten rather than stored verbatim.
+            let store_value = match vim_num_option_fixup(&store_name, &store_value) {
+                Err(()) => return Err(anyhow!("E474: Invalid argument: {tok}")),
+                Ok(Some(fixed)) => fixed.to_string(),
+                Ok(None) => store_value,
+            };
             vim_opt_store_scoped(&store_name, store_value, OptScope::Global, None);
         }
         return Ok(());
@@ -25582,12 +25834,58 @@ fn vim_set_scoped(
     // deepest fold level left open — so it carries its own value.
     let mut fold_open: Option<bool> = None;
     let mut fold_level: Option<usize> = None;
+    // vim's `do_set` aborts the rest of the `:set` line at the first bad option,
+    // *after* the options before it have taken effect (option.c:1652-1668 emits
+    // the message and returns FAIL from inside the token loop). This carries that
+    // message out past the apply-the-accumulated-config tail below.
+    let mut set_error: Option<String> = None;
     for tok in &tokens {
         // `:set opt?` reports the option's value; `:set opt&` resets it. These
         // read/clear the option store and don't change config.
         if let Some(opt) = tok.strip_suffix('?') {
             cx.editor.set_status(vim_opt_display(&config, opt));
             continue;
+        }
+        // Read-only options (`channel`): reading is fine — the `?` form above
+        // already returned — but every *set* is rejected. nvim's
+        // `validate_num_option` has `case kOptChannel: return e_invarg;`, which
+        // fires for `channel=5` and for `channel&` alike (`&` re-validates the
+        // default, option.c get_option_newval → set_option), so both report
+        // "E474: Invalid argument: <token>" and stop the line.
+        {
+            let (canon, _) = vim_opt_canonical(tok.trim_end_matches(['&', '!']));
+            if crate::commands::vim_options_data::VIM_READONLY_OPTIONS.contains(&canon.as_str())
+                && (tok.contains(['=', ':']) || tok.ends_with('&'))
+            {
+                set_error = Some(format!("E474: Invalid argument: {tok}"));
+                break;
+            }
+        }
+        // Number options whose value nvim range-checks before storing: an
+        // out-of-range value fails the line, and a couple of values are rewritten
+        // on the way in (option.c `validate_num_option`).
+        if tok.contains(['=', ':']) {
+            let (canon, val) = vim_opt_canonical(tok);
+            match vim_num_option_fixup(&canon, &val) {
+                Err(()) => {
+                    set_error = Some(format!("E474: Invalid argument: {tok}"));
+                    break;
+                }
+                // A rewritten value is stored as vim stores it and the token is
+                // done — the options with a rewrite (`pyxversion`) drive nothing
+                // else in the loop below.
+                Ok(Some(fixed)) => {
+                    let doc = doc_mut!(cx.editor);
+                    vim_opt_store_scoped(
+                        &canon,
+                        fixed.to_string(),
+                        scope,
+                        Some(&mut doc.vim_local_opts),
+                    );
+                    continue;
+                }
+                Ok(None) => {}
+            }
         }
         if let Some(opt) = tok.strip_suffix('&') {
             vim_opt_reset(opt);
@@ -26528,7 +26826,7 @@ fn vim_set_scoped(
             doc.set_tab_width(tw);
         }
         if indent_expand.is_none() && indent_width.is_none() {
-            return Ok(());
+            return vim_set_result(set_error);
         }
         let cur_width = match doc.indent_style {
             IndentStyle::Spaces(n) => n,
@@ -26546,7 +26844,17 @@ fn vim_set_scoped(
             },
         };
     }
-    Ok(())
+    vim_set_result(set_error)
+}
+
+/// Turn a `:set` line's recorded error into the command's result. vim shows the
+/// message for the offending option and fails the whole line, keeping whatever
+/// the options before it already did (option.c:1652-1668).
+fn vim_set_result(err: Option<String>) -> anyhow::Result<()> {
+    match err {
+        Some(msg) => Err(anyhow!("{msg}")),
+        None => Ok(()),
+    }
 }
 
 /// vim `:source {file}` / `:so` — source a Vimscript file through the embedded
@@ -32221,57 +32529,84 @@ fn ex_intro(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
 /// our own `:` dispatcher. The message-/mark-/jump-/direction-suppression
 /// nuances are best-effort; the wrapped command itself runs faithfully. A bare
 /// modifier with no trailing command is a no-op.
-/// vim `:browse {cmd}` — the modified command asks for its file through a dialog
-/// instead of taking it on the command line. A TUI's file dialog is the file
-/// picker, so a file-taking command given no file opens it; anything else runs
-/// unchanged. (The name used to be an alias of `:reveal`, which made
-/// `:browse edit foo` open the repository homepage.)
+/// vim `:bro[wse] {command} [file]` (editing.txt:1298-1315):
+///
+/// - "Without [file]: opens the |current-directory| (with the |dir| browser by
+///   default)."
+/// - "{command} must be one of: |:edit|, |:split|, |:vsplit|, |:tabedit|,
+///   |:tabnew|."
+/// - "With a [file] argument, or if {command} does not support browsing:
+///   executes {command}."
+///
+/// zmax's |dir| browser is Dired. (The name used to be an alias of `:reveal`,
+/// which made `:browse edit foo` open the repository homepage.)
 fn ex_browse(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let joined = args.join(" ");
     let line = joined.trim();
-    let (name, rest) = line.split_once(char::is_whitespace).unwrap_or((line, ""));
-    if rest.trim().is_empty()
-        && matches!(
-            name,
-            "e" | "edit"
-                | "o"
-                | "open"
-                | "sp"
-                | "split"
-                | "vs"
-                | "vsplit"
-                | "tabnew"
-                | "tabedit"
-                | "r"
-                | "read"
-                | "w"
-                | "write"
-                | "saveas"
-        )
-    {
-        // The picker opens the chosen file; for the write family vim would prompt
-        // for a *target*, which the picker cannot express, so those still need a
-        // path on the line.
-        if matches!(name, "w" | "write" | "saveas") {
-            bail!("{name} needs a file name (:browse cannot pick a save target)");
-        }
-        MappableCommand::file_picker.execute(&mut crate::commands::Context {
-            register: None,
-            count: None,
-            editor: cx.editor,
-            callback: Vec::new(),
-            on_next_key_callback: None,
-            jobs: cx.jobs,
-        });
-        return Ok(());
-    }
     if line.is_empty() {
         bail!(":browse needs a command to modify");
     }
-    execute_command_line(cx, line, PromptEvent::Validate)
+    let (name, rest) = line.split_once(char::is_whitespace).unwrap_or((line, ""));
+
+    /// Where `:browse` puts the window the directory browser opens into.
+    enum Browse {
+        Here,
+        HSplit,
+        VSplit,
+        Tab,
+    }
+    // editing.txt: "{command} must be one of: :edit, :split, :vsplit, :tabedit,
+    // :tabnew" — listed with the prefixes vim resolves each name from. Everything
+    // else (`:browse oldfiles`, `:browse write`, a user command) is not
+    // browse-capable and just runs.
+    let placement = match name {
+        "e" | "ed" | "edi" | "edit" => Some(Browse::Here),
+        "sp" | "spl" | "spli" | "split" => Some(Browse::HSplit),
+        "vs" | "vsp" | "vspl" | "vspli" | "vsplit" => Some(Browse::VSplit),
+        "tabe" | "tabed" | "tabedi" | "tabedit" | "tabnew" => Some(Browse::Tab),
+        _ => None,
+    };
+    // "With a [file] argument, or if {command} does not support browsing:
+    // executes {command}." Both fall through to the command itself.
+    let Some(placement) = placement.filter(|_| rest.trim().is_empty()) else {
+        return execute_command_line(cx, line, PromptEvent::Validate);
+    };
+
+    // Make the window first, then open the browser on top of it. zmax's |dir|
+    // browser is Dired, which is a full-screen overlay rather than a window, so
+    // this is what carries `:browse vsplit`'s promise: the split already exists
+    // when the user picks a file, so the file lands in it.
+    match placement {
+        Browse::Here => {}
+        Browse::HSplit => {
+            let action = split_mod(cx.editor, Action::HorizontalSplit);
+            split(cx.editor, action);
+        }
+        Browse::VSplit => {
+            let action = split_mod(cx.editor, Action::VerticalSplit);
+            split(cx.editor, action);
+        }
+        Browse::Tab => cx.editor.new_tab(),
+    }
+
+    // "Without [file]: opens the |current-directory|" — the directory relative
+    // paths resolve against (`:pwd`), not the buffer's own directory, which is
+    // what `dired-jump` would give.
+    let dir = zmax_stdx::env::current_working_dir();
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            let browser = crate::ui::dired::Dired::new(dir);
+            match browser {
+                Ok(d) => compositor.push(Box::new(d)),
+                Err(e) => editor.set_error(format!("browse: {e}")),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
 }
 
 fn ex_modifier(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -32290,6 +32625,86 @@ fn ex_modifier(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     }
     run_command_line(cx, rest);
     Ok(())
+}
+
+/// vim `:[count]verb[ose] {command}` (various.txt:499-520) — "Execute {command}
+/// with 'verbose' set to [count]. If [count] is omitted one is used.
+/// ":0verbose" can be used to set 'verbose' to zero." The previous value comes
+/// back when {command} is done, so the setting really is scoped to it.
+///
+/// zmax's 'verbose' consumer is the log level: `:set verbose=N` raises it so the
+/// `log::debug!`/`log::trace!` records zmax already emits reach the log file,
+/// which is where "give messages about what it is doing" goes in a TUI that must
+/// not print chatter. Both the stored option and the level are set for the
+/// command and both are put back after it.
+///
+/// The count is written as the first *argument* (`:verbose 9 {cmd}`). vim's
+/// `:9verbose` spelling puts it before the command name, where zmax's `:`
+/// dispatcher reads a leading count as a line range — it never resolves to this
+/// command — so that spelling is not reachable here.
+fn ex_verbose(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let mut rest = joined.trim();
+    // "If [count] is omitted one is used."
+    let mut level = 1usize;
+    if let Some((first, tail)) = rest.split_once(char::is_whitespace) {
+        if !first.is_empty() && first.chars().all(|c| c.is_ascii_digit()) {
+            level = first.parse().unwrap_or(1);
+            rest = tail.trim_start();
+        }
+    }
+    // A bare `:verbose` has no {command} to scope the option to, so there is
+    // nothing to do — vim's own form always carries one.
+    if rest.is_empty() {
+        return Ok(());
+    }
+    let saved = vim_opt_str("verbose");
+    vim_opt_store("verbose", level.to_string());
+    log::set_max_level(verbose_log_level(level));
+    // `run_command_line` reports the wrapped command's failure on the status line
+    // rather than returning it, so the restore below always runs.
+    run_command_line(cx, rest);
+    match saved {
+        Some(v) => vim_opt_store("verbose", v),
+        None => vim_opt_reset("verbose"),
+    }
+    // Read back through the abbreviation too: a `:set vbs=3` earlier in the
+    // session is the value the level goes back to.
+    let restored = vim_opt_str_alias("verbose", "vbs")
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(0);
+    log::set_max_level(verbose_log_level(restored));
+    Ok(())
+}
+
+/// vim `:hid[e]` (windows.txt:376-397) — one name, two commands:
+///
+/// - Bare `:hide`: "Quit the current window, unless it is the last window on the
+///   screen. The buffer becomes hidden … The value of 'hidden' is irrelevant for
+///   this command. Changes to the buffer are not written and won't get lost, so
+///   this is a "safe" command." That is [`window_close`], which refuses to close
+///   the last window; a zmax document stays in `editor.documents` when no view
+///   shows it any more, which is what "the buffer becomes hidden" means.
+/// - `:hide {cmd}`: "Execute {cmd} with 'hidden' set. The previous value of
+///   'hidden' is restored after {cmd} has been executed." zmax is always
+///   'hidden' — the option defaults on and losing a view never discards a
+///   document — so the modifier has nothing to set and only runs {cmd}, through
+///   the shared [`ex_modifier`] path.
+///
+/// `:{count}hide` ("quit the {count} window") does not reach this command: a
+/// leading count on a `:` line is parsed as a line range by the dispatcher, so
+/// `:2hide` never resolves to a command name.
+fn ex_hide(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.join(" ").trim().is_empty() {
+        return window_close(cx, args, event);
+    }
+    ex_modifier(cx, args, event)
 }
 
 /// vim `:normal[!] {commands}` — execute `{commands}` as normal-mode keystrokes,
@@ -33303,9 +33718,133 @@ fn ex_lpr_region(
     lpr_print(cx, &text, "region")
 }
 
-/// emacs `dictionary-search` / `dictionary`: look up a word with the external
-/// `dict` client (RFC 2229 dictionary protocol) and show the definitions in a
-/// scratch buffer. Defaults to the word under the cursor.
+/// `:dictionary-search --dict` — look the word up with the local RFC 2229 `dict`
+/// client instead of wordnik, for a machine with no network (or a user who wants
+/// their own dictd databases).
+const DICTIONARY_DICT_FLAG: Flag = Flag {
+    name: "dict",
+    alias: Some('d'),
+    doc: "use the local dict client instead of wordnik.com",
+    ..Flag::DEFAULT
+};
+
+/// The user agent define-word sends to wordnik (define-word.el:104-108): the
+/// site answers url.el's default agent with a page that has no definitions in
+/// it, so the elisp overrides it for this one service and this port keeps the
+/// same string.
+const WORDNIK_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_5_2) \
+     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36";
+
+/// `define-word-limit` (define-word.el:49) — "Maximum amount of results to
+/// display."
+const WORDNIK_LIMIT: usize = 10;
+
+/// `define-word--parse-wordnik` (define-word.el:220-235): each definition on the
+/// page is `<li><abbr …>{part of speech}</abbr> {definition}</li>`. The part of
+/// speech keeps a trailing space when it is not empty, and the semantic inline
+/// markup emacs turns into faces (`<em>`/`<i>`, `<xref>`, `<strong>`,
+/// `<internalXref …>`) is reduced to its text. Pure — unit tested.
+fn parse_wordnik(html: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = html;
+    while let Some(li) = rest.find("<li><abbr") {
+        rest = &rest[li + "<li><abbr".len()..];
+        // Skip the rest of the <abbr …> open tag.
+        let Some(gt) = rest.find('>') else { break };
+        rest = &rest[gt + 1..];
+        let Some(close) = rest.find("</abbr>") else {
+            break;
+        };
+        let part = rest[..close].trim().to_string();
+        rest = &rest[close + "</abbr>".len()..];
+        // define-word skips the spaces between the abbreviation and the body.
+        let body_start = rest.len() - rest.trim_start_matches(' ').len();
+        rest = &rest[body_start..];
+        let Some(end) = rest.find("</li>") else { break };
+        let body = &rest[..end];
+        rest = &rest[end..];
+        let text = strip_inline_html(body);
+        let text = text.trim();
+        if text.is_empty() {
+            continue;
+        }
+        out.push(if part.is_empty() {
+            text.to_string()
+        } else {
+            format!("{part} {text}")
+        });
+        if out.len() == WORDNIK_LIMIT {
+            break;
+        }
+    }
+    out
+}
+
+/// Reduce a definition's inline markup to its text — emacs paints these tags as
+/// faces (`define-word--tag-faces`), which a scratch buffer has no equivalent
+/// for, so the tags are dropped and their contents kept.
+fn strip_inline_html(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut in_tag = false;
+    for ch in s.chars() {
+        match ch {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            c if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+}
+
+/// Fetch a word's definitions from wordnik, the way define-word's default
+/// service does (`(wordnik "http://wordnik.com/words/%s" …)`,
+/// define-word.el:65, with the word downcased at define-word.el:112). Blocking —
+/// ureq is synchronous, so this runs on a `spawn_blocking` task.
+fn fetch_wordnik(word: &str) -> Result<Vec<String>, String> {
+    let url = format!(
+        "https://wordnik.com/words/{}",
+        word.trim().to_lowercase().replace(' ', "%20")
+    );
+    let body = ureq::get(&url)
+        .set("User-Agent", WORDNIK_USER_AGENT)
+        .call()
+        .map_err(|e| format!("{e}"))?
+        .into_string()
+        .map_err(|e| format!("read: {e}"))?;
+    Ok(parse_wordnik(&body))
+}
+
+/// Look a word up with the external `dict` client (RFC 2229). Blocking.
+fn fetch_dict(word: &str) -> Result<String, String> {
+    let out = std::process::Command::new("dict")
+        .arg(word)
+        .output()
+        .map_err(|e| format!("dict: {e} (install dictd/dict)"))?;
+    let body = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if body.is_empty() {
+        return Err(format!(
+            "dict: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(body)
+}
+
+/// emacs `dictionary-search` / spacemacs `SPC x w d`, whose documented behaviour
+/// is define-word's: "show dictionary entry of word from wordnik.com"
+/// (DOCUMENTATION.org). The definitions land in a scratch buffer; the word
+/// defaults to the one under the cursor, as `define-word-at-point` does.
+///
+/// Two backends, because the spec's is online and zmax must stay usable without
+/// a network: wordnik (the default, define-word's own service) and the external
+/// `dict` client, forced with `--dict`. A wordnik lookup that fails falls back to
+/// `dict` when the machine has one, and the status line always names the backend
+/// that answered, so the fallback is never silent.
 fn ex_dictionary_search(
     cx: &mut compositor::Context,
     args: Args,
@@ -33321,20 +33860,38 @@ fn ex_dictionary_search(
     if word.trim().is_empty() {
         bail!("dictionary-search: no word at point");
     }
-    let out = std::process::Command::new("dict")
-        .arg(&word)
-        .output()
-        .map_err(|e| anyhow!("dict: {e} (install dictd/dict)"))?;
-    let body = String::from_utf8_lossy(&out.stdout);
-    if !body.trim().is_empty() {
-        super::show_text_in_scratch(cx.editor, &body);
-        cx.editor.set_status(format!("dictionary: {word}"));
-    } else {
-        bail!(
-            "dictionary: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
+    let offline = args.has_flag(DICTIONARY_DICT_FLAG.name);
+
+    let query = word.clone();
+    let callback = async move {
+        let found = tokio::task::spawn_blocking(move || -> Result<(String, String), String> {
+            if offline {
+                return fetch_dict(&query).map(|body| (body, "dict".to_string()));
+            }
+            match fetch_wordnik(&query) {
+                // define-word's own empty-result message.
+                Ok(defs) if defs.is_empty() => Err("0 definitions found".to_string()),
+                Ok(defs) => Ok((defs.join("\n"), "wordnik.com".to_string())),
+                Err(e) => match fetch_dict(&query) {
+                    Ok(body) => Ok((body, "dict (wordnik unreachable)".to_string())),
+                    Err(_) => Err(e),
+                },
+            }
+        })
+        .await
+        .unwrap_or_else(|e| Err(format!("{e}")));
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, _compositor: &mut Compositor| match found {
+                Ok((body, backend)) => {
+                    super::show_text_in_scratch(editor, &format!("{body}\n"));
+                    editor.set_status(format!("dictionary: {word} ({backend})"));
+                }
+                Err(e) => editor.set_error(format!("dictionary-search: {e}")),
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
     Ok(())
 }
 
@@ -38310,6 +38867,90 @@ fn queue_current_draft(cx: &mut compositor::Context) -> anyhow::Result<std::path
     Ok(path)
 }
 
+/// Emacs `sendmail-program` (sendmail.el:46-52): "sendmail" on `PATH`, else
+/// `/usr/sbin/sendmail`, `/usr/lib/sendmail`, `/usr/ucblib/sendmail` — the first
+/// that exists. Emacs' last resort is the bare name "sendmail", which then fails
+/// at call time; `None` here means "no MTA on this machine", and the caller
+/// queues the message to the outbox instead of failing the send.
+fn sendmail_program() -> Option<std::path::PathBuf> {
+    if let Ok(p) = zmax_stdx::env::which("sendmail") {
+        return Some(p);
+    }
+    [
+        "/usr/sbin/sendmail",
+        "/usr/lib/sendmail",
+        "/usr/ucblib/sendmail",
+    ]
+    .into_iter()
+    .map(std::path::PathBuf::from)
+    .find(|p| p.exists())
+}
+
+/// Emacs `message-send-mail-with-sendmail` (message.el:5082-5150): pipe the
+/// assembled message to `sendmail`, which reads the recipients out of the
+/// headers. The argument list is Emacs': `-oi` (a lone `.` does not end the
+/// message), `-f {envelope-from}` when the draft names a `From:`, `-oem -odb`
+/// ("report errors by mail", "deliver in background" — Emacs passes these
+/// whenever `message-interactive` is nil, which is the only mode a `:` command
+/// has), and `-t` to take the recipients from the headers. "If the program
+/// returns a non-zero error code … sending is considered "failed" by Emacs."
+fn send_via_sendmail(
+    program: &std::path::Path,
+    wire: &str,
+    from: Option<&str>,
+) -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut cmd = std::process::Command::new(program);
+    cmd.arg("-oi");
+    if let Some(from) = from.map(str::trim).filter(|f| !f.is_empty()) {
+        cmd.args(["-f", from]);
+    }
+    cmd.args(["-oem", "-odb", "-t"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped());
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| anyhow!("{}: {e}", program.display()))?;
+    child
+        .stdin
+        .take()
+        .ok_or_else(|| anyhow!("{}: no stdin", program.display()))?
+        .write_all(wire.as_bytes())?;
+    let out = child.wait_with_output()?;
+    if !out.status.success() {
+        let err = String::from_utf8_lossy(&out.stderr);
+        let err = err.trim();
+        bail!(
+            "sending failed with exit value {}{}",
+            out.status.code().unwrap_or(-1),
+            if err.is_empty() {
+                String::new()
+            } else {
+                format!(": {err}")
+            }
+        );
+    }
+    Ok(())
+}
+
+/// Assemble and validate the current draft, then hand it to `sendmail` when the
+/// machine has one. Returns the address it went to for the status line, or `None`
+/// when there is no MTA — the caller queues the draft in that case, which is what
+/// zmax did for every send before a transport existed.
+fn send_current_draft(cx: &mut compositor::Context) -> anyhow::Result<Option<String>> {
+    let Some(program) = sendmail_program() else {
+        return Ok(None);
+    };
+    let raw = doc!(cx.editor).text().to_string();
+    let msg = zmax_core::email::parse_buffer(&raw);
+    msg.validate().map_err(|e| anyhow!("message: {e}"))?;
+    send_via_sendmail(&program, &msg.assemble(), msg.header("From"))?;
+    Ok(Some(
+        msg.header("To").unwrap_or_default().trim().to_string(),
+    ))
+}
+
 /// Emacs `message-send` (C-c C-s): assemble + queue the draft, keeping the buffer.
 fn message_send(
     cx: &mut compositor::Context,
@@ -38327,7 +38968,12 @@ fn message_send(
     Ok(())
 }
 
-/// Emacs `message-send-and-exit` (C-c C-c): queue the draft, then kill its buffer.
+/// Emacs `message-send-and-exit` (C-c C-c): "Send message like `message-send',
+/// then, if no errors, exit from mail buffer" (message.el:4321-4340) — the
+/// buffer is killed only when the send succeeded, so a failed send leaves the
+/// draft on screen to fix and retry. The send itself goes through `sendmail`
+/// ([`send_current_draft`]); with no MTA on the machine it falls back to the
+/// outbox queue.
 fn message_send_and_exit(
     cx: &mut compositor::Context,
     _args: Args,
@@ -38336,12 +38982,15 @@ fn message_send_and_exit(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let path = queue_current_draft(cx)?;
+    let status = match send_current_draft(cx)? {
+        Some(to) => format!("message sent to {to} — buffer killed"),
+        None => format!(
+            "message queued to {} (no MTA) — buffer killed",
+            queue_current_draft(cx)?.display()
+        ),
+    };
     run_command_line(cx, "buffer-close!");
-    cx.editor.set_status(format!(
-        "message queued to {} — buffer killed",
-        path.display()
-    ));
+    cx.editor.set_status(status);
     Ok(())
 }
 
@@ -40943,6 +41592,64 @@ fn shada_unescape(value: &str) -> String {
     out
 }
 
+thread_local! {
+    /// Marks `:rshada` read for files no buffer holds yet, keyed by canonical
+    /// path. nvim stores marks per file and applies them when the file itself is
+    /// read — starting.txt:972-973: "Marks are stored for each file separately.
+    /// When a file is read and 'shada' is non-empty, the marks for that file are
+    /// read from the ShaDa file." — so they wait here for the `DocumentDidOpen`
+    /// hook [`install_shada_mark_hook`] installs, instead of being dropped.
+    static PENDING_SHADA_MARKS: std::cell::RefCell<
+        std::collections::HashMap<std::path::PathBuf, Vec<(char, usize)>>,
+    > = std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Park a mark for a file nothing is editing yet. A later `:rshada` for the same
+/// file and mark replaces the parked position rather than stacking a second one.
+fn defer_shada_mark(path: std::path::PathBuf, mark: char, pos: usize) {
+    PENDING_SHADA_MARKS.with(|m| {
+        let mut m = m.borrow_mut();
+        let marks = m.entry(path).or_default();
+        match marks.iter_mut().find(|(c, _)| *c == mark) {
+            Some(slot) => slot.1 = pos,
+            None => marks.push((mark, pos)),
+        }
+    });
+}
+
+/// Install (once) the hook that applies parked shada marks to a file as it is
+/// opened. Registered lazily from `:rshada` — the command that knows there is
+/// anything to wait for — the same way `:filetype` installs its own
+/// `DocumentDidOpen` hook.
+fn install_shada_mark_hook() {
+    static HOOK: std::sync::Once = std::sync::Once::new();
+    HOOK.call_once(|| {
+        use zmax_event::register_hook;
+        use zmax_view::events::DocumentDidOpen;
+        register_hook!(move |event: &mut DocumentDidOpen<'_>| {
+            let path = event
+                .editor
+                .document(event.doc)
+                .and_then(|doc| doc.path().map(|p| zmax_stdx::path::canonicalize(p)));
+            let Some(marks) =
+                path.and_then(|p| PENDING_SHADA_MARKS.with(|m| m.borrow_mut().remove(&p)))
+            else {
+                return Ok(());
+            };
+            if let Some(doc) = event.editor.documents.get_mut(&event.doc) {
+                // The file may have been edited outside the session and be
+                // shorter than it was — the same clamp `:rshada` applies to the
+                // marks it can restore straight away.
+                let len = doc.text().len_chars();
+                for (mark, pos) in marks {
+                    doc.set_mark(mark, pos.min(len));
+                }
+            }
+            Ok(())
+        });
+    });
+}
+
 /// What nvim 'shada' caps in the file `:wshada` writes.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct ShadaLimits {
@@ -41064,9 +41771,12 @@ fn ex_wshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
-/// nvim `:rshada [file]` — read the state `:wshada` wrote back in: the registers,
-/// and the marks of the files that are open (a mark for a file no buffer holds has
-/// nowhere to live, so it is left in the file for the next read).
+/// nvim `:rshada [file]` — read the state `:wshada` wrote back in: the registers
+/// and the file marks. A mark whose file is open is applied straight away; a mark
+/// for a file nothing is editing is parked and applied when that file is opened,
+/// which is when nvim reads a file's marks — starting.txt:972-973: "Marks are
+/// stored for each file separately. When a file is read and 'shada' is non-empty,
+/// the marks for that file are read from the ShaDa file."
 fn ex_rshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -41113,6 +41823,7 @@ fn ex_rshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
             .map_err(|e| anyhow!("rshada: register {name}: {e}"))?;
     }
     let mut restored = 0usize;
+    let mut deferred = 0usize;
     for (file, mark, pos) in marks {
         let target = zmax_stdx::path::canonicalize(&file);
         let Some(id) = cx
@@ -41121,6 +41832,11 @@ fn ex_rshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
             .find(|doc| doc.path() == Some(target.as_path()))
             .map(|doc| doc.id())
         else {
+            // No buffer holds this file: park the mark for the file itself to
+            // pick up when it is opened, which is when nvim reads a file's marks
+            // (starting.txt:972-973).
+            defer_shada_mark(target, mark, pos);
+            deferred += 1;
             continue;
         };
         let Some(doc) = cx.editor.documents.get_mut(&id) else {
@@ -41130,8 +41846,11 @@ fn ex_rshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
         doc.set_mark(mark, pos.min(doc.text().len_chars()));
         restored += 1;
     }
+    if deferred > 0 {
+        install_shada_mark_hook();
+    }
     cx.editor.set_status(format!(
-        "shada read from {} ({n_registers} register(s), {restored} mark(s))",
+        "shada read from {} ({n_registers} register(s), {restored} mark(s), {deferred} deferred)",
         path.display()
     ));
     Ok(())
@@ -59952,11 +60671,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         &[],
         "Run {cmd} with messages shown (vim :unsilent)."
     ),
-    ex_modifier_entry!(
-        "verbose",
-        &["verb"],
-        "Run {cmd} verbosely, optional leading count (vim :verbose)."
-    ),
+    TypableCommand {
+        name: "verbose",
+        aliases: &["verb"],
+        doc: "Run {cmd} with 'verbose' set to the leading count (default 1) and restore it after (vim :verbose).",
+        fun: ex_verbose,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
     ex_modifier_entry!(
         "noautocmd",
         &["noa"],
@@ -59975,7 +60700,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "browse",
         aliases: &["bro"],
-        doc: "Run {cmd}, picking its file with the file picker when none is given (vim :browse).",
+        doc: "Open the current directory in Dired for :edit/:split/:vsplit/:tabedit/:tabnew, else run {cmd} (vim :browse).",
         fun: ex_browse,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -59983,11 +60708,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             ..Signature::DEFAULT
         },
     },
-    ex_modifier_entry!(
-        "hide",
-        &["hid"],
-        "Run {cmd} keeping the current buffer hidden (vim :hide)."
-    ),
+    TypableCommand {
+        name: "hide",
+        aliases: &["hid"],
+        doc: "Quit the current window, keeping its buffer loaded; with {cmd}, run it with 'hidden' set (vim :hide).",
+        fun: ex_hide,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
     ex_modifier_entry!(
         "vertical",
         &["vert"],
@@ -60203,12 +60934,13 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "dictionary-search",
-        aliases: &["dictionary"],
-        doc: "Look up a word (or the word at point) with the external dict client (emacs dictionary-search).",
+        aliases: &["dictionary", "define-word", "define-word-at-point"],
+        doc: "Show the definitions of a word (or the word at point) from wordnik.com; --dict uses the local dict client (emacs dictionary-search, spacemacs SPC x w d).",
         fun: ex_dictionary_search,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            flags: &[DICTIONARY_DICT_FLAG],
             ..Signature::DEFAULT
         },
     },
@@ -71056,6 +71788,180 @@ mod vim_set_tests {
         // The `<`/`>`/`---` body lines are not commands.
         assert!(parse_normal_diff("< only a body line\n> and another\n---\n").is_empty());
         assert!(parse_normal_diff("").is_empty());
+    }
+
+    /// Marks parked by `:rshada` for a file nothing is editing are keyed by file
+    /// and mark: reading the same shada twice must move the parked position, not
+    /// stack a second entry — otherwise the store grows on every read and the
+    /// stale position is the one applied when the file is finally opened.
+    #[test]
+    fn deferred_shada_marks_are_keyed_by_file_and_mark() {
+        let file = std::path::PathBuf::from("/tmp/zmax-shada-test/a.rs");
+        let other = std::path::PathBuf::from("/tmp/zmax-shada-test/b.rs");
+        defer_shada_mark(file.clone(), 'A', 10);
+        defer_shada_mark(file.clone(), 'B', 20);
+        defer_shada_mark(file.clone(), 'A', 30);
+        defer_shada_mark(other.clone(), 'A', 40);
+
+        let mut marks = PENDING_SHADA_MARKS.with(|m| m.borrow_mut().remove(&file).unwrap());
+        marks.sort_unstable();
+        assert_eq!(marks, [('A', 30), ('B', 20)], "'A' moved, 'B' kept");
+        assert_eq!(
+            PENDING_SHADA_MARKS.with(|m| m.borrow_mut().remove(&other)),
+            Some(vec![('A', 40)]),
+            "another file's marks are not touched"
+        );
+    }
+
+    /// `define-word--parse-wordnik`: a definition is
+    /// `<li><abbr …>{part of speech}</abbr> {text}</li>`, the part of speech is
+    /// prefixed with one space between it and the body, the inline markup emacs
+    /// renders as faces is reduced to its text, and at most `define-word-limit`
+    /// (10) definitions are shown. An `<abbr>` with no part of speech contributes
+    /// no leading space — that is what the elisp's `(unless (= 0 (length part))`
+    /// guard is for.
+    #[test]
+    fn wordnik_page_parses_into_definitions() {
+        let page = "<html><body><ul>\
+            <li><abbr class=\"pos\">noun</abbr> A <xref>domesticated</xref> carnivore.</li>\
+            <li><abbr class=\"pos\"></abbr> To <em>move</em> stealthily.</li>\
+            <li><abbr>verb</abbr>   Trailing spaces are skipped.</li>\
+            </ul></body></html>";
+        assert_eq!(
+            parse_wordnik(page),
+            [
+                "noun A domesticated carnivore.",
+                "To move stealthily.",
+                "verb Trailing spaces are skipped.",
+            ]
+        );
+        // A page with no definition list yields nothing, which the command
+        // reports as define-word's own "0 definitions found".
+        assert!(parse_wordnik("<html><body>no definitions here</body></html>").is_empty());
+
+        // `define-word-limit` caps the list.
+        let many: String = std::iter::repeat("<li><abbr>n.</abbr> a word</li>")
+            .take(WORDNIK_LIMIT + 5)
+            .collect();
+        assert_eq!(parse_wordnik(&many).len(), WORDNIK_LIMIT);
+
+        // Entities in the body come back as their characters.
+        assert_eq!(
+            parse_wordnik("<li><abbr>n.</abbr> salt &amp; pepper</li>"),
+            ["n. salt & pepper"]
+        );
+    }
+
+    /// vim 'tagbsearch': the binary search has to find *every* line of a tag's
+    /// run, wherever the run sits in the file, and nothing else — a lookup that
+    /// stops at the first hit silently loses the other definitions of an
+    /// overloaded name, which is the whole reason `:tselect` exists. The header
+    /// lines sort below every tag and must never come back as matches.
+    #[test]
+    fn tag_bsearch_finds_the_whole_run() {
+        let tags = "!_TAG_FILE_FORMAT\t2\t/extended format/\n\
+                    !_TAG_FILE_SORTED\t1\t/1=sorted/\n\
+                    alpha\ta.rs\t1;\"\tf\n\
+                    bravo\tb.rs\t2;\"\tf\n\
+                    bravo\tc.rs\t3;\"\tf\n\
+                    bravo\td.rs\t4;\"\tf\n\
+                    delta\te.rs\t5;\"\tf\n";
+        assert_eq!(tags_file_sorted(tags), TagSorted::Ascii);
+        let run = tag_bsearch_lines(tags, "bravo", false, 0);
+        assert_eq!(run.len(), 3, "all three bravo lines: {run:?}");
+        assert!(run.iter().all(|l| l.starts_with("bravo\t")));
+        // First and last tag in the file, and one that is not there at all.
+        assert_eq!(tag_bsearch_lines(tags, "alpha", false, 0).len(), 1);
+        assert_eq!(tag_bsearch_lines(tags, "delta", false, 0).len(), 1);
+        assert!(tag_bsearch_lines(tags, "charlie", false, 0).is_empty());
+        // The header lines sort below every tag, so the search can land on one;
+        // they are dropped where every other tags-file line is parsed.
+        assert!(parse_tag_line(
+            "!_TAG_FILE_SORTED\t1\t/1=sorted/",
+            std::path::Path::new("/tmp")
+        )
+        .is_none());
+        // 'taglength' cuts the comparison, so `bra` finds the `bravo` run.
+        assert_eq!(tag_bsearch_lines(tags, "brazil", false, 3).len(), 3);
+
+        // A case-fold sorted file (`2`) is compared with case folded, so a
+        // lowercase lookup finds the uppercase-folded run.
+        let fold = "!_TAG_FILE_SORTED\t2\t/2=foldcase/\n\
+                    Alpha\ta.rs\t1;\"\tf\n\
+                    BRAVO\tb.rs\t2;\"\tf\n\
+                    charlie\tc.rs\t3;\"\tf\n";
+        assert_eq!(tags_file_sorted(fold), TagSorted::FoldCase);
+        assert_eq!(tag_bsearch_lines(fold, "bravo", true, 0).len(), 1);
+        assert_eq!(tag_bsearch_lines(fold, "CHARLIE", true, 0).len(), 1);
+        // `0` is vim's "this file is not sorted" marker: the caller must scan.
+        assert_eq!(
+            tags_file_sorted("!_TAG_FILE_SORTED\t0\t/0=unsorted/\nzulu\ta.rs\t1\n"),
+            TagSorted::Unsorted
+        );
+        // No pseudo-tag at all still means binary search upstream.
+        assert_eq!(tags_file_sorted("alpha\ta.rs\t1\n"), TagSorted::Ascii);
+    }
+
+    /// nvim option.c `case kOptPyxversion`: 0 means "whichever Python is
+    /// available", which with only Python 3 supported is 3; 3 stores as typed;
+    /// every other value fails the `:set` line ("Setting any other value is an
+    /// error", options.txt 'pyxversion'). The regression this guards is
+    /// `:set pyxversion=2` going back to being accepted, which leaves `:pyx`
+    /// running Python 3 under a stored 2.
+    #[test]
+    fn pyxversion_only_accepts_three() {
+        assert_eq!(vim_num_option_fixup("pyxversion", "3"), Ok(None));
+        assert_eq!(vim_num_option_fixup("pyx", "0"), Ok(Some("3")));
+        assert_eq!(vim_num_option_fixup("pyxversion", "2"), Err(()));
+        assert_eq!(vim_num_option_fixup("pyx", "1"), Err(()));
+        // Options with no upstream range check are stored as typed.
+        assert_eq!(vim_num_option_fixup("textwidth", "80"), Ok(None));
+    }
+
+    /// Every read-only option must be a real option: the `:set` guard matches on
+    /// the canonical name, so a typo in the list would silently stop rejecting
+    /// anything while still looking like it covers the option.
+    #[test]
+    fn readonly_options_are_known_options() {
+        for name in crate::commands::vim_options_data::VIM_READONLY_OPTIONS {
+            assert!(
+                vim_opt_meta(name).is_some(),
+                "read-only option `{name}` is not in VIM_OPTION_TABLE"
+            );
+        }
+        assert!(
+            crate::commands::vim_options_data::VIM_READONLY_OPTIONS.contains(&"channel"),
+            "'channel' is options.txt's only Read-only option"
+        );
+    }
+
+    /// vim 'lispoptions': `indentexpr` only drives Lisp indenting when the whole
+    /// option is `expr:1`. nvim compares with `strcmp(curbuf->b_p_lop, "expr:1")`
+    /// (indent.c `use_indentexpr_for_lisp`), so a list that merely *contains* the
+    /// item does not count — the regression this guards is "fixing" the check to
+    /// a `contains`, which would silently take the indentexpr branch for
+    /// `lispoptions=expr:1,foo` and for anything a future item is added to.
+    #[test]
+    fn lispoptions_expr1_is_an_exact_match() {
+        vim_opt_reset("lispoptions");
+        vim_opt_reset("indentexpr");
+        zmax_core::indent::set_lisp(true);
+        // 'lisp' alone: the built-in Lisp indenter, whatever 'indentexpr' says.
+        assert!(!use_indentexpr_for_lisp());
+        vim_opt_store("indentexpr", "GetLispIndent()".into());
+        assert!(!use_indentexpr_for_lisp());
+        vim_opt_store("lispoptions", "expr:1".into());
+        assert!(use_indentexpr_for_lisp());
+        vim_opt_store("lispoptions", "expr:1,foo".into());
+        assert!(!use_indentexpr_for_lisp());
+        vim_opt_store("lispoptions", "expr:0".into());
+        assert!(!use_indentexpr_for_lisp());
+        // 'lisp' off takes the option out of play entirely.
+        vim_opt_store("lispoptions", "expr:1".into());
+        zmax_core::indent::set_lisp(false);
+        assert!(!use_indentexpr_for_lisp());
+        vim_opt_reset("lispoptions");
+        vim_opt_reset("indentexpr");
     }
 
     #[test]

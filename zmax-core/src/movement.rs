@@ -480,13 +480,16 @@ pub fn is_nroff_macro_line(line: &str, spec: &str) -> bool {
 /// paragraphs, a `paragraphs` macro line *starts* one (the motion lands on it,
 /// it is not skipped like a blank), everything else is body text.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum ParaLine {
+pub(crate) enum ParaLine {
     Text,
     Blank,
     Macro,
 }
 
-fn para_line(line: RopeSlice) -> ParaLine {
+/// Classify one line for paragraph purposes. `pub(crate)` because the `ip`/`ap`
+/// text objects need the same three-way answer the `{`/`}` motions use — a macro
+/// line is not a blank line to be skipped, it is the first line of a paragraph.
+pub(crate) fn para_line(line: RopeSlice) -> ParaLine {
     if rope_is_line_ending(line) {
         return ParaLine::Blank;
     }
@@ -760,9 +763,17 @@ pub fn next_sentence_boundary(slice: RopeSlice, pos: usize) -> usize {
             }
             i = j;
         } else {
-            // A blank line is its own boundary: the start of the line after it.
-            if c == '\n' && i + 1 < len && slice.char(i + 1) == '\n' {
-                return i + 1;
+            if c == '\n' && i + 1 < len {
+                // A blank line is its own boundary: the start of the line after it.
+                if slice.char(i + 1) == '\n' {
+                    return i + 1;
+                }
+                // vim `paragraphs`: a macro line begins a paragraph, and a
+                // paragraph boundary is a sentence boundary too (`:help sentence`),
+                // so `)` stops on `.PP` exactly as it stops on a blank line.
+                if para_line(slice.line(slice.char_to_line(i + 1))) == ParaLine::Macro {
+                    return i + 1;
+                }
             }
             i += 1;
         }
@@ -774,7 +785,13 @@ pub fn next_sentence_boundary(slice: RopeSlice, pos: usize) -> usize {
 /// used to bound the backward sentence scan to a single paragraph.
 pub(crate) fn current_paragraph_start(slice: RopeSlice, pos: usize) -> usize {
     let mut line = slice.char_to_line(pos);
-    while line > 0 && !rope_is_line_ending(slice.line(line - 1)) {
+    // A blank line *separates*, so the paragraph starts on the line after it; a
+    // vim `paragraphs` macro line *starts* its paragraph, so the walk stops on
+    // that line itself rather than one past it.
+    while line > 0
+        && para_line(slice.line(line)) != ParaLine::Macro
+        && !rope_is_line_ending(slice.line(line - 1))
+    {
         line -= 1;
     }
     slice.line_to_char(line)
@@ -2935,6 +2952,53 @@ mod test {
         );
 
         set_paragraph_macros("");
+    }
+
+    /// vim `paragraphs`, the option's other two consumers: the `ip` text object
+    /// takes the paragraph a macro line starts (not the blank-line block around
+    /// it), and the sentence motions stop there too — "a paragraph boundary is
+    /// also a sentence boundary" (`:help sentence`).
+    #[test]
+    fn paragraphs_option_bounds_text_object_and_sentence_motion() {
+        use crate::textobject::{textobject_paragraph, TextObject};
+        let text = Rope::from("first para line\n.PP\nsecond para line\nmore\n");
+        let s = text.slice(..);
+
+        set_paragraph_macros("PP");
+        // `ip` on the first line covers that line alone: the `.PP` under it starts
+        // the next paragraph, so the object ends before it.
+        let ip = textobject_paragraph(s, Range::point(0), TextObject::Inside, 1);
+        assert_eq!(s.char_to_line(ip.anchor), 0);
+        assert_eq!(
+            s.char_to_line(ip.head),
+            1,
+            "`ip` ends at the `.PP` line that starts the next paragraph"
+        );
+        // `ip` from inside that next paragraph runs back *onto* the macro line —
+        // it is the paragraph's first line, not a separator above it.
+        let from = Range::point(text.line_to_char(2));
+        let ip = textobject_paragraph(s, from, TextObject::Inside, 1);
+        assert_eq!(
+            s.char_to_line(ip.anchor),
+            1,
+            "`ip` includes the `.PP` line it starts at"
+        );
+        // `)` from the first line lands on the macro line instead of running
+        // through it into the next paragraph's text.
+        let fwd = move_next_sentence(s, Range::point(0), 1, Movement::Move);
+        assert_eq!(
+            s.char_to_line(fwd.cursor(s)),
+            1,
+            "`)` stops on the `.PP` line"
+        );
+
+        // With the option unset the same `.PP` is ordinary text again.
+        set_paragraph_macros("");
+        let ip = textobject_paragraph(s, Range::point(0), TextObject::Inside, 1);
+        assert!(
+            s.char_to_line(ip.head) > 1,
+            "without `paragraphs`, `ip` runs past the `.PP` line"
+        );
     }
 
     /// emacs `paragraph-indent-minor-mode`: with the mode off an indented line is

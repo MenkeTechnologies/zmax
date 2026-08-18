@@ -294,8 +294,10 @@ pub fn deindent_by_first_line(text: &str, tab_width: usize) -> String {
 // here (`>N`, `=N`, `hN`); the ~40 other 'cinoptions' flags tune constructs this
 // indenter does not model (unclosed parens, continuation lines, comment
 // alignment) and are parsed-and-ignored rather than half-honored. The lisp
-// indenter aligns under the enclosing form's first argument, with the
-// 'lispwords' forms indenting a fixed two columns instead.
+// indenter is a port of vim's own `get_lisp_indent`: it reuses the indent of the
+// last line at the same bracket level, and otherwise aligns under the enclosing
+// form's first argument — with the 'lispwords' forms indenting a fixed two
+// columns instead.
 // ---------------------------------------------------------------------------
 
 /// vim's `cinwords` default — the keywords whose (unbraced) body is indented.
@@ -305,35 +307,18 @@ const DEFAULT_CINWORDS: &[&str] = &["if", "else", "while", "do", "for", "switch"
 /// that follow get their own indent ('cinoptions' `hN`).
 const DEFAULT_CINSCOPEDECLS: &[&str] = &["public", "protected", "private"];
 
-/// A useful subset of vim's `lispwords` default: forms indented a fixed two
-/// columns from the open paren rather than aligned under the first argument.
-const DEFAULT_LISPWORDS: &[&str] = &[
-    "defun",
-    "define",
-    "defmacro",
-    "defvar",
-    "defparameter",
-    "lambda",
-    "let",
-    "let*",
-    "letrec",
-    "flet",
-    "labels",
-    "if",
-    "when",
-    "unless",
-    "case",
-    "cond",
-    "do",
-    "dolist",
-    "dotimes",
-    "loop",
-    "progn",
-    "prog1",
-    "set!",
-    "with-open-file",
-    "unwind-protect",
-];
+/// vim's `lispwords` default, verbatim from `LISPWORD_VALUE`
+/// (nvim src/nvim/option_vars.h:161): the forms indented a fixed two columns
+/// from the open paren rather than aligned under the first argument. Kept as the
+/// option's own comma-separated spelling so it can be diffed against vim's.
+const DEFAULT_LISPWORDS: &str = "defun,define,defmacro,set!,lambda,if,case,let,flet,let*,letrec,do,do*,\
+define-syntax,let-syntax,letrec-syntax,destructuring-bind,defpackage,defparameter,defstruct,deftype,\
+defvar,do-all-symbols,do-external-symbols,do-symbols,dolist,dotimes,ecase,etypecase,eval-when,labels,\
+macrolet,multiple-value-bind,multiple-value-call,multiple-value-prog1,multiple-value-setq,prog1,progv,\
+typecase,unless,unwind-protect,when,with-input-from-string,with-open-file,with-open-stream,\
+with-output-to-string,with-package-iterator,define-condition,handler-bind,handler-case,restart-bind,\
+restart-case,with-simple-restart,store-value,use-value,muffle-warning,abort,continue,with-slots,\
+with-slots*,with-accessors,with-accessors*,defclass,defmethod,print-unreadable-object";
 
 #[derive(Clone, Default)]
 struct VimIndentOptions {
@@ -581,91 +566,299 @@ fn strip_line_comment(line: &str) -> &str {
     line
 }
 
-/// The column vim's lisp indenter puts the line after `text` at: aligned under
-/// the first argument of the innermost unclosed form, or two columns in from the
-/// open paren when the form's head is a `lispwords` word. `text` is the source up
-/// to (and including) the end of the previous line. Pure — unit tested.
-pub fn vim_lisp_indent_column(text: &str, lispwords: &[&str]) -> usize {
-    // Open parens still unclosed at the end of `text`, as (column, head word,
-    // column of the first argument on the same line).
-    struct Open {
-        col: usize,
-        head: String,
-        first_arg_col: Option<usize>,
+/// The column vim's lisp indenter puts the line after `text` at. A port of
+/// `get_lisp_indent` (nvim src/nvim/indent.c:1679), the function `:set lisp`
+/// runs for <Enter>, `cc`/`S` and `=`.
+///
+/// vim works in three steps, in this order:
+///
+///  1. Find the innermost bracket still open before the line being indented —
+///     `findmatch(NULL, '(')` and `findmatch(NULL, '[')`, whichever landed later
+///     winning. With 'lisp' set those searches skip `;` comments, strings and
+///     the `#\(` character literal. Nothing open: "use zero indent".
+///  2. "Extra trick: Take the indent of the first previous non-white line that
+///     is at the same () level" — walk back from the previous line to the
+///     bracket's own line counting brackets, and reuse the indent of the first
+///     line the count comes back to zero on. This is what keeps a form's
+///     arguments lined up with each other however the first one was placed.
+///  3. Otherwise align on the open bracket's line: two columns in when the
+///     form's head is a 'lispwords' word (`(defun f (x)` -> 2), else under the
+///     head's first argument (`(foo bar` -> the column of `bar`). A head with no
+///     argument left on the line falls back to `firsttry`, one column past where
+///     the head itself starts — which is why `(foo` indents its body by two.
+///
+/// `text` is the source up to (and including) the end of the previous line;
+/// `tab_width` expands tabs into the display columns vim measures in. Pure —
+/// unit tested.
+pub fn vim_lisp_indent_column(text: &str, lispwords: &[&str], tab_width: usize) -> usize {
+    let mut lines: Vec<&str> = text.split('\n').collect();
+    // The trailing newline ends the previous line; what follows it is the line
+    // being indented, which vim never reads — `get_lisp_indent` puts the cursor
+    // in column 0 before searching backwards.
+    if lines.last() == Some(&"") {
+        lines.pop();
     }
-    let mut stack: Vec<Open> = Vec::new();
-    let mut col = 0usize;
-    let mut in_string = false;
-    let mut in_comment = false;
-    let mut escape = false;
-    let mut chars = text.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c == '\n' {
-            col = 0;
-            in_comment = false;
-            continue;
+    let Some((open_lnum, open_byte)) = lisp_open_bracket(&lines) else {
+        // "No matching '(' or '[' found, use zero indent."
+        return 0;
+    };
+    // The extra trick: the last non-blank line that starts at this same bracket
+    // level keeps its own indent.
+    let mut parencount = 0i64;
+    for lnum in (open_lnum..lines.len()).rev() {
+        let line = lines[lnum];
+        if line.trim().is_empty() {
+            continue; // linewhite()
         }
-        let this_col = col;
-        col += 1;
-        if escape {
-            escape = false;
-            continue;
+        parencount += lisp_paren_delta(line);
+        if parencount == 0 {
+            return indentation_column(line, tab_width);
         }
-        if in_comment {
-            continue;
-        }
-        match c {
-            '\\' if in_string => escape = true,
-            '"' => in_string = !in_string,
-            ';' if !in_string => in_comment = true,
-            '(' | '[' if !in_string => {
-                // A nested form can itself be the enclosing form's first argument
-                // (`(let ((x 1))` aligns under the `((`).
-                if let Some(open) = stack.last_mut() {
-                    if !open.head.is_empty() && open.first_arg_col.is_none() {
-                        open.first_arg_col = Some(this_col);
-                    }
-                }
-                stack.push(Open {
-                    col: this_col,
-                    head: String::new(),
-                    first_arg_col: None,
-                });
-            }
-            ')' | ']' if !in_string => {
-                stack.pop();
-            }
-            c if !in_string && !c.is_whitespace() => {
-                // The first token after the open paren is the form's head; the
-                // next one is the first argument (what a plain form aligns to).
-                if let Some(open) = stack.last_mut() {
-                    let token_start = this_col;
-                    let mut token = String::from(c);
-                    while let Some(&n) = chars.peek() {
-                        if n.is_whitespace() || matches!(n, '(' | ')' | '[' | ']' | ';' | '"') {
-                            break;
-                        }
-                        token.push(n);
-                        chars.next();
-                        col += 1;
-                    }
-                    if open.head.is_empty() && token_start > open.col {
-                        open.head = token;
-                    } else if open.first_arg_col.is_none() && token_start > open.col {
-                        open.first_arg_col = Some(token_start);
-                    }
-                }
+    }
+    lisp_align_on_open(lines[open_lnum], open_byte, lispwords, tab_width)
+}
+
+/// vim `check_linecomment` (vim src/cindent.c) for a lisp buffer: the byte
+/// offset of the `;` that opens a comment on `line`, or `None` when it has none.
+/// A `;` inside a string is not a comment, and neither is one written `\;` or as
+/// the `#\;` character literal. vim's own quirk is kept — a `"` in the *second*
+/// column never opens a string, because the test there is
+/// `p == line || ((p - line) >= 2 && …)`.
+fn lisp_comment_col(line: &str) -> Option<usize> {
+    let b = line.as_bytes();
+    let mut in_str = false;
+    let mut i = 0;
+    while i < b.len() {
+        match b[i] {
+            // In a string only an unescaped `"` closes it again.
+            b'"' if in_str => in_str = b[i - 1] == b'\\',
+            b'"' => in_str = i == 0 || (i >= 2 && b[i - 1] != b'\\' && b[i - 2] != b'#'),
+            b';' if !in_str && (i < 2 || (b[i - 1] != b'\\' && b[i - 2] != b'#')) => {
+                return Some(i)
             }
             _ => {}
         }
+        i += 1;
     }
-    match stack.last() {
-        // A `lispwords` form (`defun`, `let`, …) indents a fixed two columns.
-        Some(open) if lispwords.contains(&open.head.as_str()) => open.col + 2,
-        // Otherwise align under the first argument, or — when the form has none
-        // yet — under its head (the column just after the open paren).
-        Some(open) => open.first_arg_col.unwrap_or(open.col + 1),
-        None => 0,
+    None
+}
+
+/// Where vim's two `findmatch` calls land: the innermost bracket still open at
+/// the end of `lines`, as `(line, byte offset)`. `(`/`)` and `[`/`]` are two
+/// independent searches in vim, so a stray `]` never closes a `(` — hence the
+/// two stacks. Scanning forwards finds the same bracket the backwards search
+/// would: both count nesting, from opposite ends.
+fn lisp_open_bracket(lines: &[&str]) -> Option<(usize, usize)> {
+    let mut parens: Vec<(usize, usize)> = Vec::new();
+    let mut squares: Vec<(usize, usize)> = Vec::new();
+    for (lnum, line) in lines.iter().enumerate() {
+        let b = line.as_bytes();
+        // With 'lisp' set findmatch never looks inside a `;` comment.
+        let end = lisp_comment_col(line).unwrap_or(line.len());
+        // "braces inside of quotes are ignored, but only if there is an even
+        // number of quotes in the line" — with an odd count vim cannot tell
+        // which half is the string, and gives up on skipping it.
+        let do_quotes = lisp_quote_count(line) % 2 == 0;
+        let mut in_quote = false;
+        let mut i = 0;
+        while i < end {
+            match b[i] {
+                b'"' if do_quotes && lisp_unescaped(b, i) => in_quote = !in_quote,
+                // "Skip things in single quotes: 'x' or '\x'". A lisp `'(a b)` is
+                // a quoted form rather than a pair, so this only fires on a real
+                // `'('`.
+                b'\'' if i + 1 < end => {
+                    if b[i + 1] == b'\\' && i + 3 < end && b[i + 3] == b'\'' {
+                        i += 3;
+                    } else if i + 2 < end && b[i + 2] == b'\'' {
+                        i += 2;
+                    }
+                }
+                // "For Lisp skip over backslashed (), {} and [] (actually, we
+                // skip #\( et al)": an odd number of backslashes before a
+                // bracket means it is a character, not a bracket.
+                b'(' if !in_quote && lisp_unescaped(b, i) => parens.push((lnum, i)),
+                b')' if !in_quote && lisp_unescaped(b, i) => {
+                    parens.pop();
+                }
+                b'[' if !in_quote && lisp_unescaped(b, i) => squares.push((lnum, i)),
+                b']' if !in_quote && lisp_unescaped(b, i) => {
+                    squares.pop();
+                }
+                _ => {}
+            }
+            i += 1;
+        }
+    }
+    // vim runs both searches and keeps whichever bracket is later in the buffer.
+    match (parens.last(), squares.last()) {
+        (Some(p), Some(s)) => Some(*p.max(s)),
+        (p, s) => p.or(s).copied(),
+    }
+}
+
+/// Whether the byte at `i` is preceded by an even number of backslashes. vim
+/// only accepts a bracket "when the escaping is what we expect", which for the
+/// lisp indenter's explicit `findmatch(NULL, '(')` means unescaped; the `#\(`
+/// character literal is covered by the same count.
+fn lisp_unescaped(b: &[u8], i: usize) -> bool {
+    let mut j = i;
+    while j > 0 && b[j - 1] == b'\\' {
+        j -= 1;
+    }
+    (i - j) % 2 == 0
+}
+
+/// vim's `do_quotes` count for one line: the `"` characters, skipping `\"` and
+/// the `'"'` character constant.
+fn lisp_quote_count(line: &str) -> usize {
+    let b = line.as_bytes();
+    let mut n = 0;
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'"' && (i == 0 || b[i - 1] != b'\'' || b.get(i + 1) != Some(&b'\'')) {
+            n += 1;
+        }
+        if b[i] == b'\\' && i + 1 < b.len() {
+            i += 1;
+        }
+        i += 1;
+    }
+    n
+}
+
+/// The bracket balance of one line as the extra trick of `get_lisp_indent`
+/// counts it. This is vim's own second, simpler scanner: `;` ends the line, `\`
+/// escapes the next character (which is what makes `#\(` harmless here too) and
+/// a `"` runs to the next unescaped `"`, an unterminated one ending the line.
+fn lisp_paren_delta(line: &str) -> i64 {
+    let b = line.as_bytes();
+    let mut delta = 0;
+    let mut i = 0;
+    while i < b.len() {
+        match b[i] {
+            b';' => break,
+            b'\\' => i += 1,
+            b'"' if i + 1 < b.len() => {
+                i += 1;
+                while i < b.len() && b[i] != b'"' {
+                    if b[i] == b'\\' {
+                        i += 1;
+                    }
+                    i += 1;
+                }
+                if i >= b.len() {
+                    break;
+                }
+            }
+            b'(' | b'[' => delta += 1,
+            b')' | b']' => delta -= 1,
+            _ => {}
+        }
+        i += 1;
+    }
+    delta
+}
+
+/// The last step of `get_lisp_indent`: the column to align on, given the open
+/// bracket at byte `at` of `line`.
+fn lisp_align_on_open(line: &str, at: usize, lispwords: &[&str], tab_width: usize) -> usize {
+    let b = line.as_bytes();
+    let mut amount = lisp_display_column(&line[..at], tab_width);
+    // "Some keywords require "body" indenting rules (the non-standard-lisp ones
+    // are Scheme special forms)": `(let ((a 1))` indents its body two columns in
+    // from the `(` instead of aligning under the `((a 1))`.
+    if lisp_match(&line[at + 1..], lispwords) {
+        return amount + 2;
+    }
+    let mut i = at;
+    if i < line.len() {
+        i += 1; // step over the bracket, which is one column wide
+        amount += 1;
+    }
+    let mut firsttry = amount;
+    while matches!(b.get(i), Some(b' ' | b'\t')) {
+        amount = lisp_advance_column(amount, b[i] as char, tab_width);
+        i += 1;
+    }
+    if i >= line.len() || b[i] == b';' {
+        // Nothing but a comment after the bracket: stay one column past it.
+        return amount;
+    }
+    // "Test *that != '(' to accommodate first let/do argument if it is more than
+    // one line."
+    if b[i] != b'(' && b[i] != b'[' {
+        firsttry += 1;
+    }
+    let head = line[i..].chars().next().unwrap_or('\0');
+    // A head that is a string, a character, a `#` reader macro or a number is
+    // not stepped over: such a form aligns under its head, not its argument.
+    if !matches!(head, '"' | '\'' | '#' | '0'..='9') {
+        let mut parencount = 0i64;
+        let mut quotecount = false;
+        while i < line.len() {
+            let mut ch = line[i..].chars().next().unwrap();
+            // Whitespace ends the head — unless it is inside a string or a
+            // bracket the head itself opened.
+            if matches!(ch, ' ' | '\t') && !quotecount && parencount == 0 {
+                break;
+            }
+            if ch == '"' {
+                quotecount = !quotecount;
+            }
+            if matches!(ch, '(' | '[') && !quotecount {
+                parencount += 1;
+            }
+            if matches!(ch, ')' | ']') && !quotecount {
+                parencount -= 1;
+            }
+            if ch == '\\' && i + ch.len_utf8() < line.len() {
+                // An escaped character is two columns of source, one token.
+                amount = lisp_advance_column(amount, ch, tab_width);
+                i += ch.len_utf8();
+                ch = line[i..].chars().next().unwrap();
+            }
+            amount = lisp_advance_column(amount, ch, tab_width);
+            i += ch.len_utf8();
+        }
+    }
+    while matches!(b.get(i), Some(b' ' | b'\t')) {
+        amount = lisp_advance_column(amount, b[i] as char, tab_width);
+        i += 1;
+    }
+    if i >= line.len() || b[i] == b';' {
+        // The head is the last thing on the line: indent the body one column
+        // past where the head starts rather than under an argument that is not
+        // there yet.
+        amount = firsttry;
+    }
+    amount
+}
+
+/// vim `lisp_match` (nvim src/nvim/indent.c:1849): whether `p` — the text right
+/// after the open bracket — starts with a 'lispwords' word followed by
+/// whitespace or the end of the line. `(let((x 1))` therefore does *not* match
+/// `let`.
+fn lisp_match(p: &str, lispwords: &[&str]) -> bool {
+    lispwords.iter().any(|w| {
+        p.strip_prefix(w)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with([' ', '\t']))
+    })
+}
+
+/// The display column `s` ends at — vim measures the lisp indent in screen
+/// columns (`win_charsize`), so a tab counts to the next tab stop.
+fn lisp_display_column(s: &str, tab_width: usize) -> usize {
+    s.chars()
+        .fold(0, |col, ch| lisp_advance_column(col, ch, tab_width))
+}
+
+/// The display column after `ch`, starting from column `col`.
+fn lisp_advance_column(col: usize, ch: char, tab_width: usize) -> usize {
+    if ch == '\t' {
+        col + tab_width_at(col, tab_width.max(1) as u16)
+    } else {
+        col + grapheme_width(ch.encode_utf8(&mut [0u8; 4]))
     }
 }
 
@@ -682,9 +875,13 @@ pub fn vim_indent_for_newline(
         let o = o.borrow();
         (o.cindent, o.lisp, o.cinwords.clone(), o.lispwords.clone())
     });
-    if lisp {
+    // options.txt 'lisp': "'autoindent' must also be on for this to work" —
+    // nvim's change.c only calls `get_lisp_indent` when `b_p_ai` is set as well.
+    // zmax defaults 'autoindent' on, so this only bites after `:set noautoindent`.
+    let autoindent = crate::vim_opts::get(&["autoindent", "ai"]).is_none_or(|v| v != "off");
+    if lisp && autoindent {
         let words: Vec<&str> = if lispwords.is_empty() {
-            DEFAULT_LISPWORDS.to_vec()
+            DEFAULT_LISPWORDS.split(',').collect()
         } else {
             lispwords.iter().map(String::as_str).collect()
         };
@@ -697,7 +894,10 @@ pub fn vim_indent_for_newline(
         let from = text.line_to_char(start_line);
         let to = text.line_to_char(line_before + 1).min(text.len_chars());
         let src = Cow::from(text.slice(from..to));
-        return Some(" ".repeat(vim_lisp_indent_column(&src, &words)));
+        let col = vim_lisp_indent_column(&src, &words, tab_width);
+        // vim writes the indent back with `set_indent`, which uses tabs unless
+        // 'expandtab' is on — the same rule `render_indent` applies for cindent.
+        return Some(render_indent(col, indent_style, tab_width));
     }
     if cindent {
         let words: Vec<&str> = if cinwords.is_empty() {
@@ -2142,28 +2342,63 @@ mod vim_indent_tests {
     /// `lispwords` form (`defun`, `let`, …) indents two columns from the paren.
     #[test]
     fn lisp_indent_aligns_under_first_argument() {
-        let words = DEFAULT_LISPWORDS;
+        let words: Vec<&str> = DEFAULT_LISPWORDS.split(',').collect();
+        let words = words.as_slice();
         // `(foo bar` -> align under `bar` (column 5).
-        assert_eq!(vim_lisp_indent_column("(foo bar\n", words), 5);
-        // No argument yet -> align under the head.
-        assert_eq!(vim_lisp_indent_column("(foo\n", words), 1);
+        assert_eq!(vim_lisp_indent_column("(foo bar\n", words, 8), 5);
+        // No argument left on the line -> vim's `firsttry`, one column past
+        // where the head itself starts: `(foo` indents its body by two.
+        assert_eq!(vim_lisp_indent_column("(foo\n", words, 8), 2);
+        // A bare `(` has no head to step past, so the body lands in the column
+        // right after it.
+        assert_eq!(vim_lisp_indent_column("(\n", words, 8), 1);
         // `defun` is a lispword -> two columns in from its paren.
-        assert_eq!(vim_lisp_indent_column("(defun f (x)\n", words), 2);
+        assert_eq!(vim_lisp_indent_column("(defun f (x)\n", words, 8), 2);
         // Nested: the innermost unclosed form wins.
-        assert_eq!(vim_lisp_indent_column("(defun f (x)\n  (+ 1\n", words), 5);
+        assert_eq!(
+            vim_lisp_indent_column("(defun f (x)\n  (+ 1\n", words, 8),
+            5
+        );
         // Everything closed -> column 0.
-        assert_eq!(vim_lisp_indent_column("(defun f (x) 1)\n", words), 0);
-        // Parens inside a string/comment do not open a form.
-        assert_eq!(vim_lisp_indent_column("(f \"(\" 1)\n", words), 0);
-        assert_eq!(vim_lisp_indent_column("; (nope\n", words), 0);
+        assert_eq!(vim_lisp_indent_column("(defun f (x) 1)\n", words, 8), 0);
+        // Parens inside a string or a `;` comment do not open a form, and
+        // neither does the `#\(` character literal.
+        assert_eq!(vim_lisp_indent_column("(f \"(\" 1)\n", words, 8), 0);
+        assert_eq!(vim_lisp_indent_column("; (nope\n", words, 8), 0);
+        assert_eq!(vim_lisp_indent_column("(f #\\( 1)\n", words, 8), 0);
+        // The columns are display columns: a leading tab is 'tabstop' wide.
+        assert_eq!(vim_lisp_indent_column("\t(foo bar\n", words, 4), 9);
+    }
+
+    /// vim's "extra trick": the last non-blank line at the same bracket level
+    /// keeps its own indent, so a form's arguments stay lined up with each other
+    /// however the first one was placed.
+    #[test]
+    fn lisp_indent_reuses_the_previous_line_at_the_same_level() {
+        let words: Vec<&str> = DEFAULT_LISPWORDS.split(',').collect();
+        let words = words.as_slice();
+        // `baz` was put in column 2 instead of under `bar`; the next line
+        // follows `baz`, not the alignment rule (which alone would say 5).
+        assert_eq!(vim_lisp_indent_column("(foo bar\n  baz\n", words, 8), 2);
+        // Blank lines are skipped on the way up (`linewhite`).
+        assert_eq!(vim_lisp_indent_column("(foo bar\n  baz\n\n", words, 8), 2);
+        // A line that closes every form it opened is still at the same level.
+        assert_eq!(vim_lisp_indent_column("(foo bar\n  (baz 1)\n", words, 8), 2);
+        // One that leaves a form open is not: that form is now the innermost
+        // one, and its own first argument is what the next line aligns under.
+        assert_eq!(vim_lisp_indent_column("(foo bar\n  (baz 1\n", words, 8), 7);
     }
 
     /// `:set lispwords=` replaces the list: `let` stops being a special form and
     /// aligns under its first argument like any other.
     #[test]
     fn lispwords_replaces_the_special_forms() {
-        assert_eq!(vim_lisp_indent_column("(let ((x 1))\n", &["let"]), 2);
-        assert_eq!(vim_lisp_indent_column("(let ((x 1))\n", &["defun"]), 5);
+        assert_eq!(vim_lisp_indent_column("(let ((x 1))\n", &["let"], 8), 2);
+        assert_eq!(vim_lisp_indent_column("(let ((x 1))\n", &["defun"], 8), 5);
+        // vim's `lisp_match` wants whitespace (or the end of the line) after the
+        // word, so `(let(` is a plain form even with `let` in the list: the
+        // whole `let(x 1)` is the head, and `y` after it is the first argument.
+        assert_eq!(vim_lisp_indent_column("(let(x 1) y\n", &["let"], 8), 10);
     }
 
     /// vim `cinoptions`: `>N` is the indent a block adds, `=N` the indent of the

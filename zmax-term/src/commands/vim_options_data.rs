@@ -2,6 +2,18 @@
 // surface (name, is_boolean, default value). Used by `:set` / `:set all` /
 // `:set opt?` so every option round-trips even without a behavioral effect.
 // (name, is_bool, default)
+
+/// Options Nvim refuses to *set*, by full name. `:set channel=5` reports
+/// "E474: Invalid argument: channel=5" because the value validator rejects
+/// every value for them unconditionally — nvim `option.c` `validate_num_option`
+/// has `case kOptChannel: return e_invarg;` — and options.txt's 'channel' entry
+/// ends with a bare "Read-only." They stay in [`VIM_OPTION_TABLE`] because
+/// reading them (`:set channel?`, `:set all`) is still legal; only assignment
+/// (`opt=val`, `opt:val`) and the reset form (`opt&`, which re-validates the
+/// default) are rejected. Add an option here when its upstream entry says
+/// "Read-only"; nothing else in options.txt does today.
+pub const VIM_READONLY_OPTIONS: &[&str] = &["channel"];
+
 pub const VIM_OPTION_TABLE: &[(&str, bool, &str)] = &[
     ("allowrevins", true, "off"),
     ("ambiwidth", false, "single"),

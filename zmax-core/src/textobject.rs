@@ -5,7 +5,7 @@ use ropey::RopeSlice;
 use crate::chars::{categorize_char, char_is_whitespace, CharCategory};
 use crate::graphemes::{next_grapheme_boundary, prev_grapheme_boundary};
 use crate::line_ending::rope_is_line_ending;
-use crate::movement::Direction;
+use crate::movement::{para_line, Direction, ParaLine};
 use crate::syntax;
 use crate::Range;
 use crate::{surround, Syntax};
@@ -159,6 +159,29 @@ pub fn textobject_paragraph(
     let prev_empty_to_line = prev_line_empty && !curr_line_empty;
     let curr_empty_to_line = curr_line_empty && !next_line_empty;
 
+    // Walk backwards from `from` to the first line of the paragraph it sits in:
+    // over the blank lines above it, then up through the body. vim `paragraphs`:
+    // an nroff macro line (`.PP`, `.IP`, …) *starts* a paragraph, so the walk
+    // stops on it — the line is the paragraph's first line, not a separator above
+    // it. Without the option set no line is ever `Macro` and this is exactly the
+    // blank/non-blank walk it replaces.
+    let paragraph_start_above = |from: usize| -> usize {
+        let mut at = from;
+        let mut lines = slice.lines_at(at);
+        lines.reverse();
+        let mut lines = lines.map(para_line).peekable();
+        while lines.next_if(|&kind| kind == ParaLine::Blank).is_some() {
+            at -= 1;
+        }
+        while lines.next_if(|&kind| kind == ParaLine::Text).is_some() {
+            at -= 1;
+        }
+        if lines.next_if(|&kind| kind == ParaLine::Macro).is_some() {
+            at -= 1;
+        }
+        at
+    };
+
     // skip character before paragraph boundary
     let mut line_back = line; // line but backwards
     if prev_empty_to_line || curr_empty_to_line {
@@ -166,30 +189,30 @@ pub fn textobject_paragraph(
     }
     // do not include current paragraph on paragraph end (include next)
     if !(curr_empty_to_line && last_char) {
-        let mut lines = slice.lines_at(line_back);
-        lines.reverse();
-        let mut lines = lines.map(rope_is_line_ending).peekable();
-        while lines.next_if(|&e| e).is_some() {
-            line_back -= 1;
-        }
-        while lines.next_if(|&e| !e).is_some() {
-            line_back -= 1;
-        }
+        line_back = paragraph_start_above(line_back);
     }
 
     // skip character after paragraph boundary
     if curr_empty_to_line && last_char {
         line += 1;
     }
-    let mut lines = slice.lines_at(line).map(rope_is_line_ending).peekable();
+    let mut lines = slice.lines_at(line).map(para_line).peekable();
     let mut count_done = 0; // count how many non-whitespace paragraphs done
     for _ in 0..count {
         let mut done = false;
-        while lines.next_if(|&e| !e).is_some() {
+        // A paragraph may open with a `paragraphs` macro line: that line is part
+        // of this paragraph, and the *next* macro line is where it ends — so the
+        // opener is consumed once here and the body walk below stops at the next
+        // one instead of running through it.
+        if lines.next_if(|&kind| kind == ParaLine::Macro).is_some() {
             line += 1;
             done = true;
         }
-        while lines.next_if(|&e| e).is_some() {
+        while lines.next_if(|&kind| kind == ParaLine::Text).is_some() {
+            line += 1;
+            done = true;
+        }
+        while lines.next_if(|&kind| kind == ParaLine::Blank).is_some() {
             line += 1;
         }
         count_done += done as usize;
@@ -199,15 +222,7 @@ pub fn textobject_paragraph(
     // makes `map` at the end of the paragraph with trailing newlines useful
     let last_paragraph = count_done != count && lines.peek().is_none();
     if last_paragraph {
-        let mut lines = slice.lines_at(line_back);
-        lines.reverse();
-        let mut lines = lines.map(rope_is_line_ending).peekable();
-        while lines.next_if(|&e| e).is_some() {
-            line_back -= 1;
-        }
-        while lines.next_if(|&e| !e).is_some() {
-            line_back -= 1;
-        }
+        line_back = paragraph_start_above(line_back);
     }
 
     // handle last whitespaces part separately depending on textobject
