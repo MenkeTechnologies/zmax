@@ -41,6 +41,50 @@
 
 
 =================================================================
+=                      0.1 KEYMAP PRESETS                       =
+=================================================================
+ zmax ships eight keymap presets. The default is spacemacs:
+ vim keys, plus the SPC (space) leader and the Emacs C-x
+ prefix. Holding either one pops up a which-key menu of the
+ keys that can follow it.
+
+ The presets are spacemacs (the default), vim, helix, kakoune,
+ emacs, cua, micro and nano. Switch at any time with
+
+     :keymap helix
+
+ or permanently with keymap = "..." in config.toml, which
+ :config-open opens for you.
+
+ Chapters 1 to 13 teach the selection-first keys of the helix
+ preset, so run :keymap helix before working through them, and
+ :keymap spacemacs to return to the default. Chapters 14 and
+ later are written for the default spacemacs keymap; where the
+ helix preset differs, the difference is spelled out.
+
+=================================================================
+=                  0.2 FINDING YOUR WAY AROUND                  =
+=================================================================
+ Nothing in this tutorial has to be memorised. These find
+ everything else:
+
+ SPC SPC    the command palette: fuzzy-search every command
+ SPC ?      the same palette (also bound in the helix preset)
+ SPC h h    the Help browser: commands, keys and topics
+ :          the command line; Tab completes command names
+
+ A half-remembered chord can always be finished by reading the
+ which-key popup that appears while you hold the prefix.
+
+ :tutor (or SPC h t) reopens this tutorial from any buffer.
+
+ Now hold j to reach the first lesson.
+
+
+
+
+
+=================================================================
 =                  1.1 BASIC CURSOR MOVEMENT                    =
 =================================================================
 
@@ -63,7 +107,7 @@
 
 
 =================================================================
-=                      1.2 EXITING ZMAX                       =
+=                      1.2 EXITING ZMAX                         =
 =================================================================
 
  1. Type : to enter Command mode. Your cursor will
@@ -1537,5 +1581,1388 @@ letters! that is not good grammar. you can fix this.
 
 
 =================================================================
- This tutorial is still a work-in-progress.
- More sections are planned.
+=                     14.1 THE FILE PICKER                      =
+=================================================================
+ Chapters 14 and later use the default spacemacs keymap. Run
+ :keymap spacemacs first if you switched to helix for the
+ lessons above.
+
+ Press SPC f f to open the fuzzy file picker on the project.
+ Type to filter, move with the up and down arrows (or C-k and
+ C-j), and press Enter to open the file. Escape closes it.
+ In the helix preset the same picker is SPC f .
+
+ From inside the picker:
+   C-v   open the highlighted file in a vertical split
+   C-s   open it in a horizontal split
+   C-t   show or hide the preview pane
+   C-n   page down          C-p   page up
+
+ SPC f F opens the file under the cursor; SPC f L uses the
+ system locate database; SPC f o hands the file to your
+ desktop.
+
+=================================================================
+=                  14.2 MOVING BETWEEN BUFFERS                  =
+=================================================================
+ Every file you open stays loaded as a buffer.
+
+   SPC b b     fuzzy-pick an open buffer
+   SPC b n     next buffer          (also ]b )
+   SPC b p     previous buffer      (also [b )
+   SPC b m     pick among the files changed in git
+   :buffer-close   close the current buffer (alias :bc )
+   :buffer-close-others   close every other buffer
+
+ In the helix preset the picker is SPC b , and gn / gp walk
+ the buffer list.
+
+ SPC b h returns to the start screen, and SPC b w toggles the
+ buffer between writable and read-only.
+
+
+
+
+
+=================================================================
+=                14.3 RECENT AND ALTERNATE FILES                =
+=================================================================
+ zmax remembers what you have opened before, ranked by how
+ often and how recently you visited it.
+
+   SPC f r     recent files, frecency-ranked
+   SPC f u     reopen the file you closed last
+   SPC TAB     jump to the alternate (previously visited) file
+   SPC f b     the file bookmark (mark) picker
+
+ SPC TAB is the fastest key in this chapter: two files you are
+ editing together are one keystroke apart.
+
+ The jumplist remembers cursor positions rather than files:
+ C-o steps back, C-i (Tab) steps forward, and SPC j j opens
+ the jumplist as a picker.
+
+
+
+
+
+=================================================================
+=                      14.4 THE FILE TREE                       =
+=================================================================
+ SPC f t opens the project tree in a sidebar; SPC f d opens it
+ on the directory of the current buffer instead. SPC a d is
+ the same tree under its Emacs name, dired.
+
+ Inside the tree, j and k move, Enter opens, and the usual
+ window keys move focus back to the text.
+
+ The tree is also one of the IDE workbench panels, so SPC W t
+ focuses it without changing your window layout. Chapter 22
+ covers the workbench.
+
+ Starting zmax on a directory (zmax . ) opens the tree for you.
+
+
+
+
+
+
+
+=================================================================
+=                14.5 PINNING FILES WITH HARPOON                =
+=================================================================
+ A project usually has a handful of files you return to all
+ day. Harpoon pins them to number keys.
+
+   SPC H a     pin the current file
+   SPC H l     open the list of pinned files
+   SPC H d     unpin the current file
+   SPC H 1     jump to the first pinned file
+   SPC H 2     jump to the second (and so on to 4)
+   SPC H n     next pin, wrapping around
+   SPC H p     previous pin
+
+ Pins are per project, so the same four keys mean different
+ files in different checkouts.
+
+
+
+
+
+
+=================================================================
+=                       CHAPTER 14 RECAP                        =
+=================================================================
+ * SPC f f opens the fuzzy file picker; C-v and C-s open the
+   highlighted file in a split.
+ * SPC b b picks a buffer; ]b and [b walk them; :buffer-close
+   closes the current one.
+ * SPC f r lists recent files, SPC f u reopens the last closed
+   one, and SPC TAB toggles between the last two files.
+ * SPC f t opens the project tree, SPC W t focuses it.
+ * SPC H a pins a file; SPC H 1 through SPC H 4 jump to pins.
+
+ In the helix preset the pickers live on SPC f and SPC b .
+
+
+
+
+
+
+
+
+
+=================================================================
+=                      15.1 GLOBAL SEARCH                       =
+=================================================================
+ SPC / searches every file in the project and shows the
+ matches in a picker. The same key works in both keymaps.
+
+ 1. Press SPC / .
+ 2. Type a word that appears in this file, such as harpoon.
+ 3. Move through the matches; each one previews in place.
+ 4. Press Enter to jump to a match, or Escape to stay put.
+
+ SPC s s is the spacemacs name for the same search, and the
+ whole ag / rg / grep / ack family of spacemacs bindings
+ (SPC s a a, SPC s r r, SPC s g g, SPC s k f) lands on it too,
+ so muscle memory from any of them works.
+
+
+
+
+
+
+
+=================================================================
+=            15.2 SEARCHING THE SYMBOL AT THE CURSOR            =
+=================================================================
+ Put the cursor on a word and press SPC * . The project search
+ opens already filled in with that word.
+
+ The uppercase spacemacs variants do the same thing for their
+ directory, buffer and file scopes: SPC s D, SPC s B, SPC s F.
+
+ Two related keys stay inside the current file:
+
+   *      search forward for the word under the cursor
+   SPC s e   select every occurrence of the symbol, so that
+             one edit changes them all at once
+
+ SPC s c clears the search highlight when you are done.
+
+
+
+
+
+
+=================================================================
+=               15.3 LINES, RESUME AND EVERYTHING               =
+=================================================================
+ SPC s L fuzzy-searches the lines of the current buffer, which
+ is often quicker than / when you half-remember a line.
+
+ SPC s E is Search Everywhere: files, symbols and text in one
+ list, the way a double Shift works in a JetBrains IDE.
+
+ SPC ' reopens the picker you closed last, with your query
+ still typed. It is the antidote to a picker dismissed by
+ accident, and it works for every picker in this chapter.
+
+ SPC s j picks a symbol in this file; SPC s S searches symbols
+ across the whole workspace. Chapter 16 says more about both.
+
+
+
+
+
+
+
+=================================================================
+=                15.4 GREP INTO THE RUN CONSOLE                 =
+=================================================================
+ Pickers are for choosing one result. When you want the whole
+ result set kept on screen, send it to a list instead.
+
+   :search-project foo    ripgrep foo, results in the Run
+                          console; Enter jumps to a hit
+                          (also spelled :rg )
+   :grep foo              run grepprg and fill the quickfix
+                          list, jumping to the first match
+   ]q  and  [q            walk the quickfix list
+   :copen  /  :cclose     show or hide the quickfix window
+
+ :Rg, :Files and :GFiles under SPC F are the fzf.vim commands
+ and drive an external fzf binary if you have one installed.
+
+
+
+
+
+
+=================================================================
+=                       CHAPTER 15 RECAP                        =
+=================================================================
+ * SPC / searches the whole project and previews each match.
+ * SPC * searches for the symbol under the cursor.
+ * SPC s e selects every occurrence of a symbol at once.
+ * SPC s L fuzzy-searches the lines of this buffer.
+ * SPC ' reopens the last picker with its query intact.
+ * :search-project puts matches in the Run console; :grep puts
+   them in the quickfix list, which ]q and [q walk.
+
+
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                  16.1 JUMPING TO DEFINITIONS                  =
+=================================================================
+ When a language server is running for the buffer's language,
+ the g prefix navigates code rather than text.
+
+   gd     go to the definition
+   gD     go to the declaration
+   gy     go to the type definition
+   gr     list the references
+   SPC g i    go to the implementation
+
+ C-o returns to where you jumped from, every time.
+
+ In the helix preset these are the same keys, with gi for the
+ implementation. SPC g d, SPC g r and friends work in both.
+
+
+
+
+
+
+=================================================================
+=                16.2 HOVER, SIGNATURE AND PEEK                 =
+=================================================================
+ SPC l k shows the documentation for the symbol under the
+ cursor in a popup: the same text an IDE shows on mouseover.
+
+ SPC l s shows signature help, the parameter list of the call
+ you are inside.
+
+ SPC l q peeks the definition in a popup without leaving the
+ file, which answers most "what does this do" questions.
+
+ In the helix preset hover is SPC k .
+
+ In insert mode the vim completion family asks the server for
+ candidates: C-x C-o for omni completion, C-x C-n for keyword
+ completion, C-x C-f for file names, C-x C-l for whole lines.
+ The helix preset puts plain completion on C-x .
+
+
+
+
+=================================================================
+=                 16.3 RENAME AND CODE ACTIONS                  =
+=================================================================
+ SPC l r renames the symbol under the cursor across the whole
+ project. Type the new name and press Enter; every file the
+ server knows about is edited.
+
+ SPC l a lists the code actions available at the cursor:
+ quick fixes, imports to add, refactorings the server offers.
+ Pick one and press Enter.
+
+ In the helix preset these are SPC r and SPC a .
+
+ Renames and code actions are ordinary edits, so u undoes them
+ like anything else.
+
+
+
+
+
+
+
+=================================================================
+=                       16.4 DIAGNOSTICS                        =
+=================================================================
+ Errors and warnings arrive as diagnostics, drawn in the
+ gutter and inline.
+
+   ]d          next diagnostic
+   [d          previous diagnostic
+   SPC e l     list the diagnostics in this file
+   SPC e L     list them for the whole workspace
+   SPC e y     copy the message under the cursor
+   SPC e c     clear the current diagnostics
+
+ SPC e v verifies that the setup is sane, and SPC e h names
+ the server that produced a message.
+
+ In the helix preset the pickers are SPC d and SPC D .
+
+
+
+
+
+=================================================================
+=                 16.5 SYMBOLS AND HIERARCHIES                  =
+=================================================================
+ SPC s j lists the symbols in this file and jumps to the one
+ you pick; gO is the vim name for the same list.
+
+ SPC s S searches symbols across the workspace.
+
+ Two hierarchy views answer questions a search cannot:
+
+   SPC g h    incoming calls: who calls this function
+   SPC g O    outgoing calls: what this function calls
+   SPC g T    supertypes of the type at the cursor
+   SPC g U    subtypes of it
+
+ The structure panel (SPC W s) keeps the same outline on
+ screen while you edit.
+
+
+
+
+
+=================================================================
+=                     16.6 GENERATING CODE                      =
+=================================================================
+ The server can also write code for you.
+
+   SPC l O    organize (and remove unused) imports
+   SPC l i    implement the members of an interface or trait
+   SPC l v    override an inherited member
+   SPC l g    generate code: constructors, getters, impls
+   SPC l f    format the selection
+
+ :format formats the whole file, using the language server or
+ the external formatter configured for the language.
+
+ Every one of these is a normal edit in the undo history.
+
+
+
+
+
+
+
+=================================================================
+=                 16.7 WHEN A SERVER MISBEHAVES                 =
+=================================================================
+ :lsp-health reports which servers are running, which are
+ still starting, which never came up, and what features each
+ one supports.
+
+ :lsp-restart restarts the server for the current buffer,
+ which fixes most cases of stale results after a big rebase.
+
+ :lsp-workspace-command runs a command the server itself
+ exposes, if it publishes any.
+
+ Language servers are configured per language in
+ languages.toml; :config-open opens your config directory.
+
+
+
+
+
+
+
+=================================================================
+=                       CHAPTER 16 RECAP                        =
+=================================================================
+ * gd, gD, gy, gr jump to definition, declaration, type and
+   references; C-o comes back.
+ * SPC l k hovers, SPC l s shows a signature, SPC l q peeks.
+ * SPC l r renames a symbol project-wide; SPC l a lists code
+   actions at the cursor.
+ * ]d and [d walk diagnostics; SPC e l lists them.
+ * SPC s j lists this file's symbols, SPC s S the workspace's.
+ * SPC g h and SPC g O show the call hierarchy.
+ * :lsp-health and :lsp-restart diagnose a stuck server.
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=              17.1 WILDFIRE: GROWING A SELECTION               =
+=================================================================
+ zmax parses the buffer with tree-sitter, so it knows where
+ the expression under the cursor begins and ends.
+
+ In normal mode, press Enter. The closest enclosing text
+ object is selected. Press Enter again and the selection grows
+ to the next one out: the argument, then the call, then the
+ statement, then the block. Backspace shrinks it back.
+
+ Try it on this line:
+
+     print(compute(a, b) + offset)
+
+ Put the cursor on b and press Enter three or four times.
+
+ Because it is only a selection, any operator you already know
+ (d, c, y, >) applies to whatever you grew.
+
+
+
+=================================================================
+=                       17.2 TEXT OBJECTS                       =
+=================================================================
+ A text object names a region without moving there first. In
+ the default keymap it follows an operator or v :
+
+   diw    delete the inner word
+   ci"    change what is inside the quotes
+   ya(    yank the parentheses and their contents
+   vip    select the paragraph
+   dit    delete the contents of the HTML or XML tag
+   dif    delete the body of the function
+   vaC    select the class or type around the cursor
+
+ i means inner, a means around. The last two are tree-sitter
+ objects: f function, C class, a parameter, c comment, T test,
+ e entry, x XML element. They work in any language that has a
+ grammar installed, with no per-language setup.
+
+ In the helix preset the same objects are mi f and ma f .
+
+
+=================================================================
+=                    17.3 STRUCTURAL MOTIONS                    =
+=================================================================
+ The bracket keys jump by syntax rather than by line.
+
+   ]m  [m     next / previous function or member
+   ]/  [/     next / previous comment
+   ]]  [[     next / previous section
+   ]z  [z     end of the next fold / start of this one
+   ])  [(     next / previous unmatched parenthesis
+   ]}  [{     next / previous unmatched brace
+
+ These are grammar-driven, so ]m lands on the next function in
+ Rust, Python or Go alike.
+
+ The helix preset spells the same family differently and adds
+ more of it: ]f functions, ]t classes, ]a parameters,
+ ]T tests, ]c comments, ]e entries, ]x XML elements.
+
+
+
+
+=================================================================
+=                   17.4 SIBLINGS AND PARENTS                   =
+=================================================================
+ The helix preset adds keys that walk the syntax tree itself:
+
+   A-o        expand the selection to the parent node
+   A-i        shrink it back to the child
+   A-n  A-p   move to the next / previous sibling node
+   A-a        select every sibling
+   A-e  A-b   move to the end / start of the parent node
+
+ In the default keymap SPC v expands the region, which is the
+ same command under its spacemacs name, and Enter (wildfire)
+ covers the common case of growing outward.
+
+ :injections lists the embedded grammars in the buffer, such
+ as the SQL inside a string or the JavaScript inside HTML.
+
+
+
+
+
+=================================================================
+=                       CHAPTER 17 RECAP                        =
+=================================================================
+ * Enter grows the selection to the next enclosing syntax
+   node; Backspace shrinks it.
+ * diw, ci", ya(, vip work on textual objects; dif and vaC
+   work on tree-sitter objects (f function, C class,
+   a parameter, c comment, T test).
+ * ]m and [m jump between functions, ]/ and [/ between
+   comments, ]] and [[ between sections.
+ * SPC v expands the region; the helix preset uses A-o, A-i
+   and the sibling keys A-n and A-p.
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=            18.1 FILTERING THROUGH A SHELL COMMAND             =
+=================================================================
+ A selection can be handed to an external command and replaced
+ by whatever that command prints.
+
+ In the default keymap ! is the vim filter operator: !! filters
+ the current line, !j the next two lines, !G to the end of the
+ file. zmax then asks for the command.
+
+ Typed forms work on the current selection in any keymap:
+
+   :pipe sort           replace the selection with its output
+   :pipe-to wc -l       run it, keep the selection unchanged
+   :insert-output date  insert the output before the selection
+   :append-output date  insert it after
+   :sh make -j8         run a command, show its output
+
+ The helix preset puts these on | , $ , ! and A-! .
+
+
+
+=================================================================
+=                 18.2 THE INTEGRATED TERMINAL                  =
+=================================================================
+ :terminal opens a real PTY running your $SHELL in a pane, so
+ curses programs, colours and job control all work.
+
+ SPC p ' opens the same terminal in the project root.
+
+ Inside the terminal every key belongs to the shell, so the
+ window commands need their own leader:
+
+   C-\ then s     split the terminal horizontally
+   C-\ then v     split it vertically
+   C-\ then h j k l    move focus between panes
+   C-\ then q     close the pane
+   F12            detach and leave the shell running
+
+ Clicking in another pane also moves focus there.
+
+
+
+
+=================================================================
+=                    18.3 RUN CONFIGURATIONS                    =
+=================================================================
+ A run configuration says how this project is built and run.
+ zmax keeps them per project and shows the output in the Run
+ tool window.
+
+   F5          run the active configuration
+   SPC R r     the same, by name
+   SPC R R     re-run whatever ran last
+   SPC R c     manage configurations (Preferences: Run)
+   SPC R n     jump to the next file:line in the output
+   SPC R p     jump to the previous one
+   SPC R l     clear the console
+
+ :run <command> runs an arbitrary command in the same window
+ and defaults to cargo run. :compile and :make are there for
+ the traditional workflow, feeding the quickfix list.
+
+
+
+
+=================================================================
+=                       CHAPTER 18 RECAP                        =
+=================================================================
+ * ! is the filter operator: !! filters the line, !G filters
+   to the end of the file.
+ * :pipe, :pipe-to, :insert-output and :append-output run a
+   shell command against the selection.
+ * :terminal opens a PTY shell; C-\ is its window leader and
+   F12 detaches from it.
+ * F5 runs the active run configuration; SPC R c manages them;
+   SPC R n and SPC R p walk the errors in the output.
+
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                   19.1 EVALUATING A SNIPPET                   =
+=================================================================
+ zmax has twelve scripting interpreters compiled into the
+ binary. None of them is a subprocess: there is no fork, no
+ exec, and nothing to install.
+
+   :elisp (+ x 1 2)          Emacs Lisp
+   :vim echo 1 + 1           Vimscript
+   :stryke say "hi"          stryke
+   :ruby puts "hi"           Ruby
+   :python print("hi")       Python
+   :node console.log("hi")   JavaScript
+   :php echo "hi";           PHP
+   :tcl puts hi              Tcl
+   :rlang cat("hi")          R
+   :zsh print -l *           zsh
+   :awk and :arb are filters; see the next lesson.
+
+ State persists between calls, so a variable you set stays set.
+
+
+=================================================================
+=                  19.2 FILTERING A SELECTION                   =
+=================================================================
+ Two of the twelve are filters: they read the selection (or
+ the whole buffer if nothing is selected) and replace it.
+
+   :awk '{print $2}'        keep the second field of each line
+   :awk 'NF'                drop the blank lines
+   :arb <spec>              run an arb spec's out pipeline
+
+ The other ten evaluate rather than filter, but bind the
+ selection to stdin, so :ruby stdin.reverse and
+ :php echo strtoupper($stdin); work the same way.
+
+ Every filter lands as a single undo step, so u puts the
+ buffer back exactly as it was.
+
+
+
+
+
+
+=================================================================
+=                    19.3 POLYGLOT PIPELINES                    =
+=================================================================
+ :xpipe chains those interpreters together inside this one
+ process. Stages are separated by |> :
+
+   :xpipe awk '{print $2}' |> php 'echo strtoupper($stdin);'
+          |> ruby 'stdin.reverse'
+
+ Each stage receives the previous stage's output as stdin, in
+ that language's own syntax, and the whole chain is one undo
+ step.
+
+ Where :pipe spawns a shell for every selection, an N-stage
+ :xpipe chain is N function calls into interpreters that are
+ already linked into the binary. No editor does this; it is
+ what the twelve embedded languages are for.
+
+
+
+
+
+=================================================================
+=                         19.4 THE REPL                         =
+=================================================================
+ SPC a r (or :repl) opens a REPL in front of all twelve
+ languages. :repl ruby starts in a chosen one.
+
+ The REPL evaluates against the live editor, so an expression
+ can read and change the buffer you were editing.
+
+ It is the fastest way to try a transformation before you
+ commit to it: work out the one-liner in the REPL, then run
+ the same text through :xpipe or :awk on the selection.
+
+ The command palette (SPC SPC) lists everything the REPL can
+ reach, which is a reasonable way to explore it.
+
+
+
+
+
+
+
+=================================================================
+=                      19.5 STARTUP FILES                       =
+=================================================================
+ If ~/.zmax/init.el or ~/.zmax/init.vim exists, zmax sources it
+ at startup with the embedded elisp and Vimscript interpreters.
+
+ That means an Emacs or vim configuration you already have can
+ keep working here, rather than being rewritten into a new
+ configuration language.
+
+ :elisp and :vim evaluate the same dialects interactively, so
+ a line that misbehaves in your init file can be tried on its
+ own without restarting the editor.
+
+ SPC m e b evaluates the whole buffer as elisp; SPC m e r
+ evaluates just the region.
+
+
+
+
+
+
+=================================================================
+=                       CHAPTER 19 RECAP                        =
+=================================================================
+ * Twelve interpreters are compiled in: elisp, vimscript, awk,
+   zsh, stryke, ruby, php, python, node, arb, tcl and R.
+ * :elisp, :vim, :ruby, :python and the rest evaluate a
+   snippet against the live editor; state persists.
+ * :awk and :arb filter the selection in place.
+ * :xpipe chains stages with |> , all in this process.
+ * SPC a r opens a REPL over all of them.
+ * ~/.zmax/init.el and init.vim are sourced at startup.
+
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                     20.1 LINE OPERATIONS                      =
+=================================================================
+ zmax ships a large library of : commands that transform the
+ selection, or the whole buffer when nothing is selected.
+
+   :align            align the lines on = so it shares a column
+   :align /:/        align on every match of a regex
+   :sort             sort the selected lines
+   :natural-sort     sort so file10 comes after file9
+   :dedup            drop duplicate lines, keeping the first
+   :reflow 72        hard-wrap the lines to 72 columns
+   :trim-lines       strip trailing whitespace
+   :remove-blank-lines   drop empty lines
+   :rev              reverse the characters of each line
+   :head 20  :tail 20   keep the first or last lines
+
+ Each one is a single undo step.
+
+
+
+
+=================================================================
+=                   20.2 IDENTIFIERS AND CASE                   =
+=================================================================
+ Renaming a convention by hand is tedious; these do it for the
+ selection.
+
+   :to-snake        some_identifier
+   :to-camel        someIdentifier
+   :to-pascal       SomeIdentifier
+   :to-kebab        some-identifier
+   :to-constant     SOME_IDENTIFIER
+   :swapcase        invert the case of every letter
+   :capitalize-lines   capitalise the first word of each line
+   :slugify-lines   turn each line into a URL slug
+
+ With several cursors these run on every selection at once, so
+ a whole column of names converts in one keystroke.
+
+
+
+
+
+=================================================================
+=                     20.3 STRUCTURED DATA                      =
+=================================================================
+ The library reshapes data without leaving the buffer.
+
+   :json-query users.0.name   pull a value out by dot-path
+   :json-flatten              rewrite JSON as path = value
+   :json-sort                 sort a JSON array, or by field
+   :json-to-csv               and :json-to-lines, :json-to-kv
+   :csv-column 2              keep the Nth column
+   :csv-to-tsv                and :tsv-to-csv
+   :toml-to-json              and :json-to-toml
+   :json-validate             report where the JSON breaks
+   :md-table                  align a Markdown pipe table
+
+ When a reshape needs real logic rather than a fixed rule,
+ drop to :xpipe and the embedded languages.
+
+
+
+
+
+=================================================================
+=                20.4 EXTRACTING AND GENERATING                 =
+=================================================================
+ Extraction replaces the selection with just the parts you
+ asked for, one per line.
+
+   :extract-urls     :extract-emails     :extract-ips
+   :extract-numbers  :extract-quoted     :extract-between
+   :count-matches    :uniq-count         :stats
+   :sum-column       :running-total      :diff-lines
+
+ Generators insert text at every cursor:
+
+   :uuid       a random UUID v4
+   :lorem 40   forty words of placeholder text
+   :date       today's date, as YYYY-MM-DD
+   :seq 1 20   the numbers 1 to 20, one per line
+
+ SPC i U 4, SPC i l p and SPC i p 2 are the leader keys for
+ UUIDs, lorem paragraphs and generated passwords.
+
+
+=================================================================
+=                       CHAPTER 20 RECAP                        =
+=================================================================
+ * :align, :sort, :dedup and :reflow reshape lines.
+ * :to-snake, :to-camel, :to-pascal, :to-kebab and
+   :to-constant convert identifier conventions.
+ * :json-query, :json-flatten, :csv-column and friends work on
+   structured data in the buffer.
+ * :extract-urls and the rest of the extract family keep only
+   what matched; :uuid, :lorem, :date and :seq generate text.
+ * Everything here runs on the selection, or on the whole
+   buffer when there is no selection, as one undo step.
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                    21.1 THE STATUS BUFFER                     =
+=================================================================
+ :magit (also :git, or SPC g s) opens a Magit-style status
+ buffer: untracked, unstaged and staged sections, each of
+ which can be expanded to individual hunks.
+
+ From there you can stage and unstage by hunk, discard
+ changes, commit, and reach the branch, stash and rebase
+ menus, including an interactive rebase.
+
+ SPC p v opens the same status for the project.
+
+ The Git tool window (SPC W g) is the panel version: a list of
+ changed files that stays on screen while you edit, with Enter
+ opening the file under the cursor.
+
+
+
+
+
+
+=================================================================
+=                     21.2 HUNKS AND DIFFS                      =
+=================================================================
+ The gutter marks every line that differs from git HEAD.
+
+   ]c  or  ]g     jump to the next changed hunk
+   [c  or  [g     jump to the previous one
+   :hunk-next     the same, by name
+   :hunk-prev
+   :hunk-reset    restore the hunk at the cursor from HEAD
+   :diff          side-by-side diff of the buffer vs HEAD
+   SPC g =        the same diff
+   :diff-buffer-with-file   diff against what is on disk
+
+ SPC b m picks among the files git says you changed, which is
+ usually the right list to work through before a commit.
+
+
+
+
+
+
+=================================================================
+=                    21.3 BLAME AND HISTORY                     =
+=================================================================
+ SPC g b (or :blame) shows who last touched the current line,
+ and when, in the status bar.
+
+ SPC g t opens the file's history: every commit that touched
+ it, with the file's contents at that revision.
+
+ SPC g l l opens the current line on the remote forge in your
+ browser; SPC g l L copies that link instead. The permalink
+ variants (SPC g l p and SPC g l P) pin the commit, which is
+ what you want when pasting a link into a review.
+
+ SPC g H h tints the buffer by the age of the commits that
+ last touched each line.
+
+
+
+
+
+
+=================================================================
+=                     21.4 MERGE CONFLICTS                      =
+=================================================================
+ After a merge that did not go cleanly, :merge (SPC g m) opens
+ a three-pane resolver: ours, the result, and theirs, with the
+ common ancestor available as a base pane.
+
+ In an ordinary buffer the conflict markers are navigable:
+
+   ]x  or  ]n     next conflict
+   [x  or  [n     previous conflict
+   :conflict-ours     keep our side here
+   :conflict-theirs   keep their side here
+   :conflict-both     keep both
+   :conflict-next     and :conflict-prev
+
+ SPC g c O and SPC g c T resolve every conflict in the file at
+ once, ours or theirs.
+
+
+
+
+=================================================================
+=                   21.5 STAGING AND STASHING                   =
+=================================================================
+ The common git verbs have typed commands so they can be run
+ without leaving the buffer:
+
+   :git-stage      stage this file (git add)
+   :git-unstage    unstage it again
+   :stash          stash the working tree, then reload buffers
+   :stash-pop      pop the most recent stash back
+   :vc-root-version-diff   diff the whole tree against HEAD
+
+ Buffers are reloaded after commands that change the working
+ tree, so what is on screen matches what is on disk.
+
+ The status buffer (:magit) remains the place to do anything
+ finer-grained than a whole file.
+
+
+
+
+
+=================================================================
+=                       CHAPTER 21 RECAP                        =
+=================================================================
+ * :magit (SPC g s) is the status buffer: stage, unstage,
+   discard, commit, branch, stash and rebase.
+ * ]c and [c walk changed hunks; :hunk-reset restores one.
+ * :diff (SPC g =) diffs the buffer against HEAD.
+ * SPC g b blames the current line; SPC g t browses the file's
+   history; SPC g l l opens the line on the forge.
+ * :merge (SPC g m) resolves conflicts in three panes; ]x and
+   [x walk the markers; :conflict-ours keeps one side.
+ * :git-stage, :stash and :stash-pop cover the daily verbs.
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                  22.1 OPENING THE WORKBENCH                   =
+=================================================================
+ F2 turns the IDE workbench on and off. :ide and :zen do the
+ same from the command line, and zmax --ide starts in it.
+
+ The workbench adds, around the text you were editing:
+
+   * a project file tree on the left
+   * a tree-sitter structure outline of the current file
+   * problems, run and git panels along the bottom
+   * an error stripe in the right margin, marking every
+     diagnostic in the file at its relative position
+
+ The layout is remembered between sessions, per project.
+
+ Nothing about editing changes: the buffer in the middle takes
+ the same keys it did before.
+
+
+
+
+=================================================================
+=                     22.2 FOCUSING PANELS                      =
+=================================================================
+ A panel only takes keys while it has focus, so each one has a
+ key that focuses it:
+
+   SPC W t    the project tree        SPC W s    the outline
+   SPC W e    problems / errors       SPC W r    the run console
+   SPC W g    git changes             SPC W c    CI status
+   SPC W b    bookmarks               SPC W k    marks
+   SPC W j    the jumplist            SPC W u    recent files
+   SPC W d    the TODO list           SPC W R    registers
+
+ Inside a panel, j and k move and Enter opens what is under
+ the cursor. SPC W q hides the panel that has focus, and
+ SPC W TAB returns to the panel you used last.
+
+
+
+
+
+
+=================================================================
+=                22.3 WINDOWS, LAYOUTS AND ZOOM                 =
+=================================================================
+ Splits are covered in chapter 13; the workbench adds ways to
+ move around a lot of them.
+
+   SPC 1 ... SPC 9   jump straight to window N
+   SPC w s / SPC w v   split horizontally / vertically
+   SPC w o           close every window but this one
+   SPC l l           create or select a named layout
+   SPC l n / SPC l p   cycle layouts
+   SPC z z           hide the panels again (Zen mode)
+   SPC z x + / -     make the text bigger or smaller
+   SPC W m           maximise the bottom panel, or restore it
+   SPC W f           fold the middle drawer column
+
+ A layout is a whole window arrangement under a name, so a
+ debugging layout and a writing layout are one key apart.
+
+
+
+
+=================================================================
+=                       CHAPTER 22 RECAP                        =
+=================================================================
+ * F2 (or :ide) toggles the IDE workbench: tree, outline,
+   problems, run and git panels, and an error stripe.
+ * SPC W focuses a panel: t tree, s outline, e problems,
+   r run, g git, c CI, and more.
+ * SPC W q hides the focused panel; SPC W TAB returns to the
+   last one; SPC z z hides them all.
+ * SPC 1 to SPC 9 jump to a window by number.
+ * SPC l l names the current window arrangement as a layout.
+
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                  23.1 BREAKPOINTS AND LAUNCH                  =
+=================================================================
+ zmax speaks the Debug Adapter Protocol, so any language with
+ an adapter can be debugged in the editor.
+
+   SPC d b     toggle a breakpoint on this line
+   SPC d B     list every breakpoint in the project
+   SPC d d     start a debug session (pick a configuration)
+   F6          start debugging the current file
+   SPC d q     end the session
+
+ Conditional breakpoints and log points are edited from the
+ same menu; the helix preset keeps the whole debug map on
+ SPC G , where SPC G b toggles a breakpoint and SPC G l
+ launches.
+
+
+
+
+
+
+=================================================================
+=                         23.2 STEPPING                         =
+=================================================================
+ Once a session is live, the stepping keys mirror every other
+ debugger you have used:
+
+   SPC d c     continue
+   SPC d n     step over the next line
+   SPC d i     step into the call
+   SPC d o     step out of this frame
+   SPC d C     run to the cursor
+   SPC d p     pause a running program
+   SPC d r     restart the session
+
+ The gutter carries the state: ● is a breakpoint the adapter
+ verified, ◯ one it could not bind, and the line where
+ execution is paused is marked on the frame you are looking
+ at. Conditional breakpoints and log points are styled
+ differently again.
+
+
+
+=================================================================
+=                     23.3 INSPECTING STATE                     =
+=================================================================
+ SPC d v lists the variables in the selected frame.
+
+ SPC d g t switches thread and SPC d g f switches stack frame;
+ everything else follows the frame you pick.
+
+ For gdb sessions the classic data windows are available:
+
+   SPC d g l    locals            SPC d g r    registers
+   SPC d g s    stack for thread  SPC d g d    disassembly
+   SPC d g m    memory            SPC d g i    program I/O
+   SPC d g e    edit a value      SPC d g w    many-windows
+
+ Adapters are configured per language, alongside the language
+ server, in languages.toml.
+
+
+
+
+
+=================================================================
+=                       CHAPTER 23 RECAP                        =
+=================================================================
+ * SPC d b toggles a breakpoint; SPC d B lists them all.
+ * SPC d d (or F6) starts a session; SPC d q ends it.
+ * SPC d c continues, n steps over, i steps in, o steps out,
+   and C runs to the cursor.
+ * SPC d v shows variables; SPC d g t and SPC d g f change
+   thread and frame.
+ * The gdb data windows are on SPC d g l, r, s, d, m and i.
+ * In the helix preset the whole map lives under SPC G .
+
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                         24.1 SNIPPETS                         =
+=================================================================
+ :snippets opens the snippet library: create, edit and delete
+ reusable pieces of text, stored in snippets.toml and scoped
+ by language.
+
+ To use one, type its trigger word in insert mode and press
+ Tab. The body is inserted with its tab stops live, so Tab
+ walks from ${1:...} to ${2:...} and finally to $0.
+
+ Tab is doing three jobs in insert mode, in order: it accepts
+ an AI ghost-text suggestion if one is showing, then expands a
+ snippet or an Emmet abbreviation, and otherwise inserts a
+ tab. You never have to decide which.
+
+ Emmet abbreviations work in HTML-ish buffers: type
+ ul>li*3 and press Tab.
+
+
+
+
+=================================================================
+=                      24.2 THE HEX EDITOR                      =
+=================================================================
+ :hex opens an xxd-style view of a file's raw bytes: offset,
+ hex columns, and the printable text on the right.
+
+ Binary files open here instead of being refused, so a stray
+ zmax on a compiled object shows you something useful.
+
+ :hex <path> views a file other than the current buffer, and
+ SPC f h opens the picker straight into the hex view.
+
+ Tab switches between the hex and the text column, editing
+ either one, and C-s writes the bytes back to the file.
+
+ :hexdump is the transform-library cousin: it rewrites the
+ selection as a hex dump inside the buffer, which is handy for
+ pasting bytes into a bug report.
+
+
+
+
+=================================================================
+=                         24.3 ORG MODE                         =
+=================================================================
+ Org files get outline editing, TODO cycling and an agenda.
+
+   SPC m TAB     fold or unfold the subtree
+   SPC m t       cycle the TODO keyword
+   SPC m p       cycle the priority cookie
+   SPC m H       promote the heading
+   SPC m l       demote it
+   SPC m j / k   next / previous heading
+   SPC m a / A   fold or unfold everything
+   SPC a o c     capture a new note
+   SPC a o a     open the agenda (also :org-agenda)
+
+ The agenda collects the TODO and DONE items from the open
+ .org buffers and the .org files under the working directory,
+ grouped by scheduled and deadline date.
+
+
+
+
+=================================================================
+=                     24.4 THE HELP BROWSER                     =
+=================================================================
+ :help (SPC h h) opens a searchable browser over every
+ command, every key and every topic zmax knows about.
+
+   SPC h k     describe a key
+   SPC h c     describe a command
+   SPC h ?     list the bindings
+   SPC h f     browse the FAQ
+   SPC h n     browse the release notes
+   SPC h l     search the capability areas
+   SPC h m     search the man pages
+   SPC h i     search the info manuals
+   SPC h d f   describe the function at the cursor, via LSP
+
+ Outside the editor, zmax --health reports the config and
+ language files, the runtime directories, and per language
+ the servers, debug adapter, formatter and queries.
+ :version reports the build you are running.
+
+
+=================================================================
+=                       CHAPTER 24 RECAP                        =
+=================================================================
+ * :snippets manages reusable snippets; type a trigger and
+   press Tab to expand it with live tab stops.
+ * Tab in insert mode accepts ghost text, then expands a
+   snippet or Emmet abbreviation, then inserts a tab.
+ * :hex is a byte-level view; binary files open in it.
+ * Org buffers fold with SPC m TAB, cycle TODO with SPC m t,
+   and collect into an agenda with SPC a o a.
+ * :help (SPC h h) searches commands, keys and topics; the
+   SPC h family describes keys, commands and symbols.
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                      25.1 NATIVE PLUGINS                      =
+=================================================================
+ Beyond the twelve embedded languages, zmax loads native
+ plugins: ordinary compiled Rust cdylibs, over a frozen C ABI,
+ with no editor rebuild.
+
+   :zmax-native load <path>     load a built plugin
+   :zmax-native list            what is loaded now
+   :zmax-native unload <name>   drop it again
+
+ A plugin registers its own : commands and can read and edit
+ the buffer, run command lines and post status messages
+ through the host API.
+
+ The SDK crate is zmax-native, and the repository ships
+ buildable examples: hello, insert-date, buffer-stats,
+ trim-trailing and banner.
+
+
+
+
+=================================================================
+=                   25.2 THE PACKAGE MANAGER                    =
+=================================================================
+ The same command is a package manager for those plugins.
+
+   :zmax-native add owner/repo        clone, build, install
+   :zmax-native add owner/repo@v1.2   pin a tag or commit
+   :zmax-native add path:./my-plugin  a local checkout
+   :zmax-native get owner/repo        install if absent, else
+                                      load from the store
+   :zmax-native sync                  load everything installed
+   :zmax-native registry              list what is installed
+   :zmax-native update / remove / info
+   :zmax-native gc --dry-run          what a clean-up removes
+
+ Installs land in a content-addressed store under ~/.zmax/pkg,
+ SHA-256 pinned, and load by mmap rather than by copying.
+
+
+
+
+
+=================================================================
+=                 25.3 CONFIGURATION AND THEMES                 =
+=================================================================
+ zmax is meant to be useful with no configuration at all, but
+ everything is adjustable.
+
+   :config-open      your config.toml
+   :config-open-workspace   the per-project one
+   :theme <name>     switch theme now
+   SPC T c           pick a theme from a list
+   :theme-next       and :theme-prev, to browse them
+   :keymap <preset>  spacemacs, vim, helix, kakoune, emacs,
+                     cua, micro or nano
+   SPC ,             the Preferences window
+   SPC S             its Settings tab
+
+ Config changes take effect without a restart.
+
+
+
+
+
+=================================================================
+=                       CHAPTER 25 RECAP                        =
+=================================================================
+ * :zmax-native load, list and unload manage compiled plugins;
+   the SDK crate is zmax-native.
+ * :zmax-native add, get, sync, update, remove and gc are the
+   package manager over a content-addressed store.
+ * :config-open edits config.toml; :theme and SPC T c change
+   the theme; :keymap changes the whole keymap preset.
+ * SPC , opens Preferences.
+
+
+
+
+
+
+
+
+
+
+
+
+=================================================================
+=                       WHERE TO GO NEXT                        =
+=================================================================
+ That is the tour. What is left is breadth, and it is large:
+ over a thousand : commands, eight keymap presets, twelve
+ embedded languages.
+
+ Three keys keep finding the rest of it:
+
+   SPC SPC    the command palette, over every command
+   SPC h h    the Help browser
+   SPC ?      the bindings of whatever keymap you are in
+
+ The book under book/ and the FAQ (SPC h f) go deeper than a
+ tutorial can. :tutor and SPC h t reopen this file later.
+
+ To leave, type :q! (this buffer is scratch, so nothing you
+ typed here is saved anywhere).
+
+
+
+
