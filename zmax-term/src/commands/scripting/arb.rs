@@ -28,6 +28,8 @@ pub(super) fn run(program: &str, input: &str) -> Result<String, String> {
             .map(|(k, n)| format!("{k}\t{n}"))
             .collect::<Vec<_>>()
             .join("\n")),
+        // jq-front-end refusals arrive as a message that is already `jq: …`-anchored.
+        arb::query::QueryResult::Error(msg) => Err(msg),
     }
 }
 
