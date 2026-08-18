@@ -111,6 +111,45 @@ fn add_typables(mode: &mut KeyTrie) {
     }
 }
 
+/// Graft emacs's `help-command` map onto `C-h` **and** `F1`.
+///
+/// `lisp/help.el` binds all three of `C-h` (`help-char`), `<help>` and `[f1]` in
+/// `global-map` to the *same* keymap object:
+///
+/// ```elisp
+/// (define-key global-map (char-to-string help-char) 'help-command)
+/// (define-key global-map [help] 'help-command)
+/// (define-key global-map [f1] 'help-command)
+/// (fset 'help-command help-map)
+/// ```
+///
+/// so `F1 k` and `C-h k` are one binding, not two — which is why the node is
+/// built once and cloned onto `F1`. (`<help>` has no zmax key event, so that
+/// alias is dropped.) The map itself is [`spacemacs::ch_prefix`], the same
+/// curated `help-map` port the spacemacs preset overlays; the `C-h *` rows of
+/// [`spacemacs::CXCH_FULL`] (`C-h a`, `C-h d`, `C-h 4 i`, `C-h 4 s`, the
+/// `C-h C-*` GNU-documentation keys) go down first so the curated bindings win
+/// on collision, exactly as they do there.
+fn add_help_map(mode: &mut KeyTrie) {
+    if let Some(root) = mode.node_mut() {
+        for (chord, label, cmd) in super::spacemacs::CXCH_FULL
+            .iter()
+            .filter(|(chord, _, _)| chord.starts_with("C-h "))
+        {
+            super::spacemacs::add_chord(root, chord, label, cmd);
+        }
+    }
+    mode.merge_nodes(super::spacemacs::ch_prefix());
+    let help_key: KeyEvent = "C-h".parse().expect("valid key");
+    let f1: KeyEvent = "F1".parse().expect("valid key");
+    let Some(help_map) = mode.search(&[help_key]).cloned() else {
+        return;
+    };
+    if let Some(root) = mode.node_mut() {
+        root.insert(f1, help_map);
+    }
+}
+
 #[rustfmt::skip]
 pub fn default() -> HashMap<Mode, KeyTrie> {
     // Insert mode is where emacs lives: self-inserting text plus C-/M- chords.
@@ -170,7 +209,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         // editing
         "C-d" | "del" => delete_char_forward,
-        "backspace" | "C-h" => delete_char_backward,
+        // Only <backspace> deletes: `help-char` is C-h and `global-map` binds it
+        // to `help-command` (lisp/help.el, `(define-key global-map (char-to-string
+        // help-char) 'help-command)`), so C-h is the help prefix here — see
+        // `add_help_map` below. C-h-as-DEL is what a user opts into with
+        // `(keyboard-translate ?\C-h ?\C-?)`, it is not the stock binding.
+        "backspace" => delete_char_backward,
         "C-k" => kill_to_line_end,          // kill-line
         "A-d" => delete_word_forward,       // M-d: kill-word
         "A-backspace" | "C-w" => delete_word_backward, // C-w/M-DEL approx (no region: kill prev word)
@@ -443,9 +487,85 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     // Region kill/copy in select mode also wants C-x save etc.
     add_typables(&mut select);
 
+    // Emacs is modeless, so its help prefix is live wherever the user is —
+    // including with a region active (asking for help does not end the region).
+    add_help_map(&mut insert);
+    add_help_map(&mut normal);
+    add_help_map(&mut select);
+
     hashmap!(
         Mode::Normal => normal,
         Mode::Select => select,
         Mode::Insert => insert,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn search<'a>(km: &'a HashMap<Mode, KeyTrie>, mode: Mode, chord: &str) -> Option<&'a KeyTrie> {
+        let keys: Vec<KeyEvent> = chord.split(' ').map(|k| k.parse().unwrap()).collect();
+        km[&mode].search(&keys)
+    }
+    fn cmd(km: &HashMap<Mode, KeyTrie>, mode: Mode, chord: &str) -> Option<String> {
+        match search(km, mode, chord) {
+            Some(KeyTrie::MappableCommand(c)) => Some(c.name().to_string()),
+            _ => None,
+        }
+    }
+
+    /// `global-map` binds C-h (`help-char`), `[help]` and `[f1]` to the one
+    /// `help-command` keymap, so the help prefix is live in every mode of this
+    /// modeless preset and F1 reaches the same map. The keys checked here are
+    /// `help-map`'s own (lisp/help.el): k describe-key, f describe-function,
+    /// p finder-by-keyword, P describe-package, a apropos-command, 4 s
+    /// help-find-source.
+    #[test]
+    fn help_map_lives_on_c_h_and_f1() {
+        let km = default();
+        for mode in [Mode::Insert, Mode::Normal, Mode::Select] {
+            for (chord, want) in [
+                ("C-h k", "describe_key"),
+                ("C-h f", "describe_function"),
+                ("C-h p", "finder_by_keyword"),
+                ("C-h P", "describe_package"),
+                ("C-h a", "apropos-command"),
+                ("C-h 4 s", "help_find_source"),
+                ("C-h 4 i", "info_search_other_window"),
+            ] {
+                assert_eq!(
+                    cmd(&km, mode, chord).as_deref(),
+                    Some(want),
+                    "{chord} must be {want} in {mode}"
+                );
+                // F1 IS help-command — the same map, not a second one.
+                let via_f1 = chord.replacen("C-h", "F1", 1);
+                assert_eq!(
+                    cmd(&km, mode, &via_f1).as_deref(),
+                    Some(want),
+                    "{via_f1} must reach the same binding as {chord}"
+                );
+            }
+            // Both spellings of help-for-help, from inside the map.
+            assert_eq!(cmd(&km, mode, "C-h C-h").as_deref(), Some("help"));
+            assert_eq!(cmd(&km, mode, "F1 F1").as_deref(), Some("help"));
+        }
+    }
+
+    /// C-h is the help prefix, so it is no longer a second spelling of
+    /// backspace — but <backspace> itself must still delete backward, which is
+    /// the half of the old `"backspace" | "C-h"` arm that emacs really binds.
+    #[test]
+    fn backspace_still_deletes_after_c_h_became_help() {
+        let km = default();
+        assert_eq!(
+            cmd(&km, Mode::Insert, "backspace").as_deref(),
+            Some("delete_char_backward")
+        );
+        assert!(
+            matches!(search(&km, Mode::Insert, "C-h"), Some(KeyTrie::Node(_))),
+            "C-h is help-command, a prefix, not delete_char_backward"
+        );
+    }
 }

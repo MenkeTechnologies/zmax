@@ -186,12 +186,20 @@ fn cc_prefix() -> KeyTrie {
 }
 
 /// The Emacs `C-h` help prefix, routed to zmax's help / discovery commands.
+/// Shared with the `emacs` preset, which grafts this same map onto `C-h` **and**
+/// `F1` (`global-map` binds both to `help-command` — see [`super::emacs`]).
 #[rustfmt::skip]
-fn ch_prefix() -> KeyTrie {
+pub(super) fn ch_prefix() -> KeyTrie {
     keymap!({ "overlay"
         "C-h" => { "Help"
             "C-h" => help,                        // help-for-help
             "?" => help,                          // help-for-help
+            // `help-map` binds `<f1>` to help-for-help as well (lisp/help.el),
+            // because `global-map`'s `[f1]` *is* `help-command` — the same
+            // keymap — so the second press lands back inside this map. That is
+            // what makes `F1 F1` and `C-h F1` the help browser in the emacs
+            // preset, where F1 is grafted onto this node (see keymap/emacs.rs).
+            "F1" => help,                         // <f1>: help-for-help
             // C-h f is describe-function and C-h x describe-command — two commands in
             // emacs, and two here now that `describe_function` exists.
             "f" => describe_function,             // describe-function
@@ -213,8 +221,13 @@ fn ch_prefix() -> KeyTrie {
             "C" => describe_coding_system,        // describe-coding-system
             "L" => describe_language_environment, // describe-language-environment
             "l" => view_lossage,                  // view-lossage
-            "p" => package_search,                // finder-by-keyword
-            "P" => package_search,                // describe-package
+            // `help-map` binds "p" to finder-by-keyword (list the packages that
+            // carry a topic keyword) and "P" to describe-package (one package's
+            // attributes) — lisp/help.el, `defvar-keymap help-map`. Both used to
+            // sit on `package_search`, which lists the *languages* zmax has
+            // configured — a third thing entirely; the real ports exist now.
+            "p" => finder_by_keyword,             // finder-by-keyword
+            "P" => describe_package,              // describe-package
             "." => hover,                         // display-local-help (LSP hover)
             "i" => info_search,                   // info
             "S" => man_page_search,               // info-lookup-symbol
@@ -246,8 +259,12 @@ fn ch_prefix() -> KeyTrie {
 /// leaf, so a leaf on a prefix silently swallows every chord beneath it — that
 /// bug is what kept the whole `C-x 5`, `C-x t` and `C-x RET` maps unreachable.
 /// In Emacs these keys are prefixes with no command, which is what they are here.
+///
+/// The `C-h *` rows are shared with the `emacs` preset, which lays down that
+/// slice of this table before merging [`ch_prefix`] on top, exactly as
+/// [`default`] does here.
 #[rustfmt::skip]
-const CXCH_FULL: &[(&str, &str, &str)] = &[
+pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c , j", "C-c ,", "goto_definition"),
     ("C-c , J", "C-c ,", "workspace_symbol_picker"),
     // semantic-analyze-possible-completions: the completion list for the symbol at
@@ -334,7 +351,13 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h d", "Help", ":apropos-documentation"),  // C-h d: apropos-documentation
     ("C-h .", "C-h .", "hover"),
     ("C-h 4 i", "Other window", "info_search_other_window"),
-    ("C-h 4 s", "Other window", "help"),
+    // `help-map` binds "4 s" to help-find-source: visit the source of whatever
+    // the *Help* buffer is currently describing ("Show the source for what's
+    // being described in *Help*", lisp/help.el). It sat on the help browser
+    // itself until that port existed; `help_find_source` says
+    // "Source file for the current help item is not defined" when the panel
+    // has none, exactly as the emacs command errors.
+    ("C-h 4 s", "Other window", "help_find_source"), // C-h 4 s: help-find-source
     ("C-h C", "C-h C", "help"),
     ("C-h c", "C-h c", "describe_key_briefly"),   // C-h c: describe-key-briefly
     ("C-h o", "C-h o", "describe_symbol"),        // C-h o: describe-symbol
@@ -612,6 +635,25 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x *", "C-x *", "command_palette"),
 ];
 
+/// Spacemacs's own overrides of an evil (vim) binding — chords where Spacemacs
+/// deliberately rebinds a key the vim base already owns, so the two presets
+/// differ. Format: (chord, submap-label, command). Applied to **Normal mode
+/// only**, because that is the state Spacemacs binds them in.
+#[rustfmt::skip]
+const SPACEMACS_OVERRIDES: &[(&str, &str, &str)] = &[
+    // `g p` is "Select pasted text" in the Spacemacs docs (DOCUMENTATION.org,
+    // "Unimpaired bindings"), bound as the keyboard macro `` `[ v `] `` — jump
+    // to the `[` mark, enter visual state, extend to the `]` mark:
+    //   (define-key evil-normal-state-map (kbd "g p") (kbd "` [ v ` ]"))
+    // (evil-unimpaired.el, layers/+spacemacs/spacemacs-evil). `select_pasted_text`
+    // is that macro as one command. It replaces vim's `gp` (paste, leaving the
+    // cursor after the pasted text) only here — the `vim` preset keeps `gp`
+    // (keymap/vim.rs), since Spacemacs is where the override lives. Normal only:
+    // the elisp is `evil-normal-state-map`, so visual-state `g p` is untouched
+    // and stays vim's.
+    ("g p", "Goto", "select_pasted_text"),
+];
+
 /// Add a full space-separated `chord` -> `cmd` binding, creating intermediate
 /// submaps labelled `label`. A chord with a key zmax can't parse is skipped
 /// (rather than panicking), so unrepresentable Emacs chords are simply omitted.
@@ -693,6 +735,15 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     for mode in [Mode::Normal, Mode::Select] {
         if let Some(node) = keymap.get_mut(&mode).and_then(KeyTrie::node_mut) {
             add_command(node, &leader_path, "Toggles", "toggle_frame_maximized");
+        }
+    }
+
+    // Spacemacs's rebindings of vim keys (`g p`), Normal mode only — the state
+    // the Spacemacs elisp binds them in. These go on last so they win over the
+    // vim base they replace.
+    if let Some(node) = keymap.get_mut(&Mode::Normal).and_then(KeyTrie::node_mut) {
+        for (chord, label, cmd) in SPACEMACS_OVERRIDES {
+            add_chord(node, chord, label, cmd);
         }
     }
 
@@ -819,7 +870,15 @@ mod tests {
             ("C-h C", "describe_coding_system"),
             ("C-h L", "describe_language_environment"),
             ("C-h l", "view_lossage"),
-            ("C-h p", "package_search"),
+            // `help-map` binds p/P to finder-by-keyword / describe-package. Both
+            // used to run `package_search` (which lists the configured
+            // *languages*) for want of the real ports; the expectations moved
+            // with the bindings.
+            ("C-h p", "finder_by_keyword"),
+            ("C-h P", "describe_package"),
+            // C-h 4 s is help-find-source (visit the source of the item the
+            // *Help* buffer describes), not the help browser itself.
+            ("C-h 4 s", "help_find_source"),
             ("C-h .", "hover"),
             // GNU help/doc commands wired to their faithful zmax ports.
             ("C-h h", "view_hello_file"),
@@ -981,6 +1040,35 @@ mod tests {
                 "{chord}"
             );
         }
+    }
+
+    /// Spacemacs rebinds evil's `g p`: it selects the text the last put
+    /// inserted (`(define-key evil-normal-state-map (kbd "g p") (kbd "` [ v ` ]"))`
+    /// in evil-unimpaired.el). The override must land on `g p` **without**
+    /// flattening the rest of vim's `g` map — `add_command` descends into the
+    /// existing node, and this is what proves it still does.
+    #[test]
+    fn spacemacs_g_p_selects_the_pasted_text() {
+        let km = default();
+        assert_eq!(
+            cmd(&km, Mode::Normal, "g p").as_deref(),
+            Some("select_pasted_text"),
+            "spacemacs g p selects the pasted text, not vim's gp paste"
+        );
+        // vim's `gP` is a different key and Spacemacs leaves it alone, as do the
+        // rest of the `g` chords the override shares a node with.
+        assert_eq!(
+            cmd(&km, Mode::Normal, "g P").as_deref(),
+            Some("paste_before_cursor_after")
+        );
+        assert_eq!(cmd(&km, Mode::Normal, "g v").as_deref(), Some("reselect_visual"));
+        // Bound in `evil-normal-state-map` only, so visual state keeps vim's `g`
+        // map untouched — `g u` there is still lowercase-the-selection.
+        assert!(is_prefix(&km, Mode::Select, "g"), "select-mode g stays a prefix");
+        assert!(
+            search(&km, Mode::Select, "g p").is_none(),
+            "the override is normal-state only; select-mode g p stays unbound"
+        );
     }
 
     #[test]

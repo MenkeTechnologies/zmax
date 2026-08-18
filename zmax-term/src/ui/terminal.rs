@@ -565,7 +565,23 @@ impl Component for TerminalPanel {
                 EventResult::Consumed(None)
             }
             Event::Paste(s) if focused => {
-                self.send(s.as_bytes());
+                // vim `termpastefilter` (`tpf`): "control characters to be removed
+                // from the text pasted into the terminal window" (options.txt).
+                // Bracketed paste hands the panel whatever was on the clipboard,
+                // and an <Esc> or <BS> in it would drive the child's line editor
+                // instead of being inserted. `:set termpastefilter=` (empty)
+                // filters nothing; because the effective-value store reads an
+                // empty value as "unset", the raw `:setglobal` copy — which a
+                // `:set` of this global option writes as well — is what tells the
+                // two apart.
+                let filter = crate::commands::vim_opt_global_str("termpastefilter")
+                    .or_else(|| crate::commands::vim_opt_global_str("tpf"))
+                    .unwrap_or_else(|| "BS,HT,ESC,DEL".to_string());
+                let filtered: String = s
+                    .chars()
+                    .filter(|&c| !is_paste_filtered(c, &filter))
+                    .collect();
+                self.send(filtered.as_bytes());
                 EventResult::Consumed(None)
             }
             // While focused, the wheel scrolls the terminal's own scrollback
@@ -752,6 +768,29 @@ fn conv_color(c: vt100::Color, default: Color) -> Color {
     }
 }
 
+/// vim `termpastefilter` (`tpf`, default `BS,HT,ESC,DEL`): whether `c` is one of
+/// the control characters `filter` names, and so is dropped from a paste into the
+/// terminal panel. The words are `BS` (0x08), `HT` (0x09), `FF` (0x0C), `ESC`
+/// (0x1B), `DEL` (0x7F), `C0` ("other control characters, excluding Line feed and
+/// Carriage return < ' '") and `C1` (0x80…0x9F), per options.txt. Mirrors nvim's
+/// `is_filter_char` (src/nvim/terminal.c), including its rule that line feed and
+/// carriage return are never filtered — they are what makes a paste multi-line.
+/// Pure — unit tested.
+fn is_paste_filtered(c: char, filter: &str) -> bool {
+    let names = |word: &str| filter.split(',').any(|f| f.trim() == word);
+    match c {
+        '\u{08}' => names("BS"),
+        '\u{09}' => names("HT"),
+        '\n' | '\r' => false,
+        '\u{0c}' => names("FF"),
+        '\u{1b}' => names("ESC"),
+        '\u{7f}' => names("DEL"),
+        c if c < ' ' => names("C0"),
+        '\u{80}'..='\u{9f}' => names("C1"),
+        _ => false,
+    }
+}
+
 /// Translate a key event into the byte sequence a terminal expects.
 fn key_to_bytes(key: &KeyEvent) -> Option<Vec<u8>> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
@@ -866,6 +905,33 @@ mod test {
         screen.set_size(1, 1);
         assert_eq!(screen.size(), (Screen::MIN, Screen::MIN));
         assert!(screen.feed("🙂".as_bytes()), "emoji on the smallest grid");
+    }
+
+    /// vim `termpastefilter`: the default value drops the four control characters
+    /// it names and nothing else, and the two line-break characters survive every
+    /// value — a filtered multi-line paste must still be multi-line.
+    #[test]
+    fn termpastefilter_drops_only_the_named_control_characters() {
+        let default = "BS,HT,ESC,DEL";
+        for c in ['\u{08}', '\t', '\u{1b}', '\u{7f}'] {
+            assert!(is_paste_filtered(c, default), "{c:?} is named by the default");
+        }
+        // FF, C0 and C1 are not in the default value, and ordinary text never is.
+        for c in ['\u{0c}', '\u{01}', '\u{85}', 'a', 'é'] {
+            assert!(!is_paste_filtered(c, default), "{c:?} is not named");
+        }
+        // "C0: Other control characters, excluding Line feed and Carriage return"
+        // — the exclusion holds even when the value asks for everything.
+        let all = "BS,HT,FF,ESC,DEL,C0,C1";
+        assert!(is_paste_filtered('\u{01}', all));
+        assert!(is_paste_filtered('\u{85}', all));
+        assert!(!is_paste_filtered('\n', all), "line feed is never filtered");
+        assert!(
+            !is_paste_filtered('\r', all),
+            "carriage return is never filtered"
+        );
+        // An empty value filters nothing at all.
+        assert!(!is_paste_filtered('\u{1b}', ""));
     }
 
     /// A resize that only widens, or that happens with plain text on screen, is

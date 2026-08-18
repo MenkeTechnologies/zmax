@@ -77,9 +77,14 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // two above, which applies to the whole tree rather than to one file.
     ("space f v d", "File vars", "add_dir_local_variable"), // SPC f v d
     // fzf.vim commands under SPC F (external fzf binary; honors $FZF_* env).
-    ("space F f", "fzf", ":Files"),      // SPC F f : files
+    // `SPC F f` and `SPC F b` are spacemacs's own frame chords
+    // (find-file-other-frame / switch-to-buffer-other-frame, in the Frames
+    // submap below), so fzf's two pickers on those letters take free capitals:
+    // `:Files` the capital of its own name, `:Buffers` a free one, since both
+    // `b` and `B` are taken (`B` is fzf's `:BTags`).
+    ("space F F", "fzf", ":Files"),      // SPC F F : files
     ("space F g", "fzf", ":GFiles"),     // SPC F g : git files
-    ("space F b", "fzf", ":Buffers"),    // SPC F b : buffers
+    ("space F E", "fzf", ":Buffers"),    // SPC F E : buffers
     ("space F c", "fzf", ":Colors"),     // SPC F c : colorschemes
     ("space F r", "fzf", ":Rg"),         // SPC F r : ripgrep
     ("space F a", "fzf", ":Ag"),         // SPC F a : ag (rg backend)
@@ -105,6 +110,14 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space F x", "fzf", ":Todo"),       // SPC F x : TODO/FIXME tool window
     // `SPC p T` is spacemacs's "test project" (below); the TODO tool window keeps
     // `SPC F x` and the `:Todo` command.
+    // SPC m = = : the prettier layer's one chord, "format buffer in supported
+    // layers". `:format` is the command that runs the buffer's configured
+    // external formatter (`formatter = { command = "prettier" }` in
+    // languages.toml) and falls back to the language server — the same opt-in
+    // shape the layer has upstream, where the user installs prettier and the
+    // layer runs it. `format_selections` (bound to `=`) is LSP *range*
+    // formatting and would never reach prettier.
+    ("space m = =", "Format", ":format"),            // SPC m = = : format the buffer
     ("space p r", "Projects", ":project-replace"),   // SPC p r : Replace in Path (JetBrains)
     ("space r t", "Bookmarks", "bookmark_toggle"),   // SPC r t : toggle bookmark (JetBrains F11)
     ("space r n", "Bookmarks", "bookmark_next"),     // SPC r n : next bookmark
@@ -382,7 +395,13 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
 
     // ediff (SPC D): the region-wise and backup-file sessions.
     ("space D r w", "Diff", "ediff_regions_wordwise"),      // SPC D r w : ediff two regions wordwise
-    ("space D B",   "Diff", "diff_backup"),                 // SPC D B   : diff this file against its backup
+    // SPC D B is spacemacs's `ediff-backup`, an ediff session — two panes with
+    // the backup as A — not emacs's `diff-backup`, which shows a unified diff in
+    // a buffer. `diff_backup` is still the M-x command for that one.
+    ("space D B",   "Diff", "ediff_backup"),                // SPC D B   : ediff this file against its backup
+    // SPC D h (`ediff-documentation`): the Ediff manual. It was reachable only
+    // from the command palette, so the layer's documented chord did nothing.
+    ("space D h", "Diff", "ediff_documentation"),           // SPC D h   : the Ediff manual
     // `ediff-patch-file`: apply the patch in the current buffer to its target and
     // review the result side by side. Spacemacs prompts for the patch buffer; the
     // zmax port takes the patch from the buffer you run it in.
@@ -398,9 +417,12 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
 
     // Help.
     ("space h d T", "Help", ":describe-theme"),             // SPC h d T : describe a theme
-    // SPC h d P : describe a package — the same picker `C-h P` (describe-package)
-    // opens, over the language-support packages zmax knows about.
-    ("space h d P", "Help", "package_search"),
+    // SPC h d P : describe-package — emacs's `C-h P`, which asks for a package
+    // name and prints that package's version, home page, keywords and
+    // dependencies. It pointed at `package_search`, the picker over the
+    // language-support packages, which is spacemacs's own SPC h p and stays
+    // there.
+    ("space h d P", "Help", "describe_package"),
     // Help-buffer navigation. Spacemacs binds `g b` / `g f` in help mode; `g f`
     // is vim's goto-file here, so only the back half can take the vim key. The
     // command is a no-op (it reports an error) unless the *Help* window is open,
@@ -1197,7 +1219,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "x" => goto_file,                 // gx: open file/URL under cursor (goto_file opens URLs externally)
             // ga (print char ascii/unicode value) is bound via VIM_TYPABLE to
             // :character-info — vim's ga, not zmax's goto-last-accessed-file.
-            "m" => goto_line_middle,          // gm: go to middle of the screen line (vim, not last-modified)
+            // gm measures the *window* (`g0` plus half a screenwidth) and gM the
+            // line's *text*, so they are two different commands; both used to
+            // run goto_line_middle, which made gm do gM's job on any line
+            // shorter than half the window.
+            "m" => goto_screen_line_middle,   // gm: half a screenwidth right of the screen line's start
             "C-g" => document_stats,          // g CTRL-G: line/word/char counts (+ selection)
             "t" => goto_next_tabpage,          // gt: next tabpage
             "T" => goto_previous_tabpage,      // gT: previous tabpage
@@ -1266,7 +1292,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "o" => fold_open,         // zo open fold
             "O" => fold_open_recursive, // zO open the folds at the cursor recursively
             "c" => fold_close,        // zc close fold
-            "C" => fold_close,        // zC close folds recursively (approx)
+            // zC: "Close all folds under the cursor recursively. Folds that
+            // don't contain the cursor line are unchanged" (fold.txt) — the
+            // nested folds too, which is what separates it from zc.
+            "C" => fold_close_recursive, // zC close folds recursively
             "v" => fold_open,         // zv view cursor: open enough folds to see it
             "R" => fold_open_all,     // zR open all folds (foldlevel -> deepest)
             "M" => fold_close_all,    // zM close all folds (foldlevel -> 0)
@@ -1282,7 +1311,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // zX undoes manual opens/closes by re-applying 'foldlevel'; at the
             // default foldlevel=0 that CLOSES the folds again. It was bound to
             // fold_open_all, which is the opposite and duplicated zR.
-            "X" => fold_close_all,    // zX re-apply foldlevel (approx: close to level 0)
+            // zX re-applies 'foldlevel' (fold.txt) — it recomputes every fold
+            // from the level in force, so hand-opened folds deeper than it close
+            // and hand-closed folds shallower than it open. It was bound to zM,
+            // which is only the level-0 special case and dropped the level.
+            "X" => fold_reapply_level, // zX undo manual opens/closes: re-apply 'foldlevel'
             "F" => [extend_to_line_bounds, fold_create], // zF create a fold for N lines
             // zp/zP/zy: block paste/yank without the trailing padding a blockwise
             // register carries (see `strip_trailing_whitespace_lines`).
@@ -1337,10 +1370,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-d" => goto_define_from_start,        // [CTRL-D: jump to the first #define
             "s" => goto_prev_spell_error,     // [s: previous misspelled word
             "w" => rotate_view_reverse,       // [w: go to the previous window (spacemacs)
-            // [t: spacemacs's "go to the previous frame". zmax has no frames, so
-            // it cycles windows — the same substitution `C-x 5 o` (other-frame)
-            // makes, which lands it on the same command as [w.
-            "t" => rotate_view_reverse,       // [t: previous frame (= previous window)
+            // [t: spacemacs's "go to the previous frame". zmax has real frames,
+            // so this steps back through the frame ring (the mirror of `]t`'s
+            // `other_frame`) instead of cycling windows — `[w` is the window one.
+            "t" => previous_frame,            // [t: previous frame
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
             "#" => goto_prev_preproc,         // [# previous unmatched #if/#else
@@ -1377,8 +1410,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "w" => rotate_view,               // ]w: go to the next window (spacemacs)
             // ]t: go to the next frame. zmax has real frames now, so this is
             // `other_frame` (it wraps, exactly like emacs's) rather than the window
-            // rotation it had to stand on. `[t` (the previous frame) has no port yet:
-            // `other_frame` only ever steps forward.
+            // rotation it had to stand on. `[t` is its mirror, `previous_frame`.
             "t" => other_frame,               // ]t: next frame
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
@@ -2230,13 +2262,17 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "S" => paredit_split,              // SPC j S : split sexp, newline (approx: split)
             },
             // Spacemacs's frame map. zmax has real frames now, so these run the
-            // frame commands rather than the layout/window stand-ins they used to.
-            // Only the chords fzf.vim does not already hold are here: SPC F f / d /
-            // b / B / o are the fzf pickers (:Files / :Todo / :Buffers / :BTags /
-            // :Locate) in zmax, so spacemacs's frame keys on those five letters
-            // have no slot — the C-x 5 map is the whole frame map, unshadowed.
+            // frame commands rather than the layout/window stand-ins they used
+            // to, and the layer's own letters win over the fzf.vim pickers that
+            // had been squatting on them: `:Files` and `:Buffers` moved to
+            // `SPC F F` / `SPC F E` (see the fzf block at the top of this file),
+            // which is what freed `f` and `b` for the two `other-frame` opens.
+            // `B` stays with fzf's `:BTags`, so spacemacs's `SPC F B`
+            // (display-buffer-other-frame) is still only on the C-x 5 map.
             "F" => { "Frames"
                 "n" => make_frame_command,         // SPC F n : create a new frame
+                "f" => find_file_other_frame,      // SPC F f : find a file in a new frame
+                "b" => switch_to_buffer_other_frame, // SPC F b : show a buffer in a new frame
                 "d" => delete_frame,               // SPC F d : delete the current frame
                 "o" => other_frame,                // SPC F o : cycle focus between frames
                 "D" => delete_other_frames,        // SPC F D : delete all other frames
@@ -2561,6 +2597,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "k" => org_prev_heading,           // SPC m k : previous heading
                 "a" => org_fold_all,               // SPC m a : fold all headings
                 "A" => org_unfold_all,             // SPC m A : unfold all
+                // SPC m = = is in SPACEMACS_TYPABLE: the prettier layer's chord
+                // formats the whole *buffer*, which is `:format`, not the
+                // range-formatting `format_selections` bound to `=`.
             },
             // SPC u : universal-argument prefix. Only the window-layout variants
             // that map to a real command are bound; buffer variants are added via
@@ -2710,6 +2749,25 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "L" => scroll_half_column_right,    // zL scroll right half a screen
             "e" => scroll_cursor_to_right_edge, // ze put the cursor at the right edge
             "s" => scroll_cursor_to_left_edge,  // zs put the cursor at the left edge
+
+            // The spell-list family works in Visual mode too, and there it takes
+            // the highlighted run rather than the word under the cursor:
+            // spell.txt (zg) says "In Visual mode the selected characters are
+            // added as a word (including white space!)", so a two-word phrase
+            // can be taught as one entry. `spell_word_under_cursor` is what
+            // reads the selection; these commands are otherwise the normal-mode
+            // ones. They end in Normal mode because the command consumes the
+            // highlighted area, as vim's does.
+            "g" => [spell_add_good, normal_mode],          // v_zg good word -> 'spellfile'
+            "G" => [spell_add_good_internal, normal_mode], // v_zG good word -> internal word list
+            "w" => [spell_add_bad, normal_mode],           // v_zw bad word -> 'spellfile'
+            "W" => [spell_add_bad_internal, normal_mode],  // v_zW bad word -> internal word list
+            "u" => { "Undo spell"
+                "g" => [spell_undo, normal_mode],          // zug undo zg (spellfile only)
+                "w" => [spell_undo, normal_mode],          // zuw undo zw (spellfile only)
+                "G" => [spell_undo_internal, normal_mode], // zuG undo zG (internal word list only)
+                "W" => [spell_undo_internal, normal_mode], // zuW undo zW (internal word list only)
+            },
         },
 
         // gq / gw: reformat the highlighted lines (LSP formatter)
@@ -2796,7 +2854,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-u" => complete_user_func,   // i_CTRL-X_CTRL-U: 'completefunc'
             "C-n" => completion,   // keyword completion, forward
             "C-p" => completion,   // keyword completion, backward
-            "C-i" => completion,   // identifier completion
+            // i_CTRL-X_CTRL-I's source is "keywords in the current and included
+            // files" (insert.txt), which is 'include'-driven and has nothing to
+            // do with the LSP — so it gets its own command rather than the
+            // generic completion the other two keyword keys share.
+            "C-i" => complete_included, // i_CTRL-X_CTRL-I: this file + its includes
             // The sub-modes whose *source* is not zmax's LSP+word completion get
             // their own: each gathers its candidates (buffer lines, the directory,
             // the 'dictionary'/'thesaurus' files, the registers, the buffer's

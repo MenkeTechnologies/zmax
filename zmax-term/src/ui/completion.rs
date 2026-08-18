@@ -112,8 +112,92 @@ impl menu::Item for CompletionItem {
             },
         );
 
-        menu::Row::new([menu::Cell::from(label), menu::Cell::from(kind)])
+        // vim `completeitemalign` (`cia`): "A comma-separated list of strings that
+        // controls the alignment and display order of items in the popup menu
+        // during Insert mode completion. The supported values are "abbr", "kind",
+        // and "menu". … Note: must always contain those three values in any order"
+        // (options.txt). zmax's own popup is two columns (abbr + kind), so an
+        // unset — or invalid, which vim refuses outright — value keeps that
+        // layout; only an explicit `:set completeitemalign=…` reorders the columns
+        // and turns on the third one.
+        let Some(order) = completeitemalign_order() else {
+            return menu::Row::new([menu::Cell::from(label), menu::Cell::from(kind)]);
+        };
+
+        // The `menu` column is the item's extra text. nvim's own LSP client fills
+        // it from `labelDetails.description` (runtime/lua/vim/lsp/completion.lua:562
+        // — `menu = vim.tbl_get(item, 'labelDetails', 'description') or ''`), so
+        // that is what goes here; an item without one, and every non-LSP item
+        // (path/word/SQL keyword completion, which carry no detail at all), gets
+        // an empty cell rather than a substitute.
+        let detail = match self {
+            CompletionItem::Lsp(LspCompletionItem { item, .. }) => item
+                .label_details
+                .as_ref()
+                .and_then(|details| details.description.as_deref())
+                .unwrap_or(""),
+            CompletionItem::Other(_) => "",
+        };
+
+        // Each column is produced once and moved into whichever slot the option
+        // names. The parser guarantees all three words are present exactly once,
+        // so the fallbacks below are unreachable — they only keep a malformed
+        // order from panicking in the render loop.
+        let mut abbr_cell = Some(menu::Cell::from(label));
+        let mut kind_cell = Some(menu::Cell::from(kind));
+        let mut menu_cell = Some(menu::Cell::from(Span::raw(detail)));
+        menu::Row::new(order.map(|column| {
+            match column {
+                CompleteItemColumn::Abbr => abbr_cell.take(),
+                CompleteItemColumn::Kind => kind_cell.take(),
+                CompleteItemColumn::Menu => menu_cell.take(),
+            }
+            .unwrap_or_else(|| menu::Cell::from(Span::raw("")))
+        }))
     }
+}
+
+/// One column of the Insert-mode completion popup, as named by vim
+/// `completeitemalign`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum CompleteItemColumn {
+    Abbr,
+    Kind,
+    Menu,
+}
+
+/// The column order the user `:set completeitemalign=…` (`cia`) to, or `None`
+/// when the option was never set.
+fn completeitemalign_order() -> Option<[CompleteItemColumn; 3]> {
+    parse_completeitemalign(&crate::commands::vim_opt_str_alias(
+        "completeitemalign",
+        "cia",
+    )?)
+}
+
+/// Parse a `completeitemalign` value into a column order. `None` for any value
+/// vim itself would reject: options.txt requires the list to "always contain
+/// those three values in any order", so a list that repeats a word, omits one,
+/// or names something else is not a usable order and the popup keeps its own
+/// layout instead. Pure — unit tested.
+fn parse_completeitemalign(value: &str) -> Option<[CompleteItemColumn; 3]> {
+    let mut order = [None; 3];
+    let mut words = value.split(',');
+    for slot in order.iter_mut() {
+        *slot = Some(match words.next()?.trim() {
+            "abbr" => CompleteItemColumn::Abbr,
+            "kind" => CompleteItemColumn::Kind,
+            "menu" => CompleteItemColumn::Menu,
+            _ => return None,
+        });
+    }
+    // Exactly three words, and no word twice — which with three slots is the same
+    // as "contains all three".
+    if words.next().is_some() || order[0] == order[1] || order[1] == order[2] || order[0] == order[2]
+    {
+        return None;
+    }
+    Some(order.map(|column| column.expect("every slot was just filled")))
 }
 
 /// Wraps a Menu.
@@ -763,6 +847,28 @@ mod tests {
         assert_eq!(infer_case("foobar", "foo"), "foo");
         // Nothing typed: the match is inserted as the provider sent it.
         assert_eq!(infer_case("", "FooBar"), "FooBar");
+    }
+
+    #[test]
+    fn completeitemalign_takes_only_all_three_words() {
+        use CompleteItemColumn::*;
+        // The default order, and any permutation of it, is a valid column order.
+        assert_eq!(
+            parse_completeitemalign("abbr,kind,menu"),
+            Some([Abbr, Kind, Menu])
+        );
+        assert_eq!(
+            parse_completeitemalign("menu,abbr,kind"),
+            Some([Menu, Abbr, Kind])
+        );
+        // "must always contain those three values in any order": a short list, a
+        // repeat, an extra word, and an unknown word are all refused, and the
+        // popup keeps its own layout.
+        assert_eq!(parse_completeitemalign("abbr,kind"), None);
+        assert_eq!(parse_completeitemalign("abbr,abbr,kind"), None);
+        assert_eq!(parse_completeitemalign("abbr,kind,menu,abbr"), None);
+        assert_eq!(parse_completeitemalign("abbr,kind,word"), None);
+        assert_eq!(parse_completeitemalign(""), None);
     }
 
     #[test]
