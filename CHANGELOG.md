@@ -465,6 +465,9 @@ Usability improvements:
 
 Fixes:
 
+* The `:tutor` banner spells zmax. The ASCII art at the top of `runtime/tutor`
+  was still the six-letter figlet of the old name, so the first thing the
+  tutorial showed was the wrong editor.
 * `u` after a change operator now leaves the cursor on the first character of
   the restored text instead of at the start of the line: `ci"` then `u` puts it
   back on the `b` of `"bar"`, where vim puts it. Vim restores the column the
