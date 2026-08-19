@@ -41,10 +41,15 @@ pub struct Request<'a> {
     pub command: Option<String>,
     /// Per-request fzf flags (`+m`, `--no-sort`, …).
     pub options: &'a [String],
-    /// The composed `FZF_DEFAULT_OPTS` string — the user's own environment plus
-    /// zmax's `fzf.options`/`fzf.preview` config. Parsed with fzf's quoting
-    /// rules, exactly as arb parses the env var.
+    /// zmax's own additions on top of the user's fzf configuration: the
+    /// `fzf.options`/`fzf.preview` config and the CTRL-T options. Parsed with
+    /// fzf's quoting rules. `$FZF_DEFAULT_OPTS_FILE` and `$FZF_DEFAULT_OPTS`
+    /// are NOT included here — [`compose_argv`] reads them itself, in fzf's own
+    /// precedence, so there is one place that knows the environment.
     pub default_opts: &'a str,
+    /// The terminal's size, for the `FZF_LINES`/`FZF_COLUMNS` a preview command
+    /// is entitled to read. The caller has it; a worker thread does not.
+    pub term_size: (u16, u16),
 }
 
 /// The flags arb's clap layer reads that `fzf::Look` does not carry. Parsed off
@@ -60,6 +65,20 @@ struct Flags {
     exact: bool,
     no_sort: bool,
     multi: bool,
+    // The rest are not acted on here — they are read back out and handed to
+    // preview children as the `FZF_*` variables fzf exports (see [`child_env`]),
+    // which is the only way a preview command can know them.
+    nth: String,
+    with_nth: String,
+    ghost: String,
+    wrap: String,
+    preview_label: String,
+    border_label: String,
+    list_label: String,
+    input_label: String,
+    header_label: String,
+    no_input: bool,
+    hidden_input: bool,
 }
 
 impl Flags {
@@ -101,6 +120,18 @@ impl Flags {
                 "--no-sort" | "+s" => f.no_sort = true,
                 "--multi" | "-m" => f.multi = true,
                 "+m" => f.multi = false,
+                "--nth" | "-n" => f.nth = value(argv, &mut i, inline),
+                "--with-nth" => f.with_nth = value(argv, &mut i, inline),
+                "--ghost" => f.ghost = value(argv, &mut i, inline),
+                "--wrap" => f.wrap = "char".to_string(),
+                "--wrap-sign" => f.wrap = "char".to_string(),
+                "--preview-label" => f.preview_label = value(argv, &mut i, inline),
+                "--border-label" => f.border_label = value(argv, &mut i, inline),
+                "--list-label" => f.list_label = value(argv, &mut i, inline),
+                "--input-label" => f.input_label = value(argv, &mut i, inline),
+                "--header-label" => f.header_label = value(argv, &mut i, inline),
+                "--no-input" => f.no_input = true,
+                "--hidden-input" => f.hidden_input = true,
                 _ => {}
             }
             i += 1;
@@ -109,11 +140,17 @@ impl Flags {
     }
 }
 
-/// argv as arb's `main` would see it: the program name, `--fzf`, the user's fzf
-/// configuration, then the per-request flags. Later wins, which is fzf's own
-/// precedence — an explicit per-command flag overrides `$FZF_DEFAULT_OPTS`.
+/// argv as arb's `main` would see it, in fzf's own precedence (fzf(1),
+/// ENVIRONMENT VARIABLES): `$FZF_DEFAULT_OPTS_FILE`, then `$FZF_DEFAULT_OPTS`,
+/// then the command line — later wins, so an explicit per-command flag
+/// overrides the environment, and zmax's own config overrides both.
+///
+/// `arb::fzf::env_args` is the reader for the two environment entries: the same
+/// one `arb --fzf` uses, so a themed setup keeps its prompt, layout, border,
+/// colors and `--bind` table here without any of it being re-implemented.
 fn compose_argv(req: &Request<'_>) -> Vec<String> {
     let mut argv = vec!["arb".to_string(), "--fzf".to_string()];
+    argv.extend(arb::fzf::env_args());
     argv.extend(arb::fzf::shell_split(req.default_opts));
     argv.extend(req.options.iter().cloned());
     argv
@@ -170,10 +207,15 @@ fn spawn_source(command: &str, state: Arc<Mutex<StreamState>>) -> Option<Arc<Mut
 /// whenever the cursor moves, into the pane arb renders below the list. This is
 /// arb's own `spawn_item_preview`, which lives in its binary rather than its
 /// library, so it is reproduced against the same `Controls` contract.
+#[allow(clippy::too_many_arguments)]
 fn spawn_preview(
     template: String,
     controls: Arc<Mutex<arb::tui::Controls>>,
     pane: Arc<Mutex<StreamState>>,
+    state: Arc<Mutex<StreamState>>,
+    look: arb::fzf::Look,
+    flags: Arc<PreviewFlags>,
+    term_size: (u16, u16),
 ) {
     let sh = shell();
     std::thread::spawn(move || {
@@ -194,7 +236,11 @@ fn spawn_preview(
             }
             last = cur.clone();
             let cmd = template.replace("{}", &shell_quote(&cur));
-            let out = Command::new(&sh[0]).args(&sh[1..]).arg(&cmd).output();
+            let out = Command::new(&sh[0])
+                .args(&sh[1..])
+                .arg(&cmd)
+                .envs(child_env(&controls, &state, &look, &flags, term_size))
+                .output();
             let lines: Vec<String> = match out {
                 Ok(o) => String::from_utf8_lossy(&o.stdout)
                     .lines()
@@ -210,6 +256,138 @@ fn spawn_preview(
             }
         }
     });
+}
+
+/// The subset of [`Flags`] a preview child is entitled to see. Split out so the
+/// preview thread can hold it without holding the whole parse.
+pub(crate) struct PreviewFlags {
+    prompt: String,
+    ghost: String,
+    wrap: String,
+    nth: String,
+    with_nth: String,
+    preview_label: String,
+    border_label: String,
+    list_label: String,
+    input_label: String,
+    header_label: String,
+    input_state: &'static str,
+}
+
+/// The `FZF_*` variables fzf exports to its child processes (fzf(1),
+/// "ENVIRONMENT VARIABLES EXPORTED TO CHILD PROCESSES"), computed fresh for
+/// every preview run because most of them move as you type.
+///
+/// Deliberately NOT set, because this process cannot compute them honestly and
+/// an invented value is worse than an unset one:
+///
+/// * `FZF_ACTION`, `FZF_KEY`, `FZF_IDLE_TIME`, `FZF_IDLE_TIME_MS` — per-keystroke
+///   state that lives inside arb's event loop and is not on `Controls`.
+/// * `FZF_PORT`, `FZF_SOCK` — `--listen` only, which this picker does not run.
+///   fzf leaves them unset without it too.
+/// * `FZF_RAW` — raw mode only.
+fn child_env(
+    controls: &Arc<Mutex<arb::tui::Controls>>,
+    state: &Arc<Mutex<StreamState>>,
+    look: &arb::fzf::Look,
+    flags: &PreviewFlags,
+    term_size: (u16, u16),
+) -> Vec<(String, String)> {
+    let (cols, rows) = term_size;
+    let (query, current, marks, cursor) = match controls.lock() {
+        Ok(c) => (
+            c.filter.clone(),
+            c.current.clone(),
+            c.marks.len(),
+            c.cursor,
+        ),
+        Err(_) => return Vec::new(),
+    };
+    // The match count is the renderer's own predicate over the same stream, so
+    // the number a preview reads is the number on screen.
+    let (total, matched) = match state.lock() {
+        Ok(s) => (
+            s.lines.len(),
+            s.lines
+                .iter()
+                .filter(|l| arb::tui::filter_matches(l, &query))
+                .count(),
+        ),
+        Err(_) => (0, 0),
+    };
+    let (pv_rows, pv_cols) = preview_geometry(term_size);
+    let mut env: Vec<(String, String)> = vec![
+        ("FZF_LINES".into(), rows.to_string()),
+        ("FZF_COLUMNS".into(), cols.to_string()),
+        // fzf reports where the LIST grows: its default layout puts the prompt
+        // at the bottom and grows upward, `--reverse` puts it at the top.
+        (
+            "FZF_DIRECTION".into(),
+            match look.layout {
+                arb::fzf::Layout::Default => "up",
+                arb::fzf::Layout::Reverse | arb::fzf::Layout::ReverseList => "down",
+            }
+            .into(),
+        ),
+        ("FZF_TOTAL_COUNT".into(), total.to_string()),
+        ("FZF_MATCH_COUNT".into(), matched.to_string()),
+        ("FZF_SELECT_COUNT".into(), marks.to_string()),
+        // fzf's position is 1-based over the matches; arb's cursor is a 0-based
+        // offset from the best match, so the two differ by one.
+        ("FZF_POS".into(), (cursor + 1).to_string()),
+        ("FZF_QUERY".into(), query),
+        ("FZF_INPUT_STATE".into(), flags.input_state.into()),
+        ("FZF_PROMPT".into(), flags.prompt.clone()),
+        ("FZF_POINTER".into(), look.pointer.clone()),
+        ("FZF_PREVIEW_LINES".into(), pv_rows.to_string()),
+        ("FZF_PREVIEW_COLUMNS".into(), pv_cols.to_string()),
+        // The preview pane is the right-hand split, so it starts at row 0 and at
+        // the column where the list ends.
+        ("FZF_PREVIEW_TOP".into(), "0".into()),
+        (
+            "FZF_PREVIEW_LEFT".into(),
+            cols.saturating_sub(pv_cols).to_string(),
+        ),
+    ];
+    // "FZF_CURRENT_ITEM is omitted when the item contains a NUL byte, because
+    // exec(2) cannot pass it. It is also omitted when the item is larger than
+    // 64 KB, so that a huge item cannot overflow the environment size limit."
+    if !current.contains('\0') && current.len() <= 64 * 1024 {
+        env.push(("FZF_CURRENT_ITEM".into(), current));
+    }
+    // The remaining ones exist only when the corresponding option was given;
+    // fzf leaves them unset otherwise rather than exporting an empty string.
+    for (name, value) in [
+        ("FZF_GHOST", &flags.ghost),
+        ("FZF_WRAP", &flags.wrap),
+        ("FZF_NTH", &flags.nth),
+        ("FZF_WITH_NTH", &flags.with_nth),
+        ("FZF_PREVIEW_LABEL", &flags.preview_label),
+        ("FZF_BORDER_LABEL", &flags.border_label),
+        ("FZF_LIST_LABEL", &flags.list_label),
+        ("FZF_INPUT_LABEL", &flags.input_label),
+        ("FZF_HEADER_LABEL", &flags.header_label),
+    ] {
+        if !value.is_empty() {
+            env.push((name.into(), value.clone()));
+        }
+    }
+    env
+}
+
+/// Size of the preview pane, in rows and columns.
+///
+/// arb renders it as the right-hand 45% of the main area with a one-cell border
+/// on each side, and the main area is the terminal minus the status bar row
+/// (`render_output_pane`, vendor/arblang/src/tui.rs:1802). fzf sizes its own
+/// preview from `--preview-window`, which arb does not model — so this tracks
+/// arb's split, and would drift if arb ever changed it.
+fn preview_geometry((cols, rows): (u16, u16)) -> (u16, u16) {
+    let pane_cols = (u32::from(cols) * 45 / 100) as u16;
+    (
+        rows.saturating_sub(1).saturating_sub(2),
+        pane_cols.saturating_sub(2),
+    )
 }
 
 /// Single-quote for `sh -c`, the way fzf quotes the `{}` substitution: wrap in
@@ -266,6 +444,7 @@ pub fn pick(req: Request<'_>, fallback: impl FnOnce() -> Vec<String>) -> Option<
         }
     }
 
+    let look_for_preview = look.clone();
     let controls = Arc::new(Mutex::new(arb::tui::Controls::default()));
     {
         let mut c = controls.lock().ok()?;
@@ -284,7 +463,37 @@ pub fn pick(req: Request<'_>, fallback: impl FnOnce() -> Vec<String>) -> Option<
     // below the list, fed by the preview thread.
     let down = flags.preview.as_ref().map(|template| {
         let pane = Arc::new(Mutex::new(StreamState::new()));
-        spawn_preview(template.clone(), Arc::clone(&controls), Arc::clone(&pane));
+        let pv = Arc::new(PreviewFlags {
+            // fzf exports the prompt it actually shows, which is `> ` when the
+            // option was never given.
+            prompt: match flags.prompt.is_empty() {
+                true => "> ".to_string(),
+                false => flags.prompt.clone(),
+            },
+            ghost: flags.ghost.clone(),
+            wrap: flags.wrap.clone(),
+            nth: flags.nth.clone(),
+            with_nth: flags.with_nth.clone(),
+            preview_label: flags.preview_label.clone(),
+            border_label: flags.border_label.clone(),
+            list_label: flags.list_label.clone(),
+            input_label: flags.input_label.clone(),
+            header_label: flags.header_label.clone(),
+            input_state: match (flags.no_input, flags.hidden_input) {
+                (true, _) => "disabled",
+                (_, true) => "hidden",
+                _ => "enabled",
+            },
+        });
+        spawn_preview(
+            template.clone(),
+            Arc::clone(&controls),
+            Arc::clone(&pane),
+            Arc::clone(&state),
+            look_for_preview.clone(),
+            pv,
+            req.term_size,
+        );
         (pane, "preview".to_string())
     });
 
@@ -344,6 +553,7 @@ mod tests {
             command: None,
             options: &[],
             default_opts: "--prompt='<<)ZPWR(>> ' --reverse",
+            term_size: (80, 24),
         };
         let argv = compose_argv(&req);
         let f = Flags::parse(&argv);
@@ -357,6 +567,7 @@ mod tests {
             command: None,
             options: &["--prompt=Maps> ".to_string()],
             default_opts: "--prompt='env> '",
+            term_size: (80, 24),
         };
         let f = Flags::parse(&compose_argv(&req));
         assert_eq!(f.prompt, "Maps> ", "the later flag wins, as in fzf");
@@ -370,6 +581,209 @@ mod tests {
         // opening a picker — this is where that shows up.
         let spec = select_spec().expect("arb still parses the select spec");
         assert!(spec.theme.is_none(), "an unthemed picker uses fzf's palette");
+    }
+
+    /// Every variable fzf(1) lists under "ENVIRONMENT VARIABLES EXPORTED TO
+    /// CHILD PROCESSES", and whether this picker can set it. The four `false`
+    /// rows are the ones no honest value exists for here; the test exists so
+    /// that list stays a decision rather than an oversight.
+    const EXPORTED: &[(&str, bool)] = &[
+        ("FZF_LINES", true),
+        ("FZF_COLUMNS", true),
+        ("FZF_DIRECTION", true),
+        ("FZF_TOTAL_COUNT", true),
+        ("FZF_MATCH_COUNT", true),
+        ("FZF_SELECT_COUNT", true),
+        ("FZF_POS", true),
+        ("FZF_CURRENT_ITEM", true),
+        ("FZF_QUERY", true),
+        ("FZF_INPUT_STATE", true),
+        ("FZF_PROMPT", true),
+        ("FZF_POINTER", true),
+        ("FZF_PREVIEW_TOP", true),
+        ("FZF_PREVIEW_LEFT", true),
+        ("FZF_PREVIEW_LINES", true),
+        ("FZF_PREVIEW_COLUMNS", true),
+        ("FZF_NTH", true),
+        ("FZF_WITH_NTH", true),
+        ("FZF_GHOST", true),
+        ("FZF_WRAP", true),
+        ("FZF_PREVIEW_LABEL", true),
+        ("FZF_BORDER_LABEL", true),
+        ("FZF_LIST_LABEL", true),
+        ("FZF_INPUT_LABEL", true),
+        ("FZF_HEADER_LABEL", true),
+        // arb's event loop owns these and `Controls` does not publish them.
+        ("FZF_ACTION", false),
+        ("FZF_KEY", false),
+        ("FZF_IDLE_TIME", false),
+        ("FZF_IDLE_TIME_MS", false),
+        // `--listen` / raw mode, neither of which this picker runs. fzf leaves
+        // them unset in that case too.
+        ("FZF_PORT", false),
+        ("FZF_SOCK", false),
+        ("FZF_RAW", false),
+    ];
+
+    fn env_for_test(query: &str, current: &str, lines: &[&str]) -> Vec<(String, String)> {
+        let controls = Arc::new(Mutex::new(arb::tui::Controls::default()));
+        {
+            let mut c = controls.lock().unwrap();
+            c.filter = query.to_string();
+            c.current = current.to_string();
+            c.cursor = 2;
+            c.marks = vec!["one".into()];
+        }
+        let state = Arc::new(Mutex::new(StreamState::with_cap(usize::MAX)));
+        for l in lines {
+            state.lock().unwrap().push(l.to_string());
+        }
+        // Every optional flag is populated: the table below asks what this
+        // picker CAN export, and an option that was never passed is omitted on
+        // purpose (asserted separately).
+        let flags = PreviewFlags {
+            prompt: "> ".into(),
+            ghost: "type to filter".into(),
+            wrap: "char".into(),
+            nth: "2..".into(),
+            with_nth: "1,2".into(),
+            preview_label: "preview".into(),
+            border_label: "border".into(),
+            list_label: "list".into(),
+            input_label: "input".into(),
+            header_label: "header".into(),
+            input_state: "enabled",
+        };
+        child_env(
+            &controls,
+            &state,
+            &arb::fzf::Look::default(),
+            &flags,
+            (100, 30),
+        )
+    }
+
+    #[test]
+    fn every_exported_variable_is_accounted_for() {
+        let env = env_for_test("a", "alpha", &["alpha", "beta"]);
+        let set: std::collections::HashSet<&str> = env.iter().map(|(k, _)| k.as_str()).collect();
+        for (name, expected) in EXPORTED {
+            assert_eq!(
+                set.contains(name),
+                *expected,
+                "{name} should{} be exported to preview children",
+                if *expected { "" } else { " not" }
+            );
+        }
+    }
+
+    #[test]
+    fn counts_and_position_follow_the_query() {
+        let env = env_for_test("al", "alpha", &["alpha", "beta", "alfalfa"]);
+        let get = |k: &str| {
+            env.iter()
+                .find(|(n, _)| n == k)
+                .map(|(_, v)| v.clone())
+                .unwrap_or_default()
+        };
+        assert_eq!(get("FZF_TOTAL_COUNT"), "3");
+        // "beta" does not contain "al"; the other two do.
+        assert_eq!(get("FZF_MATCH_COUNT"), "2");
+        assert_eq!(get("FZF_SELECT_COUNT"), "1");
+        // arb's cursor is a 0-based offset, fzf's position is 1-based.
+        assert_eq!(get("FZF_POS"), "3");
+        assert_eq!(get("FZF_QUERY"), "al");
+        assert_eq!(get("FZF_CURRENT_ITEM"), "alpha");
+        assert_eq!(get("FZF_NTH"), "2..");
+        assert_eq!(get("FZF_LINES"), "30");
+        assert_eq!(get("FZF_COLUMNS"), "100");
+    }
+
+    #[test]
+    fn an_option_that_was_never_passed_is_not_exported_as_empty() {
+        // A preview that tests `[ -n "$FZF_GHOST" ]` must see the option's
+        // absence, not an empty string that looks like it was set.
+        let controls = Arc::new(Mutex::new(arb::tui::Controls::default()));
+        let state = Arc::new(Mutex::new(StreamState::with_cap(usize::MAX)));
+        let flags = PreviewFlags {
+            prompt: "> ".into(),
+            ghost: String::new(),
+            wrap: String::new(),
+            nth: String::new(),
+            with_nth: String::new(),
+            preview_label: String::new(),
+            border_label: String::new(),
+            list_label: String::new(),
+            input_label: String::new(),
+            header_label: String::new(),
+            input_state: "enabled",
+        };
+        let env = child_env(
+            &controls,
+            &state,
+            &arb::fzf::Look::default(),
+            &flags,
+            (80, 24),
+        );
+        for absent in ["FZF_GHOST", "FZF_WRAP", "FZF_NTH", "FZF_WITH_NTH"] {
+            assert!(
+                !env.iter().any(|(k, _)| k == absent),
+                "{absent} was exported despite the option never being passed"
+            );
+        }
+        // The unconditional ones are still there.
+        assert!(env.iter().any(|(k, _)| k == "FZF_PROMPT"));
+    }
+
+    #[test]
+    fn a_nul_bearing_item_is_omitted_not_truncated() {
+        // fzf(1): "FZF_CURRENT_ITEM is omitted when the item contains a NUL
+        // byte, because exec(2) cannot pass it."
+        let env = env_for_test("", "with\0nul", &["with\0nul"]);
+        assert!(!env.iter().any(|(k, _)| k == "FZF_CURRENT_ITEM"));
+    }
+
+    #[test]
+    fn the_preview_pane_geometry_is_the_split_arb_renders() {
+        // 45% of the width, less its border; the height is the terminal less the
+        // status bar and the pane's own border.
+        assert_eq!(preview_geometry((100, 30)), (27, 43));
+        // A tiny terminal saturates instead of underflowing.
+        assert_eq!(preview_geometry((2, 1)), (0, 0));
+    }
+
+    #[test]
+    fn opts_file_and_opts_are_both_read() {
+        // fzf(1) ENVIRONMENT VARIABLES: $FZF_DEFAULT_OPTS_FILE first, then
+        // $FZF_DEFAULT_OPTS, then the command line. `arb::fzf::env_args` is the
+        // reader; this asserts it is actually wired into the composed argv.
+        let dir = std::env::temp_dir().join("zmax-fzf-optsfile-test");
+        std::fs::write(&dir, "--prompt='file> '\n").expect("write opts file");
+        // SAFETY: single-threaded test, and both vars are restored below.
+        unsafe {
+            std::env::set_var("FZF_DEFAULT_OPTS_FILE", &dir);
+            std::env::set_var("FZF_DEFAULT_OPTS", "--pointer=>>");
+        }
+        let argv = compose_argv(&Request {
+            candidates: &[],
+            command: None,
+            options: &[],
+            default_opts: "",
+            term_size: (80, 24),
+        });
+        unsafe {
+            std::env::remove_var("FZF_DEFAULT_OPTS_FILE");
+            std::env::remove_var("FZF_DEFAULT_OPTS");
+        }
+        let _ = std::fs::remove_file(&dir);
+        assert!(
+            argv.iter().any(|a| a == "--prompt=file> " || a == "file> "),
+            "the opts FILE reached the argv: {argv:?}"
+        );
+        assert!(
+            argv.iter().any(|a| a.contains(">>")),
+            "$FZF_DEFAULT_OPTS reached the argv: {argv:?}"
+        );
     }
 
     #[test]

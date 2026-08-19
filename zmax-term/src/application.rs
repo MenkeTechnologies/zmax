@@ -2264,7 +2264,7 @@ impl Application {
         use std::process::{Command, Stdio};
 
         // Configurable popup size/layout + preview pane (applied on top of the
-        // user's own $FZF_DEFAULT_OPTS, which fzf reads itself).
+        // user's own $FZF_DEFAULT_OPTS, which the picker reads itself).
         let (cfg_opts, preview_cmd, preview_win) = {
             let c = self.editor.config();
             (
@@ -2274,14 +2274,19 @@ impl Application {
             )
         };
 
-        // Compose the child's FZF_DEFAULT_OPTS: the user's own, plus — for
-        // file/preview commands (:Files/:Buffers) — their FZF_CTRL_T_OPTS, which
-        // is where preview configs conventionally live (fzf reads FZF_CTRL_T_OPTS
-        // only in its CTRL-T *widget*, not for a bare `fzf`; we replicate that so
-        // :Files matches the shell's CTRL-T file finder). fzf parses the whole
-        // string itself, so the complex quoted/multiline preview survives intact.
-        let base_opts = std::env::var("FZF_DEFAULT_OPTS").unwrap_or_default();
-        let mut fzf_opts = base_opts;
+        // zmax's own options, layered on top of the user's fzf configuration.
+        // $FZF_DEFAULT_OPTS and $FZF_DEFAULT_OPTS_FILE are NOT folded in here:
+        // the in-process picker reads them itself in fzf's own precedence
+        // (`fzf_arb::compose_argv` -> `arb::fzf::env_args`), so doing it here
+        // too would apply the user's options twice.
+        //
+        // For file/preview commands (:Files/:Buffers) their $FZF_CTRL_T_OPTS is
+        // added, which is where preview configs conventionally live — fzf reads
+        // it only in the shell's CTRL-T *widget*, not for a bare `fzf`, and
+        // replicating that is what makes :Files match the CTRL-T file finder.
+        // The string is parsed with fzf's quoting rules, so a complex quoted or
+        // multiline preview survives intact.
+        let mut fzf_opts = String::new();
         if req.preview {
             if let Ok(ct) = std::env::var("FZF_CTRL_T_OPTS") {
                 fzf_opts.push(' ');
@@ -2314,6 +2319,14 @@ impl Application {
             }
         });
         #[cfg(not(feature = "scripting"))]
+        // The external path sets FZF_DEFAULT_OPTS for the child, so it needs the
+        // user's own options folded back in, ahead of zmax's.
+        #[cfg(not(feature = "scripting"))]
+        let fzf_opts = {
+            let base = std::env::var("FZF_DEFAULT_OPTS").unwrap_or_default();
+            format!("{base} {fzf_opts}")
+        };
+        #[cfg(not(feature = "scripting"))]
         let stream_command = req.candidates.is_empty();
 
         if self.restore_term().is_err() {
@@ -2339,6 +2352,7 @@ impl Application {
             // `:Files` and `SPC f f` list the same files under the same
             // `file-picker` config.
             let root = zmax_loader::find_workspace().0;
+            let area = self.terminal.size();
             let editor = &self.editor;
             crate::fzf_arb::pick(
                 crate::fzf_arb::Request {
@@ -2346,6 +2360,7 @@ impl Application {
                     command: source_cmd.clone(),
                     options: &args,
                     default_opts: &fzf_opts,
+                    term_size: (area.width, area.height),
                 },
                 || {
                     crate::ui::workspace_walk(editor, &root)
