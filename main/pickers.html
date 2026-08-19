@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-a3cfafd8.js";
+            window.path_to_searchindex_js = "searchindex-f7c686e8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -207,7 +207,7 @@
 <p>Precedence is fzf’s: the options file, then the environment, then <code>[editor.fzf]</code>, then the flags a particular command passes.</p>
 <p>Preview commands receive the <code>FZF_*</code> variables fzf exports to its children — <code>FZF_QUERY</code>, <code>FZF_CURRENT_ITEM</code>, <code>FZF_PREVIEW_LINES</code>, <code>FZF_PREVIEW_COLUMNS</code>, <code>FZF_TOTAL_COUNT</code>, <code>FZF_MATCH_COUNT</code>, <code>FZF_POS</code> and the rest — so a preview written for fzf works unchanged. The four that describe the last keystroke (<code>FZF_KEY</code>, <code>FZF_ACTION</code>, <code>FZF_IDLE_TIME</code>, <code>FZF_IDLE_TIME_MS</code>) are not set, and neither are the <code>--listen</code> variables, since that mode is not run.</p>
 <p>When a command supplies no candidates and no source, and none of the environment commands above is set, the list comes from the same file walk the native file picker uses — so <code>:Files</code> and <code>Space-f</code> show the same files under the same <a href="./editor.html#editorfile-picker-section"><code>[editor.file-picker]</code></a> settings.</p>
-<p><code>--preview-window</code> is the one fzf option with no effect here: the preview pane is laid out by arb, not by that spec.</p>
+<p><code>--preview-window</code> places and sizes the preview pane as it does under fzf — <code>up</code>/<code>down</code>/<code>left</code>/<code>right</code> (with <code>next</code> treated as <code>down</code>), a size in cells or per cent, <code>hidden</code>, and <code>wrap</code>. The parts arb does not model (<code>border-STYLE</code>, <code>follow</code>, <code>cycle</code>, <code>info</code>, <code>+SCROLL</code>, <code>~HEADER_LINES</code>, <code>default</code>, <code>&lt;THRESHOLD(ALT)</code>) are ignored rather than rejected, so a spec written for fzf is always accepted.</p>
 <h3 id="file-explorer"><a class="header" href="#file-explorer">File explorer</a></h3>
 <p><code>Space-e</code> opens an interactive file explorer for browsing and opening files, rooted at the workspace; <code>Space-.</code> opens one rooted at the current buffer’s directory. Unlike the file picker, the explorer does not ignore most files by default; its ignore behaviour is configured separately in the <a href="./editor.html#editorfile-explorer-section"><code>[editor.file-explorer]</code></a> section.</p>
 
