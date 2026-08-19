@@ -307,7 +307,7 @@ Everything here is empty by default so that zmax adds nothing that would overrid
 |--|--|---------|
 | `options` | Extra flags added to every fzf.vim-style command | `[]` |
 | `preview` | Preview command for the file-listing commands; `{}` is the picked file. Empty disables the preview pane | `""` |
-| `preview-window` | Kept for compatibility; the in-process picker lays the preview pane out itself and ignores this | `"right:55%"` |
+| `preview-window` | Where the preview pane goes and how big it is: `POSITION[,SIZE[%]][,hidden][,wrap]`, e.g. `down,30%` or `left,60` | `"right:55%"` |
 
 Example
 

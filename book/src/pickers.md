@@ -29,7 +29,7 @@ Preview commands receive the `FZF_*` variables fzf exports to its children — `
 
 When a command supplies no candidates and no source, and none of the environment commands above is set, the list comes from the same file walk the native file picker uses — so `:Files` and `Space-f` show the same files under the same [`[editor.file-picker]`](./editor.md#editorfile-picker-section) settings.
 
-`--preview-window` is the one fzf option with no effect here: the preview pane is laid out by arb, not by that spec.
+`--preview-window` places and sizes the preview pane as it does under fzf — `up`/`down`/`left`/`right` (with `next` treated as `down`), a size in cells or per cent, `hidden`, and `wrap`. The parts arb does not model (`border-STYLE`, `follow`, `cycle`, `info`, `+SCROLL`, `~HEADER_LINES`, `default`, `<THRESHOLD(ALT)`) are ignored rather than rejected, so a spec written for fzf is always accepted.
 
 ### File explorer
 
