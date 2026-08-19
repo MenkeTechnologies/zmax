@@ -113,6 +113,12 @@ and **R** (`:rlang`) on unix.
 `init.vim` are sourced at startup. See
 [`book/src/scripting.md`](book/src/scripting.md).
 
+Embedding earns its keep beyond scripting: the fzf.vim commands (`:Files`,
+`:Rg`, …) are driven by **arb's `--fzf` mode called as a library**, so zmax's
+fuzzy picker is a function call rather than a `fork`/`exec` of somebody else's
+binary — while still honoring every `$FZF_*` variable and the user's existing
+fzf configuration.
+
 ### Polyglot pipelines
 
 `:xpipe` filters a selection through a **chain** of those languages inside this
@@ -202,6 +208,14 @@ leaving the editor:
   and generators (`:uuid`/`:lorem`/`:date`/`:seq`) — each running on the
   selection (or whole buffer). When a transform needs real logic, drop to the
   embedded languages.
+- **fzf.vim commands, with no fzf** (`:Files`, `:Rg`, `:GFiles`, `:Buffers`,
+  `:BLines`, `:Maps`, `:Colors`, … under `SPC F`) — the picker is `arb --fzf`
+  running *in this process*: no `fork`, no `exec`, no `fzf` binary to install.
+  It is a drop-in, so it reads `$FZF_DEFAULT_OPTS_FILE`, `$FZF_DEFAULT_OPTS`,
+  `$FZF_DEFAULT_COMMAND` and the `$FZF_CTRL_T_*` pair, paints fzf's own palette,
+  and exports the `FZF_*` variables (`FZF_QUERY`, `FZF_PREVIEW_LINES`,
+  `FZF_MATCH_COUNT`, …) that preview commands read. A *source* command such as
+  `git ls-files` is of course still a process; the picker is not.
 - **IDE workbench** (`:ide` / `F2`) — a project file-tree, a tree-sitter
   structure outline, problems/run panels, and an error-stripe minimap; the
   whole layout persists to appdata.

@@ -297,6 +297,26 @@ Example
 start-position = "previous"
 ```
 
+### `[editor.fzf]` Section
+
+Options for the fzf.vim-style commands (`:Files`, `:Rg`, `:GFiles`, …). Their picker is the embedded [arb](./scripting.md) running in this process, so no `fzf` binary is required; see [fzf.vim commands](./pickers.md#fzfvim-commands) for the environment variables it honours.
+
+Everything here is empty by default so that zmax adds nothing that would override your own `$FZF_DEFAULT_OPTS`. These are applied on top of it.
+
+| Key | Description | Default |
+|--|--|---------|
+| `options` | Extra flags added to every fzf.vim-style command | `[]` |
+| `preview` | Preview command for the file-listing commands; `{}` is the picked file. Empty disables the preview pane | `""` |
+| `preview-window` | Kept for compatibility; the in-process picker lays the preview pane out itself and ignores this | `"right:55%"` |
+
+Example
+
+```toml
+[editor.fzf]
+options = ["--height=95%", "--cycle"]
+preview = "bat --color=always --line-range :$FZF_PREVIEW_LINES {}"
+```
+
 ### `[editor.auto-pairs]` Section
 
 Enables automatic insertion of pairs to parentheses, brackets, etc. Can be a

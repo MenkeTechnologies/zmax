@@ -192,6 +192,24 @@ Changes in zmax.
 
 Features:
 
+* **The fzf.vim commands no longer need fzf, or a fork.** `:Files`, `:Rg`,
+  `:GFiles`, `:Buffers`, `:BLines`, `:Maps`, `:Colors` and the rest used to hand
+  the terminal to the external `fzf` binary. The picker is now `arb --fzf` —
+  arblang is already linked in for `:arb`/`:xpipe` — called as a library, so it
+  runs in this process with nothing spawned and no binary to install. It stays a
+  drop-in: `$FZF_DEFAULT_OPTS_FILE` and `$FZF_DEFAULT_OPTS` are read in fzf's own
+  precedence (the options *file* was never read before), `$FZF_DEFAULT_COMMAND`
+  and the `$FZF_CTRL_T_*` pair still resolve the source, fzf's palette is painted
+  when nothing themed the picker, and preview commands now receive the `FZF_*`
+  variables fzf exports to its children (`FZF_QUERY`, `FZF_CURRENT_ITEM`,
+  `FZF_PREVIEW_LINES`, `FZF_MATCH_COUNT`, `FZF_POS`, …) — they were previously
+  set by fzf and by nothing else, so a preview reading them saw an empty
+  environment. When a command supplies no candidates and no source, the list now
+  comes from the file walk the native picker uses instead of fzf's `find`, so
+  `:Files` and `SPC f f` agree. Two things do not carry over: `--preview-window`
+  (the pane is laid out by arb), and the four variables describing the last
+  keystroke, which live inside arb's event loop. A `--no-default-features` build
+  has no arb and still shells out.
 * **Structural regular expressions**, from sam and vis. `:structural-x` (`:sx`)
   turns every match of a regex into a selection and runs a command over the set;
   `:structural-y` does the same for the stretches *between* matches; and
