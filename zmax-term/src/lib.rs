@@ -46,6 +46,11 @@ pub mod eww;
 pub mod file_cache;
 pub mod file_watcher;
 pub mod filesets;
+// The fzf.vim picker, run in-process by the embedded arb. Needs `scripting`,
+// which is what links `arblang`; without it the fzf.vim commands fall back to
+// the external `fzf` binary (see `Application::run_fzf`).
+#[cfg(feature = "scripting")]
+pub mod fzf_arb;
 pub mod gnus;
 pub mod gud;
 pub mod harpoon;

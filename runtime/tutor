@@ -1792,10 +1792,10 @@ letters! that is not good grammar. you can fix this.
    ]q  and  [q            walk the quickfix list
    :copen  /  :cclose     show or hide the quickfix window
 
- :Rg, :Files and :GFiles under SPC F are the fzf.vim commands
- and drive an external fzf binary if you have one installed.
-
-
+ :Rg, :Files and :GFiles under SPC F are the fzf.vim commands.
+ Their picker is arb, compiled into zmax and run in this process,
+ so no fzf binary has to be installed; it reads your $FZF_*
+ environment the way fzf itself does.
 
 
 

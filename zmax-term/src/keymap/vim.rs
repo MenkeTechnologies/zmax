@@ -76,7 +76,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // SPC f v d: add a *directory* variable — the `.dir-locals.el` sibling of the
     // two above, which applies to the whole tree rather than to one file.
     ("space f v d", "File vars", "add_dir_local_variable"), // SPC f v d
-    // fzf.vim commands under SPC F (external fzf binary; honors $FZF_* env).
+    // fzf.vim commands under SPC F. The picker is the embedded arb running
+    // in-process (`crate::fzf_arb`), not the fzf binary; it still honors the
+    // user's $FZF_* environment, which is what makes it a drop-in.
     // `SPC F f` and `SPC F b` are spacemacs's own frame chords
     // (find-file-other-frame / switch-to-buffer-other-frame, in the Frames
     // submap below), so fzf's two pickers on those letters take free capitals:

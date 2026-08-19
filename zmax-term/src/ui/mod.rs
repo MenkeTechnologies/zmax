@@ -394,24 +394,21 @@ pub struct FilePickerData {
 }
 type FilePicker = Picker<PathBuf, FilePickerData>;
 
-pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
+/// The project file walk: the user's `file-picker` config, the custom ignore
+/// files and the excluded types, in one place.
+///
+/// Shared rather than repeated, because more than one surface has to list "the
+/// files of this project" and they must agree: the file picker below, and the
+/// fzf.vim `:Files` source when nothing else supplies one (see
+/// `Application::run_fzf`, which used to leave that walk to the `fzf` binary).
+pub fn workspace_walk(editor: &Editor, root: &Path) -> ignore::Walk {
     use ignore::WalkBuilder;
-    use std::time::Instant;
 
     let config = editor.config();
-    let data = FilePickerData {
-        root: root.clone(),
-        directory_style: editor.theme.get("ui.text.directory"),
-    };
-
-    let now = Instant::now();
-
     let dedup_symlinks = config.file_picker.deduplicate_links;
-    let absolute_root = root.canonicalize().unwrap_or_else(|_| root.clone());
+    let absolute_root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
 
-    let mut walk_builder = WalkBuilder::new(&root);
-
-    let mut files = walk_builder
+    WalkBuilder::new(root)
         .hidden(config.file_picker.hidden)
         .parents(config.file_picker.parents)
         .ignore(config.file_picker.ignore)
@@ -426,13 +423,25 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         .add_custom_ignore_filename(".zmax/ignore")
         .types(get_excluded_types())
         .build()
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            if !entry.path().is_file() {
-                return None;
-            }
-            Some(entry.into_path())
-        });
+}
+
+pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
+    use std::time::Instant;
+
+    let data = FilePickerData {
+        root: root.clone(),
+        directory_style: editor.theme.get("ui.text.directory"),
+    };
+
+    let now = Instant::now();
+
+    let mut files = workspace_walk(editor, &root).filter_map(|entry| {
+        let entry = entry.ok()?;
+        if !entry.path().is_file() {
+            return None;
+        }
+        Some(entry.into_path())
+    });
     log::debug!("file_picker init {:?}", Instant::now().duration_since(now));
 
     let columns = [PickerColumn::new(
