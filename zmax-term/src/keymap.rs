@@ -895,6 +895,10 @@ mod tests {
             // vim `C-w d` splits and jumps to the definition under the cursor;
             // spacemacs `SPC w d` deletes the window.
             'd',
+            // vim `C-w p` goes to the previous (last accessed) window;
+            // spacemacs `SPC w p` is the popup prefix (`SPC w p m` shows
+            // *Messages* in a popup, `SPC w p p` closes the popup window).
+            'p',
         ];
         let spc_w = root
             .search(&[key!(' '), key!('w')])
@@ -935,6 +939,15 @@ mod tests {
             spc_w.get(&key!('d')).and_then(cmd_name_of),
             Some("wclose"),
             "SPC w d stays spacemacs's delete-window"
+        );
+        assert_eq!(
+            ctrl_w.get(&key!('p')).and_then(cmd_name_of),
+            Some("rotate_view"),
+            "C-w p stays vim's go-to-previous-window"
+        );
+        assert!(
+            matches!(spc_w.get(&key!('p')), Some(KeyTrie::Node(_))),
+            "SPC w p is spacemacs's popup prefix"
         );
         // Note: zmax ships the vim keymap, which intentionally does NOT alias
         // `z` and `Z` (vim reserves `Z` for `ZZ`/`ZQ`), so the Zmax `z`==`Z`

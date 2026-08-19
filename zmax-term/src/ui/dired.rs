@@ -65,7 +65,10 @@
 //! F hardlink-by-regexp, y mark-containing, h isearch-regexp, b byte-compile,
 //! M-d/M-x mark dirs/executables, M-l load, M-m man, M-r print, M-q grep-replace,
 //! M-n/M-p/M-u/M-y subdir motion, M-e/M-k/M-z/M-v epa, M-i/M-o image-dired,
-//! M-f/M-g find-name/find-grep, M-c locate, M-t open in a new tab, M-w wdired.
+//! M-f find-dired (the find ARGS string), M-F find-name, M-g find-grep,
+//! M-c locate, M-t open in a new tab, M-w wdired. The find/locate commands list
+//! their hits AS the Dired listing, the way emacs's find-dired buffer does, so
+//! the results can be marked, deleted, visited and shelled over.
 //!
 //! Deferred / absent (honest): `?` dired-summary and `h` describe-mode (no
 //! in-overlay help page), and the image-dired tag database commands
@@ -147,6 +150,9 @@ enum Pending {
     RegexpOpReplace(RegexpKind, Vec<String>, String),
     /// `dired-goto-subdir`: jump to the inserted subdir section named here.
     GotoSubdir,
+    /// `find-dired`: the whole find ARGS string, shell-parsed and run as
+    /// `find . \( ARGS \)`.
+    FindArgs,
     /// `find-name-dired`: list files under the tree whose name matches this glob.
     FindName,
     /// `find-grep-dired`: list files under the tree whose contents match this regexp.
@@ -390,7 +396,7 @@ fn emacs_regexp_to_rust(pat: &str) -> Option<String> {
 /// carries an upper-case letter. In a regexp a letter preceded by an odd number
 /// of backslashes is an operator, not a literal, so it does not count — but an
 /// explicit `[:upper:]` / `[:lower:]` class does.
-fn isearch_no_upper_case(text: &str, regexp: bool) -> bool {
+pub(super) fn isearch_no_upper_case(text: &str, regexp: bool) -> bool {
     if regexp && (text.contains("[:upper:]") || text.contains("[:lower:]")) {
         return false;
     }
@@ -450,6 +456,50 @@ fn read_entries(dir: &Path, show_hidden: bool) -> std::io::Result<Vec<DiredEntry
         });
     }
     Ok(entries)
+}
+
+/// Build the listing rows for an explicit set of paths named relative to `dir` —
+/// the `find-dired` / `locate-dired` case, where the rows come from a command's
+/// output instead of from reading a directory. Paths that have gone away are
+/// dropped, which is what re-running the command would do to them. The type is
+/// taken WITHOUT following symlinks and the size/time WITH, exactly as
+/// [`read_entries`] does for a directory listing.
+fn entries_for_paths(dir: &Path, paths: &[String]) -> Vec<DiredEntry> {
+    let mut entries = Vec::new();
+    for name in paths {
+        let path = dir.join(name);
+        let Ok(ft) = std::fs::symlink_metadata(&path).map(|m| m.file_type()) else {
+            continue;
+        };
+        let meta = std::fs::metadata(&path).ok();
+        let mtime = meta
+            .as_ref()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        entries.push(DiredEntry {
+            name: name.clone(),
+            is_dir: ft.is_dir(),
+            is_symlink: ft.is_symlink(),
+            size: meta.map(|m| m.len()).unwrap_or(0),
+            mtime,
+        });
+    }
+    entries
+}
+
+/// The rows a `find .` run's output names. find prints `./sub/name`, and the
+/// rows are named relative to the buffer's directory — the way the
+/// inserted-subdir rows are — so every `dir.join(name)` file op still resolves.
+/// `.` itself, which `find .` always prints, is not a result; emacs drops it the
+/// same way (`find-dired-filter` rewrites ` ./FILE` to ` FILE`).
+fn find_paths(body: &str) -> Vec<String> {
+    body.lines()
+        .map(|l| l.trim().trim_start_matches("./"))
+        .filter(|l| !l.is_empty() && *l != ".")
+        .map(str::to_string)
+        .collect()
 }
 
 /// POSIX single-quote a shell word so a file name with spaces/metacharacters is
@@ -576,6 +626,12 @@ pub struct Dired {
     /// (`dired-diff`, `dired-do-find-regexp`): the overlay pops so the result is
     /// visible.
     close_requested: bool,
+    /// A `find-dired` / `find-name-dired` / `find-grep-dired` / `locate` result
+    /// listing: the exact paths the buffer shows, named relative to `dir`. Emacs
+    /// makes these by inserting the command's output into a Dired buffer, so the
+    /// rows are ordinary Dired rows and every command (mark, delete, visit, `!`)
+    /// works on them. `None` is the ordinary directory listing.
+    found: Option<Vec<String>>,
     /// Inserted subdirectories (Emacs `i` / `dired-maybe-insert-subdir`), as paths
     /// relative to `dir`, in insertion order. Each expands into a contiguous run
     /// of entries whose `name` carries the `reldir/` prefix.
@@ -590,6 +646,13 @@ pub struct Dired {
     /// repeats it.
     search_ring: Option<String>,
     regexp_search_ring: Option<String>,
+    /// Where point was left INSIDE the row when the last filename isearch exited
+    /// with RET. Emacs's point is a buffer position, so the next `M-s f C-s`
+    /// carries on from the middle of the name the previous search stopped in
+    /// rather than from the start of the row; `selected` alone cannot hold that
+    /// column. Cleared by anything that moves the row cursor or re-reads the
+    /// listing, since those put point back at the file name (`dired-move-to-filename`).
+    isearch_point: Option<IPos>,
     /// Emacs `dired-click-to-select-mode`: when on, `mouse-2` toggles the clicked
     /// file's mark (`dired-mark-for-click`) instead of visiting it in another
     /// window. Turned on by a touch-screen "hold" gesture (`dired-touchscreen-hold`
@@ -625,11 +688,13 @@ impl Dired {
             input: None,
             undo_snapshot: None,
             close_requested: false,
+            found: None,
             subdirs: Vec::new(),
             hidden_subdirs: HashSet::new(),
             prefix: None,
             search_ring: None,
             regexp_search_ring: None,
+            isearch_point: None,
             click_to_select: false,
             area: Rect::default(),
         };
@@ -710,7 +775,14 @@ impl Dired {
     /// Read `self.dir` into `self.entries` (respecting `show_hidden`) and sort.
     /// Marks/flags naming files no longer present are dropped.
     fn read_dir(&mut self) -> std::io::Result<()> {
-        let mut entries = read_entries(&self.dir, self.show_hidden)?;
+        // A `find-dired` result buffer lists an explicit set of paths rather than
+        // a directory, so re-reading it re-stats those paths (dropping whatever
+        // has since gone) instead of scanning `dir`. Inserted subdirectories
+        // belong to a directory listing and have no meaning here.
+        let mut entries = match &self.found {
+            Some(paths) => entries_for_paths(&self.dir, paths),
+            None => read_entries(&self.dir, self.show_hidden)?,
+        };
         sort_entries(&mut entries, self.sort, self.reverse);
         // Append each inserted subdirectory's listing as a contiguous section,
         // prefixing every name with `reldir/` so it stays unique and every file
@@ -736,6 +808,9 @@ impl Dired {
         if self.selected >= self.entries.len() {
             self.selected = self.entries.len().saturating_sub(1);
         }
+        // The rows have been rebuilt, so a column an isearch left in one of them
+        // no longer means anything.
+        self.isearch_point = None;
         self.error = None;
         Ok(())
     }
@@ -756,6 +831,9 @@ impl Dired {
         }
         let max = self.entries.len() as isize - 1;
         self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
+        // Moving the cursor puts point back on the file name
+        // (`dired-move-to-filename`), so the column an isearch left is gone.
+        self.isearch_point = None;
     }
 
     fn current_name(&self) -> Option<String> {
@@ -1154,7 +1232,16 @@ impl Dired {
     fn begin_input(&mut self, prompt: &'static str, action: Pending) {
         // `dired-isearch-filenames` is live rather than modal, so it carries the
         // whole isearch state machine (command stack, direction, wrap flags).
-        let start = (self.selected, 0);
+        //
+        // A search starts AT POINT, not at the start of the row: emacs leaves
+        // point inside the name the previous search stopped in, so `M-s f C-s`
+        // twice in a row finds the second match in that name rather than the same
+        // one again. `isearch_point` is that column, good only while the cursor
+        // has not left the row it was recorded on.
+        let start = match self.isearch_point.take() {
+            Some(p) if p.0 == self.selected => p,
+            _ => (self.selected, 0),
+        };
         let isearch = match &action {
             Pending::IsearchFilenames { regexp } => Some(Isearch {
                 regexp: *regexp,
@@ -1214,7 +1301,12 @@ impl Dired {
     /// quotes it, a regexp search is translated out of Emacs syntax, and both
     /// fold case unless the pattern itself carries an upper-case letter. `None`
     /// for a pattern that does not parse (yet) — Emacs's `invalid-regexp`.
-    fn isearch_matcher(text: &str, regexp: bool) -> Option<Regex> {
+    ///
+    /// `pub(super)` because comint's input-history isearch
+    /// (`comint-history-isearch-backward-regexp`) needs the very same matcher:
+    /// both are plain isearches over text, so they must agree on the Emacs regexp
+    /// dialect and on `isearch-no-upper-case-p` case folding.
+    pub(super) fn isearch_matcher(text: &str, regexp: bool) -> Option<Regex> {
         let pat = if regexp {
             emacs_regexp_to_rust(text)?
         } else {
@@ -1442,6 +1534,13 @@ impl Dired {
             is.barrier = barrier;
         }
         self.isearch_push(st);
+    }
+
+    /// `isearch-exit` (`RET`): the point the search ends at, which is where the
+    /// NEXT isearch starts from. `None` for every other in-mode read — those
+    /// leave no point behind.
+    fn isearch_exit_point(isearch: Option<&Isearch>) -> Option<IPos> {
+        isearch?.cmds.last().map(|st| st.point)
     }
 
     /// `isearch-abort` (`C-g`): a successful search returns point to where it
@@ -1769,6 +1868,10 @@ impl Dired {
                     self.goto_named_subdir(text, cx);
                 }
             }
+            // `find-dired` takes the ARGS verbatim — emacs reads them with
+            // `read-string "Run find (with args): "` and pastes them into the
+            // command, so anything find understands goes.
+            Pending::FindArgs => self.run_find_args(text, cx),
             Pending::FindName => {
                 if !text.is_empty() {
                     self.run_find(&["-name", text], "find-name", cx);
@@ -2339,26 +2442,86 @@ impl Dired {
         ))
     }
 
-    /// Run `find . <args>` under the Dired directory and show the matching paths
-    /// in a scratch buffer (`find-name-dired` / `find-grep-dired`).
+    /// `find-dired` (and `find-name-dired` / `find-grep-dired`, which are the
+    /// same command with the ARGS built for you): run `find . <args>` under the
+    /// Dired directory and list what it prints AS THE DIRED LISTING.
+    ///
+    /// Emacs inserts the find output into a Dired buffer precisely so the result
+    /// is operable — mark it, delete it, visit it, `!` a command over it — which
+    /// a text dump of the paths is not.
     fn run_find(&mut self, args: &[&str], label: &str, cx: &mut Context) {
         let out = std::process::Command::new("find")
             .arg(".")
             .args(args)
             .current_dir(&self.dir)
             .output();
+        self.list_find_output(out, label, cx);
+    }
+
+    /// `find-dired` proper: ARGS as the user typed them. Emacs builds
+    /// `find . \( ARGS \) -ls` and hands the whole line to
+    /// `start-file-process-shell-command` (find-dired.el:194), so ARGS is
+    /// SHELL-parsed — quoting, globs and `-o` alternations mean what the shell
+    /// and find say they mean, which is the whole point of the command. Empty
+    /// ARGS lists the tree, as emacs's empty-string case does (no parens).
+    /// zmax stats the hits itself, so it asks find for the plain path list
+    /// rather than for `-ls` output it would have to parse back.
+    fn run_find_args(&mut self, args: &str, cx: &mut Context) {
+        let args = args.trim();
+        let command = if args.is_empty() {
+            "find .".to_string()
+        } else {
+            format!("find . \\( {args} \\)")
+        };
+        let out = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&command)
+            .current_dir(&self.dir)
+            .output();
+        self.list_find_output(out, "find", cx);
+    }
+
+    /// Turn the path list a find/grep run printed into the Dired listing.
+    fn list_find_output(
+        &mut self,
+        out: std::io::Result<std::process::Output>,
+        label: &str,
+        cx: &mut Context,
+    ) {
         match out {
             Ok(o) => {
-                let body = String::from_utf8_lossy(&o.stdout);
-                let content = if body.trim().is_empty() {
-                    format!("{label}: no matches under {}\n", self.dir.display())
-                } else {
-                    format!("{label} in {}:\n{body}", self.dir.display())
-                };
-                crate::commands::show_text_in_scratch(cx.editor, &content);
-                self.close_requested = true;
+                let paths = find_paths(&String::from_utf8_lossy(&o.stdout));
+                if paths.is_empty() {
+                    cx.editor.set_status(format!(
+                        "{label}: no matches under {}",
+                        self.dir.display()
+                    ));
+                    return;
+                }
+                let n = paths.len();
+                self.enter_found(paths);
+                cx.editor
+                    .set_status(format!("{label}: {n} file(s) under {}", self.dir.display()));
             }
             Err(e) => cx.editor.set_error(format!("find: {e}")),
+        }
+    }
+
+    /// Turn the buffer into a result listing over `paths` (named relative to
+    /// `dir`) — what emacs gets by inserting a command's output into a Dired
+    /// buffer. Marks and inserted subdirectories describe the directory listing,
+    /// so they do not carry over.
+    fn enter_found(&mut self, paths: Vec<String>) {
+        self.found = Some(paths);
+        self.marked.clear();
+        self.flagged.clear();
+        self.subdirs.clear();
+        self.hidden_subdirs.clear();
+        self.selected = 0;
+        self.scroll = 0;
+        self.undo_snapshot = None;
+        if let Err(err) = self.read_dir() {
+            self.error = Some(format!("{err}"));
         }
     }
 
@@ -2380,25 +2543,32 @@ impl Dired {
     }
 
     /// Emacs `locate` (with the current directory as an implicit filter): run
-    /// `locate PATTERN`, keep the hits under this directory, show them in a scratch
-    /// buffer.
+    /// `locate PATTERN`, keep the hits under this directory and list them as the
+    /// Dired listing — `locate-mode` derives from Dired for the same reason
+    /// find-dired does, so the hits are operable rows rather than text.
     fn run_locate(&mut self, pattern: &str, cx: &mut Context) {
         match std::process::Command::new("locate").arg(pattern).output() {
             Ok(o) => {
                 let dir = self.dir.to_string_lossy().into_owned();
+                let prefix = format!("{}/", dir.trim_end_matches('/'));
                 let body = String::from_utf8_lossy(&o.stdout);
-                let filtered: String = body
+                // The rows are named relative to this directory, so a hit that is
+                // merely *mentioned* by an unrelated path is not one of ours.
+                let paths: Vec<String> = body
                     .lines()
-                    .filter(|l| l.contains(&dir))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                let content = if filtered.trim().is_empty() {
-                    format!("locate {pattern}: no matches under {dir}\n")
-                } else {
-                    format!("locate {pattern} under {dir}:\n{filtered}\n")
-                };
-                crate::commands::show_text_in_scratch(cx.editor, &content);
-                self.close_requested = true;
+                    .filter_map(|l| l.trim().strip_prefix(&prefix))
+                    .filter(|l| !l.is_empty())
+                    .map(str::to_string)
+                    .collect();
+                if paths.is_empty() {
+                    cx.editor
+                        .set_status(format!("locate {pattern}: no matches under {dir}"));
+                    return;
+                }
+                let n = paths.len();
+                self.enter_found(paths);
+                cx.editor
+                    .set_status(format!("locate {pattern}: {n} file(s) under {dir}"));
             }
             Err(e) => cx.editor.set_error(format!("locate: {e}")),
         }
@@ -2534,6 +2704,9 @@ impl Dired {
             self.scroll = 0;
             self.marked.clear();
             self.flagged.clear();
+            // Entering a directory leaves any find/locate result listing behind:
+            // its paths were relative to the directory we came from.
+            self.found = None;
             if let Err(err) = self.read_dir() {
                 self.error = Some(format!("{err}"));
             }
@@ -2563,6 +2736,9 @@ impl Dired {
             self.flagged.clear();
             self.selected = 0;
             self.scroll = 0;
+            // As in `visit`: a result listing does not survive leaving its
+            // directory, since its rows are named relative to it.
+            self.found = None;
             if let Err(err) = self.read_dir() {
                 self.error = Some(format!("{err}"));
             }
@@ -2933,6 +3109,7 @@ impl Component for Dired {
                 }
                 key!(Enter) | ctrl!('j') => {
                     if let Some(inp) = self.input.take() {
+                        self.isearch_point = Self::isearch_exit_point(inp.isearch.as_ref());
                         self.run_pending(inp.action, &inp.buffer, cx);
                     }
                     if self.close_requested {
@@ -3008,8 +3185,16 @@ impl Component for Dired {
             // ---- motion ----
             key!('n') | key!(Down) | ctrl!('n') | key!(' ') => self.move_selection(1),
             key!('p') | key!(Up) | ctrl!('p') => self.move_selection(-1),
-            key!(Home) => self.selected = 0,
-            key!(End) => self.selected = self.entries.len().saturating_sub(1),
+            // Home / End jump the cursor, so like every other motion they drop
+            // the column a filename isearch left behind.
+            key!(Home) => {
+                self.selected = 0;
+                self.isearch_point = None;
+            }
+            key!(End) => {
+                self.selected = self.entries.len().saturating_sub(1);
+                self.isearch_point = None;
+            }
             // g — revert-buffer (re-read the directory); l — dired-do-redisplay
             // (re-stat the marked files, which for this listing is the same read).
             key!('g') | key!('l') => self.revert(),
@@ -3291,7 +3476,11 @@ impl Component for Dired {
                     return EventResult::Consumed(Some(cb));
                 }
             }
-            alt!('f') => self.begin_input("Find name (glob): ", Pending::FindName), // find-name-dired
+            // M-f — find-dired: the whole find ARGS string, emacs's prompt
+            // verbatim. M-F keeps find-name-dired, which is the same command with
+            // the ARGS built from a glob (`-name PATTERN`), on its own chord.
+            alt!('f') => self.begin_input("Run find (with args): ", Pending::FindArgs), // find-dired
+            alt!('F') => self.begin_input("Find name (glob): ", Pending::FindName), // find-name-dired
             alt!('g') => self.begin_input("Find grep (regexp): ", Pending::FindGrep), // find-grep-dired
             // ---- ported: epa (gpg) file operations ----
             alt!('e') => {
@@ -3677,5 +3866,97 @@ mod subdir_tests {
         assert!(wdired_rename_plan(&orig, &orig).unwrap().is_empty());
         // A removed/added line desynchronizes the pairing -> error.
         assert!(wdired_rename_plan(&orig, &edited[..2]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod isearch_tests {
+    use super::*;
+
+    /// `M-s f C-s` starts AT POINT. Emacs leaves point inside the name the
+    /// previous search stopped in, so searching the same pattern again finds the
+    /// NEXT occurrence in that name instead of the same one; moving the row
+    /// cursor puts point back on the file name and the next search starts there.
+    #[test]
+    fn filename_isearch_resumes_from_where_the_last_one_stopped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::write(root.join("banana.txt"), b"x").unwrap();
+
+        let mut d = Dired::new(root.to_path_buf()).unwrap();
+        d.selected = d
+            .entries
+            .iter()
+            .position(|e| e.name == "banana.txt")
+            .unwrap();
+        let row = d.selected;
+
+        // First search: `an` matches at 1..3 of "banana.txt".
+        d.begin_input("Filename I-search: ", Pending::IsearchFilenames { regexp: false });
+        d.isearch_type('a');
+        d.isearch_type('n');
+        let st = d.input.as_ref().unwrap().isearch.as_ref().unwrap();
+        assert_eq!(st.cmds.last().unwrap().point, (row, 3), "point at match end");
+
+        // RET (isearch-exit) records that point...
+        let inp = d.input.take().unwrap();
+        d.isearch_point = Dired::isearch_exit_point(inp.isearch.as_ref());
+        assert_eq!(d.isearch_point, Some((row, 3)));
+
+        // ...and the next search picks up there, finding the SECOND `an` (3..5).
+        d.begin_input("Filename I-search: ", Pending::IsearchFilenames { regexp: false });
+        d.isearch_type('a');
+        d.isearch_type('n');
+        let st = d.input.as_ref().unwrap().isearch.as_ref().unwrap();
+        assert_eq!(st.cmds.last().unwrap().point, (row, 5));
+
+        // Moving the cursor drops the column, so a search starts at the name again.
+        let inp = d.input.take().unwrap();
+        d.isearch_point = Dired::isearch_exit_point(inp.isearch.as_ref());
+        d.move_selection(0);
+        assert_eq!(d.isearch_point, None);
+        d.begin_input("Filename I-search: ", Pending::IsearchFilenames { regexp: false });
+        d.isearch_type('a');
+        d.isearch_type('n');
+        let st = d.input.as_ref().unwrap().isearch.as_ref().unwrap();
+        assert_eq!(st.cmds.last().unwrap().point, (row, 3), "back to the first match");
+    }
+}
+
+#[cfg(test)]
+mod find_dired_tests {
+    use super::*;
+
+    /// `find-dired` produces a DIRED listing over the hits, not a text dump: the
+    /// rows are real entries named relative to the buffer's directory, so every
+    /// file op (`dir.join(name)`) resolves, and re-reading drops what has gone.
+    #[test]
+    fn find_results_become_an_operable_listing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir(root.join("sub")).unwrap();
+        std::fs::write(root.join("sub").join("a.txt"), b"aa").unwrap();
+        std::fs::write(root.join("b.txt"), b"b").unwrap();
+
+        // What `find . -name '*.txt'` prints, with the `./` prefix and the `.`
+        // row find always emits.
+        let paths = find_paths(".\n./sub/a.txt\n./b.txt\n");
+        assert_eq!(paths, vec!["sub/a.txt".to_string(), "b.txt".to_string()]);
+
+        let mut d = Dired::new(root.to_path_buf()).unwrap();
+        d.enter_found(paths);
+        let names: Vec<&str> = d.entries.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, vec!["b.txt", "sub/a.txt"], "sorted, prefixed rows");
+        // The row names still address the files.
+        assert!(d.dir.join(&d.entries[1].name).is_file());
+        assert_eq!(d.entries[0].size, 1);
+        assert_eq!(d.entries[1].size, 2);
+
+        // Re-reading a result listing re-stats those paths instead of scanning
+        // the directory: the deleted hit goes, and `sub` (never a hit) stays out.
+        std::fs::remove_file(root.join("sub").join("a.txt")).unwrap();
+        d.read_dir().unwrap();
+        let names: Vec<&str> = d.entries.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, vec!["b.txt"]);
     }
 }

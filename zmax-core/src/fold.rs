@@ -275,6 +275,39 @@ impl Folds {
         }
     }
 
+    /// vim `zA`: "When on a closed fold: open it recursively. When on an open
+    /// fold: close it recursively" (fold.txt). The recursive counterpart of
+    /// [`Folds::toggle`] — same innermost fold, same closed flag read, but the
+    /// new state is pushed into every fold nested inside it as well.
+    /// Returns whether a fold existed at `line`.
+    pub fn toggle_recursive(&mut self, line: usize) -> bool {
+        let Some(i) = self.innermost_idx(line) else {
+            return false;
+        };
+        let closed = self.folds[i].closed;
+        self.set_recursive(line, !closed);
+        true
+    }
+
+    /// vim `zv` — "View cursor line: Open just enough folds to make the line in
+    /// which the cursor is located not folded" (fold.txt).
+    ///
+    /// *Every* fold containing `line`, not just the innermost one
+    /// ([`Folds::open`]): a line hidden two levels deep stays hidden until the
+    /// outer fold opens too. Folds nested inside the cursor's own fold are left
+    /// alone — they hide nothing on the cursor's line. Returns whether anything
+    /// changed.
+    pub fn view_line(&mut self, line: usize) -> bool {
+        let mut changed = false;
+        for fold in &mut self.folds {
+            if fold.closed && fold.contains(line) {
+                fold.closed = false;
+                changed = true;
+            }
+        }
+        changed
+    }
+
     /// Open the innermost fold at `line` together with every fold nested inside
     /// it (IntelliJ "Expand Recursively"). Returns whether anything changed.
     pub fn open_recursive(&mut self, line: usize) -> bool {
@@ -380,6 +413,22 @@ impl Folds {
             }
             None => false,
         }
+    }
+
+    /// vim `zD`: "Delete folds recursively at the cursor" (fold.txt) — the
+    /// innermost fold at `line` *and* every fold nested inside it, where
+    /// [`Folds::delete`] (`zd`) removes only the one and moves its children one
+    /// level up. Returns whether anything was removed.
+    pub fn delete_recursive(&mut self, line: usize) -> bool {
+        let Some(i) = self.innermost_idx(line) else {
+            return false;
+        };
+        let (start, end) = (self.folds[i].start, self.folds[i].end);
+        let before = self.folds.len();
+        // The same containment test `set_recursive` uses: folds nest or are
+        // disjoint, never partially overlap, so "inside" is a range comparison.
+        self.folds.retain(|f| !(f.start >= start && f.end <= end));
+        self.folds.len() != before
     }
 
     /// Remove all folds (vim `zE`). The buffer goes back to vim's default
@@ -744,5 +793,42 @@ mod tests {
         folds.open_all();
         assert!(folds.close_all_except(100));
         assert_eq!(closed(&folds), vec![(1, 9), (3, 5), (20, 30)]);
+    }
+
+    /// vim `zA` / `zD` / `zv`: each differs from its one-fold sibling (`za`,
+    /// `zd`, `zo`) only in which folds it reaches. Binding them to the sibling
+    /// is exactly the regression this pins.
+    #[test]
+    fn recursive_and_view_line_reach_past_the_innermost_fold() {
+        let mut folds = Folds::default();
+        assert!(folds.create(0, 20));
+        assert!(folds.create(4, 8));
+        assert!(folds.create(10, 14));
+        folds.open_all();
+
+        // zA on an open fold closes it *and* the folds nested in it.
+        assert!(folds.toggle_recursive(0));
+        assert_eq!(closed(&folds), vec![(0, 20), (4, 8), (10, 14)]);
+        // zA on a closed fold opens the same nest again — `za` would leave the
+        // two inner folds shut.
+        assert!(folds.toggle_recursive(0));
+        assert_eq!(closed(&folds), Vec::<(usize, usize)>::new());
+        assert!(!folds.toggle_recursive(50), "no fold there");
+
+        // zv from a line two levels deep opens both folds hiding it and leaves
+        // the unrelated one alone; `zo` would only open the inner one.
+        folds.close_all();
+        assert!(folds.view_line(6));
+        assert_eq!(closed(&folds), vec![(10, 14)]);
+        assert!(!folds.view_line(6), "already visible => no change");
+
+        // zd removes one fold and moves its children up a level; zD removes the
+        // whole nest.
+        let mut zd = folds.clone();
+        assert!(zd.delete(0));
+        assert_eq!(zd.len(), 2, "the two nested folds survive zd");
+        assert!(folds.delete_recursive(0));
+        assert!(folds.is_empty(), "zD takes the nest with it");
+        assert!(!folds.delete_recursive(0), "nothing left to delete");
     }
 }

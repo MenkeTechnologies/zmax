@@ -1272,7 +1272,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "L" => scroll_half_column_right,   // zL scroll right half a screen
             "e" => scroll_cursor_to_right_edge, // ze put the cursor at the right edge
             "s" => scroll_cursor_to_left_edge,  // zs put the cursor at the left edge
-            "x" => fold_open,                  // zx re-apply foldlevel and open enough to see cursor (approx)
+            // zx: "Undo manually opened and closed folds: re-apply 'foldlevel',
+            // then do zv: View cursor line" (fold.txt) — literally zX followed by
+            // zv, which is why it is a sequence and not fold_open (that only
+            // opened the innermost fold and never re-applied the level).
+            "x" => [fold_reapply_level, fold_view_cursor], // zx update folds
 
             // spell checking (vim z= / zg / zw / zG / zW / zug …)
             "=" => spell_suggest,              // z= spelling suggestions for word under cursor
@@ -1296,13 +1300,23 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // don't contain the cursor line are unchanged" (fold.txt) — the
             // nested folds too, which is what separates it from zc.
             "C" => fold_close_recursive, // zC close folds recursively
-            "v" => fold_open,         // zv view cursor: open enough folds to see it
+            // zv: "Open just enough folds to make the line in which the cursor is
+            // located not folded" (fold.txt) — EVERY enclosing fold, so a line
+            // nested two levels deep really becomes visible. It was bound to
+            // fold_open, which opens the innermost fold only.
+            "v" => fold_view_cursor,  // zv view cursor line
             "R" => fold_open_all,     // zR open all folds (foldlevel -> deepest)
             "M" => fold_close_all,    // zM close all folds (foldlevel -> 0)
             "d" => fold_delete,       // zd delete fold under cursor
-            "D" => fold_delete,       // zD delete folds recursively (approx: at cursor)
+            // zD deletes the fold at the cursor AND every fold nested inside it;
+            // zd deletes only the one, leaving the nested folds "moved one level
+            // up" (fold.txt). They were the same command, so zD lost nothing.
+            "D" => fold_delete_recursive, // zD delete folds recursively at the cursor
             "E" => fold_delete_all,   // zE eliminate all folds
-            "A" => fold_toggle,       // zA toggle fold recursively (approx: at cursor)
+            // zA is za for the whole nest: "When on a closed fold: open it
+            // recursively. When on an open fold: close it recursively"
+            // (fold.txt). It was bound to za, which touches one fold.
+            "A" => fold_toggle_recursive, // zA toggle fold recursively
             "i" => fold_toggle,       // zi toggle foldenable (approx: fold at cursor)
             "m" => fold_more,         // zm fold more (decrease foldlevel by one)
             "r" => fold_less,         // zr fold reduce (increase foldlevel by one)
@@ -1945,7 +1959,17 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "]" | "C-]" => goto_definition,
                 "^" | "C-^" => goto_last_accessed_file,
                 "i" | "C-i" => goto_declaration,
-                "p" | "C-p" => rotate_view,
+                // Spacemacs `SPC w p` is the POPUP prefix (popwin): `SPC w p m`
+                // shows *Messages* in a popup, `SPC w p p` closes the popup
+                // window. vim's `C-w p` is "go to the previous window" and keeps
+                // that meaning — the two disagree, and the aliased-modes test
+                // allows exactly that divergence (VIM_OWNS in keymap.rs).
+                // `SPC w C-p` stays the previous-window alias.
+                "C-p" => rotate_view,
+                "p" => { "Popups"
+                    "m" => view_echo_area_messages, // SPC w p m : *Messages* popup
+                    "p" => close_sticky_popup,      // SPC w p p : close the popup window
+                },
                 "z" => recenter_other_window,     // SPC w z : recenter point in the other window (emacs recenter-other-window)
                 "C-z" => recenter_other_window,   // SPC w C-z: same as SPC w z (parity with C-w)
                 "C-c" => no_op,                   // SPC w C-c: no-op (parity with C-w)

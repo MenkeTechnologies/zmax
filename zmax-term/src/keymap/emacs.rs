@@ -88,6 +88,7 @@ const EMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("C-9",     "Tab",    ":tablast"),                // C-9: tab-last
     ("C-0",     "Tab",    "tab_recent"),              // C-0: tab-recent
     // Frames (`C-x 5`), the same map the spacemacs preset overlays.
+    ("C-x 5 .", "Frame",  "xref_find_definitions_other_frame"), // C-x 5 .: xref-find-definitions-other-frame
     ("C-x 5 0", "Frame",  "delete_frame"),            // C-x 5 0: delete-frame
     ("C-x 5 1", "Frame",  "delete_other_frames"),     // C-x 5 1: delete-other-frames
     ("C-x 5 2", "Frame",  "make_frame_command"),      // C-x 5 2: make-frame-command
@@ -281,10 +282,16 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-&" => async_shell_command,       // M-&: async-shell-command
         "C-A-," => jump_forward,            // C-M-,: xref-go-forward
         "C-A-l" => reposition_window,       // C-M-l: reposition-window
-        "A-i" => insert_tab,                // M-i: tab-to-tab-stop
-        // Quitting: C-] aborts back to the top level, and ESC ESC ESC is emacs's
-        // keyboard-escape-quit (get out of whatever state point is in).
-        "C-]" => keyboard_escape_quit,      // C-]: abort-recursive-edit
+        // M-i pads to the next TAB STOP (a column), not by one indent unit —
+        // `insert_tab`, the old binding, is what TAB does. The stop list is the
+        // one `M-x edit-tab-stops` edits; empty means every `tab-width` columns.
+        "A-i" => tab_to_tab_stop,           // M-i: tab-to-tab-stop
+        // Quitting: C-] abandons one recursive editing level (or one modal
+        // overlay, zmax's stand-in for minibuffer input) — it was
+        // keyboard_escape_quit, which never touched the recursive stack, so no
+        // key aborted a level. ESC ESC ESC is emacs's keyboard-escape-quit (get
+        // out of whatever state point is in) and keeps that command.
+        "C-]" => abort_recursive_edit,      // C-]: abort-recursive-edit
         "esc" => { "ESC"
             "esc" => { "ESC ESC"
                 "esc" => keyboard_escape_quit, // ESC ESC ESC: keyboard-escape-quit
@@ -321,6 +328,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 // The FFAP manual lists the other-tab visit under `C-x t C-f`.
                 "C-f" => find_file_other_tab,   // C-x t C-f: ffap-other-tab
                 "b" => switch_to_buffer_other_tab, // C-x t b: switch-to-buffer-other-tab
+                // tab-bar.el: "Move the current tab ARG positions to the right",
+                // wrapping — not vim's `:tabmove`, which goes to the last position.
+                "m" => tab_move_right,          // C-x t m: tab-move
             },
             "}" => resize_view_wider,       // C-x }: enlarge-window-horizontally
             "{" => resize_view_narrower,    // C-x {: shrink-window-horizontally
@@ -350,6 +360,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "b" => bookmark_jump,            // C-x r b: bookmark-jump
                 "l" => bookmark_jump,            // C-x r l: list-bookmarks
             },
+            // Keyboard-macro definition. Both are emacs global bindings and
+            // neither was reachable in this preset. `kmacro_start_macro` is not
+            // the `record_macro` toggle: a second C-x ( errors with "Already
+            // defining kbd macro", and C-u C-x ( appends to the last macro.
+            "(" => kmacro_start_macro,      // C-x (: kmacro-start-macro
+            ")" => kmacro_end_macro,        // C-x ): kmacro-end-macro
             "'" => expand_abbrev,           // C-x ': expand-abbrev
             "a" => { "Abbrev"
                 "g" => define_abbrev,       // C-x a g: add-global-abbrev

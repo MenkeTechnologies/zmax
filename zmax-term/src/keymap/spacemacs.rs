@@ -267,9 +267,10 @@ pub(super) fn ch_prefix() -> KeyTrie {
 pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c , j", "C-c ,", "goto_definition"),
     ("C-c , J", "C-c ,", "workspace_symbol_picker"),
-    // semantic-analyze-possible-completions: the completion list for the symbol at
-    // point (Emacs shows it in another window), not the document-symbol picker.
-    ("C-c , l", "C-c ,", "completion"),
+    // semantic-analyze-possible-completions LISTS the completions in another
+    // window; it does not offer them for insertion, which is what `completion`
+    // (still on `C-c , SPC` below) does.
+    ("C-c , l", "C-c ,", "semantic_analyze_possible_completions"),
     ("C-c , space", "C-c ,", "completion"),
     // `C-c @` is the prefix BOTH hideshow (hs-minor-mode) and Outline minor mode
     // hang their maps on in Emacs — the two collide there as well, and only the
@@ -386,10 +387,10 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     // C-x $: set-selective-display (hide lines indented past a column), which has
     // a real port now — it is not "close every fold" (fold_close_all).
     ("C-x $", "C-x $", "set_selective_display"),
-    // Basic keyboard macros. `record_macro` toggles recording, so it stands in for
-    // kmacro-start-macro (C-x () — but C-x ) is kmacro-end-macro, which is its own
-    // command now (it ends the definition and errors when none is being recorded).
-    ("C-x (", "C-x (", "record_macro"),
+    // Basic keyboard macros. Both halves are their own command: C-x ( errors with
+    // "Already defining kbd macro" instead of silently ending the definition the
+    // way the `record_macro` toggle did, and C-u C-x ( appends to the last macro.
+    ("C-x (", "C-x (", "kmacro_start_macro"), // C-x (: kmacro-start-macro
     ("C-x )", "C-x )", "kmacro_end_macro"),   // C-x ): kmacro-end-macro
     ("C-x +", "C-x +", "resize_view_equalize"),
     // C-x - is shrink-window-if-larger-than-buffer: fit the window to its buffer's
@@ -406,15 +407,15 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     // `buffer_picker` (the old binding) switches to it, which is C-x b.
     ("C-x 4 C-o", "Other window", "display_buffer"),          // C-x 4 C-o: display-buffer
     ("C-x 4 d", "Other window", "dired_other_window"),        // C-x 4 d: dired-other-window
-    ("C-x 4 m", "Other window", ":compose-mail"),        // C-x 4 m: compose-mail-other-window (same window here)
+    // C-x 4 m is compose-mail-OTHER-WINDOW. It ran `:compose-mail`, which composes
+    // in the current window; the other-window typable already existed.
+    ("C-x 4 m", "Other window", ":compose-mail-other-window"), // C-x 4 m: compose-mail-other-window
     // The C-x 5 frame map. zmax has real frames now (`Editor::new_frame` /
     // `switch_frame` / `delete_frame`), so every chord runs the `*-frame` command
     // the Emacs manual names for it instead of the window-split stand-in it had to
     // sit on while there were no frames to make.
-    // C-x 5 . (xref-find-definitions-other-frame) keeps its current-window port:
-    // there is no other-frame variant of the xref jump. C-x 5 m has one
-    // (`compose_mail_other_frame`) and runs it.
-    ("C-x 5 .", "Frame", "goto_definition"),
+    // C-x 5 m has an other-frame port (`compose_mail_other_frame`) and runs it.
+    ("C-x 5 .", "Frame", "xref_find_definitions_other_frame"), // C-x 5 .: xref-find-definitions-other-frame
     ("C-x 5 0", "Frame", "delete_frame"),                // C-x 5 0: delete-frame
     ("C-x 5 1", "Frame", "delete_other_frames"),         // C-x 5 1: delete-other-frames
     ("C-x 5 2", "Frame", "make_frame_command"),          // C-x 5 2: make-frame-command
@@ -435,7 +436,17 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x 6 d", "Two-column", "twocol_dissociate"),       // 2C-dissociate
     ("C-x 6 ret", "Two-column", "twocol_newline"),        // 2C-newline
     ("C-x 6 s", "Two-column", "twocol_split"),            // 2C-split
-    ("C-x 8 e", "Unicode", "unicode_picker"),
+    // `C-x 8 e` is emacs 29's emoji PREFIX (emoji.el), not a leaf: e/i insert, l
+    // lists, s searches, d describes, r offers the recently used ones. It was a
+    // leaf on the unicode picker, which swallowed the whole map. `emoji_list` is
+    // zmax's picker over the same emoji table, and its own filter is what
+    // emoji-search's completing-read is, so insert/list/search all reach it.
+    ("C-x 8 e e", "Emoji", "emoji_list"),     // C-x 8 e e: emoji-insert
+    ("C-x 8 e i", "Emoji", "emoji_list"),     // C-x 8 e i: emoji-insert
+    ("C-x 8 e l", "Emoji", "emoji_list"),     // C-x 8 e l: emoji-list
+    ("C-x 8 e s", "Emoji", "emoji_list"),     // C-x 8 e s: emoji-search
+    ("C-x 8 e d", "Emoji", "emoji_describe"), // C-x 8 e d: emoji-describe
+    ("C-x 8 e r", "Emoji", "emoji_recent"),   // C-x 8 e r: emoji-recent
     ("C-x 8 ret", "Unicode", "unicode_picker"),
     ("C-x ;", "C-x ;", "command_palette"),
     ("C-x <", "C-x <", "scroll_half_column_right"),
@@ -465,7 +476,7 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     // the only key the three chords whose `C-c` half is already taken can have:
     // C-c C-r is zmax's re-run, C-c C-d its debug-launch, C-c C-t doc-view's
     // open-text. Those three are reachable as C-x C-a C-r / C-d / C-t.
-    ("C-x C-a C-b", "C-x C-a", "dap_toggle_breakpoint"), // C-x C-a C-b: gud-break (toggles here)
+    ("C-x C-a C-b", "C-x C-a", "dap_set_breakpoint"),    // C-x C-a C-b: gud-break (sets, never removes)
     ("C-x C-a C-d", "C-x C-a", "dap_remove_breakpoint"), // C-x C-a C-d: gud-remove (unconditional clear)
     ("C-x C-a C-j", "C-x C-a", "gud_jump"),              // C-x C-a C-j: gud-jump (set the execution point here)
     ("C-x C-a C-w", "C-x C-a", "gud_watch"),             // C-x C-a C-w: gud-watch (watch the expression at point)
@@ -496,7 +507,10 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x C-k C-p", "Macro", "kmacro_ring_prev"),       // kmacro-cycle-ring-previous
     ("C-x C-k C-t", "Macro", "kmacro_ring_swap"),       // kmacro-swap-ring
     ("C-x C-k d", "Macro", "kmacro_ring_delete"),       // kmacro-delete-ring-head
-    ("C-x C-k e", "Macro", "kmacro_edit_macro"),        // edit-kbd-macro
+    // edit-kbd-macro ASKS which macro to edit (the last one, one in a register, a
+    // named one); `kmacro_edit_macro` — still on C-x C-k C-e / RET, which is what
+    // emacs binds there — always takes the last one.
+    ("C-x C-k e", "Macro", "edit_kbd_macro"),           // edit-kbd-macro
     ("C-x C-k l", "Macro", "kmacro_edit_lossage"),      // kmacro-edit-lossage
     ("C-x C-k n", "Macro", "kmacro_name_last_macro"),   // kmacro-name-last-macro
     ("C-x C-k r", "Macro", "apply_macro_to_region_lines"), // apply-macro-to-region-lines
@@ -564,9 +578,10 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     // C-x t m is tab-move: it moves the *tab* inside the tab bar. It used to run
     // `move_to_opposite_group` — the JetBrains "move this editor to the other
     // split group" action, which moves a buffer between splits and never touches a
-    // tab. `:tabmove` moves the tab (to the last position with no count; emacs
-    // moves it one to the right).
-    ("C-x t m", "Tab", ":tabmove"),                      // C-x t m: tab-move
+    // tab — and then `:tabmove`, which is vim's command of that name and moves the
+    // tab to the LAST position. Emacs's moves it one position to the right (N with
+    // a prefix argument, wrapping), which is what `tab_move_right` does.
+    ("C-x t m", "Tab", "tab_move_right"),                // C-x t m: tab-move
     ("C-x t o", "Tab", "goto_next_tabpage"),
     ("C-x t r", "Tab", "tab_rename"),                    // C-x t r: tab-rename
     // C-x t RET is tab-switch: pick the tab by name. `tab_switch` prompts, which is
@@ -930,7 +945,8 @@ mod tests {
     #[test]
     fn emacs_prefix_keys_stay_prefixes() {
         let km = default();
-        for chord in ["C-x 4", "C-x 5", "C-x 6", "C-x 8", "C-x t", "C-x ret"] {
+        // `C-x 8 e` joined them in emacs 29: it is the emoji prefix (emoji.el).
+        for chord in ["C-x 4", "C-x 5", "C-x 6", "C-x 8", "C-x 8 e", "C-x t", "C-x ret"] {
             assert!(
                 is_prefix(&km, Mode::Normal, chord),
                 "{chord} must stay a prefix, not a command"
@@ -977,15 +993,15 @@ mod tests {
             ("C-x C-k C-f", "kmacro_set_format"),
             ("C-x C-k C-k", "kmacro_end_or_call_macro_repeat"),
             ("C-x C-k C-t", "kmacro_ring_swap"),
-            ("C-x C-k e", "kmacro_edit_macro"),
+            ("C-x C-k e", "edit_kbd_macro"),
             ("C-x C-k ret", "kmacro_edit_macro"),
             ("C-x C-k l", "kmacro_edit_lossage"),
             ("C-x C-k n", "kmacro_name_last_macro"),
             ("C-x C-k r", "apply_macro_to_region_lines"),
             ("C-x C-k space", "kmacro_step_edit_macro"),
-            // Basic keyboard macros. C-x ) is kmacro-end-macro — its own command now,
-            // not the `record_macro` toggle that used to serve both halves.
-            ("C-x (", "record_macro"),
+            // Basic keyboard macros. Both halves are their own command now, not
+            // the `record_macro` toggle that used to serve both.
+            ("C-x (", "kmacro_start_macro"),
             ("C-x )", "kmacro_end_macro"),
             ("C-x e", "kmacro_end_or_call_macro"),
             // Text scale — `C-x C--` never parsed (`C--` is not a legal key).

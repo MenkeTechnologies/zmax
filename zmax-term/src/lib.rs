@@ -65,6 +65,7 @@ pub mod recent_files;
 pub mod run_config;
 pub mod selection_ops;
 pub mod selection_registers;
+pub mod shada;
 pub mod shadow;
 pub mod sm;
 pub mod sm_lang;
