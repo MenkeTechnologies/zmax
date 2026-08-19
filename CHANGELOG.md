@@ -206,10 +206,12 @@ Features:
   set by fzf and by nothing else, so a preview reading them saw an empty
   environment. When a command supplies no candidates and no source, the list now
   comes from the file walk the native picker uses instead of fzf's `find`, so
-  `:Files` and `SPC f f` agree. Two things do not carry over: `--preview-window`
-  (the pane is laid out by arb), and the four variables describing the last
-  keystroke, which live inside arb's event loop. A `--no-default-features` build
-  has no arb and still shells out.
+  `:Files` and `SPC f f` agree. `--preview-window` works — arb honors it now
+  rather than dropping it as cosmetic, so `[editor.fzf] preview-window` and any
+  spec in `$FZF_DEFAULT_OPTS` place and size the pane (position, size in cells
+  or per cent, `hidden`, `wrap`). The one thing that does not carry over is the
+  four variables describing the last keystroke, which live inside arb's event
+  loop. A `--no-default-features` build has no arb and still shells out.
 * **Structural regular expressions**, from sam and vis. `:structural-x` (`:sx`)
   turns every match of a regex into a selection and runs a command over the set;
   `:structural-y` does the same for the stretches *between* matches; and

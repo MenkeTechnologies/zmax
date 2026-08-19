@@ -315,7 +315,7 @@ fn child_env(
         ),
         Err(_) => (0, 0),
     };
-    let (pv_rows, pv_cols) = preview_geometry(term_size);
+    let (pv_rows, pv_cols) = preview_geometry(&look.preview_window, term_size);
     let mut env: Vec<(String, String)> = vec![
         ("FZF_LINES".into(), rows.to_string()),
         ("FZF_COLUMNS".into(), cols.to_string()),
@@ -341,14 +341,18 @@ fn child_env(
         ("FZF_POINTER".into(), look.pointer.clone()),
         ("FZF_PREVIEW_LINES".into(), pv_rows.to_string()),
         ("FZF_PREVIEW_COLUMNS".into(), pv_cols.to_string()),
-        // The preview pane is the right-hand split, so it starts at row 0 and at
-        // the column where the list ends.
-        ("FZF_PREVIEW_TOP".into(), "0".into()),
-        (
-            "FZF_PREVIEW_LEFT".into(),
-            cols.saturating_sub(pv_cols).to_string(),
-        ),
     ];
+    if let Some(pane) = look.preview_window.split(ratatui::layout::Rect {
+        x: 0,
+        y: 0,
+        width: cols,
+        height: rows.saturating_sub(2),
+    }).1
+    {
+        // The box's own border is where fzf counts its content from.
+        env.push(("FZF_PREVIEW_TOP".into(), (pane.y + 1).to_string()));
+        env.push(("FZF_PREVIEW_LEFT".into(), (pane.x + 1).to_string()));
+    }
     // "FZF_CURRENT_ITEM is omitted when the item contains a NUL byte, because
     // exec(2) cannot pass it. It is also omitted when the item is larger than
     // 64 KB, so that a huge item cannot overflow the environment size limit."
@@ -375,19 +379,31 @@ fn child_env(
     env
 }
 
-/// Size of the preview pane, in rows and columns.
+/// Size of the preview pane, in rows and columns, for `FZF_PREVIEW_LINES` and
+/// `FZF_PREVIEW_COLUMNS`.
 ///
-/// arb renders it as the right-hand 45% of the main area with a one-cell border
-/// on each side, and the main area is the terminal minus the status bar row
-/// (`render_output_pane`, vendor/arblang/src/tui.rs:1802). fzf sizes its own
-/// preview from `--preview-window`, which arb does not model — so this tracks
-/// arb's split, and would drift if arb ever changed it.
-fn preview_geometry((cols, rows): (u16, u16)) -> (u16, u16) {
-    let pane_cols = (u32::from(cols) * 45 / 100) as u16;
-    (
-        rows.saturating_sub(1).saturating_sub(2),
-        pane_cols.saturating_sub(2),
-    )
+/// Asks arb's own `--preview-window` layout for the rectangle rather than
+/// re-deriving it, so the numbers a preview command reads are the ones it is
+/// actually drawn into. The box's border costs a row and a column at each edge,
+/// which is what the pane loses against its rectangle
+/// (`render_preview_pane`, vendor/arblang/src/tui.rs).
+fn preview_geometry(window: &arb::fzf::PreviewWindow, (cols, rows): (u16, u16)) -> (u16, u16) {
+    // The body is the terminal minus the prompt row and the info/separator row.
+    let body = ratatui::layout::Rect {
+        x: 0,
+        y: 0,
+        width: cols,
+        height: rows.saturating_sub(2),
+    };
+    match window.split(body).1 {
+        Some(pane) => (
+            pane.height.saturating_sub(2),
+            pane.width.saturating_sub(2),
+        ),
+        // `hidden`, or a zero size: fzf still runs the command, and reports the
+        // window it would have drawn as empty.
+        None => (0, 0),
+    }
 }
 
 /// Single-quote for `sh -c`, the way fzf quotes the `{}` substitution: wrap in
@@ -744,12 +760,64 @@ mod tests {
     }
 
     #[test]
-    fn the_preview_pane_geometry_is_the_split_arb_renders() {
-        // 45% of the width, less its border; the height is the terminal less the
-        // status bar and the pane's own border.
-        assert_eq!(preview_geometry((100, 30)), (27, 43));
+    fn the_preview_geometry_follows_preview_window() {
+        // Default is fzf's right half: 50 columns less the box border, and the
+        // body (terminal less prompt and info rows) less the border.
+        let default = arb::fzf::PreviewWindow::default();
+        assert_eq!(preview_geometry(&default, (100, 30)), (26, 48));
+
+        // A different spec moves and resizes it, and the reported numbers move
+        // with it — this is what was inert before arb honored the flag.
+        let down = arb::fzf::PreviewWindow::parse("down,10");
+        assert_eq!(preview_geometry(&down, (100, 30)), (8, 98));
+        let left = arb::fzf::PreviewWindow::parse("left,25%");
+        assert_eq!(preview_geometry(&left, (100, 30)), (26, 23));
+
+        // Hidden still runs the command, and reports an empty window.
+        let hidden = arb::fzf::PreviewWindow::parse("hidden");
+        assert_eq!(preview_geometry(&hidden, (100, 30)), (0, 0));
+
         // A tiny terminal saturates instead of underflowing.
-        assert_eq!(preview_geometry((2, 1)), (0, 0));
+        assert_eq!(preview_geometry(&default, (2, 1)), (0, 0));
+    }
+
+    #[test]
+    fn the_preview_corner_follows_the_position() {
+        let env = |spec: &str| {
+            let controls = Arc::new(Mutex::new(arb::tui::Controls::default()));
+            let state = Arc::new(Mutex::new(StreamState::with_cap(usize::MAX)));
+            let flags = PreviewFlags {
+                prompt: "> ".into(),
+                ghost: String::new(),
+                wrap: String::new(),
+                nth: String::new(),
+                with_nth: String::new(),
+                preview_label: String::new(),
+                border_label: String::new(),
+                list_label: String::new(),
+                input_label: String::new(),
+                header_label: String::new(),
+                input_state: "enabled",
+            };
+            let look = arb::fzf::Look {
+                preview_window: arb::fzf::PreviewWindow::parse(spec),
+                ..arb::fzf::Look::default()
+            };
+            let env = child_env(&controls, &state, &look, &flags, (100, 30));
+            let get = |k: &str| {
+                env.iter()
+                    .find(|(n, _)| n == k)
+                    .map(|(_, v)| v.clone())
+                    .unwrap_or_default()
+            };
+            (get("FZF_PREVIEW_TOP"), get("FZF_PREVIEW_LEFT"))
+        };
+        // right: the box starts where the list ends.
+        assert_eq!(env("right,50%"), ("1".to_string(), "51".to_string()));
+        // left: at the first column instead.
+        assert_eq!(env("left,50%"), ("1".to_string(), "1".to_string()));
+        // down: below the list.
+        assert_eq!(env("down,10"), ("19".to_string(), "1".to_string()));
     }
 
     #[test]
