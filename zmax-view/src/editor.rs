@@ -1897,12 +1897,15 @@ pub struct FzfRequest {
     pub preview: bool,
     /// Optional shell command whose output fzf streams as its source (fzf.vim's
     /// `source` — e.g. `git ls-files`, `rg …`). When set, `candidates` is ignored
-    /// and fzf runs this via the shell (set as the child's FZF_DEFAULT_COMMAND).
+    /// and the picker streams it through the shell. `$FZF_DEFAULT_COMMAND` and
+    /// `$FZF_CTRL_T_COMMAND` are the fallbacks, in that order, as under fzf.
     pub command: Option<String>,
 }
 
-/// Configuration for the external-`fzf` integration (fzf.vim-style commands).
-/// `fzf` also honors the user's `$FZF_DEFAULT_OPTS`; these apply on top.
+/// Configuration for the fzf.vim-style commands. The picker is the embedded
+/// arb (`arb --fzf`), run in-process — nothing is spawned for it and no `fzf`
+/// binary need be installed. It reads the user's `$FZF_DEFAULT_OPTS` the way
+/// fzf does; these apply on top.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
 pub struct FzfConfig {
@@ -2339,7 +2342,8 @@ pub struct Editor {
     /// (vim) / the emacs `*Messages*` buffer. Capped to the most recent entries.
     pub messages: Vec<(Cow<'static, str>, Severity)>,
     pub autoinfo: Option<Info>,
-    /// A pending external-`fzf` request (fzf.vim `:Files`/`:Colors`/`:Maps`/…).
+    /// A pending fzf.vim-style pick (`:Files`/`:Colors`/`:Maps`/…), drained by
+    /// the terminal layer into the in-process arb picker.
     /// A command fills this; the terminal layer (which owns the TTY) drains it,
     /// hands the terminal to `fzf` with `candidates` on stdin, then runs `sink`
     /// (a zmax `:` command line with `{}` replaced by the picked line).

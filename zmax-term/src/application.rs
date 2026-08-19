@@ -2253,11 +2253,14 @@ impl Application {
         self.render().await;
     }
 
-    /// Blocking TTY handoff to `fzf`. Returns the first selected line (or `None`
-    /// on cancel / spawn failure). When `candidates` is empty, `fzf` is left to
-    /// use its own `$FZF_DEFAULT_COMMAND` (file walk) via the inherited tty.
+    /// Blocking TTY handoff for a fzf.vim-style pick. Returns the first selected
+    /// line, or `None` on cancel. The terminal is released first because the
+    /// picker takes raw mode on `/dev/tty`, and re-claimed after — the picker
+    /// itself is the embedded arb, in this process (see `crate::fzf_arb`).
     fn run_fzf(&mut self, req: &zmax_view::editor::FzfRequest) -> Option<String> {
+        #[cfg(not(feature = "scripting"))]
         use std::io::Write;
+        #[cfg(not(feature = "scripting"))]
         use std::process::{Command, Stdio};
 
         // Configurable popup size/layout + preview pane (applied on top of the
@@ -2310,6 +2313,7 @@ impl Application {
                 None
             }
         });
+        #[cfg(not(feature = "scripting"))]
         let stream_command = req.candidates.is_empty();
 
         if self.restore_term().is_err() {
@@ -2321,6 +2325,52 @@ impl Application {
         let _ = &req.prompt;
         let args: Vec<String> = req.options.clone();
 
+        // The picker runs IN THIS PROCESS. arb is compiled in (the `scripting`
+        // feature links `arblang` for `:arb`/`:xpipe`), and `arb --fzf` is a
+        // drop-in for the fzf binary down to reading $FZF_DEFAULT_OPTS and
+        // painting fzf's own palette — so there is nothing to spawn and nothing
+        // to install. Only the *source* command still forks, because
+        // `git ls-files` is a process by nature; fzf forked for that too.
+        #[cfg(feature = "scripting")]
+        let result = {
+            // When no candidates, no fzf.vim `source` and no $FZF_* command say
+            // where the lines come from, fzf fell back to its own `find` walk.
+            // zmax hands over the walk its own file picker uses instead, so
+            // `:Files` and `SPC f f` list the same files under the same
+            // `file-picker` config.
+            let root = zmax_loader::find_workspace().0;
+            let editor = &self.editor;
+            crate::fzf_arb::pick(
+                crate::fzf_arb::Request {
+                    candidates: &req.candidates,
+                    command: source_cmd.clone(),
+                    options: &args,
+                    default_opts: &fzf_opts,
+                },
+                || {
+                    crate::ui::workspace_walk(editor, &root)
+                        .filter_map(|entry| {
+                            let entry = entry.ok()?;
+                            if !entry.path().is_file() {
+                                return None;
+                            }
+                            Some(
+                                entry
+                                    .path()
+                                    .strip_prefix(&root)
+                                    .unwrap_or(entry.path())
+                                    .to_string_lossy()
+                                    .into_owned(),
+                            )
+                        })
+                        .collect()
+                },
+            )
+        };
+
+        // Without `scripting` there is no arb to run the picker, so this build
+        // still shells out to whatever `fzf` is on PATH.
+        #[cfg(not(feature = "scripting"))]
         let result = (|| -> std::io::Result<Option<String>> {
             let mut cmd = Command::new("fzf");
             cmd.args(&args)
