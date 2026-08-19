@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-c6231b57.js";
+            window.path_to_searchindex_js = "searchindex-a3cfafd8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -483,6 +483,26 @@ not visible in the Zmax file picker and global search.</p>
 <p>Example</p>
 <pre><code class="language-toml">[editor.buffer-picker]
 start-position = "previous"
+</code></pre>
+<h3 id="editorfzf-section"><a class="header" href="#editorfzf-section"><code>[editor.fzf]</code> Section</a></h3>
+<p>Options for the fzf.vim-style commands (<code>:Files</code>, <code>:Rg</code>, <code>:GFiles</code>, …). Their picker is the embedded <a href="./scripting.html">arb</a> running in this process, so no <code>fzf</code> binary is required; see <a href="./pickers.html#fzfvim-commands">fzf.vim commands</a> for the environment variables it honours.</p>
+<p>Everything here is empty by default so that zmax adds nothing that would override your own <code>$FZF_DEFAULT_OPTS</code>. These are applied on top of it.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Description</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td><code>options</code></td><td>Extra flags added to every fzf.vim-style command</td><td><code>[]</code></td></tr>
+<tr><td><code>preview</code></td><td>Preview command for the file-listing commands; <code>{}</code> is the picked file. Empty disables the preview pane</td><td><code>""</code></td></tr>
+<tr><td><code>preview-window</code></td><td>Kept for compatibility; the in-process picker lays the preview pane out itself and ignores this</td><td><code>"right:55%"</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Example</p>
+<pre><code class="language-toml">[editor.fzf]
+options = ["--height=95%", "--cycle"]
+preview = "bat --color=always --line-range :$FZF_PREVIEW_LINES {}"
 </code></pre>
 <h3 id="editorauto-pairs-section"><a class="header" href="#editorauto-pairs-section"><code>[editor.auto-pairs]</code> Section</a></h3>
 <p>Enables automatic insertion of pairs to parentheses, brackets, etc. Can be a
