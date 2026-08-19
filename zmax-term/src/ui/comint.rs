@@ -23,8 +23,10 @@
 //!   C-d — comint-delchar-or-maybe-eof (delete char, or EOF on empty line)
 //!   TAB — completion-at-point (complete the file name before point)
 //!   M-? — comint-dynamic-list-filename-completions
-//!   M-r — comint-history-isearch-backward-regexp (reads the pattern, then yanks
-//!         the newest older input containing it onto the input line)
+//!   M-r — comint-history-isearch-backward-regexp (a live incremental regexp
+//!         search of the input ring: each character re-searches and puts the
+//!         matching input on the line, C-r/M-r and C-s repeat, DEL undoes one
+//!         step, C-g restores the unfinished line, RET keeps what was found)
 //!   C-M-l — comint-show-output
 //!   C-c is a prefix (comint job control), then:
 //!     C-c — comint-interrupt-subjob (SIGINT)   C-z — comint-stop-subjob (SIGTSTP)
@@ -88,6 +90,15 @@ impl Scrollback {
             self.lines.drain(0..drop);
             self.is_prompt.drain(0..drop);
         }
+    }
+
+    /// Drop everything appended after `len`. Used to un-say output that was
+    /// consumed by a command run for its value rather than for the user — the
+    /// job emacs's temporary `gud-gdb-fetch-lines-filter` does by returning ""
+    /// instead of the text it swallowed.
+    fn truncate(&mut self, len: usize) {
+        self.lines.truncate(len);
+        self.is_prompt.truncate(len);
     }
 }
 
@@ -586,8 +597,10 @@ pub struct Comint {
     pending_ctrl_c: bool,
     /// An in-mode minibuffer read at the foot of the panel: which command is
     /// waiting for the line, and the line typed so far. Emacs reads these in the
-    /// echo area (`C-c C-s` a file name, `M-r` a history pattern).
+    /// echo area (`C-c C-s` a file name).
     reading: Option<(Reading, String)>,
+    /// Live `comint-history-isearch-backward-regexp` (`M-r`) — see [`HistIsearch`].
+    hist: Option<HistIsearch>,
     /// Where the subshell is and how we keep up with it — see [`DirTrack`].
     /// Shared with the reader threads, which run the `dirtrack-mode` output
     /// filter and consume the reply to the `dirs` query.
@@ -600,9 +613,53 @@ pub struct Comint {
 enum Reading {
     /// `C-c C-s` (`comint-write-output`): the file to write the last output to.
     WriteOutput,
-    /// `M-r` (`comint-history-isearch-backward-regexp`): the pattern to search
-    /// the input ring backward for.
-    HistorySearch,
+}
+
+/// One entry of `isearch-cmds` for the input-history isearch: the state a single
+/// isearch command left the search in. `DEL` (`isearch-delete-char`) pops back to
+/// the entry before it, which is why the pattern AND the history position are
+/// both part of the state — `comint-history-isearch-push-state` saves
+/// `comint-input-ring-index` for exactly that reason.
+#[derive(Clone)]
+struct HistState {
+    string: String,
+    /// `comint-input-ring-index`: which ring entry is on the input line, or
+    /// `None` for the unfinished line the search started from.
+    index: Option<usize>,
+    /// Point in the input line, in chars. A backward search leaves it at the
+    /// start of the match and a forward one at its end; `other_end` is always the
+    /// opposite end (`isearch-other-end`).
+    point: usize,
+    other_end: usize,
+    /// `isearch-barrier`: where this history element was entered, bounding how
+    /// far a typed character may drag the search inside it.
+    barrier: usize,
+    success: bool,
+    forward: bool,
+    wrapped: bool,
+}
+
+/// Live `comint-history-isearch-backward-regexp` (`M-r`) state.
+///
+/// Emacs implements this by handing isearch a different search function
+/// (`comint-history-isearch-search`): the pattern is searched in the current
+/// input line first and, when that fails, the next/previous history element is
+/// put on the input line and searched, over and over until the ring runs out.
+/// So the "buffer" being searched is the ring, one input at a time, and the
+/// visible input line always holds the element the search is standing in.
+struct HistIsearch {
+    /// `M-r` is the regexp flavour; `comint-history-isearch-backward` is the
+    /// same machine with a literal pattern.
+    regexp: bool,
+    /// `comint-stored-incomplete-input`: the unfinished input the search started
+    /// from. It is the "edit line" the search walks off the newest entry back
+    /// onto, and what `C-g` restores.
+    stored: String,
+    /// `isearch-opoint`: point on the edit line when the search started. It
+    /// decides "wrapped" versus "overwrapped".
+    opoint: usize,
+    /// `isearch-cmds`, oldest first; never empty.
+    cmds: Vec<HistState>,
 }
 
 impl Comint {
@@ -720,6 +777,7 @@ impl Comint {
             cursor: None,
             pending_ctrl_c: false,
             reading: None,
+            hist: None,
             dirstack,
         })
     }
@@ -1174,9 +1232,10 @@ impl Comint {
         true
     }
 
-    /// `comint-history-isearch-backward-regexp` (degraded) — search the input
-    /// ring backward for `needle` (substring) and yank the first older match onto
-    /// the input line. Returns the matched entry.
+    /// `comint-previous-matching-input` — search the input ring backward for
+    /// `needle` (substring) and yank the first older match onto the input line.
+    /// Returns the matched entry. The *incremental* history search `M-r` runs is
+    /// [`Comint::history_isearch_backward`].
     pub fn history_search_backward(&mut self, needle: &str) -> Option<String> {
         if !self.ring.navigating() {
             self.stash = Some(self.input.clone());
@@ -1186,6 +1245,348 @@ impl Comint {
             self.set_input(m);
         }
         found
+    }
+
+    // ── comint-history-isearch (M-r) ────────────────────────────────────────
+    //
+    // Emacs runs a REAL isearch here: `comint-history-isearch-backward-regexp`
+    // starts `isearch-backward-regexp` with `comint-history-isearch-search`
+    // installed as the search function, so every typed character re-searches —
+    // first the input line the search is standing in, then, when that fails, the
+    // previous history element, which is put on the input line and searched in
+    // turn (comint.el `comint-history-isearch-search`). The commands below are
+    // that machine: an `isearch-cmds` stack whose entries carry the pattern AND
+    // the history position (`comint-history-isearch-push-state`), so `DEL` undoes
+    // one command at a time and `C-g` puts the unfinished input back.
+
+    /// `comint-history-isearch-backward-regexp` (`M-r`, `regexp` true) and
+    /// `comint-history-isearch-backward` (the literal flavour): begin a live
+    /// history search from the current input line and point.
+    pub fn history_isearch_backward(&mut self, regexp: bool) {
+        let point = self.caret.min(self.input.chars().count());
+        self.hist = Some(HistIsearch {
+            regexp,
+            stored: self.input.clone(),
+            opoint: point,
+            cmds: vec![HistState {
+                string: String::new(),
+                index: None,
+                point,
+                other_end: point,
+                barrier: point,
+                success: true,
+                forward: false,
+                wrapped: false,
+            }],
+        });
+    }
+
+    /// Whether a history isearch is running (`M-r`).
+    pub fn history_isearch_active(&self) -> bool {
+        self.hist.is_some()
+    }
+
+    /// The input-line text at history position `index`: a ring entry, or the
+    /// stored unfinished input for the edit line — the two things
+    /// `comint-goto-input` puts on the line.
+    fn hist_line(&self, index: Option<usize>) -> String {
+        match index {
+            None => self
+                .hist
+                .as_ref()
+                .map(|h| h.stored.clone())
+                .unwrap_or_default(),
+            Some(i) => self.ring.get(i).unwrap_or_default().to_string(),
+        }
+    }
+
+    /// One step of the history walk `comint-history-isearch-search` makes when
+    /// the pattern is not in the current line: `comint-previous-input` backward,
+    /// `comint-next-input` forward. `None` at the end of the ring — the error
+    /// ("Beginning of history; no preceding item" / "End of history; no next
+    /// item") that makes the whole search fail.
+    fn hist_step(&self, index: Option<usize>, forward: bool) -> Option<Option<usize>> {
+        let len = self.ring.len();
+        if forward {
+            match index {
+                // Already on the edit line: there is nothing newer.
+                None => None,
+                Some(0) => Some(None),
+                Some(i) => Some(Some(i - 1)),
+            }
+        } else {
+            match index {
+                None => (len > 0).then_some(Some(0)),
+                Some(i) if i + 1 < len => Some(Some(i + 1)),
+                Some(_) => None,
+            }
+        }
+    }
+
+    /// `re-search-backward` / `re-search-forward` inside one input line: the
+    /// match nearest `from` (a char index), backward taking the last match that
+    /// ends at or before it, forward the first that starts at or after it.
+    /// Returns `(point, other_end)` in char indices — point at the match start
+    /// backward, at its end forward.
+    fn hist_find(
+        re: &regex::Regex,
+        line: &str,
+        from: usize,
+        forward: bool,
+    ) -> Option<(usize, usize)> {
+        let lim = char_index_to_byte(line, from);
+        let chars = |b: usize| line[..b].chars().count();
+        if forward {
+            re.find_at(line, lim)
+                .map(|m| (chars(m.end()), chars(m.start())))
+        } else {
+            // Emacs takes the latest match that still ends at or before the
+            // limit. Anchoring each candidate start keeps overlapping matches
+            // visible, which a non-overlapping scan would skip.
+            (0..=lim)
+                .rev()
+                .filter(|s| line.is_char_boundary(*s))
+                .find_map(|s| {
+                    re.find_at(line, s)
+                        .filter(|m| m.start() == s && m.end() <= lim)
+                        .map(|m| (chars(m.start()), chars(m.end())))
+                })
+        }
+    }
+
+    /// `comint-history-isearch-search`: search the pattern in the line the search
+    /// stands in and, failing that, put the next/previous history element on the
+    /// line and search that, over and over until the ring runs out. `st` is
+    /// updated in place with where the search ended and whether it succeeded; a
+    /// failure leaves it where the last successful command left it.
+    fn hist_search(&mut self, st: &mut HistState) {
+        let regexp = self.hist.as_ref().is_some_and(|h| h.regexp);
+        // A pattern that does not parse (yet) is emacs's `invalid-regexp`:
+        // isearch reports it and leaves the state alone, so a half-typed `\(` is
+        // not a failure.
+        let Some(re) = super::dired::Dired::isearch_matcher(&st.string, regexp) else {
+            return;
+        };
+        let mut index = st.index;
+        let mut from = st.point;
+        let mut barrier = st.barrier;
+        loop {
+            let line = self.hist_line(index);
+            if let Some((point, other)) = Self::hist_find(&re, &line, from, st.forward) {
+                st.index = index;
+                st.point = point;
+                st.other_end = other;
+                st.barrier = barrier;
+                st.success = true;
+                return;
+            }
+            let Some(next) = self.hist_step(index, st.forward) else {
+                st.success = false;
+                return;
+            };
+            index = next;
+            // A new element is entered at its far end so the search runs across
+            // the whole of it, and emacs re-arms the barrier there
+            // (`setq isearch-barrier (point) isearch-opoint (point)`).
+            from = if st.forward {
+                0
+            } else {
+                self.hist_line(index).chars().count()
+            };
+            barrier = from;
+        }
+    }
+
+    /// The state on top of `isearch-cmds`.
+    fn hist_snapshot(&self) -> Option<HistState> {
+        self.hist.as_ref()?.cmds.last().cloned()
+    }
+
+    /// `isearch-push-state`, then show the result: the input line becomes the
+    /// history element the search stands in, with the caret on the match.
+    fn hist_push(&mut self, st: HistState) {
+        if let Some(h) = self.hist.as_mut() {
+            h.cmds.push(st);
+        }
+        self.hist_sync();
+    }
+
+    /// Mirror the current isearch state onto the visible input line.
+    fn hist_sync(&mut self) {
+        let Some(st) = self.hist.as_ref().and_then(|h| h.cmds.last()).cloned() else {
+            return;
+        };
+        self.input = self.hist_line(st.index);
+        self.caret = st.point.min(self.input.chars().count());
+    }
+
+    /// `isearch-printing-char`: extend the pattern and re-search
+    /// (`isearch-search-and-update`).
+    fn hist_type(&mut self, c: char) {
+        let Some(mut st) = self.hist_snapshot() else {
+            return;
+        };
+        let regexp = self.hist.as_ref().is_some_and(|h| h.regexp);
+        st.string.push(c);
+        // Adding characters to a failing literal search cannot make it match, so
+        // emacs does not even re-search; a regexp can still become valid.
+        if st.success || regexp {
+            // Re-search from the near end of the current match, never from the
+            // search origin — a typed character must not drag point the other
+            // way. Backwards the match may grow by the new character, but never
+            // past the barrier (where this element was entered).
+            st.point = if st.forward {
+                st.other_end
+            } else {
+                (st.other_end + 1).min(st.barrier)
+            };
+            self.hist_search(&mut st);
+        }
+        self.hist_push(st);
+    }
+
+    /// `isearch-delete-char` (`DEL`): pop the last isearch command, restoring the
+    /// pattern and the history position it had before. After a repeat this undoes
+    /// the repeat and keeps the pattern, exactly as emacs does.
+    fn hist_delete_char(&mut self) {
+        if let Some(h) = self.hist.as_mut() {
+            if h.cmds.len() > 1 {
+                h.cmds.pop();
+            }
+        }
+        self.hist_sync();
+    }
+
+    /// `isearch-repeat-backward` (`M-r` / `C-r`) and `isearch-repeat-forward`
+    /// (`C-s`) inside the history search.
+    fn hist_repeat(&mut self, forward: bool) {
+        let Some(mut st) = self.hist_snapshot() else {
+            return;
+        };
+        if forward == st.forward {
+            if st.string.is_empty() {
+                // Emacs would recall the previous search string off
+                // `regexp-search-ring`; comint keeps no search ring of its own,
+                // so an empty pattern has nothing to repeat.
+                self.hist_push(st);
+                return;
+            }
+            if !st.success {
+                // `isearch-wrap-pause` is t, so the repeat that ran off the end
+                // only failed and this next one wraps.
+                // `comint-history-isearch-wrap` goes to the edit line for a
+                // backward search (the newest input) and to the oldest ring entry
+                // for a forward one.
+                st.wrapped = true;
+                st.index = if st.forward {
+                    self.ring.len().checked_sub(1)
+                } else {
+                    None
+                };
+                let len = self.hist_line(st.index).chars().count();
+                st.point = if st.forward { 0 } else { len };
+            } else if st.point == st.other_end {
+                // Repeating on an empty match: step a character first so the
+                // search cannot stand still, and fail if there is nowhere to go.
+                let len = self.hist_line(st.index).chars().count();
+                if st.forward && st.point < len {
+                    st.point += 1;
+                } else if !st.forward && st.point > 0 {
+                    st.point -= 1;
+                } else {
+                    st.success = false;
+                    self.hist_push(st);
+                    return;
+                }
+            }
+        } else {
+            // Reversing direction is a command in itself: point does not move
+            // (`isearch-repeat-on-direction-change` is nil) and the search below
+            // re-finds the same match from the other side.
+            st.forward = forward;
+            st.success = true;
+        }
+        st.barrier = st.point;
+        self.hist_search(&mut st);
+        self.hist_push(st);
+    }
+
+    /// `isearch-abort` (`C-g`): a successful search puts the unfinished input
+    /// back and quits; a failing one only rubs out the commands that failed and
+    /// stays in the search. Returns true when the search is over.
+    fn hist_abort(&mut self) -> bool {
+        let quit = self
+            .hist
+            .as_ref()
+            .and_then(|h| h.cmds.last())
+            .is_some_and(|st| st.success);
+        if quit {
+            let stored = self
+                .hist
+                .take()
+                .map(|h| h.stored)
+                .unwrap_or_default();
+            self.set_input(&stored);
+            self.ring.reset();
+            return true;
+        }
+        if let Some(h) = self.hist.as_mut() {
+            while h.cmds.len() > 1 && !h.cmds[h.cmds.len() - 1].success {
+                h.cmds.pop();
+            }
+        }
+        self.hist_sync();
+        false
+    }
+
+    /// `isearch-exit` (`RET`): end the search where it stands. The element it
+    /// found stays on the input line, and the input ring is left pointing at it
+    /// so `M-p` carries on from there — emacs keeps `comint-input-ring-index`
+    /// across the search, with the unfinished line stashed as
+    /// `comint-stored-incomplete-input`.
+    fn hist_exit(&mut self) {
+        let Some(h) = self.hist.take() else {
+            return;
+        };
+        let index = h.cmds.last().and_then(|st| st.index);
+        self.stash = Some(h.stored);
+        self.ring.reset();
+        if let Some(i) = index {
+            for _ in 0..=i {
+                self.ring.previous();
+            }
+        }
+    }
+
+    /// `isearch-message-prefix` for the history search, with the "history "
+    /// `isearch-message-prefix-add` that `comint-history-isearch-setup` sets and
+    /// the failing / wrapped / overwrapped annotations.
+    fn hist_prompt(h: &HistIsearch) -> String {
+        let Some(st) = h.cmds.last() else {
+            return String::new();
+        };
+        // Overwrapped: the wrapped search has come back past where it started.
+        // The origin is always the edit line, so that is where it can happen.
+        let over = st.wrapped
+            && st.index.is_none()
+            && if st.forward {
+                st.point > h.opoint
+            } else {
+                st.point < h.opoint
+            };
+        format!(
+            "{}{}{}{}history {}I-search{}: ",
+            if st.success { "" } else { "failing " },
+            if over { "over" } else { "" },
+            if st.wrapped { "wrapped " } else { "" },
+            if super::dired::isearch_no_upper_case(&st.string, h.regexp) {
+                ""
+            } else {
+                "case-sensitive "
+            },
+            if h.regexp { "regexp " } else { "" },
+            if st.forward { "" } else { " backward" },
+        )
     }
 
     /// `shell-forward-command` (M-f) — move point forward over the next shell
@@ -1396,22 +1797,156 @@ impl Comint {
             .unwrap_or(false)
     }
 
+    /// `gud-cont` (`C-c C-r` in the GUD buffer): resume the inferior. gud.el
+    /// spells the command `"cont"` — gdb's abbreviation of `continue` — and
+    /// sends it straight to the process; the echo back into the scrollback is
+    /// what emacs gets for free from the pty the GUD comint runs on.
+    pub fn gud_cont(&mut self) {
+        self.submit("cont");
+    }
+
+    /// `gud-gdb-run-command-fetch-lines` — run `command` in gdb *for its value*:
+    /// send it without echoing it (emacs's `gud-basic-call` writes straight to
+    /// the process and never inserts the command), collect the lines it prints
+    /// and chop `skip` characters off the front of each one, then take those
+    /// lines back out of the scrollback so the round trip leaves no trace.
+    ///
+    /// Emacs stops at the next prompt (`gud-gdb-fetch-lines-filter` matches
+    /// `comint-prompt-regexp`) while blocking in `accept-process-output`. zmax's
+    /// reader threads split the process output on newlines and gdb's `(gdb) `
+    /// prompt carries none, so there is no prompt *line* to stop at: the reply
+    /// is taken to be complete once the output has stayed quiet for
+    /// [`FETCH_QUIET`], and — since emacs's loop can also be entered against a
+    /// debugger that never answers — the whole wait is capped at
+    /// [`FETCH_TIMEOUT`] rather than hanging the panel.
+    fn fetch_lines(&mut self, command: &str, skip: usize) -> Vec<String> {
+        use std::time::{Duration, Instant};
+        /// Output quiet for this long ends the reply (stands in for the prompt).
+        const FETCH_QUIET: Duration = Duration::from_millis(120);
+        /// Hard cap on one fetch, so a wedged debugger cannot freeze the panel.
+        const FETCH_TIMEOUT: Duration = Duration::from_millis(1000);
+
+        if self.dead.load(Ordering::Relaxed) {
+            return Vec::new();
+        }
+        let Ok(mark) = self.scrollback.lock().map(|sb| sb.lines.len()) else {
+            return Vec::new();
+        };
+        if !self.send_invisible(command) {
+            return Vec::new();
+        }
+        let started = Instant::now();
+        let mut seen = mark;
+        let mut last_change = Instant::now();
+        while started.elapsed() < FETCH_TIMEOUT {
+            std::thread::sleep(Duration::from_millis(5));
+            let now = self
+                .scrollback
+                .lock()
+                .map(|sb| sb.lines.len())
+                .unwrap_or(seen);
+            if now != seen {
+                seen = now;
+                last_change = Instant::now();
+            } else if now > mark && last_change.elapsed() >= FETCH_QUIET {
+                break;
+            }
+        }
+        let mut lines = Vec::new();
+        if let Ok(mut sb) = self.scrollback.lock() {
+            for line in &sb.lines[mark.min(sb.lines.len())..] {
+                // The prompt has to come off BEFORE the context is chopped:
+                // gdb writes `(gdb) ` without a newline, so the line reader
+                // glues it onto the front of the first line of the reply. That
+                // is what `comint-prompt-regexp` matches in emacs, where the
+                // prompt was already consumed by the time the reply arrives.
+                lines.push(strip_gdb_prompts(line).chars().skip(skip).collect::<String>());
+            }
+            sb.truncate(mark);
+        }
+        lines
+    }
+
+    /// `gud-gdb-completions-1`: sort the candidates the way readline does and
+    /// drop the duplicates gdb can repeat.
+    fn gud_completions_1(mut list: Vec<String>) -> Vec<String> {
+        list.sort();
+        list.dedup();
+        list
+    }
+
+    /// Replace the `n_chars` characters before point with `text` — the edit
+    /// `completion-in-region` makes over the word being completed.
+    fn replace_before_point(&mut self, n_chars: usize, text: &str) {
+        let start_char = self.caret.saturating_sub(n_chars);
+        let start = char_index_to_byte(&self.input, start_char);
+        let end = char_index_to_byte(&self.input, self.caret.min(self.input.chars().count()));
+        self.input.replace_range(start..end, text);
+        self.caret = start_char + text.chars().count();
+        self.ring.reset();
+    }
+
     /// `gud-gdb-complete-command` (TAB in the GUD buffer): ask gdb itself for the
     /// completions of the command line up to point, with gdb's own `complete`
-    /// command. gdb prints the candidates, so they arrive in the scrollback the
-    /// way Emacs shows them in `*Completions*`.
+    /// command.
     ///
-    /// Returns 0: the candidates come back asynchronously on the process's
-    /// stdout, so none are known at the moment TAB is pressed — which is also why
-    /// a unique candidate is not inserted into the input line here.
+    /// The split emacs makes (`gud-gdb-completion-at-point`) is at the last space
+    /// before point: everything before it is the CONTEXT — sent to gdb so it
+    /// completes inside the right command, then chopped back off every reply line
+    /// — and the word after it is the region completion replaces. The request
+    /// goes out as `server complete …` (the `server` prefix keeps it out of gdb's
+    /// own command history) and the reply is read back synchronously, as emacs
+    /// does. Candidates are then sorted and de-duplicated
+    /// (`gud-gdb-completions-1`) and applied by `completion-in-region`'s rule: a
+    /// unique one is inserted whole, several are reduced to their longest common
+    /// prefix and, when that adds nothing, listed. Returns how many candidates
+    /// gdb offered.
     pub fn complete_gud_command(&mut self) -> usize {
         let upto: String = self.input.chars().take(self.caret).collect();
-        let upto = upto.trim_end();
-        if upto.is_empty() {
+        if upto.trim().is_empty() {
             return 0;
         }
-        self.submit(&format!("complete {upto}"));
-        0
+        // `skip-chars-backward "^ "` from point: the word being completed.
+        let word: String = upto.chars().rev().take_while(|c| *c != ' ').collect();
+        let word: String = word.chars().rev().collect();
+        let context_len = upto.chars().count() - word.chars().count();
+
+        let lines = self.fetch_lines(&format!("server complete {upto}"), context_len);
+        // Protect against old versions of gdb, exactly where emacs does.
+        if lines
+            .first()
+            .is_some_and(|l| l.starts_with("Undefined command: \"complete\""))
+        {
+            if let Ok(mut sb) = self.scrollback.lock() {
+                sb.push("This version of GDB doesn't support the `complete' command".into());
+            }
+            self.scroll = 0;
+            return 0;
+        }
+        let names = Self::gud_completions_1(
+            lines
+                .into_iter()
+                .filter(|l| !l.trim().is_empty())
+                .collect::<Vec<_>>(),
+        );
+        let word_len = word.chars().count();
+        match names.len() {
+            0 => {}
+            1 => self.replace_before_point(word_len, &names[0]),
+            _ => {
+                let common = Self::common_prefix(&names);
+                if common.chars().count() > word_len {
+                    self.replace_before_point(word_len, &common);
+                } else if let Ok(mut sb) = self.scrollback.lock() {
+                    sb.push(format!("=== Completions of `{word}` ==="));
+                    for name in &names {
+                        sb.push(format!("  {name}"));
+                    }
+                    self.scroll = 0;
+                }
+            }
+        }
+        names.len()
     }
 
     /// `shell-dynamic-complete-command`: complete the word before point against the
@@ -1478,14 +2013,6 @@ impl Comint {
                 }
                 self.scroll = 0;
             }
-            Reading::HistorySearch => {
-                if self.history_search_backward(text.trim()).is_none() {
-                    if let Ok(mut sb) = self.scrollback.lock() {
-                        sb.push(format!("No earlier input matching `{}`", text.trim()));
-                    }
-                    self.scroll = 0;
-                }
-            }
         }
     }
 
@@ -1544,6 +2071,20 @@ enum PipeSource {
 }
 
 /// Byte offset of the `n`-th char in `s` (or `s.len()` when `n` is past the end).
+/// gud's `comint-prompt-regexp` (`^(gdb) *`, repeated): take the gdb prompts off
+/// the front of a line of output. gdb writes `(gdb) ` with no trailing newline,
+/// so the line reader hands it back glued to the next line it does terminate —
+/// and several prompts can pile up when commands were sent without output
+/// between them (verified: `server complete inf` on gdb 16 comes back as
+/// `(gdb) (gdb) inferior`).
+fn strip_gdb_prompts(line: &str) -> &str {
+    let mut rest = line;
+    while let Some(tail) = rest.strip_prefix("(gdb)") {
+        rest = tail.trim_start_matches(' ');
+    }
+    rest
+}
+
 fn char_index_to_byte(s: &str, n: usize) -> usize {
     s.char_indices().nth(n).map_or(s.len(), |(b, _)| b)
 }
@@ -1558,7 +2099,38 @@ impl Component for Comint {
         if key.code == KeyCode::F(12) {
             return Comint::close();
         }
-        // An in-mode minibuffer read (`C-c C-s`, `M-r`) owns every key.
+        // A live history isearch (`M-r`) owns every key while it runs, the way
+        // `isearch-mode-map` shadows the buffer's own map in emacs.
+        if self.hist.is_some() {
+            match key {
+                // `isearch-abort`: a failing search only rubs out the commands
+                // that failed; a successful one restores the line and quits.
+                key!(Esc) | ctrl!('g') => {
+                    self.hist_abort();
+                }
+                // `isearch-exit` — keep the element the search found.
+                key!(Enter) => self.hist_exit(),
+                key!(Backspace) => self.hist_delete_char(),
+                // Repeats: `M-r` and `C-r` step to an older match, `C-s` to a
+                // newer one (and reverse the direction).
+                alt!('r') | ctrl!('r') => self.hist_repeat(false),
+                ctrl!('s') => self.hist_repeat(true),
+                _ => {
+                    // `isearch-printing-char`. Any other key is swallowed rather
+                    // than ending the search and being re-executed, which is the
+                    // same simplification the dired isearch port makes.
+                    if let KeyCode::Char(c) = key.code {
+                        use zmax_view::keyboard::KeyModifiers;
+                        if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT {
+                            self.hist_type(c);
+                        }
+                    }
+                }
+            }
+            return EventResult::Consumed(None);
+        }
+
+        // An in-mode minibuffer read (`C-c C-s`) owns every key.
         if let Some((what, mut buf)) = self.reading.take() {
             match key {
                 key!(Esc) | ctrl!('g') => {}
@@ -1597,8 +2169,19 @@ impl Component for Comint {
                 ctrl!('p') => {
                     self.previous_prompt();
                 }
+                // C-c C-r — comint-show-output, EXCEPT in the GUD interaction
+                // buffer, where `gud-mode-map` shadows it with `gud-cont`:
+                // gud.el defines it as `(gud-def gud-cont "cont" "\C-r" …)`, and
+                // `gud-def` binds `C-c` + that key in gud-mode-map (plus the
+                // global `C-x C-a C-r`, which zmax already has as dap_continue).
+                // The global `C-c C-r` stays zmax's rerun-last-run; this is the
+                // buffer-local override, exactly as emacs scopes it.
                 ctrl!('r') => {
-                    self.show_output();
+                    if self.is_gud_gdb() {
+                        self.gud_cont();
+                    } else {
+                        self.show_output();
+                    }
                 }
                 ctrl!('e') => self.show_maximum_output(),
                 ctrl!('o') => {
@@ -1666,9 +2249,11 @@ impl Component for Comint {
             alt!('?') => {
                 self.list_filename_completions();
             }
-            // M-r — comint-history-isearch-backward-regexp: read a pattern, then
-            // yank the newest older input containing it onto the input line.
-            alt!('r') => self.reading = Some((Reading::HistorySearch, String::new())),
+            // M-r — comint-history-isearch-backward-regexp: a LIVE incremental
+            // regexp search of the input ring. Every typed character re-searches
+            // and the matching input is put on the line as it is found; C-r/M-r
+            // and C-s repeat, DEL undoes one step, C-g restores the line.
+            alt!('r') => self.history_isearch_backward(true),
             // C-c — enter the comint job-control prefix.
             ctrl!('c') => self.pending_ctrl_c = true,
             ctrl!('d') => {
@@ -1751,11 +2336,34 @@ impl Component for Comint {
             );
         }
 
-        // An in-mode minibuffer read (C-c C-s, M-r) takes over the input line.
+        // A live history isearch (M-r) replaces the comint prompt with the
+        // isearch prompt — `comint-history-isearch-message` puts that prefix in
+        // an overlay over the prompt — and leaves the history element the search
+        // found on the input line with point on the match. Emacs shows the typed
+        // pattern only when the search is failing or the regexp is bad (it falls
+        // back to `isearch-message` there), which is what the second arm does.
+        if let Some(h) = &self.hist {
+            let prompt = Self::hist_prompt(h);
+            let failing = h.cmds.last().is_some_and(|st| !st.success);
+            let (text, point) = match h.cmds.last() {
+                Some(st) if failing => (st.string.clone(), st.string.chars().count()),
+                Some(st) => (self.input.clone(), st.point),
+                None => (self.input.clone(), self.caret),
+            };
+            let line = format!("{prompt}{text}");
+            let cursor_x = area.x + (prompt.chars().count() + point) as u16;
+            surface.set_stringn(area.x, input_y, &line, area.width as usize, header_style);
+            self.cursor = Some(zmax_core::Position::new(
+                input_y as usize,
+                cursor_x as usize,
+            ));
+            return;
+        }
+
+        // An in-mode minibuffer read (C-c C-s) takes over the input line.
         if let Some((what, buf)) = &self.reading {
             let label = match what {
                 Reading::WriteOutput => "Write output to file: ",
-                Reading::HistorySearch => "History search backward: ",
             };
             let line = format!("{label}{buf}");
             let cursor_x = area.x + line.chars().count() as u16;
@@ -1841,6 +2449,48 @@ mod tests {
             ""
         );
         assert_eq!(Comint::common_prefix(&[]), "");
+    }
+
+    /// `M-r` (comint-history-isearch-backward-regexp) is a LIVE search: every
+    /// typed character re-searches the ring backward and puts the matching input
+    /// on the line, `C-r` steps to the next older match, `DEL` undoes that step
+    /// while keeping the pattern, and `C-g` restores the unfinished line. This is
+    /// the whole difference from the modal `comint-previous-matching-input`.
+    #[test]
+    fn history_isearch_walks_the_ring_as_the_pattern_is_typed() {
+        let mut c = comint();
+        // Ring ends up newest-first: ls, git commit -m x, cargo test, git status.
+        for line in ["git status", "cargo test", "git commit -m x", "ls"] {
+            c.ring.add(line);
+        }
+        c.set_input("half-typed");
+
+        c.history_isearch_backward(true);
+        c.hist_type('g');
+        assert_eq!(c.input, "git commit -m x", "first older input matching `g`");
+        c.hist_type('i');
+        assert_eq!(c.input, "git commit -m x", "`gi` still matches where we are");
+
+        c.hist_repeat(false);
+        assert_eq!(c.input, "git status", "C-r steps past `cargo test` to the next match");
+
+        c.hist_delete_char();
+        assert_eq!(c.input, "git commit -m x", "DEL undoes the repeat");
+
+        // A pattern that matches nothing fails without moving, and says so.
+        c.hist_type('z');
+        assert_eq!(c.input, "git commit -m x", "a failing search leaves point put");
+        let prompt = Comint::hist_prompt(c.hist.as_ref().unwrap());
+        assert_eq!(prompt, "failing history regexp I-search backward: ");
+
+        // `C-g` on a failing search only rubs out the failing commands...
+        assert!(!c.hist_abort());
+        assert_eq!(c.input, "git commit -m x");
+        // ...and on the successful search that is left, it quits and puts the
+        // unfinished input back.
+        assert!(c.hist_abort());
+        assert!(c.hist.is_none());
+        assert_eq!(c.input, "half-typed");
     }
 
     /// `C-c C-w` (backward-kill-word) deletes back over one word, skipping any

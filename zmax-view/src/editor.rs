@@ -12,6 +12,7 @@ use crate::{
     register::Registers,
     theme::{self, Theme},
     tree::{self, Tree},
+    view::ViewPosition,
     Document, DocumentId, View, ViewId,
 };
 use zmax_event::dispatch;
@@ -4832,8 +4833,10 @@ impl Editor {
     }
 
     pub fn jump_forward(&mut self, view_id: ViewId, count: usize) {
-        if let Some((doc_id, selection)) = view_mut!(self, view_id).jumps.forward(count).cloned() {
-            self.jump_to(view_id, doc_id, selection);
+        if let Some(((doc_id, selection), view_position)) =
+            view_mut!(self, view_id).jumps.forward(count)
+        {
+            self.jump_to(view_id, doc_id, selection, view_position);
         }
     }
 
@@ -4845,12 +4848,19 @@ impl Editor {
         // `doc_revisions` matches, otherwise that entry would be left ahead of
         // it and a later sync would map it out of bounds.
         view.sync_changes(doc);
-        if let Some((doc_id, selection)) = view.jumps.backward(view_id, doc, count).cloned() {
-            self.jump_to(view_id, doc_id, selection);
+        if let Some(((doc_id, selection), view_position)) = view.jumps.backward(view_id, doc, count)
+        {
+            self.jump_to(view_id, doc_id, selection, view_position);
         }
     }
 
-    fn jump_to(&mut self, view_id: ViewId, dest_doc_id: DocumentId, mut selection: Selection) {
+    fn jump_to(
+        &mut self,
+        view_id: ViewId,
+        dest_doc_id: DocumentId,
+        mut selection: Selection,
+        mut view_position: ViewPosition,
+    ) {
         let view = view_mut!(self, view_id);
         let old_doc_id = view.doc;
         if old_doc_id != dest_doc_id {
@@ -4858,6 +4868,12 @@ impl Editor {
             if let Some(transaction) = view.changes_to_sync(new_doc) {
                 let text = new_doc.text().slice(..);
                 selection = selection.map(transaction.changes()).ensure_invariants(text);
+                // The recorded window position is a position in the same
+                // document, so it has to ride the same changeset as the
+                // selection or `jumpoptions=view` would restore a stale anchor.
+                view_position.anchor = transaction
+                    .changes()
+                    .map_pos(view_position.anchor, zmax_core::Assoc::Before);
             }
             self.replace_document_in_view(view_id, dest_doc_id);
             dispatch(DocumentFocusLost {
@@ -4867,7 +4883,29 @@ impl Editor {
         }
         let (view, doc) = current!(self);
         doc.set_selection(view_id, selection);
-        // vim jumplist navigation (Ctrl-O/Ctrl-I) scrolls minimally, not centered.
+        if crate::view::jumpoptions_view() {
+            // vim `jumpoptions=view`: "when moving through the jumplist ... try to
+            // restore the |mark-view| in which the action occurred". vim stores the
+            // mark's offset from the window's topline and puts the topline back
+            // (`mark_view_restore`); zmax's equivalent of a topline is the view's
+            // anchor plus its two scroll offsets, which is what was recorded.
+            // The anchor is clamped because the document may have shrunk since —
+            // vim's own restore is likewise guarded (`topline >= 1`).
+            let anchor = view_position.anchor.min(doc.text().len_chars());
+            doc.set_view_offset(
+                view_id,
+                ViewPosition {
+                    anchor,
+                    ..view_position
+                },
+            );
+        }
+        // Without `view` this is the whole behaviour: vim jumplist navigation
+        // (Ctrl-O/Ctrl-I) scrolls minimally, not centered. With `view` it is the
+        // guard vim spells `check_cursor` — the restored window already contains
+        // the cursor unless the document changed under the recorded anchor, and
+        // the recorded offsets already satisfy `scrolloff`, so this is normally a
+        // no-op that only bites when the restore would leave the cursor offscreen.
         view.ensure_cursor_in_view(doc, self.config.load().scrolloff);
     }
 }

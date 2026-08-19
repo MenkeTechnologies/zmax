@@ -125,6 +125,16 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("c cpp", "i",   "tab",           "C mode", "c_indent_line_or_region"),      // TAB: c-indent-line-or-region
     ("c cpp", "i",   "backspace",     "C mode", "backward_delete_char_untabify"),// DEL: backward-delete-char-untabify
 
+    // -- prog-mode (every programming major mode) ----------------------------
+    // prog-mode.el binds `"M-q" #'prog-fill-reindent-defun`, and every
+    // programming major mode inherits prog-mode-map — so M-q means "fill this
+    // comment or string, else reindent this defun" in all of them, not the plain
+    // fill the base map has on A-q. C and C++ are absent from this row on
+    // purpose: cc-mode overrides prog-mode's M-q with `c-fill-paragraph`, which
+    // they already carry above.
+    ("rust python javascript jsx typescript tsx go java ruby lua zig c-sharp php haskell scala kotlin elixir perl",
+                "nsi", "A-q", "Prog", "prog_fill_reindent_defun"),  // M-q: prog-fill-reindent-defun
+
     // -- TeX / LaTeX (tex-mode, latex-mode) ----------------------------------
     // `"` is Insert-only — in Normal it is vim's register prefix.
     ("latex", "i",   "\"",      "TeX", "tex_insert_quote"),           // tex-insert-quote
@@ -179,15 +189,24 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("fortran", "nsi", "A-C-j",   "Fortran", "fortran_split_line"),        // C-M-j: fortran-split-line
     ("fortran", "nsi", "A-C-q",   "Fortran", "fortran_indent_subprogram"), // C-M-q: fortran-indent-subprogram
     ("fortran", "nsi", "A-^",     "Fortran", "fortran_join_line"),         // M-^: fortran-join-line
+    // fortran-mode reaches `fortran-fill-paragraph` from M-q through
+    // `(setq-local fill-paragraph-function 'fortran-fill-paragraph)`, not through
+    // a keymap entry — the effect is the same key, so the overlay is where it
+    // goes here. Without this row M-q fell through to the generic reflow, which
+    // knows nothing about comment prefixes or continuation lines.
+    ("fortran", "nsi", "A-q",     "Fortran", "fortran_fill_paragraph"),    // M-q: fortran-fill-paragraph
 
     // -- Emacs Lisp (emacs-lisp-mode) ----------------------------------------
-    ("elisp", "nsi", "A-C-x", "Emacs Lisp", "eval_elisp_defun"),           // C-M-x: eval-defun
-    // Lisp Interaction mode's `C-j` (eval-print-last-sexp). zmax's
-    // `lisp-interaction-mode` is an elisp *scratch buffer* (commands.rs:
-    // `lisp_interaction_mode`) and the overlay key is the language, so the chord
-    // is live in every elisp buffer. Normal-only: `C-j` in Insert stays the
-    // newline it is in emacs-lisp-mode.
-    ("elisp", "n", "C-j", "Emacs Lisp", "eval_print_last_sexp"),           // C-j: eval-print-last-sexp
+    // lisp-interaction-mode derives from emacs-lisp-mode, so its buffer keeps
+    // C-M-x (eval-defun) — hence both major modes on this row.
+    ("elisp lisp-interaction", "nsi", "A-C-x", "Emacs Lisp", "eval_elisp_defun"), // C-M-x: eval-defun
+    // `C-j` (eval-print-last-sexp) is bound by lisp-interaction-mode-map ALONE —
+    // emacs-lisp-mode does not have it. `lisp_interaction_mode` now marks its
+    // scratch buffer with that major mode (commands.rs), so the chord is live
+    // there and nowhere else; it used to key off the `elisp` language and fired
+    // in every elisp buffer. Insert too: the mode exists only in that scratch
+    // buffer, where C-j is emacs's eval-and-print rather than a newline.
+    ("lisp-interaction", "ni", "C-j", "Lisp Interaction", "eval_print_last_sexp"), // C-j: eval-print-last-sexp
 
     // -- Common Lisp / Scheme (lisp-mode, scheme-mode) -----------------------
     // Both send the top-level form at point to the inferior Lisp started by
@@ -339,11 +358,13 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("view", "n", "space",     "View", "page_down"), // SPC: View-scroll-page-forward
     ("view", "n", "backspace", "View", "page_up"),   // DEL: View-scroll-page-backward
     ("view", "n", "s",         "View", "search"),    // s:   incremental search
-    // The two ways out. `view_mode` toggles, so on a view buffer it *is*
-    // View-exit; View-quit additionally buries the buffer, which zmax does not
-    // do (the buffer stays where it is, no longer in view-mode).
+    // The two ways out, and they are not the same one. `e` is View-exit, "Exit
+    // View mode but stay in current buffer" — the toggle does exactly that on a
+    // view buffer. `q` is View-quit, which also restores the window: point goes
+    // back to where view-mode was entered and the window is quit (closed, or
+    // switched back to the previous file). It used to run the same toggle.
     ("view", "n", "e",         "View", "view_mode"), // e:   View-exit
-    ("view", "n", "q",         "View", "view_mode"), // q:   View-quit (no bury)
+    ("view", "n", "q",         "View", "view_quit"), // q:   View-quit
 ];
 
 /// The overlay tries, built once: mode -> language -> the major-mode [`KeyTrie`].

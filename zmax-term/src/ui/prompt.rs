@@ -137,6 +137,12 @@ pub struct Prompt {
     /// the expression rather than the command line — `Enter` evaluates it and
     /// the result becomes the command line, `Esc` puts the saved one back.
     cmdline_eval: Option<CmdlineEval>,
+    /// Emacs `previous-matching-history-element` (`M-r`) /
+    /// `next-matching-history-element` (`M-s`): the minibuffer set aside while the
+    /// *recursive* minibuffer reads the regexp to search the history for. `Some`
+    /// for as long as what is typed is that regexp rather than the answer —
+    /// `Enter` runs the search, `Esc` puts the answer back untouched.
+    history_search_read: Option<HistorySearchRead>,
     /// Emacs `isearch-yank-pop-only` (`M-y`): the byte length the last
     /// `isearch-yank-kill` / `isearch-yank-pop-only` appended to the search
     /// string. This is Emacs's `last-command` check — `M-y` only replaces a kill
@@ -155,10 +161,83 @@ struct CmdlineEval {
     prompt: Cow<'static, str>,
 }
 
+/// Emacs `previous-matching-history-element` / `next-matching-history-element`:
+/// the minibuffer put aside while the recursive one reads the regexp. Emacs binds
+/// `enable-recursive-minibuffers` to `t` for that read (simple.el), so whatever
+/// the read does, the minibuffer underneath comes back.
+struct HistorySearchRead {
+    /// The answer being typed when `M-r` / `M-s` was pressed.
+    line: String,
+    /// Its cursor, so an abandoned search leaves the answer exactly as it was.
+    cursor: usize,
+    /// The prompt string the "… element matching regexp" one replaced.
+    prompt: Cow<'static, str>,
+    /// `M-r` walks to older entries, `M-s` to newer ones.
+    backward: bool,
+}
+
+/// Emacs's `minibuffer-history-search-history`: the regexps `M-r` / `M-s` have
+/// been given. Only its newest entry is ever read back — it is the default the
+/// recursive read offers and the one empty input reuses — so that is all this
+/// keeps. Process-global, as the Emacs variable is.
+static HISTORY_SEARCH_REGEXP: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+
+/// The newest `minibuffer-history-search-history` entry, `""` when there is none.
+fn last_history_search_regexp() -> String {
+    HISTORY_SEARCH_REGEXP
+        .lock()
+        .map(|regexp| regexp.clone())
+        .unwrap_or_default()
+}
+
+/// Add a regexp to `minibuffer-history-search-history`.
+fn push_history_search_regexp(regexp: &str) {
+    if let Ok(mut last) = HISTORY_SEARCH_REGEXP.lock() {
+        last.clear();
+        last.push_str(regexp);
+    }
+}
+
+/// The prompt the regexp is read with, as `format-prompt` builds it in simple.el:
+/// "Previous element matching regexp" going back, "Next …" going on, then
+/// ` (default REGEXP)` when there is a last regexp — which is what empty input
+/// reuses — and the `": "` every minibuffer prompt ends in.
+fn history_search_prompt(backward: bool, default: &str) -> String {
+    format!(
+        "{} element matching regexp{}: ",
+        if backward { "Previous" } else { "Next" },
+        if default.is_empty() {
+            String::new()
+        } else {
+            format!(" (default {default})")
+        }
+    )
+}
+
+/// Where point goes in the entry a matching-history-element search found: Emacs
+/// matches `".*\(REGEXP\)"` going back, so the start of the **last** match on the
+/// entry, and plain `REGEXP` going on, so the end of the **first** one
+/// (simple.el). An entry that does not match at all leaves point at its end.
+fn matching_history_point(regex: &regex::Regex, entry: &str, backward: bool) -> usize {
+    if backward {
+        regex
+            .find_iter(entry)
+            .last()
+            .map_or(entry.len(), |m| m.start())
+    } else {
+        regex.find(entry).map_or(entry.len(), |m| m.end())
+    }
+}
+
 /// The toggles an incremental search starts with. zmax's `/` is a regexp
 /// search — Emacs's starts literal, and `M-r` toggles between the two either way
 /// — and it leaves case and whitespace to the editor's own settings until a key
 /// says otherwise.
+///
+/// `invisible` starts on, which is both Emacs's default (`search-invisible` is
+/// `open`: a match in invisible text is found and what hides it opened) and vim's
+/// (`'foldopen'` contains `search`). `M-s i` turns it off, and then a match a
+/// closed fold hides is not found at all.
 const ISEARCH_START: IsearchFlags = IsearchFlags {
     regexp: true,
     word: false,
@@ -166,7 +245,7 @@ const ISEARCH_START: IsearchFlags = IsearchFlags {
     case_fold: true,
     lax_whitespace: false,
     char_fold: false,
-    invisible: false,
+    invisible: true,
 };
 
 /// The mode toggles of Emacs's isearch (`M-r` and the `M-s` map). Emacs makes the
@@ -816,6 +895,7 @@ impl Prompt {
             pending_ctrl_x: false,
             history_search: None,
             cmdline_eval: None,
+            history_search_read: None,
             isearch_yank_len: None,
         }
     }
@@ -968,11 +1048,19 @@ impl Prompt {
         self.wild_press = 0;
         // In the `=` prompt of `c_CTRL-\_e` the line is an expression, not the
         // command line, so the command line's candidates do not apply to it.
-        self.completion = if self.cmdline_eval.is_some() {
+        self.completion = if self.in_nested_read() {
             Vec::new()
         } else {
             (self.completion_fn)(editor, &self.line)
         };
+    }
+
+    /// Whether what is being typed belongs to a *nested* read rather than to this
+    /// prompt's own answer: vim's `=` expression line (`c_CTRL-\_e`) or the Emacs
+    /// recursive minibuffer that `M-r` / `M-s` read a history regexp in. Neither is
+    /// the prompt's value, so neither takes its completions or feeds its callback.
+    fn in_nested_read(&self) -> bool {
+        self.cmdline_eval.is_some() || self.history_search_read.is_some()
     }
 
     /// vim `c_CTRL-D`: the candidates for "the pattern in front of the cursor"
@@ -983,7 +1071,7 @@ impl Prompt {
     fn list_completion_before_cursor(&mut self, editor: &Editor) {
         self.exit_selection();
         self.wild_press = 0;
-        self.completion = if self.cmdline_eval.is_some() {
+        self.completion = if self.in_nested_read() {
             Vec::new()
         } else {
             (self.completion_fn)(editor, &self.line[..self.cursor])
@@ -1149,6 +1237,42 @@ impl Prompt {
         // list visible rather than selecting one of them.
         self.completion = (self.completion_fn)(editor, &self.line);
         self.exit_selection();
+        true
+    }
+
+    /// vim `c_CTRL-A`: "All names that match the pattern in front of the cursor
+    /// are inserted" (cmdline.txt) — every candidate at once, space separated, in
+    /// place of the pattern, with no candidate selected afterwards. Returns
+    /// whether anything was inserted.
+    ///
+    /// Like `c_CTRL-D`, the pattern is the line *up to the cursor* and not the
+    /// whole line, so the candidates come from that prefix; what follows the
+    /// cursor is left alone, which is why this replaces an explicit
+    /// `start..cursor` range rather than the candidate's open-ended one.
+    fn complete_insert_all_matches(&mut self, editor: &Editor) -> bool {
+        // A nested read is not the command line, so it has no names to insert.
+        if self.in_nested_read() {
+            return false;
+        }
+        let candidates = (self.completion_fn)(editor, &self.line[..self.cursor]);
+        let Some((range, _)) = candidates.first() else {
+            return false;
+        };
+        let start = range.start;
+        let joined = candidates
+            .iter()
+            .map(|(_, item)| item.content.as_ref())
+            .collect::<Vec<&str>>()
+            .join(" ");
+        if self.line[start..self.cursor] == joined {
+            return false;
+        }
+        self.line.replace_range(start..self.cursor, &joined);
+        self.cursor = start + joined.len();
+        // The line changed, so the candidate list is stale: recompute it against
+        // what is now there (which normally leaves it empty — the inserted list is
+        // not itself a pattern) and select nothing, as vim does after `CTRL-A`.
+        self.recalculate_completion(editor);
         true
     }
 
@@ -1439,9 +1563,9 @@ impl Prompt {
         editor: &Editor,
         backward: bool,
     ) -> Result<bool, String> {
-        let Some(register) = self.history_register else {
+        if self.history_register.is_none() {
             return Err("this prompt keeps no history".to_string());
-        };
+        }
         let pattern = match &self.history_search {
             Some((pat, applied)) if *applied == self.line => pat.clone(),
             _ => self.line.clone(),
@@ -1449,32 +1573,17 @@ impl Prompt {
         if pattern.is_empty() {
             return Err("no regexp — type one first".to_string());
         }
-        let re = regex::Regex::new(&pattern).map_err(|e| format!("bad regexp: {e}"))?;
-        // Oldest first, the order `change_history` indexes history in.
-        let entries: Vec<String> = match editor.registers.read(register, editor) {
-            Some(values) => values.map(|v| v.to_string()).rev().collect(),
-            None => Vec::new(),
-        };
-        if entries.is_empty() {
-            return Ok(false);
-        }
-        // Searching starts from where history navigation currently sits: past the
-        // newest entry when nothing has been recalled yet.
-        let from = self.history_pos.unwrap_or(entries.len());
-        let found = if backward {
-            (0..from.min(entries.len()))
-                .rev()
-                .find(|&i| re.is_match(&entries[i]))
-        } else {
-            (from + 1..entries.len()).find(|&i| re.is_match(&entries[i]))
-        };
-        let Some(index) = found else {
+        // The walk itself is shared with the `M-r` / `M-s` keys, which read the
+        // regexp in a recursive minibuffer instead of taking it off the line.
+        let Some((index, entry, offset)) =
+            self.find_matching_history(editor, &pattern, backward)?
+        else {
             return Ok(false);
         };
-        self.line = entries[index].clone();
+        self.line = entry;
         self.history_pos = Some(index);
         self.history_search = Some((pattern, self.line.clone()));
-        self.move_end();
+        self.cursor = clamp_to_boundary(&self.line, offset);
         self.exit_selection();
         Ok(true)
     }
@@ -1509,7 +1618,12 @@ impl Prompt {
             }
             pattern
         };
+        let folds = self.isearch_fold_snapshot(cx.editor);
         (self.callback_fn)(cx, &input, PromptEvent::Validate);
+        // `isearch-invisible` nil: the committed match has to be a visible one
+        // too. `Validate` searches afresh from where the prompt opened, so it can
+        // land back on a match the incremental search had already stepped over.
+        self.isearch_skip_invisible(cx, folds);
         true
     }
 
@@ -1727,16 +1841,114 @@ impl Prompt {
         // see it — it only ever sees the result the expression produces.
         // `isearch-edit-string` is the same story: while the search string is
         // being edited the search does not run, so the buffer stays where the
-        // last search left it until `RET` resumes.
-        if self.cmdline_eval.is_some() || self.isearch_edit {
+        // last search left it until `RET` resumes. So is the regexp typed into the
+        // recursive minibuffer `M-r` / `M-s` opens.
+        if self.in_nested_read() || self.isearch_edit {
             return;
         }
+        // `isearch-invisible` nil: what the folds looked like before the search
+        // moved, which is what decides whether the match it finds is one Emacs
+        // would have found at all.
+        let folds = self.isearch_fold_snapshot(cx.editor);
         let pattern = self.pattern();
         (self.callback_fn)(cx, &pattern, PromptEvent::Update);
+        // Step off a match a closed fold hid before anything else reads where the
+        // search landed.
+        self.isearch_skip_invisible(cx, folds);
         if self.isearch.is_some() {
             self.isearch_note_result(cx.editor, &pattern);
         }
         self.isearch_reveal(cx);
+    }
+
+    /// The cursor of the match the search is sitting on when a closed fold hides
+    /// it, `None` when it is visible. zmax's invisible text is folded text, so
+    /// this is Emacs's `isearch-range-invisible` test.
+    fn hidden_match_cursor(editor: &Editor) -> Option<usize> {
+        let (view, doc) = current_ref!(editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        doc.folds()
+            .is_line_hidden(text.char_to_line(cursor))
+            .then_some(cursor)
+    }
+
+    /// The fold state to judge the next match against, taken *before* the search
+    /// runs. `None` when there is nothing to judge: not a search, the `M-s i`
+    /// toggle is on (the match is revealed instead), or the prompt has no
+    /// next-match cycle to step with — it is not one of the incremental searches
+    /// (`/`, `?`).
+    ///
+    /// The snapshot is needed because the search opens what it lands in on its own
+    /// (vim `'foldopen'` contains `search`), so by the time the match can be looked
+    /// at, the fold that hid it is already open.
+    fn isearch_fold_snapshot(&self, editor: &Editor) -> Option<zmax_core::fold::Folds> {
+        match self.isearch {
+            None
+            | Some(IsearchFlags {
+                invisible: true, ..
+            }) => return None,
+            Some(_) => {}
+        }
+        self.incsearch_cycle.as_ref()?;
+        let (_view, doc) = current_ref!(editor);
+        Some(doc.folds().clone())
+    }
+
+    /// Put the fold state back as `snapshot` had it, undoing what the search's own
+    /// `'foldopen'` reveal did.
+    fn restore_folds(editor: &mut Editor, snapshot: &zmax_core::fold::Folds) {
+        let (_view, doc) = current!(editor);
+        if doc.folds() != snapshot {
+            *doc.folds_mut() = snapshot.clone();
+        }
+    }
+
+    /// Emacs `isearch-invisible` nil (`M-s i`, off): a match hidden in invisible
+    /// text "is not found at all" — `isearch-range-invisible` rejects it and the
+    /// search goes on to the next one (isearch.el). With the toggle on (Emacs's
+    /// default `search-invisible` = `open`) the match is kept and what hides it
+    /// opened instead, which is [`Prompt::isearch_reveal`].
+    ///
+    /// So each candidate is judged against the fold state as it was *before* the
+    /// search moved, and that state is put back first — a match Emacs would not
+    /// have found must not be left revealed by the search's own `'foldopen'`. The
+    /// step is the incremental search's own next-match cycle, so skipping obeys
+    /// `search.wrap-around` exactly as `C-s` does and goes on in the direction the
+    /// search is running. It stops at the first visible match; when every match has
+    /// been stepped over — the cycle comes back to one already rejected, or stops
+    /// moving with wrapping off — the search has failed, so the buffer goes back to
+    /// where it was, as a failing Emacs search leaves point where the last
+    /// successful one put it.
+    fn isearch_skip_invisible(
+        &mut self,
+        cx: &mut Context,
+        snapshot: Option<zmax_core::fold::Folds>,
+    ) {
+        let Some(snapshot) = snapshot else {
+            return;
+        };
+        let line = self.line.clone();
+        let mut rejected = std::collections::HashSet::new();
+        let mut failed = false;
+        loop {
+            Self::restore_folds(cx.editor, &snapshot);
+            let Some(cursor) = Self::hidden_match_cursor(cx.editor) else {
+                break;
+            };
+            if !rejected.insert(cursor) {
+                failed = true;
+                break;
+            }
+            let Some(cycle) = &mut self.incsearch_cycle else {
+                break;
+            };
+            cycle(cx, &line, true);
+        }
+        if failed {
+            Self::restore_folds(cx.editor, &snapshot);
+            (self.callback_fn)(cx, &line, PromptEvent::Abort);
+        }
     }
 
     /// Emacs `isearch-invisible` (`M-s i`, on): the match the search just landed
@@ -2008,7 +2220,17 @@ impl Prompt {
             return false;
         };
         let (_view, doc) = current_ref!(editor);
-        regex.is_match(doc.text().slice(..).regex_input())
+        let text = doc.text().slice(..);
+        // `isearch-invisible` nil (`M-s i`, off): a match a closed fold hides is
+        // not found at all, so a search with only those left to offer is a failing
+        // one — which is what `C-g` rubs back out of.
+        if matches!(self.isearch, Some(flags) if !flags.invisible) {
+            return regex.find_iter(text.regex_input()).any(|mat| {
+                !doc.folds()
+                    .is_line_hidden(text.char_to_line(text.byte_to_char(mat.start())))
+            });
+        }
+        regex.is_match(text.regex_input())
     }
 
     /// Emacs `isearch-abort` (`C-g`): a search that has found what was asked for
@@ -2083,9 +2305,14 @@ impl Prompt {
 
     /// Emacs `minibuffer-depth-indicate-mode`: the `[N]` a recursive minibuffer
     /// is prefixed with, empty for the outermost one and while the mode is off.
+    ///
+    /// The regexp `M-r` / `M-s` read is read in a recursive minibuffer too — it is
+    /// one prompt component here rather than two, but `minibuffer-depth` counts it,
+    /// so the read is one deeper than the prompt it interrupted.
     fn depth_prefix(&self) -> String {
-        if self.depth > 1 && DEPTH_INDICATE.load(Ordering::Relaxed) {
-            format!("[{}]", self.depth)
+        let depth = self.depth + usize::from(self.history_search_read.is_some());
+        if depth > 1 && DEPTH_INDICATE.load(Ordering::Relaxed) {
+            format!("[{}]", depth)
         } else {
             String::new()
         }
@@ -2132,46 +2359,137 @@ impl Prompt {
     }
 
     /// Emacs `previous-matching-history-element` (`M-r`) / `next-matching-history-element`
-    /// (`M-s`): step back / on to a history entry matching what is typed, read as a
-    /// regexp. Emacs reads that regexp in a recursive minibuffer; here the line
-    /// already holds it, as it does in a shell's history search.
-    fn matching_history(&mut self, cx: &mut Context, older: bool) {
-        let Some(register) = self.history_register else {
+    /// (`M-s`): open the recursive minibuffer that reads the regexp to search the
+    /// history for. The answer being typed is *not* that regexp, so it is set aside
+    /// and comes back whatever the search does.
+    ///
+    /// The prompt is the one `format-prompt` builds in simple.el — "Previous
+    /// element matching regexp" / "Next element matching regexp" — with the newest
+    /// `minibuffer-history-search-history` entry shown as ` (default REGEXP)`,
+    /// because that is what empty input reuses.
+    fn begin_history_search(&mut self, editor: &Editor, backward: bool) {
+        // A prompt that keeps no history has nothing to search, and the read is not
+        // recursive into itself: `M-r` while it is open would lose the answer the
+        // first one set aside.
+        if self.history_register.is_none() || self.history_search_read.is_some() {
+            return;
+        }
+        let prompt = history_search_prompt(backward, &last_history_search_regexp());
+        self.history_search_read = Some(HistorySearchRead {
+            line: std::mem::take(&mut self.line),
+            cursor: std::mem::replace(&mut self.cursor, 0),
+            prompt: std::mem::replace(&mut self.prompt, Cow::Owned(prompt)),
+            backward,
+        });
+        self.recalculate_completion(editor);
+    }
+
+    /// `Enter` in that recursive minibuffer: the regexp is read, the minibuffer
+    /// underneath comes back, and the search runs on it. "Use the last regexp
+    /// specified, by default, if input is empty" (simple.el) — and empty input with
+    /// no last regexp is the `user-error` "No history search regexp".
+    fn finish_history_search(&mut self, cx: &mut Context) {
+        let Some(saved) = self.history_search_read.take() else {
             return;
         };
-        let regex = match regex::Regex::new(&self.line) {
-            Ok(regex) => regex,
-            Err(_) => {
-                cx.editor
-                    .set_error(format!("Invalid regexp: {}", self.line));
-                return;
-            }
+        let typed = std::mem::take(&mut self.line);
+        self.prompt = saved.prompt;
+        self.line = saved.line;
+        self.cursor = saved.cursor;
+        self.recalculate_completion(cx.editor);
+        let pattern = if typed.is_empty() {
+            last_history_search_regexp()
+        } else {
+            typed
         };
+        if pattern.is_empty() {
+            cx.editor.set_error("No history search regexp");
+            return;
+        }
+        push_history_search_regexp(&pattern);
+        self.apply_matching_history(cx, &pattern, saved.backward);
+    }
+
+    /// `Esc` / `C-g` in that recursive minibuffer (`abort-recursive-edit`): the
+    /// regexp is dropped and the answer underneath comes back exactly as it was,
+    /// cursor included. No search runs.
+    fn cancel_history_search(&mut self, editor: &Editor) {
+        let Some(saved) = self.history_search_read.take() else {
+            return;
+        };
+        self.prompt = saved.prompt;
+        self.line = saved.line;
+        self.cursor = saved.cursor;
+        self.recalculate_completion(editor);
+    }
+
+    /// The history walk `previous-matching-history-element` does (simple.el): step
+    /// one entry at a time — older when `backward`, newer when not — until one
+    /// matches `pattern`. Returns its index in oldest-first order, the entry, and
+    /// where point goes in it; `Ok(None)` is "no (further) matching entry".
+    ///
+    /// Point lands *in* the match: Emacs matches `".*\(REGEXP\)"` going back, so
+    /// the start of the **last** match on the entry, and plain `REGEXP` going on,
+    /// so the end of the **first** one.
+    fn find_matching_history(
+        &self,
+        editor: &Editor,
+        pattern: &str,
+        backward: bool,
+    ) -> Result<Option<(usize, String, usize)>, String> {
+        let Some(register) = self.history_register else {
+            return Ok(None);
+        };
+        // "history elements are matched case-insensitively if `case-fold-search'
+        // is non-nil, but an uppercase letter in REGEXP makes the search
+        // case-sensitive" (simple.el) — which is zmax's `search.smart-case`.
+        let case_insensitive =
+            editor.config().search.smart_case && !pattern.chars().any(char::is_uppercase);
+        let regex = regex::RegexBuilder::new(pattern)
+            .case_insensitive(case_insensitive)
+            .build()
+            .map_err(|_| format!("Invalid regexp: {pattern}"))?;
         // `change_history` counts the history from its oldest entry, and the ring
         // reads most-recent first, so it is reversed to share that index.
-        let mut entries: Vec<String> = match cx.editor.registers.read(register, cx.editor) {
-            Some(values) => values.map(|value| value.to_string()).collect(),
-            None => return,
+        let entries: Vec<String> = match editor.registers.read(register, editor) {
+            Some(values) => values.map(|value| value.to_string()).rev().collect(),
+            None => return Ok(None),
         };
-        entries.reverse();
         let start = self.history_pos.unwrap_or(entries.len());
-        let found = if older {
+        let found = if backward {
             (0..start.min(entries.len()))
                 .rev()
                 .find(|&i| regex.is_match(&entries[i]))
         } else {
             (start + 1..entries.len()).find(|&i| regex.is_match(&entries[i]))
         };
-        let Some(index) = found else {
-            cx.editor.set_error("No matching history element");
-            return;
-        };
-        (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
-        self.line = entries[index].clone();
-        self.history_pos = Some(index);
-        self.move_end();
-        self.fire_update(cx);
-        self.recalculate_completion(cx.editor);
+        Ok(found.map(|index| {
+            let entry = entries[index].clone();
+            let offset = matching_history_point(&regex, &entry, backward);
+            (index, entry, offset)
+        }))
+    }
+
+    /// Put the entry the walk found on the line — Emacs's
+    /// `delete-minibuffer-contents` + `insert` + `goto-char` — and report the
+    /// `user-error` it signals when there is none to put there.
+    fn apply_matching_history(&mut self, cx: &mut Context, pattern: &str, backward: bool) {
+        match self.find_matching_history(cx.editor, pattern, backward) {
+            Err(e) => cx.editor.set_error(e),
+            Ok(None) => cx.editor.set_error(if backward {
+                "No earlier matching history item"
+            } else {
+                "No later matching history item"
+            }),
+            Ok(Some((index, entry, offset))) => {
+                (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
+                self.line = entry;
+                self.history_pos = Some(index);
+                self.cursor = clamp_to_boundary(&self.line, offset);
+                self.fire_update(cx);
+                self.recalculate_completion(cx.editor);
+            }
+        }
     }
 
     /// Emacs `minibuffer-complete-defaults` (`C-x DOWN`): offer the prompt's
@@ -2585,6 +2903,11 @@ impl Component for Prompt {
             ctrl!('c') | key!(Esc) if self.cmdline_eval.is_some() => {
                 self.cancel_cmdline_eval(cx.editor);
             }
+            // Emacs `abort-recursive-edit`: in the recursive minibuffer `M-r` /
+            // `M-s` opened these drop the regexp, not the answer underneath.
+            ctrl!('c') | ctrl!('g') | key!(Esc) if self.history_search_read.is_some() => {
+                self.cancel_history_search(cx.editor);
+            }
             ctrl!('c') | key!(Esc) => {
                 (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
                 return close_fn;
@@ -2834,7 +3157,7 @@ impl Component for Prompt {
                 if isearch {
                     self.isearch_toggle(cx, IsearchToggle::Regexp);
                 } else {
-                    self.matching_history(cx, true);
+                    self.begin_history_search(cx.editor, true);
                 }
             }
             // `isearch-complete`: complete the search string from the search ring.
@@ -2845,7 +3168,7 @@ impl Component for Prompt {
                 self.pending_isearch_s = true;
                 if !isearch {
                     self.pending_isearch_s = false;
-                    self.matching_history(cx, false);
+                    self.begin_history_search(cx.editor, false);
                 }
             }
 
@@ -2887,6 +3210,13 @@ impl Component for Prompt {
             ctrl!('b') | key!(Left) => self.move_cursor(Movement::BackwardChar(1)),
             ctrl!('f') | key!(Right) => self.move_cursor(Movement::ForwardChar(1)),
             ctrl!('e') | key!(End) => self.move_end(),
+            // vim `c_CTRL-A`: insert every name matching the pattern in front of
+            // the cursor. Only in the vim presets — in the Emacs ones `C-a` is
+            // `beginning-of-line`, the arm below.
+            ctrl!('a') if cx.editor.vim_semantics => {
+                self.complete_insert_all_matches(cx.editor);
+                self.fire_update(cx);
+            }
             ctrl!('a') | key!(Home) => self.move_start(),
             // vim incsearch: C-g next match, C-t previous match (search prompts only;
             // in the Emacs presets `C-g` is `isearch-abort`, handled above).
@@ -2961,6 +3291,13 @@ impl Component for Prompt {
             key!(Enter) | ctrl!('j') if self.cmdline_eval.is_some() => {
                 self.finish_cmdline_eval(cx);
             }
+            // Emacs `previous-matching-history-element` / `next-matching-history-element`:
+            // `<Enter>` in the recursive minibuffer ends *that* read — the regexp is
+            // what it returns — and the history search runs with it. The prompt
+            // underneath stays open on whatever the search found.
+            key!(Enter) | ctrl!('j') if self.history_search_read.is_some() => {
+                self.finish_history_search(cx);
+            }
             // Emacs `isearch-edit-string`: `RET` resumes the incremental search
             // with the edited string instead of ending the search — it takes a
             // second one to stop on the match that finds.
@@ -2982,6 +3319,22 @@ impl Component for Prompt {
                     return close_fn;
                 }
             }
+            // The recursive minibuffer `M-r` / `M-s` opens reads its regexp with a
+            // history of its own (`minibuffer-history-search-history`), not the
+            // answer's — and only that list's newest entry is kept, so there is
+            // nothing to walk. Walking the answer's history here would replace the
+            // answer the read set aside, which is what these keys must not do.
+            alt!('p')
+            | ctrl!('p')
+            | key!(Up)
+            | shift!(Up)
+            | key!(PageUp)
+            | alt!('n')
+            | ctrl!('n')
+            | key!(Down)
+            | shift!(Down)
+            | key!(PageDown)
+                if self.history_search_read.is_some() => {}
             // Emacs `previous-history-element` (`M-p`, `UP`), which in a search is
             // `isearch-ring-retreat`: back to the search string used before this one.
             alt!('p') | ctrl!('p') | key!(Up) | shift!(Up) | key!(PageUp) => {
@@ -3103,6 +3456,38 @@ mod tests {
         p.line_area = Rect::new(area_x, 0, 40, 1);
         p.anchor = anchor;
         p
+    }
+
+    /// Emacs `previous-matching-history-element` puts point *in* the match, and
+    /// which end of it depends on the direction: going back it matches
+    /// `".*\(REGEXP\)"`, so the **last** match's start, and going on plain
+    /// `REGEXP`, so the **first** match's end (simple.el). Landing at the end of
+    /// the recalled entry instead — which is what history recall does — would lose
+    /// that entirely.
+    #[test]
+    fn matching_history_point_follows_the_search_direction() {
+        let re = regex::Regex::new("ab").unwrap();
+        assert_eq!(matching_history_point(&re, "xabyab", true), 4);
+        assert_eq!(matching_history_point(&re, "xabyab", false), 3);
+        // An entry with no match at all (nothing the walk would return) leaves
+        // point at the end rather than panicking on the missing match.
+        assert_eq!(matching_history_point(&re, "zzz", true), 3);
+    }
+
+    /// The regexp `M-r` / `M-s` search the history with is read in a recursive
+    /// minibuffer whose prompt is `format-prompt`'s (simple.el) — and the last
+    /// regexp searched for is offered there as the default, because empty input
+    /// reuses it.
+    #[test]
+    fn history_search_prompt_offers_the_last_regexp() {
+        assert_eq!(
+            history_search_prompt(true, ""),
+            "Previous element matching regexp: "
+        );
+        assert_eq!(
+            history_search_prompt(false, "^:w"),
+            "Next element matching regexp (default ^:w): "
+        );
     }
 
     /// vim `c_<LeftMouse>`: the click column maps back to a byte index. This is the

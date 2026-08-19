@@ -743,6 +743,7 @@ impl MappableCommand {
         describe_char, "Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =)",
         emoji_describe, "Say what the emoji after point is called (emacs emoji-describe)",
         emoji_list, "Pick an emoji by name and insert it (emacs emoji-list)",
+        emoji_recent, "Insert one of the recently-used emoji (emacs emoji-recent, C-x 8 e r)",
         view_hello_file, "Show a multi-script greeting sample (emacs view-hello-file, C-h h)",
         view_echo_area_messages, "Show the last echo-area message (emacs view-echo-area-messages, C-h e)",
         describe_copying, "Show zmax's copying license, the GPL (emacs describe-copying, C-h C-c)",
@@ -1048,6 +1049,8 @@ impl MappableCommand {
         command_history_picker, "Fuzzy-pick and run a past command line (:History:)",
         cmdline_window, "Edit the command-line history in a buffer; <CR> runs the line (vim q:)",
         cmdline_window_execute, "Run the command-line under the cursor and close the window (vim q: <CR>)",
+        search_cmdline_window, "Edit the search history in a buffer; <CR> searches forward (vim q/)",
+        rsearch_cmdline_window, "Edit the search history in a buffer; <CR> searches backward (vim q?)",
         search_history_picker, "Fuzzy-pick and re-run a past search (:History/)",
         unicode_picker, "Fuzzy-pick a character/digraph and insert it (helm-unicode)",
         git_file_log_picker, "Commit log for the current file (:BCommits)",
@@ -1212,6 +1215,7 @@ impl MappableCommand {
         project_async_shell_command, "Run an async shell command in the project (emacs project-async-shell-command)",
         project_eshell, "Open a shell buffer for the project (emacs project-eshell)",
         xref_find_definitions_other_window, "Goto definition in another window (emacs xref-find-definitions-other-window)",
+        xref_find_definitions_other_frame, "Goto definition in another frame (emacs xref-find-definitions-other-frame, C-x 5 .)",
         info_search_other_window, "Open the Info directory node in another window (emacs info-other-window)",
         xref_query_replace_in_results, "Query-replace across xref/project results (emacs xref-query-replace-in-results)",
         xref_find_references_and_replace, "Find references and replace them (emacs xref-find-references-and-replace)",
@@ -1396,6 +1400,7 @@ impl MappableCommand {
         keep_primary_selection, "Keep primary selection",
         remove_primary_selection, "Remove primary selection",
         completion, "Invoke completion popup",
+        semantic_analyze_possible_completions, "List the completions possible at point in another window (semantic-analyze-possible-completions, C-c , l)",
         hover, "Show docs for item under cursor",
         keyword_lookup, "vim K: run keywordprg on the word under cursor, else LSP hover",
         goto_first_nonwhitespace_down, "vim _: first non-blank, count-1 lines down",
@@ -1466,6 +1471,7 @@ impl MappableCommand {
         new_tab, "Open a new tabpage (:tabnew)",
         close_tab, "Close the current tabpage (:tabclose)",
         tab_only, "Close all other tabpages (:tabonly)",
+        tab_move_right, "Move the current tab one position right, N with a prefix (emacs tab-move, C-x t m)",
         window_to_new_tab, "Move the current window to a new tabpage (vim CTRL-W T)",
         goto_first_tabpage, "Go to the first tabpage (:tabfirst)",
         goto_last_tabpage, "Go to the last tabpage (:tablast)",
@@ -1488,6 +1494,7 @@ impl MappableCommand {
         forward_sexp, "Move forward over the next s-expression (emacs forward-sexp, C-M-f)",
         backward_sexp, "Move backward over the previous s-expression (emacs backward-sexp, C-M-b)",
         prog_indent_sexp, "Re-indent the s-expression after point, or the enclosing defun with a prefix (emacs prog-indent-sexp, C-M-q; here = s)",
+        prog_fill_reindent_defun, "Fill the comment/string at point, else reindent the defun around it (emacs prog-fill-reindent-defun, M-q in prog modes)",
         copy_region_as_kill, "Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w)",
         copy_as_format, "Copy the region or line to the kill ring, wrapped for the default format (spacemacs copy-as-format)",
         copy_as_format_asciidoc, "Copy the region or line as an AsciiDoc source block (copy-as-format-asciidoc)",
@@ -1790,7 +1797,9 @@ impl MappableCommand {
         outline_cycle_buffer, "Cycle the whole buffer show-all -> overview -> contents (emacs outline-cycle-buffer)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
+        fold_toggle_recursive, "Toggle the fold under the cursor and every fold nested in it (zA)",
         fold_open, "Open fold under cursor (zo)",
+        fold_view_cursor, "View cursor line: open just enough folds to unhide it (zv)",
         fold_close, "Close fold under cursor (zc)",
         fold_open_recursive, "Open fold under cursor and all nested folds (IntelliJ Expand Recursively)",
         fold_close_recursive, "Close fold under cursor and all nested folds (IntelliJ Collapse Recursively)",
@@ -1800,6 +1809,7 @@ impl MappableCommand {
         fold_more, "Fold more: close one more level of nested folds (zm)",
         fold_less, "Fold less: open one more level of nested folds (zr)",
         fold_delete, "Delete fold under cursor (zd)",
+        fold_delete_recursive, "Delete the fold under the cursor and every fold nested in it (zD)",
         fold_delete_all, "Delete all folds (zE)",
         narrow_to_region, "Narrow the buffer to the selected region (SPC n r)",
         widen, "Widen: remove narrowing and reveal the whole buffer (SPC n w)",
@@ -1834,6 +1844,7 @@ impl MappableCommand {
         kmacro_end_or_call_macro, "End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4)",
         kmacro_end_or_call_macro_repeat, "Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat)",
         kmacro_edit_macro, "Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro)",
+        edit_kbd_macro, "Ask which keyboard macro to edit, then edit its keys (emacs edit-kbd-macro, C-x C-k e)",
         edmacro_insert_key, "Read one literal key and insert its written name at point (emacs edmacro-insert-key)",
         edmacro_set_macro_to_region_lines, "Set the kbd macro to the lines the region covers (emacs edmacro-set-macro-to-region-lines)",
         kmacro_step_edit_macro, "Step through the last kbd macro key by key, editing as you go (emacs kmacro-step-edit-macro)",
@@ -2152,6 +2163,7 @@ impl MappableCommand {
         studlify_buffer, "StudlyCaps the whole buffer (emacs studlify-buffer)",
         studlify_word, "StudlyCaps the word after point (emacs studlify-word)",
         indent_relative, "Indent to under the next indent point in the previous line (emacs indent-relative)",
+        tab_to_tab_stop, "Pad with spaces or tabs to the next tab stop (emacs tab-to-tab-stop, M-i)",
         indent_code_rigidly, "Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r)",
         indent_sexp_rigidly, "Reindent this line and shift the grouping starting on it by the same amount (emacs C-u TAB)",
         c_hungry_delete_forward, "Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f)",
@@ -2237,6 +2249,7 @@ impl MappableCommand {
         dap_restart, "Restart debugging session",
         dap_toggle_breakpoint, "Toggle breakpoint",
         dap_remove_breakpoint, "Remove breakpoint on current line (Emacs gud-remove)",
+        dap_set_breakpoint, "Set a breakpoint on the current line, leaving an existing one alone (Emacs gud-break)",
         dap_continue, "Continue program execution",
         dap_run_to_cursor, "Run the debugger up to the cursor line (JetBrains Run To Cursor)",
         dap_pause, "Pause program execution",
@@ -2349,6 +2362,7 @@ impl MappableCommand {
         kmacro_menu_edit_format, "Edit the counter format of the macro at point (emacs kmacro-menu-edit-format)",
         kmacro_menu_edit_position, "Move the macro at point to another ring position (emacs kmacro-menu-edit-position)",
         kmacro_end_macro, "End the keyboard macro being defined (emacs kmacro-end-macro, C-x ))",
+        kmacro_start_macro, "Start defining a keyboard macro; C-u appends to the last one (emacs kmacro-start-macro, C-x ()",
         kmacro_start_macro_or_insert_counter, "Start a kbd macro, or insert the counter while defining one (emacs kmacro-start-macro-or-insert-counter, F3)",
         keymap_global_set, "Bind a key sequence to a command, live (emacs keymap-global-set)",
         keymap_global_unset, "Remove a key sequence's global binding (emacs keymap-global-unset)",
@@ -2509,6 +2523,7 @@ impl MappableCommand {
         command_query, "Ask a question before a named command runs (emacs command-query; C-u asks yes/no)",
         recursive_edit, "Enter a recursive editing level (emacs recursive-edit)",
         exit_recursive_edit, "Leave the innermost recursive editing level (emacs exit-recursive-edit, C-M-c)",
+        abort_recursive_edit, "Abort the command that opened the innermost recursive edit (emacs abort-recursive-edit, C-])",
         kbd_macro_query, "Ask how to continue when a running keyboard macro reaches this point (emacs kbd-macro-query, C-x q)",
         ispell_kill_ispell, "Kill the spell checker so the next check reloads the dictionary (emacs ispell-kill-ispell)",
         minibuffer_complete_defaults, "Complete the minibuffer input against the prompt's default (emacs minibuffer-complete-defaults, C-x DOWN)",
@@ -5935,14 +5950,12 @@ fn fortran_fill_comment_lines(lines: &[&str], width: usize) -> Vec<String> {
 /// trailing comment on the statement is not detached and re-attached the way
 /// `fortran-break-line` does.
 fn fortran_fill_paragraph(cx: &mut Context) {
-    let width = {
-        let w = cx.editor.config().text_width;
-        if w == 0 {
-            72
-        } else {
-            w
-        }
-    };
+    // fortran.el: `(defcustom fortran-line-length 72 …)` and, in `fortran-mode`,
+    // `(setq-local fill-column fortran-line-length)` — the fill column in a
+    // fixed-form buffer IS the line length, because columns 73+ are sequence
+    // numbers rather than code. Reading the editor's `text_width` instead broke
+    // statements at its default of 80, i.e. past the code columns entirely.
+    let width = 72;
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let slice = text.slice(..);
@@ -7210,6 +7223,17 @@ thread_local! {
     /// (E1292) — there is no nesting — and `<CR>` must only run a line when the
     /// buffer under it really is one.
     static CMDWIN_OPEN: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+
+    /// *Which* command-line window is open: `None` for the Ex history (`q:`),
+    /// `Some(forward)` for the search history (`q/` forward, `q?` backward).
+    ///
+    /// cmdline.txt: "q: q/ q?  … edit Ex commands or search strings
+    /// respectively". `<CR>` runs the line under the cursor either way, so it
+    /// needs to know which one it is looking at; the direction also survives into
+    /// `last_search_forward`, so after `q?` a later `n` repeats backward the way
+    /// it does after a plain `?pat`.
+    static CMDWIN_SEARCH: std::cell::Cell<Option<bool>> =
+        const { std::cell::Cell::new(None) };
 }
 
 /// vim `q:` — the command-line window: the Ex command history in a real buffer,
@@ -7220,11 +7244,30 @@ thread_local! {
 /// `cmdline-window`, which is what puts `<CR>` on [`cmdline_window_execute`]
 /// (see `keymap::major_mode`).
 ///
-/// `q/` and `q?` open the search-history version in vim. They are not wired here
-/// yet: running a line as a search means compiling the pattern the way the `/`
-/// prompt does (smartcase and the rest), and pointing them at this window without
-/// that would open a buffer whose `<CR>` does the wrong thing.
+/// `q/` / `q?` are the search-history version — same window, same `<CR>`, over
+/// the `/` register instead of `:`; see [`search_cmdline_window`].
 fn cmdline_window(cx: &mut Context) {
+    cmdline_window_impl(cx, ':', None)
+}
+
+/// vim `q/` — the command-line window over the *search* history: the `/` register
+/// in a buffer, `<CR>` running the line under the cursor as a forward search.
+///
+/// The only thing that differs from `q:` is what `<CR>` does with the line, so
+/// the window itself is the same one (same major mode, same close path); the
+/// direction rides along in `CMDWIN_SEARCH`.
+fn search_cmdline_window(cx: &mut Context) {
+    cmdline_window_impl(cx, '/', Some(true))
+}
+
+/// vim `q?` — the backward half of [`search_cmdline_window`]. The pattern is
+/// searched for backward and `last_search_forward` is left false, so a following
+/// `n` repeats backward, exactly as after `?pat`.
+fn rsearch_cmdline_window(cx: &mut Context) {
+    cmdline_window_impl(cx, '/', Some(false))
+}
+
+fn cmdline_window_impl(cx: &mut Context, register: char, search: Option<bool>) {
     // vim: "Once a command-line window is open it is not possible to open another
     // one."
     if CMDWIN_OPEN.with(|k| k.get()) {
@@ -7235,7 +7278,7 @@ fn cmdline_window(cx: &mut Context) {
     let history: Vec<String> = cx
         .editor
         .registers
-        .read(':', cx.editor)
+        .read(register, cx.editor)
         .map(|values| values.map(|v| v.into_owned()).collect())
         .unwrap_or_default();
 
@@ -7248,7 +7291,37 @@ fn cmdline_window(cx: &mut Context) {
     // instead of the newest command.
     let content = history.join("\n");
 
-    show_text_in_scratch(cx.editor, &content);
+    // vim opens the command-line window as a split at the bottom of the screen —
+    // "its height is decided by 'cmdwinheight' (if there is room)" (cmdline.txt).
+    // Not `show_text_in_scratch`: that takes over the whole window (Action::Replace),
+    // which leaves 'cmdwinheight' nothing to size.
+    let previous = cx.editor.tree.focus;
+    cx.editor.new_file(Action::HorizontalSplit);
+    {
+        let (view, doc) = current!(cx.editor);
+        doc.ensure_view_init(view.id);
+        let transaction =
+            Transaction::insert(doc.text(), doc.selection(view.id), content.as_str().into())
+                .with_selection(Selection::point(0));
+        doc.apply(&transaction, view.id);
+        doc.append_changes_to_history(view);
+    }
+    if cx.editor.tree.focus != previous {
+        // 'cmdwinheight' defaults to 7 (vim_options_data.rs:61); `cwh` is its
+        // abbreviation, which `:set cwh=3` stores under.
+        let wanted = typed::vim_opt_num("cmdwinheight")
+            .or_else(|| typed::vim_opt_num("cwh"))
+            .unwrap_or(7) as i16;
+        let view_id = cx.editor.tree.focus;
+        let current = cx.editor.tree.get(view_id).area.height as i16;
+        let delta = wanted - current;
+        // `resize_vertical` borrows from the *next* sibling, which the new window
+        // does not have when the split put it last; then take the rows from the
+        // window it was split off instead (as `show_text_in_scratch` does).
+        if delta != 0 && !cx.editor.tree.resize_vertical(view_id, delta) {
+            cx.editor.tree.resize_vertical(previous, -delta);
+        }
+    }
     let (view, doc) = current!(cx.editor);
     doc.set_major_mode(Some("cmdline-window"));
     // Land on the last (empty) line, where vim leaves the cursor — not on the
@@ -7257,8 +7330,14 @@ fn cmdline_window(cx: &mut Context) {
     let pos = doc.text().line_to_char(last);
     doc.set_selection(view.id, Selection::point(pos));
     CMDWIN_OPEN.with(|k| k.set(true));
-    cx.editor
-        .set_status("command-line window — <CR> runs the line under the cursor, :q discards");
+    CMDWIN_SEARCH.with(|k| k.set(search));
+    cx.editor.set_status(match search {
+        None => "command-line window — <CR> runs the line under the cursor, :q discards",
+        Some(true) => "search window — <CR> searches for the line under the cursor, :q discards",
+        Some(false) => {
+            "search window (backward) — <CR> searches for the line under the cursor, :q discards"
+        }
+    });
 }
 
 /// vim `<CR>` in the command-line window: run the line under the cursor.
@@ -7281,8 +7360,15 @@ fn cmdline_window_execute(cx: &mut Context) {
             .trim_end_matches('\n')
             .to_string()
     };
+    let search = CMDWIN_SEARCH.with(|k| k.get());
     cmdline_window_close(cx);
     if line.trim().is_empty() {
+        return;
+    }
+    // The search window (`q/` / `q?`) runs the line as a search rather than as an
+    // Ex command — the same `<CR>`, over a different history.
+    if let Some(forward) = search {
+        cmdline_window_search(cx, &line, forward);
         return;
     }
     let mut bridge = crate::compositor::Context {
@@ -7298,8 +7384,33 @@ fn cmdline_window_execute(cx: &mut Context) {
 /// one — so the flag is cleared on the way through here.
 fn cmdline_window_close(cx: &mut Context) {
     CMDWIN_OPEN.with(|k| k.set(false));
+    CMDWIN_SEARCH.with(|k| k.set(None));
     let doc_id = doc!(cx.editor).id();
     let _ = cx.editor.close_document(doc_id, true);
+}
+
+/// Run one line of the search command-line window as a search, from the window
+/// the search window was opened over (it has already been closed by the caller).
+///
+/// The line becomes the new search pattern the same way the `/` prompt's submit
+/// makes it one — pushed to the `/` register, which is where `n`/`N` read it
+/// from — and the direction is recorded so those repeats follow it.
+fn cmdline_window_search(cx: &mut Context, line: &str, forward: bool) {
+    if let Err(err) = cx.editor.registers.push('/', line.to_string()) {
+        cx.editor.set_error(err.to_string());
+        return;
+    }
+    cx.editor.registers.last_search_register = '/';
+    cx.editor.last_search_forward = forward;
+    // The pattern lives in `/`, not in whatever register the `q` was prefixed
+    // with; clear it so the repeat impl falls through to `last_search_register`.
+    cx.register = None;
+    let direction = if forward {
+        Direction::Forward
+    } else {
+        Direction::Backward
+    };
+    search_next_or_prev_impl(cx, Movement::Move, direction);
 }
 
 fn vim_record_macro(cx: &mut Context) {
@@ -7309,7 +7420,11 @@ fn vim_record_macro(cx: &mut Context) {
     }
     cx.editor.autoinfo = Some(Info::new(
         "Record macro",
-        &[("a-z0-9\"", "register"), (":", "command-line window")],
+        &[
+            ("a-z0-9\"", "register"),
+            (":", "command-line window"),
+            ("/ ?", "search window (forward / backward)"),
+        ],
     ));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
@@ -7320,6 +7435,15 @@ fn vim_record_macro(cx: &mut Context) {
             // recording then)" — which the check above already guarantees.
             if ch == ':' {
                 return cmdline_window(cx);
+            }
+            // cmdline.txt: "q/ q?  Open the command-line window over the search
+            // history" — the same window, the `/` register, and a `<CR>` that
+            // searches. `?` differs only in direction.
+            if ch == '/' {
+                return search_cmdline_window(cx);
+            }
+            if ch == '?' {
+                return rsearch_cmdline_window(cx);
             }
             cx.register = Some(ch);
             record_macro(cx);
@@ -8203,6 +8327,42 @@ fn indent_relative(cx: &mut Context) {
     let pad = " ".repeat(spaces);
     let tx = Transaction::insert(text, doc.selection(view.id), Tendril::from(pad.as_str()));
     doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `tab-to-tab-stop` (`M-i`): "Insert spaces or tabs to next defined
+/// tab-stop column. The variable `tab-stop-list` is a list of columns at which
+/// there are tab stops."
+///
+/// `M-i` used to run `insert_tab`, which inserts one *indent unit* — that is
+/// `TAB`'s job. This one pads to a *column*. zmax's `tab-stop-list` is
+/// `Editor::picture_tab_stops`, the list `M-x edit-tab-stops` edits; with none
+/// set, `indent-next-tab-stop` falls back to the next multiple of `tab-width`.
+///
+/// `tab-to-tab-stop` runs `(delete-horizontal-space t)` first — the white space
+/// *before* point goes, so a run left by an earlier, narrower stop is re-laid-out
+/// rather than added to. The padding is tabs when the buffer indents with tabs
+/// (emacs's `indent-tabs-mode`), spaces otherwise.
+fn tab_to_tab_stop(cx: &mut Context) {
+    let stops = cx.editor.picture_tab_stops.clone();
+    let (view, doc) = current!(cx.editor);
+    let tab_width = doc.tab_width();
+    let use_tabs = !matches!(doc.indent_style, IndentStyle::Spaces(_));
+    let text = doc.text().slice(..);
+    let transaction = Transaction::change(
+        doc.text(),
+        doc.selection(view.id).ranges().iter().map(|range| {
+            let cursor = range.cursor(text);
+            let col = cursor_display_column(text, cursor, tab_width);
+            let target = zmax_core::picture::next_tab_stop(col, &stops)
+                .unwrap_or_else(|| (col / tab_width + 1) * tab_width);
+            let from = leading_white_start(text, cursor);
+            let start_col = cursor_display_column(text, from, tab_width);
+            let fill = fill_to_column(start_col, target, tab_width, use_tabs);
+            (from, cursor, Some(Tendril::from(fill.as_str())))
+        }),
+    );
+    doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
 }
 
@@ -13217,22 +13377,28 @@ fn isearch_complete(cx: &mut Context) {
                 .set_status(format!("I-search: {input} (sole match)"));
         }
         search::TryCompletion::Ambiguous => {
-            // Nothing to insert, so show what it could still become — the role
-            // of emacs's `*Isearch completions*` buffer.
+            // Nothing to insert, so show what it could still become. `isearch-complete1`
+            // does this with `(with-output-to-temp-buffer "*Isearch completions*"
+            // (display-completion-list completions))` — a buffer holding *every*
+            // candidate, not an echo-area line, which is why this is a scratch
+            // buffer (zmax's temp-buffer display) and not a truncated set_status.
+            let lower = input.to_lowercase();
             let shown: Vec<&str> = entries
                 .iter()
                 .filter(|e| {
                     if fold {
-                        e.to_lowercase().starts_with(&input.to_lowercase())
+                        e.to_lowercase().starts_with(&lower)
                     } else {
                         e.starts_with(&input)
                     }
                 })
                 .map(String::as_str)
-                .take(8)
                 .collect();
-            cx.editor
-                .set_status(format!("I-search completions: {}", shown.join("  ")));
+            // `completion-setup-function`'s header line. Emacs's precedes it with
+            // "Click on a completion to select it"; that instruction is left out
+            // because this listing is a plain buffer with nothing to click.
+            let out = format!("Possible completions are:\n{}\n", shown.join("\n"));
+            show_text_in_scratch(cx.editor, &out);
         }
         search::TryCompletion::None => {
             cx.editor.set_error("No completion");
@@ -30755,6 +30921,20 @@ fn close_tab(cx: &mut Context) {
 fn tab_only(cx: &mut Context) {
     cx.editor.tab_only();
 }
+/// Emacs `tab-move` / `tab-bar-move-tab` (`C-x t m`): "Move the current tab ARG
+/// positions to the right", ARG coming from the prefix argument (`(interactive
+/// "p")`, so a bare press is 1).
+///
+/// tab-bar.el computes the target as `(mod (+ from-index arg) (length tabs))` —
+/// it wraps, so moving the last tab right puts it first. `:tabmove` is vim's
+/// command of the same name and moves the tab to the *last* position with no
+/// argument; the two disagree, so they are two commands.
+fn tab_move_right(cx: &mut Context) {
+    let count = cx.count();
+    let tabs = cx.editor.tab_count();
+    let to = (cx.editor.current_tab() + count) % tabs.max(1);
+    cx.editor.move_current_tab(to);
+}
 /// vim `CTRL-W T` — move the current window to a new tabpage. Fails when the
 /// current tabpage has only one window (matching vim, which refuses to move the
 /// sole window). Otherwise the window is closed in the old tab and its buffer is
@@ -31961,27 +32141,32 @@ fn view_external_packages(cx: &mut Context) {
     open_gnu_doc(cx, "external packages", "https://elpa.gnu.org/");
 }
 
-/// C-h e: view-echo-area-messages — show the last echo-area message. zmax keeps
-/// only the current status line, not a persistent *Messages* ring, so this is a
-/// reduced view (there is a separate `view-lossage` for the recent key history).
+/// `C-h e` (and spacemacs `SPC w p m`): view-echo-area-messages — pop up the
+/// *Messages* buffer, the log every `set_status` / `set_warning` / `set_error`
+/// writes to (`Editor::messages`, capped by 'messagesopt' history).
+///
+/// It used to read `get_status()` alone and say zmax keeps no persistent log;
+/// there has been one for a while, and `:messages` already renders it. The
+/// severity tags are that command's: `E` error, `W` warning, blank otherwise.
 fn view_echo_area_messages(cx: &mut Context) {
-    let msg = cx
+    if cx.editor.messages.is_empty() {
+        cx.editor.set_status("no messages");
+        return;
+    }
+    let rows: Vec<(&'static str, String)> = cx
         .editor
-        .get_status()
-        .map(|(s, _)| s.to_string())
-        .unwrap_or_default();
-    let body = if msg.is_empty() {
-        "*Messages*\n\n(no message in the echo area)\n\nzmax shows only the current \
-         echo-area message, not a persistent message log.\nUse view-lossage (C-h l) for the \
-         recent key history."
-            .to_string()
-    } else {
-        format!(
-            "*Messages*\n\n{msg}\n\n(zmax keeps only the current echo-area message, \
-             not a persistent log.)"
-        )
-    };
-    show_text_in_scratch(cx.editor, &body);
+        .messages
+        .iter()
+        .map(|(m, sev)| {
+            let tag = match sev {
+                zmax_core::diagnostic::Severity::Error => "E",
+                zmax_core::diagnostic::Severity::Warning => "W",
+                _ => " ",
+            };
+            (tag, m.to_string())
+        })
+        .collect();
+    cx.editor.autoinfo = Some(Info::new("*Messages*", &rows));
 }
 
 /// Render the current mode's whole keymap as sorted "chord  command" lines.
@@ -38728,6 +38913,66 @@ fn prog_indent_sexp(cx: &mut Context) {
     }
 }
 
+/// Emacs `prog-fill-reindent-defun` — `M-q` in `prog-mode-map`: "Refill or
+/// reindent the paragraph or defun that contains point. If the point is in a
+/// string or a comment, fill the paragraph that contains point or follows point.
+/// Otherwise, reindent the function definition that contains point or follows
+/// point."
+///
+/// The two halves are the ones `prog--fill-reindent-defun-default` picks between:
+/// `fill-paragraph` (zmax's reflow) inside prose, and `indent-region` over
+/// `beginning-of-defun`..`end-of-defun` (the tree-sitter `function` object, the
+/// same span `prog_indent_sexp`'s prefix case uses) inside code.
+fn prog_fill_reindent_defun(cx: &mut Context) {
+    // "the point is in a string or a comment" — the tree-sitter node at point,
+    // read with the same walk flyspell-prog-mode uses to find prose in code.
+    // `None` also covers a buffer with no parsed tree at all.
+    let prose = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let end = (cursor + 1).min(slice.len_chars());
+        comment_string_spans_in(doc, cursor, end)
+            .into_iter()
+            .find(|&(from, to)| from <= cursor && cursor < to)
+    };
+    if let Some((from, to)) = prose {
+        // fill-paragraph over the comment or string. The span is selected only so
+        // the reflow has a region; point goes back to a bare cursor afterwards,
+        // since M-q is not a selecting command.
+        let (view, doc) = current!(cx.editor);
+        doc.set_selection(view.id, Selection::single(from, to));
+        reflow_selections(cx);
+        collapse_selection(cx);
+        return;
+    }
+    if doc!(cx.editor).syntax().is_none() {
+        // No grammar for this buffer: neither half of the emacs command can be
+        // decided, so M-q keeps its ordinary meaning (fill) rather than erroring.
+        reflow_selections(cx);
+        return;
+    }
+    match c_function_object(cx) {
+        Some((_vid, from, to)) => {
+            let (start_line, end_line) = {
+                let (_view, doc) = current_ref!(cx.editor);
+                let text = doc.text();
+                (
+                    text.char_to_line(from),
+                    text.char_to_line(to.saturating_sub(1).max(from)),
+                )
+            };
+            c_reindent_lines(cx, start_line, end_line);
+        }
+        // emacs would reindent the *preceding* defun here (`beginning-of-defun`
+        // moves back); saying there is none is better than reindenting a function
+        // the cursor is not in.
+        None => cx
+            .editor
+            .set_status("prog-fill-reindent-defun: no defun at point"),
+    }
+}
+
 /// The `[start_line, end_line]` line range emacs `prog-indent-sexp` re-indents
 /// in the no-prefix case: from the line holding `cursor` to the line holding
 /// the last character of the following s-expression (`indent-region` over the
@@ -44916,8 +45161,29 @@ fn emoji_describe(cx: &mut Context) {
 /// and subgroup are columns to narrow on rather than headings to scroll to, and
 /// the skin-tone variants Emacs hides behind a derived sub-menu are listed flat.
 fn emoji_list(cx: &mut Context) {
-    type Emoji = (&'static str, &'static str, &'static str, &'static str);
+    emoji_picker(cx, EMOJI.to_vec());
+}
 
+/// One row of [`EMOJI`]: glyph, CLDR name, group, subgroup.
+type Emoji = (&'static str, &'static str, &'static str, &'static str);
+
+/// The glyphs inserted from the emoji picker, most recent first — emacs's
+/// `emoji--recent`, which `emoji-recent` (`C-x 8 e r`) offers. `emoji--add-recent`
+/// moves a repeat to the front and cuts the list at 30, which is what this does.
+static EMOJI_RECENT: Lazy<std::sync::Mutex<Vec<Emoji>>> =
+    Lazy::new(|| std::sync::Mutex::new(Vec::new()));
+
+fn emoji_add_recent(emoji: Emoji) {
+    if let Ok(mut recent) = EMOJI_RECENT.lock() {
+        recent.retain(|e| e.0 != emoji.0);
+        recent.insert(0, emoji);
+        recent.truncate(30);
+    }
+}
+
+/// The emoji picker over `entries`: choose one, and the glyph is inserted whole
+/// (a ZWJ sequence is one emoji, not several) and remembered as recent.
+fn emoji_picker(cx: &mut Context, entries: Vec<Emoji>) {
     let columns = [
         ui::PickerColumn::new("emoji", |e: &Emoji, _: &()| e.0.into()),
         ui::PickerColumn::new("name", |e: &Emoji, _: &()| e.1.into()),
@@ -44925,17 +45191,27 @@ fn emoji_list(cx: &mut Context) {
         ui::PickerColumn::new("subgroup", |e: &Emoji, _: &()| e.3.into()),
     ];
 
-    let picker = Picker::new(
-        columns,
-        1,
-        EMOJI.to_vec(),
-        (),
-        |cx, emoji: &Emoji, _action| {
-            // The glyph is inserted whole: a ZWJ sequence is one emoji, not several.
-            insert_at_cursors(cx.editor, emoji.0);
-        },
-    );
+    let picker = Picker::new(columns, 1, entries, (), |cx, emoji: &Emoji, _action| {
+        insert_at_cursors(cx.editor, emoji.0);
+        emoji_add_recent(*emoji);
+    });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Emacs `emoji-recent` (`C-x 8 e r`): "Choose and insert one of the
+/// recently-used emoji glyphs." The list is filled by every insertion from the
+/// picker; emacs seeds its own with two faces, zmax starts empty and says so.
+fn emoji_recent(cx: &mut Context) {
+    let recent = EMOJI_RECENT
+        .lock()
+        .map(|r| r.clone())
+        .unwrap_or_default();
+    if recent.is_empty() {
+        cx.editor
+            .set_error("emoji-recent: no emoji has been inserted yet");
+        return;
+    }
+    emoji_picker(cx, recent);
 }
 
 fn digraph_lookup(a: char, b: char) -> Option<char> {
@@ -49021,6 +49297,87 @@ fn xref_find_definitions_other_window(cx: &mut Context) {
     goto_definition(cx);
 }
 
+/// Semantic's `semantic-analyze-possible-completions` (`C-c , l`): *list* the
+/// completions possible at point, in another window — it does not offer them for
+/// insertion the way the completion popup does. That is the whole difference from
+/// `completion`, which this chord used to run.
+fn semantic_analyze_possible_completions(cx: &mut Context) {
+    use zmax_lsp::lsp;
+    let request = {
+        let (view, doc) = current_ref!(cx.editor);
+        let Some(language_server) = doc
+            .language_servers_with_feature(LanguageServerFeature::Completion)
+            .next()
+        else {
+            cx.editor
+                .set_error("semantic-analyze-possible-completions: no completion provider");
+            return;
+        };
+        let offset_encoding = language_server.offset_encoding();
+        let pos = doc.position(view.id, offset_encoding);
+        // An explicit request, not one a typed character triggered.
+        let context = lsp::CompletionContext {
+            trigger_kind: lsp::CompletionTriggerKind::INVOKED,
+            trigger_character: None,
+        };
+        language_server.completion(doc.identifier(), pos, None, context)
+    };
+    let Some(future) = request else {
+        cx.editor
+            .set_error("semantic-analyze-possible-completions: no completion provider");
+        return;
+    };
+    cx.callback(
+        future,
+        move |editor, _compositor, response: Option<lsp::CompletionResponse>| {
+            let items = match response {
+                Some(lsp::CompletionResponse::Array(items)) => items,
+                Some(lsp::CompletionResponse::List(list)) => list.items,
+                None => Vec::new(),
+            };
+            if items.is_empty() {
+                editor.set_error("no completions at point");
+                return;
+            }
+            // One candidate per line: the label, what it is, and the server's
+            // detail — the columns Semantic's completion listing shows.
+            let mut out = String::from("Possible completions are:\n");
+            for item in &items {
+                out.push_str(&item.label);
+                if let Some(kind) = item.kind {
+                    out.push_str(&format!("\t{kind:?}"));
+                }
+                if let Some(detail) = item.detail.as_deref() {
+                    out.push('\t');
+                    out.push_str(detail);
+                }
+                out.push('\n');
+            }
+            // "in another window": the listing must not take over the buffer the
+            // completions were asked about.
+            display_other_window(editor);
+            show_text_in_scratch(editor, &out);
+        },
+    );
+}
+
+/// `xref-find-definitions-other-frame` (`C-x 5 .`): jump to the definition of
+/// the symbol at point in another frame. The etags branch is
+/// [`xref_find_definitions_other_window`]'s, for the same reason.
+///
+/// The frame comes from `pending_display` (emacs's `other-frame-prefix`), not
+/// from an `Action`: the jump happens inside `goto_definition` with
+/// `Action::Replace`, and that is exactly the plain display `Editor::switch`
+/// redirects into a new frame. `find_file_other_frame` works the same way.
+fn xref_find_definitions_other_frame(cx: &mut Context) {
+    cx.editor.pending_display = Some(zmax_view::editor::DisplayTarget::Frame);
+    if xref_etags_enabled(doc!(cx.editor).id()) {
+        etags_goto_definition(cx, "xref-find-definitions-other-frame", Action::Replace);
+        return;
+    }
+    goto_definition(cx);
+}
+
 /// Emacs `info-other-window` (`C-h 4 i`): `info` in another window. Its
 /// interactive spec only reads a file name under a prefix argument, so with no
 /// prefix it opens the Info directory (`(dir)Top`) straight away rather than
@@ -50839,10 +51196,33 @@ fn fold_toggle(cx: &mut Context) {
     fold_snap_cursor(view, doc);
 }
 
+/// vim `zA`: "When on a closed fold: open it recursively. When on an open fold:
+/// close it recursively" (fold.txt) — `za` for the whole nest, not just the
+/// innermost fold, which is what `zA` was bound to.
+fn fold_toggle_recursive(cx: &mut Context) {
+    ensure_folds(cx);
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    doc.folds_mut().toggle_recursive(line);
+    fold_snap_cursor(view, doc);
+}
+
 fn fold_open(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let line = fold_cursor_line(view, doc);
     doc.folds_mut().open(line);
+}
+
+/// vim `zv`: "View cursor line: Open just enough folds to make the line in which
+/// the cursor is located not folded" (fold.txt).
+///
+/// Not `zo`: `zo` opens the innermost fold at the cursor and stops, so a cursor
+/// line hidden by an outer fold as well stayed hidden.
+fn fold_view_cursor(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    doc.folds_mut().view_line(line);
+    fold_snap_cursor(view, doc);
 }
 
 /// Open the fold at the cursor and every fold nested within it (IntelliJ "Expand Recursively").
@@ -51433,6 +51813,16 @@ fn fold_delete(cx: &mut Context) {
     doc.folds_mut().delete(line);
 }
 
+/// vim `zD`: "Delete folds recursively at the cursor" (fold.txt) — the fold at
+/// the cursor and every fold nested inside it. `zd` deletes only the one and
+/// leaves the nested folds behind ("moved one level up"), which is why the two
+/// cannot share a command.
+fn fold_delete_recursive(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    doc.folds_mut().delete_recursive(line);
+}
+
 fn fold_delete_all(cx: &mut Context) {
     let (_view, doc) = current!(cx.editor);
     doc.folds_mut().clear();
@@ -51991,13 +52381,22 @@ fn kmacro_end_or_call_macro_repeat(cx: &mut Context) {
 /// Shared macro editor: open the given macro key-string in a prompt, and on
 /// accept re-parse it and store it back as the last macro (ring head + `@`).
 fn edit_macro_prompt(cx: &mut Context, title: std::borrow::Cow<'static, str>, initial: String) {
-    ui::prompt_with_input(
-        cx,
+    let prompt = edit_macro_prompt_component(title, initial, cx.editor);
+    cx.push_layer(Box::new(prompt));
+}
+
+/// The *Edit Macro* prompt itself: `initial` is the macro's keys as text, and
+/// accepting parses them and makes them the last macro.
+fn edit_macro_prompt_component(
+    title: std::borrow::Cow<'static, str>,
+    initial: String,
+    editor: &Editor,
+) -> crate::ui::prompt::Prompt {
+    crate::ui::prompt::Prompt::new(
         title,
-        initial,
         None,
-        |_editor, _input| Vec::new(),
-        move |cx, input, event| {
+        |_editor: &Editor, _input: &str| Vec::new(),
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
             if event != PromptEvent::Validate {
                 return;
             }
@@ -52011,7 +52410,21 @@ fn edit_macro_prompt(cx: &mut Context, title: std::borrow::Cow<'static, str>, in
                 Err(err) => cx.editor.set_error(format!("Invalid macro: {err}")),
             }
         },
-    );
+    )
+    .with_line(initial, editor)
+}
+
+/// The same prompt opened from inside *another* prompt's callback, which has only
+/// a compositor context: the layer goes up through a job callback, exactly as
+/// [`prompt_then_cx`] does it.
+fn edit_macro_prompt_cx(cx: &mut crate::compositor::Context, title: String, initial: String) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = edit_macro_prompt_component(title.into(), initial, editor);
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
 }
 
 /// Emacs `edit-kbd-macro` / `kmacro-edit-macro` (C-x C-k C-e): edit the last
@@ -52024,6 +52437,80 @@ fn kmacro_edit_macro(cx: &mut Context) {
         return;
     };
     edit_macro_prompt(cx, "Edit macro: ".into(), macro_str);
+}
+
+/// Emacs `edit-kbd-macro` (`C-x C-k e`): "Edit a keyboard macro. At the prompt,
+/// type any key sequence which is bound to a keyboard macro. Or, type `C-x e` or
+/// RET to edit the last keyboard macro, `C-h l` to edit the last 300 keystrokes
+/// as a keyboard macro, or `M-x` to edit a macro by its command name."
+///
+/// `C-x C-k e` used to run [`kmacro_edit_macro`], which is the *last macro*
+/// variant — what emacs binds on `C-x C-k C-e` and `C-x C-k RET`, and those two
+/// keep it. This one asks which macro.
+///
+/// The answer is read as text rather than as a raw key sequence (zmax has no
+/// "read one key sequence and look it up" prompt), so a macro living in a
+/// register is named by that register's letter and a named macro by its name —
+/// the two places a macro can be besides the ring.
+fn edit_kbd_macro(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Keyboard macro to edit (RET or C-x e last, C-h l lossage, name or register): ".into(),
+        None,
+        // Completion over the named macros: the `M-x <name>` answer.
+        |_editor, input: &str| {
+            zmax_core::kmacro::named_macros()
+                .into_iter()
+                .map(|(name, _)| name)
+                .filter(|name| name.starts_with(input))
+                .map(|name| (0.., name.into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let answer = input.trim();
+            // RET / `C-x e`: the last macro, which is the ring head.
+            if answer.is_empty() || answer == "C-x e" {
+                match macro_ring_head() {
+                    Some(keys) => edit_macro_prompt_cx(cx, "Edit macro: ".into(), keys),
+                    None => cx.editor.set_status("no keyboard macro defined yet"),
+                }
+                return;
+            }
+            // `C-h l`: the recent keystrokes, as a macro.
+            if answer == "C-h l" {
+                match lossage_macro_string(cx.editor) {
+                    Some(keys) => {
+                        edit_macro_prompt_cx(cx, "Edit lossage as macro: ".into(), keys)
+                    }
+                    None => cx.editor.set_status("no recent keys recorded yet"),
+                }
+                return;
+            }
+            // A named macro (`M-x <name>`), as made by `kmacro-name-last-macro`.
+            if let Some(keys) = zmax_core::kmacro::macro_named(answer) {
+                edit_macro_prompt_cx(cx, format!("Edit macro {answer}: "), keys);
+                return;
+            }
+            // A one-character answer names a register, where `kmacro-to-register`
+            // puts a macro.
+            let mut chars = answer.chars();
+            if let (Some(reg), None) = (chars.next(), chars.next()) {
+                match cx.editor.registers.first(reg, cx.editor) {
+                    Some(keys) => {
+                        let keys = keys.to_string();
+                        edit_macro_prompt_cx(cx, format!("Edit macro [{reg}]: "), keys);
+                    }
+                    None => cx.editor.set_error(format!("Register [{reg}] is empty")),
+                }
+                return;
+            }
+            cx.editor
+                .set_error(format!("No keyboard macro named '{answer}'"));
+        },
+    );
 }
 
 /// Emacs `edmacro-insert-key` (`C-c C-q` in the *Edit Macro* buffer): read one
@@ -52416,24 +52903,34 @@ fn kmacro_step_finish(cx: &mut Context, edited: Vec<KeyEvent>) {
 /// (dropping the key that invoked this command) and opens it in the macro
 /// editor.
 fn kmacro_edit_lossage(cx: &mut Context) {
-    let mut keys: Vec<KeyEvent> = cx.editor.last_keys.iter().copied().collect();
-    keys.pop(); // drop the invoking key
-    if keys.is_empty() {
+    let Some(s) = lossage_macro_string(cx.editor) else {
         cx.editor.set_status("no recent keys recorded yet");
         return;
-    }
-    let s = keys
-        .into_iter()
-        .map(|key| {
-            let k = key.to_string();
-            if k.chars().count() == 1 {
-                k
-            } else {
-                format!("<{k}>")
-            }
-        })
-        .collect::<String>();
+    };
     edit_macro_prompt(cx, "Edit lossage as macro: ".into(), s);
+}
+
+/// The recent keystrokes written as a macro key-string (emacs's `C-h l` lossage,
+/// which `edit-kbd-macro` also offers), minus the key that asked for them.
+/// `None` when nothing has been typed yet.
+fn lossage_macro_string(editor: &Editor) -> Option<String> {
+    let mut keys: Vec<KeyEvent> = editor.last_keys.iter().copied().collect();
+    keys.pop(); // drop the invoking key
+    if keys.is_empty() {
+        return None;
+    }
+    Some(
+        keys.into_iter()
+            .map(|key| {
+                let k = key.to_string();
+                if k.chars().count() == 1 {
+                    k
+                } else {
+                    format!("<{k}>")
+                }
+            })
+            .collect::<String>(),
+    )
 }
 
 /// Emacs `kmacro-bind-to-key` (C-x C-k b): bind the last keyboard macro to a
@@ -59318,6 +59815,49 @@ fn kmacro_end_macro(cx: &mut Context) {
     record_macro(cx);
 }
 
+/// Emacs `kmacro-start-macro` (`C-x (`): "Record subsequent keyboard input,
+/// defining a keyboard macro. … Non-nil arg (prefix arg) means append to last
+/// macro defined. … Otherwise, it sets `kmacro-counter` to ARG or 0 if missing
+/// before defining the macro."
+///
+/// `C-x (` used to run `record_macro`, which is a *toggle*: a second press ended
+/// the definition silently where emacs reports "Already defining kbd macro", and
+/// `C-u C-x (` could not append to the last macro. `C-x )` has been its own
+/// `kmacro_end_macro` all along, so only this half was missing.
+fn kmacro_start_macro(cx: &mut Context) {
+    if cx.editor.macro_recording.is_some() {
+        cx.editor.set_error("Already defining kbd macro");
+        return;
+    }
+    // kmacro.el: `(let ((append (and arg (listp arg))))` — a *raw* argument
+    // (`C-u`, `M--`) appends; a numeric one is a counter value, not an append.
+    if cx.prefix_arg().is_some_and(|arg| arg.is_raw()) {
+        let Some(head) = macro_ring_head() else {
+            cx.editor.set_error("No kbd macro has been defined");
+            return;
+        };
+        let keys = match zmax_view::input::parse_macro(&head) {
+            Ok(keys) => keys,
+            Err(err) => {
+                cx.editor.set_error(format!("Invalid macro: {err}"));
+                return;
+            }
+        };
+        // Seeding the recording with the last macro's keys is what `start-kbd-macro`
+        // does with a non-nil APPEND: the definition that ends at `C-x )` is the
+        // old macro followed by whatever is typed now.
+        let reg = cx.register.take().unwrap_or('@');
+        cx.editor.macro_recording = Some((reg, keys));
+        cx.editor
+            .set_status(format!("Appending to kbd macro (register [{reg}])"));
+        return;
+    }
+    // "sets kmacro-counter to ARG or 0 if missing": a positive prefix argument is
+    // already folded into the count.
+    kmacro_counter_set(cx.count.map_or(0, |c| c.get() as i64));
+    record_macro(cx);
+}
+
 /// Emacs `kmacro-start-macro-or-insert-counter` (`F3`): start defining a
 /// keyboard macro; if one is already being defined, insert the macro counter at
 /// point and increment it (F3's second role inside a definition).
@@ -65141,15 +65681,32 @@ fn nroff_electric_newline(cx: &mut Context) -> bool {
 /// DEL). It toggles — the mode's own keys take over SPC, so `M-x view-mode` again
 /// (or `:view-mode`) is how you leave.
 fn view_mode(cx: &mut Context) {
+    let entry_point = {
+        let (view, doc) = current_ref!(cx.editor);
+        doc.selection(view.id).primary().cursor(doc.text().slice(..))
+    };
     let doc = doc_mut!(cx.editor);
+    let id = doc.id();
     if doc.major_mode() == Some("view") {
         doc.set_major_mode(None);
+        VIEW_ENTRY_POINT.with(|m| m.borrow_mut().remove(&id));
         cx.editor.set_status("view-mode disabled");
     } else {
         doc.set_major_mode(Some("view"));
+        // emacs's `view-return-to-alist`: where the window was before view-mode
+        // took it over, which is what `View-quit` restores (and `View-exit`
+        // deliberately does not).
+        VIEW_ENTRY_POINT.with(|m| m.borrow_mut().insert(id, entry_point));
         cx.editor
             .set_status("view-mode enabled (SPC/DEL page, :view-mode exits)");
     }
+}
+
+thread_local! {
+    /// Where point was when `view-mode` was turned on, per buffer — zmax's
+    /// `view-return-to-alist`. Read only by [`view_quit`].
+    static VIEW_ENTRY_POINT: std::cell::RefCell<HashMap<DocumentId, usize>> =
+        std::cell::RefCell::new(HashMap::new());
 }
 
 /// Emacs `View-exit` (`e` / `q` in view-mode): leave view-mode, staying at the
@@ -65162,10 +65719,28 @@ fn view_exit(cx: &mut Context) {
     }
 }
 
-/// Emacs `View-quit` (`Q` in view-mode): leave view-mode. (zmax does not track
-/// the pre-view position, so like `View-exit` it leaves the cursor where it is.)
+/// Emacs `View-quit` (`q` in view-mode): "Quit View mode, trying to restore
+/// window and buffer to previous state. … Try to restore selected window to
+/// previous state and go to previous buffer or window."
+///
+/// Both halves, where `View-exit` (`e`) is only the first: point goes back to
+/// where it was when view-mode was entered, and then the window is quit the way
+/// `quit-window` does it — closed when it is one of several, otherwise switched
+/// back to the previously visited file, which is emacs's "go to previous buffer".
 fn view_quit(cx: &mut Context) {
+    if doc!(cx.editor).major_mode() != Some("view") {
+        // Reachable from `M-x` in any buffer; there is nothing to quit outside
+        // view-mode, and quitting the window would be a surprise.
+        return;
+    }
+    let id = doc!(cx.editor).id();
+    if let Some(pos) = VIEW_ENTRY_POINT.with(|m| m.borrow().get(&id).copied()) {
+        let (view, doc) = current!(cx.editor);
+        let pos = pos.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(pos));
+    }
     view_exit(cx);
+    quit_window(cx);
 }
 
 /// emacs `fundamental-mode`: no major mode at all — drops a language-less mode and
@@ -65221,6 +65796,12 @@ fn emacs_lisp_mode(cx: &mut Context) {
 fn lisp_interaction_mode(cx: &mut Context) {
     cx.editor.new_file(Action::Replace);
     set_major_mode(cx, "elisp", "lisp-interaction-mode");
+    // The *language* is elisp, but the *major mode* is lisp-interaction — and it
+    // is the mode the keymap overlay is keyed on (`Document::major_mode` returns
+    // this string in preference to the language). Without it `C-j`
+    // (eval-print-last-sexp), which lisp-interaction-mode-map alone binds, would
+    // fire in every emacs-lisp-mode buffer as well.
+    doc_mut!(cx.editor).set_major_mode(Some("lisp-interaction"));
     cx.editor
         .set_status("lisp-interaction-mode: eval-elisp-defun evaluates the form at point");
 }
@@ -70360,6 +70941,38 @@ fn toggle_column_indexing(cx: &mut Context) {
     });
 }
 
+/// Emacs `gud-break` (`C-x C-a C-b`): set a breakpoint on the current line.
+///
+/// `gud-break` only ever *sets* one — `gud-remove` (`C-x C-a C-d`, and
+/// [`dap_remove_breakpoint`]) is what takes it away — so pressing it twice on the
+/// same line leaves the breakpoint standing. The chord used to run
+/// `dap_toggle_breakpoint`, which removed it on the second press.
+fn dap_set_breakpoint(cx: &mut Context) {
+    let (path, line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let Some(path) = doc.path().map(ToOwned::to_owned) else {
+            cx.editor
+                .set_error("Can't set breakpoint: document has no path");
+            return;
+        };
+        let line = doc
+            .selection(view.id)
+            .primary()
+            .cursor_line(doc.text().slice(..));
+        (path, line)
+    };
+    let already_set = cx
+        .editor
+        .breakpoints
+        .get(&path)
+        .is_some_and(|bps| bps.iter().any(|b| b.line == line));
+    if already_set {
+        return;
+    }
+    // The toggle's set half — the only path that also tells the debugger.
+    dap_toggle_breakpoint(cx);
+}
+
 /// Emacs `bury-buffer` (Spacemacs `SPC b . C-d`): stop showing the current
 /// buffer in this window without killing it — display the previously-visited
 /// file instead. The buffer stays open and reachable from the buffer list.
@@ -74636,6 +75249,63 @@ fn exit_recursive_edit(cx: &mut Context) {
             .editor
             .set_status(format!("Exited recursive edit [{depth} still open]")),
     }
+}
+
+/// Emacs `abort-recursive-edit` (`C-]`): "aborts the command that requested the
+/// innermost recursive edit (including minibuffer input), by signaling quit after
+/// exiting the recursive edit" (elisp manual, *Recursive Editing*).
+///
+/// The difference from [`exit_recursive_edit`] is the whole point: `C-M-c`
+/// *resumes* the command that opened the level, `C-]` *abandons* it. `M-x
+/// top-level` is "equivalent to enough C-] commands to get you out of all the
+/// levels"; this one leaves exactly one.
+fn abort_recursive_edit(cx: &mut Context) {
+    match emacs_misc::recursive_exit() {
+        // The level a `kbd-macro-query` `C-r` opened: abandoning it abandons the
+        // macro too — the same disposal the query's own `RET`/`q` answer does.
+        // Resuming the query here (what `exit_recursive_edit` does) would be the
+        // opposite of an abort, and dropping the level without the parked macro
+        // would leave the macro parked with nothing left to answer for it.
+        Some(RecursiveReason::MacroQuery) => {
+            emacs_misc::macro_resume_state();
+        }
+        Some(RecursiveReason::Interactive) => {}
+        None => {
+            // No level of ours is open. zmax's stand-in for emacs's recursive
+            // minibuffer is the modal overlay stack (pickers, prompts, Dired,
+            // …), and C-] aborts minibuffer input as well, so drop one layer of
+            // that — `top_level` drops the whole stack the same way.
+            abort_one_overlay(cx);
+            return;
+        }
+    }
+    let depth = emacs_misc::recursive_depth();
+    if depth == 0 {
+        cx.editor.set_status("Quit");
+    } else {
+        cx.editor
+            .set_status(format!("Quit [{depth} recursive edits still open]"));
+    }
+}
+
+/// Drop the topmost modal overlay, if any — one level of what emacs would call
+/// minibuffer input. Errors like emacs does when there is nothing to abort.
+fn abort_one_overlay(cx: &mut Context) {
+    cx.callback.push(Box::new(
+        |compositor: &mut Compositor, cx: &mut crate::compositor::Context| {
+            let editor_view = std::any::type_name::<crate::ui::EditorView>();
+            match compositor.pop() {
+                // The editor itself is the one layer that must survive: put it
+                // back and report the emacs error for a C-] with nothing to abort.
+                Some(layer) if layer.type_name() == editor_view => {
+                    compositor.push(layer);
+                    cx.editor.set_error("No recursive edit is in progress");
+                }
+                Some(_) => cx.editor.set_status("Quit"),
+                None => cx.editor.set_error("No recursive edit is in progress"),
+            }
+        },
+    ));
 }
 
 /// Emacs `kbd-macro-query` (`C-x q`): while a keyboard macro *runs*, stop and ask

@@ -3,6 +3,7 @@ use std::io::BufReader;
 use std::ops::{self, Deref};
 
 use crate::job::Job;
+use crate::shada;
 
 use super::*;
 
@@ -41548,48 +41549,55 @@ fn write_rc(cx: &mut compositor::Context, args: &Args, default_name: &str) -> an
 
 // ---------------------------------------------------------------------------
 // nvim shada (`:wshada` / `:rshada`): the editor state that outlives a session.
-// nvim's file is msgpack and holds registers, marks, jumps, histories and more;
-// zmax writes the two of those it can restore through public state — the
-// registers and every named mark of every open buffer — as a line-oriented file
-// of its own (documented in the command's help, and *not* nvim-compatible: it is
-// zmax's state file, read back by `:rshada`).
+// The file is nvim's own format — "ShaDa files are concats of MessagePack
+// entries" (starting.txt:1193-1204), encoded and decoded by [`crate::shada`] —
+// so the file zmax writes is the file nvim reads, and the other way round.
+//
+// What goes into it is the state zmax can restore through public editor state:
+// the registers, the `:` and `/` histories with the last search pattern, every
+// named mark (global `'A`-`'Z` / numbered `'0`-`'9` and each buffer's local
+// marks), the jumplist, and — only with 'shada' `%` — the buffer list. The
+// module below is the *state* half; the format half lives in `crate::shada`.
 // ---------------------------------------------------------------------------
 
-/// The shada file to read/write: the command's argument, else vim 'shadafile',
-/// else `<config>/shada/main.shada`.
+/// The shada file to read/write: the command's argument, else vim 'shadafile'
+/// (`sdf`), else the 'shada' `n` item — options.txt:5591-5596: "Name of the
+/// shada file. The name must immediately follow the 'n'. Must be at the end of
+/// the option! If the 'shadafile' option is set, that file name overrides the
+/// one given here with 'shada'." — else `<config>/shada/main.shada`.
 fn shada_path(args: &Args) -> std::path::PathBuf {
-    let default = || match vim_opt_str_alias("shadafile", "sd") {
-        Some(f) if !f.trim().is_empty() && f.trim() != "NONE" => {
-            zmax_stdx::path::expand_tilde(std::path::Path::new(f.trim())).into_owned()
-        }
-        _ => zmax_loader::config_dir().join("shada").join("main.shada"),
+    let expand = |f: &str| zmax_stdx::path::expand_tilde(std::path::Path::new(f)).into_owned();
+    let default = || match vim_opt_str_alias("shadafile", "sdf") {
+        // "When equal to "NONE" no shada file will be read or written"
+        // (options.txt:5639) — the name is then no name at all.
+        Some(f) if !f.trim().is_empty() && f.trim() != "NONE" => expand(f.trim()),
+        _ => match shada_limits_now().name {
+            Some(name) => expand(name.trim()),
+            None => zmax_loader::config_dir().join("shada").join("main.shada"),
+        },
     };
     session_arg_path(args, default())
 }
 
-/// Escape a register value for one shada line (values may contain newlines).
-/// Pure — unit tested.
-fn shada_escape(value: &str) -> String {
-    value.replace('\\', "\\\\").replace('\n', "\\n")
+/// A char position as a ShaDa position: the 1-based line ("Must be greater then
+/// zero", starting.txt:1319) and the column.
+///
+/// nvim's `c` is a *byte* column; every column zmax has — `coords_at_pos`, and
+/// the `line`/`col` of a [`zmax_view::GlobalMark`] whose file is closed — is a
+/// *character* column, and the two only differ on a line with multi-byte
+/// characters. zmax writes the character column throughout rather than
+/// converting the marks whose buffer happens to be open: one file that mixed
+/// both units would restore its own marks onto the wrong column.
+fn shada_line_col(text: zmax_core::ropey::RopeSlice, pos: usize) -> (usize, usize) {
+    let coords = zmax_core::coords_at_pos(text, pos.min(text.len_chars()));
+    (coords.row + 1, coords.col)
 }
 
-/// Inverse of [`shada_escape`]. Pure — unit tested.
-fn shada_unescape(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    let mut chars = value.chars();
-    while let Some(c) = chars.next() {
-        if c != '\\' {
-            out.push(c);
-            continue;
-        }
-        match chars.next() {
-            Some('n') => out.push('\n'),
-            Some('\\') => out.push('\\'),
-            Some(other) => out.push(other),
-            None => out.push('\\'),
-        }
-    }
-    out
+/// The inverse of [`shada_line_col`], clamped to the buffer — a file edited
+/// outside the session can be shorter than it was when the mark was written.
+fn shada_char_pos(text: zmax_core::ropey::RopeSlice, line: usize, col: usize) -> usize {
+    let row = line.saturating_sub(1).min(text.len_lines().saturating_sub(1));
+    pos_at_coords(text, zmax_core::Position::new(row, col), true).min(text.len_chars())
 }
 
 thread_local! {
@@ -41600,19 +41608,20 @@ thread_local! {
     /// read from the ShaDa file." — so they wait here for the `DocumentDidOpen`
     /// hook [`install_shada_mark_hook`] installs, instead of being dropped.
     static PENDING_SHADA_MARKS: std::cell::RefCell<
-        std::collections::HashMap<std::path::PathBuf, Vec<(char, usize)>>,
+        std::collections::HashMap<std::path::PathBuf, Vec<(char, usize, usize)>>,
     > = std::cell::RefCell::new(std::collections::HashMap::new());
 }
 
-/// Park a mark for a file nothing is editing yet. A later `:rshada` for the same
-/// file and mark replaces the parked position rather than stacking a second one.
-fn defer_shada_mark(path: std::path::PathBuf, mark: char, pos: usize) {
+/// Park a mark (name, 1-based line, column — the shape a ShaDa position carries)
+/// for a file nothing is editing yet. A later `:rshada` for the same file and
+/// mark replaces the parked position rather than stacking a second one.
+fn defer_shada_mark(path: std::path::PathBuf, mark: char, line: usize, col: usize) {
     PENDING_SHADA_MARKS.with(|m| {
         let mut m = m.borrow_mut();
         let marks = m.entry(path).or_default();
-        match marks.iter_mut().find(|(c, _)| *c == mark) {
-            Some(slot) => slot.1 = pos,
-            None => marks.push((mark, pos)),
+        match marks.iter_mut().find(|(c, _, _)| *c == mark) {
+            Some(slot) => *slot = (mark, line, col),
+            None => marks.push((mark, line, col)),
         }
     });
 }
@@ -41638,11 +41647,11 @@ fn install_shada_mark_hook() {
             };
             if let Some(doc) = event.editor.documents.get_mut(&event.doc) {
                 // The file may have been edited outside the session and be
-                // shorter than it was — the same clamp `:rshada` applies to the
-                // marks it can restore straight away.
-                let len = doc.text().len_chars();
-                for (mark, pos) in marks {
-                    doc.set_mark(mark, pos.min(len));
+                // shorter than it was — [`shada_char_pos`] clamps, exactly as it
+                // does for the marks `:rshada` restored straight away.
+                let text = doc.text().clone();
+                for (mark, line, col) in marks {
+                    doc.set_mark(mark, shada_char_pos(text.slice(..), line, col));
                 }
             }
             Ok(())
@@ -41650,40 +41659,97 @@ fn install_shada_mark_hook() {
     });
 }
 
-/// What nvim 'shada' caps in the file `:wshada` writes.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// What nvim 'shada' (options.txt:5522-5612) controls in the file `:wshada`
+/// writes. Every "absent" default below is the one nvim's shada.c falls back to,
+/// not a guess: `get_shada_parameter` returns -1 for an item that is not in the
+/// option, and each call site decides what -1 means.
+#[derive(Clone, PartialEq, Eq, Debug)]
 struct ShadaLimits {
-    /// `'N` — remember marks for at most this many files (0 = no marks at all).
+    /// `'N` — "Maximum number of previously edited files for which the marks are
+    /// remembered ... If non-zero, then the |jumplist| and the |changelist| are
+    /// also stored". Absent is unlimited (shada.c:2263 casts the -1 to `size_t`).
     files: usize,
-    /// `<N` — save at most this many lines of each register (0 = no registers).
+    /// `<N`, old name `"N` — "Maximum number of lines saved for each register.
+    /// If zero then registers are not saved. When not included, all lines are
+    /// saved" (shada.c:2256-2260).
     lines: usize,
-    /// `sN` — skip a register item larger than this many Kbyte.
+    /// `sN` — "Maximum size of an item contents in KiB. If zero then nothing is
+    /// saved." Absent is 10 (shada.c:2245-2248).
     kb: usize,
+    /// `:N` — command-line history entries to save. Absent is 'history'
+    /// (shada.c:2269-2272).
+    cmd_history: usize,
+    /// `/N` — search history entries to save; "If non-zero, then the previous
+    /// search and substitute patterns are also saved". Absent is 'history'.
+    search_history: usize,
+    /// `%[N]` — "When included, save and restore the buffer list ... Without a
+    /// number all buffers are stored." `None` when the flag is absent, which is
+    /// nvim's default: no buffer list is written at all.
+    buffers: Option<usize>,
+    /// `fN` — "Whether file marks need to be stored. If zero, file marks ('0 to
+    /// '9, 'A to 'Z) are not stored" (shada.c:2264).
+    file_marks: bool,
+    /// `rPATH` — "Each specifies the start of a path for which no marks will be
+    /// stored ... Case is ignored." May be given several times; the default
+    /// 'shada' lists `/tmp/` and `/private/`, which is why a scratch file never
+    /// grows persistent marks.
+    removable: Vec<String>,
+    /// `nFILE` — the shada file's own name, unless 'shadafile' overrides it.
+    name: Option<String>,
 }
 
-/// Parse nvim 'shada' (`!,'100,<50,s10,h,r/tmp/`) into the three caps `:wshada`
-/// can honor. Unlisted items keep nvim's own defaults; the flags that describe
-/// state zmax's shada file does not carry (`!`, `h`, `r`, `%`, `:`, `/`) are
-/// skipped. Pure — unit tested.
-fn shada_limits(spec: &str) -> ShadaLimits {
+/// nvim's own default 'shada', used when the option was never `:set`.
+const SHADA_DEFAULT: &str = "!,'100,<50,s10,h,r/tmp/,r/private/";
+
+/// Parse nvim 'shada' (`!,'100,<50,s10,h,r/tmp/`). `history` is the 'history'
+/// option, the documented fallback for the two history caps. Items zmax has no
+/// state for (`!` global variables, `@` input-line history, `c`, `h`) are
+/// skipped rather than misread. Pure — unit tested.
+fn shada_limits(spec: &str, history: usize) -> ShadaLimits {
     let mut out = ShadaLimits {
-        files: 100,
-        lines: 50,
+        files: usize::MAX,
+        lines: usize::MAX,
         kb: 10,
+        cmd_history: history,
+        search_history: history,
+        buffers: None,
+        file_marks: true,
+        removable: Vec::new(),
+        name: None,
     };
-    for item in spec.split(',') {
+    let mut rest = spec;
+    while !rest.is_empty() {
+        let (item, tail) = rest.split_once(',').unwrap_or((rest, ""));
+        rest = tail;
         let item = item.trim();
         let mut chars = item.chars();
-        let (Some(key), num) = (chars.next(), chars.as_str().trim()) else {
-            continue;
-        };
-        let Ok(n) = num.parse::<usize>() else {
-            continue;
-        };
+        let Some(key) = chars.next() else { continue };
+        let arg = chars.as_str().trim();
+        let num = arg.parse::<usize>().ok();
         match key {
-            '\'' => out.files = n,
-            '<' | '"' => out.lines = n,
-            's' => out.kb = n,
+            '\'' => out.files = num.unwrap_or(out.files),
+            '<' | '"' => out.lines = num.unwrap_or(out.lines),
+            's' => out.kb = num.unwrap_or(out.kb),
+            ':' => out.cmd_history = num.unwrap_or(out.cmd_history),
+            '/' => out.search_history = num.unwrap_or(out.search_history),
+            '%' => out.buffers = Some(num.unwrap_or(usize::MAX)),
+            // "When not present or when non-zero, they are all stored."
+            'f' => out.file_marks = num != Some(0),
+            'r' if !arg.is_empty() => out.removable.push(arg.to_lowercase()),
+            // "Must be at the end of the option!" — so the name runs to the end
+            // of the string, commas and all. shada.c `find_shada_parameter`
+            // stops its own scan at `n` for exactly this reason.
+            'n' => {
+                let name = if rest.is_empty() {
+                    arg.to_string()
+                } else {
+                    format!("{arg},{rest}")
+                };
+                if !name.is_empty() {
+                    out.name = Some(name);
+                }
+                break;
+            }
             _ => {}
         }
     }
@@ -41693,139 +41759,529 @@ fn shada_limits(spec: &str) -> ShadaLimits {
 /// The live 'shada' caps (nvim's default when the option was never `:set`).
 fn shada_limits_now() -> ShadaLimits {
     shada_limits(
-        &vim_opt_str_alias("shada", "sd")
-            .unwrap_or_else(|| "!,'100,<50,s10,h,r/tmp/,r/private/".to_string()),
+        &vim_opt_str_alias("shada", "sd").unwrap_or_else(|| SHADA_DEFAULT.to_string()),
+        vim_opt_num("history").unwrap_or(0),
     )
 }
 
-/// nvim `:wshada [file]` — write the editor state that should outlive the session:
-/// every written register and every named mark of every open file, capped by the
-/// 'shada' option (`'N` files with marks, `<N` lines per register, `sN` Kbyte per
-/// register item).
-fn ex_wshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+/// 'shada' `r`: whether marks for `path` are on removable media (or a temp
+/// directory) and must not be stored. Case is ignored, as documented.
+fn shada_removable(limits: &ShadaLimits, path: &std::path::Path) -> bool {
+    if limits.removable.is_empty() {
+        return false;
+    }
+    let path = path.to_string_lossy().to_lowercase();
+    limits
+        .removable
+        .iter()
+        .any(|prefix| path.starts_with(prefix))
+}
+
+/// The seconds-since-epoch stamp the entries `:wshada` writes carry — an entry's
+/// second MessagePack object (starting.txt:1198).
+fn shada_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// A register's values, newest first — the order `Registers::read` yields and
+/// `Registers::write` takes back, so a round trip through the shada file leaves
+/// a register exactly as it was.
+fn shada_register_values(editor: &Editor, name: char) -> Vec<String> {
+    editor
+        .registers
+        .read(name, editor)
+        .map(|values| values.map(|v| v.into_owned()).collect())
+        .unwrap_or_default()
+}
+
+/// One register as a ShaDa Register entry (starting.txt:1270-1298). `rc` is one
+/// string per *line*, which is what nvim reads back; zmax registers hold a list
+/// of values (one per selection), so the value boundaries ride along in the `zv`
+/// key the spec's "Other keys are allowed" clause makes room for.
+fn shada_register_entry(name: char, values: &[String], max_lines: usize) -> shada::Register {
+    // A value that ends in a newline is vim's linewise register: the trailing
+    // empty piece is the line ending, not a line of its own.
+    let linewise = !values.is_empty() && values.iter().all(|v| v.ends_with('\n'));
+    let mut contents: Vec<String> = Vec::new();
+    let mut value_lines: Vec<usize> = Vec::new();
+    for value in values {
+        let body = if linewise {
+            value.strip_suffix('\n').unwrap_or(value)
+        } else {
+            value.as_str()
+        };
+        let lines: Vec<&str> = body.split('\n').collect();
+        value_lines.push(lines.len());
+        contents.extend(lines.into_iter().map(str::to_string));
+    }
+    // 'shada' `<N` caps *lines*, so a value can be cut in half — the boundaries
+    // are re-walked over what survives.
+    if contents.len() > max_lines {
+        contents.truncate(max_lines);
+        let mut left = max_lines;
+        let mut kept = Vec::new();
+        for n in value_lines {
+            if left == 0 {
+                break;
+            }
+            let take = n.min(left);
+            kept.push(take);
+            left -= take;
+        }
+        value_lines = kept;
+    }
+    shada::Register {
+        name,
+        kind: u64::from(linewise),
+        // zmax has no blockwise register, so `rw` (which is "Only valid for
+        // blockwise-registers") is always the 0 default.
+        width: 0,
+        contents,
+        // zmax does not track which register the unnamed one aliases, so `ru`
+        // stays at its documented default rather than being guessed.
+        unnamed: false,
+        value_lines,
+    }
+}
+
+/// The register values a ShaDa Register entry restores — the inverse of
+/// [`shada_register_entry`], in `Registers::write` order (newest first).
+fn shada_register_restore(entry: &shada::Register) -> Vec<String> {
+    let linewise = entry.kind == 1;
+    let join = |lines: &[String]| {
+        let mut value = lines.join("\n");
+        if linewise {
+            value.push('\n');
+        }
+        value
+    };
+    // Without `zv` (an nvim-written entry) the whole line array is one value.
+    if entry.value_lines.len() < 2 {
+        return if entry.contents.is_empty() {
+            Vec::new()
+        } else {
+            vec![join(&entry.contents)]
+        };
+    }
+    let mut values = Vec::with_capacity(entry.value_lines.len());
+    let mut at = 0usize;
+    for n in &entry.value_lines {
+        let end = (at + n).min(entry.contents.len());
+        if at >= end {
+            break;
+        }
+        values.push(join(&entry.contents[at..end]));
+        at = end;
+    }
+    values
+}
+
+/// Every ShaDa entry this session's state produces, in the order they are
+/// written: the header, the last search pattern, the `:`/`/` histories, the
+/// registers, the marks, the jumplist, and — only with 'shada' `%` — the buffer
+/// list.
+fn shada_state(editor: &Editor, limits: &ShadaLimits) -> Vec<shada::Entry> {
+    use crate::shada::EntryKind;
+    let stamp = shada_now();
+    let entry = |kind: EntryKind| shada::Entry {
+        timestamp: stamp,
+        kind,
+    };
+    let mut entries = vec![entry(EntryKind::Header {
+        generator: "zmax".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        // options.txt 'shada' `c`: "ShaDa always uses UTF-8 and 'encoding' value
+        // is fixed to UTF-8 as well".
+        encoding: "utf-8".to_string(),
+        max_kbyte: limits.kb as u64,
+        pid: u64::from(std::process::id()),
+    })];
+
+    // The last search pattern. options.txt shada-/: "If non-zero, then the
+    // previous search and substitute patterns are also saved." zmax's last
+    // search is the head of the `/` register, and `su` is what marks an entry as
+    // that last-used one.
+    if limits.search_history > 0 {
+        if let Some(pattern) = editor
+            .registers
+            .first('/', editor)
+            .map(|p| p.into_owned())
+            .filter(|p| !p.is_empty())
+        {
+            entries.push(entry(EntryKind::SearchPattern(shada::SearchPattern {
+                pattern,
+                last_used: true,
+                smartcase: editor.config().search.smart_case,
+                ..shada::SearchPattern::default()
+            })));
+        }
+    }
+
+    // The `:` and `/` registers are vim's command-line and search histories, and
+    // nvim keeps those as HistoryEntry entries rather than as registers. The
+    // file holds them oldest first, the order they are replayed in.
+    for (kind, name, cap, sep) in [
+        (shada::HISTORY_CMD, ':', limits.cmd_history, None),
+        // "Third item is only valid for search history" — the character the
+        // search was started with, `/` for a forward search.
+        (shada::HISTORY_SEARCH, '/', limits.search_history, Some(b'/')),
+    ] {
+        if cap == 0 {
+            continue;
+        }
+        let mut lines = shada_register_values(editor, name);
+        lines.truncate(cap);
+        for line in lines.into_iter().rev() {
+            entries.push(entry(EntryKind::History { kind, line, sep }));
+        }
+    }
+
+    // Registers. The clipboard registers are the *system* clipboard: they are
+    // not ours to persist, and writing them back would clobber it on the next
+    // `:rshada`.
+    if limits.lines > 0 {
+        for name in editor.registers.written() {
+            if matches!(name, '+' | '*' | ':' | '/') {
+                continue;
+            }
+            let values = shada_register_values(editor, name);
+            if values.is_empty() {
+                continue;
+            }
+            let register = shada_register_entry(name, &values, limits.lines);
+            if register.contents.is_empty() {
+                continue;
+            }
+            entries.push(entry(EntryKind::Register(register)));
+        }
+    }
+
+    // Global (`'A`-`'Z`) and numbered file (`'0`-`'9`) marks — what 'shada' `f`
+    // covers. Sorted, so two runs over the same state produce the same file.
+    if limits.file_marks {
+        let mut global: Vec<(char, &zmax_view::GlobalMark)> = editor
+            .global_marks
+            .iter()
+            .map(|(name, mark)| (*name, mark))
+            .collect();
+        global.sort_by_key(|(name, _)| *name);
+        for (name, mark) in global {
+            if shada_removable(limits, &mark.path) {
+                continue;
+            }
+            entries.push(entry(EntryKind::Mark {
+                global: true,
+                name,
+                pos: shada::Position {
+                    file: mark.path.clone(),
+                    line: mark.line + 1,
+                    col: mark.col,
+                },
+            }));
+        }
+    }
+
+    // Each buffer's own marks, capped by 'shada' `'N` — "Maximum number of
+    // previously edited files for which the marks are remembered". An uppercase
+    // mark on an open buffer is still a global mark; the lowercase ones are the
+    // local marks of that file.
+    let mut files_with_marks = 0usize;
+    for doc in editor.documents() {
+        let Some(file) = doc.path() else { continue };
+        if files_with_marks >= limits.files {
+            break;
+        }
+        if shada_removable(limits, file) {
+            continue;
+        }
+        let text = doc.text().slice(..);
+        // nvim dumps every mark the buffer iterator yields (shada.c:2514-2537):
+        // `a`-`z` plus the special local marks it keeps. Of those zmax maintains
+        // `^`, the last insert position `gi` returns to; `<`, `>`, `[`, `]`,
+        // `` ` `` and `'` are within-session state nvim does not store either.
+        let mut named: Vec<(char, usize)> = doc
+            .marks()
+            .iter()
+            .filter(|(mark, _)| mark.is_ascii_alphabetic() || **mark == '^')
+            .map(|(&mark, &pos)| (mark, pos))
+            .collect();
+        named.sort_unstable();
+        if named.is_empty() {
+            continue;
+        }
+        files_with_marks += 1;
+        for (name, pos) in named {
+            let global = name.is_ascii_uppercase();
+            if global && !limits.file_marks {
+                continue;
+            }
+            let (line, col) = shada_line_col(text, pos);
+            entries.push(entry(EntryKind::Mark {
+                global,
+                name,
+                pos: shada::Position {
+                    file: file.to_path_buf(),
+                    line,
+                    col,
+                },
+            }));
+        }
+    }
+
+    // The jumplist of the focused view, oldest first. options.txt shada-':
+    // "If non-zero, then the |jumplist| and the |changelist| are also stored."
+    if limits.files > 0 {
+        if let Some(view) = editor.tree.try_get(editor.tree.focus) {
+            for (doc_id, selection) in view.jumps.iter() {
+                let Some(doc) = editor.document(*doc_id) else {
+                    continue;
+                };
+                let Some(file) = doc.path() else { continue };
+                if shada_removable(limits, file) {
+                    continue;
+                }
+                let text = doc.text().slice(..);
+                let (line, col) = shada_line_col(text, selection.primary().cursor(text));
+                entries.push(entry(EntryKind::Jump(shada::Position {
+                    file: file.to_path_buf(),
+                    line,
+                    col,
+                })));
+            }
+        }
+    }
+
+    // The buffer list, only with 'shada' `%` — without the flag nvim does not
+    // write one at all.
+    if let Some(max) = limits.buffers {
+        let mut cursors: std::collections::HashMap<zmax_view::DocumentId, (usize, usize)> =
+            std::collections::HashMap::new();
+        for (view, _) in editor.tree.views() {
+            if let Some(doc) = editor.document(view.doc) {
+                let text = doc.text().slice(..);
+                let pos = doc.selection(view.id).primary().cursor(text);
+                cursors.insert(view.doc, shada_line_col(text, pos));
+            }
+        }
+        let mut buffers = Vec::new();
+        for doc in editor.documents() {
+            if buffers.len() >= max {
+                break;
+            }
+            let Some(file) = doc.path() else { continue };
+            if shada_removable(limits, file) {
+                continue;
+            }
+            let (line, col) = cursors.get(&doc.id()).copied().unwrap_or((1, 0));
+            buffers.push(shada::Position {
+                file: file.to_path_buf(),
+                line,
+                col,
+            });
+        }
+        if !buffers.is_empty() {
+            entries.push(entry(EntryKind::BufferList(buffers)));
+        }
+    }
+
+    entries
+}
+
+/// nvim `:wshada[!] [file]` — write the state that should outlive the session:
+/// the registers, the `:`/`/` histories with the last search pattern, every
+/// named mark, the jumplist and (with 'shada' `%`) the buffer list, capped by
+/// the 'shada' option and framed as nvim's msgpack ShaDa entries.
+///
+/// Without `!` the file already on disk is read first and merged entry by entry
+/// — starting.txt:1161-1165: "The information in the file is first read in to
+/// make a merge between old and new info. When [!] is used, the old information
+/// is not read first, only the internal info is written". The merge is what
+/// keeps a second editor instance's marks from being wiped by whichever one
+/// writes last.
+fn wshada(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    force: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     sandbox_check("wshada")?;
     let path = shada_path(&args);
     let limits = shada_limits_now();
-    let mut out = String::from("# zmax shada — registers and marks (:rshada reads it)\n");
-    let mut registers = 0usize;
-    // The clipboard registers are the *system* clipboard: they are not ours to
-    // persist, and writing them back would clobber it on the next `:rshada`.
-    for name in cx.editor.registers.written() {
-        // 'shada' `<0` — don't save registers at all.
-        if limits.lines == 0 {
-            break;
-        }
-        if matches!(name, '+' | '*') {
-            continue;
-        }
-        let Some(values) = cx.editor.registers.read(name, cx.editor) else {
-            continue;
-        };
-        let mut values: Vec<String> = values.map(|v| v.into_owned()).collect();
-        // 'shada' `sN` — a register item over N Kbyte is not saved.
-        values.retain(|v| v.len() <= limits.kb.saturating_mul(1024));
-        // 'shada' `<N` — at most N lines of each register.
-        values.truncate(limits.lines);
-        if values.is_empty() {
-            continue;
-        }
-        registers += 1;
-        for value in values {
-            out.push_str(&format!("register {name} {}\n", shada_escape(&value)));
-        }
+    // 'shada' `s0`: "If zero then nothing is saved" — shada.c:2249-2251 returns
+    // before the file is touched, so the shada already on disk is left intact.
+    if limits.kb == 0 {
+        cx.editor
+            .set_status("shada not written: 'shada' s0 saves nothing");
+        return Ok(());
     }
-    let mut marks = 0usize;
-    // 'shada' `'N` — marks are remembered for at most N files.
-    let mut files_with_marks = 0usize;
-    for doc in cx.editor.documents() {
-        let Some(file) = doc.path() else { continue };
-        if files_with_marks >= limits.files {
-            break;
-        }
-        let mut named: Vec<(char, usize)> = doc
-            .marks()
-            .iter()
-            .filter(|(mark, _)| mark.is_ascii_alphabetic())
-            .map(|(&mark, &pos)| (mark, pos))
-            .collect();
-        named.sort_unstable();
-        if !named.is_empty() {
-            files_with_marks += 1;
-        }
-        for (mark, pos) in named {
-            marks += 1;
-            out.push_str(&format!("mark {} {mark} {pos}\n", file.display()));
-        }
-    }
+    let entries = shada_state(cx.editor, &limits);
+    let registers = entries
+        .iter()
+        .filter(|e| matches!(e.kind, crate::shada::EntryKind::Register(_)))
+        .count();
+    let marks = entries
+        .iter()
+        .filter(|e| matches!(e.kind, crate::shada::EntryKind::Mark { .. }))
+        .count();
+    let entries = if force {
+        entries
+    } else {
+        let old = std::fs::read(&path)
+            .map(|bytes| crate::shada::decode_file(&bytes).0)
+            .unwrap_or_default();
+        crate::shada::merge(old, entries)
+    };
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    std::fs::write(&path, out.as_bytes()).map_err(|e| anyhow!("wshada: {e}"))?;
+    let bytes = crate::shada::encode_file(&entries, limits.kb);
+    std::fs::write(&path, &bytes).map_err(|e| anyhow!("wshada: {e}"))?;
     cx.editor.set_status(format!(
-        "shada written to {} ({registers} register(s), {marks} mark(s))",
-        path.display()
+        "shada written to {} ({registers} register(s), {marks} mark(s), {} entries)",
+        path.display(),
+        entries.len()
     ));
     Ok(())
 }
 
-/// nvim `:rshada [file]` — read the state `:wshada` wrote back in: the registers
-/// and the file marks. A mark whose file is open is applied straight away; a mark
-/// for a file nothing is editing is parked and applied when that file is opened,
-/// which is when nvim reads a file's marks — starting.txt:972-973: "Marks are
-/// stored for each file separately. When a file is read and 'shada' is non-empty,
-/// the marks for that file are read from the ShaDa file."
-fn ex_rshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_wshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    wshada(cx, args, event, false)
+}
+
+fn ex_wshada_bang(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    wshada(cx, args, event, true)
+}
+
+/// nvim `:rshada[!] [file]` — read the ShaDa file back in: the registers, the
+/// `:`/`/` histories, the last search pattern and the marks. Without `!` only
+/// state that is not already set is filled in; with `!` "any information that is
+/// already set (registers, marks, |v:oldfiles|, etc.) will be overwritten"
+/// (starting.txt:1155-1158).
+///
+/// A mark whose file is open is applied straight away; a mark for a file nothing
+/// is editing is parked and applied when that file is opened, which is when nvim
+/// reads a file's marks — starting.txt:972-973: "Marks are stored for each file
+/// separately. When a file is read and 'shada' is non-empty, the marks for that
+/// file are read from the ShaDa file."
+fn rshada(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    force: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    use crate::shada::EntryKind;
     let path = shada_path(&args);
-    let text = std::fs::read_to_string(&path)
+    let bytes = std::fs::read(&path)
         .map_err(|e| anyhow!("rshada: cannot read {}: {e}", path.display()))?;
+    let (entries, critical) = crate::shada::decode_file(&bytes);
 
-    let mut registers: Vec<(char, Vec<String>)> = Vec::new();
-    let mut marks: Vec<(std::path::PathBuf, char, usize)> = Vec::new();
-    for line in text.lines() {
-        if let Some(rest) = line.strip_prefix("register ") {
-            let Some((name, value)) = rest.split_once(' ') else {
-                continue;
-            };
-            let Some(name) = name.chars().next().filter(|_| name.chars().count() == 1) else {
-                continue;
-            };
-            let value = shada_unescape(value);
-            match registers.iter_mut().find(|(n, _)| *n == name) {
-                Some((_, values)) => values.push(value),
-                None => registers.push((name, vec![value])),
-            }
-        } else if let Some(rest) = line.strip_prefix("mark ") {
-            // `mark {path} {char} {pos}` — the path may contain spaces, so split
-            // the two fixed fields off the end.
-            let mut fields = rest.rsplitn(3, ' ');
-            let (Some(pos), Some(mark), Some(file)) = (fields.next(), fields.next(), fields.next())
-            else {
-                continue;
-            };
-            let (Ok(pos), Some(mark)) = (pos.parse::<usize>(), mark.chars().next()) else {
-                continue;
-            };
-            marks.push((std::path::PathBuf::from(file), mark, pos));
+    // Registers first: a name this session already wrote is left alone unless
+    // `!` says to overwrite it.
+    let mut n_registers = 0usize;
+    for entry in &entries {
+        let EntryKind::Register(register) = &entry.kind else {
+            continue;
+        };
+        if matches!(register.name, '+' | '*') {
+            continue;
+        }
+        if !force && cx.editor.registers.written().contains(&register.name) {
+            continue;
+        }
+        let values = shada_register_restore(register);
+        if values.is_empty() {
+            continue;
+        }
+        cx.editor
+            .registers
+            .write(register.name, values)
+            .map_err(|e| anyhow!("rshada: register {}: {e}", register.name))?;
+        n_registers += 1;
+    }
+
+    // Histories, oldest first in the file: collected per kind, then reversed
+    // into the newest-first order the `:`/`/` registers hold.
+    let mut n_history = 0usize;
+    let mut search_history_applied = false;
+    for (kind, name) in [
+        (crate::shada::HISTORY_CMD, ':'),
+        (crate::shada::HISTORY_SEARCH, '/'),
+    ] {
+        let lines: Vec<String> = entries
+            .iter()
+            .filter_map(|entry| match &entry.kind {
+                EntryKind::History { kind: k, line, .. } if *k == kind => Some(line.clone()),
+                _ => None,
+            })
+            .rev()
+            .collect();
+        if lines.is_empty() {
+            continue;
+        }
+        if !force && cx.editor.registers.written().contains(&name) {
+            continue;
+        }
+        n_history += lines.len();
+        search_history_applied |= name == '/';
+        cx.editor
+            .registers
+            .write(name, lines)
+            .map_err(|e| anyhow!("rshada: history {name}: {e}"))?;
+    }
+
+    // The last used search pattern. In zmax the head of the `/` register *is*
+    // the last search, so a file that carried search history has already set it
+    // — writing the pattern on top would replace the register and throw that
+    // history away. zmax does not `:set` the options the entry also records
+    // ('magic', 'smartcase', 'hlsearch'): those are the reader's own options in
+    // nvim too.
+    if !search_history_applied && (force || cx.editor.registers.first('/', cx.editor).is_none()) {
+        if let Some(pattern) = entries.iter().find_map(|entry| match &entry.kind {
+            EntryKind::SearchPattern(p) if p.last_used && !p.substitute => Some(p.pattern.clone()),
+            _ => None,
+        }) {
+            cx.editor
+                .registers
+                .write('/', vec![pattern])
+                .map_err(|e| anyhow!("rshada: search pattern: {e}"))?;
         }
     }
 
-    let n_registers = registers.len();
-    for (name, values) in registers {
-        cx.editor
-            .registers
-            .write(name, values)
-            .map_err(|e| anyhow!("rshada: register {name}: {e}"))?;
-    }
+    // Marks. A global mark also lands in the editor's own store, so it survives
+    // its file being closed the way `m A` does.
     let mut restored = 0usize;
     let mut deferred = 0usize;
-    for (file, mark, pos) in marks {
-        let target = zmax_stdx::path::canonicalize(&file);
+    for entry in &entries {
+        let EntryKind::Mark { global, name, pos } = &entry.kind else {
+            continue;
+        };
+        let target = zmax_stdx::path::canonicalize(&pos.file);
+        if *global {
+            let already = cx.editor.global_marks.contains_key(name);
+            if force || !already {
+                cx.editor.global_marks.insert(
+                    *name,
+                    zmax_view::GlobalMark {
+                        path: target.clone(),
+                        line: pos.line.saturating_sub(1),
+                        col: pos.col,
+                    },
+                );
+            }
+        }
         let Some(id) = cx
             .editor
             .documents()
@@ -41833,27 +42289,62 @@ fn ex_rshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
             .map(|doc| doc.id())
         else {
             // No buffer holds this file: park the mark for the file itself to
-            // pick up when it is opened, which is when nvim reads a file's marks
-            // (starting.txt:972-973).
-            defer_shada_mark(target, mark, pos);
+            // pick up when it is opened (starting.txt:972-973).
+            defer_shada_mark(target, *name, pos.line, pos.col);
             deferred += 1;
             continue;
         };
         let Some(doc) = cx.editor.documents.get_mut(&id) else {
             continue;
         };
-        // A file edited outside the session can be shorter than it was: clamp.
-        doc.set_mark(mark, pos.min(doc.text().len_chars()));
+        if !force && doc.mark(*name).is_some() {
+            continue;
+        }
+        let at = shada_char_pos(doc.text().slice(..), pos.line, pos.col);
+        doc.set_mark(*name, at);
         restored += 1;
     }
     if deferred > 0 {
         install_shada_mark_hook();
     }
+
+    // The buffer list is read but not acted on: nvim restores it at startup
+    // ("If Vim is started without a file name argument, the buffer list is
+    // restored from the shada file", options.txt shada-%), not from a `:rshada`
+    // in the middle of a session.
+    let buffers = entries
+        .iter()
+        .filter_map(|entry| match &entry.kind {
+            EntryKind::BufferList(list) => Some(list.len()),
+            _ => None,
+        })
+        .sum::<usize>();
+
     cx.editor.set_status(format!(
-        "shada read from {} ({n_registers} register(s), {restored} mark(s), {deferred} deferred)",
+        "shada read from {} ({n_registers} register(s), {restored} mark(s), {deferred} deferred, \
+         {n_history} history line(s), {buffers} buffer(s))",
         path.display()
     ));
+    // starting.txt:1351: "When reading, critical errors cause the rest of the
+    // file to be skipped" — everything before the error is already applied, so
+    // the error is reported after it rather than instead of it.
+    if let Some(error) = critical {
+        cx.editor
+            .set_error(format!("rshada: {}: {error}", path.display()));
+    }
     Ok(())
+}
+
+fn ex_rshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    rshada(cx, args, event, false)
+}
+
+fn ex_rshada_bang(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    rshada(cx, args, event, true)
 }
 
 /// vim `:syncbind` — force the 'scrollbind' windows back in step, scrolling them
@@ -58935,8 +59426,19 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "wshada",
         aliases: &["wsh", "wsha", "wshad"],
-        doc: "Write the registers and every buffer's marks to the shada state file (nvim :wshada; zmax's own line format, not nvim's msgpack).",
+        doc: "Write the registers, histories, marks and jumplist to the shada file, merging with what it already holds (nvim :wshada; nvim's msgpack ShaDa format).",
         fun: ex_wshada,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wshada!",
+        aliases: &["wsh!", "wsha!", "wshad!"],
+        doc: "Write the shada file without reading the old one first (nvim :wshada!).",
+        fun: ex_wshada_bang,
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (0, Some(1)),
@@ -58946,8 +59448,19 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "rshada",
         aliases: &["rsh", "rsha", "rshad"],
-        doc: "Read the registers and marks back from the shada state file (nvim :rshada).",
+        doc: "Read the registers, histories and marks back from the shada file, keeping what is already set (nvim :rshada).",
         fun: ex_rshada,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rshada!",
+        aliases: &["rsh!", "rsha!", "rshad!"],
+        doc: "Read the shada file, overwriting registers, histories and marks that are already set (nvim :rshada!).",
+        fun: ex_rshada_bang,
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (0, Some(1)),
@@ -70533,23 +71046,43 @@ mod vim_set_tests {
         );
     }
 
-    /// nvim `:wshada` writes values that can hold a newline (a linewise register)
-    /// on one line each, so the escaping has to round-trip exactly — a lost
-    /// newline would silently change the register on the next `:rshada`.
+    /// A register survives the trip through a ShaDa Register entry: nvim's `rc`
+    /// is a flat array of *lines*, so the value boundaries zmax registers have
+    /// (one value per selection) only come back because of the `zv` key, and a
+    /// linewise register only stays linewise because of `rt`. Losing either
+    /// silently rewrites the register on the next `:rshada`.
     #[test]
-    fn shada_escaping_round_trips() {
-        use super::{shada_escape, shada_unescape};
-        for value in [
-            "plain",
-            "line one\nline two\n",
-            r"back\slash",
-            "mixed \\n literal and\nreal",
-            "",
+    fn shada_registers_round_trip_through_an_entry() {
+        use super::{shada_register_entry, shada_register_restore};
+        for values in [
+            vec!["plain".to_string()],
+            vec!["one\ntwo\n".to_string()],
+            vec!["first".to_string(), "second".to_string()],
+            vec!["a\nb".to_string(), "c".to_string()],
         ] {
-            let escaped = shada_escape(value);
-            assert!(!escaped.contains('\n'), "escaped value must fit one line");
-            assert_eq!(shada_unescape(&escaped), value, "round-trip of {value:?}");
+            let entry = shada_register_entry('a', &values, usize::MAX);
+            assert_eq!(shada_register_restore(&entry), values, "{values:?}");
         }
+        // 'shada' `<N` caps lines, not values: the boundaries are re-walked over
+        // what survives, so the restored values still line up.
+        let entry = shada_register_entry(
+            'a',
+            &["one\ntwo".to_string(), "three".to_string()],
+            2,
+        );
+        assert_eq!(entry.contents, vec!["one", "two"]);
+        assert_eq!(shada_register_restore(&entry), vec!["one\ntwo".to_string()]);
+        // An nvim-written entry has no `zv` at all: the whole line array is one
+        // value, linewise when `rt` says so.
+        let nvim = super::shada::Register {
+            name: 'a',
+            kind: 1,
+            width: 0,
+            contents: vec!["one".to_string(), "two".to_string()],
+            unnamed: false,
+            value_lines: Vec::new(),
+        };
+        assert_eq!(shada_register_restore(&nvim), vec!["one\ntwo\n".to_string()]);
     }
 
     /// `:uptime` reads `ps -o etime=`, whose format is `[[dd-]hh:]mm:ss`.
@@ -70589,6 +71122,13 @@ mod vim_set_tests {
             ("wsh", "wshada"),
             ("rshada", "rshada"),
             ("rsh", "rshada"),
+            // The bang forms are separate commands: `!` skips the read-and-merge
+            // on write, and overwrites already-set state on read
+            // (starting.txt:1155-1167).
+            ("wshada!", "wshada!"),
+            ("wsh!", "wshada!"),
+            ("rshada!", "rshada!"),
+            ("rsh!", "rshada!"),
             ("syncbind", "syncbind"),
             ("sync", "syncbind"),
             ("uptime", "uptime"),
@@ -71523,35 +72063,59 @@ mod vim_set_tests {
     }
 
     /// nvim `shada`: `'N` caps the files with marks, `<N` the lines per register,
-    /// `sN` the size of a register item.
+    /// `sN` the size of an item, `:N`/`/N` the two histories, `%` turns the
+    /// buffer list on, `f0` turns the file marks off, `r` lists paths whose marks
+    /// are never stored and `n` names the file itself.
     #[test]
     fn shada_option_caps_what_wshada_writes() {
-        let d = shada_limits("!,'100,<50,s10,h,r/tmp/");
-        assert_eq!(
-            d,
-            ShadaLimits {
-                files: 100,
-                lines: 50,
-                kb: 10
-            }
-        );
-        // Explicit caps win; the flags that name state zmax's shada does not
-        // carry are skipped rather than misread.
-        let l = shada_limits("'0,<0,s1");
-        assert_eq!(
-            l,
-            ShadaLimits {
-                files: 0,
-                lines: 0,
-                kb: 1
-            }
-        );
-        // Unlisted items keep nvim's defaults.
-        let p = shada_limits("h");
-        assert_eq!(p.files, 100);
-        assert_eq!(p.lines, 50);
+        let d = shada_limits(SHADA_DEFAULT, 1000);
+        assert_eq!(d.files, 100);
+        assert_eq!(d.lines, 50);
+        assert_eq!(d.kb, 10);
+        assert_eq!(d.removable, vec!["/tmp/".to_string(), "/private/".to_string()]);
+        assert!(d.file_marks, "the default 'shada' has no `f0`");
+        assert_eq!(d.buffers, None, "the default 'shada' has no `%`");
+        // Explicit caps win; the flags that name state zmax has none of (`!`
+        // global variables, `@` input-line history, `c`, `h`) are skipped rather
+        // than misread.
+        let l = shada_limits("'0,<0,s1,:0,/3,@9,c,%7,f0", 1000);
+        assert_eq!(l.files, 0);
+        assert_eq!(l.lines, 0);
+        assert_eq!(l.kb, 1);
+        assert_eq!(l.cmd_history, 0);
+        assert_eq!(l.search_history, 3);
+        assert_eq!(l.buffers, Some(7));
+        assert!(!l.file_marks);
+        // Unlisted items fall back to what nvim's shada.c uses for a `-1` (item
+        // not present): `'` and `<` are unlimited (shada.c:2256-2263), `s` is 10
+        // (shada.c:2246), and the two histories are 'history' (shada.c:2269-2272).
+        let p = shada_limits("h", 1000);
+        assert_eq!(p.files, usize::MAX);
+        assert_eq!(p.lines, usize::MAX);
+        assert_eq!(p.kb, 10);
+        assert_eq!(p.cmd_history, 1000);
+        assert_eq!(p.search_history, 1000);
         // `"N` is the viminfo spelling of `<N`.
-        assert_eq!(shada_limits("\"7").lines, 7);
+        assert_eq!(shada_limits("\"7", 0).lines, 7);
+        // `%` with no number is "all buffers".
+        assert_eq!(shada_limits("%", 0).buffers, Some(usize::MAX));
+        // `n` "must be at the end of the option", so the name runs to the end of
+        // the string — commas in a path do not split it.
+        assert_eq!(
+            shada_limits("'10,n~/state/my,shada", 0).name.as_deref(),
+            Some("~/state/my,shada")
+        );
+        // `r` is case-insensitive and may be given several times.
+        let r = shada_limits("r/Tmp/,r/Volumes/", 0);
+        assert!(shada_removable(
+            &r,
+            std::path::Path::new("/tmp/scratch.rs")
+        ));
+        assert!(shada_removable(
+            &r,
+            std::path::Path::new("/Volumes/usb/notes.md")
+        ));
+        assert!(!shada_removable(&r, std::path::Path::new("/home/x/a.rs")));
     }
 
     /// vim `:clist` prints `{nr} {file}|{line} col {col}| {text}`, with `>` on the
@@ -71798,17 +72362,17 @@ mod vim_set_tests {
     fn deferred_shada_marks_are_keyed_by_file_and_mark() {
         let file = std::path::PathBuf::from("/tmp/zmax-shada-test/a.rs");
         let other = std::path::PathBuf::from("/tmp/zmax-shada-test/b.rs");
-        defer_shada_mark(file.clone(), 'A', 10);
-        defer_shada_mark(file.clone(), 'B', 20);
-        defer_shada_mark(file.clone(), 'A', 30);
-        defer_shada_mark(other.clone(), 'A', 40);
+        defer_shada_mark(file.clone(), 'A', 10, 1);
+        defer_shada_mark(file.clone(), 'B', 20, 2);
+        defer_shada_mark(file.clone(), 'A', 30, 3);
+        defer_shada_mark(other.clone(), 'A', 40, 4);
 
         let mut marks = PENDING_SHADA_MARKS.with(|m| m.borrow_mut().remove(&file).unwrap());
         marks.sort_unstable();
-        assert_eq!(marks, [('A', 30), ('B', 20)], "'A' moved, 'B' kept");
+        assert_eq!(marks, [('A', 30, 3), ('B', 20, 2)], "'A' moved, 'B' kept");
         assert_eq!(
             PENDING_SHADA_MARKS.with(|m| m.borrow_mut().remove(&other)),
-            Some(vec![('A', 40)]),
+            Some(vec![('A', 40, 4)]),
             "another file's marks are not touched"
         );
     }

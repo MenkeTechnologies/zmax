@@ -188,6 +188,11 @@ static SMOOTHSCROLL: AtomicBool = AtomicBool::new(true);
 /// zmax has always done, so it holds until `:set jumpoptions=` (or any value
 /// without `stack`) asks for the classic jumplist, which keeps them.
 static JUMPOPTIONS_STACK: AtomicBool = AtomicBool::new(true);
+/// vim `jumpoptions` contains `view`: "when moving through the jumplist ... try
+/// to restore the |mark-view| in which the action occurred" (options.txt). vim's
+/// default is `clean`, so this starts off and zmax keeps its own
+/// scroll-minimally-to-the-cursor behaviour until `:set jumpoptions=view`.
+static JUMPOPTIONS_VIEW: AtomicBool = AtomicBool::new(false);
 
 /// vim `smoothscroll` (`sms`): `:set nosmoothscroll` keeps whole lines at the
 /// top of the window — a soft-wrapped line is never shown with its first screen
@@ -200,29 +205,73 @@ fn smoothscroll() -> bool {
     SMOOTHSCROLL.load(Ordering::Relaxed)
 }
 
-/// vim `jumpoptions` (`jop`): only the `stack` word changes what the jumplist
-/// does on a push (see `JumpList::push`).
+/// vim `jumpoptions` (`jop`): `stack` changes what the jumplist does on a push
+/// (see `JumpList::push`), `view` changes what navigating it restores (see
+/// `Editor::jump_to`). `clean` — dropping unloaded buffers — is a no-op here:
+/// zmax already prunes a closed document from every jumplist in
+/// `Editor::close_document`, so there is nothing left to remove.
 pub fn set_jumpoptions(value: &str) {
-    let stack = value.split(',').any(|w| w.trim() == "stack");
+    let mut stack = false;
+    let mut view = false;
+    for word in value.split(',') {
+        match word.trim() {
+            "stack" => stack = true,
+            "view" => view = true,
+            _ => {}
+        }
+    }
     JUMPOPTIONS_STACK.store(stack, Ordering::Relaxed);
+    JUMPOPTIONS_VIEW.store(view, Ordering::Relaxed);
 }
 
 fn jumpoptions_stack() -> bool {
     JUMPOPTIONS_STACK.load(Ordering::Relaxed)
 }
 
+pub(crate) fn jumpoptions_view() -> bool {
+    JUMPOPTIONS_VIEW.load(Ordering::Relaxed)
+}
+
 type Jump = (DocumentId, Selection);
+
+/// A jumplist entry: the jump itself plus the window's scroll position at the
+/// moment it was recorded. vim keeps the same pair on every mark (`fmarkv_T`,
+/// `mark_view_make` in src/nvim/mark.c) so that `jumpoptions=view` can put the
+/// *window* back the way it was and not merely the cursor. The scroll position
+/// is stored even when the option is off — it costs three `usize` and the option
+/// is global and can be flipped between the push and the jump back.
+#[derive(Debug, Clone)]
+struct JumpEntry {
+    jump: Jump,
+    view_position: ViewPosition,
+}
+
+impl JumpEntry {
+    /// An entry whose recorded view is the top of the buffer — the window a
+    /// freshly opened `View` starts with, which is the only jump that exists
+    /// before anything has been pushed. vim's equivalent blank (`INIT_FMARKV`)
+    /// means "no view recorded, do not restore one"; here the blank is a real
+    /// position, so `jumpoptions=view` on this entry scrolls to the top rather
+    /// than leaving the window alone. Every entry `push_jump` records carries the
+    /// window it was actually made in, so this only covers the initial one.
+    fn new(jump: Jump) -> Self {
+        Self {
+            jump,
+            view_position: ViewPosition::default(),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct JumpList {
-    jumps: VecDeque<Jump>,
+    jumps: VecDeque<JumpEntry>,
     current: usize,
 }
 
 impl JumpList {
     pub fn new(initial: Jump) -> Self {
         let mut jumps = VecDeque::with_capacity(JUMP_LIST_CAPACITY);
-        jumps.push_back(initial);
+        jumps.push_back(JumpEntry::new(initial));
         Self { jumps, current: 0 }
     }
 
@@ -234,13 +283,14 @@ impl JumpList {
 
     /// Returns how many entries were dropped from *before* the navigation cursor
     /// (so [`Self::backward`] can keep `current` pointing at the same jump).
-    fn push_impl(&mut self, jump: Jump) -> usize {
+    fn push_impl(&mut self, entry: JumpEntry) -> usize {
+        let jump = &entry.jump;
         let mut num_removed_from_front = 0;
         if jumpoptions_stack() {
             // vim `jumpoptions=stack`: jumping from the middle of the list
             // discards everything after the current position (|jumplist-stack|).
             self.jumps.truncate(self.current);
-        } else if let Some(idx) = self.jumps.iter().position(|j| j == &jump) {
+        } else if let Some(idx) = self.jumps.iter().position(|e| &e.jump == jump) {
             // The classic vim jumplist keeps the entries after the current
             // position; instead, "if the same line was already in the jump list,
             // it is removed" — the entry moves to the end rather than duplicating.
@@ -250,28 +300,36 @@ impl JumpList {
                 num_removed_from_front += 1;
             }
         }
-        // don't push duplicates
-        if self.jumps.back() != Some(&jump) {
+        // don't push duplicates (the recorded view is not part of the identity —
+        // returning to the same spot with the window scrolled differently is the
+        // same jump, exactly as in vim, where the mark is keyed by position)
+        if self.jumps.back().map(|e| &e.jump) != Some(jump) {
             // If the jumplist is full, drop the oldest item.
             while self.jumps.len() >= JUMP_LIST_CAPACITY {
                 self.jumps.pop_front();
                 num_removed_from_front += 1;
             }
 
-            self.jumps.push_back(jump);
+            self.jumps.push_back(entry);
             self.current = self.jumps.len();
         }
         num_removed_from_front
     }
 
-    pub(crate) fn push(&mut self, jump: Jump) {
-        self.push_impl(jump);
+    pub(crate) fn push(&mut self, jump: Jump, view_position: ViewPosition) {
+        self.push_impl(JumpEntry {
+            jump,
+            view_position,
+        });
     }
 
-    pub(crate) fn forward(&mut self, count: usize) -> Option<&Jump> {
+    /// The jump at the navigation cursor after moving `count` entries forward,
+    /// with the window position recorded when it was pushed (`jumpoptions=view`).
+    pub(crate) fn forward(&mut self, count: usize) -> Option<(Jump, ViewPosition)> {
         if self.current + count < self.jumps.len() {
             self.current += count;
-            self.jumps.get(self.current)
+            let entry = self.jumps.get(self.current)?;
+            Some((entry.jump.clone(), entry.view_position))
         } else {
             None
         }
@@ -283,21 +341,28 @@ impl JumpList {
         view_id: ViewId,
         doc: &mut Document,
         count: usize,
-    ) -> Option<&Jump> {
+    ) -> Option<(Jump, ViewPosition)> {
         if let Some(mut current) = self.current.checked_sub(count) {
             if self.current == self.jumps.len() {
-                let jump = (doc.id(), doc.selection(view_id).clone());
-                let num_removed = self.push_impl(jump);
+                // Leaving the tip of the list records where we are leaving from,
+                // window position included, so that `jump_forward` can bring both
+                // the cursor and the view back (vim `jumpoptions=view`).
+                let entry = JumpEntry {
+                    jump: (doc.id(), doc.selection(view_id).clone()),
+                    view_position: doc.view_offset(view_id),
+                };
+                let num_removed = self.push_impl(entry);
                 current = current.saturating_sub(num_removed);
             }
             self.current = current;
 
             // Avoid jumping to the current location.
-            let (doc_id, selection) = self.jumps.get(self.current)?;
+            let (doc_id, selection) = &self.jumps.get(self.current)?.jump;
             if doc.id() == *doc_id && doc.selection(view_id) == selection {
                 self.current = self.current.checked_sub(1)?;
             }
-            self.jumps.get(self.current)
+            let entry = self.jumps.get(self.current)?;
+            Some((entry.jump.clone(), entry.view_position))
         } else {
             None
         }
@@ -313,9 +378,9 @@ impl JumpList {
             .jumps
             .iter()
             .take(self.current)
-            .filter(|(other_id, _)| other_id == doc_id)
+            .filter(|e| &e.jump.0 == doc_id)
             .count();
-        self.jumps.retain(|(other_id, _)| other_id != doc_id);
+        self.jumps.retain(|e| &e.jump.0 != doc_id);
         self.current = self
             .current
             .saturating_sub(removed_before_current)
@@ -323,21 +388,30 @@ impl JumpList {
     }
 
     pub fn iter(&self) -> impl DoubleEndedIterator<Item = &Jump> {
-        self.jumps.iter()
+        self.jumps.iter().map(|e| &e.jump)
     }
 
     /// Applies a [`Transaction`] of changes to the jumplist.
     /// This is necessary to ensure that changes to documents do not leave jump-list
     /// selections pointing to parts of the text which no longer exist.
     fn apply(&mut self, transaction: &Transaction, doc: &Document) {
+        use zmax_core::Assoc;
+
         let text = doc.text().slice(..);
 
-        for (doc_id, selection) in &mut self.jumps {
+        for entry in &mut self.jumps {
+            let (doc_id, selection) = &mut entry.jump;
             if doc.id() == *doc_id {
                 *selection = selection
                     .clone()
                     .map(transaction.changes())
                     .ensure_invariants(text);
+                // The recorded window position is a char index into the same
+                // document, so it has to be mapped too — `Document::apply` does
+                // exactly this for the live `ViewPosition` (see `view_data`).
+                entry.view_position.anchor = transaction
+                    .changes()
+                    .map_pos(entry.view_position.anchor, Assoc::Before);
             }
         }
     }
@@ -1122,7 +1196,11 @@ impl View {
         // map it through a changeset whose pre-image predates it, panicking in
         // `ChangeSet::update_positions` when the document has since grown.
         self.sync_changes(doc);
-        self.jumps.push(jump);
+        // vim records the window's view alongside every mark it sets
+        // (`mark_view_make`, src/nvim/mark.c) so that `jumpoptions=view` can
+        // restore the screen — not just the cursor — when the jump is taken back.
+        let view_position = doc.view_offset(self.id);
+        self.jumps.push(jump, view_position);
     }
 }
 
@@ -1562,6 +1640,7 @@ mod tests {
                 (doc_a, Selection::point(4)),
             ]
             .into_iter()
+            .map(JumpEntry::new)
             .collect();
             jumps.current = current;
             jumps
@@ -1685,20 +1764,23 @@ mod tests {
         // `push` is the very thing under test).
         let make = || -> JumpList {
             let mut jumps = JumpList::new(at(0));
-            jumps.jumps = [at(0), at(1), at(2)].into_iter().collect();
+            jumps.jumps = [at(0), at(1), at(2)]
+                .into_iter()
+                .map(JumpEntry::new)
+                .collect();
             jumps.current = 1;
             jumps
         };
 
         set_jumpoptions("stack");
         let mut jumps = make();
-        jumps.push(at(9));
+        jumps.push(at(9), ViewPosition::default());
         assert_eq!(heads(&jumps), vec![0, 9], "stack: forward entries dropped");
         assert_eq!(jumps.current, 2);
 
         set_jumpoptions("clean");
         let mut jumps = make();
-        jumps.push(at(9));
+        jumps.push(at(9), ViewPosition::default());
         assert_eq!(
             heads(&jumps),
             vec![0, 1, 2, 9],
@@ -1709,10 +1791,56 @@ mod tests {
         // "If the same line was already in the jump list, it is removed" — the
         // entry moves to the end instead of appearing twice.
         let mut jumps = make();
-        jumps.push(at(1));
+        jumps.push(at(1), ViewPosition::default());
         assert_eq!(heads(&jumps), vec![0, 2, 1]);
         assert_eq!(jumps.current, 3);
 
         set_jumpoptions("stack");
+    }
+
+    /// vim `jumpoptions=view`: "when moving through the jumplist ... try to
+    /// restore the |mark-view| in which the action occurred" (options.txt). vim
+    /// can do that because every mark carries the window position it was made in
+    /// (`mark_view_make`, src/nvim/mark.c); a jumplist entry of just
+    /// `(DocumentId, Selection)` has nothing to restore. This pins the recording
+    /// half — that the scroll position at push time is what navigation hands back
+    /// — independently of the `stack`/`clean` state the previous test leaves in
+    /// the (global, vim-global) option.
+    #[test]
+    fn jumplist_records_the_window_position() {
+        let config = Arc::new(ArcSwap::new(Arc::new(Config::default())));
+        let loader = Arc::new(ArcSwap::from_pointee(syntax::Loader::default()));
+        let mut doc = Document::from(Rope::from_str("a\nb\nc\nd\ne\nf\n"), None, config, loader);
+        let mut view = View::new(doc.id(), GutterConfig::default());
+        doc.ensure_view_init(view.id);
+
+        // A window scrolled down two lines, with the cursor on the third line.
+        let scrolled = ViewPosition {
+            anchor: 4,
+            horizontal_offset: 0,
+            vertical_offset: 1,
+        };
+        doc.set_view_offset(view.id, scrolled);
+        doc.set_selection(view.id, Selection::point(4));
+        let jump = (doc.id(), doc.selection(view.id).clone());
+        // `set_selection` runs `ensure_invariants`, which widens a point to cover
+        // the grapheme under it, so ask the document what the caret ended up as.
+        let expected_head = doc.selection(view.id).primary().head;
+        view.push_jump(&mut doc, jump);
+
+        // Jump away: both the caret and the window move to the top of the buffer.
+        doc.set_selection(view.id, Selection::point(0));
+        doc.set_view_offset(view.id, ViewPosition::default());
+
+        let ((_, selection), recorded) = view.jumps.backward(view.id, &mut doc, 1).unwrap();
+        assert_eq!(
+            selection.primary().head,
+            expected_head,
+            "the caret comes back"
+        );
+        assert_eq!(
+            recorded, scrolled,
+            "and so does the window it was in, for `jumpoptions=view` to apply",
+        );
     }
 }
