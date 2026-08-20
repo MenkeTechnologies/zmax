@@ -2138,6 +2138,15 @@ pub struct Editor {
     pub tree: Tree,
     pub next_document_id: DocumentId,
     pub documents: BTreeMap<DocumentId, Document>,
+    /// The user-visible buffer order — what the buffer line shows left to right,
+    /// and what `move_buffer` / `sort_buffers` rearrange. `documents` is keyed by
+    /// [`DocumentId`], so on its own it can only ever be in open order; vim's
+    /// `:buffers` order and AstroNvim's `vim.t.bufs` are a list the user may
+    /// permute, hence a list of our own. Maintained by [`Editor::new_document`]
+    /// and every site that removes from `documents`; read through
+    /// [`Editor::ordered_document_ids`], which reconciles it with `documents`
+    /// so a stale or missing entry can never hide a buffer.
+    pub buffer_order: Vec<DocumentId>,
 
     // We Flatten<> to resolve the inner DocumentSavedEventFuture. For that we need a stream of streams, hence the Once<>.
     // https://stackoverflow.com/a/66875668
@@ -2517,6 +2526,63 @@ impl Action {
     }
 }
 
+/// Which key [`Editor::sort_buffers`] orders the buffer line by. Ports
+/// AstroNvim's `astrocore.buffer.comparator` (the `<Leader>bs*` sorts).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BufferSortKey {
+    /// `comparator.extension`: the file's extension (`fnamemodify(name, ":e")`),
+    /// empty for a buffer with no path or no extension.
+    Extension,
+    /// `comparator.full_path`: the absolute path (`fnamemodify(name, ":p")`).
+    FullPath,
+    /// `comparator.unique_path`: upstream sorts on the shortest path that tells a
+    /// buffer apart from its namesakes. zmax's equivalent is
+    /// [`Document::relative_path`], which is what the buffer line already
+    /// displays.
+    RelativePath,
+    /// `comparator.bufnr`: the buffer number, i.e. [`DocumentId`] — open order.
+    Id,
+    /// `comparator.modified`: named for the `<Leader>bsm` "By modification"
+    /// mapping, but upstream compares `getbufinfo().lastused` *descending*, i.e.
+    /// most recently used first, not the modified flag. `Document::focused_at` is
+    /// zmax's `lastused`.
+    LastUsed,
+}
+
+/// Move the buffer `id` `offset` places along `order`, wrapping at the ends.
+///
+/// Ports `astrocore.buffer.move(n)`: the count is reduced modulo the buffer
+/// count and applied as that many single steps to the right, each swapping with
+/// the next buffer except at the end, where the buffer rotates round to the
+/// front. Lua's `%` floors, so a negative count is the equivalent number of
+/// rightward steps — `move(-1)` over five buffers is four steps right, which is
+/// one step left with wrapping. Returns whether anything moved.
+pub(crate) fn move_buffer_in_order(
+    order: &mut Vec<DocumentId>,
+    id: DocumentId,
+    offset: isize,
+) -> bool {
+    let len = order.len();
+    if len < 2 {
+        return false;
+    }
+    let Some(mut i) = order.iter().position(|&buf| buf == id) else {
+        return false;
+    };
+    let steps = offset.rem_euclid(len as isize) as usize;
+    for _ in 0..steps {
+        if i == len - 1 {
+            let buf = order.remove(i);
+            order.insert(0, buf);
+            i = 0;
+        } else {
+            order.swap(i, i + 1);
+            i += 1;
+        }
+    }
+    steps != 0
+}
+
 /// Error thrown on failed document closed
 pub enum CloseError {
     /// Document doesn't exist
@@ -2577,6 +2643,7 @@ impl Editor {
             tree: Tree::new(area),
             next_document_id: DocumentId::default(),
             documents: BTreeMap::new(),
+            buffer_order: Vec::new(),
             saves: HashMap::new(),
             save_queue: SelectAll::new(),
             write_count: 0,
@@ -3321,6 +3388,7 @@ impl Editor {
                     // borrow, invalidating direct access to `doc.id`.
                     let id = doc.id;
                     self.documents.remove(&id);
+                    self.buffer_order.retain(|&buf| buf != id);
 
                     // Remove the scratch buffer from any jumplists
                     for (view, _) in self.tree.views_mut() {
@@ -3412,6 +3480,8 @@ impl Editor {
             DocumentId(unsafe { NonZeroUsize::new_unchecked(self.next_document_id.0.get() + 1) });
         doc.id = id;
         self.documents.insert(id, doc);
+        // A new buffer joins the end of the buffer line, as in vim and AstroNvim.
+        self.buffer_order.push(id);
 
         let (save_sender, save_receiver) = tokio::sync::mpsc::unbounded_channel();
         self.saves.insert(id, save_sender);
@@ -3673,6 +3743,7 @@ impl Editor {
         }
 
         let doc = self.documents.remove(&doc_id).unwrap();
+        self.buffer_order.retain(|&buf| buf != doc_id);
 
         // If the document we removed was visible in all views, we will have no more views. We don't
         // want to close the editor just for a simple buffer close, so we need to create a new view
@@ -4535,6 +4606,92 @@ impl Editor {
             .find(|doc| doc.path().is_some_and(|p| p == path.as_ref()))
     }
 
+    /// The open buffers in buffer-line order — [`Editor::buffer_order`] reconciled
+    /// with `documents`: ids whose document is gone are dropped, and documents the
+    /// order never recorded are appended in id order. The reconciliation is what
+    /// makes this safe to render from; without it a bookkeeping slip would hide a
+    /// real buffer. Buffer counts are in the tens, so the linear scans are cheaper
+    /// than the sets that would replace them.
+    pub fn ordered_document_ids(&self) -> Vec<DocumentId> {
+        let mut ids: Vec<DocumentId> = self
+            .buffer_order
+            .iter()
+            .copied()
+            .filter(|id| self.documents.contains_key(id))
+            .collect();
+        ids.extend(
+            self.documents
+                .keys()
+                .copied()
+                .filter(|id| !self.buffer_order.contains(id)),
+        );
+        ids
+    }
+
+    /// The documents in buffer-line order. The ordered counterpart of
+    /// [`Editor::documents`], which iterates by [`DocumentId`].
+    pub fn ordered_documents(&self) -> impl Iterator<Item = &Document> {
+        self.ordered_document_ids()
+            .into_iter()
+            .filter_map(|id| self.documents.get(&id))
+    }
+
+    /// Where `id` sits in the buffer line, counting from 0.
+    pub fn buffer_position(&self, id: DocumentId) -> Option<usize> {
+        self.ordered_document_ids().iter().position(|&buf| buf == id)
+    }
+
+    /// Write the reconciled order back, so the reordering operations below act on
+    /// a complete, live order rather than on whatever the raw list happens to hold.
+    fn sync_buffer_order(&mut self) {
+        self.buffer_order = self.ordered_document_ids();
+    }
+
+    /// Move a buffer `offset` places along the buffer line, wrapping at the ends
+    /// (`>b` / `<b`, i.e. `astrocore.buffer.move`). Returns whether it moved.
+    pub fn move_buffer(&mut self, id: DocumentId, offset: isize) -> bool {
+        self.sync_buffer_order();
+        move_buffer_in_order(&mut self.buffer_order, id, offset)
+    }
+
+    /// Reorder the buffer line by `key` (the `<Leader>bs*` sorts).
+    pub fn sort_buffers(&mut self, key: BufferSortKey) {
+        match key {
+            BufferSortKey::Extension => self.sort_buffers_by(|doc| {
+                doc.path()
+                    .and_then(Path::extension)
+                    .map(|ext| ext.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            }),
+            BufferSortKey::FullPath => self.sort_buffers_by(|doc| {
+                doc.path()
+                    .map(|path| path.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            }),
+            BufferSortKey::RelativePath => self.sort_buffers_by(|doc| {
+                doc.relative_path()
+                    .map(|path| path.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            }),
+            BufferSortKey::Id => self.sort_buffers_by(Document::id),
+            // Most recently used first, per `comparator.modified`.
+            BufferSortKey::LastUsed => {
+                self.sort_buffers_by(|doc| std::cmp::Reverse(doc.focused_at))
+            }
+        }
+    }
+
+    /// Sort the buffer line by a key read off each document. Ties break on the
+    /// buffer number, so the result never depends on the sort being stable —
+    /// upstream's `table.sort` is itself unstable, so there is no ordering of
+    /// equal keys to be faithful to.
+    fn sort_buffers_by<K: Ord>(&mut self, key: impl Fn(&Document) -> K) {
+        self.sync_buffer_order();
+        let mut order = std::mem::take(&mut self.buffer_order);
+        order.sort_by_cached_key(|id| (self.documents.get(id).map(&key), *id));
+        self.buffer_order = order;
+    }
+
     /// Returns all supported diagnostics for the document
     pub fn doc_diagnostics<'a>(
         language_servers: &'a zmax_lsp::Registry,
@@ -5230,5 +5387,241 @@ pub mod debug_on_error {
             assert!(take().is_none());
             assert!(!toggle());
         }
+    }
+}
+
+#[cfg(test)]
+mod buffer_order_tests {
+    use super::*;
+    use crate::handlers::{completion::CompletionHandler, word_index, Handlers};
+
+    /// Nothing here sends a handler event, so the receivers are dropped on the
+    /// spot — that only makes a later send fail, it never panics.
+    fn sender<T>() -> tokio::sync::mpsc::Sender<T> {
+        tokio::sync::mpsc::channel(1).0
+    }
+
+    fn test_editor() -> Editor {
+        let handlers = Handlers {
+            completions: CompletionHandler::new(sender()),
+            signature_hints: sender(),
+            auto_save: sender(),
+            document_colors: sender(),
+            document_links: sender(),
+            word_index: word_index::Handler::spawn(),
+            pull_diagnostics: sender(),
+            pull_all_documents_diagnostics: sender(),
+            code_action_hint: sender(),
+            ai_ghost: sender(),
+        };
+        Editor::new(
+            Rect::new(0, 0, 80, 24),
+            Arc::new(theme::Loader::new(&[])),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+            Arc::new(ArcSwap::from_pointee(Config::default())),
+            handlers,
+            WorkspaceTrust::fully_trusted(),
+        )
+    }
+
+    /// Open a buffer visiting `path`, through the one site that inserts into
+    /// `documents`.
+    fn open(editor: &mut Editor, path: impl AsRef<Path>) -> DocumentId {
+        let mut doc = Document::from(
+            zmax_core::Rope::from("\n"),
+            None,
+            editor.config.clone(),
+            editor.syn_loader.clone(),
+        );
+        doc.set_path(Some(path.as_ref()));
+        editor.new_document(doc)
+    }
+
+    /// A scratch buffer — no path, so every path-derived sort key is empty.
+    fn open_scratch(editor: &mut Editor) -> DocumentId {
+        let doc = Document::default(editor.config.clone(), editor.syn_loader.clone());
+        editor.new_document(doc)
+    }
+
+    /// A new buffer joins the end of the line and a closed one leaves it,
+    /// without disturbing the rest.
+    #[tokio::test]
+    async fn buffers_join_and_leave_the_order() {
+        let mut editor = test_editor();
+        let a = open(&mut editor, "/zroot/a.rs");
+        let b = open(&mut editor, "/zroot/b.rs");
+        let c = open(&mut editor, "/zroot/c.rs");
+        let d = open(&mut editor, "/zroot/d.rs");
+        assert_eq!(editor.buffer_order, vec![a, b, c, d]);
+        assert_eq!(editor.ordered_document_ids(), vec![a, b, c, d]);
+        assert_eq!(editor.buffer_position(c), Some(2));
+
+        // Give the tree a window first: closing a buffer with no window left
+        // opens a replacement scratch, which is a different scenario.
+        editor.switch(a, Action::Load);
+
+        assert!(editor.close_document(c, true).is_ok());
+        assert_eq!(editor.buffer_order, vec![a, b, d]);
+        assert_eq!(editor.buffer_position(c), None);
+        assert_eq!(editor.buffer_position(d), Some(2));
+        assert_eq!(editor.documents().count(), 3);
+    }
+
+    /// The order is only ever read through `ordered_document_ids`, which
+    /// reconciles it with `documents` — so neither a stale id nor a document the
+    /// order failed to record can corrupt what the buffer line shows.
+    #[tokio::test]
+    async fn the_order_is_reconciled_with_the_document_map() {
+        let mut editor = test_editor();
+        let a = open(&mut editor, "/zroot/a.rs");
+        let b = open(&mut editor, "/zroot/b.rs");
+        let c = open(&mut editor, "/zroot/c.rs");
+
+        // Corrupt it both ways: an id for a document that does not exist, and a
+        // document (`b`) that never made it into the order.
+        let stale = editor.next_document_id;
+        editor.buffer_order.retain(|&id| id != b);
+        editor.buffer_order.push(stale);
+
+        // The stale id is dropped, and the unrecorded document is appended.
+        assert_eq!(editor.ordered_document_ids(), vec![a, c, b]);
+        assert_eq!(editor.ordered_documents().count(), 3);
+        // A reordering operation repairs the stored order on the way through.
+        editor.sort_buffers(BufferSortKey::Id);
+        assert_eq!(editor.buffer_order, vec![a, b, c]);
+    }
+
+    /// `>b` / `<b`: astrocore reduces the count modulo the buffer count and
+    /// applies it as that many single steps right, rotating round at the end.
+    #[tokio::test]
+    async fn moving_a_buffer_walks_the_line_and_wraps() {
+        let mut editor = test_editor();
+        let a = open(&mut editor, "/zroot/a.rs");
+        let b = open(&mut editor, "/zroot/b.rs");
+        let c = open(&mut editor, "/zroot/c.rs");
+        let d = open(&mut editor, "/zroot/d.rs");
+
+        assert!(editor.move_buffer(a, 1));
+        assert_eq!(editor.buffer_order, vec![b, a, c, d]);
+        // Two more steps put it at the end…
+        assert!(editor.move_buffer(a, 2));
+        assert_eq!(editor.buffer_order, vec![b, c, d, a]);
+        // …and one more wraps it round to the front.
+        assert!(editor.move_buffer(a, 1));
+        assert_eq!(editor.buffer_order, vec![a, b, c, d]);
+
+        // Left off the front wraps to the back, because `-1` reduces to three
+        // steps right over four buffers.
+        assert!(editor.move_buffer(a, -1));
+        assert_eq!(editor.buffer_order, vec![b, c, d, a]);
+        assert!(editor.move_buffer(a, -1));
+        assert_eq!(editor.buffer_order, vec![b, c, a, d]);
+
+        // A whole lap is a no-op, as is `move(0)`.
+        assert!(!editor.move_buffer(a, 4));
+        assert!(!editor.move_buffer(a, 0));
+        assert_eq!(editor.buffer_order, vec![b, c, a, d]);
+
+        // Nothing to move past when there is one buffer, or none matching.
+        let mut lone = test_editor();
+        let only = open(&mut lone, "/zroot/only.rs");
+        assert!(!lone.move_buffer(only, 1));
+        assert_eq!(lone.buffer_order, vec![only]);
+        assert!(!editor.move_buffer(editor.next_document_id, 1));
+    }
+
+    /// `<Leader>bse`, `comparator.extension`: `fnamemodify(name, ":e")`, which is
+    /// empty for a buffer with no extension — or no file.
+    #[tokio::test]
+    async fn sorting_by_extension() {
+        let mut editor = test_editor();
+        let scratch = open_scratch(&mut editor);
+        let rs = open(&mut editor, "/zroot/z.rs");
+        let txt = open(&mut editor, "/zroot/a.txt");
+        let c = open(&mut editor, "/zroot/m.c");
+
+        editor.sort_buffers(BufferSortKey::Extension);
+        assert_eq!(editor.buffer_order, vec![scratch, c, rs, txt]);
+    }
+
+    /// `<Leader>bsp`, `comparator.full_path`: the absolute path, compared as a
+    /// string — so `a.rs` precedes the directory `a/`, which precedes `b.rs`.
+    #[tokio::test]
+    async fn sorting_by_full_path() {
+        let mut editor = test_editor();
+        let b = open(&mut editor, "/zroot/b.rs");
+        let a = open(&mut editor, "/zroot/a.rs");
+        let nested = open(&mut editor, "/zroot/a/z.rs");
+
+        editor.sort_buffers(BufferSortKey::FullPath);
+        assert_eq!(editor.buffer_order, vec![a, nested, b]);
+    }
+
+    /// `<Leader>bsr`, `comparator.unique_path`: zmax sorts on the path the buffer
+    /// line displays, which is relative to the working directory when the file is
+    /// under it and absolute when it is not.
+    #[tokio::test]
+    async fn sorting_by_relative_path() {
+        let mut editor = test_editor();
+        let inside = open(
+            &mut editor,
+            zmax_stdx::env::current_working_dir().join("zzz.rs"),
+        );
+        let outside = open(&mut editor, "/zroot/aaa.rs");
+
+        // The keys the sort actually compares.
+        assert_eq!(
+            editor.document(inside).unwrap().relative_path(),
+            Some(Path::new("zzz.rs"))
+        );
+        assert_eq!(
+            editor.document(outside).unwrap().relative_path(),
+            Some(Path::new("/zroot/aaa.rs"))
+        );
+
+        // A leading `/` sorts before `z`, so the buffer outside the working
+        // directory comes first — the opposite of what its file name suggests.
+        editor.sort_buffers(BufferSortKey::RelativePath);
+        assert_eq!(editor.buffer_order, vec![outside, inside]);
+    }
+
+    /// `<Leader>bsi`, `comparator.bufnr`: back to open order.
+    #[tokio::test]
+    async fn sorting_by_id() {
+        let mut editor = test_editor();
+        let a = open(&mut editor, "/zroot/a.rs");
+        let b = open(&mut editor, "/zroot/b.rs");
+        let c = open(&mut editor, "/zroot/c.rs");
+
+        assert!(editor.move_buffer(c, -2));
+        assert!(editor.move_buffer(b, 1));
+        assert_eq!(editor.buffer_order, vec![b, c, a]);
+
+        editor.sort_buffers(BufferSortKey::Id);
+        assert_eq!(editor.buffer_order, vec![a, b, c]);
+    }
+
+    /// `<Leader>bsm`, `comparator.modified`: named for the "By modification"
+    /// mapping, but upstream compares `lastused` descending — most recently used
+    /// first, regardless of whether anything was modified.
+    #[tokio::test]
+    async fn sorting_by_last_used() {
+        let mut editor = test_editor();
+        let a = open(&mut editor, "/zroot/a.rs");
+        let b = open(&mut editor, "/zroot/b.rs");
+        let c = open(&mut editor, "/zroot/c.rs");
+
+        // Explicit instants: two `Instant::now()` calls can read equal on a
+        // coarse clock, and the test would then be asserting the tiebreak.
+        let base = std::time::Instant::now();
+        editor.document_mut(a).unwrap().focused_at = base + std::time::Duration::from_secs(2);
+        editor.document_mut(b).unwrap().focused_at = base + std::time::Duration::from_secs(3);
+        editor.document_mut(c).unwrap().focused_at = base + std::time::Duration::from_secs(1);
+
+        editor.sort_buffers(BufferSortKey::LastUsed);
+        assert_eq!(editor.buffer_order, vec![b, a, c]);
+
+        // Modifying a buffer is not what this sorts on.
+        assert!(!editor.document(b).unwrap().is_modified());
     }
 }

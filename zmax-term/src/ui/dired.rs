@@ -14,6 +14,7 @@
 //!
 //! > Motion / visiting
 //!   n / p / C-n / C-p / SPC / arrows — next / previous line
+//!   C-v / M-v (PageDown / PageUp) — scroll a page forward / back
 //!   RET, f, e — visit the file (or enter the subdirectory in place)
 //!   a — dired-find-alternate-file; o — other window; C-o — display in a split
 //!   v — view read-only; ^ — up to the parent; < / > — prev / next dirline
@@ -64,7 +65,7 @@
 //! K kill-lines, V open-externally, `,` clean-directory, `/` flag-by-regexp,
 //! F hardlink-by-regexp, y mark-containing, h isearch-regexp, b byte-compile,
 //! M-d/M-x mark dirs/executables, M-l load, M-m man, M-r print, M-q grep-replace,
-//! M-n/M-p/M-u/M-y subdir motion, M-e/M-k/M-z/M-v epa, M-i/M-o image-dired,
+//! M-n/M-p/M-u/M-y subdir motion, M-e/M-k/M-z epa, M-i/M-o image-dired,
 //! M-f find-dired (the find ARGS string), M-F find-name, M-g find-grep,
 //! M-c locate, M-t open in a new tab, M-w wdired. The find/locate commands list
 //! their hits AS the Dired listing, the way emacs's find-dired buffer does, so
@@ -81,7 +82,9 @@
 #![allow(clippy::doc_lazy_continuation)]
 
 use std::collections::HashSet;
+use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::io::FromRawFd;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -277,7 +280,10 @@ impl LinkKind {
 /// listing and refresh it in place — a pushed `Prompt` layer could not reach
 /// back into this component's marks.
 struct Input {
-    prompt: &'static str,
+    /// Owned because Emacs builds some of these prompts from the targets:
+    /// `dired-do-shell-command` reads with `"! on %s: "` filled in by
+    /// `dired-mark-prompt` (dired-aux.el), so the file name is part of the text.
+    prompt: String,
     buffer: String,
     action: Pending,
     /// Live isearch state, for the one read that is not modal
@@ -508,6 +514,56 @@ fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
 
+/// What a child wrote on its merged output stream, plus how it ended.
+struct MergedOutput {
+    text: String,
+    /// The exit code, or `None` when the child was killed by a signal.
+    status: Option<i32>,
+}
+
+/// Run `cmd` with stdout and stderr sharing ONE pipe, the way mg's `d_exec`
+/// hands the child its output (`dup2(fds[1], STDOUT_FILENO)` immediately
+/// followed by `dup2(fds[1], STDERR_FILENO)`, dired.c:711-712), so the two
+/// streams interleave in the captured text exactly as they would on a terminal.
+/// `Command::output()` gives each stream a pipe of its own and cannot do this.
+fn merged_output(mut cmd: std::process::Command) -> std::io::Result<MergedOutput> {
+    let mut fds = [0 as libc::c_int; 2];
+    // SAFETY: `pipe` writes two fresh descriptors into the array it is given.
+    if unsafe { libc::pipe(fds.as_mut_ptr()) } == -1 {
+        return Err(std::io::Error::last_os_error());
+    }
+    // SAFETY: `pipe` returned success, so both descriptors are open and owned
+    // here; wrapping them in `File` transfers that ownership.
+    let (mut read, write) = unsafe {
+        (
+            std::fs::File::from_raw_fd(fds[0]),
+            std::fs::File::from_raw_fd(fds[1]),
+        )
+    };
+    let write_err = write.try_clone()?;
+    cmd.stdout(write).stderr(write_err);
+    let mut child = cmd.spawn()?;
+    // `Command` keeps its own copy of an explicitly configured descriptor, so the
+    // write end stays open in this process until the builder goes away — and the
+    // read below would never see EOF.
+    drop(cmd);
+    let mut buf = Vec::new();
+    read.read_to_end(&mut buf)?;
+    Ok(MergedOutput {
+        text: String::from_utf8_lossy(&buf).into_owned(),
+        status: child.wait()?.code(),
+    })
+}
+
+/// Emacs `dired-mark-prompt` (dired.el:4167): how the targets are named in a
+/// Dired prompt — the file itself when there is one, else `* [N files]`.
+fn mark_prompt(names: &[String]) -> String {
+    match names {
+        [only] => only.clone(),
+        _ => format!("* [{} files]", names.len()),
+    }
+}
+
 /// Active `wdired` (writable Dired) edit session: the directory being edited and
 /// the original top-level file names, in listing order. Set when Dired switches
 /// to wdired (dumping the names into an editable buffer) and consumed by
@@ -617,6 +673,11 @@ pub struct Dired {
     /// file name, hiding the type/size columns.
     show_details: bool,
     error: Option<String>,
+    /// A non-error echo-area message (Emacs `message`, mg `ewprintf`). The
+    /// overlay covers the editor's status line, so `Editor::set_status` is not
+    /// visible while Dired is up; anything the user must read without closing
+    /// Dired goes here and is drawn on the same row as `error`.
+    message: Option<String>,
     /// Active in-mode minibuffer read, if any (see [`Input`]).
     input: Option<Input>,
     /// The listing as it was before the last `K`/undoable listing edit, for
@@ -685,6 +746,7 @@ impl Dired {
             show_hidden: false,
             show_details: true,
             error: None,
+            message: None,
             input: None,
             undo_snapshot: None,
             close_requested: false,
@@ -833,6 +895,44 @@ impl Dired {
         self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
         // Moving the cursor puts point back on the file name
         // (`dired-move-to-filename`), so the column an isearch left is gone.
+        self.isearch_point = None;
+    }
+
+    /// mg `dired-scroll-down` / `dired-scroll-up` (`C-v` / `M-v`): mg's
+    /// `d_forwpage` / `d_backpage` are `forwpage` / `backpage` followed by
+    /// `d_warpdot`, which puts point back on the file-name field (dired.c:889-900).
+    ///
+    /// `forwpage` moves the window top by `w_ntrows - 2` — a page less mg's
+    /// two-line overlap — and refuses with "End of buffer" when that would step
+    /// past the last line, leaving the window where it was; `backpage` is the
+    /// mirror image with "Beginning of buffer". Neither moves point while it is
+    /// still on screen after the scroll; when the page left it behind they drag
+    /// it to the nearest visible line — the new top going forward, the last
+    /// visible row going back (basic.c `forwpage`/`backpage`).
+    fn scroll_page(&mut self, forward: bool) {
+        if self.entries.is_empty() {
+            return;
+        }
+        let last = self.entries.len() - 1;
+        // mg clamps the overlap away in a window too short to have one.
+        let step = self.viewport.saturating_sub(2).max(1);
+        if forward {
+            if self.scroll + step > last {
+                self.message = Some("End of buffer".to_string());
+                return;
+            }
+            self.scroll += step;
+        } else {
+            if self.scroll == 0 {
+                self.message = Some("Beginning of buffer".to_string());
+                return;
+            }
+            self.scroll = self.scroll.saturating_sub(step);
+        }
+        let bottom = (self.scroll + self.viewport.saturating_sub(1)).min(last);
+        self.selected = self.selected.clamp(self.scroll, bottom);
+        // `d_warpdot` puts point back on the file name, so a column a filename
+        // isearch left in the old row is gone (as after any other motion).
         self.isearch_point = None;
     }
 
@@ -1229,7 +1329,7 @@ impl Dired {
     }
 
     /// Open the in-mode minibuffer for `action`, showing `prompt`.
-    fn begin_input(&mut self, prompt: &'static str, action: Pending) {
+    fn begin_input(&mut self, prompt: impl Into<String>, action: Pending) {
         // `dired-isearch-filenames` is live rather than modal, so it carries the
         // whole isearch state machine (command stack, direction, wrap flags).
         //
@@ -1260,7 +1360,7 @@ impl Dired {
             _ => None,
         };
         self.input = Some(Input {
-            prompt,
+            prompt: prompt.into(),
             buffer: String::new(),
             action,
             isearch,
@@ -1798,7 +1898,8 @@ impl Dired {
                 if text.is_empty() {
                     return;
                 }
-                // Emacs `!`: run `command file1 file2 ...` in the directory.
+                // `!`: run `command file1 file2 ...` in the directory, with the
+                // single target on stdin, and show what it wrote.
                 self.run_shell(text, &targets, cx);
             }
             Pending::AsyncShellCommand(targets) => {
@@ -1984,30 +2085,67 @@ impl Dired {
         }
     }
 
-    /// `dired-do-shell-command`: run the shell `command`, with the target file
-    /// names appended as arguments, in the Dired directory.
+    /// `dired-do-shell-command` (`!`) / mg `dired-shell-command`.
+    ///
+    /// Emacs appends the shell-quoted target names to the command line
+    /// (dired-aux.el `dired-shell-stuff-it`); mg instead pipes the file at point
+    /// in on standard input (`d_exec(0, bp, fname, "sh", "-c", command, NULL)`,
+    /// dired.c:630, whose child does `dup2(infd, STDIN_FILENO)`). Both are done
+    /// here: the names are appended, and when there is exactly one target — mg's
+    /// only case, since mg's Dired has no marks — that file is also the child's
+    /// stdin, so a command written either way works.
+    ///
+    /// mg gives the child a single pipe for stdout *and* stderr (dired.c:711-712)
+    /// and puts everything it reads into `*Shell Command Output*`; Emacs displays
+    /// the same buffer, and when the command wrote nothing says so in the echo
+    /// area instead (simple.el `shell-command`). Both are ported: output opens a
+    /// buffer under the overlay, silence leaves the listing up with the message.
     fn run_shell(&mut self, command: &str, names: &[String], cx: &mut Context) {
         let quoted: String = names
             .iter()
             .map(|n| format!(" {}", shell_quote(n)))
             .collect();
         let full = format!("{command}{quoted}");
-        match std::process::Command::new("/bin/sh")
-            .arg("-c")
-            .arg(&full)
-            .current_dir(&self.dir)
-            .output()
-        {
-            Ok(out) => {
-                let _ = self.read_dir();
-                let code = out.status.code().unwrap_or(-1);
-                cx.editor.set_status(format!(
-                    "dired: `{command}` on {} file(s) (exit {code})",
-                    names.len()
-                ));
+        let mut cmd = std::process::Command::new("/bin/sh");
+        cmd.arg("-c").arg(&full).current_dir(&self.dir);
+        // mg's `d_exec` opens the input file itself and reports the failure
+        // rather than running the command on the wrong input.
+        match names {
+            [only] => match std::fs::File::open(self.dir.join(only)) {
+                Ok(f) => {
+                    cmd.stdin(f);
+                }
+                Err(e) => {
+                    cx.editor
+                        .set_error(format!("dired: {only}: can't open input file: {e}"));
+                    return;
+                }
+            },
+            // `d_exec` reads /dev/null when it has no input file.
+            _ => {
+                cmd.stdin(std::process::Stdio::null());
             }
-            Err(e) => cx.editor.set_error(format!("shell: {e}")),
         }
+        let out = match merged_output(cmd) {
+            Ok(out) => out,
+            Err(e) => {
+                cx.editor.set_error(format!("shell: {e}"));
+                return;
+            }
+        };
+        let _ = self.read_dir();
+        if out.text.is_empty() {
+            self.message = Some(match out.status {
+                Some(0) => "(Shell command succeeded with no output)".to_string(),
+                Some(code) => {
+                    format!("(Shell command failed with code {code} and no output)")
+                }
+                None => "(Shell command failed with error)".to_string(),
+            });
+            return;
+        }
+        crate::commands::show_text_in_scratch(cx.editor, &out.text);
+        self.close_requested = true;
     }
 
     /// `dired-do-async-shell-command` (`&`): the same command line as `!`, but
@@ -3160,6 +3298,10 @@ impl Component for Dired {
             return EventResult::Consumed(None);
         }
 
+        // Emacs clears the echo area when the next command runs, so a message
+        // lives exactly until the following key.
+        self.message = None;
+
         // A prefix chord (`%`, `*`, `:`, `C-t`, `M-s`, `M-DEL`) owns the next key.
         if let Some(prefix) = self.prefix.take() {
             self.handle_prefix(prefix, key, cx);
@@ -3185,6 +3327,11 @@ impl Component for Dired {
             // ---- motion ----
             key!('n') | key!(Down) | ctrl!('n') | key!(' ') => self.move_selection(1),
             key!('p') | key!(Up) | ctrl!('p') => self.move_selection(-1),
+            // C-v / M-v — mg dired-scroll-down / dired-scroll-up, which are also
+            // the Emacs `scroll-up-command` / `scroll-down-command` Dired inherits
+            // from the global map. PageDown/PageUp are the usual aliases.
+            ctrl!('v') | key!(PageDown) => self.scroll_page(true),
+            alt!('v') | key!(PageUp) => self.scroll_page(false),
             // Home / End jump the cursor, so like every other motion they drop
             // the column a filename isearch left behind.
             key!(Home) => {
@@ -3251,10 +3398,12 @@ impl Component for Dired {
                 cx.editor
                     .set_status(format!("dired: flagged {n} auto-save file(s)"));
             }
-            // & — dired-do-async-shell-command (flagging garbage is `% &`).
+            // & — dired-do-async-shell-command (flagging garbage is `% &`), read
+            // with `"& on %s: "` (dired-aux.el:820).
             key!('&') => {
                 let t = self.targets();
-                self.begin_input("Async shell command: ", Pending::AsyncShellCommand(t));
+                let prompt = format!("& on {}: ", mark_prompt(&t));
+                self.begin_input(prompt, Pending::AsyncShellCommand(t));
             }
             key!('x') => {
                 let names: Vec<String> = self
@@ -3437,10 +3586,13 @@ impl Component for Dired {
                 let t = self.targets();
                 self.begin_input("Chgrp to: ", Pending::Chgrp(t));
             }
-            // ! and X — dired-do-shell-command (Emacs binds both to it).
+            // ! and X — dired-do-shell-command (Emacs binds both to it), read with
+            // `"! on %s: "` (dired-aux.el:888); mg's `!` prompts the same way
+            // (`eread("! on %s: ", ...)`, dired.c:626).
             key!('!') | key!('X') => {
                 let t = self.targets();
-                self.begin_input("Shell command: ", Pending::ShellCommand(t));
+                let prompt = format!("! on {}: ", mark_prompt(&t));
+                self.begin_input(prompt, Pending::ShellCommand(t));
             }
             // Q — dired-do-find-regexp-and-replace.
             key!('Q') => {
@@ -3490,7 +3642,8 @@ impl Component for Dired {
             }
             alt!('k') => self.epa_run(&["--yes", "-d"], "decrypted", cx), // epa-dired-do-decrypt
             alt!('z') => self.epa_run(&["--yes", "--detach-sign"], "signed", cx), // epa-dired-do-sign
-            alt!('v') => self.epa_run(&["--verify"], "verified", cx), // epa-dired-do-verify
+            // epa-dired-do-verify has no `M-v` alias: `M-v` is scroll-down in both
+            // Emacs and mg, and the whole epa map is on the `:` prefix (`: v`).
             // ---- ported: find-and-replace / locate / image external ----
             alt!('q') => {
                 let t = self.targets();
@@ -3589,8 +3742,12 @@ impl Component for Dired {
         let body_h = area.height.saturating_sub(2);
         self.viewport = body_h as usize;
 
+        // The echo row: an error wins over a plain message, as it does in the
+        // Emacs echo area.
         if let Some(err) = &self.error {
             surface.set_stringn(area.x, area.y + 1, err, area.width as usize, flag_style);
+        } else if let Some(msg) = &self.message {
+            surface.set_stringn(area.x, area.y + 1, msg, area.width as usize, info_style);
         }
 
         if self.entries.is_empty() {
@@ -3958,5 +4115,145 @@ mod find_dired_tests {
         d.read_dir().unwrap();
         let names: Vec<&str> = d.entries.iter().map(|e| e.name.as_str()).collect();
         assert_eq!(names, vec!["b.txt"]);
+    }
+}
+
+#[cfg(test)]
+mod paging_tests {
+    use super::*;
+
+    /// 20 named rows, and a window `viewport` rows tall, so the page step is a
+    /// known `viewport - 2`.
+    fn listing(root: &Path, viewport: usize) -> Dired {
+        for i in 0..20 {
+            std::fs::write(root.join(format!("f{i:02}")), b"x").unwrap();
+        }
+        let mut d = Dired::new(root.to_path_buf()).unwrap();
+        d.viewport = viewport;
+        assert_eq!(d.entries.len(), 20);
+        d
+    }
+
+    /// mg `dired-scroll-down` (`C-v`): the window top advances by `w_ntrows - 2`
+    /// (basic.c `forwpage`), and point, left behind by that jump, is dragged to
+    /// the new top line.
+    #[test]
+    fn page_forward_advances_the_window_by_a_page_less_the_overlap() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut d = listing(tmp.path(), 10);
+
+        d.scroll_page(true);
+        assert_eq!(d.scroll, 8, "page step is viewport - 2");
+        assert_eq!(d.selected, 8, "point followed to the new top line");
+
+        d.scroll_page(true);
+        assert_eq!((d.scroll, d.selected), (16, 16));
+    }
+
+    /// `forwpage` refuses to step the top past the last line: it prints
+    /// "End of buffer" and leaves the window exactly where it was.
+    #[test]
+    fn page_forward_stops_at_the_end_of_the_buffer() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut d = listing(tmp.path(), 10);
+        d.scroll = 16;
+        d.selected = 16;
+
+        d.scroll_page(true);
+        assert_eq!((d.scroll, d.selected), (16, 16), "window did not move");
+        assert_eq!(d.message.as_deref(), Some("End of buffer"));
+    }
+
+    /// Both page commands leave point alone while the scroll kept it on screen —
+    /// mg only moves the dot when the new window no longer contains it.
+    #[test]
+    fn paging_leaves_a_still_visible_point_alone() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut d = listing(tmp.path(), 10);
+        d.selected = 9;
+
+        d.scroll_page(true);
+        assert_eq!(d.scroll, 8);
+        assert_eq!(d.selected, 9, "row 9 is still inside rows 8..=17");
+    }
+
+    /// mg `dired-scroll-up` (`M-v`): `backpage` moves the top back a page and
+    /// pulls point to the LAST visible row when the scroll left it below.
+    #[test]
+    fn page_back_pulls_point_to_the_last_visible_row() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut d = listing(tmp.path(), 10);
+        d.scroll = 16;
+        d.selected = 19;
+
+        d.scroll_page(false);
+        assert_eq!(d.scroll, 8);
+        assert_eq!(d.selected, 17, "bottom of rows 8..=17");
+    }
+
+    /// `backpage` at the top of the listing reports "Beginning of buffer" rather
+    /// than scrolling into nothing.
+    #[test]
+    fn page_back_stops_at_the_beginning_of_the_buffer() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut d = listing(tmp.path(), 10);
+        d.selected = 3;
+
+        d.scroll_page(false);
+        assert_eq!((d.scroll, d.selected), (0, 3));
+        assert_eq!(d.message.as_deref(), Some("Beginning of buffer"));
+    }
+
+    /// A window too short for mg's two-line overlap still pages, one line at a
+    /// time (`n <= 0` -> `n = 1` in `forwpage`).
+    #[test]
+    fn a_window_with_no_room_for_the_overlap_pages_one_line() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut d = listing(tmp.path(), 2);
+
+        d.scroll_page(true);
+        assert_eq!(d.scroll, 1);
+    }
+}
+
+#[cfg(test)]
+mod shell_command_tests {
+    use super::*;
+
+    /// mg's `d_exec` hands the child one pipe for both streams
+    /// (dired.c:711-712), so `*Shell Command Output*` holds stderr as well as
+    /// stdout — the point of `!` on a command that fails.
+    #[test]
+    fn stdout_and_stderr_are_captured_through_one_pipe() {
+        let mut cmd = std::process::Command::new("/bin/sh");
+        cmd.arg("-c").arg("echo out; echo err 1>&2; exit 3");
+        let out = merged_output(cmd).unwrap();
+        assert!(out.text.contains("out"), "stdout captured: {:?}", out.text);
+        assert!(out.text.contains("err"), "stderr captured: {:?}", out.text);
+        assert_eq!(out.status, Some(3));
+    }
+
+    /// mg pipes the file at point in on stdin (`dup2(infd, STDIN_FILENO)`), so a
+    /// command that reads standard input sees the file's bytes.
+    #[test]
+    fn the_target_file_is_the_childs_standard_input() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("a.txt");
+        std::fs::write(&path, b"one\ntwo\n").unwrap();
+
+        let mut cmd = std::process::Command::new("/bin/sh");
+        cmd.arg("-c").arg("cat").stdin(std::fs::File::open(&path).unwrap());
+        assert_eq!(merged_output(cmd).unwrap().text, "one\ntwo\n");
+    }
+
+    /// Emacs `dired-mark-prompt` (dired.el:4167): the file's own name when one
+    /// file is targeted, `* [N files]` when several are.
+    #[test]
+    fn mark_prompt_names_the_targets_the_way_emacs_does() {
+        assert_eq!(mark_prompt(&["foo.txt".to_string()]), "foo.txt");
+        assert_eq!(
+            mark_prompt(&["a".to_string(), "b".to_string(), "c".to_string()]),
+            "* [3 files]"
+        );
     }
 }

@@ -17365,14 +17365,20 @@ fn outline_show_by_heading_regexp(
 }
 
 /// Keep (or, when `keep` is false, drop) the lines of `input` that match `pattern`
-/// — the in-buffer equivalent of `grep` / `grep -v`. Pure — unit tested.
+/// — the in-buffer equivalent of `grep` / `grep -v`. A trailing newline is kept
+/// when the input had one, so filtering a whole buffer does not eat its final
+/// line ending. Pure — unit tested.
 fn filter_lines(input: &str, pattern: &str, keep: bool) -> anyhow::Result<String> {
     let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
     let out: Vec<&str> = input
         .lines()
         .filter(|line| re.is_match(line) == keep)
         .collect();
-    Ok(out.join("\n"))
+    let mut out = out.join("\n");
+    if input.ends_with('\n') && !out.is_empty() {
+        out.push('\n');
+    }
+    Ok(out)
 }
 
 fn filter_reject_impl(
@@ -17390,17 +17396,16 @@ fn filter_reject_impl(
         anyhow::bail!("usage: :{} <regex>", if keep { "filter" } else { "reject" });
     }
     let (view, doc) = current!(cx.editor);
+    // The region, or point-to-end-of-buffer when nothing is selected — the same
+    // rule `:kill-matching-lines` uses. Using the bare selection instead made a
+    // point cursor filter a single character's worth of text, i.e. nothing.
+    let span = line_filter_span(doc, view.id);
     let text = doc.text();
-    let sel = doc.selection(view.id).primary();
-    let s: String = text
-        .slice(..)
-        .slice(sel.from()..sel.to())
-        .chunks()
-        .collect();
+    let s: String = text.slice(..).slice(span.start..span.end).chunks().collect();
     let new = filter_lines(&s, pattern, keep)?;
     let transaction = Transaction::change(
         text,
-        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+        std::iter::once((span.start, span.end, Some(new.into()))),
     );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
@@ -17424,6 +17429,26 @@ fn count_matches(input: &str, pattern: &str) -> anyhow::Result<(usize, usize)> {
     Ok((total, lines))
 }
 
+/// Count the lines of `input` that do *not* match `pattern` — mg's
+/// `count-non-matches`, the inverse of [`count_matches`]'s line half. Pure —
+/// unit tested.
+fn count_non_matching_lines(input: &str, pattern: &str) -> anyhow::Result<usize> {
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    Ok(input.lines().filter(|l| !re.is_match(l)).count())
+}
+
+/// The text `:count-matches` / `:count-non-matches` scan: the region, or point to
+/// the end of the buffer when nothing is selected.
+fn count_span_text(cx: &mut compositor::Context) -> String {
+    let (view, doc) = current!(cx.editor);
+    let span = line_filter_span(doc, view.id);
+    doc.text()
+        .slice(..)
+        .slice(span.start..span.end)
+        .chunks()
+        .collect()
+}
+
 fn count_matches_cmd(
     cx: &mut compositor::Context,
     args: Args,
@@ -17437,18 +17462,33 @@ fn count_matches_cmd(
     if pattern.is_empty() {
         anyhow::bail!("usage: :count-matches <regex>");
     }
-    let (view, doc) = current!(cx.editor);
-    let sel = doc.selection(view.id).primary();
-    let s: String = doc
-        .text()
-        .slice(..)
-        .slice(sel.from()..sel.to())
-        .chunks()
-        .collect();
+    let s = count_span_text(cx);
     let (total, lines) = count_matches(&s, pattern)?;
     cx.editor.set_status(format!(
         "{total} match(es) on {lines} line(s) for /{pattern}/"
     ));
+    Ok(())
+}
+
+/// mg `count-non-matches` — report how many lines of the region (or point to the
+/// end of the buffer) do *not* match the regex.
+fn count_non_matches_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :count-non-matches <regex>");
+    }
+    let s = count_span_text(cx);
+    let lines = count_non_matching_lines(&s, pattern)?;
+    cx.editor
+        .set_status(format!("{lines} line(s) not matching /{pattern}/"));
     Ok(())
 }
 
@@ -29045,16 +29085,20 @@ fn ex_docview_show_tooltip(
 }
 
 /// Shared launcher for the Ex line-input commands `:append` / `:insert` /
-/// `:change`. Computes the target span for the current line and opens the
-/// [`crate::ui::ExInput`] mode, which collects lines until a lone `.`.
+/// `:change`. Computes the target span and opens the [`crate::ui::ExInput`] mode,
+/// which collects lines until a lone `.`.
 ///
-/// `kind`: "append" inserts after the current line, "insert" before it, "change"
-/// replaces it. No explicit `{range}` is parsed — these operate on the current
-/// line (the common no-range form); the mode inserts everything as one undo step.
+/// `kind`: "append" inserts after the addressed line, "insert" before it,
+/// "change" replaces the addressed range — nvi(1): "The input text is appended
+/// after the specified line" / "inserted before the specified line" / "replaces
+/// the specified range". `lines` is the 0-based line range resolved from the
+/// command's `{range}` by [`execute_command_line_inner`]; `None` means the
+/// cursor's line. The mode inserts everything as one undo step.
 fn ex_line_input(
     cx: &mut compositor::Context,
     event: PromptEvent,
     kind: &'static str,
+    lines: Option<(usize, usize)>,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -29064,22 +29108,29 @@ fn ex_line_input(
         let text = doc.text();
         let slice = text.slice(..);
         let cursor = doc.selection(view.id).primary().cursor(slice);
-        let line = slice.char_to_line(cursor);
+        let last = slice.len_lines().saturating_sub(1);
+        let (line, end_line) = match lines {
+            Some((lo, hi)) => (lo.min(last), hi.min(last)),
+            None => {
+                let l = slice.char_to_line(cursor);
+                (l, l)
+            }
+        };
         let line_start = slice.line_to_char(line);
         let len = slice.len_chars();
-        // Start of the next line, or end-of-buffer for the last line.
-        let next_line_start = slice.line_to_char((line + 1).min(slice.len_lines()));
+        // Start of the line after the range, or end-of-buffer past the last line.
+        let next_line_start = slice.line_to_char((end_line + 1).min(slice.len_lines()));
         let ends_with_nl = len == 0 || slice.char(len - 1) == '\n';
         let (from, to, lead_newline) = match kind {
-            // After the current line. When appending past a final line with no
+            // After the addressed line. When appending past a final line with no
             // trailing newline, the block must start on its own line.
             "append" => {
                 let at = next_line_start;
                 (at, at, at == len && !ends_with_nl)
             }
-            // Before the current line.
+            // Before the addressed line.
             "insert" => (line_start, line_start, false),
-            // Replace the current line (its text and trailing newline).
+            // Replace the addressed lines (their text and trailing newline).
             "change" => (line_start, next_line_start, false),
             _ => (line_start, line_start, false),
         };
@@ -29100,17 +29151,17 @@ fn ex_line_input(
 
 /// vim `:append` — after the current line, read typed lines until a lone `.`.
 fn ex_append(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
-    ex_line_input(cx, event, "append")
+    ex_line_input(cx, event, "append", None)
 }
 
 /// vim `:insert` — before the current line, read typed lines until a lone `.`.
 fn ex_insert(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
-    ex_line_input(cx, event, "insert")
+    ex_line_input(cx, event, "insert", None)
 }
 
 /// vim `:change` — replace the current line with typed lines (ended by a lone `.`).
 fn ex_change(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
-    ex_line_input(cx, event, "change")
+    ex_line_input(cx, event, "change", None)
 }
 
 /// vim `:undojoin` — join the next change with the previous undo block, so a
@@ -32895,9 +32946,10 @@ fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
-/// vim `:buffer {name}` / `:b {name}` — switch the current window to the open
-/// buffer whose path contains `{name}`. Errors on no match, or (like vim's E93)
-/// on more than one match. Buffer *numbers* are not modeled; use a name.
+/// vim `:buffer {N}` / `:buffer {name}` (`:b`) — switch the current window to a
+/// buffer by *number* (the id the `:buffers` picker lists, dte's "view buffer N")
+/// or to the one whose path contains `{name}`. Errors on no match, or (like vim's
+/// E93) on more than one name match.
 fn ex_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -32905,6 +32957,22 @@ fn ex_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     let joined = args.join(" ");
     let needle = joined.trim();
     if needle.is_empty() {
+        return Ok(());
+    }
+    // An all-digit argument is a buffer number, never a name to search for — the
+    // same rule vim uses, so `:b2` reaches buffer 2 even when a path contains "2".
+    if !needle.is_empty() && needle.bytes().all(|b| b.is_ascii_digit()) {
+        let target = cx
+            .editor
+            .documents()
+            .map(|d| d.id())
+            .find(|id| id.to_string() == needle);
+        match target {
+            Some(id) => cx.editor.switch(id, zmax_view::editor::Action::Replace),
+            None => cx
+                .editor
+                .set_error(format!("E86: Buffer {needle} does not exist")),
+        }
         return Ok(());
     }
     let matches: Vec<_> = cx
@@ -32925,6 +32993,91 @@ fn ex_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
             .editor
             .set_error(format!("E93: More than one match for {needle}")),
     }
+    Ok(())
+}
+
+/// ne `Clear` (`CL`) / emacs `erase-buffer` — "destroys the contents of the
+/// current document and of its undo buffer. Moreover, the document becomes
+/// unnamed." ne asks for confirmation when the document is modified; here the
+/// bang form (`:erase-buffer!`) is that confirmation. Unlike `:new`, the buffer
+/// itself — and every window showing it — is kept.
+fn erase_buffer_impl(cx: &mut compositor::Context, force: bool) -> anyhow::Result<()> {
+    if !force && doc!(cx.editor).is_modified() {
+        bail!("no write since last change (add ! to override)");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let transaction = Transaction::change(text, std::iter::once((0, text.len_chars(), None)));
+    doc.apply(&transaction, view.id);
+    // Drain the pending change into the history before dropping it, so the
+    // buffer is not left "modified" by an edit no longer in any history.
+    doc.append_changes_to_history(view);
+    doc.history.set(Default::default());
+    doc.set_path(None);
+    doc.reset_modified();
+    doc.set_selection(view.id, Selection::point(0));
+    Ok(())
+}
+
+fn erase_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    erase_buffer_impl(cx, false)
+}
+
+fn force_erase_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    erase_buffer_impl(cx, true)
+}
+
+/// vile `replace-with-file` (`e!`) — "replace the contents of the current buffer
+/// with the given file". `:reload` re-reads the buffer's *own* path; this takes
+/// the text from `{file}` while the buffer keeps its own name, so the next `:w`
+/// writes the file back where it came from.
+fn replace_with_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(file) = args.first().map(str::trim).filter(|s| !s.is_empty()) else {
+        bail!("usage: :replace-with-file <file>");
+    };
+    let path = zmax_stdx::path::expand_tilde(Path::new(file));
+    ensure!(
+        path.exists() && path.is_file(),
+        "path is not a file: {}",
+        path.display()
+    );
+    let f = std::fs::File::open(&path).map_err(|err| anyhow!("error opening file: {err}"))?;
+    let mut reader = BufReader::new(f);
+    let encoding = doc!(cx.editor).encoding();
+    let (contents, _, _) = read_to_string(&mut reader, Some(encoding))
+        .map_err(|err| anyhow!("error reading file: {err}"))?;
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((0, text.len_chars(), Some(contents.as_str().into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    doc.set_selection(view.id, Selection::point(0));
+    view.ensure_cursor_in_view(doc, scrolloff);
     Ok(())
 }
 
@@ -43146,26 +43299,32 @@ fn ex_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
     print_lines(cx, PrintStyle::List, event)
 }
 
-/// vim `:=` — echo the number of the last line in the buffer to the status line
-/// ("print the last line number"). An empty buffer reports line 1.
+/// nvi `:[line]=` — "Display the line number of line. If line is not specified,
+/// display the line number of the last line in the file" (vi(1)). The address is
+/// resolved by the caller in [`execute_command_line_inner`] and handed over as a
+/// 1-based line number; with no argument this reports the last line, and an empty
+/// buffer reports line 1.
 fn ex_line_number(
     cx: &mut compositor::Context,
-    _args: Args,
+    args: Args,
     event: PromptEvent,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let n = {
-        let (_, doc) = zmax_view::current_ref!(cx.editor);
-        let text = doc.text();
-        let mut n = text.len_lines();
-        // Ropey counts the phantom empty line after a trailing newline; vim's last
-        // line number excludes it.
-        if n > 1 && text.line(n - 1).len_chars() == 0 {
-            n -= 1;
+    let n = match args.first().and_then(|a| a.trim().parse::<usize>().ok()) {
+        Some(n) => n,
+        None => {
+            let (_, doc) = zmax_view::current_ref!(cx.editor);
+            let text = doc.text();
+            let mut n = text.len_lines();
+            // Ropey counts the phantom empty line after a trailing newline; vim's
+            // last line number excludes it.
+            if n > 1 && text.line(n - 1).len_chars() == 0 {
+                n -= 1;
+            }
+            n
         }
-        n
     };
     cx.editor.set_status(n.to_string());
     Ok(())
@@ -43784,6 +43943,31 @@ fn ex_insert_buffer(
 }
 
 fn read(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    read_impl(cx, args, event, None)
+}
+
+/// The char position `:read` inserts at: the start of the line *after* `line`, or
+/// the end of the buffer for the last line. `read` is linewise, so a mid-line
+/// cursor still lands the text on its own lines.
+fn read_target(text: &zmax_core::Rope, line: usize) -> usize {
+    if line + 1 < text.len_lines() {
+        text.line_to_char(line + 1)
+    } else {
+        text.len_chars()
+    }
+}
+
+/// vim/ed `:[line]r[ead] {file}` / `:[line]r !{cmd}` — insert a file, or a
+/// command's output, linewise. `at` is the char position to insert at, resolved
+/// from the command's address by [`execute_command_line_inner`]; `None` means
+/// after the cursor's line, which is what a bare `:r` does ("Insert the file
+/// [name] below the cursor", `:h :read`).
+fn read_impl(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    at: Option<usize>,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -43793,48 +43977,53 @@ fn read(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     // vim `:r !{cmd}` — read the command's *output* into the buffer, linewise
     // below the current line. The quoting options apply here as they do to `:!`.
     let argument = args.join(" ");
-    if let Some(cmd) = argument.trim().strip_prefix('!') {
+    let contents = if let Some(cmd) = argument.trim().strip_prefix('!') {
         let cmd = cmd.trim();
         ensure!(!cmd.is_empty(), "read: needs a command");
         let shell = vim_shell_argv(&cx.editor.config().shell);
         ensure!(!shell.is_empty(), "read: no shell configured");
-        let output = shell_impl(&shell, &vim_shell_quote(cmd), None)?;
-        let mut contents = output.to_string();
-        if !contents.ends_with('\n') {
-            contents.push('\n');
-        }
-        let (view, doc) = current!(cx.editor);
-        let text = doc.text();
-        let line = doc.selection(view.id).primary().cursor_line(text.slice(..));
-        let pos = text.line_to_char((line + 1).min(text.len_lines()));
-        let transaction = Transaction::change(
-            text,
-            std::iter::once((pos, pos, Some(contents.as_str().into()))),
+        shell_impl(&shell, &vim_shell_quote(cmd), None)?.to_string()
+    } else {
+        let filename = args.first().unwrap();
+        let path = zmax_stdx::path::expand_tilde(PathBuf::from(filename.to_string()));
+
+        ensure!(
+            path.exists() && path.is_file(),
+            "path is not a file: {:?}",
+            path
         );
-        doc.apply(&transaction, view.id);
-        doc.append_changes_to_history(view);
-        view.ensure_cursor_in_view(doc, scrolloff);
-        return Ok(());
-    }
+
+        let file =
+            std::fs::File::open(path).map_err(|err| anyhow!("error opening file: {}", err))?;
+        let mut reader = BufReader::new(file);
+        let encoding = doc!(cx.editor).encoding();
+        let (contents, _, _) = read_to_string(&mut reader, Some(encoding))
+            .map_err(|err| anyhow!("error reading file: {}", err))?;
+        contents
+    };
 
     let (view, doc) = current!(cx.editor);
-
-    let filename = args.first().unwrap();
-    let path = zmax_stdx::path::expand_tilde(PathBuf::from(filename.to_string()));
-
-    ensure!(
-        path.exists() && path.is_file(),
-        "path is not a file: {:?}",
-        path
+    let text = doc.text();
+    let pos = match at {
+        Some(pos) => pos.min(text.len_chars()),
+        None => {
+            let line = doc.selection(view.id).primary().cursor_line(text.slice(..));
+            read_target(text, line)
+        }
+    };
+    let mut contents = contents;
+    if !contents.ends_with('\n') {
+        contents.push('\n');
+    }
+    // Reading in after a final line that has no line ending has to start one,
+    // otherwise the text is glued to that line.
+    if pos == text.len_chars() && pos > 0 && text.char(pos - 1) != '\n' {
+        contents.insert(0, '\n');
+    }
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((pos, pos, Some(contents.as_str().into()))),
     );
-
-    let file = std::fs::File::open(path).map_err(|err| anyhow!("error opening file: {}", err))?;
-    let mut reader = BufReader::new(file);
-    let (contents, _, _) = read_to_string(&mut reader, Some(doc.encoding()))
-        .map_err(|err| anyhow!("error reading file: {}", err))?;
-    let contents = Tendril::from(contents);
-    let selection = doc.selection(view.id);
-    let transaction = Transaction::insert(doc.text(), selection, contents);
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     view.ensure_cursor_in_view(doc, scrolloff);
@@ -55328,6 +55517,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "erase-buffer",
+        aliases: &["clear-buffer"],
+        doc: "Empty the current buffer, drop its undo history and make it unnamed (ne Clear).",
+        fun: erase_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "erase-buffer!",
+        aliases: &["clear-buffer!"],
+        doc: "Empty the current buffer even when it has unsaved changes (ne Clear, confirmed).",
+        fun: force_erase_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "replace-with-file",
+        aliases: &[],
+        doc: "Replace the current buffer's contents with the given file, keeping its name (vile e!).",
+        fun: replace_with_file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "Scratch",
         aliases: &["scratch"],
         doc: "Open a new scratch buffer, optionally with a language (SPC b S).",
@@ -57856,6 +58078,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["count-regex", "how-many"],
         doc: "Report how many regex matches (and matching lines) are in the selection (Emacs how-many).",
         fun: count_matches_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "count-non-matches",
+        aliases: &["count-non-regex", "how-many-not"],
+        doc: "Report how many lines of the selection do not match a regex (mg count-non-matches).",
+        fun: count_non_matches_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
@@ -61175,11 +61408,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "print-line-number",
         aliases: &["="],
-        doc: "Echo the last line number of the buffer (vim :=).",
+        doc: "Echo the line number of {line}, or of the buffer's last line (vim/nvi :=).",
         fun: ex_line_number,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -62118,7 +62351,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "z",
         aliases: &[],
-        doc: "Print a window of lines from the cursor into a scratch buffer (vim :z).",
+        doc: "Print a window of lines into a scratch buffer; :{line}z{-+.=^}{count} places it (nvi :z).",
         fun: ex_z,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -66952,6 +67185,73 @@ fn resolve_filter_range(
     Some((lo.min(hi), hi.max(lo)))
 }
 
+/// Put the primary selection over the whole of lines `lo..=hi` (0-based) — the
+/// shape the line-oriented ex commands read their span from. The selection ends
+/// past line `hi`'s line ending, so a `to() - 1` lookup still lands on that line.
+fn select_lines(cx: &mut compositor::Context, lo: usize, hi: usize) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let total = text.len_lines();
+    let start = text.line_to_char(lo.min(total.saturating_sub(1)));
+    let end = if hi + 1 < total {
+        text.line_to_char(hi + 1)
+    } else {
+        text.len_chars()
+    };
+    doc.set_selection(view.id, Selection::single(start, end.max(start)));
+}
+
+/// The name of an ex command and its argument, where the name runs up to the
+/// first non-letter. Kept separate from `command_line::split` (which splits on
+/// whitespace) because the ex write/read forms glue punctuation to the name:
+/// `w!file`, `w>>file`, `r!date`.
+fn split_command_name(after: &str) -> (&str, &str) {
+    let s = after.trim_start();
+    let end = s
+        .find(|c: char| !c.is_ascii_alphabetic())
+        .unwrap_or(s.len());
+    s.split_at(end)
+}
+
+/// Parse an ex `[range] w[rite][!] [>>] [file]` / `wq[!]` tail into (quit, force,
+/// argument). A `!` glued to the name is the force flag; vi(1) is explicit that
+/// it is "whitespace followed by !" that pipes to a shell command instead, so
+/// `w! out` forces a write and `w !cmd` pipes. Pure — unit tested.
+fn parse_ex_write(after: &str) -> Option<(bool, bool, &str)> {
+    let (name, rest) = split_command_name(after);
+    let quit = match name {
+        "wq" => true,
+        "w" | "wr" | "wri" | "writ" | "write" => false,
+        _ => return None,
+    };
+    let (force, rest) = match rest.strip_prefix('!') {
+        Some(rest) => (true, rest),
+        None => (false, rest),
+    };
+    Some((quit, force, rest.trim()))
+}
+
+/// Parse an ex `[line] r[ead] {file}` / `r !{cmd}` tail, returning the argument.
+/// `:5r!date` glues the `!` to the name, so the split cannot be on whitespace.
+/// Pure — unit tested.
+fn parse_ex_read(after: &str) -> Option<&str> {
+    let (name, rest) = split_command_name(after);
+    matches!(name, "r" | "re" | "rea" | "read").then(|| rest.trim())
+}
+
+/// Parse `rest` into [`Args`] for `cmd` exactly as the dispatcher would, so a
+/// command reached through a range prefix still gets its `%`/`~` expansions.
+fn parse_command_args<'a>(
+    cx: &mut compositor::Context,
+    cmd: &TypableCommand,
+    rest: &'a str,
+) -> anyhow::Result<Args<'a>> {
+    Args::parse(rest, cmd.signature, true, |token| {
+        expansion::expand(cx.editor, token).map_err(|err| err.into())
+    })
+    .map_err(|err| anyhow!("'{}': {err}", cmd.name))
+}
+
 /// Run one Ex command line, then apply vim 'bufhidden': a `:set bufhidden=delete`
 /// buffer that the command just stopped showing (`:edit`, `:bnext`, `:buffer`, a
 /// window close) is dropped here — which is the point in vim where it happens
@@ -67385,6 +67685,177 @@ fn execute_command_line_inner(
                 let cmd_name = if above { "put!" } else { "put" };
                 let cmd = TYPABLE_COMMAND_MAP.get(cmd_name).unwrap();
                 return execute_command(cx, cmd, reg_arg, event);
+            }
+        }
+    }
+
+    // ex `:{range}p[rint]` / `:{range}nu[mber]` / `:{range}l[ist]` — "Display the
+    // specified lines" (vi(1)). The address is glued to the name, so `:1,5p`
+    // parsed as a command called `1,5p`, missed the map and fell through to the
+    // VimL interpreter; resolve it into a selection, which is where `print_lines`
+    // reads its span from.
+    {
+        let (range_str, after) = split_leading_range(input);
+        let name = match after.trim() {
+            "p" | "pr" | "pri" | "prin" | "print" => Some("print"),
+            "nu" | "num" | "numb" | "numbe" | "number" | "#" => Some("number"),
+            "l" | "li" | "lis" | "list" => Some("list"),
+            _ => None,
+        };
+        if let (Some(name), false) = (name, range_str.is_empty()) {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let Some((lo, hi)) = resolve_range_with_marks(cx, range_str) else {
+                bail!("bad range '{range_str}'");
+            };
+            select_lines(cx, lo, hi);
+            let cmd = TYPABLE_COMMAND_MAP.get(name).unwrap();
+            return execute_command(cx, cmd, "", event);
+        }
+    }
+
+    // nvi `:{line}=` — "Display the line number of line. If line is not specified,
+    // display the line number of the last line in the file" (vi(1)). The address
+    // is resolved here and handed to the command as a 1-based line number.
+    {
+        let (range_str, after) = split_leading_range(input);
+        if !range_str.is_empty() && after.trim() == "=" {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let Some((_, hi)) = resolve_range_with_marks(cx, range_str) else {
+                bail!("bad range '{range_str}'");
+            };
+            let cmd = TYPABLE_COMMAND_MAP.get("print-line-number").unwrap();
+            return execute_command(cx, cmd, &(hi + 1).to_string(), event);
+        }
+    }
+
+    // ed/vi `:{line}r[ead] {file}` / `:{line}r !{cmd}` — "Reads to after the
+    // addressed line" (ed(1)). Address `0` reads in before the first line. A bare
+    // `:r` reads below the cursor line, through the command map.
+    {
+        let (range_str, after) = split_leading_range(input);
+        if let (Some(arg), false) = (parse_ex_read(after), range_str.is_empty()) {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let at = if range_str.trim() == "0" {
+                0
+            } else {
+                let Some((_, hi)) = resolve_range_with_marks(cx, range_str) else {
+                    bail!("bad range '{range_str}'");
+                };
+                let (_, doc) = current_ref!(cx.editor);
+                read_target(doc.text(), hi)
+            };
+            let cmd = TYPABLE_COMMAND_MAP.get("read").unwrap();
+            let args = parse_command_args(cx, cmd, arg)?;
+            return read_impl(cx, args, event, Some(at));
+        }
+    }
+
+    // nvi `:{range}w[rite][!] [>>] [file]` / `:{range}w !{cmd}` / `:{range}wq[!]` —
+    // "Write the entire file, or range. ! overwrites a different, preexisting
+    // file. >> appends to a file that may preexist. Whitespace followed by !
+    // pipes the file to shell-command" (vi(1)). Without this `:1,5w out` looked up
+    // a command named `1,5w`, missed, and silently wrote nothing.
+    {
+        let (range_str, after) = split_leading_range(input);
+        if let (Some((quit, force, arg)), false) = (parse_ex_write(after), range_str.is_empty()) {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let Some((lo, hi)) = resolve_range_with_marks(cx, range_str) else {
+                bail!("bad range '{range_str}'");
+            };
+            select_lines(cx, lo, hi);
+            // `w !{cmd}` pipes the addressed lines to the command and leaves the
+            // buffer alone — it is not a write to a file at all.
+            if let Some(shell_cmd) = arg.strip_prefix('!') {
+                let cmd = TYPABLE_COMMAND_MAP.get("pipe-to").unwrap();
+                return execute_command(cx, cmd, shell_cmd, event);
+            }
+            let (append, file) = match arg.strip_prefix(">>") {
+                Some(file) => (true, file.trim()),
+                None => (false, arg),
+            };
+            // No file name: the addressed lines are written to the file being
+            // edited, as ed's "(1,$) w file … the default filename is unchanged".
+            let file = if file.is_empty() {
+                current_file_path(cx)?.to_string_lossy().into_owned()
+            } else {
+                file.to_string()
+            };
+            // "! overwrites a different, preexisting file" — so without the bang,
+            // refuse to clobber one.
+            if !append && !force {
+                let target = zmax_stdx::path::expand_tilde(Path::new(&file));
+                let canonical = zmax_stdx::path::canonicalize(&target);
+                if target.exists() && doc!(cx.editor).path() != Some(canonical.as_path()) {
+                    bail!("E13: file exists (add ! to override): {}", target.display());
+                }
+            }
+            let name = if append { "append-to-file" } else { "write-region" };
+            let cmd = TYPABLE_COMMAND_MAP.get(name).unwrap();
+            execute_command(cx, cmd, &file, event)?;
+            if quit {
+                let cmd = TYPABLE_COMMAND_MAP
+                    .get(if force { "quit!" } else { "quit" })
+                    .unwrap();
+                return execute_command(cx, cmd, "", event);
+            }
+            return Ok(());
+        }
+    }
+
+    // ex `:{range}a[ppend]` / `:{range}i[nsert]` / `:{range}c[hange]` — "The input
+    // text is appended after the specified line / inserted before the specified
+    // line / replaces the specified range" (vi(1)). Address `0` means before the
+    // first line, which both `a` and `i` reach as an insert at the top.
+    {
+        let (range_str, after) = split_leading_range(input);
+        let kind = match after.trim() {
+            "a" | "ap" | "app" | "appe" | "appen" | "append" => Some("append"),
+            "i" | "in" | "ins" | "inse" | "inser" | "insert" => Some("insert"),
+            "c" | "ch" | "cha" | "chan" | "chang" | "change" => Some("change"),
+            _ => None,
+        };
+        if let (Some(kind), false) = (kind, range_str.is_empty()) {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            if range_str.trim() == "0" {
+                let kind = if kind == "change" { "change" } else { "insert" };
+                return ex_line_input(cx, event, kind, Some((0, 0)));
+            }
+            let Some(lines) = resolve_range_with_marks(cx, range_str) else {
+                bail!("bad range '{range_str}'");
+            };
+            return ex_line_input(cx, event, kind, Some(lines));
+        }
+    }
+
+    // nvi `:{line} z {type} {count}` — the type character is glued to the command
+    // name (`:z-`, `:.z=20`), so the whole form is parsed here; a plain `:z` or
+    // `:z 10` still reaches the command map.
+    {
+        let (range_str, after) = split_leading_range(input);
+        if let Some((ty, count)) = parse_ex_z(after) {
+            if ty.is_some() || !range_str.is_empty() {
+                if event != PromptEvent::Validate {
+                    return Ok(());
+                }
+                let line = if range_str.is_empty() {
+                    None
+                } else {
+                    match resolve_range_with_marks(cx, range_str) {
+                        Some((_, hi)) => Some(hi + 1),
+                        None => bail!("bad range '{range_str}'"),
+                    }
+                };
+                return ex_z_impl(cx, ty, line, count);
             }
         }
     }
@@ -68431,33 +68902,155 @@ fn checkpath_impl(cx: &mut compositor::Context, all: bool) -> anyhow::Result<()>
     Ok(())
 }
 
-/// vim `:z [count]` — print a window of lines starting at the current line into a
-/// scratch buffer: `count` lines (or to the end of the buffer if omitted). The
-/// `:z+`/`:z-`/`:z=`/`:z^`/`:z#` positioning variants are not supported.
+/// The lines nvi's `:z` writes. `Span` is one inclusive run of 1-based line
+/// numbers (empty when `.0 > .1`); `Centred` is the `z=` layout — the lines
+/// before the addressed line, that line between two rules, then the lines after.
+#[derive(Debug, PartialEq, Eq)]
+enum ZWindow {
+    Span(usize, usize),
+    Centred {
+        before: (usize, usize),
+        line: usize,
+        after: (usize, usize),
+    },
+}
+
+/// nvi `:[line] z [type] [count]` — which lines the window covers. A faithful port
+/// of nvi's `ex/ex_z.c` (all addresses 1-based): `^` shows the screen *before* the
+/// previous one, `-` puts the addressed line at the bottom, `.` centres it, `=`
+/// centres it between hyphen rules, `+` (and no type) puts it at the top — except
+/// that with no type *and* no address the window starts at the line after the
+/// current one, which is what makes repeated `:z` page forward. Pure — unit tested.
+fn ex_z_window(
+    ty: Option<char>,
+    lno: usize,
+    cnt: usize,
+    addr_default: bool,
+    last: usize,
+) -> ZWindow {
+    let cnt = cnt.max(1);
+    match ty {
+        // "Display cnt * 2 before the line."
+        Some('^') => {
+            let lo = if lno > cnt * 2 { lno - cnt * 2 + 1 } else { 1 };
+            ZWindow::Span(lo, (lo + cnt - 1).min(last))
+        }
+        // "Line goes at the bottom of the screen." (no end-of-file clamp: the
+        // addressed line is the last one printed).
+        Some('-') => ZWindow::Span(if lno > cnt { lno - cnt + 1 } else { 1 }, lno),
+        // "Line goes in the middle of the screen" — historically the middleness
+        // overrides the count: (cnt - 1) / 2 lines on each side.
+        Some('.') => {
+            let half = (cnt - 1) / 2;
+            ZWindow::Span(if lno > half { lno - half } else { 1 }, (lno + half).min(last))
+        }
+        // "Center with hyphens": like `.`, with a rule above and below the line.
+        Some('=') => {
+            let half = (cnt - 1) / 2;
+            ZWindow::Centred {
+                before: (if lno > half { lno - half } else { 1 }, lno.saturating_sub(1)),
+                line: lno,
+                after: (lno + 1, (lno + half).saturating_sub(1).min(last)),
+            }
+        }
+        // `+`, and the no-type default. "If no line specified, move to the next one."
+        ty => {
+            let lno = if ty.is_none() && addr_default {
+                lno + 1
+            } else {
+                lno
+            };
+            ZWindow::Span(lno, (lno + cnt - 1).min(last))
+        }
+    }
+}
+
+/// Parse the tail of an ex `z` command — `z`, `z-`, `z.20`, `z + 10` — into its
+/// type character and count. `None` when `after` is not a `z` command at all (so
+/// `:zsh` still reaches the command map). Pure — unit tested.
+fn parse_ex_z(after: &str) -> Option<(Option<char>, Option<usize>)> {
+    let rest = after.trim().strip_prefix('z')?.trim_start();
+    let (ty, rest) = match rest.chars().next() {
+        Some(c) if matches!(c, '-' | '+' | '.' | '=' | '^') => {
+            (Some(c), rest[c.len_utf8()..].trim_start())
+        }
+        _ => (None, rest),
+    };
+    if rest.is_empty() {
+        return Some((ty, None));
+    }
+    let count: usize = rest.parse().ok()?;
+    Some((ty, Some(count)))
+}
+
+/// nvi `:[line] z [type] [count]` — write a window of lines around the addressed
+/// line into a scratch buffer, and leave the current line on the last one written
+/// (`z=` leaves it on the addressed line), as nvi's `ex_pr` does. `line` is the
+/// 1-based address, `None` when the command had none.
+fn ex_z_impl(
+    cx: &mut compositor::Context,
+    ty: Option<char>,
+    line: Option<usize>,
+    count: Option<usize>,
+) -> anyhow::Result<()> {
+    let (out, cursor_line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let last = last_real_line(text.slice(..)) + 1;
+        let cur = text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..))) + 1;
+        // nvi: "If no count specified, use … the size of the window option",
+        // less one line to leave room for the next ex prompt.
+        let window = vim_opt_num("window").unwrap_or_else(|| view.inner_height());
+        let cnt = count.unwrap_or_else(|| window.saturating_sub(1)).max(1);
+        let text_of = |lo: usize, hi: usize, out: &mut String| {
+            for line in lo.max(1)..=hi.min(last) {
+                let raw = text.line(line - 1).to_string();
+                out.push_str(raw.strip_suffix('\n').unwrap_or(&raw));
+                out.push('\n');
+            }
+        };
+        let mut out = String::new();
+        let cursor_line = match ex_z_window(ty, line.unwrap_or(cur), cnt, line.is_none(), last) {
+            ZWindow::Span(lo, hi) => {
+                text_of(lo, hi, &mut out);
+                hi.min(last)
+            }
+            ZWindow::Centred {
+                before,
+                line,
+                after,
+            } => {
+                const RULE: &str = "----------------------------------------";
+                text_of(before.0, before.1, &mut out);
+                out.push_str(RULE);
+                out.push('\n');
+                text_of(line, line, &mut out);
+                out.push_str(RULE);
+                out.push('\n');
+                text_of(after.0, after.1, &mut out);
+                line.min(last)
+            }
+        };
+        (out, cursor_line)
+    };
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let pos = text.line_to_char(cursor_line.saturating_sub(1).min(last_real_line(text.slice(..))));
+        doc.set_selection(view.id, Selection::point(pos));
+    }
+    super::show_text_in_scratch(cx.editor, &out);
+    Ok(())
+}
+
+/// `:z [count]` with no address — the addressed forms (`:5z-`, `:.z=10`) are
+/// parsed in [`execute_command_line_inner`], which calls [`ex_z_impl`] directly.
 fn ex_z(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let count: Option<usize> = args.first().and_then(|a| a.trim().parse().ok());
-    let out = {
-        let (view, doc) = current_ref!(cx.editor);
-        let text = doc.text();
-        let cur = text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..)));
-        let last = text.len_lines().saturating_sub(1);
-        let end = match count {
-            Some(n) => (cur + n.saturating_sub(1)).min(last),
-            None => last,
-        };
-        let mut out = String::new();
-        for line in cur..=end {
-            let raw = text.line(line).to_string();
-            out.push_str(raw.strip_suffix('\n').unwrap_or(&raw));
-            out.push('\n');
-        }
-        out
-    };
-    super::show_text_in_scratch(cx.editor, &out);
-    Ok(())
+    ex_z_impl(cx, None, None, count)
 }
 
 /// vim `:digraphs` — list the digraph table (`{a}{b} {char} {code}` per line) in

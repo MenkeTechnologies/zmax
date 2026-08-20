@@ -3154,8 +3154,11 @@ impl EditorView {
         };
 
         let current_doc = view!(editor).doc;
+        // Buffer-line order, not DocumentId order: `>b`/`<b` and the sort
+        // commands rearrange `Editor::buffer_order`, and the bar is what they
+        // rearrange.
         let entries: Vec<(zmax_view::DocumentId, String)> = editor
-            .documents()
+            .ordered_documents()
             .map(|doc| {
                 let fname = doc
                     .path()

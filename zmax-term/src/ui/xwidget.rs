@@ -516,6 +516,12 @@ pub fn ex_isearch_mode(cx: &mut Context, _args: Args, event: PromptEvent) -> any
 mod tests {
     use super::*;
 
+    /// `HISTORY` is process-global, and cargo runs these tests on parallel
+    /// threads in one process — so without a lock of their own, one test's
+    /// `reset()` lands in the middle of the other's sequence and the walk sees
+    /// an empty history. Serialise them.
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
     /// Reset the shared history so the assertions below are order-independent.
     fn reset() {
         let mut h = HISTORY.lock().unwrap();
@@ -525,6 +531,7 @@ mod tests {
 
     #[test]
     fn history_walks_back_and_forward_and_truncates() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset();
         history_push("https://a");
         history_push("https://b");
@@ -545,6 +552,7 @@ mod tests {
 
     #[test]
     fn history_ignores_a_reload_of_the_same_url() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset();
         history_push("https://a");
         history_push("https://a");
