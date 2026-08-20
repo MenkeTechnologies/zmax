@@ -12485,6 +12485,27 @@ fn extend_search_prev_vim(cx: &mut Context) {
     search_next_or_prev_impl(cx, Movement::Extend, dir);
 }
 
+/// Expand a bare cursor to the word it sits on. Helix represents "no selection"
+/// as a 1-char range, so `range.from() != range.to()` cannot distinguish a bare
+/// cursor from a real one-character selection; length is the only signal. A
+/// ≤1-char range over a word char grows to the whole surrounding word (vim's
+/// `*`/`#`/`SPC *` semantics); anything longer, or a cursor on a non-word char,
+/// is returned unchanged.
+fn expand_bare_cursor_to_word(text: RopeSlice, from: usize, to: usize) -> (usize, usize) {
+    if to.saturating_sub(from) > 1 || from >= text.len_chars() || !char_is_word(text.char(from)) {
+        return (from, to);
+    }
+    let mut start = from;
+    while start > 0 && char_is_word(text.char(start - 1)) {
+        start -= 1;
+    }
+    let mut end = from;
+    while end < text.len_chars() && char_is_word(text.char(end)) {
+        end += 1;
+    }
+    (start, end)
+}
+
 fn search_selection(cx: &mut Context) {
     search_selection_impl(cx, false)
 }
@@ -12529,25 +12550,9 @@ fn search_selection_impl(cx: &mut Context, detect_word_boundaries: bool) {
         .iter()
         .map(|selection| {
             // Vim `*`/`#`: with a bare cursor (no real selection) search the WORD
-            // under the cursor, not the single char. Expand a ≤1-char range that
-            // sits on a word char to its surrounding word; leave real multi-char
-            // selections (Helix `*`) untouched.
-            let (from, to) = {
-                let (f, t) = (selection.from(), selection.to());
-                if t.saturating_sub(f) <= 1 && f < text.len_chars() && char_is_word(text.char(f)) {
-                    let mut s = f;
-                    while s > 0 && char_is_word(text.char(s - 1)) {
-                        s -= 1;
-                    }
-                    let mut e = f;
-                    while e < text.len_chars() && char_is_word(text.char(e)) {
-                        e += 1;
-                    }
-                    (s, e)
-                } else {
-                    (f, t)
-                }
-            };
+            // under the cursor, not the single char.
+            let (from, to) =
+                expand_bare_cursor_to_word(text, selection.from(), selection.to());
             let add_boundary_prefix = detect_word_boundaries && is_at_word_start(text, from);
             let add_boundary_suffix = detect_word_boundaries && is_at_word_end(text, to);
 
@@ -21488,13 +21493,11 @@ fn symbol_at_point(cx: &mut Context) -> Option<String> {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let range = doc.selection(view.id).primary();
-    // A non-empty selection wins; otherwise grab the word object at the cursor.
-    let word = if range.from() != range.to() {
-        range
-    } else {
-        textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
-    };
-    let s: String = text.slice(word.from()..word.to()).to_string();
+    // A real (multi-char) selection wins; a bare cursor — which Helix models as
+    // a 1-char range — grows to the word under it instead of yielding that lone
+    // character.
+    let (from, to) = expand_bare_cursor_to_word(text, range.from(), range.to());
+    let s: String = text.slice(from..to).to_string();
     let s = s.trim();
     if s.is_empty() {
         None
@@ -73132,6 +73135,28 @@ fn open_dribble_file(cx: &mut Context) {
 #[cfg(test)]
 mod gap_command_tests {
     use super::*;
+
+    /// A bare cursor is a 1-char range in Helix, so `SPC *` / `*` / dumb-jump
+    /// must widen it to the whole word before searching — searching for the
+    /// single character under the cursor is the bug this guards.
+    #[test]
+    fn bare_cursor_widens_to_the_whole_word() {
+        let rope = Rope::from_str("let symbol_at_point = 1;");
+        let text = rope.slice(..);
+        // Cursor mid-word (`m` of `symbol_at_point`, a 1-char range).
+        assert_eq!(expand_bare_cursor_to_word(text, 6, 7), (4, 19));
+        // Cursor on the word's first char, and on its last char.
+        assert_eq!(expand_bare_cursor_to_word(text, 4, 5), (4, 19));
+        assert_eq!(expand_bare_cursor_to_word(text, 18, 19), (4, 19));
+        // A real multi-char selection is searched verbatim, not widened.
+        assert_eq!(expand_bare_cursor_to_word(text, 4, 10), (4, 10));
+        // A cursor on a non-word char has no word to widen to.
+        assert_eq!(expand_bare_cursor_to_word(text, 3, 4), (3, 4));
+        assert_eq!(expand_bare_cursor_to_word(text, 20, 21), (20, 21));
+        // A cursor past the last char (empty range at EOF) must not panic.
+        let len = text.len_chars();
+        assert_eq!(expand_bare_cursor_to_word(text, len, len), (len, len));
+    }
 
     /// The strings emacs 30.2 echoes for `C-x C-e` on an integer, taken from
     /// `(eval-expression-print-format N)` in `emacs -Q --batch`.
