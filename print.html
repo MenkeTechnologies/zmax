@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e9e82525.js";
+            window.path_to_searchindex_js = "searchindex-f7c686e8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -811,6 +811,26 @@ selection to the “func” <code>identifier</code>.</p>
 <p>Most pickers perform fuzzy matching using <a href="https://github.com/junegunn/fzf?tab=readme-ov-file#search-syntax">fzf syntax</a>. Two exceptions are the global search picker, which uses regex, and the workspace symbol picker, which passes search terms to the language server. Note that OR operations (<code>|</code>) are not currently supported.</p>
 <p>If a picker shows multiple columns, you may apply the filter to a specific column by prefixing the column name with <code>%</code>. Column names can be shortened to any prefix, so <code>%p</code>, <code>%pa</code> or <code>%pat</code> all mean the same as <code>%path</code>. For example, a query of <code>zmax %p .toml !lang</code> in the global search picker searches for the term “zmax” within files with paths ending in “.toml” but not including “lang”.</p>
 <p>You can insert the contents of a <a href="#registers-1">register</a> using <code>Ctrl-r</code> followed by a register name. For example, one could insert the currently selected text using <code>Ctrl-r</code>-<code>.</code>, or the directory of the current file using <code>Ctrl-r</code>-<code>%</code> followed by <code>Ctrl-w</code> to remove the last path section. The global search picker will use the contents of the <a href="#default-registers">search register</a> if you press <code>Enter</code> without typing a filter. For example, pressing <code>*</code>-<code>Space-/</code>-<code>Enter</code> will start a global search for the currently selected text.</p>
+<h3 id="fzfvim-commands"><a class="header" href="#fzfvim-commands">fzf.vim commands</a></h3>
+<p>Alongside the native pickers, zmax ships the <a href="https://github.com/junegunn/fzf.vim">fzf.vim</a> command surface — <code>:Files</code>, <code>:GFiles</code>, <code>:Buffers</code>, <code>:Rg</code>, <code>:BLines</code>, <code>:Commands</code>, <code>:Maps</code>, <code>:Colors</code>, <code>:Locate</code>, <code>:Todo</code> and the rest — reachable from <code>SPC F</code> in the modal presets.</p>
+<p>They do <strong>not</strong> need the <code>fzf</code> binary installed. The picker is <a href="#embedded-scripting">arb</a>, one of the twelve interpreters compiled into zmax, running its <code>--fzf</code> mode in this process: no <code>fork</code>, no <code>exec</code>, and no external dependency. It is a drop-in for fzf, so it paints fzf’s own palette and honours your existing configuration:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FZF_DEFAULT_OPTS_FILE</code></td><td>Read first, as fzf does</td></tr>
+<tr><td><code>FZF_DEFAULT_OPTS</code></td><td>Read next, so your prompt, layout, border, colors and <code>--bind</code> table carry over</td></tr>
+<tr><td><code>FZF_DEFAULT_COMMAND</code></td><td>Source command when a command supplies no list of its own</td></tr>
+<tr><td><code>FZF_CTRL_T_COMMAND</code> / <code>FZF_CTRL_T_OPTS</code></td><td>Used for the file-listing commands, so <code>:Files</code> matches your shell’s <code>Ctrl-t</code> finder</td></tr>
+</tbody>
+</table>
+</div>
+<p>Precedence is fzf’s: the options file, then the environment, then <code>[editor.fzf]</code>, then the flags a particular command passes.</p>
+<p>Preview commands receive the <code>FZF_*</code> variables fzf exports to its children — <code>FZF_QUERY</code>, <code>FZF_CURRENT_ITEM</code>, <code>FZF_PREVIEW_LINES</code>, <code>FZF_PREVIEW_COLUMNS</code>, <code>FZF_TOTAL_COUNT</code>, <code>FZF_MATCH_COUNT</code>, <code>FZF_POS</code> and the rest — so a preview written for fzf works unchanged. The four that describe the last keystroke (<code>FZF_KEY</code>, <code>FZF_ACTION</code>, <code>FZF_IDLE_TIME</code>, <code>FZF_IDLE_TIME_MS</code>) are not set, and neither are the <code>--listen</code> variables, since that mode is not run.</p>
+<p>When a command supplies no candidates and no source, and none of the environment commands above is set, the list comes from the same file walk the native file picker uses — so <code>:Files</code> and <code>Space-f</code> show the same files under the same <a href="#editorfile-picker-section"><code>[editor.file-picker]</code></a> settings.</p>
+<p><code>--preview-window</code> places and sizes the preview pane as it does under fzf — <code>up</code>/<code>down</code>/<code>left</code>/<code>right</code> (with <code>next</code> treated as <code>down</code>), a size in cells or per cent, <code>hidden</code>, and <code>wrap</code>. The parts arb does not model (<code>border-STYLE</code>, <code>follow</code>, <code>cycle</code>, <code>info</code>, <code>+SCROLL</code>, <code>~HEADER_LINES</code>, <code>default</code>, <code>&lt;THRESHOLD(ALT)</code>) are ignored rather than rejected, so a spec written for fzf is always accepted.</p>
 <h3 id="file-explorer"><a class="header" href="#file-explorer">File explorer</a></h3>
 <p><code>Space-e</code> opens an interactive file explorer for browsing and opening files, rooted at the workspace; <code>Space-.</code> opens one rooted at the current buffer’s directory. Unlike the file picker, the explorer does not ignore most files by default; its ignore behaviour is configured separately in the <a href="#editorfile-explorer-section"><code>[editor.file-explorer]</code></a> section.</p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -6987,6 +7007,26 @@ not visible in the Zmax file picker and global search.</p>
 <pre><code class="language-toml">[editor.buffer-picker]
 start-position = "previous"
 </code></pre>
+<h3 id="editorfzf-section"><a class="header" href="#editorfzf-section"><code>[editor.fzf]</code> Section</a></h3>
+<p>Options for the fzf.vim-style commands (<code>:Files</code>, <code>:Rg</code>, <code>:GFiles</code>, …). Their picker is the embedded <a href="#embedded-scripting">arb</a> running in this process, so no <code>fzf</code> binary is required; see <a href="#fzfvim-commands">fzf.vim commands</a> for the environment variables it honours.</p>
+<p>Everything here is empty by default so that zmax adds nothing that would override your own <code>$FZF_DEFAULT_OPTS</code>. These are applied on top of it.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Description</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td><code>options</code></td><td>Extra flags added to every fzf.vim-style command</td><td><code>[]</code></td></tr>
+<tr><td><code>preview</code></td><td>Preview command for the file-listing commands; <code>{}</code> is the picked file. Empty disables the preview pane</td><td><code>""</code></td></tr>
+<tr><td><code>preview-window</code></td><td>Where the preview pane goes and how big it is: <code>POSITION[,SIZE[%]][,hidden][,wrap]</code>, e.g. <code>down,30%</code> or <code>left,60</code></td><td><code>"right:55%"</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Example</p>
+<pre><code class="language-toml">[editor.fzf]
+options = ["--height=95%", "--cycle"]
+preview = "bat --color=always --line-range :$FZF_PREVIEW_LINES {}"
+</code></pre>
 <h3 id="editorauto-pairs-section"><a class="header" href="#editorauto-pairs-section"><code>[editor.auto-pairs]</code> Section</a></h3>
 <p>Enables automatic insertion of pairs to parentheses, brackets, etc. Can be a
 simple boolean value, or a specific mapping of pairs of single characters.</p>
@@ -9070,11 +9110,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>9760</strong></li>
-<li>Ported: <strong>7576</strong> (77.6%)</li>
-<li>Partial: <strong>529</strong> (5.4%)</li>
+<li>Ported: <strong>7619</strong> (78.1%)</li>
+<li>Partial: <strong>486</strong> (5.0%)</li>
 <li>Absent: <strong>1655</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2399 static commands, 2948 typable <code>:</code> commands, 4373 default keybindings</li>
+<li>zmax source surface: 2406 static commands, 2951 typable <code>:</code> commands, 4387 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9133,7 +9173,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>dte</td><td style="text-align: right">116</td><td style="text-align: right">66</td><td style="text-align: right">1</td><td style="text-align: right">56.9%</td></tr>
 <tr><td>ed</td><td style="text-align: right">53</td><td style="text-align: right">26</td><td style="text-align: right">2</td><td style="text-align: right">49.1%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">2786</td><td style="text-align: right">207</td><td style="text-align: right">92.5%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">2795</td><td style="text-align: right">198</td><td style="text-align: right">92.8%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">185</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">215</td><td style="text-align: right">3</td><td style="text-align: right">98.6%</td></tr>
@@ -9145,10 +9185,10 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>micro</td><td style="text-align: right">272</td><td style="text-align: right">193</td><td style="text-align: right">7</td><td style="text-align: right">71.0%</td></tr>
 <tr><td>nano</td><td style="text-align: right">400</td><td style="text-align: right">188</td><td style="text-align: right">0</td><td style="text-align: right">47.0%</td></tr>
 <tr><td>ne</td><td style="text-align: right">140</td><td style="text-align: right">74</td><td style="text-align: right">1</td><td style="text-align: right">52.9%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1946</td><td style="text-align: right">131</td><td style="text-align: right">93.7%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1970</td><td style="text-align: right">107</td><td style="text-align: right">94.8%</td></tr>
 <tr><td>nvi</td><td style="text-align: right">284</td><td style="text-align: right">85</td><td style="text-align: right">29</td><td style="text-align: right">29.9%</td></tr>
 <tr><td>sam</td><td style="text-align: right">58</td><td style="text-align: right">4</td><td style="text-align: right">1</td><td style="text-align: right">6.9%</td></tr>
-<tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">1170</td><td style="text-align: right">123</td><td style="text-align: right">90.3%</td></tr>
+<tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">1180</td><td style="text-align: right">113</td><td style="text-align: right">91.0%</td></tr>
 <tr><td>vile</td><td style="text-align: right">445</td><td style="text-align: right">51</td><td style="text-align: right">0</td><td style="text-align: right">11.5%</td></tr>
 <tr><td>vis</td><td style="text-align: right">195</td><td style="text-align: right">54</td><td style="text-align: right">1</td><td style="text-align: right">27.7%</td></tr>
 </tbody>
@@ -9184,8 +9224,8 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>ed</td><td>asynchronous-events</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>ed</td><td>commands</td><td style="text-align: right">37</td><td style="text-align: right">26</td><td style="text-align: right">2</td><td style="text-align: right">70.3%</td></tr>
 <tr><td>ed</td><td>line-addressing</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">1751</td><td style="text-align: right">119</td><td style="text-align: right">92.9%</td></tr>
-<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">1035</td><td style="text-align: right">88</td><td style="text-align: right">91.8%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">1756</td><td style="text-align: right">114</td><td style="text-align: right">93.2%</td></tr>
+<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">1039</td><td style="text-align: right">84</td><td style="text-align: right">92.2%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>diagnostics</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9282,11 +9322,11 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>ne</td><td>support-commands</td><td style="text-align: right">13</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">15.4%</td></tr>
 <tr><td>ne</td><td>undo-commands</td><td style="text-align: right">5</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">40.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">50</td><td style="text-align: right">3</td><td style="text-align: right">94.3%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">550</td><td style="text-align: right">11</td><td style="text-align: right">98.0%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">554</td><td style="text-align: right">7</td><td style="text-align: right">98.8%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">451</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">94</td><td style="text-align: right">4</td><td style="text-align: right">95.9%</td></tr>
-<tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">443</td><td style="text-align: right">36</td><td style="text-align: right">92.5%</td></tr>
-<tr><td>neovim</td><td>option</td><td style="text-align: right">350</td><td style="text-align: right">275</td><td style="text-align: right">75</td><td style="text-align: right">78.6%</td></tr>
+<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">95</td><td style="text-align: right">3</td><td style="text-align: right">96.9%</td></tr>
+<tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">454</td><td style="text-align: right">25</td><td style="text-align: right">94.8%</td></tr>
+<tr><td>neovim</td><td>option</td><td style="text-align: right">350</td><td style="text-align: right">283</td><td style="text-align: right">67</td><td style="text-align: right">80.9%</td></tr>
 <tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">83</td><td style="text-align: right">2</td><td style="text-align: right">97.6%</td></tr>
 <tr><td>nvi</td><td>asynchronous-events</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>nvi</td><td>ex-commands</td><td style="text-align: right">69</td><td style="text-align: right">16</td><td style="text-align: right">0</td><td style="text-align: right">23.2%</td></tr>
@@ -9304,9 +9344,9 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>sam</td><td>simple-addresses</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>sam</td><td>text-commands</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>sam</td><td>the-terminal</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">245</td><td style="text-align: right">26</td><td style="text-align: right">90.4%</td></tr>
-<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">782</td><td style="text-align: right">733</td><td style="text-align: right">49</td><td style="text-align: right">93.7%</td></tr>
-<tr><td>spacemacs</td><td>layer</td><td style="text-align: right">243</td><td style="text-align: right">192</td><td style="text-align: right">48</td><td style="text-align: right">79.0%</td></tr>
+<tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">246</td><td style="text-align: right">25</td><td style="text-align: right">90.8%</td></tr>
+<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">782</td><td style="text-align: right">741</td><td style="text-align: right">41</td><td style="text-align: right">94.8%</td></tr>
+<tr><td>spacemacs</td><td>layer</td><td style="text-align: right">243</td><td style="text-align: right">193</td><td style="text-align: right">47</td><td style="text-align: right">79.4%</td></tr>
 <tr><td>vile</td><td>command</td><td style="text-align: right">211</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">7.1%</td></tr>
 <tr><td>vile</td><td>command-bound</td><td style="text-align: right">234</td><td style="text-align: right">36</td><td style="text-align: right">0</td><td style="text-align: right">15.4%</td></tr>
 <tr><td>vis</td><td>asynchronous-events</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
@@ -9336,8 +9376,8 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline-1"><a class="header" href="#headline-1">Headline</a></h2>
 <ul>
 <li>Cited keybindings (denominator): <strong>3113</strong></li>
-<li>Ported: <strong>2898</strong> (93.1%)</li>
-<li>Partial: <strong>211</strong> (6.8%)</li>
+<li>Ported: <strong>2923</strong> (93.9%)</li>
+<li>Partial: <strong>186</strong> (6.0%)</li>
 <li>Absent: <strong>4</strong></li>
 </ul>
 <h2 id="by-source"><a class="header" href="#by-source">By source</a></h2>
@@ -9347,10 +9387,10 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th style="text-align: right">Keybindings</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
-<tr><td>emacs</td><td style="text-align: right">1127</td><td style="text-align: right">1035</td><td style="text-align: right">88</td><td style="text-align: right">91.8%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">1127</td><td style="text-align: right">1039</td><td style="text-align: right">84</td><td style="text-align: right">92.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">215</td><td style="text-align: right">3</td><td style="text-align: right">98.6%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">670</td><td style="text-align: right">45</td><td style="text-align: right">93.7%</td></tr>
-<tr><td>spacemacs</td><td style="text-align: right">1053</td><td style="text-align: right">978</td><td style="text-align: right">75</td><td style="text-align: right">92.9%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">682</td><td style="text-align: right">33</td><td style="text-align: right">95.4%</td></tr>
+<tr><td>spacemacs</td><td style="text-align: right">1053</td><td style="text-align: right">987</td><td style="text-align: right">66</td><td style="text-align: right">93.7%</td></tr>
 </tbody>
 </table>
 </div>
@@ -9361,7 +9401,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th>Category</th><th style="text-align: right">Keybindings</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
-<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">1035</td><td style="text-align: right">88</td><td style="text-align: right">91.8%</td></tr>
+<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">1039</td><td style="text-align: right">84</td><td style="text-align: right">92.2%</td></tr>
 <tr><td>jetbrains</td><td>caret-navigation</td><td style="text-align: right">18</td><td style="text-align: right">18</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>code-analysis</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>code-folding</td><td style="text-align: right">8</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9380,11 +9420,11 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">50</td><td style="text-align: right">3</td><td style="text-align: right">94.3%</td></tr>
-<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">94</td><td style="text-align: right">4</td><td style="text-align: right">95.9%</td></tr>
-<tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">443</td><td style="text-align: right">36</td><td style="text-align: right">92.5%</td></tr>
+<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">95</td><td style="text-align: right">3</td><td style="text-align: right">96.9%</td></tr>
+<tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">454</td><td style="text-align: right">25</td><td style="text-align: right">94.8%</td></tr>
 <tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">83</td><td style="text-align: right">2</td><td style="text-align: right">97.6%</td></tr>
-<tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">245</td><td style="text-align: right">26</td><td style="text-align: right">90.4%</td></tr>
-<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">782</td><td style="text-align: right">733</td><td style="text-align: right">49</td><td style="text-align: right">93.7%</td></tr>
+<tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">246</td><td style="text-align: right">25</td><td style="text-align: right">90.8%</td></tr>
+<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">782</td><td style="text-align: right">741</td><td style="text-align: right">41</td><td style="text-align: right">94.8%</td></tr>
 </tbody>
 </table>
 </div>

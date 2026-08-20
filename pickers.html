@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e9e82525.js";
+            window.path_to_searchindex_js = "searchindex-f7c686e8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -188,6 +188,26 @@
 <p>Most pickers perform fuzzy matching using <a href="https://github.com/junegunn/fzf?tab=readme-ov-file#search-syntax">fzf syntax</a>. Two exceptions are the global search picker, which uses regex, and the workspace symbol picker, which passes search terms to the language server. Note that OR operations (<code>|</code>) are not currently supported.</p>
 <p>If a picker shows multiple columns, you may apply the filter to a specific column by prefixing the column name with <code>%</code>. Column names can be shortened to any prefix, so <code>%p</code>, <code>%pa</code> or <code>%pat</code> all mean the same as <code>%path</code>. For example, a query of <code>zmax %p .toml !lang</code> in the global search picker searches for the term “zmax” within files with paths ending in “.toml” but not including “lang”.</p>
 <p>You can insert the contents of a <a href="./registers.html">register</a> using <code>Ctrl-r</code> followed by a register name. For example, one could insert the currently selected text using <code>Ctrl-r</code>-<code>.</code>, or the directory of the current file using <code>Ctrl-r</code>-<code>%</code> followed by <code>Ctrl-w</code> to remove the last path section. The global search picker will use the contents of the <a href="./registers.html#default-registers">search register</a> if you press <code>Enter</code> without typing a filter. For example, pressing <code>*</code>-<code>Space-/</code>-<code>Enter</code> will start a global search for the currently selected text.</p>
+<h3 id="fzfvim-commands"><a class="header" href="#fzfvim-commands">fzf.vim commands</a></h3>
+<p>Alongside the native pickers, zmax ships the <a href="https://github.com/junegunn/fzf.vim">fzf.vim</a> command surface — <code>:Files</code>, <code>:GFiles</code>, <code>:Buffers</code>, <code>:Rg</code>, <code>:BLines</code>, <code>:Commands</code>, <code>:Maps</code>, <code>:Colors</code>, <code>:Locate</code>, <code>:Todo</code> and the rest — reachable from <code>SPC F</code> in the modal presets.</p>
+<p>They do <strong>not</strong> need the <code>fzf</code> binary installed. The picker is <a href="./scripting.html">arb</a>, one of the twelve interpreters compiled into zmax, running its <code>--fzf</code> mode in this process: no <code>fork</code>, no <code>exec</code>, and no external dependency. It is a drop-in for fzf, so it paints fzf’s own palette and honours your existing configuration:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FZF_DEFAULT_OPTS_FILE</code></td><td>Read first, as fzf does</td></tr>
+<tr><td><code>FZF_DEFAULT_OPTS</code></td><td>Read next, so your prompt, layout, border, colors and <code>--bind</code> table carry over</td></tr>
+<tr><td><code>FZF_DEFAULT_COMMAND</code></td><td>Source command when a command supplies no list of its own</td></tr>
+<tr><td><code>FZF_CTRL_T_COMMAND</code> / <code>FZF_CTRL_T_OPTS</code></td><td>Used for the file-listing commands, so <code>:Files</code> matches your shell’s <code>Ctrl-t</code> finder</td></tr>
+</tbody>
+</table>
+</div>
+<p>Precedence is fzf’s: the options file, then the environment, then <code>[editor.fzf]</code>, then the flags a particular command passes.</p>
+<p>Preview commands receive the <code>FZF_*</code> variables fzf exports to its children — <code>FZF_QUERY</code>, <code>FZF_CURRENT_ITEM</code>, <code>FZF_PREVIEW_LINES</code>, <code>FZF_PREVIEW_COLUMNS</code>, <code>FZF_TOTAL_COUNT</code>, <code>FZF_MATCH_COUNT</code>, <code>FZF_POS</code> and the rest — so a preview written for fzf works unchanged. The four that describe the last keystroke (<code>FZF_KEY</code>, <code>FZF_ACTION</code>, <code>FZF_IDLE_TIME</code>, <code>FZF_IDLE_TIME_MS</code>) are not set, and neither are the <code>--listen</code> variables, since that mode is not run.</p>
+<p>When a command supplies no candidates and no source, and none of the environment commands above is set, the list comes from the same file walk the native file picker uses — so <code>:Files</code> and <code>Space-f</code> show the same files under the same <a href="./editor.html#editorfile-picker-section"><code>[editor.file-picker]</code></a> settings.</p>
+<p><code>--preview-window</code> places and sizes the preview pane as it does under fzf — <code>up</code>/<code>down</code>/<code>left</code>/<code>right</code> (with <code>next</code> treated as <code>down</code>), a size in cells or per cent, <code>hidden</code>, and <code>wrap</code>. The parts arb does not model (<code>border-STYLE</code>, <code>follow</code>, <code>cycle</code>, <code>info</code>, <code>+SCROLL</code>, <code>~HEADER_LINES</code>, <code>default</code>, <code>&lt;THRESHOLD(ALT)</code>) are ignored rather than rejected, so a spec written for fzf is always accepted.</p>
 <h3 id="file-explorer"><a class="header" href="#file-explorer">File explorer</a></h3>
 <p><code>Space-e</code> opens an interactive file explorer for browsing and opening files, rooted at the workspace; <code>Space-.</code> opens one rooted at the current buffer’s directory. Unlike the file picker, the explorer does not ignore most files by default; its ignore behaviour is configured separately in the <a href="./editor.html#editorfile-explorer-section"><code>[editor.file-explorer]</code></a> section.</p>
 
