@@ -1359,6 +1359,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "[" => { "Prev"
             "[" => goto_prev_section,   // [[ back to the previous section ('sections')
             "d" => goto_prev_diag,
+            // [e: previous *error* diagnostic. AstroNvim and LazyVim both bind
+            // it to a severity-filtered jump; the warning twin they put on `[w`
+            // has no chord here, `[w` being spacemacs's "previous window".
+            "e" => goto_prev_diag_error,
             "g" => goto_prev_change,
             "c" => goto_prev_change,      // [c back to start of prev change (diff hunk)
             "x" => goto_prev_conflict,    // [x previous merge-conflict marker
@@ -1399,6 +1403,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "]" => { "Next"
             "]" => goto_next_section,   // ]] forward to the next section ('sections')
             "d" => goto_next_diag,
+            "e" => goto_next_diag_error,  // ]e next error diagnostic (see [e)
             "g" => goto_next_change,
             "c" => goto_next_change,      // ]c forward to start of next change (diff hunk)
             "x" => goto_next_conflict,    // ]x next merge-conflict marker
@@ -1576,7 +1581,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-v"     => page_up,             // M-v scroll-down
         "C-space" => select_mode,         // C-SPC set-mark
         "C-g"     => file_info,           // vim CTRL-G: show file name + position (Esc still collapses)
-        "C-l"     => align_view_center,   // C-l recenter
+        // C-l is emacs `recenter-top-bottom`, not plain `recenter`: the first
+        // press centres (so this is unchanged for a single hit), and repeats walk
+        // the line to the top and then the bottom.
+        "C-l"     => recenter_top_bottom,
         "C-s"     => search,              // C-s isearch-forward
         "C-/"     => undo,                // C-/ undo
         "C-_"     => undo,                // C-_ undo
@@ -3547,7 +3555,7 @@ mod tests {
         assert_eq!(cmd_name(resolve(n, "C-g").unwrap()), Some("file_info"));
         assert_eq!(
             cmd_name(resolve(n, "C-l").unwrap()),
-            Some("align_view_center")
+            Some("recenter_top_bottom")
         );
         // readline motion in insert mode that does NOT clash with a vim insert key
         // (vim leaves C-f/C-b/M-f free in insert) stays emacs.

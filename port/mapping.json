@@ -12429,9 +12429,10 @@
   "spec_id": "emacs.command.recenter_top_bottom",
   "status": "ported",
   "evidence": [
+   "static:recenter_top_bottom",
    "key:normal:C-l"
   ],
-  "note": ""
+  "note": "C-l now runs recenter_top_bottom, which cycles middle -> top -> bottom on repeated presses (recenter-positions default). It previously ran align_view_center, which only ever centres, so the cycling half of the command did not exist. First press is unchanged."
  },
  {
   "spec_id": "emacs.command.scroll_up_command",
@@ -14175,9 +14176,9 @@
   "spec_id": "emacs.command.recenter",
   "status": "ported",
   "evidence": [
-   "key:normal:C-l"
+   "static:align_view_center"
   ],
-  "note": ""
+  "note": "Emacs `recenter` with no argument puts the current line in the middle: align_view_center does exactly that. The C-l token is deliberately NOT cited here \u2014 in Emacs C-l is `recenter-top-bottom`, a different command, and zmax now binds C-l to its own recenter_top_bottom too. `recenter` itself has no default binding in either editor."
  },
  {
   "spec_id": "emacs.command.what_line",
@@ -21163,7 +21164,7 @@
    "static:goto_reference",
    "static:xref_find_references"
   ],
-  "note": "LSP goto_reference lists/visits references to the symbol; matches xref-find-references."
+  "note": "xref_find_references (zmax-term/src/commands.rs:27879) now grep-scans for the identifier at point (typed::word_under_cursor) and opens the minibuffer prompt 'Find references: ' when the cursor is not on a word - emacs offers the identifier at point as the prompt's default. Until this change the query was the literal string \"TODO\" (`let symbol = \"TODO\".to_string()`), so the command found TODO comments whatever the cursor was on. LSP goto_reference remains the language-server form."
  },
  {
   "spec_id": "emacs.command.xref_go_back",
@@ -35579,7 +35580,7 @@
   "evidence": [
    "typable:set"
   ],
-  "note": "typable:set clears/sets the document read-only flag (modifiable = !readonly)"
+  "note": "`:set nomodifiable`/`noma` writes the same Document::readonly flag (typed.rs:26707-26718), which Document::apply now enforces: a text-changing transaction is refused and the buffer is left untouched (zmax-view/src/document.rs:2856-2890), vim's E21 case. Motions still apply."
  },
  {
   "spec_id": "neovim.option.modified",
@@ -35741,7 +35742,7 @@
   "evidence": [
    "typable:set"
   ],
-  "note": "typable:set sets the document read-only flag (Document.readonly)"
+  "note": "`:set readonly` sets Document::readonly, shown as `[RO]` (ui/statusline.rs:810), and a plain `:w` on the buffer's own file now fails with vim's E45 (zmax-view/src/document.rs:1742-1749); `:w!` writes and clears the flag unless `cpoptions` has `Z`. `:w {other}` is a different file and is still allowed, as in vim."
  },
  {
   "spec_id": "neovim.option.redrawdebug",
@@ -60802,9 +60803,10 @@
   "spec_id": "ne.preferences-commands.readonly",
   "status": "ported",
   "evidence": [
-   "typable:set-option"
+   "typable:set-option",
+   "static:toggle_readonly"
   ],
-  "note": "ne ReadOnly"
+  "note": "ne ReadOnly: \"no editing can be performed on the document\" \u2014 Document::apply/apply_temporary refuse every text-changing transaction while the flag is set (zmax-view/src/document.rs:2856-2890). \"Saving read only documents is inhibited as well\" \u2014 save_impl bails on a plain `:w` (document.rs:1742-1749); zmax's override is `:w!` rather than ne's confirmation prompt."
  },
  {
   "spec_id": "ne.preferences-commands.tabsize",
@@ -62771,11 +62773,13 @@
  },
  {
   "spec_id": "nvi.set-options.readonly",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:set"
+   "typable:set",
+   "static:toggle_readonly",
+   "typable:view"
   ],
-  "note": "`readonly`/`ro` sets the document's flag (typed.rs:26761), but it is advisory: it drives the status-line `[RO]` indicator (ui/statusline.rs:810) and is cleared by a forced write (typed.rs:6652). Nothing in Document::apply (zmax-view/src/document.rs:2831) or write_impl refuses an edit or a `:w` on a read-only buffer."
+  "note": "`:set readonly`/`ro` is now enforced, not advisory: Document::apply and apply_temporary refuse any transaction that changes the text (zmax-view/src/document.rs:2856-2890, E21_NOT_MODIFIABLE) and save_impl refuses a plain `:w` on the buffer's own file (document.rs:1742-1749, \"E45: 'readonly' option is set (add ! to override)\"). `:w!` still overrides and clears the flag unless `cpoptions` has `Z` (typed.rs:6652). Selection-only transactions (cursor motion) still apply, and undo/redo/restore bypass the guard so a buffer marked read-only after a change can still be walked back."
  },
  {
   "spec_id": "nvi.set-options.report",
@@ -63011,11 +63015,12 @@
  },
  {
   "spec_id": "mg.default-key-bindings.c_l",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
+   "static:align_view_center",
    "key:normal:C-l"
   ],
-  "note": "mg recenter, via the GNU Emacs command of the same name (emacs.command.recenter)"
+  "note": "mg binds C-l to `recenter`, which redraws with the current line centred every time. zmax's C-l is recenter_top_bottom, so the first press matches mg exactly and a repeat does not: it advances to top, then bottom (Emacs recenter-positions). align_view_center is the un-cycling command for the plain behaviour."
  },
  {
   "spec_id": "mg.default-key-bindings.c_n",
@@ -64125,9 +64130,9 @@
   "spec_id": "mg.mg-commands.recenter",
   "status": "ported",
   "evidence": [
-   "key:normal:C-l"
+   "static:align_view_center"
   ],
-  "note": "mg recenter, via the GNU Emacs command of the same name (emacs.command.recenter)"
+  "note": "mg `recenter`: redraw with the current line in the centre. align_view_center, cited without a key because zmax's C-l cycles (see mg.default-key-bindings.c_l)."
  },
  {
   "spec_id": "mg.mg-commands.revert_buffer",
@@ -65342,33 +65347,35 @@
   "spec_id": "lazyvim.keys-n.e",
   "status": "ported",
   "evidence": [
-   "static:goto_next_diag"
+   "static:goto_next_diag_error",
+   "key:normal:] e"
   ],
-  "note": "lazyvim: Next Error"
+  "note": "]e Next Error -> goto_next_diag_error on `] e`. LazyVim's diagnostic_goto(true, \"ERROR\") passes a bare severity, an exact-severity filter; the previous mapping cited the severity-agnostic goto_next_diag."
  },
  {
   "spec_id": "lazyvim.keys-n.e_2",
   "status": "ported",
   "evidence": [
-   "static:goto_prev_diag"
+   "static:goto_prev_diag_error",
+   "key:normal:[ e"
   ],
-  "note": "lazyvim: Prev Error"
+  "note": "[e Prev Error -> goto_prev_diag_error on `[ e`; exact ERROR-severity filter."
  },
  {
   "spec_id": "lazyvim.keys-n.w",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
-   "static:goto_next_diag"
+   "static:goto_next_diag_warning"
   ],
-  "note": "lazyvim: Next Warning"
+  "note": "]w Next Warning -> goto_next_diag_warning (exact WARNING-severity filter). Partial on the chord only: `] w` is spacemacs's next-window in the default keymap and was not shadowed."
  },
  {
   "spec_id": "lazyvim.keys-n.w_2",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
-   "static:goto_prev_diag"
+   "static:goto_prev_diag_warning"
   ],
-  "note": "lazyvim: Prev Warning"
+  "note": "[w Prev Warning -> goto_prev_diag_warning (exact WARNING-severity filter). Partial on the chord only: `[ w` is spacemacs's previous-window."
  },
  {
   "spec_id": "lazyvim.keys-n.leadergb",
@@ -66085,35 +66092,37 @@
  },
  {
   "spec_id": "astronvim.keys-n.e",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_prev_diag"
+   "static:goto_prev_diag_error",
+   "key:normal:[ e"
   ],
-  "note": "[e Previous error. zmax `goto_prev_diag` (zmax-term/src/commands.rs:33656) walks the buffer's diagnostics backwards from the cursor, but is severity-agnostic \u2014 it stops on warnings and hints too. AstroNvim's `[e` is diagnostic_jump(false, \"ERROR\"). No severity-filtered diagnostic motion exists in zmax."
+  "note": "[e Previous error -> goto_prev_diag_error (zmax-term/src/commands.rs, goto_diag_impl with Some(Severity::Error)), bound on `[ e` (zmax-term/src/keymap/vim.rs). Matches AstroNvim's diagnostic_jump(false, \"ERROR\"): a bare severity in vim.diagnostic.jump is an exact-severity filter, so warnings and hints are skipped."
  },
  {
   "spec_id": "astronvim.keys-n.e_2",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_diag"
+   "static:goto_next_diag_error",
+   "key:normal:] e"
   ],
-  "note": "]e Next error. zmax `goto_next_diag` (zmax-term/src/commands.rs:33629) is severity-agnostic; AstroNvim's `]e` is diagnostic_jump(true, \"ERROR\"). Nearest available motion, not the same one."
+  "note": "]e Next error -> goto_next_diag_error on `] e`; exact ERROR-severity filter, as AstroNvim's diagnostic_jump(true, \"ERROR\")."
  },
  {
   "spec_id": "astronvim.keys-n.w",
   "status": "partial",
   "evidence": [
-   "static:goto_prev_diag"
+   "static:goto_prev_diag_warning"
   ],
-  "note": "[w Previous warning. zmax `goto_prev_diag` (zmax-term/src/commands.rs:33656) walks all diagnostics regardless of severity; AstroNvim's `[w` is diagnostic_jump(false, \"WARN\")."
+  "note": "[w Previous warning -> goto_prev_diag_warning (exact WARNING-severity filter, AstroNvim's diagnostic_jump(false, \"WARN\")). Partial on the chord only: `[ w` is already spacemacs's previous-window in the default keymap (rotate_view_reverse, cited by spacemacs.keybinding.w_83 and asserted by keymap::vim::tests::spacemacs_leader_gap_chords_bound), so it was not shadowed."
  },
  {
   "spec_id": "astronvim.keys-n.w_2",
   "status": "partial",
   "evidence": [
-   "static:goto_next_diag"
+   "static:goto_next_diag_warning"
   ],
-  "note": "]w Next warning. zmax `goto_next_diag` (zmax-term/src/commands.rs:33629) is severity-agnostic; AstroNvim's `]w` is diagnostic_jump(true, \"WARN\")."
+  "note": "]w Next warning -> goto_next_diag_warning (exact WARNING-severity filter). Partial on the chord only: `] w` is spacemacs's next-window (rotate_view, cited by spacemacs.keybinding.w_84)."
  },
  {
   "spec_id": "astronvim.keys-n.t",
@@ -67698,9 +67707,10 @@
   "status": "partial",
   "evidence": [
    "static:xref_find_apropos",
-   "static:global_search_symbol"
+   "static:global_search_symbol",
+   "static:xref_find_references"
   ],
-  "note": "cscope-find-this-symbol -> xref_find_apropos (prompt for a symbol, whole-word tree scan listed in the Xref overlay; zmax_core::xref::find_matches) or global_search_symbol (workspace search seeded with the symbol at point). Both are grep-backed and need no language server. Partial: mg's `C-c s s` chord is unbound. NOTE: xref_find_references is NOT this capability \u2014 its query is hardcoded to \"TODO\" (commands.rs:27846)."
+  "note": "cscope-find-this-symbol -> xref_find_apropos (prompt for a symbol, whole-word tree scan listed in the Xref overlay; zmax_core::xref::find_matches), global_search_symbol (workspace search seeded with the symbol at point), or xref_find_references, which now searches the identifier at point (commands.rs:27879) rather than the hardcoded \"TODO\" the earlier note flagged. Partial: mg's `C-c s s` chord is still unbound."
  },
  {
   "spec_id": "mg.default-key-bindings.c_c_9",
@@ -71220,19 +71230,19 @@
  },
  {
   "spec_id": "micro.action.selectpageup",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:extend_page_up"
   ],
-  "note": "extend_page_up (zmax-term/src/commands.rs:10454-10462) scrolls a page back and moves the cursor to the window edge (vim_page_cursor, commands.rs:10426-10448). It extends the selection only when the editor is already in Select mode (`extend = cx.editor.mode == Mode::Select`, commands.rs:10427); from Normal mode it collapses to a bare cursor, where micro's SelectPageUp starts a selection. The selecting form is reached via <S-PageUp> with `:set keymodel=startsel`, which enters Select mode first (keymodel_startsel, commands.rs:3049-3058)."
+  "note": "extend_page_up (zmax-term/src/commands.rs:10487) scrolls a page back and always keeps the anchor - vim_page_cursor and the non-vim path both take `extend`/Movement::Extend unconditionally now (commands.rs:10433, 10461), like every other extend_* command. It previously derived extend from `cx.editor.mode == Mode::Select`, so from Normal mode it collapsed the selection; micro's SelectPageUp starts one."
  },
  {
   "spec_id": "micro.action.selectpagedown",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:extend_page_down"
   ],
-  "note": "extend_page_down (zmax-term/src/commands.rs:10465-10473), the forward mirror of extend_page_up: it extends only when the editor is already in Select mode (vim_page_cursor, commands.rs:10427); from Normal mode it moves a page without selecting."
+  "note": "extend_page_down (zmax-term/src/commands.rs:10498), the forward mirror of extend_page_up: it now extends from Normal mode too, so it starts a selection the way micro's SelectPageDown does."
  },
  {
   "spec_id": "micro.action.togglekeymenu",
@@ -72344,19 +72354,19 @@
  },
  {
   "spec_id": "mcedit.editor.markpageup",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:extend_page_up"
   ],
-  "note": "extend_page_up (zmax-term/src/commands.rs:10454-10462) is the page-up-keeping-the-anchor motion, but the anchor is kept only when the editor is already in Select mode (vim_page_cursor, commands.rs:10427). mc's MarkPageUp begins the block itself, so zmax needs the selection started first (`v`, or <S-PageUp> with `:set keymodel=startsel`, commands.rs:3205-3207)."
+  "note": "extend_page_up (zmax-term/src/commands.rs:10487) is the page-up-keeping-the-anchor motion and now begins the block itself from Normal mode, which is what mc's MarkPageUp does; the Select-mode-only gate (`extend = cx.editor.mode == Mode::Select`) is gone."
  },
  {
   "spec_id": "mcedit.editor.markpagedown",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:extend_page_down"
   ],
-  "note": "extend_page_down (zmax-term/src/commands.rs:10465-10473) keeps the anchor only when the editor is already in Select mode (vim_page_cursor, commands.rs:10427); mc's MarkPageDown starts the block on its own."
+  "note": "extend_page_down (zmax-term/src/commands.rs:10498) keeps the anchor from Normal mode as well, so it starts the block on its own - mc's MarkPageDown."
  },
  {
   "spec_id": "mcedit.editor.marktopagebegin",
@@ -72685,7 +72695,7 @@
    "typable:substitute",
    "typable:delete-lines"
   ],
-  "note": "`a1,a2` splits on the comma (zmax-term/src/commands/typed.rs:66777-66784) and `%` spells `0,$` (zmax-term/src/commands/typed.rs:66770-66772). An OMITTED side does not default to `0`/`$` as vis specifies \u2014 the empty token resolves to the current line (zmax-term/src/commands/typed.rs:66726-66728), so `:,d` and `:.,d` act on one line."
+  "note": "the defaulting vis specifies is implemented: an omitted a1 is the start of the buffer and an omitted a2 is `$` (zmax-term/src/commands/typed.rs:66912-66920), so `,` is the whole buffer, `,5` is 0,5 and `5,` is 5,$. Still partial because zmax ranges are whole lines - `a1,a2` spans from the start of a1's line to the end of a2's line, not from the exact start of a1 to the exact end of a2, and character addresses (`#n`) are not part of the resolver."
  },
  {
   "spec_id": "vis.text-commands.a",
@@ -73465,7 +73475,7 @@
    "typable:substitute",
    "typable:delete-lines"
   ],
-  "note": "`a1,a2` splits on the comma (zmax-term/src/commands/typed.rs:66777-66784) and `%` spells sam's `0,$` (zmax-term/src/commands/typed.rs:66770-66772). sam's defaulting for an omitted side (0 / $) is NOT implemented \u2014 an empty token resolves to the current line (zmax-term/src/commands/typed.rs:66726-66728)."
+  "note": "sam's \"if a1 is missing, 0 is substituted. If a2 is missing, $ is substituted\" is implemented (zmax-term/src/commands/typed.rs:66912-66920); a bare `,` is the whole buffer, matching `%` (zmax-term/src/commands/typed.rs:66905-66907). Partial because the resulting range is line-granular: it covers whole lines rather than the substring from the beginning of a1 to the end of a2."
  },
  {
   "spec_id": "sam.text-commands.a",
@@ -73799,21 +73809,21 @@
  },
  {
   "spec_id": "ed.line-addressing.item_3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:substitute",
    "typable:delete-lines"
   ],
-  "note": "`-` and `-N` work: a leading sign makes the base the current line and a bare sign counts as 1 (zmax-term/src/commands/typed.rs:66741-66743, zmax-term/src/commands/typed.rs:66751-66766). ed's `^` synonym for `-` is NOT accepted \u2014 split_leading_range (zmax-term/src/commands/typed.rs:66546-66557) stops at `^`, so `:^p` is not a range."
+  "note": "ed's `^` synonym for `-` is now accepted: split_leading_range treats `^` as a range character (zmax-term/src/commands/typed.rs:66603) and the address parser reads it as a negative offset term, base split included (zmax-term/src/commands/typed.rs:66866, :66887, :66893). A bare `^` is the previous line and repeats accumulate (`^^` = -2), matching the existing `-` behaviour. Test caret_is_a_synonym_for_minus_in_addresses (zmax-term/src/commands/typed.rs:69260)."
  },
  {
   "spec_id": "ed.line-addressing.item_4",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:substitute",
    "typable:delete-lines"
   ],
-  "note": "`-N` (N-th previous line) works via the same offset loop (zmax-term/src/commands/typed.rs:66751-66766); the `^N` spelling is not accepted."
+  "note": "`^N` (N-th previous line) runs through the same offset loop as `-N` now that `^` is a recognised sign (zmax-term/src/commands/typed.rs:66887-66893); `:^3,$d` parses (test at zmax-term/src/commands/typed.rs:69260)."
  },
  {
   "spec_id": "ed.line-addressing.item_5",
@@ -73835,30 +73845,30 @@
  },
  {
   "spec_id": "ed.line-addressing.item_7",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:substitute",
    "typable:delete-lines"
   ],
-  "note": "`%` is the whole buffer (zmax-term/src/commands/typed.rs:66770-66772). ed's bare `,` is NOT `1,$`: both sides of the comma split resolve to the current line when empty (zmax-term/src/commands/typed.rs:66726-66728), so `:,p`/`:,d` act on the current line only."
+  "note": "an omitted side of `a1,a2` is now the ed/sam default instead of the current line (zmax-term/src/commands/typed.rs:66912-66920): empty a1 -> line 1 (index 0), empty a2 -> `$`. A bare `,` therefore resolves to (0, last), identical to `%` (zmax-term/src/commands/typed.rs:66905-66907), so `:,d` / `:,s/a/b/` act on the whole buffer. Regression test omitted_comma_address_defaults_to_first_and_last_line (zmax-term/src/commands/typed.rs:69197) asserts `,` == `%`, plus `,5` == 0,5 and `5,` == 5,$."
  },
  {
   "spec_id": "ed.line-addressing.item_9",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:substitute",
    "typable:delete-lines"
   ],
-  "note": "`/re/` addresses are substituted for their line number before the numeric resolver runs (substitute_patterns zmax-term/src/commands/typed.rs:66617-66655); the search starts on the line after the current one and wraps back around (zmax-term/src/commands/typed.rs:66677-66682), which is ed's rule. `//` does NOT repeat the last search \u2014 the empty pattern compiles to an empty regex (zmax-term/src/vim_regex.rs:158-164) that matches the next line."
+  "note": "`/re/` resolves to the next matching line, wrapping to the top (search_line_for_pattern zmax-term/src/commands/typed.rs:66734-66760). Two gaps closed: an empty `//` now repeats the last search - the address resolver reuses the last-search register, the same one `:s//rep/` reuses (zmax-term/src/commands/typed.rs:66779-66790), and fails the address when there is no previous pattern (zmax-term/src/commands/typed.rs:66798-66802) instead of compiling `Regex::new(\"\")`, which matched every line and silently resolved to the adjacent one; and a bare `:/re` / `:/re/` with no command now moves the cursor to the match, the closing delimiter being optional at end of line (zmax-term/src/commands/typed.rs:66961-66974)."
  },
  {
   "spec_id": "ed.line-addressing.item_10",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:substitute",
    "typable:delete-lines"
   ],
-  "note": "`?re?` \u2014 same substitution path with forward=false (zmax-term/src/commands/typed.rs:66628-66629), searching backwards from the current line and wrapping to the end of the buffer (zmax-term/src/commands/typed.rs:66677-66682). `??` does not repeat the last search; an empty pattern matches the previous line."
+  "note": "`?re?` is the same path with forward=false (zmax-term/src/commands/typed.rs:66673), searching backwards and wrapping to the end of the buffer. `??` now repeats the last search through the same last-search-register reuse as `//` (zmax-term/src/commands/typed.rs:66779-66802), and `:?re` with the closing delimiter omitted moves the cursor (zmax-term/src/commands/typed.rs:66961-66974)."
  },
  {
   "spec_id": "ed.line-addressing.lc",
@@ -76475,5 +76485,109 @@
    "static:delete_selection"
   ],
   "note": "delete_selection \"Delete selection\" (commands.rs) removes the selection into the unnamed register \u2014 vile delete-text-selection. [static:delete_selection=zmax-term/src/commands.rs:793]"
+ },
+ {
+  "spec_id": "nano.function.cycle",
+  "status": "ported",
+  "evidence": [
+   "static:recenter_top_bottom",
+   "key:normal:C-l"
+  ],
+  "note": "recenter_top_bottom (zmax-term/src/commands.rs, next to align_view_bottom) scrolls the cursor's line to the middle of the viewport, then the top, then the bottom on successive presses - nano's do_cycle order and emacs's recenter-positions default (middle top bottom). The cycle advances only when the document, cursor and view offset are all where the previous press left them, so moving or scrolling restarts at the middle."
+ },
+ {
+  "spec_id": "nano.keys.m_23",
+  "status": "ported",
+  "evidence": [
+   "static:recenter_top_bottom",
+   "key:normal:C-l"
+  ],
+  "note": "M-% runs do_cycle -> recenter_top_bottom, on C-l in the default keymap (nano's own M-% chord lives in the nano preset, zmax-term/src/keymap/nano.rs)."
+ },
+ {
+  "spec_id": "ed.line-addressing.item_8",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute",
+   "typable:delete-lines"
+  ],
+  "note": "`;` is now an address separator: split_leading_range accepts it (zmax-term/src/commands/typed.rs:66603) and resolve_semicolon_list (zmax-term/src/commands/typed.rs:66821-66847) walks the `;`-separated list left to right, moving the current line to each address before the next is evaluated (ed's extract_addr_range), keeping the last two as the range. An omitted address before a `;` is the current line and an omitted one after the last `;` is `$`, so a bare `;` is `.,$`. Because the split happens before pattern substitution (split_semicolon_address zmax-term/src/commands/typed.rs:66703-66732 skips `/re/`/`?re?` bodies), `/a/;/b/` searches for `b` from the `a` line, not from the cursor. Test semicolon_moves_the_current_line_between_addresses (zmax-term/src/commands/typed.rs:69215)."
+ },
+ {
+  "spec_id": "vis.compound-addresses.a1_4",
+  "status": "partial",
+  "evidence": [
+   "typable:substitute",
+   "typable:delete-lines"
+  ],
+  "note": "`a1;a2` now evaluates a2 at a1: resolve_semicolon_list (zmax-term/src/commands/typed.rs:66821-66847) resolves the left address, makes it the current line, and resolves the right one there, so `/a/;/b/` is the first `b` after the `a` while `/a/,/b/` still evaluates both from the cursor. Partial for the same reason as a1_3: line granularity, not character, and the range is not written back to dot as a persistent side effect - only the address evaluation origin moves."
+ },
+ {
+  "spec_id": "sam.compound-addresses.a1_4",
+  "status": "partial",
+  "evidence": [
+   "typable:substitute",
+   "typable:delete-lines"
+  ],
+  "note": "`a1;a2` is implemented as ed/sam specify - a2 is evaluated at a1 (resolve_semicolon_list zmax-term/src/commands/typed.rs:66821-66847), the `;` split skipping pattern bodies so `/a/;/b/` works (zmax-term/src/commands/typed.rs:66703-66732), and an omitted a1 is `.`. Partial: line granularity as in a1_3, `+`/`-` are still numeric-offset only (they do not evaluate a regex a2 from the end/start of a1), and dot is not set to a1 beyond the address evaluation itself."
+ },
+ {
+  "spec_id": "nano.function.prepend",
+  "status": "ported",
+  "evidence": [
+   "typable:prepend-to-file"
+  ],
+  "note": "\"prepends (writes at the beginning) instead of overwriting\" = `:prepend-to-file <file>` (zmax-term/src/commands/typed.rs:41229-41259, registered zmax-term/src/commands/typed.rs:63719-63729). It writes the region - or the whole buffer when nothing is selected, the same region_or_buffer_text rule `:append-to-file` uses - in front of the file's existing bytes, creating the file when it does not exist."
+ },
+ {
+  "spec_id": "nano.keys.m_p_2",
+  "status": "ported",
+  "evidence": [
+   "typable:prepend-to-file"
+  ],
+  "note": "nano prepend_it = `:prepend-to-file` (zmax-term/src/commands/typed.rs:41229-41259), the mirror of the already-mapped nano.keys.m_a_2 -> `:append-to-file`. zmax has no nano write-file menu for the M-P chord to live in, so the function is reached as an ex command."
+ },
+ {
+  "spec_id": "nvi.asynchronous-events.sighup",
+  "status": "ported",
+  "evidence": [
+   "typable:preserve",
+   "typable:recover"
+  ],
+  "note": "SIGHUP is now in the registered signal set (zmax-term/src/application.rs:505-517; it was absent before, so a hangup killed zmax with no handler at all) and SIGHUP/SIGTERM share one arm at :1198-1209 that calls Application::preserve_modified_buffers (:1228-1244) before restoring the terminal and leaving the event loop. That helper walks editor.documents() and runs crate::vim_swap::preserve on every modified buffer -- the same writer :preserve uses (typed.rs ex_preserve) and the same file :recover reads back (typed.rs ex_recover) -- so the modified files are saved for later recovery, which is what vi(1) ASYNCHRONOUS EVENTS specifies for SIGHUP/SIGTERM. A buffer visiting no file has no swap-file name and cannot be preserved; it is counted and logged."
+ },
+ {
+  "spec_id": "vis.asynchronous-events.sighup",
+  "status": "ported",
+  "evidence": [
+   "typable:preserve"
+  ],
+  "note": "The SIGHUP/SIGTERM arm (zmax-term/src/application.rs:1198-1209) restores the initial terminal state via restore_term() and exits the event loop. Unlike vis, unsaved contents are not lost: preserve_modified_buffers (:1228-1244) flushes every modified buffer to its swap file through crate::vim_swap::preserve first. restore_term is best-effort here (the tty is usually already gone on a hangup) so a failing restore cannot panic away the preserve that just ran."
+ },
+ {
+  "spec_id": "ed.asynchronous-events.sighup",
+  "status": "partial",
+  "evidence": [
+   "typable:preserve",
+   "typable:recover"
+  ],
+  "note": "On SIGHUP a changed buffer is written out and the editor exits (zmax-term/src/application.rs:1198-1209, :1228-1244), and nothing is written to the remembered file. It differs from ed in where the rescue copy lands: zmax writes each modified buffer to its vim swap file (crate::vim_swap::preserve, recovered with :recover), not to a single `ed.hup` in the current directory. A buffer with no file name therefore gets no rescue copy at all, where ed's ed.hup would still capture it."
+ },
+ {
+  "spec_id": "vis.asynchronous-events.sigint",
+  "status": "partial",
+  "evidence": [
+   "static:comint_interrupt_subjob"
+  ],
+  "note": "SIGINT no longer exits (it was folded into the SIGTERM exit arm). It now runs Application::interrupt (zmax-term/src/application.rs:1210-1213, :1255-1305), whose first act is to signal the running external command: the comint inferior (shell, gdb, comint-run) is spawned with piped stdio and no controlling terminal, so it is signalled by pid via Comint::interrupt_subjob -- the same method the comint_interrupt_subjob command drives (ui/comint.rs:888-898). Partial because that only reaches the comint child: a TeX compile tracked in the private TEX_JOB_PID (commands.rs:50324) is not interrupted, since application.rs has no accessor for it."
+ },
+ {
+  "spec_id": "ed.asynchronous-events.sigint",
+  "status": "partial",
+  "evidence": [
+   "static:normal_mode",
+   "static:mark_insert_exit"
+  ],
+  "note": "An interrupt returns to command mode instead of quitting: Application::interrupt (zmax-term/src/application.rs:1255-1305) cancels any half-typed chord (EditorView::cancel_pending_keys) and then runs the same command sequences C-c is bound to per mode in keymap/vim.rs:2832,2846 -- mark_insert_exit + normal_mode from insert, so the text already typed is committed to the buffer and its history as if input had ended normally. Partial: zmax has no ed-style `?` error line, so nothing is printed."
  }
 ]

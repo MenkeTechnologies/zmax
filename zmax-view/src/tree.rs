@@ -216,6 +216,19 @@ fn split_sizes(total: u16, weights: &[f32], weight_total: f32, fixed: &[Option<u
     sizes
 }
 
+/// Which sibling gives up the cells a resize of `idx` asks for. vim's `:resize`
+/// and CTRL-W +/-/</> work from either side of a split: normally the next
+/// window pays, but the last one has no next window and takes the space from the
+/// previous one instead. `None` when `idx` is an only child — there is nobody to
+/// take from, so the resize is refused. Pure — unit tested.
+fn sibling_donor(idx: usize, len: usize) -> Option<usize> {
+    if idx + 1 < len {
+        Some(idx + 1)
+    } else {
+        idx.checked_sub(1)
+    }
+}
+
 /// Grow sibling `idx` to `want` cells (vim `winheight` / `winwidth`), taking the
 /// difference from the other siblings in proportion to the room each has above
 /// the `min` floor. Returns the new sizes, or `None` when nothing moves — the
@@ -858,8 +871,9 @@ impl Tree {
 
     /// Drag the vertical divider on the right edge of `view` by `delta` columns
     /// (positive grows `view`, shrinking its right neighbour). Pins every sibling
-    /// to its current width first so only the dragged divider moves. Returns true
-    /// if the layout changed.
+    /// to its current width first so only the dragged divider moves. The
+    /// right-most window has no right neighbour, so it takes the columns from the
+    /// window on its left instead. Returns true if the layout changed.
     pub fn resize_horizontal(&mut self, view: ViewId, delta: i16) -> bool {
         if delta == 0 {
             return false;
@@ -875,9 +889,13 @@ impl Tree {
         let Some(idx) = children.iter().position(|c| *c == view) else {
             return false;
         };
-        if idx + 1 >= children.len() {
+        // vim's `:vertical resize` works from either side: the columns normally
+        // come out of the next window, but the right-most window has none, so it
+        // borrows from the previous one instead. Without this a two-pane split
+        // could only be resized from the left pane.
+        let Some(donor) = sibling_donor(idx, children.len()) else {
             return false;
-        }
+        };
 
         // vim `winminwidth`: a window is never resized below this many columns.
         let min = win_min_width() as f32;
@@ -888,13 +906,13 @@ impl Tree {
 
         // vim refuses a resize that would take either window below the floor
         // rather than silently applying a smaller one.
-        let new_left = widths[idx] + delta as f32;
-        let new_right = widths[idx + 1] - delta as f32;
-        if new_left < min || new_right < min {
+        let new_width = widths[idx] + delta as f32;
+        let new_donor = widths[donor] - delta as f32;
+        if new_width < min || new_donor < min {
             return false;
         }
-        widths[idx] = new_left;
-        widths[idx + 1] = new_right;
+        widths[idx] = new_width;
+        widths[donor] = new_donor;
 
         for (child, width) in children.iter().zip(widths) {
             self.nodes[*child].weight = width;
@@ -904,7 +922,8 @@ impl Tree {
     }
 
     /// Resize the given view's height by `delta` rows, borrowing from the next
-    /// sibling in a horizontally-laid-out (stacked) container. Mirror of
+    /// sibling in a horizontally-laid-out (stacked) container — or from the
+    /// previous one when the view is the bottom-most. Mirror of
     /// `resize_horizontal` for the vertical axis (vim CTRL-W + / CTRL-W -).
     pub fn resize_vertical(&mut self, view: ViewId, delta: i16) -> bool {
         if delta == 0 {
@@ -921,9 +940,10 @@ impl Tree {
         let Some(idx) = children.iter().position(|c| *c == view) else {
             return false;
         };
-        if idx + 1 >= children.len() {
+        // vim's `:resize` works from either side — see `resize_horizontal`.
+        let Some(donor) = sibling_donor(idx, children.len()) else {
             return false;
-        }
+        };
 
         // vim `winminheight`: a window is never resized below this many rows.
         let min = win_min_height() as f32;
@@ -932,13 +952,13 @@ impl Tree {
             .map(|c| self.node_height(*c) as f32)
             .collect();
 
-        let new_top = heights[idx] + delta as f32;
-        let new_bottom = heights[idx + 1] - delta as f32;
-        if new_top < min || new_bottom < min {
+        let new_height = heights[idx] + delta as f32;
+        let new_donor = heights[donor] - delta as f32;
+        if new_height < min || new_donor < min {
             return false;
         }
-        heights[idx] = new_top;
-        heights[idx + 1] = new_bottom;
+        heights[idx] = new_height;
+        heights[donor] = new_donor;
 
         for (child, height) in children.iter().zip(heights) {
             self.nodes[*child].weight = height;
@@ -1373,6 +1393,52 @@ mod test {
             "refused resize changes nothing"
         );
         set_win_min_width(3);
+    }
+
+    // vim `:resize` / `:vertical resize` work from either side of a split. The
+    // last window in a container has no next sibling, so it takes the space from
+    // the previous one — before, the bottom/right-most pane could not resize at
+    // all (`resize_view_taller` and friends were dead there).
+    #[test]
+    fn the_last_pane_resizes_against_its_previous_sibling() {
+        let mut tree = Tree::new(Rect::new(0, 0, 40, 20));
+        let left = tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
+        let right = tree.split_with(
+            View::new(DocumentId::new(20), GutterConfig::default()),
+            Layout::Vertical,
+            false,
+        );
+        let (was_left, was_right) = (tree.node_width(left), tree.node_width(right));
+        assert!(tree.resize_horizontal(right, 6), "right-most pane resizes");
+        assert_eq!(tree.node_width(right), was_right + 6);
+        assert_eq!(tree.node_width(left), was_left - 6);
+
+        // `winminwidth` still applies, to the donor on this side too.
+        let widths = (tree.node_width(left), tree.node_width(right));
+        assert!(!tree.resize_horizontal(right, 40));
+        assert_eq!(
+            (tree.node_width(left), tree.node_width(right)),
+            widths,
+            "refused resize changes nothing"
+        );
+
+        // Same on the vertical axis for the bottom-most window.
+        let mut tree = Tree::new(Rect::new(0, 0, 40, 20));
+        let top = tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
+        let bottom = tree.split_with(
+            View::new(DocumentId::new(20), GutterConfig::default()),
+            Layout::Horizontal,
+            false,
+        );
+        let (was_top, was_bottom) = (tree.node_height(top), tree.node_height(bottom));
+        assert!(tree.resize_vertical(bottom, 3), "bottom-most pane resizes");
+        assert_eq!(tree.node_height(bottom), was_bottom + 3);
+        assert_eq!(tree.node_height(top), was_top - 3);
+
+        // An only child has nobody to borrow from.
+        assert_eq!(sibling_donor(0, 1), None);
+        assert_eq!(sibling_donor(0, 2), Some(1));
+        assert_eq!(sibling_donor(2, 3), Some(1));
     }
 
     // vim `winwidth`: the focused window is grown to the requested width, and the

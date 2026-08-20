@@ -506,6 +506,11 @@ impl Application {
             signal::SIGTSTP,
             signal::SIGCONT,
             signal::SIGUSR1,
+            // SIGHUP and SIGTERM both mean "the editor is going away": vi(1)
+            // ASYNCHRONOUS EVENTS makes them the recovery-saving pair, so they
+            // have to be caught rather than left at their default of dying with
+            // the buffers unwritten.
+            signal::SIGHUP,
             signal::SIGTERM,
             signal::SIGINT,
         ])
@@ -1190,14 +1195,115 @@ impl Application {
                 self.refresh_config();
                 self.render().await;
             }
-            signal::SIGTERM | signal::SIGINT => {
-                self.restore_term().unwrap();
+            signal::SIGHUP | signal::SIGTERM => {
+                // vi(1): "If the current buffer has changed since it was last
+                // written in its entirety, the editor attempts to save the
+                // modified file so it can be later recovered." The work goes to
+                // the swap files, so it comes back with `:recover`.
+                self.preserve_modified_buffers();
+                // The controlling terminal is usually already gone on a hangup,
+                // so the restore is best-effort — a failure here must not panic
+                // away the exit path that just preserved the user's work.
+                let _ = self.restore_term();
                 return false;
+            }
+            signal::SIGINT => {
+                self.interrupt();
+                self.render().await;
             }
             _ => unreachable!(),
         }
 
         true
+    }
+
+    /// vi(1) ASYNCHRONOUS EVENTS, SIGHUP/SIGTERM: flush every modified buffer to
+    /// its swap file so the edits survive the signal. This is the writer behind
+    /// `:preserve`, and what `:recover` reads back — the editor keeps one
+    /// recovery mechanism, not a second one for signals.
+    ///
+    /// A buffer that visits no file has no swap-file name, so it cannot be
+    /// preserved; it is counted and logged rather than silently dropped.
+    #[cfg(not(windows))]
+    fn preserve_modified_buffers(&self) {
+        let mut preserved = 0;
+        let mut unnamed = 0;
+        for doc in self.editor.documents() {
+            if !doc.is_modified() {
+                continue;
+            }
+            if doc.path().is_none() {
+                unnamed += 1;
+                continue;
+            }
+            crate::vim_swap::preserve(doc);
+            preserved += 1;
+        }
+        info!("signal: preserved {preserved} modified buffer(s) to their swap files, {unnamed} unnamed buffer(s) could not be preserved");
+    }
+
+    /// nvi(1) SIGINT: "the current operation is halted and the editor returns to
+    /// the command level. If interrupted during text input, the text already
+    /// input is resolved into the file as if the text input had been normally
+    /// terminated." vis(1) adds the child: "when an interrupt occurs while an
+    /// external command is being run it is terminated."
+    ///
+    /// An interrupt therefore does *not* quit — that is `:q`. This drives the
+    /// same command sequences `C-c` is bound to in `keymap/vim.rs`, so the key
+    /// and the signal cannot drift apart.
+    #[cfg(not(windows))]
+    fn interrupt(&mut self) {
+        // The external command first. A comint inferior (shell, gdb, comint-run)
+        // is spawned with piped stdio and no controlling terminal of its own, so
+        // it never sees the tty's interrupt — it has to be signalled by pid.
+        if let Some(comint) = self.compositor.find::<crate::ui::comint::Comint>() {
+            comint.interrupt_subjob();
+        }
+
+        // A half-typed chord is an operation in progress too; this is the same
+        // unwind the `timeout` deadline performs.
+        if let Some(view) = self.compositor.find::<ui::EditorView>() {
+            view.cancel_pending_keys(&mut self.editor);
+        }
+
+        // Back to command level. Leaving insert through `normal_mode` commits
+        // the text typed so far to the buffer and its history, which is nvi's
+        // "resolved into the file as if the text input had been normally
+        // terminated".
+        let cbs = {
+            let mut cx = crate::commands::Context {
+                editor: &mut self.editor,
+                count: None,
+                register: None,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: &mut self.jobs,
+            };
+            use crate::commands::MappableCommand as Cmd;
+            match cx.editor.mode {
+                zmax_view::document::Mode::Insert => {
+                    Cmd::mark_insert_exit.execute(&mut cx);
+                    Cmd::normal_mode.execute(&mut cx);
+                }
+                zmax_view::document::Mode::Select => {
+                    Cmd::save_visual_selection.execute(&mut cx);
+                    Cmd::collapse_selection.execute(&mut cx);
+                    Cmd::normal_mode.execute(&mut cx);
+                }
+                // Already at command level: the interrupt has nothing left to
+                // halt, and vi does not report one.
+                zmax_view::document::Mode::Normal => {}
+            }
+            std::mem::take(&mut cx.callback)
+        };
+        let mut cx = crate::compositor::Context {
+            editor: &mut self.editor,
+            jobs: &mut self.jobs,
+            scroll: None,
+        };
+        for cb in cbs {
+            cb(&mut self.compositor, &mut cx);
+        }
     }
 
     pub async fn handle_idle_timeout(&mut self) {

@@ -19225,13 +19225,24 @@ fn push_keys(map: &serde_json::Map<String, Value>, keys: &mut Vec<String>) {
     }
 }
 
-/// List the keys of a JSON object — or the union of keys across a JSON array of
-/// objects — one per line. Errors on a scalar value. Pure — unit tested.
+/// List the keys of a JSON object — sorted — or the union of keys across a JSON
+/// array of objects, in first-seen order, one per line. Errors on a scalar
+/// value. Pure — unit tested.
+///
+/// The sort is explicit rather than inherited from `serde_json::Map`:
+/// `tree-sitter-generate` elsewhere in the build tree turns on serde_json's
+/// `preserve_order`, and cargo unifies features across the whole graph, so the
+/// map is an insertion-ordered `IndexMap` here and a sorted `BTreeMap` in a
+/// build without that dependency. Sorting here keeps the output the same either
+/// way.
 fn json_keys(input: &str) -> anyhow::Result<String> {
     let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
     let mut keys: Vec<String> = Vec::new();
     match &root {
-        Value::Object(map) => push_keys(map, &mut keys),
+        Value::Object(map) => {
+            push_keys(map, &mut keys);
+            keys.sort();
+        }
         Value::Array(arr) => {
             for item in arr {
                 if let Value::Object(map) = item {
@@ -25822,6 +25833,7 @@ fn vim_set_scoped(
     let mut indent_width: Option<u8> = None;
     let mut tab_width: Option<u8> = None;
     let mut doc_readonly: Option<bool> = None;
+    let mut doc_modifiable: Option<bool> = None;
     let mut doc_modified: Option<bool> = None;
     // vim `filetype`/`syntax` set the current buffer's language.
     let mut set_language: Option<String> = None;
@@ -26704,18 +26716,27 @@ fn vim_set_scoped(
             }
             continue;
         }
-        // `readonly`/`modifiable` set the document's read-only flag (opposites;
-        // not in the VIM_OPTIONS table, so their `no` forms are matched here).
+        // `readonly` and `modifiable` are two different flags in vim, not
+        // opposites: `readonly` refuses the *write* (E45), `modifiable` refuses
+        // the *change* (E21). Neither is in the VIM_OPTIONS table, so their `no`
+        // forms are matched here.
         if value.is_none() {
             let ro = match name {
                 "readonly" | "ro" => Some(true),
                 "noreadonly" | "noro" => Some(false),
-                "modifiable" | "ma" => Some(false),
-                "nomodifiable" | "noma" => Some(true),
                 _ => None,
             };
             if let Some(ro) = ro {
                 doc_readonly = Some(ro);
+                continue;
+            }
+            let ma = match name {
+                "modifiable" | "ma" => Some(true),
+                "nomodifiable" | "noma" => Some(false),
+                _ => None,
+            };
+            if let Some(ma) = ma {
+                doc_modifiable = Some(ma);
                 continue;
             }
             // `modified`/`nomodified` force the buffer's modified state
@@ -26757,10 +26778,15 @@ fn vim_set_scoped(
             .0
             .send(ConfigEvent::Update(config))?;
     }
-    // Buffer-local read-only flag (vim `readonly`/`modifiable`).
+    // Buffer-local write guard (vim `readonly`).
     if let Some(ro) = doc_readonly {
         let (_view, doc) = current!(cx.editor);
         doc.readonly = ro;
+    }
+    // Buffer-local change guard (vim `modifiable`).
+    if let Some(ma) = doc_modifiable {
+        let (_view, doc) = current!(cx.editor);
+        doc.modifiable = ma;
     }
     // Buffer modified state (vim `modified`/`nomodified`).
     if let Some(m) = doc_modified {
@@ -41223,6 +41249,38 @@ fn append_to_file(
         .map_err(|e| anyhow!("append-to-file: {}: {e}", path.display()))?;
     cx.editor
         .set_status(format!("appended region to {}", path.display()));
+    Ok(())
+}
+
+/// `:prepend-to-file <file>` — nano's write-file "prepend" (M-P): write the region
+/// (or the whole buffer when nothing is selected) at the *beginning* of FILE,
+/// keeping what is already there after it, and creating it if necessary.
+fn prepend_to_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = args.first().map(str::trim).filter(|s| !s.is_empty());
+    let Some(file) = file else {
+        bail!("usage: :prepend-to-file <file>");
+    };
+    let path = zmax_stdx::path::expand_tilde(Path::new(file));
+    let body = region_or_buffer_text(cx);
+    // A missing file prepends to nothing, as nano does — it creates it.
+    let existing = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(e) => bail!("prepend-to-file: {}: {e}", path.display()),
+    };
+    let mut out = body.into_bytes();
+    out.extend_from_slice(&existing);
+    std::fs::write(&path, &out)
+        .map_err(|e| anyhow!("prepend-to-file: {}: {e}", path.display()))?;
+    cx.editor
+        .set_status(format!("prepended region to {}", path.display()));
     Ok(())
 }
 
@@ -63685,6 +63743,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "prepend-to-file",
+        aliases: &[],
+        doc: "Write the region (or whole buffer) at the beginning of a file (nano prepend).",
+        fun: prepend_to_file,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "set-justification-left",
         aliases: &[],
         doc: "Flush the region's lines to the left margin (emacs set-justification-left).",
@@ -66511,7 +66580,7 @@ pub static TYPABLE_COMMAND_MAP: Lazy<HashMap<&'static str, &'static TypableComma
 /// number `N`, a pair `N,M`, and `'<,'>`. Returns `None` on an unrecognized token.
 /// Split a leading ex range off a command line, returning `(range, rest)`. The
 /// range is the maximal prefix made of range characters (`%`, digits, `.`, `,`,
-/// `'`, `<`, `>`, `$`); `rest` is the command that follows. `("", input)` when
+/// `;`, `'`, `<`, `>`, `$`, `+`, `-`, `^`); `rest` is the command that follows. `("", input)` when
 /// there is no range. Used by `:{range}sort` (and reusable by other ranged cmds).
 /// The index of the last real line, excluding the phantom empty line ropey reports
 /// after a trailing newline. Used so `%`/`$` line ranges don't include it.
@@ -66555,8 +66624,9 @@ fn split_leading_range(input: &str) -> (&str, &str) {
         // otherwise it starts the command, so the range ends here. `*` is vim's
         // `:*` — the last Visual area, i.e. `'<,'>` — and only counts at the very
         // start of the line (nothing else in a range is a `*`).
+        // `;` is the other ed/sam address separator, `^` ed's synonym for `-`.
         let ok = c.is_ascii_digit()
-            || matches!(c, b'%' | b'.' | b',' | b'\'' | b'$' | b'+' | b'-')
+            || matches!(c, b'%' | b'.' | b',' | b';' | b'\'' | b'$' | b'+' | b'-' | b'^')
             || (c == b'*' && i == 0)
             // `<`/`>` are range chars only as the visual marks `'<`/`'>` (right
             // after a `'`); a bare `<`/`>` is the shift command and ends the range.
@@ -66653,6 +66723,38 @@ fn substitute_patterns(
     Some(out)
 }
 
+/// Split an ex range at its first top-level `;` — one that is not inside a
+/// `/pat/`/`?pat?` address — returning `(before, after)`. `None` when the range
+/// has no `;`.
+fn split_semicolon_address(range: &str) -> Option<(&str, &str)> {
+    let bytes = range.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        let c = bytes[i];
+        if c == b'/' || c == b'?' {
+            i += 1;
+            let mut escaped = false;
+            while i < bytes.len() {
+                if escaped {
+                    escaped = false;
+                } else if bytes[i] == b'\\' {
+                    escaped = true;
+                } else if bytes[i] == c {
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            continue;
+        }
+        if c == b';' {
+            return Some((&range[..i], &range[i + 1..]));
+        }
+        i += 1;
+    }
+    None
+}
+
 /// The 0-based line of the next (`forward`) / previous line whose text matches
 /// `pat`, starting from `from` (exclusive) and wrapping around the buffer.
 fn search_line_for_pattern(
@@ -66684,8 +66786,8 @@ fn search_line_for_pattern(
 }
 
 /// Resolve an ex range against the current buffer — line numbers, `%`, `.`, `$`,
-/// address arithmetic, `'<`/`'>`, `'{letter}` marks, and `/pat/`/`?pat?` patterns.
-/// `None` for an empty or unresolvable range.
+/// address arithmetic, `'<`/`'>`, `'{letter}` marks, `/pat/`/`?pat?` patterns and
+/// the `;` separator. `None` for an empty or unresolvable range.
 fn resolve_range_with_marks(cx: &compositor::Context, range: &str) -> Option<(usize, usize)> {
     if range.is_empty() {
         return None;
@@ -66700,16 +66802,74 @@ fn resolve_range_with_marks(cx: &compositor::Context, range: &str) -> Option<(us
         slice.char_to_line(prim.to()),
     );
     let vim = cx.editor.vim_semantics;
-    // Resolve pattern addresses first (they may contain `,`/mark-like chars), then
-    // named marks, then the numeric/arithmetic resolver.
-    let with_patterns = substitute_patterns(range, |pat, forward| {
-        search_line_for_pattern(slice, pat, cur, forward, vim)
-    })?;
-    let substituted = substitute_marks(&with_patterns, |m| {
-        doc.mark(m)
-            .map(|p| slice.char_to_line(p.min(slice.len_chars())))
-    })?;
-    resolve_filter_range(&substituted, cur, last, sel)
+    // ed(1) `/re/`: "// repeats the last search" (and `??` likewise). The reused
+    // pattern is the one `:s//rep/` reuses — the last-search register. Without
+    // this an empty pattern compiles to a regex that matches every line, so the
+    // address silently resolves to the adjacent line instead of erroring.
+    let reg = cx.editor.registers.last_search_register;
+    let last_search = cx
+        .editor
+        .registers
+        .first(reg, cx.editor)
+        .map(|p| p.to_string())
+        .unwrap_or_default();
+    // One address, evaluated against the current line `from`: pattern addresses
+    // first (they may contain `,`/mark-like chars), then named marks, then the
+    // numeric/arithmetic resolver.
+    let resolve = |addr: &str, from: usize| -> Option<(usize, usize)> {
+        let with_patterns = substitute_patterns(addr, |pat, forward| {
+            let pat = if pat.is_empty() {
+                last_search.as_str()
+            } else {
+                pat
+            };
+            if pat.is_empty() {
+                return None; // `//` with no previous search
+            }
+            search_line_for_pattern(slice, pat, from, forward, vim)
+        })?;
+        let substituted = substitute_marks(&with_patterns, |m| {
+            doc.mark(m)
+                .map(|p| slice.char_to_line(p.min(slice.len_chars())))
+        })?;
+        resolve_filter_range(&substituted, from, last, sel)
+    };
+    resolve_semicolon_list(range, cur, last, resolve)
+}
+
+/// Walk an ed/sam `;`-separated address list, resolving each address with `one`
+/// against the current line as it stands. `a1;a2` evaluates a1, *moves the current
+/// line* to it, then evaluates a2 there — so `/a/;/b/` is the first `b` after the
+/// next `a` — whereas `a1,a2` (which `one` handles) evaluates both sides against
+/// the original current line. ed keeps the last two addresses of the list as the
+/// range; an omitted address before a `;` is the current line and an omitted one
+/// after the last `;` is `$`, so `;` alone is `.,$` (ed(1)).
+fn resolve_semicolon_list(
+    range: &str,
+    cur: usize,
+    last: usize,
+    mut one: impl FnMut(&str, usize) -> Option<(usize, usize)>,
+) -> Option<(usize, usize)> {
+    let mut from = cur;
+    let mut prev = None;
+    let mut rest = range;
+    let span = loop {
+        match split_semicolon_address(rest) {
+            Some((a, tail)) => {
+                if !a.trim().is_empty() {
+                    from = one(a, from)?.1;
+                }
+                prev = Some(from);
+                rest = tail;
+            }
+            None if prev.is_some() && rest.trim().is_empty() => break (last, last),
+            None => break one(rest, from)?,
+        }
+    };
+    Some(match prev {
+        Some(p) => (p.min(span.0), span.1.max(p)),
+        None => span,
+    })
 }
 
 fn resolve_filter_range(
@@ -66726,13 +66886,14 @@ fn resolve_filter_range(
         if tok.is_empty() {
             return Some(cur);
         }
-        // The base ends at the first `+`/`-` that starts an offset. A leading sign
-        // means the base is empty (relative to the current line).
-        let (base_str, offset_str) = if tok.starts_with(['+', '-']) {
+        // The base ends at the first `+`/`-`/`^` that starts an offset. A leading
+        // sign means the base is empty (relative to the current line). `^` is ed's
+        // synonym for `-` ("`- or ^` … the previous line", ed(1)).
+        let (base_str, offset_str) = if tok.starts_with(['+', '-', '^']) {
             ("", tok)
         } else {
             let base_end = tok[1..]
-                .find(['+', '-'])
+                .find(['+', '-', '^'])
                 .map(|i| i + 1)
                 .unwrap_or(tok.len());
             (&tok[..base_end], &tok[base_end..])
@@ -66749,13 +66910,13 @@ fn resolve_filter_range(
         while !rest.is_empty() {
             let sign = if rest.starts_with('+') {
                 1
-            } else if rest.starts_with('-') {
+            } else if rest.starts_with(['-', '^']) {
                 -1
             } else {
                 return None;
             };
             rest = &rest[1..];
-            let end = rest.find(['+', '-']).unwrap_or(rest.len());
+            let end = rest.find(['+', '-', '^']).unwrap_or(rest.len());
             // A bare sign (`.+`) counts as ±1, matching vim.
             let num: isize = if end == 0 {
                 1
@@ -66775,7 +66936,14 @@ fn resolve_filter_range(
         return Some((sel.0.min(sel.1), sel.1.max(sel.0)));
     }
     let (lo, hi) = match range.split_once(',') {
-        Some((a, b)) => (addr(a)?, addr(b)?),
+        // An omitted side of `a1,a2` is a default, not the current line: sam(1)
+        // "if a1 is missing, 0 is substituted; if a2 is missing, $ is substituted",
+        // which is what makes a bare `,` the whole buffer (ed(1): "`,` … is
+        // equivalent to the address range 1,$").
+        Some((a, b)) => (
+            if a.trim().is_empty() { 0 } else { addr(a)? },
+            if b.trim().is_empty() { last } else { addr(b)? },
+        ),
         None => {
             let l = addr(range)?;
             (l, l)
@@ -66818,15 +66986,16 @@ fn execute_command_line_inner(
 
     // vim `:{range}` — a bare range with no command moves the cursor to the last
     // line of the range (`:2,4` → line 4, `:$`, `:.+3`, `:'<,'>`). The guard
-    // requires a real line address (digit / `.` / `$` / `'` / `%`) so the shift
-    // commands `:>` / `:<` are not swallowed.
+    // requires a real line address (digit / `.` / `$` / `'` / `%` / a `/re/`
+    // search) so the shift commands `:>` / `:<` are not swallowed. ed(1) lets the
+    // closing delimiter be omitted at the end of the line, so `:/re` counts too.
     {
         let (range_str, after) = split_leading_range(input);
         if !range_str.is_empty()
             && after.trim().is_empty()
-            && range_str
-                .bytes()
-                .any(|c| c.is_ascii_digit() || matches!(c, b'.' | b'$' | b'\'' | b'%' | b'*'))
+            && range_str.bytes().any(|c| {
+                c.is_ascii_digit() || matches!(c, b'.' | b'$' | b'\'' | b'%' | b'*' | b'/' | b'?')
+            })
         {
             if event != PromptEvent::Validate {
                 return Ok(());
@@ -69045,6 +69214,87 @@ mod vim_set_tests {
         assert_eq!(resolve_filter_range(".-100", 3, 9, (2, 5)), Some((0, 0)));
         // Unrecognized token → None.
         assert_eq!(resolve_filter_range("foo", 3, 9, (2, 5)), None);
+    }
+
+    /// ed(1): "`,` … is equivalent to the address range 1,$"; sam(1): "if a1 is
+    /// missing, 0 is substituted. If a2 is missing, $ is substituted." An omitted
+    /// side is a default, not the current line.
+    #[test]
+    fn omitted_comma_address_defaults_to_first_and_last_line() {
+        assert_eq!(resolve_filter_range(",", 3, 9, (2, 5)), Some((0, 9)));
+        assert_eq!(
+            resolve_filter_range(",", 3, 9, (2, 5)),
+            resolve_filter_range("%", 3, 9, (2, 5))
+        );
+        // Only the missing side defaults; the present one is unaffected.
+        assert_eq!(resolve_filter_range(",5", 3, 9, (2, 5)), Some((0, 4)));
+        assert_eq!(resolve_filter_range("5,", 3, 9, (2, 5)), Some((4, 9)));
+        assert_eq!(resolve_filter_range(".,", 3, 9, (2, 5)), Some((3, 9)));
+        // A lone address is still the current line, not line 1.
+        assert_eq!(resolve_filter_range(".", 3, 9, (2, 5)), Some((3, 3)));
+    }
+
+    /// ed(1): "`;` … the current through last lines in the buffer. This is
+    /// equivalent to the address range `.,$`", and sam(1) `a1;a2`: "like `a1,a2`
+    /// but with a2 evaluated at … a1" — the separator that moves the current line.
+    #[test]
+    fn semicolon_moves_the_current_line_between_addresses() {
+        // `one` stands in for the real address resolver: `+N`/`-N` relative to the
+        // current line it is handed, a bare number 1-based, `$` the last line.
+        let one = |addr: &str, from: usize| -> Option<(usize, usize)> {
+            let l = match addr {
+                "$" => 9,
+                "." => from,
+                a if a.starts_with('+') => from + a[1..].parse::<usize>().unwrap_or(1),
+                a if a.starts_with('-') => from - a[1..].parse::<usize>().unwrap_or(1),
+                a => a.parse::<usize>().ok()?.checked_sub(1)?,
+            };
+            Some((l, l))
+        };
+        // A bare `;` is `.,$`; the left side of a `,` would have defaulted to 1.
+        assert_eq!(resolve_semicolon_list(";", 3, 9, one), Some((3, 9)));
+        // The right address is evaluated at the left one, not at the cursor: with
+        // the cursor on line 4 (index 3), `2;+1` is line 3, not line 5.
+        assert_eq!(resolve_semicolon_list("2;+1", 3, 9, one), Some((1, 2)));
+        assert_eq!(resolve_semicolon_list("2;.", 3, 9, one), Some((1, 1)));
+        // ed evaluates a list left to right and keeps the last two addresses.
+        assert_eq!(resolve_semicolon_list("2;+1;+3", 3, 9, one), Some((2, 5)));
+        // No `;` at all — the address goes through untouched, cursor-relative.
+        assert_eq!(resolve_semicolon_list("+1", 3, 9, one), Some((4, 4)));
+        // An unresolvable address fails the whole range.
+        assert_eq!(resolve_semicolon_list("x;$", 3, 9, one), None);
+    }
+
+    /// A `;` inside a `/pat/` or `?pat?` address is part of the pattern, not a
+    /// separator — the split has to skip patterns like the range parser does.
+    #[test]
+    fn semicolon_split_skips_pattern_addresses() {
+        assert_eq!(split_semicolon_address("/a/;/b/"), Some(("/a/", "/b/")));
+        assert_eq!(split_semicolon_address("/a;b/"), None);
+        assert_eq!(split_semicolon_address("?a;b?;3"), Some(("?a;b?", "3")));
+        assert_eq!(split_semicolon_address("/a\\/;b/;$"), Some(("/a\\/;b/", "$")));
+        assert_eq!(split_semicolon_address("1,$"), None);
+        assert_eq!(split_semicolon_address(";"), Some(("", "")));
+        // The range parser has to hand `;` ranges to the resolver in the first place.
+        assert_eq!(split_leading_range("/a/;/b/d"), ("/a/;/b/", "d"));
+        assert_eq!(split_leading_range(".;$y"), (".;$", "y"));
+    }
+
+    /// ed(1): "`- or ^` … the previous line. This is equivalent to -1 and may be
+    /// repeated with cumulative effect", and "`-n or ^n` … the nth previous line".
+    #[test]
+    fn caret_is_a_synonym_for_minus_in_addresses() {
+        assert_eq!(
+            resolve_filter_range("^", 3, 9, (2, 5)),
+            resolve_filter_range("-", 3, 9, (2, 5))
+        );
+        assert_eq!(resolve_filter_range("^", 3, 9, (2, 5)), Some((2, 2)));
+        assert_eq!(resolve_filter_range("^2", 3, 9, (2, 5)), Some((1, 1)));
+        assert_eq!(resolve_filter_range("^^", 3, 9, (2, 5)), Some((1, 1)));
+        assert_eq!(resolve_filter_range("$^1", 3, 9, (2, 5)), Some((8, 8)));
+        assert_eq!(resolve_filter_range("^3,$", 3, 9, (2, 5)), Some((0, 9)));
+        // The range parser must let `^` through to the resolver.
+        assert_eq!(split_leading_range("^3,$d"), ("^3,$", "d"));
     }
 
     #[test]
