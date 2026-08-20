@@ -388,6 +388,13 @@ impl MappableCommand {
         drag_line_down, "Drag the current line down (SPC x . j)",
         drag_line_up, "Drag the current line up (SPC x . k)",
         toggle_test_file, "Toggle between implementation and test file (SPC p a)",
+        buffer_move_right, "Move this buffer one place right in the buffer line (AstroNvim >b)",
+        buffer_move_left, "Move this buffer one place left in the buffer line (AstroNvim <b)",
+        buffer_sort_by_extension, "Sort the buffer line by file extension (AstroNvim SPC b s e)",
+        buffer_sort_by_full_path, "Sort the buffer line by full path (AstroNvim SPC b s p)",
+        buffer_sort_by_relative_path, "Sort the buffer line by relative path (AstroNvim SPC b s r)",
+        buffer_sort_by_number, "Sort the buffer line by buffer number (AstroNvim SPC b s i)",
+        buffer_sort_by_last_used, "Sort the buffer line by last use (AstroNvim SPC b s m)",
         fold_comments, "Fold multi-line comment blocks (SPC c h)",
         move_visual_line_up, "Move up",
         move_visual_line_down, "Move down",
@@ -509,6 +516,10 @@ impl MappableCommand {
         save_selections_to_register, "Save selections to a register (kakoune Z)",
         restore_selections_from_register, "Restore selections from a register (kakoune z)",
         combine_selections_from_register, "Combine selections with a register's (kakoune A-z)",
+        selection_union, "Union with the saved selections (vis |)",
+        selection_intersection, "Intersection with the saved selections (vis &)",
+        selection_minus, "Subtract the saved selections (vis \\)",
+        selection_complement, "Select what the selections do not cover (vis ~)",
         search, "Search for regex pattern",
         rsearch, "Reverse search for regex pattern",
         delete_to_search_forward, "Delete up to the next match (vim d/pat)",
@@ -528,6 +539,7 @@ impl MappableCommand {
         extend_search_next_vim, "vim n (visual): extend to the repeated match",
         extend_search_prev_vim, "vim N (visual): extend to the reverse match",
         add_selection_to_next_match, "Add the next occurrence of the selection as a new cursor",
+        skip_selection_to_next_match, "Skip this occurrence and select the next one (vis C-x)",
         select_all_occurrences, "Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences)",
         search_selection, "Use current selection as search pattern",
         search_selection_detect_word_boundaries, "Use current selection as the search pattern, automatically wrapping with `\\b` on word boundaries",
@@ -1390,6 +1402,8 @@ impl MappableCommand {
         paste_primary_clipboard_before, "Paste primary clipboard before selections",
         indent, "Indent selection",
         unindent, "Unindent selection",
+        indent_including_blank, "Indent selection, empty lines included (kakoune A->)",
+        unindent_full_levels_only, "Unindent selection, keeping an incomplete indent (kakoune A-<)",
         format_selections, "Format selection",
         reflow_selections, "vim gq: reflow selection to text-width",
         reflow_selections_keep_cursor, "vim gw: reflow to text-width, keep cursor",
@@ -1943,6 +1957,14 @@ impl MappableCommand {
         surround_delete, "Surround delete",
         select_textobject_around, "Select around object",
         select_textobject_inner, "Select inside object",
+        select_to_textobject_around_start, "Select to the whole object's start (kakoune [)",
+        select_to_textobject_around_end, "Select to the whole object's end (kakoune ])",
+        extend_to_textobject_around_start, "Extend to the whole object's start (kakoune {)",
+        extend_to_textobject_around_end, "Extend to the whole object's end (kakoune })",
+        select_to_textobject_inner_start, "Select to the inner object's start (kakoune A-[)",
+        select_to_textobject_inner_end, "Select to the inner object's end (kakoune A-])",
+        extend_to_textobject_inner_start, "Extend to the inner object's start (kakoune A-{)",
+        extend_to_textobject_inner_end, "Extend to the inner object's end (kakoune A-})",
         change_textobject_inner, "Change inside object (ci)",
         change_textobject_around, "Change around object (ca)",
         delete_textobject_inner, "Delete inside object (di)",
@@ -3628,14 +3650,17 @@ fn goto_previous_buffer(cx: &mut Context) {
 fn goto_buffer(editor: &mut Editor, direction: Direction, count: usize) {
     let current = view!(editor).doc;
 
+    // Walk the buffer-line order, not `documents`' DocumentId order, so `]b`/`[b`
+    // agree with the bar the user is looking at after a move or a sort.
+    let order = editor.ordered_document_ids();
     let id = match direction {
         Direction::Forward => {
-            let iter = editor.documents.keys();
+            let iter = order.iter();
             // skip 'count' times past current buffer
             iter.cycle().skip_while(|id| *id != &current).nth(count)
         }
         Direction::Backward => {
-            let iter = editor.documents.keys();
+            let iter = order.iter();
             // skip 'count' times past current buffer
             iter.rev()
                 .cycle()
@@ -11465,6 +11490,45 @@ fn add_selection_to_next_match(cx: &mut Context) {
     }
 }
 
+/// vis `<c-x>` (vis.1 "MULTIPLE SELECTIONS"): clear the current selection but
+/// select the next matching word — JetBrains calls it "skip occurrence".
+///
+/// Port of vis's `ka_selections_match_skip` (main.c:503-511): the same search
+/// [`add_selection_to_next_match`] runs, then the selection that was primary
+/// before it is dropped. Every other selection is left alone.
+fn skip_selection_to_next_match(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let selection = doc.selection(view.id);
+    let primary = selection.primary();
+    let needle: String = slice.slice(primary.from()..primary.to()).chunks().collect();
+    if needle.is_empty() {
+        cx.editor.set_error("select text first (Skip Occurrence)");
+        return;
+    }
+    let haystack: String = slice.chunks().collect();
+    let ranges = find_all_ranges(&haystack, &needle);
+    let existing: std::collections::HashSet<usize> =
+        selection.ranges().iter().map(|r| r.from()).collect();
+    let anchor = primary.from();
+    let next = ranges
+        .iter()
+        .find(|&&(s, _)| s > anchor && !existing.contains(&s))
+        .or_else(|| ranges.iter().find(|&&(s, _)| !existing.contains(&s)))
+        .copied();
+    match next {
+        Some((s, e)) => {
+            // `replace` puts the new range where the old primary was, and
+            // normalizing keeps the primary index on it — so the skipped-to
+            // match becomes the primary, as it does in vis.
+            let index = selection.primary_index();
+            let sel = selection.clone().replace(index, Range::new(s, e));
+            doc.set_selection(view.id, sel);
+        }
+        None => cx.editor.set_status("no more occurrences"),
+    }
+}
+
 /// JetBrains "Select All Occurrences" (Cmd+Ctrl+G): replace the selection with a
 /// cursor on every occurrence of the primary selection's text.
 fn select_all_occurrences(cx: &mut Context) {
@@ -11830,6 +11894,80 @@ fn combine_selections_from_register(cx: &mut Context) {
                 .set_error("no selections survived the combination"),
         }
     })
+}
+
+/// The binary half of vis's selection set algebra (vis.1 "MULTIPLE
+/// SELECTIONS"): `|` union, `&` intersection, `\` minus.
+#[derive(Clone, Copy)]
+enum SelectionSetOp {
+    Union,
+    Intersection,
+    Minus,
+}
+
+/// vis's second operand is a *mark* holding a saved selection list. zmax's
+/// saved-selection store is the register kakoune's `Z` writes, so that is what
+/// these read — `"a|` takes the union with register `a`, a bare `|` with the
+/// default selection register.
+fn selection_set_op(cx: &mut Context, op: SelectionSetOp) {
+    let register = cx.register.unwrap_or(selection_registers::DEFAULT);
+    let Some(descs) = selection_register_descs(cx, register) else {
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let Some(stored) = selection_registers::decode(text, &descs) else {
+        cx.editor.set_error(format!(
+            "register {register} holds no selection for this buffer"
+        ));
+        return;
+    };
+    let len = text.len_chars();
+    let current = doc.selection(view.id).clone();
+    let result = match op {
+        SelectionSetOp::Union => Some(current.union(&stored)),
+        SelectionSetOp::Intersection => current.intersection(&stored),
+        SelectionSetOp::Minus => current.minus(&stored, len),
+    };
+    match result {
+        Some(selection) => doc.set_selection(view.id, selection),
+        // vis leaves the window's selections alone when the operation yields
+        // nothing; a zmax `Selection` cannot be empty either way.
+        None => cx
+            .editor
+            .set_error("no selections survived the set operation"),
+    }
+}
+
+/// vis `|`: the characters covered by the current selections or the saved ones.
+fn selection_union(cx: &mut Context) {
+    selection_set_op(cx, SelectionSetOp::Union);
+}
+
+/// vis `&`: the characters covered by both the current selections and the saved
+/// ones.
+fn selection_intersection(cx: &mut Context) {
+    selection_set_op(cx, SelectionSetOp::Intersection);
+}
+
+/// vis `\`: the characters the current selections cover and the saved ones do
+/// not.
+fn selection_minus(cx: &mut Context) {
+    selection_set_op(cx, SelectionSetOp::Minus);
+}
+
+/// vis `~`: replace the selections with the stretches of buffer they leave
+/// uncovered. The only one of the four with no second operand — vis complements
+/// against the whole text (`text_object_entire`).
+fn selection_complement(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let len = doc.text().len_chars();
+    match doc.selection(view.id).clone().complement(len) {
+        Some(selection) => doc.set_selection(view.id, selection),
+        None => cx
+            .editor
+            .set_error("the selections already cover the whole buffer"),
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -36864,6 +37002,17 @@ fn get_lines(doc: &Document, view_id: ViewId) -> Vec<usize> {
 }
 
 fn indent(cx: &mut Context) {
+    indent_impl(cx, false);
+}
+
+/// kakoune `<a->>` (`:doc keys`, "Changes"): indent the selected lines
+/// *including* the empty ones. Plain `>` leaves a blank line blank — kakoune's
+/// `indent` is templated on that one condition and so is this.
+fn indent_including_blank(cx: &mut Context) {
+    indent_impl(cx, true);
+}
+
+fn indent_impl(cx: &mut Context, include_blank: bool) {
     // vim: a count before an indent OPERATOR counts LINES, never levels — `3>>`
     // indents three lines by one level, and `2>j` three lines by one. helix reads
     // it as a level multiplier, so that stays for the non-vim presets. The line
@@ -36888,7 +37037,7 @@ fn indent(cx: &mut Context) {
         doc.text(),
         lines.into_iter().filter_map(|line| {
             let is_blank = doc.text().line(line).chunks().all(|s| s.trim().is_empty());
-            if is_blank {
+            if is_blank && !include_blank {
                 return None;
             }
             let pos = doc.text().line_to_char(line);
@@ -36948,6 +37097,20 @@ fn insert_unindent(cx: &mut Context) {
 }
 
 fn unindent(cx: &mut Context) {
+    unindent_impl(cx, true);
+}
+
+/// kakoune `<a-<>` (`:doc keys`, "Changes"): unindent, but leave an incomplete
+/// indent alone — three leading spaces where the indent is four stay put.
+///
+/// kakoune's `deindent` is templated on `with_incomplete`; plain `<` removes
+/// whatever leading white space it walked, this form only removes a walk that
+/// reached a full indent level.
+fn unindent_full_levels_only(cx: &mut Context) {
+    unindent_impl(cx, false);
+}
+
+fn unindent_impl(cx: &mut Context, remove_incomplete: bool) {
     // vim counts LINES, not levels, for the operator; in Visual mode it counts
     // levels again (change.txt:497 `{Visual}[count]<`) — see `indent`.
     let count = if cx.editor.vim_semantics && cx.editor.mode != Mode::Select {
@@ -36981,7 +37144,7 @@ fn unindent(cx: &mut Context) {
         }
 
         // now delete from start to first non-blank
-        if pos > 0 {
+        if pos > 0 && (remove_incomplete || width >= indent_width) {
             let start = doc.text().line_to_char(line_idx);
             changes.push((start, start + pos, None))
         }
@@ -54651,6 +54814,53 @@ fn test_counterpart_names(name: &str) -> Vec<String> {
 
 /// SPC p a: toggle between an implementation file and its test counterpart,
 /// trying common naming conventions in the same directory and a `tests/` sibling.
+/// AstroNvim `>b` / `<b`: move the current buffer along the buffer line.
+///
+/// The offset is a count, so `3>b` moves three places; `Editor::move_buffer`
+/// carries astrocore's wrapping (`astrocore/lua/astrocore/buffer.lua` `M.move`),
+/// where an offset past either end rotates round rather than clamping.
+fn buffer_move_impl(cx: &mut Context, offset: isize) {
+    let count = cx.count() as isize;
+    let current = view!(cx.editor).doc;
+    if cx.editor.move_buffer(current, offset * count) {
+        cx.editor.needs_redraw = true;
+    }
+}
+
+fn buffer_move_right(cx: &mut Context) {
+    buffer_move_impl(cx, 1);
+}
+
+fn buffer_move_left(cx: &mut Context) {
+    buffer_move_impl(cx, -1);
+}
+
+/// AstroNvim's `<Leader>bs*` buffer sorts, over `Editor::sort_buffers`.
+fn buffer_sort_impl(cx: &mut Context, key: zmax_view::editor::BufferSortKey) {
+    cx.editor.sort_buffers(key);
+    cx.editor.needs_redraw = true;
+}
+
+fn buffer_sort_by_extension(cx: &mut Context) {
+    buffer_sort_impl(cx, zmax_view::editor::BufferSortKey::Extension);
+}
+
+fn buffer_sort_by_full_path(cx: &mut Context) {
+    buffer_sort_impl(cx, zmax_view::editor::BufferSortKey::FullPath);
+}
+
+fn buffer_sort_by_relative_path(cx: &mut Context) {
+    buffer_sort_impl(cx, zmax_view::editor::BufferSortKey::RelativePath);
+}
+
+fn buffer_sort_by_number(cx: &mut Context) {
+    buffer_sort_impl(cx, zmax_view::editor::BufferSortKey::Id);
+}
+
+fn buffer_sort_by_last_used(cx: &mut Context) {
+    buffer_sort_impl(cx, zmax_view::editor::BufferSortKey::LastUsed);
+}
+
 fn toggle_test_file(cx: &mut Context) {
     let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
         cx.editor.set_error("buffer has no file path");
@@ -54851,6 +55061,103 @@ fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
     select_textobject_then(cx, objtype, None);
 }
 
+/// Which part of the object the key that asked for it actually selects.
+///
+/// kakoune's object keys come in three shapes (`:doc keys`, "Object selection"):
+/// `<a-a>`/`<a-i>` take the whole object, `[`/`]` run from the cursor to one of
+/// its edges, and `{`/`}` extend the existing selection to that edge instead.
+/// zmax had only the whole-object shape.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ObjectEdge {
+    /// The whole object — vim `di(`, kakoune `<a-a>` / `<a-i>`.
+    Whole,
+    /// Cursor to the object's first char, replacing the selection: kakoune `[`.
+    ToStart,
+    /// Cursor to the object's last char, replacing the selection: kakoune `]`.
+    ToEnd,
+    /// Anchor kept, cursor moved to the object's first char: kakoune `{`.
+    ExtendToStart,
+    /// Anchor kept, cursor moved to the object's last char: kakoune `}`.
+    ExtendToEnd,
+}
+
+impl ObjectEdge {
+    /// Reduce `object` — the object found around `range` — to what this key
+    /// selects.
+    ///
+    /// kakoune's `find_surrounding` returns `{pos, first}` for the to-begin
+    /// forms and `{pos, last}` for the to-end ones, `pos` being where the cursor
+    /// already was; in extend mode `select()` keeps the old anchor and moves
+    /// only the cursor. That is what the two `base` cases are.
+    fn apply(self, text: RopeSlice, range: Range, object: Range) -> Range {
+        // An object the dispatcher does not know hands `range` straight back, so
+        // there is no edge to run to and the key does nothing — as in kakoune,
+        // where the selector returns no selection and the key is a no-op.
+        if self == Self::Whole || object == range {
+            return object;
+        }
+        let edge = match self {
+            Self::ToStart | Self::ExtendToStart => object.from(),
+            // A zmax head is exclusive and `put_cursor` wants the position the
+            // block cursor sits *on*, so the object's end is one grapheme back.
+            _ => graphemes::prev_grapheme_boundary(text, object.to()),
+        };
+        let base = match self {
+            Self::ToStart | Self::ToEnd => Range::point(range.cursor(text)),
+            _ => range,
+        };
+        base.put_cursor(text, edge, true)
+    }
+}
+
+// kakoune `[` / `]` / `{` / `}` and their `<a-…>` inner twins: select or extend
+// from the cursor to an object's start or end. The object itself is picked by
+// the next keypress, exactly as for `mi` / `ma`.
+fn select_to_textobject_around_start(cx: &mut Context) {
+    select_textobject_edge_then(cx, textobject::TextObject::Around, ObjectEdge::ToStart, None);
+}
+fn select_to_textobject_around_end(cx: &mut Context) {
+    select_textobject_edge_then(cx, textobject::TextObject::Around, ObjectEdge::ToEnd, None);
+}
+fn extend_to_textobject_around_start(cx: &mut Context) {
+    select_textobject_edge_then(
+        cx,
+        textobject::TextObject::Around,
+        ObjectEdge::ExtendToStart,
+        None,
+    );
+}
+fn extend_to_textobject_around_end(cx: &mut Context) {
+    select_textobject_edge_then(
+        cx,
+        textobject::TextObject::Around,
+        ObjectEdge::ExtendToEnd,
+        None,
+    );
+}
+fn select_to_textobject_inner_start(cx: &mut Context) {
+    select_textobject_edge_then(cx, textobject::TextObject::Inside, ObjectEdge::ToStart, None);
+}
+fn select_to_textobject_inner_end(cx: &mut Context) {
+    select_textobject_edge_then(cx, textobject::TextObject::Inside, ObjectEdge::ToEnd, None);
+}
+fn extend_to_textobject_inner_start(cx: &mut Context) {
+    select_textobject_edge_then(
+        cx,
+        textobject::TextObject::Inside,
+        ObjectEdge::ExtendToStart,
+        None,
+    );
+}
+fn extend_to_textobject_inner_end(cx: &mut Context) {
+    select_textobject_edge_then(
+        cx,
+        textobject::TextObject::Inside,
+        ObjectEdge::ExtendToEnd,
+        None,
+    );
+}
+
 /// Whether the object `ch` actually has a match around any cursor, so the caller
 /// can abort instead of operating on the range the helpers fall back to — the
 /// cursor's own single character.
@@ -54915,6 +55222,15 @@ fn select_textobject_then(
     objtype: textobject::TextObject,
     after: Option<fn(&mut Context)>,
 ) {
+    select_textobject_edge_then(cx, objtype, ObjectEdge::Whole, after);
+}
+
+fn select_textobject_edge_then(
+    cx: &mut Context,
+    objtype: textobject::TextObject,
+    edge: ObjectEdge,
+    after: Option<fn(&mut Context)>,
+) {
     let count = cx.count();
     // The operator's register prefix (`"a` in `"ayiw`) is set on cx.register now,
     // but this defers the operator to a later keypress, by which point cx.register
@@ -54971,8 +55287,9 @@ fn select_textobject_then(
                     Range::new(start, end).with_direction(range.direction())
                 };
 
+                let tab_width = doc.tab_width();
                 let selection = doc.selection(view.id).clone().transform(|range| {
-                    match ch {
+                    let object = match ch {
                         'w' => textobject::textobject_word(text, range, objtype, count, false),
                         'W' => textobject::textobject_word(text, range, objtype, count, true),
                         // vim block aliases: `ib`/`ab` == `i(`/`a(`, `iB`/`aB` == `i{`/`a{`.
@@ -55022,6 +55339,12 @@ fn select_textobject_then(
                         'x' => textobject_treesitter("xml-element", range),
                         'p' => textobject::textobject_paragraph(text, range, objtype, count),
                         's' => textobject::textobject_sentence(text, range, objtype, count),
+                        // kakoune `i`: the current indentation block — the run of
+                        // lines indented at least as far as the cursor's.
+                        'i' => textobject::textobject_indent(text, range, objtype, tab_width),
+                        // vis `al` / `il`: the current line, `il` without its
+                        // leading and trailing white space.
+                        'l' => textobject::textobject_line(text, range, objtype),
                         'm' => textobject::textobject_pair_surround_closest(
                             doc.syntax(),
                             text,
@@ -55069,7 +55392,8 @@ fn select_textobject_then(
                             }
                         }
                         _ => range,
-                    }
+                    };
+                    edge.apply(text, range, object)
                 });
                 doc.set_selection(view.id, selection);
             };
@@ -55093,6 +55417,8 @@ fn select_textobject_then(
         ("b", "Block — parentheses (alias for ( )"),
         ("B", "Block — braces (alias for { )"),
         ("p", "Paragraph"),
+        ("i", "Indentation block (kakoune)"),
+        ("l", "Line (vis al/il)"),
         ("t", "Tag / (X)HTML element (tree-sitter)"),
         ("C", "Type/class definition (tree-sitter)"),
         ("f", "Function (tree-sitter)"),

@@ -700,6 +700,104 @@ impl Selection {
     pub fn contains(&self, other: &Selection) -> bool {
         is_subset::<true>(self.range_bounds(), other.range_bounds())
     }
+
+    //--------------------------------
+    // Set algebra.
+    //
+    // vis treats a selection as the *set of characters* it covers and offers
+    // union / intersection / minus / complement over two such sets (`|`, `&`,
+    // `\`, `~`; vis.1 "MULTIPLE SELECTIONS"). The four are ported from vis's
+    // `main.c` — `ka_selections_union`, `intersect`, `complement` and
+    // `ka_selections_minus` — so the operand pairing and the empty-result rule
+    // are vis's, not an approximation of them.
+    //
+    // Every result is a set of positions, so the ranges come out forward and
+    // the primary is the first one: which end of an input range was the anchor
+    // does not survive an operation on the characters it covered. vis does the
+    // same (its results are plain `Filerange`s).
+
+    /// The characters covered by either selection (vis `|`).
+    ///
+    /// vis sweeps the two sorted lists and merges what overlaps; [`normalize`]
+    /// already does exactly that to the concatenation, adjacent-but-touching
+    /// ranges staying separate in both.
+    ///
+    /// [`normalize`]: Selection::normalize
+    #[must_use]
+    pub fn union(&self, other: &Selection) -> Selection {
+        Selection::new(
+            self.ranges.iter().chain(other.ranges.iter()).copied().collect(),
+            0,
+        )
+    }
+
+    /// The characters covered by both selections (vis `&`).
+    ///
+    /// `None` when nothing overlaps: a `Selection` cannot be empty, and vis
+    /// leaves the window's selections alone when the operation yields no range.
+    #[must_use]
+    pub fn intersection(&self, other: &Selection) -> Option<Selection> {
+        let ranges = intersect(&self.ranges, &other.ranges);
+        (!ranges.is_empty()).then(|| Selection::new(ranges, 0))
+    }
+
+    /// The characters of `0..len` this selection does *not* cover (vis `~`).
+    ///
+    /// `len` is the buffer length: vis complements against `text_object_entire`,
+    /// so the gap before the first range and the one after the last are part of
+    /// the answer.
+    #[must_use]
+    pub fn complement(&self, len: usize) -> Option<Selection> {
+        let ranges = complement(&self.ranges, len);
+        (!ranges.is_empty()).then(|| Selection::new(ranges, 0))
+    }
+
+    /// The characters this selection covers and `other` does not (vis `\`).
+    ///
+    /// vis spells this `intersect(a, complement(b))`, which is what it is here.
+    #[must_use]
+    pub fn minus(&self, other: &Selection, len: usize) -> Option<Selection> {
+        let ranges = intersect(&self.ranges, &complement(&other.ranges, len));
+        (!ranges.is_empty()).then(|| Selection::new(ranges, 0))
+    }
+}
+
+/// The overlapping parts of two range lists, both sorted by [`Range::from`].
+///
+/// Port of vis's `intersect` (main.c): walk the two lists together, emit each
+/// overlap, and advance whichever range ends first.
+fn intersect(a: &[Range], b: &[Range]) -> SmallVec<[Range; 1]> {
+    let mut result = SmallVec::new();
+    let (mut i, mut j) = (0, 0);
+    while i < a.len() && j < b.len() {
+        let (r1, r2) = (a[i], b[j]);
+        let (from, to) = (r1.from().max(r2.from()), r1.to().min(r2.to()));
+        if from < to {
+            result.push(Range::new(from, to));
+        }
+        if r1.to() < r2.to() {
+            i += 1;
+        } else {
+            j += 1;
+        }
+    }
+    result
+}
+
+/// The gaps `ranges` leaves in `0..len`. Port of vis's `complement` (main.c).
+fn complement(ranges: &[Range], len: usize) -> SmallVec<[Range; 1]> {
+    let mut result = SmallVec::new();
+    let mut pos = 0;
+    for range in ranges {
+        if pos < range.from() {
+            result.push(Range::new(pos, range.from()));
+        }
+        pos = range.to();
+    }
+    if pos < len {
+        result.push(Range::new(pos, len));
+    }
+    result
 }
 
 impl<'a> IntoIterator for &'a Selection {
@@ -1454,5 +1552,52 @@ mod test {
             vec!((1, 4), (7, 10)),
             vec!((1, 2), (3, 4), (7, 9))
         ));
+    }
+
+    fn sel(ranges: &[(usize, usize)]) -> Selection {
+        Selection::new(ranges.iter().map(|&(a, b)| Range::new(a, b)).collect(), 0)
+    }
+
+    #[test]
+    fn set_algebra_works_on_the_characters_covered() {
+        // a: [0,5) [12,18)     b: [3,9) [15,23)     buffer length 30
+        let a = sel(&[(0, 5), (12, 18)]);
+        let b = sel(&[(3, 9), (15, 23)]);
+
+        assert_eq!(a.union(&b).ranges(), &[Range::new(0, 9), Range::new(12, 23)]);
+        assert_eq!(
+            a.intersection(&b).unwrap().ranges(),
+            &[Range::new(3, 5), Range::new(15, 18)]
+        );
+        // `a \ b` keeps the parts of a that b does not cover.
+        assert_eq!(
+            a.minus(&b, 30).unwrap().ranges(),
+            &[Range::new(0, 3), Range::new(12, 15)]
+        );
+        // The complement runs to both ends of the buffer, not just between the
+        // ranges — vis complements against the whole text.
+        assert_eq!(
+            a.complement(30).unwrap().ranges(),
+            &[Range::new(5, 12), Range::new(18, 30)]
+        );
+        assert_eq!(sel(&[(4, 9)]).complement(9).unwrap().ranges(), &[Range::new(0, 4)]);
+    }
+
+    #[test]
+    fn set_algebra_answers_none_rather_than_an_empty_selection() {
+        // A `Selection` is never empty, so an operation with no result has to
+        // say so and let the caller keep what the window already has.
+        assert!(sel(&[(0, 4)]).intersection(&sel(&[(6, 9)])).is_none());
+        assert!(sel(&[(0, 4)]).minus(&sel(&[(0, 9)]), 9).is_none());
+        assert!(sel(&[(0, 9)]).complement(9).is_none());
+    }
+
+    #[test]
+    fn set_algebra_does_not_merge_merely_adjacent_ranges() {
+        // vis's `text_range_overlap` is strict, and so is `Range::overlaps`:
+        // [0,4) and [4,8) share an edge but no character.
+        let joined = sel(&[(0, 4)]).union(&sel(&[(4, 8)]));
+        assert_eq!(joined.ranges(), &[Range::new(0, 4), Range::new(4, 8)]);
+        assert!(sel(&[(0, 4)]).intersection(&sel(&[(4, 8)])).is_none());
     }
 }

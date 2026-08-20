@@ -308,6 +308,127 @@ pub fn textobject_sentence(
     Range::new(start, end)
 }
 
+/// A line holding nothing but its line ending — kakoune's `buffer[l] == "\n"`.
+fn line_is_empty(slice: RopeSlice, line: usize) -> bool {
+    rope_is_line_ending(slice.line(line))
+}
+
+/// A line holding nothing but white space — kakoune's `is_only_whitespaces`.
+fn line_is_blank(slice: RopeSlice, line: usize) -> bool {
+    slice.line(line).chars().all(|c| c.is_whitespace())
+}
+
+/// The indent of `line` in columns, tabs advancing to the next `tab_width` stop.
+/// Stops at the first character that is neither a space nor a tab.
+fn line_indent_width(slice: RopeSlice, line: usize, tab_width: usize) -> usize {
+    let mut indent = 0;
+    for ch in slice.line(line).chars() {
+        match ch {
+            ' ' => indent += 1,
+            '\t' => indent = (indent / tab_width + 1) * tab_width,
+            _ => break,
+        }
+    }
+    indent
+}
+
+/// kakoune's `i` object (`:doc keys`, "Objects types"): the current indentation
+/// block — the run of lines around the cursor indented at least as far as it is.
+///
+/// Port of kakoune's `select_indent` (src/selectors.cc). Three details of that
+/// function are easy to get wrong and are kept here:
+///
+/// * The reference indent is read from the nearest *non-empty* line, searching
+///   up from the cursor and then down, so a cursor parked on a blank line gets
+///   the block it sits in rather than indent 0.
+/// * Empty lines do not end the block; they are stepped over.
+/// * `Inside` does not drop the block's first line (it is not a header/body
+///   object) — it only trims white-space-only lines off either end.
+///
+/// kakoune's `select_indent` ignores its count, and so does this.
+pub fn textobject_indent(
+    slice: RopeSlice,
+    range: Range,
+    textobject: TextObject,
+    tab_width: usize,
+) -> Range {
+    let line_count = slice.len_lines();
+    let cursor_line = range.cursor_line(slice);
+
+    let indent = (0..=cursor_line)
+        .rev()
+        .chain(cursor_line + 1..line_count)
+        .find(|&line| !line_is_empty(slice, line))
+        .map_or(0, |line| line_indent_width(slice, line, tab_width));
+
+    let part_of_block = |line: usize| {
+        line_is_empty(slice, line) || line_indent_width(slice, line, tab_width) >= indent
+    };
+
+    let mut begin_line = cursor_line;
+    while begin_line > 0 && part_of_block(begin_line - 1) {
+        begin_line -= 1;
+    }
+    let mut end_line = cursor_line;
+    while end_line + 1 < line_count && part_of_block(end_line + 1) {
+        end_line += 1;
+    }
+
+    match textobject {
+        TextObject::Around => {}
+        TextObject::Inside => {
+            while begin_line < end_line && line_is_blank(slice, begin_line) {
+                begin_line += 1;
+            }
+            while begin_line < end_line && line_is_blank(slice, end_line) {
+                end_line -= 1;
+            }
+        }
+        TextObject::Movement => unreachable!(),
+    }
+
+    Range::new(
+        slice.line_to_char(begin_line),
+        slice.line_to_char((end_line + 1).min(line_count)),
+    )
+}
+
+/// vis's `al` / `il` (vis.1 "TEXT OBJECTS"): the current line, `Inside` without
+/// its leading and trailing white space.
+///
+/// Port of vis's `text_object_line` / `text_object_line_inner`
+/// (text-objects.c:141-151): `al` runs from the start of the line to the start
+/// of the next one, so it takes the line ending with it, and `il` then trims
+/// with `text_range_inner` (text-objects.c:376-387) — which uses `isspace`, so
+/// the trailing newline goes too.
+///
+/// A line that is nothing but white space leaves `il` empty. vis disposes the
+/// selection there; zmax cannot hold an empty one, so the caller gets a
+/// zero-width range at the trimmed position and the usual min-width-1 rule
+/// applies.
+pub fn textobject_line(slice: RopeSlice, range: Range, textobject: TextObject) -> Range {
+    let line_count = slice.len_lines();
+    let line = range.cursor_line(slice);
+    let from = slice.line_to_char(line);
+    let to = slice.line_to_char((line + 1).min(line_count));
+
+    match textobject {
+        TextObject::Around => Range::new(from, to),
+        TextObject::Inside => {
+            let mut start = from;
+            let mut end = to;
+            while end > start && slice.char(end - 1).is_whitespace() {
+                end -= 1;
+            }
+            while start < end && slice.char(start).is_whitespace() {
+                start += 1;
+            }
+            Range::new(start, end)
+        }
+        TextObject::Movement => unreachable!(),
+    }
+}
+
 pub fn textobject_pair_surround(
     syntax: Option<&Syntax>,
     slice: RopeSlice,
@@ -739,5 +860,90 @@ mod test {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_textobject_indent() {
+        // A python-shaped block: the `def` header is indent 0, its body 4.
+        let doc = Rope::from("def f():\n    a = 1\n\n    b = 2\nc = 3\n");
+        let slice = doc.slice(..);
+        let body = slice.line_to_char(1);
+
+        // From inside the body the block is lines 1..=3 — the blank line 2 does
+        // not end it, and line 4 (indent 0) does.
+        assert_eq!(
+            textobject_indent(slice, Range::point(body), Around, 4),
+            Range::new(slice.line_to_char(1), slice.line_to_char(4))
+        );
+        // kakoune's `Inner` trims blank lines off the ends; it does not drop the
+        // block's first line.
+        assert_eq!(
+            textobject_indent(slice, Range::point(body), Inside, 4),
+            Range::new(slice.line_to_char(1), slice.line_to_char(4))
+        );
+
+        // From the blank line the indent is read from the nearest non-empty line
+        // above, so the same block comes back rather than the whole buffer.
+        let blank = slice.line_to_char(2);
+        assert_eq!(
+            textobject_indent(slice, Range::point(blank), Around, 4),
+            Range::new(slice.line_to_char(1), slice.line_to_char(4))
+        );
+
+        // From the indent-0 header every line qualifies, so the block is the
+        // whole buffer.
+        assert_eq!(
+            textobject_indent(slice, Range::point(0), Around, 4),
+            Range::new(0, slice.len_chars())
+        );
+    }
+
+    #[test]
+    fn test_textobject_indent_trailing_blank_lines() {
+        // The trailing blank line is part of the `Around` block (kakoune steps
+        // over empties) but is trimmed by `Inside`.
+        let doc = Rope::from("a\n    x\n    \ny\n");
+        let slice = doc.slice(..);
+        let x = slice.line_to_char(1);
+        assert_eq!(
+            textobject_indent(slice, Range::point(x), Around, 4),
+            Range::new(slice.line_to_char(1), slice.line_to_char(3))
+        );
+        assert_eq!(
+            textobject_indent(slice, Range::point(x), Inside, 4),
+            Range::new(slice.line_to_char(1), slice.line_to_char(2))
+        );
+    }
+
+    #[test]
+    fn test_textobject_line() {
+        let doc = Rope::from("first\n   padded   \nlast");
+        let slice = doc.slice(..);
+
+        // `al` takes the line ending with it.
+        assert_eq!(
+            textobject_line(slice, Range::point(0), Around),
+            Range::new(0, 6)
+        );
+        // `il` drops the leading spaces, the trailing spaces and the newline.
+        let padded = slice.line_to_char(1);
+        assert_eq!(
+            textobject_line(slice, Range::point(padded), Inside),
+            Range::new(padded + 3, padded + 9)
+        );
+        // The last line has no line ending to take.
+        let last = slice.line_to_char(2);
+        assert_eq!(
+            textobject_line(slice, Range::point(last), Around),
+            Range::new(last, slice.len_chars())
+        );
+
+        // A white-space-only line leaves `il` empty.
+        let doc = Rope::from("  \n");
+        let slice = doc.slice(..);
+        assert_eq!(
+            textobject_line(slice, Range::point(0), Inside),
+            Range::new(0, 0)
+        );
     }
 }

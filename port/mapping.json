@@ -76589,5 +76589,68 @@
    "static:mark_insert_exit"
   ],
   "note": "An interrupt returns to command mode instead of quitting: Application::interrupt (zmax-term/src/application.rs:1255-1305) cancels any half-typed chord (EditorView::cancel_pending_keys) and then runs the same command sequences C-c is bound to per mode in keymap/vim.rs:2832,2846 -- mark_insert_exit + normal_mode from insert, so the text already typed is committed to the buffer and its history as if input had ended normally. Partial: zmax has no ed-style `?` error line, so nothing is printed."
+ },
+ {
+  "spec_id": "astronvim.keys-n.b_3",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_move_right",
+   "key:normal:space b >"
+  ],
+  "note": "Moves the current buffer one place right in the buffer line, count-aware. Editor::move_buffer reduces the offset modulo the buffer count and applies single rightward swaps, matching astrocore/lua/astrocore/buffer.lua M.move (Lua's flooring %, so an offset past the end rotates rather than clamping). Bound at SPC b > rather than upstream's >b: `>` is vim's indent operator here (`> a` indents a text object), and shadowing operator-pending would cost more than the chord is worth."
+ },
+ {
+  "spec_id": "astronvim.keys-n.b_4",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_move_left",
+   "key:normal:space b <"
+  ],
+  "note": "The left-moving twin of buffer_move_right, same mechanism with a negated offset. SPC b < for the same operator-pending reason."
+ },
+ {
+  "spec_id": "astronvim.keys-n.leaderbse",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_sort_by_extension",
+   "key:normal:space b o e"
+  ],
+  "note": "Editor::sort_buffers(BufferSortKey::Extension), astrocore comparator.extension (fnamemodify(name, ':e'), empty for a pathless buffer). Ties break on DocumentId so the order is deterministic. Under SPC b o (order) because SPC b s is already Scratch."
+ },
+ {
+  "spec_id": "astronvim.keys-n.leaderbsp",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_sort_by_full_path",
+   "key:normal:space b o p"
+  ],
+  "note": "BufferSortKey::FullPath, astrocore comparator.full_path (fnamemodify(name, ':p'))."
+ },
+ {
+  "spec_id": "astronvim.keys-n.leaderbsr",
+  "status": "partial",
+  "evidence": [
+   "static:buffer_sort_by_relative_path",
+   "key:normal:space b o r"
+  ],
+  "note": "BufferSortKey::RelativePath sorts on Document::relative_path, which is what the buffer line displays. Upstream's comparator.unique_path sorts on the shortest path that distinguishes a buffer from its namesakes, which needs AstroUI's namesake disambiguation; zmax has no equivalent, so identical file names under different directories sort by their full relative path instead of a shortened unique suffix."
+ },
+ {
+  "spec_id": "astronvim.keys-n.leaderbsi",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_sort_by_number",
+   "key:normal:space b o i"
+  ],
+  "note": "BufferSortKey::Id, astrocore comparator.bufnr. DocumentId is zmax's buffer number, so this is open order."
+ },
+ {
+  "spec_id": "astronvim.keys-n.leaderbsm",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_sort_by_last_used",
+   "key:normal:space b o m"
+  ],
+  "note": "BufferSortKey::LastUsed over Document::focused_at, descending. Upstream labels the mapping 'By modification' but comparator.modified compares getbufinfo().lastused, not the modified flag \u2014 verified against astrocore/lua/astrocore/buffer/comparator.lua \u2014 so this ports the behaviour, not the label."
  }
 ]

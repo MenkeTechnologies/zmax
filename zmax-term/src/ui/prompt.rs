@@ -91,6 +91,12 @@ pub struct Prompt {
     /// The direction the incremental search was started in (`/` forward, `?`
     /// backward), so `C-s`/`C-r` repeat forward/backward whichever way it began.
     isearch_forward: bool,
+    /// dte's `M-r` (`A-R` here — `A-r` is the regexp toggle): the search in
+    /// flight has been turned round, so it runs against
+    /// [`Prompt::isearch_forward`] rather than with it until the key is pressed
+    /// again. The flip is applied through the incsearch cycle, which is the only
+    /// thing that can move the search the other way from here.
+    isearch_reversed: bool,
     /// Emacs `isearch-toggle-case-fold` (`M-c`, `M-s c`): forces case folding on
     /// or off for this search. `None` until the key is pressed, so an untouched
     /// search still uses the editor's smart-case setting.
@@ -834,6 +840,64 @@ pub enum Movement {
     None,
 }
 
+/// vim 'cedit': whether `event` is the key that opens the command-line window
+/// from the command line. The option names the key (`CTRL-F` by default, empty
+/// to turn it off) and `typed::cedit_key` parses it into `(needs_ctrl, char)`;
+/// this is the other half — the comparison against what was actually typed.
+fn cedit_pressed(event: KeyEvent) -> bool {
+    let Some((needs_ctrl, key)) = crate::commands::typed::cedit_key() else {
+        return false; // an empty 'cedit' is how vim turns the key off
+    };
+    let Some(c) = event.char() else {
+        return false;
+    };
+    let ctrl = event
+        .modifiers
+        .contains(zmax_view::keyboard::KeyModifiers::CONTROL);
+    ctrl == needs_ctrl && c.to_ascii_lowercase() == key
+}
+
+/// vim 'cedit': open the command-line window `name` (`q:`, `q/` or `q?`) and put
+/// `line` — the command line as it was typed — on its last line, which is where
+/// vim leaves it: "the command line is used to fill the last line of the window"
+/// (cmdline.txt), with the cursor after it.
+fn open_cmdline_window(compositor: &mut Compositor, cx: &mut Context, name: &str, line: &str) {
+    let mut ccx = crate::commands::Context {
+        register: None,
+        count: None,
+        editor: cx.editor,
+        callback: Vec::new(),
+        on_next_key_callback: None,
+        jobs: cx.jobs,
+    };
+    match name.parse::<crate::commands::MappableCommand>() {
+        Ok(command) => command.execute(&mut ccx),
+        Err(err) => return cx.editor.set_error(err.to_string()),
+    }
+    for callback in std::mem::take(&mut ccx.callback) {
+        callback(compositor, cx);
+    }
+    if line.is_empty() {
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let transaction =
+        zmax_core::Transaction::insert(doc.text(), doc.selection(view.id), line.into());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    doc.set_selection(view.id, Selection::point(pos + line.chars().count()));
+}
+
+/// kakoune's `Quoting::Kakoune` quoter (`quote()`, string_utils.hh:74-77): the
+/// value in single quotes with every single quote in it doubled, which is how
+/// kakoune's command language spells a string that is one argument whatever it
+/// contains. What the prompt's `<c-r>` puts on the line when the register key
+/// carries Control.
+fn kak_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
+
 fn is_word_sep(c: char) -> bool {
     c == std::path::MAIN_SEPARATOR || c.is_whitespace()
 }
@@ -883,6 +947,7 @@ impl Prompt {
             wild_press: 0,
             isearch: None,
             isearch_forward: true,
+            isearch_reversed: false,
             isearch_case: None,
             pending_isearch_s: false,
             isearch_success: true,
@@ -1172,6 +1237,14 @@ impl Prompt {
     }
 
     pub fn insert_char(&mut self, c: char, cx: &Context) {
+        self.insert_typed_char(c, cx, true)
+    }
+
+    /// The body of [`Prompt::insert_char`]. `abbrev` is false for a character
+    /// `CTRL-V` made literal: vim's way of *avoiding* an abbreviation is to type
+    /// CTRL-V before the character that would trigger it (map.txt), so a literal
+    /// character must not expand one.
+    fn insert_typed_char(&mut self, c: char, cx: &Context, abbrev: bool) {
         if let Some(handler) = &self.next_char_handler.take() {
             self.pending_register = false;
             handler(self, c, cx);
@@ -1191,6 +1264,16 @@ impl Prompt {
             }
             self.recalculate_completion(cx.editor);
             return;
+        }
+
+        // vim abbreviations: "An abbreviation is only recognized when you type a
+        // non-keyword character … The non-keyword character which ends the
+        // abbreviation is inserted after the expanded abbreviation" (map.txt), so
+        // the expansion happens first and `c` then goes in behind it. A `:cmap` /
+        // `:lmap` rhs is already-mapped text rather than a typed character, which
+        // is why the mapping arm above returns before reaching this.
+        if abbrev && !zmax_core::abbrev::is_keyword_char(c) {
+            self.expand_cmdline_abbrev(cx.editor);
         }
 
         // vim `c_<Insert>`: in overstrike mode a typed character replaces the one
@@ -1213,6 +1296,88 @@ impl Prompt {
             }
         }
         self.recalculate_completion(cx.editor);
+    }
+
+    /// The command-line window vim's 'cedit' opens from *this* prompt: `q:` over
+    /// the Ex history for the `:` line, `q/` / `q?` over the search history for a
+    /// search (whichever way it was started), and `None` for a prompt vim has no
+    /// window for — an `input()`-style read or the nested `=` expression line.
+    fn cmdline_window_command(&self) -> Option<&'static str> {
+        match self.cmdline_type() {
+            ':' => Some("cmdline_window"),
+            '/' | '?' if self.isearch_forward => Some("search_cmdline_window"),
+            '/' | '?' => Some("rsearch_cmdline_window"),
+            _ => None,
+        }
+    }
+
+    /// vim `:cabbrev` / `:cnoreabbrev`: expand the Command-line-mode abbreviation
+    /// in front of the cursor. Returns whether the line changed.
+    ///
+    /// Called from three places, which are vim's three triggers: a typed
+    /// non-keyword character ([`Prompt::insert_typed_char`]), the `<CR>` that ends
+    /// the command ([`Prompt::submit`]) and `c_CTRL-]`, which expands without
+    /// inserting anything extra (map.txt).
+    ///
+    /// Which abbreviations may fire, and what has to stand in front of the match
+    /// for one to, is `zmax_core::abbrev`'s job — this only decides *where*
+    /// abbreviations are live: vim's own command lines (`:`, `/`, `?`, `=`), not
+    /// an Emacs-style read (`@`), whose answer is a value rather than a command.
+    /// "Abbreviations are disabled if the 'paste' option is on" (map.txt).
+    fn expand_cmdline_abbrev(&mut self, editor: &Editor) -> bool {
+        if self.cmdline_type() == '@' || crate::commands::typed::vim_opt_bool("paste") {
+            return false;
+        }
+        let before = self.line[..self.cursor].to_string();
+        let Some((lhs, rhs)) = crate::commands::typed::cmdline_abbrev_expand(&before) else {
+            return false;
+        };
+        self.replace_before_cursor(lhs.len(), &rhs);
+        self.recalculate_completion(editor);
+        true
+    }
+
+    /// The text kakoune's prompt `<c-r>` inserts for register `name`: "insert the
+    /// content of the register given by next key, if next key has the Alt
+    /// modifier, it will insert all values in the register joined with spaces,
+    /// else it will insert the main one. if it has the Control modifier, it will
+    /// quote the inserted value(s)" (keys.asciidoc).
+    ///
+    /// A faithful read of input_handler.cc:762-773: the two modifiers are read off
+    /// the register key, `joined` picks every value over the main one, and the
+    /// quoter is applied to *each* value before they are joined — so a joined
+    /// insert of a quoted register is a list of quoted arguments, not one quoted
+    /// string.
+    fn register_text(editor: &Editor, name: char, joined: bool, quoted: bool) -> String {
+        let quote = |value: Cow<str>| {
+            if quoted {
+                kak_quote(&value)
+            } else {
+                value.into_owned()
+            }
+        };
+        if joined {
+            editor
+                .registers
+                .read(name, editor)
+                .map(|values| values.map(quote).collect::<Vec<String>>().join(" "))
+                .unwrap_or_default()
+        } else {
+            editor
+                .registers
+                .first(name, editor)
+                .map(quote)
+                .unwrap_or_default()
+        }
+    }
+
+    /// Swap the `len` bytes in front of the cursor for `text`, leaving the cursor
+    /// after what went in. What follows the cursor is untouched, so this works
+    /// mid-line and not only at the end of it.
+    fn replace_before_cursor(&mut self, len: usize, text: &str) {
+        let start = self.cursor - len;
+        self.line.replace_range(start..self.cursor, text);
+        self.cursor = start + text.len();
     }
 
     /// vim `c_CTRL-L`: complete the command line by the longest prefix every
@@ -1593,6 +1758,11 @@ impl Prompt {
     /// prompt must stay open (a directory completion was selected, and the
     /// candidate list was refreshed for the next component instead).
     pub fn submit(&mut self, cx: &mut Context) -> bool {
+        // vim: the non-keyword character that expands an abbreviation "can also be
+        // … the <CR> that ends a command" (map.txt) — so `:W<CR>` runs what
+        // `:cabbrev W write` stands for, which is the whole point of a
+        // command-line abbreviation.
+        self.expand_cmdline_abbrev(cx.editor);
         if self.selection.is_some() && self.line.ends_with(std::path::MAIN_SEPARATOR) {
             self.recalculate_completion(cx.editor);
             return false;
@@ -1789,7 +1959,7 @@ impl Prompt {
                 Some(radix) => self.literal_code = Some((radix, String::new())),
                 None => {
                     if let Some(c) = Self::literal_char(event) {
-                        self.insert_char(c, cx);
+                        self.insert_typed_char(c, cx, false);
                     }
                 }
             },
@@ -1803,7 +1973,7 @@ impl Prompt {
     /// Insert the character the digits of a `CTRL-V` code name.
     fn insert_literal_code(&mut self, radix: LiteralRadix, digits: &str, cx: &Context) {
         if let Some(c) = literal_code_char(radix, digits) {
-            self.insert_char(c, cx);
+            self.insert_typed_char(c, cx, false);
         }
     }
 
@@ -1852,6 +2022,10 @@ impl Prompt {
         let folds = self.isearch_fold_snapshot(cx.editor);
         let pattern = self.pattern();
         (self.callback_fn)(cx, &pattern, PromptEvent::Update);
+        // The update searched the way the prompt was opened; with the direction
+        // toggle on (dte `M-r`), turn it back round before anything reads where
+        // the search landed.
+        self.isearch_step_reversed(cx);
         // Step off a match a closed fold hid before anything else reads where the
         // search landed.
         self.isearch_skip_invisible(cx, folds);
@@ -1991,6 +2165,48 @@ impl Prompt {
         let with_start = forward == self.isearch_forward;
         if let Some(cycle) = &mut self.incsearch_cycle {
             cycle(cx, &pattern, with_start);
+        }
+    }
+
+    /// dte `M-r` — "Reverse search direction" (dte.md, search mode): turn the
+    /// search in flight round, so it runs the other way from here on.
+    ///
+    /// Bound to `A-R` rather than dte's `A-r`, which is already Emacs's
+    /// `isearch-toggle-regexp` on this prompt (and is cited as that by the port
+    /// mapping) — the shifted sibling is the free key next to it.
+    ///
+    /// The direction the search prompt's own callback runs in was fixed when the
+    /// prompt was opened, so what actually moves the search the other way is the
+    /// incsearch cycle: stepping it against the starting direction lands on the
+    /// match on the other side, and marks the prompt "cycled", which is what makes
+    /// `<Enter>` commit the match it is showing instead of re-searching forward
+    /// from where the prompt opened (ui/mod.rs `raw_regex_prompt`). The flag keeps
+    /// that up for what is typed after, one step per update.
+    fn isearch_reverse_direction(&mut self, cx: &mut Context) {
+        if self.incsearch_cycle.is_none() {
+            return;
+        }
+        self.isearch_reversed = !self.isearch_reversed;
+        cx.editor.set_status(if self.isearch_reversed == self.isearch_forward {
+            "search direction: backward"
+        } else {
+            "search direction: forward"
+        });
+        self.isearch_step_reversed(cx);
+    }
+
+    /// Move the search to the match on the other side of the current one, when
+    /// the direction toggle above is on. A no-op otherwise, and with nothing
+    /// typed — there is no match to step from yet.
+    fn isearch_step_reversed(&mut self, cx: &mut Context) {
+        if !self.isearch_reversed || self.line.is_empty() {
+            return;
+        }
+        let pattern = self.pattern();
+        if let Some(cycle) = &mut self.incsearch_cycle {
+            // `false` is "against the direction the search was started in", which
+            // is exactly what the toggle asks for.
+            cycle(cx, &pattern, false);
         }
     }
 
@@ -2897,6 +3113,31 @@ impl Component for Prompt {
             event.modifiers == KeyModifiers::CONTROL | KeyModifiers::ALT
         };
 
+        // vim 'cedit' (`CTRL-F` by default): open the command-line window on what
+        // has been typed so far — the history in a real buffer, where the line can
+        // be edited with ordinary commands before `<CR>` runs it (cmdline.txt).
+        // Only in the vim presets, where the key is vim's: in the Emacs ones
+        // `C-f` is `forward-char`, the arm further down. Not while a register name
+        // or a literal key is awaited, where the next key is data, and not in a
+        // nested read, whose line is an expression rather than a command.
+        if cx.editor.vim_semantics
+            && !self.pending_register
+            && self.next_char_handler.is_none()
+            && !self.in_nested_read()
+            && cedit_pressed(event)
+        {
+            if let Some(command) = self.cmdline_window_command() {
+                let line = std::mem::take(&mut self.line);
+                (self.callback_fn)(cx, &line, PromptEvent::Abort);
+                return EventResult::Consumed(Some(Box::new(
+                    move |compositor: &mut Compositor, cx: &mut Context| {
+                        compositor.pop();
+                        open_cmdline_window(compositor, cx, command, &line);
+                    },
+                )));
+            }
+        }
+
         match event {
             // vim `c_CTRL-\_e {expr}`: in the nested `=` prompt these abandon the
             // expression, not the command line — that comes back untouched.
@@ -2929,6 +3170,35 @@ impl Component for Prompt {
             // register literally / without indent changes. The insert below is
             // already literal, so these just wait for the register name.
             ctrl!('r') | ctrl!('o') | ctrl!('p') if self.pending_register => {}
+            // kakoune `<c-r>` with a modifier on the register key: Alt inserts
+            // every value in the register joined with spaces, Control quotes what
+            // goes in (keys.asciidoc; input_handler.cc:762-773). It sits here, in
+            // front of every other Alt/Control chord, because while the register
+            // name is awaited the next key *is* the register name — but behind
+            // vim's `c_CTRL-R CTRL-R` / `_CTRL-O` / `_CTRL-P` above, which are the
+            // same keystroke and keep their vim meaning.
+            KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers,
+            } if self.pending_register
+                && modifiers.intersects(
+                    zmax_view::keyboard::KeyModifiers::ALT
+                        | zmax_view::keyboard::KeyModifiers::CONTROL,
+                ) =>
+            {
+                use zmax_view::keyboard::KeyModifiers;
+                self.pending_register = false;
+                self.next_char_handler = None;
+                let text = Self::register_text(
+                    cx.editor,
+                    c,
+                    modifiers.contains(KeyModifiers::ALT),
+                    modifiers.contains(KeyModifiers::CONTROL),
+                );
+                self.insert_str(&text, cx.editor);
+                self.fire_update(cx);
+                return EventResult::Consumed(None);
+            }
 
             // ── Emacs isearch: the `M-s` toggle map ─────────────────────────
             // Emacs `isearch-toggle-regexp` (`M-s r`), `-word` (`M-s w`),
@@ -3160,6 +3430,10 @@ impl Component for Prompt {
                     self.begin_history_search(cx.editor, true);
                 }
             }
+            // dte `M-r` — "Reverse search direction": the search in flight turns
+            // round. `A-r` above is the regexp toggle in both the vim and the
+            // Emacs presets, so the direction toggle takes the shifted key.
+            alt!('R') => self.isearch_reverse_direction(cx),
             // `isearch-complete`: complete the search string from the search ring.
             alt!(Tab) if isearch => self.isearch_complete(cx),
             // Emacs isearch `M-s`: the prefix of the toggle map above. Outside a
@@ -3177,15 +3451,12 @@ impl Component for Prompt {
             // completion-selection exit further down.
             ctrl!('v') => self.pending_literal = true,
             ctrl!('q') if cx.editor.vim_semantics => self.pending_literal = true,
-            // vim `c_CTRL-]`: expand the `:cabbrev` in front of the cursor.
+            // vim `c_CTRL-]`: expand the `:cabbrev` in front of the cursor —
+            // "used to expand an abbreviation without inserting any extra
+            // characters" (map.txt), unlike the typed non-keyword character and
+            // the `<CR>` that also trigger one.
             ctrl!(']') => {
-                let before = self.line[..self.cursor].to_string();
-                if let Some((lhs, rhs)) = crate::commands::typed::cmdline_abbrev_expand(&before) {
-                    let start = self.cursor - lhs.len();
-                    let mut line = self.line.clone();
-                    line.replace_range(start..self.cursor, &rhs);
-                    self.set_line(line, cx.editor);
-                }
+                self.expand_cmdline_abbrev(cx.editor);
             }
             // vim `c_CTRL-^`: turn the `:lmap` language keymap off/on ('imsearch').
             ctrl!('^') => {
@@ -3641,6 +3912,84 @@ mod tests {
         p.line = "s/a//b".to_string();
         assert_eq!(p.shadow_end(), 0);
         assert!(!file_name_shadow_mode());
+    }
+
+    /// An abbreviation is expanded in place: what follows the cursor stays put and
+    /// the cursor ends up after the expansion, not at the end of the line. Byte
+    /// arithmetic, so a multi-byte line has to survive it.
+    #[test]
+    fn abbrev_expansion_replaces_only_what_is_in_front_of_the_cursor() {
+        // `:W arg` with the cursor after `W`: `W` becomes `write`, ` arg` stays.
+        let mut p = prompt_at("W arg", 1, 0);
+        p.cursor = 1;
+        p.replace_before_cursor(1, "write");
+        assert_eq!(p.line, "write arg");
+        assert_eq!(p.cursor, 5);
+        // The expansion may be shorter than the abbreviation, and either side may
+        // be multi-byte — the cursor must still land on a character boundary.
+        let mut p = prompt_at("日本語 x", 1, 0);
+        p.cursor = "日本語".len();
+        p.replace_before_cursor("日本語".len(), "ß");
+        assert_eq!(p.line, "ß x");
+        assert_eq!(p.cursor, "ß".len());
+        assert!(p.line.is_char_boundary(p.cursor));
+    }
+
+    /// kakoune's `<c-r>` with Control on the register key quotes what it inserts
+    /// the kakoune way (string_utils.hh:74-77): single quotes, with every single
+    /// quote in the value doubled so the result is one argument.
+    #[test]
+    fn kakoune_quoting_doubles_the_quote() {
+        assert_eq!(kak_quote("foo"), "'foo'");
+        assert_eq!(kak_quote("it's"), "'it''s'");
+        assert_eq!(kak_quote(""), "''");
+        // A value that is already quoted is quoted again rather than left alone —
+        // it is text, not syntax.
+        assert_eq!(kak_quote("'a b'"), "'''a b'''");
+    }
+
+    /// vim 'cedit' names the key that opens the command-line window; its default
+    /// is `CTRL-F`, so that is the chord the prompt has to recognise when nothing
+    /// set the option.
+    #[test]
+    fn cedit_is_ctrl_f_until_the_option_says_otherwise() {
+        assert!(cedit_pressed(ctrl!('f')));
+        // The same letter without the modifier is a character of the command line.
+        assert!(!cedit_pressed(key!('f')));
+        assert!(!cedit_pressed(ctrl!('g')));
+        // A key with no character of its own is never the cedit key.
+        assert!(!cedit_pressed(key!(Enter)));
+    }
+
+    /// Which command-line window 'cedit' opens depends on which command line it
+    /// was pressed on: the Ex history for `:`, the search history for a search —
+    /// backwards when the search was started backwards — and none at all for a
+    /// prompt that is not one of vim's command lines.
+    #[test]
+    fn cedit_opens_the_window_for_this_command_line() {
+        assert_eq!(
+            prompt_at("write", 1, 0).cmdline_window_command(),
+            Some("cmdline_window")
+        );
+        let search = |forward| {
+            Prompt::new(
+                "search:".into(),
+                Some('/'),
+                |_: &Editor, _: &str| Vec::new(),
+                |_: &mut Context, _: &str, _: PromptEvent| {},
+            )
+            .with_isearch(forward)
+        };
+        assert_eq!(
+            search(true).cmdline_window_command(),
+            Some("search_cmdline_window")
+        );
+        assert_eq!(
+            search(false).cmdline_window_command(),
+            Some("rsearch_cmdline_window")
+        );
+        // An `input()`-style read (`getcmdtype()` == `@`) has no history window.
+        assert_eq!(test_prompt(false).cmdline_window_command(), None);
     }
 
     #[test]

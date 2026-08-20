@@ -215,6 +215,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x d w", "Text",    ":delete-trailing-whitespace"),           // SPC x d w
     ("space x l d", "Text",    ":duplicate-line"),                       // SPC x l d
     ("space x o",   "Text",    "select_all_occurrences"),               // SPC x o : select all occurrences of selection (JetBrains Select All Occurrences)
+    // vis binds this to CTRL-X, which is vim's `decrement` here, so it sits next
+    // to the other occurrence commands instead.
+    ("space x n",   "Text",    "skip_selection_to_next_match"),         // SPC x n : skip this occurrence, select the next (vis C-x)
     ("space x A",   "Text",    "open_all_buffer_links"),                // SPC x A : open every link in the buffer (link-hint-open-all-links)
     ("space x O",   "Text",    "link_hint_open_link"),                  // SPC x O : pick a link and open it (link-hint-open-link)
     ("space x y",   "Text",    "link_hint_copy_link"),                  // SPC x y : pick a link and copy it (link-hint-copy-link)
@@ -1399,6 +1402,16 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "#" => goto_prev_preproc,         // [# previous unmatched #if/#else
             "`" => goto_prev_mark,            // [` previous lowercase mark
             "'" => goto_prev_mark_line,       // ['  previous lowercase mark (line)
+            // kakoune's object-edge keys. kakoune spells them `[`/`{` (whole vs
+            // extend — shift on a US layout) and `<a-[>`/`<a-{>` (the inner
+            // twins); here `[`/`]` are already prefixes and `{`/`}` are vim's
+            // paragraph motions, so the same three-way distinction moves one key
+            // in: `o`/`O` for select/extend and Alt for inner. The object itself
+            // is read from the next key, as it is for `mi`/`ma`.
+            "o"   => select_to_textobject_around_start, // kakoune [
+            "O"   => extend_to_textobject_around_start, // kakoune {
+            "A-o" => select_to_textobject_inner_start,  // kakoune <a-[>
+            "A-O" => extend_to_textobject_inner_start,  // kakoune <a-{>
         },
         "]" => { "Next"
             "]" => goto_next_section,   // ]] forward to the next section ('sections')
@@ -1438,6 +1451,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "#" => goto_next_preproc,         // ]# next unmatched #endif/#else
             "`" => goto_next_mark,            // ]` next lowercase mark
             "'" => goto_next_mark_line,       // ]'  next lowercase mark (line)
+            // The forward halves of the object-edge keys — see the `[` submap.
+            "o"   => select_to_textobject_around_end, // kakoune ]
+            "O"   => extend_to_textobject_around_end, // kakoune }
+            "A-o" => select_to_textobject_inner_end,  // kakoune <a-]>
+            "A-O" => extend_to_textobject_inner_end,  // kakoune <a-}>
         },
 
         // --- window commands (C-w) -----------------------------------------
@@ -1895,6 +1913,20 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 },
             },
             "b" => { "Buffers"
+                // AstroNvim's buffer-line ordering. Upstream puts these on `>b`/`<b`
+                // and `<Leader>bs*`, but `>`/`<` are vim's indent operators here
+                // (`< a` unindents a text object) and `SPC b s` is already
+                // Scratch, so they live under `SPC b o`/`O` (order) and
+                // `SPC b o <key>` instead of shadowing either.
+                ">" => buffer_move_right,
+                "<" => buffer_move_left,
+                "o" => { "Order buffers"
+                    "e" => buffer_sort_by_extension,
+                    "p" => buffer_sort_by_full_path,
+                    "r" => buffer_sort_by_relative_path,
+                    "i" => buffer_sort_by_number,
+                    "m" => buffer_sort_by_last_used,
+                },
                 "b" => buffer_picker,              // SPC b b
                 "n" => goto_next_buffer,           // SPC b n
                 "p" => goto_previous_buffer,       // SPC b p
@@ -2825,10 +2857,24 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "~" => [switch_case, normal_mode],       // g~: toggle case (vim also allows plain ~)
             "C-a" => increment_sequential,          // g CTRL-A: bump each line by a growing amount
             "C-x" => decrement_sequential,          // g CTRL-X: decrement each line likewise
+            // kakoune's `<a->>` / `<a-<>` shift variants. Their own chords are
+            // taken here (`A->`/`A-<` are emacs's goto-file-end/start), so the
+            // two sit next to the plain `>`/`<` under `g`.
+            ">" => indent_including_blank,          // v_g>: indent, empty lines included
+            "<" => unindent_full_levels_only,       // v_g<: unindent, keep an incomplete indent
         },
 
         "C-a" => increment,
         "C-x" => decrement,
+
+        // vis's selection set algebra (vis.1 "MULTIPLE SELECTIONS"), on vis's own
+        // keys where they are free. The second operand is the saved selection
+        // register (`Z` writes it), which is zmax's analogue of vis's marks.
+        // vis's `~` is vim's `switch_case` here, so the complement takes `A-~`.
+        "|"   => selection_union,
+        "&"   => selection_intersection,
+        "\\"  => selection_minus,
+        "A-~" => selection_complement,
 
         // visual-mode extras (vim v_*)
         "K"   => hover,                              // run keywordprg on the area
