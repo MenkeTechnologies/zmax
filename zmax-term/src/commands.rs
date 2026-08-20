@@ -1139,6 +1139,10 @@ impl MappableCommand {
         goto_last_diag, "Goto last diagnostic",
         goto_next_diag, "Goto next diagnostic",
         goto_prev_diag, "Goto previous diagnostic",
+        goto_next_diag_error, "Goto next error diagnostic (]e)",
+        goto_prev_diag_error, "Goto previous error diagnostic ([e)",
+        goto_next_diag_warning, "Goto next warning diagnostic (]w)",
+        goto_prev_diag_warning, "Goto previous warning diagnostic ([w)",
         goto_next_change, "Goto next change",
         goto_prev_change, "Goto previous change",
         goto_next_conflict, "Goto next merge-conflict marker",
@@ -1552,6 +1556,7 @@ impl MappableCommand {
         align_view_top, "Align view top",
         align_view_center, "Align view center",
         align_view_bottom, "Align view bottom",
+        recenter_top_bottom, "Cycle the cursor line to the middle, then top, then bottom of the window (emacs recenter-top-bottom, nano cycle)",
         scroll_up, "Scroll view up",
         scroll_down, "Scroll view down",
         scroll_column_left, "Scroll view left one column (zh)",
@@ -10421,10 +10426,11 @@ fn half_page_down(cx: &mut Context) {
 /// moves it to the window edge whether or not it was still visible, so the jump
 /// is "a page" of window, not "a page" of cursor. Measured against nvim 0.12.4
 /// (18 text rows, topline 83, cursor 100): `CTRL-F` -> top 99 cursor 99,
-/// `CTRL-B` -> top 83 cursor 100. `Movement::Extend` in Select mode keeps the
-/// anchor, which is what makes `<S-PageDown>` select down to the new topline.
-fn vim_page_cursor(cx: &mut Context, direction: Direction) {
-    let extend = cx.editor.mode == Mode::Select;
+/// `CTRL-B` -> top 83 cursor 100. `extend` keeps the anchor, which is what makes
+/// `<S-PageDown>` select down to the new topline; the `extend_page_*` entry
+/// points always pass it, like every other `extend_*` command, so `<S-PageUp>`
+/// starts a selection from Normal mode instead of collapsing one.
+fn vim_page_cursor(cx: &mut Context, direction: Direction, extend: bool) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let last_line = text.len_lines().saturating_sub(1);
@@ -10447,28 +10453,55 @@ fn vim_page_cursor(cx: &mut Context, direction: Direction) {
     doc.set_selection(view.id, selection);
 }
 
-/// Move the cursor a page back, extending the selection when in Select mode.
-/// Under vim semantics the cursor goes to the window edge ([`vim_page_cursor`]);
-/// otherwise `scroll`'s sync_cursor path moves it by the same offset as the
-/// view. Used by `<S-PageUp>` under 'keymodel' startsel.
+/// The cursor half of a `sync_cursor` scroll, forced to keep the anchor.
+/// `scroll` picks Move/Extend from the current mode, but an `extend_*` command
+/// extends from Normal mode too — that is what makes `<S-PageUp>` *start* a
+/// selection rather than drag an empty one along. Call after `scroll(.., false)`
+/// so the view offset has already moved.
+fn extend_cursor_page(cx: &mut Context, offset: usize, direction: Direction) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let viewport = view.inner_area(doc);
+    let text_fmt = doc.text_format(viewport.width, None, Some(view.id));
+    let mut annotations = view.text_annotations(&*doc, None);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        move_vertically_visual(
+            text,
+            range,
+            direction,
+            offset,
+            Movement::Extend,
+            &text_fmt,
+            &mut annotations,
+        )
+    });
+    drop(annotations);
+    doc.set_selection(view.id, selection);
+}
+
+/// Move the cursor a page back, always extending the selection — like every
+/// other `extend_*` command, and unlike the plain `page_up` it shares its scroll
+/// with. Under vim semantics the cursor goes to the window edge
+/// ([`vim_page_cursor`]); otherwise it moves by the same offset as the view.
+/// Used by `<S-PageUp>` under 'keymodel' startsel.
 fn extend_page_up(cx: &mut Context) {
     let offset = page_offset(cx);
+    scroll(cx, offset, Direction::Backward, false);
     if cx.editor.vim_semantics {
-        scroll(cx, offset, Direction::Backward, false);
-        vim_page_cursor(cx, Direction::Backward);
+        vim_page_cursor(cx, Direction::Backward, true);
     } else {
-        scroll(cx, offset, Direction::Backward, true);
+        extend_cursor_page(cx, offset, Direction::Backward);
     }
 }
 
 /// See [`extend_page_up`]. Used by `<S-PageDown>`.
 fn extend_page_down(cx: &mut Context) {
     let offset = page_offset(cx);
+    scroll(cx, offset, Direction::Forward, false);
     if cx.editor.vim_semantics {
-        scroll(cx, offset, Direction::Forward, false);
-        vim_page_cursor(cx, Direction::Forward);
+        vim_page_cursor(cx, Direction::Forward, true);
     } else {
-        scroll(cx, offset, Direction::Forward, true);
+        extend_cursor_page(cx, offset, Direction::Forward);
     }
 }
 
@@ -27840,10 +27873,42 @@ fn nonogram(cx: &mut Context) {
 }
 
 /// Emacs `xref-find-references` (M-?): grep-scan the working tree for a symbol
-/// and list the hits in an Xref results overlay.
+/// and list the hits in an Xref results overlay. Emacs offers the identifier at
+/// point as the default, so we search it straight away when the cursor is on a
+/// word and only fall back to the minibuffer prompt when it is not.
 fn xref_find_references(cx: &mut Context) {
+    let symbol = crate::commands::typed::word_under_cursor(cx.editor);
+    if symbol.trim().is_empty() {
+        let prompt = crate::ui::prompt::Prompt::new(
+            "Find references: ".into(),
+            None,
+            ui::completers::none,
+            move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                if event != PromptEvent::Validate || input.trim().is_empty() {
+                    return;
+                }
+                xref_references_overlay(
+                    &mut crate::commands::Context {
+                        register: None,
+                        count: None,
+                        editor: cx.editor,
+                        callback: Vec::new(),
+                        on_next_key_callback: None,
+                        jobs: cx.jobs,
+                    },
+                    input.trim().to_string(),
+                );
+            },
+        );
+        cx.push_layer(Box::new(prompt));
+        return;
+    }
+    xref_references_overlay(cx, symbol);
+}
+
+/// Grep the working tree for `symbol` and show the hits in the Xref overlay.
+fn xref_references_overlay(cx: &mut Context, symbol: String) {
     let root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-    let symbol = "TODO".to_string();
     open_overlay(cx, move |_editor| {
         crate::ui::xref::Xref::new(root, symbol)
             .map(|x| Box::new(x) as Box<dyn Component>)
@@ -33626,7 +33691,17 @@ fn goto_last_diag(cx: &mut Context) {
         .immediately_show_diagnostic(doc, view.id);
 }
 
-fn goto_next_diag(cx: &mut Context) {
+/// `]d` / `[d` and their severity-filtered siblings. `severity` of `None` takes
+/// the next diagnostic whatever it is; `Some(s)` takes only the ones of exactly
+/// that severity, which is what nvim's `vim.diagnostic.jump { severity = … }`
+/// does with a bare severity value (a range needs `{ min = …, max = … }`).
+/// AstroNvim and LazyVim both define `]e`/`[e` as ERROR and `]w`/`[w` as WARN
+/// that way.
+fn goto_diag_impl(
+    cx: &mut Context,
+    direction: Direction,
+    severity: Option<zmax_core::diagnostic::Severity>,
+) {
     let motion = move |editor: &mut Editor| {
         let (view, doc) = current!(editor);
 
@@ -33635,14 +33710,25 @@ fn goto_next_diag(cx: &mut Context) {
             .primary()
             .cursor(doc.text().slice(..));
 
-        let diag = doc
-            .diagnostics()
-            .iter()
-            .find(|diag| diag.range.start > cursor_pos);
+        let diag = match direction {
+            Direction::Forward => doc.diagnostics().iter().find(|diag| {
+                diag.range.start > cursor_pos && (severity.is_none() || diag.severity == severity)
+            }),
+            Direction::Backward => doc.diagnostics().iter().rev().find(|diag| {
+                diag.range.start < cursor_pos && (severity.is_none() || diag.severity == severity)
+            }),
+        };
 
-        let selection = match diag {
-            Some(diag) => Selection::single(diag.range.start, diag.range.end),
-            None => return,
+        let selection = match (diag, direction) {
+            (Some(diag), Direction::Forward) => {
+                Selection::single(diag.range.start, diag.range.end)
+            }
+            // NOTE: the selection is reversed because we're jumping to the
+            // previous diagnostic.
+            (Some(diag), Direction::Backward) => {
+                Selection::single(diag.range.end, diag.range.start)
+            }
+            (None, _) => return,
         };
         push_jump(view, doc);
         doc.set_selection(view.id, selection);
@@ -33653,33 +33739,44 @@ fn goto_next_diag(cx: &mut Context) {
     cx.editor.apply_motion(motion);
 }
 
+fn goto_next_diag(cx: &mut Context) {
+    goto_diag_impl(cx, Direction::Forward, None);
+}
+
 fn goto_prev_diag(cx: &mut Context) {
-    let motion = move |editor: &mut Editor| {
-        let (view, doc) = current!(editor);
+    goto_diag_impl(cx, Direction::Backward, None);
+}
 
-        let cursor_pos = doc
-            .selection(view.id)
-            .primary()
-            .cursor(doc.text().slice(..));
+fn goto_next_diag_error(cx: &mut Context) {
+    goto_diag_impl(
+        cx,
+        Direction::Forward,
+        Some(zmax_core::diagnostic::Severity::Error),
+    );
+}
 
-        let diag = doc
-            .diagnostics()
-            .iter()
-            .rev()
-            .find(|diag| diag.range.start < cursor_pos);
+fn goto_prev_diag_error(cx: &mut Context) {
+    goto_diag_impl(
+        cx,
+        Direction::Backward,
+        Some(zmax_core::diagnostic::Severity::Error),
+    );
+}
 
-        let selection = match diag {
-            // NOTE: the selection is reversed because we're jumping to the
-            // previous diagnostic.
-            Some(diag) => Selection::single(diag.range.end, diag.range.start),
-            None => return,
-        };
-        push_jump(view, doc);
-        doc.set_selection(view.id, selection);
-        view.diagnostics_handler
-            .immediately_show_diagnostic(doc, view.id);
-    };
-    cx.editor.apply_motion(motion)
+fn goto_next_diag_warning(cx: &mut Context) {
+    goto_diag_impl(
+        cx,
+        Direction::Forward,
+        Some(zmax_core::diagnostic::Severity::Warning),
+    );
+}
+
+fn goto_prev_diag_warning(cx: &mut Context) {
+    goto_diag_impl(
+        cx,
+        Direction::Backward,
+        Some(zmax_core::diagnostic::Severity::Warning),
+    );
 }
 
 fn goto_first_change(cx: &mut Context) {
@@ -41004,6 +41101,81 @@ fn align_view_center(cx: &mut Context) {
 fn align_view_bottom(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     align_view(doc, view, Align::Bottom);
+}
+
+/// Where the previous [`recenter_top_bottom`] left things, so a *repeated* press
+/// advances the cycle and anything else restarts it at the centre.
+#[derive(Clone, Copy, Default, PartialEq)]
+struct RecenterCycle {
+    doc: Option<DocumentId>,
+    view: Option<ViewId>,
+    cursor: usize,
+    anchor: usize,
+    phase: u8,
+}
+
+thread_local! {
+    static RECENTER_CYCLE: std::cell::Cell<RecenterCycle> =
+        const { std::cell::Cell::new(RecenterCycle {
+            doc: None,
+            view: None,
+            cursor: 0,
+            anchor: 0,
+            phase: 0,
+        }) };
+}
+
+/// Emacs `recenter-top-bottom` (C-l), which nano copies as `cycle` (M-%): put the
+/// cursor's line in the middle of the window, then at the top, then at the
+/// bottom on successive presses — `recenter-positions` defaults to
+/// `(middle top bottom)`.
+///
+/// zmax has no `last-command`, so — as [`dabbrev_expand`] does for its own
+/// continuation test — the cycle only advances when the document, the cursor and
+/// the view offset are all exactly where the previous press left them. Moving
+/// the cursor or scrolling starts over at the middle. A command that changes
+/// neither (`file_info`, say) is indistinguishable from a repeat here; emacs
+/// would reset on it.
+fn recenter_top_bottom(cx: &mut Context) {
+    let (doc_id, view_id, cursor, anchor) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        (
+            doc.id(),
+            view.id,
+            doc.selection(view.id).primary().cursor(text),
+            doc.view_offset(view.id).anchor,
+        )
+    };
+    let previous = RECENTER_CYCLE.with(|c| c.get());
+    let repeated = previous.doc == Some(doc_id)
+        && previous.view == Some(view_id)
+        && previous.cursor == cursor
+        && previous.anchor == anchor;
+    let phase = if repeated {
+        (previous.phase + 1) % 3
+    } else {
+        0
+    };
+    let align = match phase {
+        0 => Align::Center,
+        1 => Align::Top,
+        _ => Align::Bottom,
+    };
+    let anchor = {
+        let (view, doc) = current!(cx.editor);
+        align_view(doc, view, align);
+        doc.view_offset(view.id).anchor
+    };
+    RECENTER_CYCLE.with(|c| {
+        c.set(RecenterCycle {
+            doc: Some(doc_id),
+            view: Some(view_id),
+            cursor,
+            anchor,
+            phase,
+        })
+    });
 }
 
 fn align_view_middle(cx: &mut Context) {
@@ -52936,9 +53108,11 @@ fn lossage_macro_string(editor: &Editor) -> Option<String> {
     )
 }
 
-/// Emacs `kmacro-bind-to-key` (C-x C-k b): bind the last keyboard macro to a
-/// key. zmax cannot mutate the live keymap at runtime, so this reports the
-/// exact config line to add instead of installing the binding.
+/// Emacs `kmacro-bind-to-key` (C-x C-k b): bind the last keyboard macro to the
+/// next key pressed. The binding is live from that press onwards — `keymap_write`
+/// writes `keys.<mode>` into config.toml and sends `ConfigEvent::Refresh`, which
+/// `Application::refresh_config` (application.rs) picks up to rebuild
+/// `config.keys` — and, unlike emacs's, it also survives a restart.
 fn kmacro_bind_to_key(cx: &mut Context) {
     let Some(macro_str) = macro_ring_head() else {
         cx.editor.set_status("no keyboard macro defined yet");

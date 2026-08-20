@@ -16,7 +16,7 @@ wrapscan, hlsearch, cursorline, cursorcolumn, scrolloff, textwidth, termguicolor
 mouse, list, autoread, endofline, fixendofline, splitright, splitbelow, signcolumn,
 showtabline, foldenable, foldlevel, laststatus, shell, listchars, showbreak,
 colorcolumn, fileformat, expandtab, tabstop, shiftwidth, softtabstop, readonly,
-modifiable, clipboard, gdefault, scroll, updatetime, smarttab, filetype, syntax,
+modifiable, clipboard, gdefault, updatetime, smarttab, filetype, syntax,
 guicursor. Always-on-faithful (credited): hidden, autoindent, backspace, casemap,
 belloff, wildchar, wildmenu, encoding, fileformats, ttyfast, wildignorecase,
 window, ruler, showmode.
@@ -38,12 +38,13 @@ Each = add field + wire the named call-site + a unit test.
 - startofline -> G/gg/{count}G cursor-column placement (startofline_pos) [DONE; dd/C-d still first-non-blank]
 - commentstring -> per-buffer comment-token override for toggle_comments (apply_comment_transaction) [DONE]
 - sidescroll / sidescrolloff / scrolloffpad / scrolljump -> view horizontal/vertical scroll math
+- scroll -> C-d/C-u page distance. Accepted and round-trips as `scroll-lines`, but the only reader is the mouse-wheel handler (ui/editor.rs); `page_cursor_half_down`/`_up` hardcode `inner_height()/2`
 - title / titlestring / titlelen / titleold / icon -> emit OSC window-title from render loop
-- makeprg / grepprg / grepformat / errorformat -> :make/:grep program + quickfix parse (hardcoded today)
+- makeprg / grepprg / grepformat -> :make/:grep program (hardcoded today; `errorformat` itself is wired — `qf_entry_from_line` tries the configured patterns before its built-in shape, commands.rs)
 - formatprg / equalprg -> external filter path for gq / `=`
 - keywordprg -> `K` keyword lookup program
 - tags / tagcase / tagbsearch / taglength / tagrelative -> find_tags_file (hardcoded ./tags,tags)
-- iskeyword / isident / isfname -> word-motion + gf char classes (currently fixed char_is_word)
+- isident / isfname -> gf / identifier char classes (currently fixed char_is_word). `iskeyword` is DONE: parsed by `parse_iskeyword` and applied to word motions and text objects (commands/typed.rs)
 - pumheight / pumwidth / pummaxwidth / completeitemalign -> completion popup render caps
 - confirm -> default-on the existing `:confirm` behavior on quit/edit
 - autowrite / autowriteall / write / writeany -> save-before-switch / write guards

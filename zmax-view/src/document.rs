@@ -168,6 +168,18 @@ struct SelectionHistory {
 /// covers "put it back the way it was" without holding a session's worth.
 const SELECTION_HISTORY_LEN: usize = 256;
 
+/// vim's error for a change to a buffer that will not take one. `Document::apply`
+/// refuses the transaction and returns `false`; a caller that wants to tell the
+/// user why reports this. It is vim's `modifiable` wording rather than `readonly`'s
+/// because zmax stores both options in the one `Document::readonly` flag, and
+/// `modifiable` is the one vim checks when a *change* is attempted (`readonly`
+/// only guards the write — see [`E45_READONLY`]).
+pub const E21_NOT_MODIFIABLE: &str = "E21: Cannot make changes, 'modifiable' is off";
+
+/// vim's error for `:w` on a read-only buffer. `:w!` overrides it, and — unless
+/// `cpoptions` has `Z` — clears the flag on the way through.
+pub const E45_READONLY: &str = "E45: 'readonly' option is set (add ! to override)";
+
 pub struct Document {
     pub(crate) id: DocumentId,
     text: Rope,
@@ -376,7 +388,22 @@ pub struct Document {
     // when document was used for most-recent-used buffer picker
     pub focused_at: std::time::Instant,
 
+    /// vim `readonly`, and — because `:set nomodifiable` writes this same flag —
+    /// vim `modifiable` inverted. Set explicitly (`:set ro`, `:view`, dired's
+    /// read-only visit, the emacs `file-locked` abort) or detected from the file's
+    /// permissions by [`Document::detect_readonly`]. Enforced in `save_impl`: a
+    /// plain `:w` is refused with [`E45_READONLY`], `:w!` overrides.
+    ///
+    /// It deliberately does *not* refuse edits. vim lets you change the buffer of
+    /// a file you cannot write — it warns W10 and stops you only at the write —
+    /// and `detect_readonly` sets this from file permissions, so refusing edits
+    /// here would make every root-owned file uneditable on open. Refusing changes
+    /// is [`Document::modifiable`]'s job.
     pub readonly: bool,
+
+    /// vim `'modifiable'`. When false the buffer refuses changes with
+    /// [`E21_NOT_MODIFIABLE`]; enforced in [`Document::apply`].
+    pub modifiable: bool,
 
     pub is_binary: bool,
 
@@ -1388,6 +1415,7 @@ impl Document {
             version_control_head: None,
             focused_at: std::time::Instant::now(),
             readonly: false,
+            modifiable: true,
             is_binary: false,
             jump_labels: HashMap::new(),
             conceal_overlays: Vec::new(),
@@ -1720,6 +1748,14 @@ impl Document {
                 "E382: Cannot write, 'buftype' option is set ({})",
                 self.buftype
             );
+        }
+
+        // vim/nvi `readonly`: the file is marked read-only, so a plain `:w` fails
+        // and `:w!` is what goes through (`write_impl` clears the flag on the way,
+        // unless `cpoptions` has `Z`). Like `buftype`, only the buffer's own file
+        // is protected — `:w {other}` writes a different file and is allowed.
+        if path.is_none() && !force && self.readonly {
+            bail!("{}", E45_READONLY);
         }
 
         // we clone and move text + path into the future so that we asynchronously save the current
@@ -2827,8 +2863,31 @@ impl Document {
         self.last_visual.as_ref()
     }
 
+    /// Whether a `nomodifiable` buffer refuses this transaction
+    /// ([`E21_NOT_MODIFIABLE`]).
+    ///
+    /// Only a transaction that changes the *text* is refused: a selection-only
+    /// transaction is every cursor motion in the editor, and moving around an
+    /// unmodifiable buffer is the point of one. Two loads and a `Vec::is_empty`
+    /// on the hot path.
+    ///
+    /// Keyed on `modifiable`, not `readonly`: see [`Document::readonly`].
+    #[inline]
+    fn refuses_change(&self, transaction: &Transaction) -> bool {
+        !self.modifiable && !transaction.changes().is_empty()
+    }
+
     /// Apply a [`Transaction`] to the [`Document`] to change its text.
+    ///
+    /// Returns `false` without touching the text when the buffer is read-only
+    /// (vim `readonly`/`nomodifiable`, nvi `readonly`, ne `ReadOnly`: "no editing
+    /// can be performed on the document"). Undo, redo and `restore` go straight to
+    /// `apply_impl`, so a buffer marked read-only *after* a change — emacs's
+    /// `file-locked` abort does exactly that — can still be walked back.
     pub fn apply(&mut self, transaction: &Transaction, view_id: ViewId) -> bool {
+        if self.refuses_change(transaction) {
+            return false;
+        }
         self.apply_inner(transaction, view_id, true)
     }
 
@@ -2836,6 +2895,9 @@ impl Document {
     /// without notifying the language servers. This is useful for temporary transactions
     /// that must not influence the server.
     pub fn apply_temporary(&mut self, transaction: &Transaction, view_id: ViewId) -> bool {
+        if self.refuses_change(transaction) {
+            return false;
+        }
         self.apply_inner(transaction, view_id, false)
     }
 
@@ -4689,6 +4751,82 @@ mod test {
             original,
             "undo truncated/changed the buffer instead of reverting the edit"
         );
+    }
+
+    // vim keeps two separate flags and this test pins both, because collapsing
+    // them is a real regression: `detect_readonly` sets `readonly` from file
+    // permissions, so if `readonly` refused edits then every root-owned file
+    // would open uneditable. vim instead lets you change such a buffer (warning
+    // W10) and stops you at the write with E45; refusing the change is
+    // `nomodifiable`'s job (E21). nvi `readonly` ("mark the file and session as
+    // read-only") and ne `ReadOnly` guard the write the same way.
+    #[test]
+    fn readonly_guards_the_write_and_modifiable_guards_the_change() {
+        use crate::view::View;
+        let mut doc = Document::from(
+            Rope::from("line one\n"),
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let mut view = View::new(doc.id(), Default::default());
+        doc.ensure_view_init(view.id);
+        doc.set_selection(view.id, Selection::single(0, 0));
+        doc.modifiable = false;
+
+        let tx = Transaction::insert(doc.text(), doc.selection(view.id), "X".into());
+        assert!(
+            !doc.apply(&tx, view.id),
+            "a nomodifiable buffer refuses a change"
+        );
+        assert!(!doc.apply_temporary(&tx, view.id));
+        assert_eq!(doc.text().to_string(), "line one\n", "text is untouched");
+        assert!(!doc.is_modified(), "a refused change does not dirty the buffer");
+
+        // Moving around an unmodifiable buffer is the point of one: a transaction
+        // that only carries a selection changes no text, so it still applies.
+        let motion = Transaction::new(doc.text()).with_selection(Selection::single(4, 4));
+        assert!(doc.apply(&motion, view.id), "cursor motion is not a change");
+        assert_eq!(
+            doc.selection(view.id).primary().cursor(doc.text().slice(..)),
+            4
+        );
+
+        // `readonly` alone must NOT refuse a change — this is the half that
+        // keeps a permission-read-only file editable in the buffer.
+        doc.modifiable = true;
+        doc.readonly = true;
+        assert!(
+            doc.apply(&tx, view.id),
+            "'readonly' alone leaves the buffer editable (vim W10, not E21)"
+        );
+        assert_eq!(doc.text().to_string(), "lXine one\n");
+        // Put the text back so the write assertions below start from a known state.
+        doc.undo(&mut view);
+        assert_eq!(doc.text().to_string(), "line one\n");
+
+        // `:w` fails with E45; `:w!` is what goes through.
+        let mut path = std::env::temp_dir();
+        path.push(format!("zmax_readonly_{}.txt", std::process::id()));
+        doc.set_path(Some(&path));
+        // `set_path` re-detects the flag from the (absent) file — put it back.
+        doc.readonly = true;
+        let err = doc
+            .save(None::<std::path::PathBuf>, false)
+            .err()
+            .expect("a plain :w on a read-only buffer is refused");
+        assert_eq!(err.to_string(), E45_READONLY);
+        assert!(
+            doc.save(None::<std::path::PathBuf>, true).is_ok(),
+            ":w! overrides 'readonly'"
+        );
+
+        // `:set modifiable` makes the refused transaction land. (It inserts at
+        // the cursor's head, which `ensure_invariants` widened from 0 to 1.)
+        doc.modifiable = true;
+        assert!(doc.apply(&tx, view.id));
+        assert_eq!(doc.text().to_string(), "lXine one\n");
+        assert!(doc.is_modified());
     }
 
     #[tokio::test(flavor = "multi_thread")]
