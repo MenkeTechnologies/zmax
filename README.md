@@ -13,7 +13,7 @@
 [![docs](https://img.shields.io/badge/docs-online-9b5de5?style=flat-square)](https://menketechnologies.github.io/zmax/)
 ![status](https://img.shields.io/badge/status-stable-39ff14?style=flat-square)
 
-### `[THE MOST POWERFUL CLI IDE  // VIM · EMACS · SPACEMACS SUPERSET]`
+### `[POWERFUL CLI IDE  // VIM · EMACS · SPACEMACS SUPERSET]`
 
 # zmax
 
