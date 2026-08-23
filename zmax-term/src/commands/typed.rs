@@ -29469,6 +29469,19 @@ fn vim_let(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     }
 }
 
+/// Quote a fzf pick as ONE command-line argument for a sink command.
+///
+/// The sink is a `:` command line (`open {}`, `fzf-goto {}`, …) that goes back
+/// through the command-line tokenizer, which splits on whitespace. A pick is a
+/// single line — a path, a `file:line:col:text` hit, a tab-separated record —
+/// so it has to arrive as one argument whatever it contains. Single quotes are
+/// the tokenizer's literal form (`TokenKind::Quoted`): whitespace does not
+/// split inside them, `%` expansions are not evaluated, and an inner `'` is
+/// written doubled. Without this, `Doc Notes/my file.md` opened three buffers.
+pub(crate) fn quote_command_arg(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "''"))
+}
+
 /// Queue an external-`fzf` request (fzf.vim-style). The terminal layer hands the
 /// TTY to `fzf` with `candidates` on stdin, then runs `sink` (a zmax `:`
 /// command with `{}` = the picked line). Empty `candidates` lets `fzf` use its
@@ -29535,7 +29548,7 @@ fn fzf_goto(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
             target.push_str(c);
         }
     }
-    run_command_line(cx, &format!("open {target}"));
+    run_command_line(cx, &format!("open {}", quote_command_arg(&target)));
     Ok(())
 }
 
@@ -29984,7 +29997,7 @@ fn local_history_open(
     let line = args.join(" ");
     let p = line.rsplit('\t').next().unwrap_or("").trim();
     if !p.is_empty() {
-        run_command_line(cx, &format!("open {p}"));
+        run_command_line(cx, &format!("open {}", quote_command_arg(p)));
     }
     Ok(())
 }
@@ -74576,5 +74589,66 @@ mod vim_option_consumer_tests {
         );
         set_buf_hidden_action(id, "");
         assert!(BUFHIDDEN.with(|b| b.borrow().is_empty()));
+    }
+}
+
+#[cfg(test)]
+mod fzf_sink_tests {
+    use super::*;
+    use zmax_core::command_line::Args;
+
+    /// Splice `pick` into a sink the way `Application::drain_fzf` does, parse the
+    /// result with the sink command's real signature, and return its positionals.
+    #[track_caller]
+    fn sink_args(sink: &str, pick: &str) -> Vec<String> {
+        let line = sink.replace("{}", &quote_command_arg(pick));
+        let (name, rest) = line.split_once(' ').unwrap();
+        let cmd = TYPABLE_COMMAND_MAP
+            .get(name)
+            .unwrap_or_else(|| panic!("no `:{name}` command for sink `{sink}`"));
+        Args::parse(rest, cmd.signature, true, |token| Ok(token.content))
+            .unwrap_or_else(|err| panic!("`:{line}` failed to parse: {err}"))
+            .into_iter()
+            .map(|arg| arg.to_string())
+            .collect()
+    }
+
+    /// A pick is one line and must reach its sink as one argument. Before the
+    /// quoting, `:Files` on a path with a space ran `:open Doc Notes/a b.md`,
+    /// which the tokenizer split into three positionals — three wrong buffers.
+    #[test]
+    fn pick_reaches_sink_as_a_single_argument() {
+        assert_eq!(sink_args("open {}", "src/main.rs"), ["src/main.rs"]);
+        assert_eq!(
+            sink_args("open {}", "Doc Notes/a b.md"),
+            ["Doc Notes/a b.md"]
+        );
+        // `:open` keeps the `file:line:col` suffix `fzf-goto` builds.
+        assert_eq!(
+            sink_args("open {}", "Doc Notes/a b.md:12:3"),
+            ["Doc Notes/a b.md:12:3"]
+        );
+        // Tab-separated records (`:LocalHistory`, `:Snippets`) keep their tabs,
+        // which is what those sinks split on.
+        assert_eq!(
+            sink_args("local-history-open {}", "2m ago\t/tmp/a b.rs"),
+            ["2m ago\t/tmp/a b.rs"]
+        );
+        assert_eq!(
+            sink_args("fzf-goto {}", "a b.rs:1:1:let x = 1;"),
+            ["a b.rs:1:1:let x = 1;"]
+        );
+    }
+
+    /// The quoting is the tokenizer's literal form: an inner `'` doubles, and a
+    /// `%` in a filename stays text instead of being read as an expansion.
+    #[test]
+    fn quoting_survives_quotes_and_percent_tokens() {
+        assert_eq!(quote_command_arg("it's here.md"), "'it''s here.md'");
+        assert_eq!(sink_args("open {}", "it's here.md"), ["it's here.md"]);
+        assert_eq!(
+            sink_args("open {}", "%sh{echo hi} report.md"),
+            ["%sh{echo hi} report.md"]
+        );
     }
 }

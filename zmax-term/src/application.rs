@@ -2347,7 +2347,21 @@ impl Application {
         if let Some(sel) = selection {
             let sel = sel.trim();
             if !sel.is_empty() && !req.sink.is_empty() {
-                let line = req.sink.replace("{}", sel);
+                // The pick is one argument, so it is quoted into the sink: a
+                // path with spaces (`Doc Notes/my file.md`) would otherwise be
+                // tokenized into several positionals and open three buffers,
+                // and a tab-separated record (`:LocalHistory`, `:Snippets`)
+                // would lose its tabs. The bare `{}` sink is the exception —
+                // there the pick IS the command line (`:Commands`,
+                // `:History:`), so it runs verbatim.
+                let line = if req.sink == "{}" {
+                    sel.to_string()
+                } else {
+                    req.sink.replace(
+                        "{}",
+                        &crate::commands::typed::quote_command_arg(sel),
+                    )
+                };
                 let mut cx = crate::compositor::Context {
                     editor: &mut self.editor,
                     scroll: None,
