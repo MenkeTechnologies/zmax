@@ -758,6 +758,7 @@ impl MappableCommand {
         emoji_describe, "Say what the emoji after point is called (emacs emoji-describe)",
         emoji_list, "Pick an emoji by name and insert it (emacs emoji-list)",
         complete_emoji, "Complete the `:name` being typed into an emoji (spacemacs company-emoji)",
+        http_send_request, "Send the .http request under the cursor and show the response (restclient C-c C-c)",
         emoji_recent, "Insert one of the recently-used emoji (emacs emoji-recent, C-x 8 e r)",
         view_hello_file, "Show a multi-script greeting sample (emacs view-hello-file, C-h h)",
         view_echo_area_messages, "Show the last echo-area message (emacs view-echo-area-messages, C-h e)",
@@ -74505,6 +74506,49 @@ fn open_dribble_file(cx: &mut Context) {
 
 #[cfg(test)]
 mod gap_command_tests {
+    /// restclient.el's buffer shape: `###`-separated requests, `METHOD URL`,
+    /// header lines, a blank line, then the body. The request that runs is the
+    /// one the cursor is inside.
+    #[test]
+    fn http_request_at_reads_the_block_under_the_cursor() {
+        let text = "\
+# a comment
+GET https://example.com/one
+Accept: application/json
+
+###
+POST https://example.com/two
+Content-Type: application/json
+
+{\"a\": 1}
+";
+        // Inside the first block.
+        let first = http_request_at(text, 1).expect("first request");
+        assert_eq!(first.method, "GET");
+        assert_eq!(first.url, "https://example.com/one");
+        assert_eq!(
+            first.headers,
+            vec![("Accept".into(), "application/json".into())]
+        );
+        assert!(first.body.is_empty(), "no body before the separator");
+
+        // Inside the second, including its body.
+        let second = http_request_at(text, 8).expect("second request");
+        assert_eq!(second.method, "POST");
+        assert_eq!(second.url, "https://example.com/two");
+        assert_eq!(second.body, "{\"a\": 1}");
+
+        // A bare URL is a GET, as restclient.el allows.
+        let bare = http_request_at("https://example.com/plain\n", 0).expect("bare url");
+        assert_eq!(
+            (bare.method.as_str(), bare.url.as_str()),
+            ("GET", "https://example.com/plain")
+        );
+
+        // Nothing to send in a buffer with no request line.
+        assert!(http_request_at("# just a comment\n", 0).is_none());
+    }
+
     /// csv-mode's field sort: by field, textual or numeric, header kept in place.
     #[test]
     fn csv_sort_fields_orders_by_one_field() {
@@ -74938,6 +74982,155 @@ const PACKAGE_ARCHIVES: &[(&str, &str)] = &[
 /// Every package currently installed on disk.
 pub(crate) fn installed_packages() -> Vec<Installed> {
     pkg::installed_packages(&elpa_dir())
+}
+
+// --- restclient (`.http` / `.rest` request files) ---------------------------
+// restclient.el binds `C-c C-c` to "send the request under point": the buffer is
+// a list of requests separated by `#` comment lines, each `METHOD URL` followed
+// by header lines and an optional body, and the one point is inside is the one
+// that runs. The response opens in another buffer.
+
+/// One request read out of a `.http` buffer.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct HttpRequest {
+    pub method: String,
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub body: String,
+}
+
+/// The request the cursor is inside, from the whole buffer text and the cursor's
+/// line. Requests are separated by `###` (or `#`-only) lines, comments start with
+/// `#` or `//`, headers are `Name: value` lines before the first blank line, and
+/// everything after that blank line is the body — restclient.el's own shape.
+///
+/// Pure, so the parse is unit-tested rather than driven through the editor.
+pub(crate) fn http_request_at(text: &str, line_no: usize) -> Option<HttpRequest> {
+    let lines: Vec<&str> = text.lines().collect();
+    let is_sep = |l: &str| {
+        let t = l.trim_start();
+        t.starts_with("###") || t == "#"
+    };
+    // The block the line belongs to.
+    let start = (0..=line_no.min(lines.len().saturating_sub(1)))
+        .rev()
+        .find(|&i| is_sep(lines[i]))
+        .map_or(0, |i| i + 1);
+    let end = (line_no + 1..lines.len())
+        .find(|&i| is_sep(lines[i]))
+        .unwrap_or(lines.len());
+
+    let mut method = String::new();
+    let mut url = String::new();
+    let mut headers = Vec::new();
+    let mut body = String::new();
+    let mut in_body = false;
+    for raw in &lines[start..end] {
+        let line = raw.trim_end();
+        if in_body {
+            body.push_str(line);
+            body.push('\n');
+            continue;
+        }
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            // The blank line after the headers opens the body — but only once a
+            // request line has been seen, so leading blank lines are skipped.
+            if !method.is_empty() {
+                in_body = true;
+            }
+            continue;
+        }
+        if trimmed.starts_with('#') || trimmed.starts_with("//") {
+            continue;
+        }
+        if method.is_empty() {
+            let mut parts = trimmed.split_whitespace();
+            let (Some(verb), Some(target)) = (parts.next(), parts.next()) else {
+                // A bare URL means GET, as restclient.el allows.
+                method = "GET".to_string();
+                url = trimmed.to_string();
+                continue;
+            };
+            method = verb.to_ascii_uppercase();
+            url = target.to_string();
+            continue;
+        }
+        if let Some((name, value)) = trimmed.split_once(':') {
+            headers.push((name.trim().to_string(), value.trim().to_string()));
+        }
+    }
+    if url.is_empty() {
+        return None;
+    }
+    Some(HttpRequest {
+        method,
+        url,
+        headers,
+        body: body.trim_end().to_string(),
+    })
+}
+
+/// restclient.el's `restclient-http-send-current` (`C-c C-c`): run the request
+/// the cursor is inside and show the response — status line, headers and body —
+/// in a scratch buffer. The call runs on a blocking task, since ureq is blocking.
+fn http_send_request(cx: &mut Context) {
+    let (text, line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        (doc.text().to_string(), slice.char_to_line(cursor))
+    };
+    let Some(request) = http_request_at(&text, line) else {
+        cx.editor
+            .set_error("http-send: no request under the cursor");
+        return;
+    };
+    cx.editor
+        .set_status(format!("{} {}…", request.method, request.url));
+    cx.jobs.callback(async move {
+        let rendered = tokio::task::spawn_blocking(move || {
+            let agent = ureq::AgentBuilder::new()
+                .timeout_connect(std::time::Duration::from_secs(10))
+                .timeout_read(std::time::Duration::from_secs(60))
+                .build();
+            let mut req = agent.request(&request.method, &request.url);
+            for (name, value) in &request.headers {
+                req = req.set(name, value);
+            }
+            let result = if request.body.is_empty() {
+                req.call()
+            } else {
+                req.send_string(&request.body)
+            };
+            // ureq reports a non-2xx as an error carrying the response, which is
+            // still what the user asked to see.
+            let response = match result {
+                Ok(response) => Some(response),
+                Err(ureq::Error::Status(_, response)) => Some(response),
+                Err(e) => return format!("{} {}\n\n{e}\n", request.method, request.url),
+            };
+            let Some(response) = response else {
+                return String::new();
+            };
+            let mut out = format!("{} {}\n", response.status(), response.status_text());
+            for name in response.headers_names() {
+                if let Some(value) = response.header(&name) {
+                    out.push_str(&format!("{name}: {value}\n"));
+                }
+            }
+            out.push('\n');
+            out.push_str(&response.into_string().unwrap_or_default());
+            out
+        })
+        .await
+        .unwrap_or_else(|e| format!("http-send: {e}"));
+        Ok(crate::job::Callback::Editor(Box::new(
+            move |editor: &mut Editor| {
+                show_text_in_scratch(editor, &rendered);
+            },
+        )))
+    });
 }
 
 /// Fetch and parse every archive's `archive-contents`. Blocking (ureq is), so it

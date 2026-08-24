@@ -48807,11 +48807,13 @@
  },
  {
   "spec_id": "spacemacs.layer.tools_restclient",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "language:http"
+   "language:http",
+   "static:http_send_request",
+   "key:major-http:C-c C-c"
   ],
-  "note": "`.http`/`.rest` request files: tree-sitter-http grammar (rest-nvim/tree-sitter-http @ db8b4398) with JSON/XML/GraphQL body injection, plus the kulala-ls language server. Editing and diagnostics only - the send-request-under-cursor command restclient.el binds to C-c C-c does not exist yet"
+  "note": "`.http`/`.rest` request files: the tree-sitter-http grammar (rest-nvim/tree-sitter-http @ db8b4398) with JSON/XML/GraphQL body injection, the kulala-ls language server for editing and diagnostics, and - the gap the old note named - the send command restclient.el binds to `C-c C-c`. `http_send_request` reads the request the cursor is inside out of the buffer (`###`-separated blocks, `METHOD URL`, header lines, a blank line, then the body; a bare URL is a GET), runs it off the UI thread, and shows the status line, response headers and body in a scratch buffer - a non-2xx included, since that is still what was asked for. The chord lives in the `http` major-mode overlay, where restclient.el puts it. The parse is unit-tested (`http_request_at_reads_the_block_under_the_cursor`)."
  },
  {
   "spec_id": "spacemacs.layer.tools_prettier",

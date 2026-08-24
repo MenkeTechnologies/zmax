@@ -379,6 +379,11 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // SPC m t b : run this file's tests. Every language whose `buffer_test_command`
     // arm exists, which is the set whose layer binds the chord.
     ("ruby python elixir go rust javascript typescript tsx jsx java kotlin scala clojure c-sharp php haskell elisp", "ns", "space m t b", "Tests", ":test-buffer"),
+    // -- restclient (`.http` / `.rest` request files) ------------------------
+    // restclient.el binds `C-c C-c` to "send the request under point"; the
+    // buffer's language is `http`, so that is where the chord lives.
+    ("http", "ns", "C-c C-c", "HTTP", "http_send_request"),
+
     // SPC m t q : run one named test — the languages `:test-function` filters for.
     ("rust go python ruby javascript typescript tsx jsx java kotlin elixir", "ns", "space m t q", "Tests", ":test-function"),
 ];
