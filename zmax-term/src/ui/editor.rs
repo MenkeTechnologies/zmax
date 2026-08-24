@@ -3668,6 +3668,10 @@ impl EditorView {
         let oneshot_armed = cxt.editor.insert_oneshot;
 
         let mut execute_command = |command: &commands::MappableCommand| {
+            // Emacs `repeat` (`C-x z`) re-runs the last command, so every
+            // dispatched command is recorded — except the repeat itself, which
+            // would otherwise repeat repeating.
+            commands::record_last_command(command);
             command.execute(cxt);
             zmax_event::dispatch(PostCommand { command, cx: cxt });
 

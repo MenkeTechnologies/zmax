@@ -470,6 +470,7 @@ impl MappableCommand {
         extend_till_prev_char, "Extend till previous occurrence of char",
         extend_prev_char, "Extend to previous occurrence of char",
         repeat_last_motion, "Repeat last motion",
+        repeat_last_command, "Run the last command again (emacs repeat, C-x z)",
         repeat_find_char, "Repeat last find in same direction (;)",
         repeat_find_char_reverse, "Repeat last find in opposite direction (,)",
         replace, "Replace with new char",
@@ -7850,6 +7851,45 @@ fn vim_change_line(cx: &mut Context) {
 
 fn extend_prev_char(cx: &mut Context) {
     find_char(cx, Direction::Backward, true, true, false)
+}
+
+/// The last command the key dispatcher ran, for emacs `repeat` (`C-x z`).
+/// `repeat_last_command` never records itself, so `C-x z z z` keeps repeating
+/// the command that came before it rather than the repeat.
+static LAST_COMMAND: std::sync::Mutex<Option<MappableCommand>> = std::sync::Mutex::new(None);
+
+/// Record `command` as the one `repeat` would re-run. Called for every command
+/// the keymap dispatches (`ui::editor`), which is emacs's `last-repeatable-command`.
+pub(crate) fn record_last_command(command: &MappableCommand) {
+    if command.name() == "repeat_last_command" {
+        return;
+    }
+    *LAST_COMMAND.lock().unwrap() = Some(command.clone());
+}
+
+/// Emacs `repeat` (`C-x z`): run the last command again. Emacs then lets a bare
+/// `z` repeat it further, which is `repeat-mode`'s transient map — zmax arms
+/// that from the chord's own prefix (see `emacs_repeat`), so `C-x z z z` works
+/// the same way.
+///
+/// This is not `repeat_last_motion` (which the chord used to run): a motion is
+/// only one kind of command, and emacs's `repeat` re-runs whatever ran last,
+/// edit or motion.
+fn repeat_last_command(cx: &mut Context) {
+    let last = LAST_COMMAND.lock().unwrap().clone();
+    match last {
+        Some(command) => {
+            command.execute(cx);
+            // "You can repeat the command by typing just `z`": `repeat` installs
+            // its own transient map, mode or no mode. The prefix replayed is the
+            // chord's own (`C-x`), so the bare key runs `C-x z` again.
+            // `C-x` — the chord `C-x z` minus its final key.
+            if let Ok(prefix) = "C-x".parse::<zmax_view::input::KeyEvent>() {
+                crate::emacs_repeat::arm_command_repeat(&[prefix]);
+            }
+        }
+        None => cx.editor.set_error("No command to repeat"),
+    }
 }
 
 fn repeat_last_motion(cx: &mut Context) {

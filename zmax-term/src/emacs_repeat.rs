@@ -24,6 +24,12 @@ use zmax_view::input::{KeyCode, KeyEvent};
 /// Emacs `repeat-mode`: off until turned on, as in Emacs.
 static REPEAT_MODE: AtomicBool = AtomicBool::new(false);
 
+/// Emacs's `repeat` command (`C-x z`) installs a transient map of its own — a
+/// bare `z` repeats again — and it does that whether or not `repeat-mode` is on.
+/// This flag is that one-shot repetition, so `C-x z z z` works with the mode
+/// off, which is how Emacs ships.
+static COMMAND_REPEAT: AtomicBool = AtomicBool::new(false);
+
 /// The prefix keys of the chord that armed the current repetition, e.g. `[C-x]`
 /// after `C-x o`. `None` when no repetition is in flight.
 static ARMED: Mutex<Option<Vec<KeyEvent>>> = Mutex::new(None);
@@ -62,9 +68,22 @@ pub fn arm(prefix: &[KeyEvent]) {
     }
 }
 
+/// Arm the repetition `repeat` (`C-x z`) installs itself: same replay, but not
+/// gated on `repeat-mode`. `prefix` is the chord minus its final key, so a bare
+/// `z` after `C-x z` re-runs `C-x z`.
+pub fn arm_command_repeat(prefix: &[KeyEvent]) {
+    if prefix.is_empty() {
+        return;
+    }
+    COMMAND_REPEAT.store(true, Ordering::Relaxed);
+    if let Ok(mut armed) = ARMED.lock() {
+        *armed = Some(prefix.to_vec());
+    }
+}
+
 /// The prefix to replay before the repeat key, if a repetition is in flight.
 pub fn armed() -> Option<Vec<KeyEvent>> {
-    if !enabled() {
+    if !enabled() && !COMMAND_REPEAT.load(Ordering::Relaxed) {
         return None;
     }
     ARMED.lock().ok().and_then(|a| a.clone())
@@ -72,6 +91,7 @@ pub fn armed() -> Option<Vec<KeyEvent>> {
 
 /// End the current repetition.
 pub fn disarm() {
+    COMMAND_REPEAT.store(false, Ordering::Relaxed);
     if let Ok(mut armed) = ARMED.lock() {
         *armed = None;
     }
@@ -120,6 +140,17 @@ mod tests {
         assert!(armed().is_none());
         REPEAT_MODE.store(false, Ordering::Relaxed);
         disarm();
+
+        // `repeat`'s own transient map is not gated on the mode: with it off,
+        // arming through `arm_command_repeat` still replays, and disarming ends
+        // it.
+        arm_command_repeat(&[key(KeyCode::Char('x'))]);
+        assert_eq!(armed(), Some(vec![key(KeyCode::Char('x'))]));
+        disarm();
+        assert!(armed().is_none());
+        // An empty prefix arms nothing there either.
+        arm_command_repeat(&[]);
+        assert!(armed().is_none());
     }
 
     #[test]

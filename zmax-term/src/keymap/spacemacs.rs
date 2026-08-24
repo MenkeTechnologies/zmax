@@ -640,7 +640,7 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x x r", "C-x x", ":rename-buffer"),              // C-x x r: rename-buffer
     ("C-x x t", "C-x x", "toggle_soft_wrap"),
     ("C-x x u", "C-x x", ":rename-uniquely"),            // C-x x u: rename-uniquely
-    ("C-x z", "C-x z", "repeat_last_motion"),
+    ("C-x z", "C-x z", "repeat_last_command"),
     // C-x [ / C-x ] move over form-feed *pages*, they do not scroll a screenful.
     ("C-x [", "C-x [", "backward_page"),
     ("C-x ]", "C-x ]", "forward_page"),

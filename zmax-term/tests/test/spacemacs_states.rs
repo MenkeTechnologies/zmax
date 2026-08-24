@@ -109,3 +109,103 @@ async fn major_mode_test_chords_shadow_the_org_leaf() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+/// Emacs `C-x t d` is dired-*other-tab*: the listing opens in a new tab rather
+/// than taking over the current one. The chord prompts for the directory first
+/// (dired-read-dir-and-switches), so the tab appears when that is answered.
+#[tokio::test(flavor = "multi_thread")]
+async fn dired_other_tab_opens_a_new_tab() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    let before = app.editor.tab_count();
+    let keys = format!("<C-x>td<C-u>{}<ret>", dir.path().display());
+    test_key_sequence(
+        &mut app,
+        Some(&keys),
+        Some(&|app: &zmax_term::application::Application| {
+            assert_eq!(
+                app.editor.tab_count(),
+                before + 1,
+                "the dired listing went to a new tab"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Emacs `C-x 4 m` is compose-mail-*other-window*: the draft opens in a split,
+/// leaving the buffer it was called from on screen.
+#[tokio::test(flavor = "multi_thread")]
+async fn compose_mail_other_window_splits_first() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    let before = app.editor.tree.views().count();
+    test_key_sequence(
+        &mut app,
+        Some("<C-x>4m"),
+        Some(&|app: &zmax_term::application::Application| {
+            assert!(
+                app.editor.tree.views().count() > before,
+                "the draft opened in another window, not this one"
+            );
+            let doc = zmax_view::doc!(app.editor);
+            assert!(
+                doc.text().to_string().contains("To:"),
+                "the split holds a mail draft: {:?}",
+                doc.text().to_string()
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Emacs `C-x z` is `repeat`: it runs the *last command* again, whatever that
+/// was. The chord used to run `repeat_last_motion`, which only ever repeated a
+/// motion — an edit before it was not repeatable at all.
+#[tokio::test(flavor = "multi_thread")]
+async fn c_x_z_repeats_the_last_command() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bcdef\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            // `x` deletes the character under the cursor …
+            (
+                Some("x"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (_v, doc) = zmax_view::current_ref!(app.editor);
+                    assert_eq!(doc.text().to_string(), "bcdef\n");
+                }),
+            ),
+            // … and `C-x z` deletes another one, which a motion-only repeat
+            // could not do.
+            (
+                Some("<C-x>z"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (_v, doc) = zmax_view::current_ref!(app.editor);
+                    assert_eq!(doc.text().to_string(), "cdef\n", "the edit repeated");
+                }),
+            ),
+            // Emacs then lets a bare `z` keep repeating (repeat-mode's transient
+            // map), which zmax arms from the chord's own prefix.
+            (
+                Some("z"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (_v, doc) = zmax_view::current_ref!(app.editor);
+                    assert_eq!(doc.text().to_string(), "def\n", "bare z repeats again");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

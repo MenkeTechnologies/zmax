@@ -22750,11 +22750,11 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x 4 m"
   ],
-  "note": "compose-mail-other-window (current window)"
+  "note": "`C-x 4 m` is compose-mail-other-window and opens the draft in a split: `compose_mail_other_window` runs `hsplit-new` before `compose_mail`, so the buffer it was called from stays on screen. The old note ('current window') predates that. Pinned by `tests/test/spacemacs_states.rs::compose_mail_other_window_splits_first`, which asserts the view count grew and the new view holds the draft."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_dot",
@@ -23478,11 +23478,11 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_d",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x t d"
   ],
-  "note": "dired-other-tab: file explorer in the current tab"
+  "note": "`C-x t d` is dired-other-tab and opens the listing in a new tab: `dired_other_tab` prompts for the directory with the current buffer's own as the default (emacs's `dired-read-dir-and-switches`), calls `Editor::new_tab`, and pushes the Dired component there. The old note ('file explorer in the current tab') predates that. Pinned by `tests/test/spacemacs_states.rs::dired_other_tab_opens_a_new_tab`, which drives the chord in the shipped preset and asserts `tab_count` grew."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_f",
@@ -23826,11 +23826,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_z",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:repeat_last_command",
    "key:normal:C-x z"
   ],
-  "note": "repeat: repeat_last_motion repeats the last motion, not the last command (was bound to `:repeat`, which repeats the selected text N times)"
+  "note": "`C-x z` is emacs `repeat`: it runs the *last command* again, whatever that was. `repeat_last_command` (commands.rs) replays the command the key dispatcher recorded in LAST_COMMAND \u2014 every dispatched command except the repeat itself, so `C-x z z z` keeps repeating the command that came before it. It then arms `repeat`'s own transient map through `emacs_repeat::arm_command_repeat`, which is not gated on `repeat-mode` (emacs installs that map from the command, mode or no mode), so a bare `z` repeats again. The chord used to run `repeat_last_motion`, which could only repeat a motion - an edit before it was not repeatable at all. Pinned by `tests/test/spacemacs_states.rs::c_x_z_repeats_the_last_command`: `x` then `C-x z` then `z` deletes three characters."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_lbrack",
@@ -26444,11 +26445,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_z",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:repeat_last_command",
    "key:normal:C-x z"
   ],
-  "note": "repeat: repeat_last_motion repeats the last motion, not the last command (was bound to `:repeat`, which repeats the selected text N times)"
+  "note": "`C-x z` is emacs `repeat`: it runs the *last command* again, whatever that was. `repeat_last_command` (commands.rs) replays the command the key dispatcher recorded in LAST_COMMAND \u2014 every dispatched command except the repeat itself, so `C-x z z z` keeps repeating the command that came before it. It then arms `repeat`'s own transient map through `emacs_repeat::arm_command_repeat`, which is not gated on `repeat-mode` (emacs installs that map from the command, mode or no mode), so a bare `z` repeats again. The chord used to run `repeat_last_motion`, which could only repeat a motion - an edit before it was not repeatable at all. Pinned by `tests/test/spacemacs_states.rs::c_x_z_repeats_the_last_command`: `x` then `C-x z` then `z` deletes three characters."
  },
  {
   "spec_id": "emacs.keybinding.c_x_caret",
