@@ -471,6 +471,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space D b p",   "Diff", "ediff_patch_buffer"),                  // SPC D b p
     ("space D f .",   "Diff", "ediff_dotfile_and_template"),          // SPC D f .
     ("space D m d d", "Diff", "ediff_merge_directories"),             // SPC D m d d
+    ("space D m d 3", "Diff", "ediff_merge_directories_with_ancestor"), // SPC D m d 3 : merge two dirs + ancestors
     ("space D m r 3", "Diff", "ediff_merge_revisions_with_ancestor"), // SPC D m r 3
     ("space D m r r", "Diff", "ediff_merge_revisions"),               // SPC D m r r
     ("space D s",     "Diff", "ediff_show_registry"),                 // SPC D s

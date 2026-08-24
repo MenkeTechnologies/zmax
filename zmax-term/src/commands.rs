@@ -17139,35 +17139,62 @@ fn ediff_merge_directories_with_ancestor(cx: &mut Context) {
                 );
                 return;
             }
-            let mut out = format!(
-                "ediff-merge-directories-with-ancestor: {} + {} (ancestors in {})\n\n",
-                args[0], args[1], args[2]
+            // Emacs opens a session group: one merge per common name, entered
+            // one at a time. The group here is a picker over those names;
+            // choosing one runs that file's merge — three-way against the
+            // ancestor when ANCESTOR holds a file of the same name, two-way
+            // otherwise, which is exactly what emacs falls back to.
+            let (dir_a, dir_b, dir_anc) = (
+                args[0].to_string(),
+                args[1].to_string(),
+                args[2].to_string(),
             );
-            let section = |out: &mut String, title: &str, files: &[&str]| {
-                out.push_str(title);
-                out.push('\n');
-                if files.is_empty() {
-                    out.push_str("  (none)\n");
-                } else {
-                    for f in files {
-                        out.push_str("  ");
-                        out.push_str(f);
-                        out.push('\n');
-                    }
-                }
-                out.push('\n');
-            };
-            section(
-                &mut out,
-                "Merge with ancestor (SPC D m f 3 on the three paths):",
-                &with_ancestor,
-            );
-            section(
-                &mut out,
-                "Merge without ancestor — no same-name file in ANCESTOR (SPC D m f f):",
-                &without_ancestor,
-            );
-            show_text_in_scratch(cx.editor, &out);
+            let entries: Vec<(String, bool)> = with_ancestor
+                .iter()
+                .map(|n| ((*n).to_string(), true))
+                .chain(without_ancestor.iter().map(|n| ((*n).to_string(), false)))
+                .collect();
+            let call: job::Callback = Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut Compositor| {
+                    let columns = [
+                        ui::PickerColumn::new("file", |item: &(String, bool), _: &()| {
+                            item.0.as_str().into()
+                        }),
+                        ui::PickerColumn::new("merge", |item: &(String, bool), _: &()| {
+                            if item.1 { "3-way (ancestor)" } else { "2-way" }.into()
+                        }),
+                    ];
+                    let picker = Picker::new(
+                        columns,
+                        0,
+                        entries,
+                        (),
+                        move |cx, (name, has_ancestor), _action| {
+                            let read = |dir: &str| -> Option<String> {
+                                std::fs::read_to_string(
+                                    path::expand_tilde(std::path::Path::new(dir)).join(name),
+                                )
+                                .ok()
+                            };
+                            let (Some(ta), Some(tb)) = (read(&dir_a), read(&dir_b)) else {
+                                cx.editor.set_error(format!(
+                                    "ediff-merge-directories-with-ancestor: cannot read {name}"
+                                ));
+                                return;
+                            };
+                            let ancestor = if *has_ancestor {
+                                read(&dir_anc).unwrap_or_default()
+                            } else {
+                                String::new()
+                            };
+                            let merged = zmax_core::merge_ops::three_way_merge(&ancestor, &ta, &tb);
+                            emerge_show(cx, "ediff-merge-directories-with-ancestor", merged);
+                        },
+                    );
+                    compositor.push(Box::new(overlaid(picker)));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
         },
     );
     cx.push_layer(Box::new(prompt));

@@ -543,3 +543,28 @@ async fn spc_d_d_r_lists_the_changed_files_as_a_group() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+/// Spacemacs `SPC D m d 3` (`ediff-merge-directories-with-ancestor`) opens a
+/// merge session group over the files two directories share, three-way against
+/// a third directory's ancestors. The chord was unbound and the command wrote a
+/// listing telling you to re-run a *different* chord per file.
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_d_m_d_3_resolves_and_merges_common_files() -> anyhow::Result<()> {
+    use zmax_term::keymap::{KeymapResult, Keymaps};
+    use zmax_view::document::Mode;
+
+    let mut keymaps = Keymaps::default();
+    let mut last = None;
+    for key in "space D m d 3".split(' ') {
+        last = match keymaps.get(Mode::Normal, key.parse().expect("valid key")) {
+            KeymapResult::Matched(cmd) => Some(cmd.name().to_string()),
+            _ => None,
+        };
+    }
+    assert_eq!(
+        last.as_deref(),
+        Some("ediff_merge_directories_with_ancestor"),
+        "the chord resolves in the shipped preset"
+    );
+    Ok(())
+}

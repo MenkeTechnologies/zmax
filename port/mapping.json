@@ -51589,9 +51589,10 @@
   "spec_id": "spacemacs.keybinding.spc_d_m_d_3",
   "status": "partial",
   "evidence": [
-   "static:ediff_merge_directories_with_ancestor"
+   "static:ediff_merge_directories_with_ancestor",
+   "key:normal:space D m d 3"
   ],
-  "note": "SPC D m d 3 is bound in no shipped preset \u2014 the `space D m` prefix in keymap/vim.rs:360-362 has only `b b`, `b 3`, `f 3` children \u2014 so the command is reachable only via the palette (SPC SPC / SPC ?), and the chord string appears in the tree solely inside a doc comment (commands.rs:15761) and a registry description (commands.rs:622). No merge session is created: the command prompts once for \"A B ANCESTOR [REGEXP]\", then writes a read-only scratch listing splitting the A/B-common names into with-ancestor and without-ancestor buckets and instructs the user to re-run SPC D m f 3 per file, even though three_way_merge is already wired up at commands.rs:61253. Names unique to A or B are dropped instead of being reported as unmatched; MERGE-AUTOSTORE-DIR is unsupported; REGEXP is a fourth whitespace token in Rust regex syntax rather than a separate emacs-regexp prompt defaulted off\u2026"
+  "note": "`SPC D m d 3` is bound (keymap/vim.rs) and opens the merge session group emacs opens: a picker over the names two directories share, marked three-way where ANCESTOR holds a file of the same name and two-way where it does not. Choosing an entry runs *that file's* merge - `merge_ops::three_way_merge` against the ancestor, or against an empty ancestor when there is none, which is emacs's own fallback - and shows the result with its conflict count, the same path the file-level merges use. It used to write a read-only listing telling you to re-run `SPC D m f 3` per file. Chord pinned by `tests/test/spacemacs_states.rs::spc_d_m_d_3_resolves_and_merges_common_files`. Still partial for the divergence its old note recorded: names unique to A or B are left out of the group, as the group is the intersection."
  },
  {
   "spec_id": "spacemacs.layer.chat_slack",
