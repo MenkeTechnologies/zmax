@@ -483,3 +483,63 @@ async fn spc_t_k_pins_a_persistent_which_key_popup() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// Spacemacs `SPC a k` launches paradox — the package listing. The chord was
+/// zmax's AI shell-command generator, which has moved to `SPC a K`.
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_a_k_opens_the_package_listing() -> anyhow::Result<()> {
+    use zmax_term::keymap::{KeymapResult, Keymaps};
+    use zmax_view::document::Mode;
+
+    let mut keymaps = Keymaps::default();
+    let chord = |s: &str| -> Vec<zmax_view::input::KeyEvent> {
+        s.split(' ')
+            .map(|k| k.parse().expect("valid key"))
+            .collect()
+    };
+    let resolve = |keymaps: &mut Keymaps, keys: &str| -> Option<String> {
+        let mut last = None;
+        for key in chord(keys) {
+            last = match keymaps.get(Mode::Normal, key) {
+                KeymapResult::Matched(cmd) => Some(cmd.name().to_string()),
+                _ => None,
+            };
+        }
+        last
+    };
+    assert_eq!(
+        resolve(&mut keymaps, "space a k").as_deref(),
+        Some("list_packages"),
+        "SPC a k is the package listing"
+    );
+    assert_eq!(
+        resolve(&mut keymaps, "space a K").as_deref(),
+        Some("ai_terminal_command"),
+        "the shell-command generator kept a chord of its own"
+    );
+    Ok(())
+}
+
+/// Spacemacs `SPC D d r` (`ediff-directory-revisions`) opens a session *group*:
+/// one working-copy-vs-revision entry per changed file, which you pick from.
+/// The chord was unbound and the command wrote a static scratch listing.
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_d_d_r_lists_the_changed_files_as_a_group() -> anyhow::Result<()> {
+    use zmax_term::keymap::{KeymapResult, Keymaps};
+    use zmax_view::document::Mode;
+
+    let mut keymaps = Keymaps::default();
+    let mut last = None;
+    for key in "space D d r".split(' ') {
+        last = match keymaps.get(Mode::Normal, key.parse().expect("valid key")) {
+            KeymapResult::Matched(cmd) => Some(cmd.name().to_string()),
+            _ => None,
+        };
+    }
+    assert_eq!(
+        last.as_deref(),
+        Some("ediff_directory_revisions"),
+        "the chord resolves in the shipped preset"
+    );
+    Ok(())
+}

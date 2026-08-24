@@ -19865,10 +19865,10 @@
   "spec_id": "cursor.edit.terminal",
   "status": "ported",
   "evidence": [
-   "key:normal:space a k",
+   "key:normal:space a K",
    "static:ai_terminal_command"
   ],
-  "note": "terminal Cmd+K -> ai_terminal_command (NL -> shell command, copied)"
+  "note": "terminal Cmd+K -> ai_terminal_command (NL -> shell command, copied) The chord moved to `SPC a K` so `SPC a k` could be spacemacs's package listing; the command is unchanged."
  },
  {
   "spec_id": "cursor.autocomplete.tab",
@@ -51488,9 +51488,10 @@
   "spec_id": "spacemacs.keybinding.spc_d_d_r",
   "status": "partial",
   "evidence": [
-   "static:ediff_directory_revisions"
+   "static:ediff_directory_revisions",
+   "key:normal:space D d r"
   ],
-  "note": "No SPC D d r chord exists in any shipped preset (vim.rs:266-267 binds only `space D d d` and `space D d 3`); the command is reachable only by name through command_palette. Behaviour also diverges: the output is a static scratch listing, not an interactive per-file ediff session group; revision resolution is git-only (`git diff --name-only HEAD`) rather than the generic VC backend; the listing is recursive while Emacs uses one directory level; DIR resolves against the workspace root (git_exec passes `git -C <root>`); REGEXP is a Rust regex, not an Emacs regexp; empty input errors instead of defaulting to the current directory and a space-containing DIR is unparseable; untracked files are emitted despite the doc comment stating Emacs omits them; and git_exec's `Ok(stderr)`-on-empty-stdout fallback can surface a git warning line as a phantom differing file."
+  "note": "`SPC D d r` is bound (keymap/vim.rs) and opens the session *group* emacs opens: a picker over the files under DIR whose working copy differs from HEAD, plus the untracked ones marked as unregistered. Choosing an entry opens that file and puts its working copy against `git show HEAD:<file>` in the ediff view - one working-copy-vs-revision session, which is what entering a group entry does in emacs; an unregistered file just opens, having no revision to compare against. An empty answer means the current directory, emacs's own default, instead of erroring. Remaining divergence, recorded rather than argued with: revisions come from git (`git diff --name-only HEAD`) rather than a generic VC backend, git reports a path recursively, and REGEXP is a Rust regex. Chord pinned by `tests/test/spacemacs_states.rs::spc_d_d_r_lists_the_changed_files_as_a_group`."
  },
  {
   "spec_id": "emacs.command.emoji_describe",
@@ -54430,11 +54431,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_a_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:list_packages"
+   "static:list_packages",
+   "key:normal:space a k"
   ],
-  "note": "the package listing (zmax's Package Menu, paradox's role) opens with list_packages / `:list-packages`. The chord is NOT bound: `SPC a k` is already ai_terminal_command, which port/mapping.json cites for cursor.edit.terminal, so taking it would falsify that entry"
+  "note": "`SPC a k` opens the package listing (zmax's Package Menu, paradox's role in the layer). The chord was zmax's AI shell-command generator, which cursor.edit.terminal cited; that capability is unchanged and keeps a chord of its own at `SPC a K`, so nothing was lost to make room. Pinned by `tests/test/spacemacs_states.rs::spc_a_k_opens_the_package_listing`, which resolves both chords through the shipped keymap."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_w_b",

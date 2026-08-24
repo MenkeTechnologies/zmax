@@ -318,6 +318,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space D f 3", "Diff",    "ediff_3_files"),                       // SPC D f 3 : 3-way diff of three files (read-only)
     ("space D d d", "Diff",    "ediff_directories"),                   // SPC D d d : ediff two directories (same-name files)
     ("space D d 3", "Diff",    "ediff_directories3"),                  // SPC D d 3 : ediff three directories (same-name files)
+    ("space D d r", "Diff",    "ediff_directory_revisions"),           // SPC D d r : each file in a directory vs its revision
     ("space D r l", "Diff",    "ediff_regions"),                      // SPC D r l : ediff two regions linewise
     ("space D m f f", "Diff",  "ediff_merge_file"),                   // SPC D m f f : merge a file into current buffer
     ("space D b 3", "Diff",    "ediff_3_buffers"),                     // SPC D b 3 : 3-way diff of three buffers (read-only)
@@ -1827,7 +1828,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "D" => ai_docs_context,            // SPC a D : @docs keyword search over docs/ dir
                 "w" => ai_web_context,             // SPC a w : @web live web-search context
                 "g" => toggle_ai_autocomplete,     // SPC a g : toggle real-time ghost-text autocomplete
-                "k" => ai_terminal_command,        // SPC a k : generate a shell command
+                // SPC a k is spacemacs's paradox (the package listing); the AI
+                // shell-command generator moves to the free `SPC a K`.
+                "K" => ai_terminal_command,        // SPC a K : generate a shell command
+                "k" => list_packages,              // SPC a k : the package listing (paradox)
                 "u" => ai_generate_tests,          // SPC a u : AI generate unit tests
                 "U" => undo_tree,                  // SPC a U : browse branching undo history (vim undotree)
                 "c" => ai_commit_message,          // SPC a c : AI git commit message

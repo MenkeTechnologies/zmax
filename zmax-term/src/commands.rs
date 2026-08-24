@@ -17191,10 +17191,9 @@ fn ediff_directory_revisions(cx: &mut Context) {
                 return;
             }
             let args: Vec<&str> = input.split_whitespace().collect();
-            let Some(dir) = args.first().copied() else {
-                cx.editor.set_error("need a directory path");
-                return;
-            };
+            // Emacs defaults DIR to the current directory; an empty answer is
+            // that default rather than an error.
+            let dir = args.first().copied().unwrap_or(".");
             // Emacs matches the regexp against the file names in the directory;
             // an omitted one matches all of them.
             let filter = match args.get(1) {
@@ -17231,27 +17230,82 @@ fn ediff_directory_revisions(cx: &mut Context) {
                     .set_status("ediff-directory-revisions: every file matches its revision");
                 return;
             }
-            let mut out = format!("ediff-directory-revisions: {dir} vs HEAD\n\n");
-            let section = |out: &mut String, title: &str, files: &[&str]| {
-                if files.is_empty() {
-                    return;
-                }
-                out.push_str(title);
-                out.push('\n');
-                for f in files {
-                    out.push_str("  ");
-                    out.push_str(f);
-                    out.push('\n');
-                }
-                out.push('\n');
-            };
-            section(
-                &mut out,
-                "Files differing from their revision (ediff one with vc-ediff):",
-                &differ,
-            );
-            section(&mut out, "Not under version control:", &unregistered);
-            show_text_in_scratch(cx.editor, &out);
+            // Emacs opens a *session group*: one working-copy-vs-revision diff
+            // per match, which you walk and enter one at a time. The group here
+            // is a picker over the same files; choosing one opens that file's
+            // ediff (its text on the left, HEAD's on the right). Untracked files
+            // have no revision to compare against, so they are listed as such
+            // and choosing one just opens it — emacs leaves them out of the
+            // group for the same reason.
+            let files: Vec<(String, bool)> = differ
+                .iter()
+                .map(|f| ((*f).to_string(), true))
+                .chain(unregistered.iter().map(|f| ((*f).to_string(), false)))
+                .collect();
+            let call: job::Callback = Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut Compositor| {
+                    let columns = [
+                        ui::PickerColumn::new("file", |item: &(String, bool), _: &()| {
+                            item.0.as_str().into()
+                        }),
+                        ui::PickerColumn::new("state", |item: &(String, bool), _: &()| {
+                            if item.1 { "differs" } else { "unregistered" }.into()
+                        }),
+                    ];
+                    let picker = Picker::new(
+                        columns,
+                        0,
+                        files,
+                        (),
+                        move |cx, (file, tracked), _action| {
+                            let root = zmax_loader::find_workspace().0;
+                            let path = root.join(file);
+                            if let Err(e) = cx.editor.open(&path, Action::Replace) {
+                                cx.editor.set_error(format!(
+                                    "ediff-directory-revisions: cannot open {}: {e}",
+                                    path.display()
+                                ));
+                                return;
+                            }
+                            if !tracked {
+                                cx.editor.set_status(
+                                    "not under version control — no revision to compare against",
+                                );
+                                return;
+                            }
+                            let head = match git_exec(&["show", &format!("HEAD:{file}")]) {
+                                Ok(text) => text,
+                                Err(e) => {
+                                    cx.editor.set_error(format!(
+                                        "ediff-directory-revisions: {}",
+                                        e.lines().next().unwrap_or("git show failed")
+                                    ));
+                                    return;
+                                }
+                            };
+                            let (doc_id, working) = {
+                                let doc = doc!(cx.editor);
+                                (doc.id(), doc.text().to_string())
+                            };
+                            let name = file.rsplit('/').next().unwrap_or(file).to_string();
+                            let view = crate::ui::merge::DiffView::new(
+                                format!("{name} ⇔ HEAD"),
+                                doc_id,
+                                &head,
+                                &working,
+                            );
+                            let call: job::Callback = Callback::EditorCompositor(Box::new(
+                                move |_editor: &mut Editor, compositor: &mut Compositor| {
+                                    compositor.push(Box::new(view));
+                                },
+                            ));
+                            cx.jobs.callback(async move { Ok(call) });
+                        },
+                    );
+                    compositor.push(Box::new(overlaid(picker)));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
         },
     );
     cx.push_layer(Box::new(prompt));
