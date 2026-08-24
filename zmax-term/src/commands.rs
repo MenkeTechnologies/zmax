@@ -9699,8 +9699,8 @@ pub(crate) fn csv_sort_fields(block: &str, field: usize, numeric: bool, header: 
     if numeric {
         sortable.sort_by(|a, b| {
             let (na, nb) = (
-                key(&a).parse::<f64>().unwrap_or(0.0),
-                key(&b).parse::<f64>().unwrap_or(0.0),
+                key(a).parse::<f64>().unwrap_or(0.0),
+                key(b).parse::<f64>().unwrap_or(0.0),
             );
             na.partial_cmp(&nb).unwrap_or(std::cmp::Ordering::Equal)
         });
