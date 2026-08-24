@@ -13021,12 +13021,8 @@ fn isearch_thing_at_point(cx: &mut Context) -> Option<String> {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let range = doc.selection(view.id).primary();
-    let word = if range.from() != range.to() {
-        range
-    } else {
-        textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
-    };
-    let s: String = text.slice(word.from()..word.to()).to_string();
+    let (from, to) = expand_bare_cursor_to_word(text, range.from(), range.to());
+    let s: String = text.slice(from..to).to_string();
     let s = s.trim();
     if s.is_empty() {
         None
@@ -17683,16 +17679,8 @@ fn info_search(cx: &mut Context) {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let range = doc.selection(view.id).primary();
-        let word = if range.from() != range.to() {
-            range
-        } else {
-            textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
-        };
-        let s = text
-            .slice(word.from()..word.to())
-            .to_string()
-            .trim()
-            .to_string();
+        let (from, to) = expand_bare_cursor_to_word(text, range.from(), range.to());
+        let s = text.slice(from..to).to_string().trim().to_string();
         Some(s).filter(|s| !s.is_empty())
     };
 
@@ -17784,12 +17772,8 @@ fn thing_at_point_symbol(cx: &mut Context) -> Option<String> {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let range = doc.selection(view.id).primary();
-    let word = if range.from() != range.to() {
-        range
-    } else {
-        textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
-    };
-    let s = text.slice(word.from()..word.to()).to_string();
+    let (from, to) = expand_bare_cursor_to_word(text, range.from(), range.to());
+    let s = text.slice(from..to).to_string();
     let s = s.trim().to_string();
     Some(s).filter(|s| !s.is_empty())
 }
@@ -17933,7 +17917,9 @@ fn info_lookup_file_at_point(cx: &mut Context) -> Option<String> {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let range = doc.selection(view.id).primary();
-    if range.from() != range.to() {
+    // A real (multi-char) selection wins; a bare cursor — a 1-char range in
+    // helix's model — falls through to the character scan below.
+    if range.to().saturating_sub(range.from()) > 1 {
         let s = text.slice(range.from()..range.to()).to_string();
         return Some(s.trim().to_string()).filter(|s| !s.is_empty());
     }
@@ -20229,12 +20215,8 @@ fn ai_symbol_context(cx: &mut Context) {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let range = doc.selection(view.id).primary();
-        let w = if range.from() != range.to() {
-            range
-        } else {
-            textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
-        };
-        text.slice(w.from()..w.to()).to_string().trim().to_string()
+        let (from, to) = expand_bare_cursor_to_word(text, range.from(), range.to());
+        text.slice(from..to).to_string().trim().to_string()
     };
     if word.is_empty() {
         cx.editor.set_status("no symbol under cursor");
@@ -46757,12 +46739,8 @@ fn gud_word_at_point(cx: &mut Context) -> Option<String> {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let range = doc.selection(view.id).primary();
-    let word = if range.from() != range.to() {
-        range
-    } else {
-        textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
-    };
-    let s = text.slice(word.from()..word.to()).to_string();
+    let (from, to) = expand_bare_cursor_to_word(text, range.from(), range.to());
+    let s = text.slice(from..to).to_string();
     let s = s.trim().to_string();
     if s.is_empty() {
         None
@@ -46894,16 +46872,8 @@ fn gud_format_command(editor: &Editor, count: Option<usize>, template: &str) -> 
             )
         });
         let range = doc.selection(view.id).primary();
-        let wr = if range.from() != range.to() {
-            range
-        } else {
-            textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
-        };
-        let s = text
-            .slice(wr.from()..wr.to())
-            .to_string()
-            .trim()
-            .to_string();
+        let (wfrom, wto) = expand_bare_cursor_to_word(text, range.from(), range.to());
+        let s = text.slice(wfrom..wto).to_string().trim().to_string();
         let word = if s.is_empty() { None } else { Some(s) };
         (file_line, word)
     };
@@ -47434,16 +47404,15 @@ fn comint_run(cx: &mut Context) {
     cx.push_layer(Box::new(prompt));
 }
 
-/// Open the project-wide Find in Files panel, seeded with the primary selection.
+/// Open the project-wide Find in Files panel, seeded with the primary selection
+/// — or, for a bare cursor, with the word it sits on.
 fn search_in_files(cx: &mut Context) {
     let seed = {
         let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
         let sel = doc.selection(view.id).primary();
-        if sel.from() != sel.to() {
-            doc.text().slice(sel.from()..sel.to()).to_string()
-        } else {
-            String::new()
-        }
+        let (from, to) = expand_bare_cursor_to_word(text, sel.from(), sel.to());
+        text.slice(from..to).to_string().trim().to_string()
     };
     open_overlay(cx, move |_editor| {
         Ok(Box::new(crate::ui::search::SearchPanel::new(&seed)) as Box<dyn Component>)
