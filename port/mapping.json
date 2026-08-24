@@ -54828,19 +54828,21 @@
  },
  {
   "spec_id": "spacemacs.keybinding.g_f",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:help_go_forward"
+   "static:help_go_forward",
+   "key:help:g"
   ],
-  "note": "help_go_forward steps forward through the Help browser's history (the counterpart of `g b`, which is bound). The chord is NOT bound: `g f` is vim's goto-file in zmax, the same reason the existing comment in keymap/vim.rs gives for `g b` taking only the back half"
+  "note": "`g f` is bound in the Help browser's own map, which is where spacemacs binds it - evil-help-mode, not the global map, so vim's `g f` (goto-file) is untouched. While a topic is visited (the read-only `*Help*` state where `l`/`r`/`n`/`p`/`s` already live), `g` arms a prefix and `g f` runs `go_forward`, the counterpart of `g b`. While browsing, `g` is still search input. Pinned by `ui::help::tests::g_prefix_walks_help_history_only_while_visiting`."
  },
  {
   "spec_id": "spacemacs.keybinding.g_h",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:help_follow_symbol"
+   "static:help_follow_symbol",
+   "key:help:g"
   ],
-  "note": "help_follow_symbol (new) takes the identifier under the cursor and opens the Help browser filtered to it, erroring when there is no symbol at point. The chord is NOT bound: `g h` is vim's Select-mode entry in zmax"
+  "note": "`g h` is bound in the Help browser's own map alongside `g b`/`g f`, which is where spacemacs binds it (evil-help-mode) - vim's `g h` (Select mode) is untouched. It follows the cross-reference at point, which is what `help-follow-symbol` does inside `*Help*`: the selected entry is visited and recorded in the history the other two walk. Pinned by `ui::help::tests::g_prefix_walks_help_history_only_while_visiting`, which drives the same prefix."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_i_58",

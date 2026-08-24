@@ -2909,6 +2909,10 @@ pub struct HelpPanel {
     /// `C-c` was typed: the panel is waiting for the second key of Emacs's
     /// `C-c C-b` (`help-go-back`) / `C-c C-f` (`help-go-forward`) chords.
     pending_ctrl_c: bool,
+    /// `g` armed the evil help-mode chords `g b` / `g f` / `g h`, the way
+    /// `pending_ctrl_c` arms the Emacs `C-c` ones. Only while a topic is
+    /// visited — `g` is search input while browsing.
+    pending_g: bool,
 }
 
 impl Default for HelpPanel {
@@ -2964,6 +2968,7 @@ impl HelpPanel {
             hpos: 0,
             page: 5,
             pending_ctrl_c: false,
+            pending_g: false,
         }
     }
 
@@ -3261,16 +3266,33 @@ fn source_not_found() -> EventResult {
     })))
 }
 
-impl Component for HelpPanel {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
-        let key: KeyEvent = match event {
-            Event::Key(k) => *k,
-            Event::Mouse(ev) => return self.handle_mouse(ev.column, ev.row, ev.kind),
-            _ => return EventResult::Ignored(None),
-        };
+impl HelpPanel {
+    /// One key of the Help browser's own map. Split out of `handle_event` (whose
+    /// `Context` this never used) so the map can be driven directly in tests.
+    fn on_key(&mut self, key: KeyEvent) -> EventResult {
         let n = self.matches().len();
         // `C-c` armed the Emacs `C-c C-b` / `C-c C-f` chords: the next key either
         // completes one or drops the prefix, as an Emacs prefix key does.
+        // Spacemacs's evil help-mode map: `g b` back, `g f` forward, `g h` the
+        // help for the symbol at point (following the cross-reference the cursor
+        // is on, which is what `help-follow-symbol` does inside `*Help*`).
+        // Sub-keys are matched on the code so they are not mistaken for
+        // unprefixed help keys — `b`, `f` and `h` are search input while browsing.
+        if std::mem::take(&mut self.pending_g) {
+            match key.code {
+                KeyCode::Char('b') => {
+                    self.go_back();
+                }
+                KeyCode::Char('f') => {
+                    self.go_forward();
+                }
+                KeyCode::Char('h') => {
+                    self.follow();
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
         if std::mem::take(&mut self.pending_ctrl_c) {
             match key {
                 ctrl!('b') => {
@@ -3324,6 +3346,7 @@ impl Component for HelpPanel {
             // Help-mode keys, live while a single topic is displayed on its own —
             // that state is the read-only `*Help*` buffer. While browsing, these
             // letters are search input (the fall-through arm below).
+            key!('g') if self.visiting.is_some() => self.pending_g = true,
             key!('l') if self.visiting.is_some() => {
                 self.go_back();
             }
@@ -3344,6 +3367,17 @@ impl Component for HelpPanel {
             }
         }
         EventResult::Consumed(None)
+    }
+}
+
+impl Component for HelpPanel {
+    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+        let key: KeyEvent = match event {
+            Event::Key(k) => *k,
+            Event::Mouse(ev) => return self.handle_mouse(ev.column, ev.row, ev.kind),
+            _ => return EventResult::Ignored(None),
+        };
+        self.on_key(key)
     }
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
@@ -3513,6 +3547,47 @@ impl Component for HelpPanel {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Spacemacs's evil help-mode chords: `g` opens a prefix while a topic is
+    /// visited, and `g b` / `g f` walk the history the way `l` / `r` do. While
+    /// browsing (no topic visited) `g` is search input, so the prefix must not
+    /// arm there.
+    #[test]
+    fn g_prefix_walks_help_history_only_while_visiting() {
+        use zmax_view::input::{KeyCode, KeyEvent, KeyModifiers};
+        let mut p = HelpPanel::new();
+        let key = |c: char| KeyEvent {
+            code: KeyCode::Char(c),
+            modifiers: KeyModifiers::NONE,
+        };
+
+        // Browsing: `g` types into the filter rather than arming the prefix.
+        assert!(p.visiting.is_none());
+        p.filter.clear();
+        p.on_key(key('g'));
+        assert!(!p.pending_g, "no prefix while browsing");
+        assert_eq!(p.filter, "g", "the key was search input");
+        p.filter.clear();
+
+        // Visiting two topics, `g b` goes back and `g f` forward again.
+        p.visit(0);
+        p.visit(1);
+        let second = p.current_title().map(str::to_string);
+        let first = {
+            p.on_key(key('g'));
+            assert!(p.pending_g, "g armed the prefix while visiting");
+            p.on_key(key('b'));
+            p.current_title().map(str::to_string)
+        };
+        assert_ne!(first, second, "g b went back");
+        p.on_key(key('g'));
+        p.on_key(key('f'));
+        assert_eq!(
+            p.current_title().map(str::to_string),
+            second,
+            "g f went forward"
+        );
+    }
 
     #[test]
     fn help_history_walks_back_and_forward() {
