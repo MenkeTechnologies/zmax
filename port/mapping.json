@@ -43522,11 +43522,13 @@
  },
  {
   "spec_id": "spacemacs.layer.readers_epub",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:doc-view-mode"
+   "typable:doc-view-mode",
+   "typable:epub-read",
+   "static:epub_read"
   ],
-  "note": "epub layer -> doc-view renders pages; no reflowable text mode"
+  "note": "doc-view renders an EPUB's pages, and - the gap the old note named - `:epub-read` (alias `:nov`) is the reflowable text mode nov.el gives: the zip's `META-INF/container.xml` names the package document, whose manifest and spine give the reading order, and each XHTML in that order is rendered to text through the same reader the built-in browser uses. hrefs resolve against the package document's directory, `..` included. An EPUB is a zip, which the editor refuses to open as a buffer, so the path is given (`:epub-read book.epub`). The container/spine reading is unit-tested (`epub_container_and_spine_are_read_in_order`) and the whole path is driven end to end over a built EPUB by `tests/test/spacemacs_states.rs::epub_read_renders_the_spine_as_text`, which checks the documents come out in spine order rather than manifest order."
  },
  {
   "spec_id": "spacemacs.layer.fun_games",

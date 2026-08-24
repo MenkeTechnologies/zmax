@@ -760,6 +760,7 @@ impl MappableCommand {
         complete_emoji, "Complete the `:name` being typed into an emoji (spacemacs company-emoji)",
         http_send_request, "Send the .http request under the cursor and show the response (restclient C-c C-c)",
         nixos_options, "Browse NixOS options by name, type and default (spacemacs nixos layer)",
+        epub_read, "Show this EPUB as reflowable text in spine order (spacemacs epub layer / nov.el)",
         emoji_recent, "Insert one of the recently-used emoji (emacs emoji-recent, C-x 8 e r)",
         view_hello_file, "Show a multi-script greeting sample (emacs view-hello-file, C-h h)",
         view_echo_area_messages, "Show the last echo-area message (emacs view-echo-area-messages, C-h e)",
@@ -74507,6 +74508,51 @@ fn open_dribble_file(cx: &mut Context) {
 
 #[cfg(test)]
 mod gap_command_tests {
+    /// An EPUB names its package document in `META-INF/container.xml`, and the
+    /// package document's spine gives the reading order by manifest id.
+    #[test]
+    fn epub_container_and_spine_are_read_in_order() {
+        let container = r#"<?xml version="1.0"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>"#;
+        assert_eq!(
+            epub_opf_path(container).as_deref(),
+            Some("OEBPS/content.opf")
+        );
+        assert_eq!(epub_opf_path("<container/>"), None);
+
+        let opf = r#"<package>
+  <manifest>
+    <item id="cover" href="Text/cover.xhtml" media-type="application/xhtml+xml"/>
+    <item id="ch1" href="Text/ch1.xhtml" media-type="application/xhtml+xml"/>
+    <item id="css" href="Styles/main.css" media-type="text/css"/>
+  </manifest>
+  <spine toc="ncx">
+    <itemref idref="cover"/>
+    <itemref idref="ch1"/>
+  </spine>
+</package>"#;
+        // Spine order, not manifest order, and non-spine items are left out.
+        assert_eq!(
+            epub_spine_paths(opf),
+            vec!["Text/cover.xhtml".to_string(), "Text/ch1.xhtml".to_string()]
+        );
+
+        // hrefs resolve against the package document's own directory, `..` included.
+        assert_eq!(
+            epub_join("OEBPS/content.opf", "Text/ch1.xhtml"),
+            "OEBPS/Text/ch1.xhtml"
+        );
+        assert_eq!(
+            epub_join("OEBPS/x/content.opf", "../Text/ch1.xhtml"),
+            "OEBPS/Text/ch1.xhtml"
+        );
+        assert_eq!(epub_join("content.opf", "ch1.xhtml"), "ch1.xhtml");
+    }
+
     /// NixOS's `options.json`: an object keyed by option name, whose `default`
     /// and `description` are sometimes a bare string and sometimes `{"text": …}`.
     #[test]
@@ -75016,6 +75062,137 @@ const PACKAGE_ARCHIVES: &[(&str, &str)] = &[
 /// Every package currently installed on disk.
 pub(crate) fn installed_packages() -> Vec<Installed> {
     pkg::installed_packages(&elpa_dir())
+}
+
+// --- epub (readers layer's reflowable text mode) -----------------------------
+// An EPUB is a zip: `META-INF/container.xml` names the OPF package document,
+// whose `<manifest>` maps ids to files and whose `<spine>` gives the reading
+// order. nov.el renders that order as reflowable text; so does this.
+
+/// The OPF package path named by `META-INF/container.xml`.
+///
+/// Pure — the XML is small and shaped, so it is read with a scan rather than a
+/// parser, and unit-tested.
+pub(crate) fn epub_opf_path(container_xml: &str) -> Option<String> {
+    let at = container_xml.find("full-path")?;
+    let rest = &container_xml[at..];
+    let quote = rest.find(['"', '\''])?;
+    let delim = rest.as_bytes()[quote] as char;
+    let value = &rest[quote + 1..];
+    let end = value.find(delim)?;
+    Some(value[..end].to_string())
+}
+
+/// The spine's documents, in reading order, as paths relative to the OPF's own
+/// directory: the manifest maps `id` to `href`, the spine lists `idref`s.
+pub(crate) fn epub_spine_paths(opf_xml: &str) -> Vec<String> {
+    // `id="x" href="y"` in either order, so both attributes are read per item.
+    let attr = |tag: &str, name: &str| -> Option<String> {
+        let at = tag.find(&format!("{name}="))?;
+        let rest = &tag[at + name.len() + 1..];
+        let delim = rest.chars().next()?;
+        let value = &rest[1..];
+        let end = value.find(delim)?;
+        Some(value[..end].to_string())
+    };
+    let mut manifest: Vec<(String, String)> = Vec::new();
+    for item in opf_xml.split("<item ").skip(1) {
+        let tag = item.split('>').next().unwrap_or("");
+        if let (Some(id), Some(href)) = (attr(tag, "id"), attr(tag, "href")) {
+            manifest.push((id, href));
+        }
+    }
+    let mut out = Vec::new();
+    for itemref in opf_xml.split("<itemref").skip(1) {
+        let tag = itemref.split('>').next().unwrap_or("");
+        let Some(idref) = attr(tag, "idref") else {
+            continue;
+        };
+        if let Some((_, href)) = manifest.iter().find(|(id, _)| *id == idref) {
+            out.push(href.clone());
+        }
+    }
+    out
+}
+
+/// Join a path relative to the OPF's directory, normalising `..` — EPUBs do use
+/// `../Text/ch1.xhtml` hrefs.
+fn epub_join(opf_path: &str, href: &str) -> String {
+    let mut parts: Vec<&str> = opf_path
+        .rsplit_once('/')
+        .map(|(dir, _)| dir)
+        .unwrap_or("")
+        .split('/')
+        .collect();
+    if parts == [""] {
+        parts.clear();
+    }
+    for segment in href.split('/') {
+        match segment {
+            "." | "" => {}
+            ".." => {
+                parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
+}
+
+/// Render an EPUB as reflowable text: the spine's documents in order, each
+/// stripped to text the way the built-in browser strips a page.
+pub(crate) fn epub_to_text(path: &std::path::Path) -> Result<String, String> {
+    let file = std::fs::File::open(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("{}: {e}", path.display()))?;
+    let read = |zip: &mut zip::ZipArchive<std::fs::File>, name: &str| -> Option<String> {
+        use std::io::Read;
+        let mut entry = zip.by_name(name).ok()?;
+        let mut out = String::new();
+        entry.read_to_string(&mut out).ok()?;
+        Some(out)
+    };
+    let container = read(&mut zip, "META-INF/container.xml")
+        .ok_or_else(|| "not an EPUB: no META-INF/container.xml".to_string())?;
+    let opf_path = epub_opf_path(&container)
+        .ok_or_else(|| "not an EPUB: container.xml names no package document".to_string())?;
+    let opf = read(&mut zip, &opf_path).ok_or_else(|| format!("missing {opf_path}"))?;
+    let spine = epub_spine_paths(&opf);
+    if spine.is_empty() {
+        return Err("the package document has an empty spine".to_string());
+    }
+    let mut out = String::new();
+    for href in spine {
+        let name = epub_join(&opf_path, &href);
+        let Some(xhtml) = read(&mut zip, &name) else {
+            continue;
+        };
+        out.push_str(&crate::eww::html_to_text(&xhtml, ""));
+        out.push_str("\n\n");
+    }
+    Ok(out)
+}
+
+/// The readers layer's reflowable text mode (nov.el): show an EPUB as text,
+/// spine order preserved, instead of page images. Reads the current buffer's
+/// file, so `:open book.epub` then this.
+fn epub_read(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        // An EPUB is a zip, which the editor refuses to open as a buffer, so
+        // the usual way in is `:epub-read <path>`.
+        cx.editor
+            .set_error("epub-read: give the EPUB's path (`:epub-read book.epub`)");
+        return;
+    };
+    match epub_to_text(&path) {
+        Ok(text) => {
+            show_text_in_scratch(cx.editor, &text);
+            cx.editor.set_status(format!(
+                "{}: reflowed text",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ));
+        }
+        Err(e) => cx.editor.set_error(format!("epub-read: {e}")),
+    }
 }
 
 // --- nixos options ----------------------------------------------------------

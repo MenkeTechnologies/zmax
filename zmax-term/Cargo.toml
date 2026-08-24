@@ -142,6 +142,10 @@ ureq = { version = "2", features = ["json"] }
 # (`.tar.gz`), which `package-install-file` accepts for a locally-built package.
 tar = "0.4"
 flate2 = "1"
+# EPUB is a zip of XHTML: the readers layer's reflowable text mode unpacks the
+# spine and renders it. Same crate strykelang already builds, so it costs no new
+# dependency in the tree.
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 dashmap = "6.2"
 
@@ -204,6 +208,8 @@ zmax-loader = { path = "../zmax-loader" }
 
 [dev-dependencies]
 smallvec = "1.15"
+# The epub test builds a small EPUB (a zip) to read back.
+zip = { version = "2", default-features = false, features = ["deflate"] }
 indoc = "2.0.6"
 tempfile.workspace = true
 same-file = "1.0.1"

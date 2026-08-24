@@ -40120,6 +40120,30 @@ fn delete_trailing_whitespace(
     Ok(())
 }
 
+/// `:epub-read` — the readers layer's reflowable text mode, as a typable command
+/// so it can be reached from the command line as well as the palette.
+fn ex_epub_read(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // An EPUB is a zip, so the editor refuses to open one as a buffer: the path
+    // is normally given, and falls back to the buffer's own file.
+    let path = match first_nonempty(&args) {
+        Some(given) => zmax_stdx::path::expand_tilde(std::path::Path::new(&given)).into_owned(),
+        None => doc!(cx.editor)
+            .path()
+            .map(std::path::Path::to_path_buf)
+            .ok_or_else(|| anyhow!("epub-read: give the EPUB's path"))?,
+    };
+    let text = super::epub_to_text(&path).map_err(|e| anyhow!("epub-read: {e}"))?;
+    super::show_text_in_scratch(cx.editor, &text);
+    Ok(())
+}
+
 /// The web-beautify layer (`web-beautify-js` / `-css` / `-html`): filter the
 /// selection — or the whole buffer, as the layer's commands do with no region —
 /// through js-beautify. The flavour is the argument (`js`, `css`, `html`) or, with
@@ -64812,6 +64836,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "epub-read",
+        aliases: &["nov"],
+        doc: "Show an EPUB as reflowable text, in spine order; defaults to the file this buffer visits (spacemacs epub layer).",
+        fun: ex_epub_read,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

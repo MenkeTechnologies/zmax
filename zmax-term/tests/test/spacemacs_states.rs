@@ -727,3 +727,63 @@ async fn emoji_layer_chords_resolve_and_complete() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// The readers layer's reflowable text mode (nov.el): an EPUB opens as text in
+/// spine order, rather than only as page images.
+#[tokio::test(flavor = "multi_thread")]
+async fn epub_read_renders_the_spine_as_text() -> anyhow::Result<()> {
+    use std::io::Write;
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("book.epub");
+    {
+        let file = std::fs::File::create(&path)?;
+        let mut zip = zip::ZipWriter::new(file);
+        let opts: zip::write::FileOptions<'_, ()> =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        zip.start_file("META-INF/container.xml", opts)?;
+        zip.write_all(
+            br#"<container><rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles></container>"#,
+        )?;
+        zip.start_file("OEBPS/content.opf", opts)?;
+        zip.write_all(
+            br#"<package><manifest>
+                  <item id="one" href="one.xhtml"/>
+                  <item id="two" href="two.xhtml"/>
+                </manifest><spine>
+                  <itemref idref="two"/>
+                  <itemref idref="one"/>
+                </spine></package>"#,
+        )?;
+        zip.start_file("OEBPS/one.xhtml", opts)?;
+        zip.write_all(b"<html><body><p>First chapter text.</p></body></html>")?;
+        zip.start_file("OEBPS/two.xhtml", opts)?;
+        zip.write_all(b"<html><body><p>Front matter.</p></body></html>")?;
+        zip.finish()?;
+    }
+
+    // An EPUB is a zip, which the editor refuses to open as a buffer, so the
+    // path is given — the same way nov.el is pointed at a file.
+    let mut app = preset_app("spacemacs").build()?;
+    let keys = format!(":epub-read {}<ret>", path.display());
+    test_key_sequence(
+        &mut app,
+        Some(&keys),
+        Some(&|app: &zmax_term::application::Application| {
+            let (_v, doc) = zmax_view::current_ref!(app.editor);
+            let text = doc.text().to_string();
+            assert!(
+                text.contains("First chapter text."),
+                "chapter text: {text:?}"
+            );
+            assert!(text.contains("Front matter."), "front matter: {text:?}");
+            // Spine order, not manifest order: "two" comes first.
+            assert!(
+                text.find("Front matter.") < text.find("First chapter text."),
+                "documents are in spine order: {text:?}"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

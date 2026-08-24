@@ -11476,6 +11476,7 @@ dependencies = [
  "ureq",
  "vimlrs",
  "vt100",
+ "zip",
  "zmax-core",
  "zmax-dap",
  "zmax-event",
