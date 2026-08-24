@@ -169,15 +169,12 @@ pub async fn test_key_sequences(
         };
     }
 
-    if !should_exit {
-        for key_event in parse_macro("<esc>:q!<ret>")?.into_iter() {
-            tx.send(Ok(Event::Key(KeyEvent::from(key_event))))?;
-        }
-
-        let event_loop = app.event_loop(&mut rx_stream);
-        tokio::time::timeout(TIMEOUT, event_loop).await?;
-    }
-
+    // Every assertion has run by now, so the app is torn down through
+    // `Application::close` (which stops the language servers and flushes the
+    // jobs) rather than by typing `<esc>:q!<ret>` at it. Those keystrokes only
+    // mean "quit" under a modal preset: with the modeless emacs keymap they are
+    // literal text, the editor never closed, and the wait that followed failed on
+    // its own deadline instead of on anything the test did.
     let errs = app.close().await;
 
     if !errs.is_empty() {
@@ -272,8 +269,15 @@ pub async fn test_with_config<T: Into<TestCase>>(
     .await
 }
 
-pub async fn test<T: Into<TestCase>>(test_case: T) -> anyhow::Result<()> {
-    test_with_config(AppBuilder::default(), test_case).await
+/// The future is boxed rather than returned inline: a whole `Application`
+/// (editor, registers, config, the compositor's layers) lives across every await
+/// in `test_with_config`, so a test that chains a couple of dozen cases — vim's
+/// `find_char` drives 24 — stacks that much state into one generator and
+/// overflows the 2 MiB test thread. On the heap each case costs one pointer.
+pub fn test<'a, T: Into<TestCase> + 'a>(
+    test_case: T,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + 'a>> {
+    Box::pin(test_with_config(AppBuilder::default(), test_case))
 }
 
 pub fn temp_file_with_contents<S: AsRef<str>>(
@@ -323,6 +327,13 @@ pub fn test_config() -> Config {
     Config {
         editor: test_editor_config(),
         keys: zmax_term::keymap::default::default(),
+        // Name the preset the keys came from. `Application::new` derives
+        // `Editor::vim_semantics` (and the starting mode) from this name, so
+        // leaving it at the "spacemacs" default paired the selection-first keys
+        // with vim's insert/search cursor rules — a combination the shipped
+        // editor never produces, and one that fails on any test whose expected
+        // cursor differs between the two.
+        keymap: "helix".to_string(),
         ..Default::default()
     }
 }

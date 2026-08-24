@@ -347,7 +347,7 @@ async fn test_open_above() -> anyhow::Result<()> {
 async fn test_open_above_with_multiple_cursors() -> anyhow::Result<()> {
     // the primary cursor is also in the top line
     test((
-        indoc! {"#[Z|]#emacs
+        indoc! {"#[Z|]#max
             #(i|)#s
             #(c|)#ool"},
         "O",
@@ -365,7 +365,7 @@ async fn test_open_above_with_multiple_cursors() -> anyhow::Result<()> {
 
     // now with some additional indentation
     test((
-        indoc! {"····#[Z|]#emacs
+        indoc! {"····#[Z|]#max
             ····#(i|)#s
             ····#(c|)#ool"}
         .replace("·", " "),
@@ -408,7 +408,7 @@ async fn test_open_above_with_multiple_cursors() -> anyhow::Result<()> {
 async fn test_open_below_with_multiple_cursors() -> anyhow::Result<()> {
     // the primary cursor is also in the top line
     test((
-        indoc! {"#[Z|]#emacs
+        indoc! {"#[Z|]#max
             #(i|)#s
             #(c|)#ool"},
         "o",
@@ -425,7 +425,7 @@ async fn test_open_below_with_multiple_cursors() -> anyhow::Result<()> {
 
     // now with some additional indentation
     test((
-        indoc! {"····#[Z|]#emacs
+        indoc! {"····#[Z|]#max
             ····#(i|)#s
             ····#(c|)#ool"}
         .replace("·", " "),
