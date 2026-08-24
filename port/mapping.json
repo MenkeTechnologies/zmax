@@ -51417,11 +51417,14 @@
  },
  {
   "spec_id": "spacemacs.layer.tools_tmux",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tmux_navigate_left"
+   "static:tmux_navigate_left",
+   "static:tmux_navigate_right",
+   "key:normal:C-w C-h",
+   "key:normal:space w C-l"
   ],
-  "note": "The layer's entire user-facing surface \u2014 the four evil-normal-state chords C-h/C-j/C-k/C-l => tmux-navigate left/down/up/right \u2014 is unbound in every shipped preset. No file under zmax-term/src/keymap/ mentions tmux_navigate_* (repo-wide grep hits only commands.rs), and all four chords are already occupied by incompatible bindings: vim.rs:1401 C-h => move_char_left, vim.rs:1405 C-j => move_line_down, vim.rs:1445 C-l => align_view_center, plus spacemacs.rs:173 where C-h is the Emacs Help prefix. The split-navigation keys that ARE live, C-w h/j/k/l and C-w C-h/C-j/C-k/C-l => jump_view_left/down/up/right (vim.rs:1319-1322, vim.rs:1795-1798), have no tmux select-pane fallthrough, so the layer's defining behaviour (a single keystroke crossing the editor/tmux boundary) is unreachable by keystroke; the commands can only be run by name from the command palette. key:normal:C-h and its siblings do\u2026"
+  "note": "The layer's whole user-facing surface is bound now. `tmux_navigate_left/down/up/right` sit on the control variants of both window maps (`C-w C-h/C-j/C-k/C-l` and their `SPC w` mirrors, which the aliased-modes invariant requires to match): each moves one split, and at the edge - where vim does nothing, there being no window that way - hands the move to `tmux select-pane -L/-D/-U/-R`, so one keystroke walks on across the panes. Outside tmux it is silent, exactly as navigate.el's discarded `shell-command-to-string` is. The layer binds these on bare `C-h/C-j/C-k/C-l`; those keys are vim motions here and are cited by ported neovim and emacs entries, so the control variants carry it instead - the same chord family, one modifier over. Pinned by `tests/test/spacemacs_states.rs::tmux_navigate_is_bound_on_both_window_maps`, which also checks the bare keys stay pure window jumps."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_t_iU",

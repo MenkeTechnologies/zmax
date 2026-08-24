@@ -612,3 +612,43 @@ async fn command_log_mode_logs_commands_as_they_run() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// The tmux layer's `tmux-navigate`: the control variants of the window map move
+/// one split, and at the edge — where vim does nothing, there being no window
+/// that way — hand the move to tmux. Both window maps carry them, since `SPC w`
+/// mirrors `C-w`.
+#[tokio::test(flavor = "multi_thread")]
+async fn tmux_navigate_is_bound_on_both_window_maps() -> anyhow::Result<()> {
+    use zmax_term::keymap::{KeymapResult, Keymaps};
+    use zmax_view::document::Mode;
+
+    let resolve = |keys: &str| -> Option<String> {
+        let mut keymaps = Keymaps::default();
+        let mut last = None;
+        for key in keys.split(' ') {
+            last = match keymaps.get(Mode::Normal, key.parse().expect("valid key")) {
+                KeymapResult::Matched(cmd) => Some(cmd.name().to_string()),
+                _ => None,
+            };
+        }
+        last
+    };
+    for (keys, want) in [
+        ("C-w C-h", "tmux_navigate_left"),
+        ("C-w C-j", "tmux_navigate_down"),
+        ("C-w C-k", "tmux_navigate_up"),
+        ("C-w C-l", "tmux_navigate_right"),
+        ("space w C-h", "tmux_navigate_left"),
+        ("space w C-l", "tmux_navigate_right"),
+    ] {
+        assert_eq!(resolve(keys).as_deref(), Some(want), "{keys}");
+    }
+    // The bare keys stay pure vim window jumps.
+    for (keys, want) in [
+        ("C-w h", "jump_view_left"),
+        ("space w l", "jump_view_right"),
+    ] {
+        assert_eq!(resolve(keys).as_deref(), Some(want), "{keys}");
+    }
+    Ok(())
+}

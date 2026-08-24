@@ -1477,10 +1477,20 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "d" => xref_find_definitions_other_window,
             "C-d" => wclose,
             "o" | "C-o" => wonly,
-            "h" | "C-h" => jump_view_left,
-            "j" | "C-j" => jump_view_down,
-            "k" | "C-k" => jump_view_up,
-            "l" | "C-l" => jump_view_right,
+            // The control variants carry the spacemacs tmux layer's
+            // `tmux-navigate`: the same move as the bare key, and at the edge —
+            // where vim does nothing because there is no window that way — the
+            // move is handed to tmux (`tmux select-pane -L/-D/-U/-R`), so one
+            // keystroke walks on across the panes. Outside tmux it is silent,
+            // exactly as navigate.el's discarded `shell-command-to-string` is.
+            "h" => jump_view_left,
+            "C-h" => tmux_navigate_left,
+            "j" => jump_view_down,
+            "C-j" => tmux_navigate_down,
+            "k" => jump_view_up,
+            "C-k" => tmux_navigate_up,
+            "l" => jump_view_right,
+            "C-l" => tmux_navigate_right,
             "left"  => jump_view_left,
             "down"  => jump_view_down,
             "up"    => jump_view_up,
@@ -1997,10 +2007,16 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "q" | "C-q" => wclose,
                 "d" | "C-d" => wclose,
                 "o" | "C-o" => wonly,
-                "h" | "C-h" => jump_view_left,
-                "j" | "C-j" => jump_view_down,
-                "k" | "C-k" => jump_view_up,
-                "l" | "C-l" => jump_view_right,
+                // As in the `C-w` map above: the control variants are the
+                // tmux layer's `tmux-navigate`.
+                "h" => jump_view_left,
+                "C-h" => tmux_navigate_left,
+                "j" => jump_view_down,
+                "C-j" => tmux_navigate_down,
+                "k" => jump_view_up,
+                "C-k" => tmux_navigate_up,
+                "l" => jump_view_right,
+                "C-l" => tmux_navigate_right,
                 "left"  => jump_view_left,
                 "down"  => jump_view_down,
                 "up"    => jump_view_up,
