@@ -40120,6 +40120,44 @@ fn delete_trailing_whitespace(
     Ok(())
 }
 
+/// csv-mode `csv-sort-fields` / `csv-sort-numeric-fields` (`:csv-sort-fields N`):
+/// sort the selected CSV/TSV lines by one field, counting from 1. `--numeric`
+/// compares the field as a number; the first line is kept in place as a header
+/// unless `--no-header` says otherwise, which is csv-mode's own rule.
+fn ex_csv_sort_fields(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let field: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .filter(|n| *n > 0)
+        .ok_or_else(|| anyhow!("csv-sort-fields: give the field number, counting from 1"))?;
+    let numeric = args.has_flag("numeric");
+    let header = !args.has_flag("no-header");
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let selection = doc.selection(view.id);
+    let transaction = Transaction::change_by_selection(text, selection, |range| {
+        let block = range.fragment(text.slice(..)).to_string();
+        let sorted = super::csv_sort_fields(&block, field, numeric, header);
+        // A block that ended in a newline keeps it: the lines are what is sorted.
+        let sorted = if block.ends_with('\n') {
+            format!("{sorted}\n")
+        } else {
+            sorted
+        };
+        (range.from(), range.to(), Some(sorted.into()))
+    });
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 fn sort(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -64729,6 +64767,31 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "csv-sort-fields",
+        aliases: &["csv-sort-numeric-fields"],
+        doc: "Sort the selected CSV/TSV lines by field N, counting from 1 (csv-mode csv-sort-fields).",
+        fun: ex_csv_sort_fields,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            flags: &[
+                Flag {
+                    name: "numeric",
+                    alias: Some('n'),
+                    doc: "compare the field as a number (csv-sort-numeric-fields)",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "no-header",
+                    alias: Some('H'),
+                    doc: "sort the first line too, instead of keeping it as a header",
+                    ..Flag::DEFAULT
+                },
+            ],
             ..Signature::DEFAULT
         },
     },

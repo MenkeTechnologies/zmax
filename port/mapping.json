@@ -46790,13 +46790,16 @@
  },
  {
   "spec_id": "spacemacs.layer.lang_csv",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:csv_to_table_selection",
    "static:transpose_csv_selection",
-   "static:align_at_comma"
+   "static:align_at_comma",
+   "typable:csv-sort-fields",
+   "static:csv_forward_field",
+   "static:csv_backward_field"
   ],
-  "note": "csv-mode analogue: align on comma, transpose, table conversion; no field-wise sort/navigation and no csv LSP"
+  "note": "csv-mode's surface, now including the field-wise half the old note called missing: align on the comma, transpose, table/JSON conversion, and per-field operations - `:csv-sort-fields N` (alias `:csv-sort-numeric-fields`) sorts the selected lines by one field, textually or with `--numeric`, keeping the first line as a header unless `--no-header` says otherwise, and `csv_forward_field`/`csv_backward_field` step the cursor over the delimiters the way `csv-forward-field`/`csv-backward-field` do. Tab-separated blocks are read as such throughout (`csv_delimiter`). The sorter and the boundary walk are pure and unit-tested (`csv_sort_fields_orders_by_one_field`, `csv_field_boundaries_step_over_delimiters`). No csv language server exists to attach, in emacs or here."
  },
  {
   "spec_id": "spacemacs.layer.checkers_languagetool",

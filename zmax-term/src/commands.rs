@@ -1634,6 +1634,8 @@ impl MappableCommand {
         slugify_selection, "Slugify the selection (lowercase, hyphen-separated)",
         humanize_selection, "Humanize a slug/identifier into a Title-Cased label",
         transpose_csv_selection, "Transpose the selected CSV/TSV table (rows <-> columns)",
+        csv_forward_field, "Move to the next CSV field on this line (csv-mode csv-forward-field)",
+        csv_backward_field, "Move to the previous CSV field on this line (csv-mode csv-backward-field)",
         csv_to_json_selection, "Convert the selected CSV/TSV to a JSON array of objects",
         regex_escape_selection, "Escape regex metacharacters in the selection",
         blockquote_selection, "Prefix each selected line with \"> \" (markdown blockquote)",
@@ -9654,6 +9656,113 @@ fn transpose_csv(s: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// The delimiter a CSV/TSV block uses: a tab when one is present, else a comma —
+/// the same rule [`transpose_csv`] follows, so every csv command reads a block
+/// the same way.
+fn csv_delimiter(s: &str) -> char {
+    if s.contains('\t') {
+        '\t'
+    } else {
+        ','
+    }
+}
+
+/// csv-mode `csv-sort-fields` / `csv-sort-numeric-fields`: sort the lines of a
+/// CSV block by one field, counting from 1. Sorting is textual, or numeric when
+/// `numeric` is set (a field that is not a number sorts as 0, as csv-mode's
+/// numeric sort does). Blank lines and a leading header row are left where they
+/// are — csv-mode keeps the header out of the sort.
+///
+/// Pure, so the field-splitting and the ordering are unit tested rather than
+/// driven through the editor.
+pub(crate) fn csv_sort_fields(block: &str, field: usize, numeric: bool, header: bool) -> String {
+    let delim = csv_delimiter(block);
+    let lines: Vec<&str> = block.lines().collect();
+    let (head, rest) = match (header, lines.split_first()) {
+        (true, Some((first, rest))) => (vec![*first], rest.to_vec()),
+        _ => (Vec::new(), lines),
+    };
+    let key = |line: &&str| -> String {
+        line.split(delim)
+            .nth(field.saturating_sub(1))
+            .unwrap_or("")
+            .trim()
+            .to_string()
+    };
+    let mut sortable: Vec<&str> = rest
+        .iter()
+        .filter(|l| !l.trim().is_empty())
+        .copied()
+        .collect();
+    if numeric {
+        sortable.sort_by(|a, b| {
+            let (na, nb) = (
+                key(&a).parse::<f64>().unwrap_or(0.0),
+                key(&b).parse::<f64>().unwrap_or(0.0),
+            );
+            na.partial_cmp(&nb).unwrap_or(std::cmp::Ordering::Equal)
+        });
+    } else {
+        sortable.sort_by_key(|l| key(l));
+    }
+    head.into_iter()
+        .chain(sortable)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The char position of the field boundary `count` fields away from `pos` on its
+/// line, in `dir` (+1 forward, -1 back) — csv-mode's `csv-forward-field` /
+/// `csv-backward-field`. Field boundaries are the delimiters; the ends of the
+/// line bound the walk.
+fn csv_field_boundary(line: &str, col: usize, delim: char, forward: bool) -> usize {
+    let idx: Vec<usize> = line
+        .char_indices()
+        .filter(|(_, c)| *c == delim)
+        .map(|(i, _)| line[..i].chars().count())
+        .collect();
+    if forward {
+        idx.into_iter()
+            .find(|&i| i >= col)
+            .map(|i| i + 1)
+            .unwrap_or_else(|| line.chars().count())
+    } else {
+        idx.into_iter()
+            .rev()
+            .find(|&i| i + 1 < col)
+            .map(|i| i + 1)
+            .unwrap_or(0)
+    }
+}
+
+/// Move the cursor one CSV field forward or back on its line.
+fn csv_move_field(cx: &mut Context, forward: bool) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let line_no = text.char_to_line(cursor);
+    let line_start = text.line_to_char(line_no);
+    let line: String = text.line(line_no).to_string();
+    let delim = csv_delimiter(&line);
+    let col = cursor - line_start;
+    let target = line_start + csv_field_boundary(&line, col, delim, forward);
+    let selection = doc
+        .selection(view.id)
+        .clone()
+        .transform(|range| range.put_cursor(text, target.min(text.len_chars()), false));
+    doc.set_selection(view.id, selection);
+}
+
+/// csv-mode `csv-forward-field`: the start of the next field on this line.
+fn csv_forward_field(cx: &mut Context) {
+    csv_move_field(cx, true);
+}
+
+/// csv-mode `csv-backward-field`: the start of the previous field.
+fn csv_backward_field(cx: &mut Context) {
+    csv_move_field(cx, false);
 }
 
 fn transpose_csv_selection(cx: &mut Context) {
@@ -74351,6 +74460,52 @@ fn open_dribble_file(cx: &mut Context) {
 
 #[cfg(test)]
 mod gap_command_tests {
+    /// csv-mode's field sort: by field, textual or numeric, header kept in place.
+    #[test]
+    fn csv_sort_fields_orders_by_one_field() {
+        let block = "name,qty\npears,10\napples,9\ncherries,100\n";
+        // Textual sort on field 1 leaves the header first.
+        assert_eq!(
+            csv_sort_fields(block, 1, false, true),
+            "name,qty\napples,9\ncherries,100\npears,10"
+        );
+        // Numeric sort on field 2 is not the textual order ("10" < "100" < "9").
+        assert_eq!(
+            csv_sort_fields(block, 2, true, true),
+            "name,qty\napples,9\npears,10\ncherries,100"
+        );
+        assert_eq!(
+            csv_sort_fields(block, 2, false, true),
+            "name,qty\npears,10\ncherries,100\napples,9"
+        );
+        // Without a header the first line sorts with the rest.
+        assert_eq!(csv_sort_fields("b,2\na,1\n", 1, false, false), "a,1\nb,2");
+        // Tab-separated blocks split on tabs.
+        assert_eq!(
+            csv_sort_fields("b\t2\na\t1\n", 1, false, false),
+            "a\t1\nb\t2"
+        );
+    }
+
+    /// `csv-forward-field` / `csv-backward-field` step over the delimiters.
+    #[test]
+    fn csv_field_boundaries_step_over_delimiters() {
+        let line = "one,two,three";
+        // From the start, forward lands just past the first comma.
+        assert_eq!(csv_field_boundary(line, 0, ',', true), 4);
+        // From inside "two", forward lands past the second comma.
+        assert_eq!(csv_field_boundary(line, 5, ',', true), 8);
+        // Past the last delimiter, forward stops at the end of the line.
+        assert_eq!(csv_field_boundary(line, 9, ',', true), line.chars().count());
+        // Backward from inside "three" lands at the start of *that* field, the
+        // way csv-backward-field moves to the field point is in …
+        assert_eq!(csv_field_boundary(line, 9, ',', false), 8);
+        // … and again from there to the field before it.
+        assert_eq!(csv_field_boundary(line, 8, ',', false), 4);
+        // Backward from the first field stops at the start of the line.
+        assert_eq!(csv_field_boundary(line, 2, ',', false), 0);
+    }
+
     /// JetBrains Smart Type Completion filters to what fits the expected type,
     /// which LSP never states; it is read off the line before the caret.
     #[test]
