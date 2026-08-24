@@ -2630,10 +2630,8 @@ impl Dired {
             Ok(o) => {
                 let paths = find_paths(&String::from_utf8_lossy(&o.stdout));
                 if paths.is_empty() {
-                    cx.editor.set_status(format!(
-                        "{label}: no matches under {}",
-                        self.dir.display()
-                    ));
+                    cx.editor
+                        .set_status(format!("{label}: no matches under {}", self.dir.display()));
                     return;
                 }
                 let n = paths.len();
@@ -4049,11 +4047,18 @@ mod isearch_tests {
         let row = d.selected;
 
         // First search: `an` matches at 1..3 of "banana.txt".
-        d.begin_input("Filename I-search: ", Pending::IsearchFilenames { regexp: false });
+        d.begin_input(
+            "Filename I-search: ",
+            Pending::IsearchFilenames { regexp: false },
+        );
         d.isearch_type('a');
         d.isearch_type('n');
         let st = d.input.as_ref().unwrap().isearch.as_ref().unwrap();
-        assert_eq!(st.cmds.last().unwrap().point, (row, 3), "point at match end");
+        assert_eq!(
+            st.cmds.last().unwrap().point,
+            (row, 3),
+            "point at match end"
+        );
 
         // RET (isearch-exit) records that point...
         let inp = d.input.take().unwrap();
@@ -4061,7 +4066,10 @@ mod isearch_tests {
         assert_eq!(d.isearch_point, Some((row, 3)));
 
         // ...and the next search picks up there, finding the SECOND `an` (3..5).
-        d.begin_input("Filename I-search: ", Pending::IsearchFilenames { regexp: false });
+        d.begin_input(
+            "Filename I-search: ",
+            Pending::IsearchFilenames { regexp: false },
+        );
         d.isearch_type('a');
         d.isearch_type('n');
         let st = d.input.as_ref().unwrap().isearch.as_ref().unwrap();
@@ -4072,11 +4080,18 @@ mod isearch_tests {
         d.isearch_point = Dired::isearch_exit_point(inp.isearch.as_ref());
         d.move_selection(0);
         assert_eq!(d.isearch_point, None);
-        d.begin_input("Filename I-search: ", Pending::IsearchFilenames { regexp: false });
+        d.begin_input(
+            "Filename I-search: ",
+            Pending::IsearchFilenames { regexp: false },
+        );
         d.isearch_type('a');
         d.isearch_type('n');
         let st = d.input.as_ref().unwrap().isearch.as_ref().unwrap();
-        assert_eq!(st.cmds.last().unwrap().point, (row, 3), "back to the first match");
+        assert_eq!(
+            st.cmds.last().unwrap().point,
+            (row, 3),
+            "back to the first match"
+        );
     }
 }
 
@@ -4242,7 +4257,9 @@ mod shell_command_tests {
         std::fs::write(&path, b"one\ntwo\n").unwrap();
 
         let mut cmd = std::process::Command::new("/bin/sh");
-        cmd.arg("-c").arg("cat").stdin(std::fs::File::open(&path).unwrap());
+        cmd.arg("-c")
+            .arg("cat")
+            .stdin(std::fs::File::open(&path).unwrap());
         assert_eq!(merged_output(cmd).unwrap().text, "one\ntwo\n");
     }
 

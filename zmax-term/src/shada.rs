@@ -519,7 +519,11 @@ impl Position {
         }
         Some(Position {
             file: PathBuf::from(file),
-            line: value.map_get("l").and_then(Value::as_u64).unwrap_or(1).max(1) as usize,
+            line: value
+                .map_get("l")
+                .and_then(Value::as_u64)
+                .unwrap_or(1)
+                .max(1) as usize,
             col: value.map_get("c").and_then(Value::as_u64).unwrap_or(0) as usize,
         })
     }
@@ -578,10 +582,7 @@ impl EntryKind {
                 Value::Array(vec![Value::Bin(s.clone().into_bytes())]),
             ),
             EntryKind::History { kind, line, sep } => {
-                let mut items = vec![
-                    Value::Uint(*kind),
-                    Value::Bin(line.clone().into_bytes()),
-                ];
+                let mut items = vec![Value::Uint(*kind), Value::Bin(line.clone().into_bytes())];
                 if let Some(sep) = sep {
                     items.push(Value::Uint(*sep as u64));
                 }
@@ -656,7 +657,10 @@ impl EntryKind {
                 generator: text_key(&data, "generator"),
                 version: text_key(&data, "version"),
                 encoding: text_key(&data, "encoding"),
-                max_kbyte: data.map_get("max_kbyte").and_then(Value::as_u64).unwrap_or(0),
+                max_kbyte: data
+                    .map_get("max_kbyte")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0),
                 pid: data.map_get("pid").and_then(Value::as_u64).unwrap_or(0),
             },
             TYPE_SEARCH_PATTERN => {
@@ -665,7 +669,9 @@ impl EntryKind {
                 };
                 let d = SearchPattern::default();
                 let flag = |key: &str, default: bool| {
-                    data.map_get(key).and_then(Value::as_bool).unwrap_or(default)
+                    data.map_get(key)
+                        .and_then(Value::as_bool)
+                        .unwrap_or(default)
                 };
                 EntryKind::SearchPattern(SearchPattern {
                     pattern,
@@ -675,7 +681,10 @@ impl EntryKind {
                     smartcase: flag("sc", d.smartcase),
                     line_offset: flag("sl", d.line_offset),
                     end_offset: flag("se", d.end_offset),
-                    offset: data.map_get("so").and_then(Value::as_i64).unwrap_or(d.offset),
+                    offset: data
+                        .map_get("so")
+                        .and_then(Value::as_i64)
+                        .unwrap_or(d.offset),
                     hlsearch: flag("sh", d.hlsearch),
                     backward: flag("sb", d.backward),
                 })
@@ -780,9 +789,7 @@ impl EntryKind {
             // must not end up holding two `'A`s. A local mark belongs to its
             // file, so that one is keyed by both.
             EntryKind::Mark {
-                global: true,
-                name,
-                ..
+                global: true, name, ..
             } => name.to_string(),
             EntryKind::Mark { name, pos, .. } => {
                 format!("{name}\u{1}{}", pos.file.display())
@@ -1246,10 +1253,7 @@ mod tests {
         let variable = entry(
             EntryKind::Unknown {
                 typ: 6,
-                data: Value::Array(vec![
-                    Value::Bin(b"KEEPTHIS".to_vec()),
-                    Value::Uint(7),
-                ]),
+                data: Value::Array(vec![Value::Bin(b"KEEPTHIS".to_vec()), Value::Uint(7)]),
             },
             50,
         );
@@ -1288,7 +1292,10 @@ mod tests {
 
         // The other direction: an old entry with the newer timestamp wins, which
         // is what makes a second nvim/zmax instance's later write survive.
-        let merged = merge(vec![reg('a', "old-but-newer", 30)], vec![reg('a', "new", 20)]);
+        let merged = merge(
+            vec![reg('a', "old-but-newer", 30)],
+            vec![reg('a', "new", 20)],
+        );
         assert_eq!(merged, vec![reg('a', "old-but-newer", 30)]);
     }
 }

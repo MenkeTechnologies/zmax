@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "arblang"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "ansi-to-tui",
  "base64 0.22.1",
@@ -279,6 +279,7 @@ dependencies = [
  "clap",
  "fusevm 0.23.0",
  "libc",
+ "memchr",
  "nu-ansi-term",
  "percent-encoding",
  "portable-pty 0.9.0",
@@ -8650,7 +8651,7 @@ dependencies = [
 
 [[package]]
 name = "strykelang"
-version = "0.17.47"
+version = "0.17.48"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -8696,7 +8697,7 @@ dependencies = [
  "errno",
  "fancy-regex 0.14.0",
  "flate2",
- "fusevm 0.22.0",
+ "fusevm 0.23.0",
  "git2",
  "glob",
  "hex",
@@ -11568,7 +11569,7 @@ checksum = "0f4a4e8e9dc5c62d159f04fcdbe07f4c3fb710415aab4754bf11505501e3251d"
 
 [[package]]
 name = "znative"
-version = "0.12.35"
+version = "0.12.37"
 
 [[package]]
 name = "zopfli"
@@ -11584,7 +11585,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs"
-version = "0.12.35"
+version = "0.12.37"
 dependencies = [
  "atty",
  "bincode",
@@ -11595,8 +11596,9 @@ dependencies = [
  "crossterm 0.27.0",
  "ctrlc",
  "dirs 5.0.1",
+ "fancy-regex 0.18.0",
  "filetime",
- "fusevm 0.22.0",
+ "fusevm 0.23.0",
  "glob",
  "hostname",
  "indexmap",
@@ -11636,7 +11638,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs-daemon"
-version = "0.12.35"
+version = "0.12.37"
 dependencies = [
  "atty",
  "axum",

@@ -726,7 +726,11 @@ impl Selection {
     #[must_use]
     pub fn union(&self, other: &Selection) -> Selection {
         Selection::new(
-            self.ranges.iter().chain(other.ranges.iter()).copied().collect(),
+            self.ranges
+                .iter()
+                .chain(other.ranges.iter())
+                .copied()
+                .collect(),
             0,
         )
     }
@@ -1564,7 +1568,10 @@ mod test {
         let a = sel(&[(0, 5), (12, 18)]);
         let b = sel(&[(3, 9), (15, 23)]);
 
-        assert_eq!(a.union(&b).ranges(), &[Range::new(0, 9), Range::new(12, 23)]);
+        assert_eq!(
+            a.union(&b).ranges(),
+            &[Range::new(0, 9), Range::new(12, 23)]
+        );
         assert_eq!(
             a.intersection(&b).unwrap().ranges(),
             &[Range::new(3, 5), Range::new(15, 18)]
@@ -1580,7 +1587,10 @@ mod test {
             a.complement(30).unwrap().ranges(),
             &[Range::new(5, 12), Range::new(18, 30)]
         );
-        assert_eq!(sel(&[(4, 9)]).complement(9).unwrap().ranges(), &[Range::new(0, 4)]);
+        assert_eq!(
+            sel(&[(4, 9)]).complement(9).unwrap().ranges(),
+            &[Range::new(0, 4)]
+        );
     }
 
     #[test]

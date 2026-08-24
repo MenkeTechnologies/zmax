@@ -914,7 +914,10 @@ mod test {
     fn termpastefilter_drops_only_the_named_control_characters() {
         let default = "BS,HT,ESC,DEL";
         for c in ['\u{08}', '\t', '\u{1b}', '\u{7f}'] {
-            assert!(is_paste_filtered(c, default), "{c:?} is named by the default");
+            assert!(
+                is_paste_filtered(c, default),
+                "{c:?} is named by the default"
+            );
         }
         // FF, C0 and C1 are not in the default value, and ordinary text never is.
         for c in ['\u{0c}', '\u{01}', '\u{85}', 'a', 'é'] {

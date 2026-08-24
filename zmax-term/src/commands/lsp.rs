@@ -1414,11 +1414,8 @@ pub fn safe_delete(cx: &mut Context) {
     // Expand a bare cursor to the word under it so the whole identifier is the
     // delete target; an existing selection is taken as-is.
     let primary = doc.selection(view.id).primary();
-    let (from, to) = super::expand_bare_cursor_to_word(
-        doc.text().slice(..),
-        primary.from(),
-        primary.to(),
-    );
+    let (from, to) =
+        super::expand_bare_cursor_to_word(doc.text().slice(..), primary.from(), primary.to());
 
     let mut futures: FuturesUnordered<_> = doc
         .language_servers_with_feature(LanguageServerFeature::GotoReference)

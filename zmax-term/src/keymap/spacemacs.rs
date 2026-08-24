@@ -946,7 +946,9 @@ mod tests {
     fn emacs_prefix_keys_stay_prefixes() {
         let km = default();
         // `C-x 8 e` joined them in emacs 29: it is the emoji prefix (emoji.el).
-        for chord in ["C-x 4", "C-x 5", "C-x 6", "C-x 8", "C-x 8 e", "C-x t", "C-x ret"] {
+        for chord in [
+            "C-x 4", "C-x 5", "C-x 6", "C-x 8", "C-x 8 e", "C-x t", "C-x ret",
+        ] {
             assert!(
                 is_prefix(&km, Mode::Normal, chord),
                 "{chord} must stay a prefix, not a command"
@@ -1077,10 +1079,16 @@ mod tests {
             cmd(&km, Mode::Normal, "g P").as_deref(),
             Some("paste_before_cursor_after")
         );
-        assert_eq!(cmd(&km, Mode::Normal, "g v").as_deref(), Some("reselect_visual"));
+        assert_eq!(
+            cmd(&km, Mode::Normal, "g v").as_deref(),
+            Some("reselect_visual")
+        );
         // Bound in `evil-normal-state-map` only, so visual state keeps vim's `g`
         // map untouched — `g u` there is still lowercase-the-selection.
-        assert!(is_prefix(&km, Mode::Select, "g"), "select-mode g stays a prefix");
+        assert!(
+            is_prefix(&km, Mode::Select, "g"),
+            "select-mode g stays a prefix"
+        );
         assert!(
             search(&km, Mode::Select, "g p").is_none(),
             "the override is normal-state only; select-mode g p stays unbound"

@@ -164,8 +164,7 @@ fn select_spec() -> Option<arb::spec::Spec> {
     // An unthemed picker renders in fzf's palette rather than an arb theme —
     // the point of the drop-in. Ctrl-T still switches to an arb theme live.
     spec.theme = None;
-    spec
-        .widgets
+    spec.widgets
         .iter()
         .any(|w| w.kind == arb::spec::WidgetKind::Select)
         .then_some(spec)
@@ -295,12 +294,7 @@ fn child_env(
 ) -> Vec<(String, String)> {
     let (cols, rows) = term_size;
     let (query, current, marks, cursor) = match controls.lock() {
-        Ok(c) => (
-            c.filter.clone(),
-            c.current.clone(),
-            c.marks.len(),
-            c.cursor,
-        ),
+        Ok(c) => (c.filter.clone(), c.current.clone(), c.marks.len(), c.cursor),
         Err(_) => return Vec::new(),
     };
     // The match count is the renderer's own predicate over the same stream, so
@@ -342,12 +336,15 @@ fn child_env(
         ("FZF_PREVIEW_LINES".into(), pv_rows.to_string()),
         ("FZF_PREVIEW_COLUMNS".into(), pv_cols.to_string()),
     ];
-    if let Some(pane) = look.preview_window.split(ratatui::layout::Rect {
-        x: 0,
-        y: 0,
-        width: cols,
-        height: rows.saturating_sub(2),
-    }).1
+    if let Some(pane) = look
+        .preview_window
+        .split(ratatui::layout::Rect {
+            x: 0,
+            y: 0,
+            width: cols,
+            height: rows.saturating_sub(2),
+        })
+        .1
     {
         // The box's own border is where fzf counts its content from.
         env.push(("FZF_PREVIEW_TOP".into(), (pane.y + 1).to_string()));
@@ -396,10 +393,7 @@ fn preview_geometry(window: &arb::fzf::PreviewWindow, (cols, rows): (u16, u16)) 
         height: rows.saturating_sub(2),
     };
     match window.split(body).1 {
-        Some(pane) => (
-            pane.height.saturating_sub(2),
-            pane.width.saturating_sub(2),
-        ),
+        Some(pane) => (pane.height.saturating_sub(2), pane.width.saturating_sub(2)),
         // `hidden`, or a zero size: fzf still runs the command, and reports the
         // window it would have drawn as empty.
         None => (0, 0),
@@ -446,8 +440,16 @@ pub fn pick(req: Request<'_>, fallback: impl FnOnce() -> Vec<String>) -> Option<
             .command
             .clone()
             .filter(|c| !c.is_empty())
-            .or_else(|| std::env::var("FZF_DEFAULT_COMMAND").ok().filter(|c| !c.is_empty()))
-            .or_else(|| std::env::var("FZF_CTRL_T_COMMAND").ok().filter(|c| !c.is_empty()));
+            .or_else(|| {
+                std::env::var("FZF_DEFAULT_COMMAND")
+                    .ok()
+                    .filter(|c| !c.is_empty())
+            })
+            .or_else(|| {
+                std::env::var("FZF_CTRL_T_COMMAND")
+                    .ok()
+                    .filter(|c| !c.is_empty())
+            });
         match cmd {
             Some(cmd) => source_child = spawn_source(&cmd, Arc::clone(&state)),
             None => {
@@ -596,7 +598,10 @@ mod tests {
         // `source .name { in }` form, every fzf.vim command would silently stop
         // opening a picker — this is where that shows up.
         let spec = select_spec().expect("arb still parses the select spec");
-        assert!(spec.theme.is_none(), "an unthemed picker uses fzf's palette");
+        assert!(
+            spec.theme.is_none(),
+            "an unthemed picker uses fzf's palette"
+        );
     }
 
     /// Every variable fzf(1) lists under "ENVIRONMENT VARIABLES EXPORTED TO

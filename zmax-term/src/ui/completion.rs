@@ -193,7 +193,10 @@ fn parse_completeitemalign(value: &str) -> Option<[CompleteItemColumn; 3]> {
     }
     // Exactly three words, and no word twice — which with three slots is the same
     // as "contains all three".
-    if words.next().is_some() || order[0] == order[1] || order[1] == order[2] || order[0] == order[2]
+    if words.next().is_some()
+        || order[0] == order[1]
+        || order[1] == order[2]
+        || order[0] == order[2]
     {
         return None;
     }

@@ -74,11 +74,7 @@ async fn undo_of_cw_puts_cursor_at_word_start() -> anyhow::Result<()> {
 async fn undo_of_x_puts_cursor_back_on_the_deleted_char() -> anyhow::Result<()> {
     test_with_config(
         vim(),
-        (
-            "        bbbb#[b|]#bbb",
-            "i<esc>xu",
-            "        bbb#[b|]#bbbb",
-        ),
+        ("        bbbb#[b|]#bbb", "i<esc>xu", "        bbb#[b|]#bbbb"),
     )
     .await?;
     Ok(())

@@ -1644,13 +1644,13 @@ mod test {
         // `foo bar\n  baz\n\nqux`:
         //   f0 o1 o2 ' '3 b4 a5 r6 \n7 ' '8 ' '9 b10 a11 z12 \n13 \n14 q15 u16 x17
         let w = [
-            ("foo\n\tbar", 0, 1, 5),  // from `foo` over the newline -> `bar`, not `\t`
-            ("foo\n\tbar", 2, 1, 5),  // last char of the line -> `bar`
+            ("foo\n\tbar", 0, 1, 5),   // from `foo` over the newline -> `bar`, not `\t`
+            ("foo\n\tbar", 2, 1, 5),   // last char of the line -> `bar`
             ("foo\n    bar", 0, 1, 8), // space indent -> `bar`
             ("foo bar\n  baz\n\nqux", 4, 1, 10), // -> `baz`
             ("foo bar\n  baz\n\nqux", 10, 1, 14), // empty line is a stop
             ("foo bar\n  baz\n\nqux", 14, 1, 15), // off the empty line -> `qux`
-            ("foo bar\n  baz\n\nqux", 4, 3, 15),  // count composes across both
+            ("foo bar\n  baz\n\nqux", 4, 3, 15), // count composes across both
         ];
         for (sample, cursor, count, expected) in w {
             let range =
@@ -1663,14 +1663,14 @@ mod test {
         }
 
         let b = [
-            ("foo\n\tbar", 5, 1, 0),  // from `bar` back over the newline -> `foo`
-            ("foo\n\tbar", 7, 1, 5),  // inside `bar` -> its own start
+            ("foo\n\tbar", 5, 1, 0),   // from `bar` back over the newline -> `foo`
+            ("foo\n\tbar", 7, 1, 5),   // inside `bar` -> its own start
             ("foo\n    bar", 8, 1, 0), // space indent -> `foo`
             ("foo bar\n  baz\n\nqux", 10, 1, 4), // `baz` -> `bar`
             ("foo bar\n  baz\n\nqux", 15, 1, 14), // `qux` -> the empty line
             ("foo bar\n  baz\n\nqux", 14, 1, 10), // empty line -> `baz`
             ("foo bar\n  baz\n\nqux", 15, 3, 4), // count composes: empty line, `baz`, `bar`
-            ("foo bar", 0, 1, 0),                // start of buffer: stay put
+            ("foo bar", 0, 1, 0),      // start of buffer: stay put
         ];
         for (sample, cursor, count, expected) in b {
             let range =

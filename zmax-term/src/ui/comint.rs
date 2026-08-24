@@ -1521,11 +1521,7 @@ impl Comint {
             .and_then(|h| h.cmds.last())
             .is_some_and(|st| st.success);
         if quit {
-            let stored = self
-                .hist
-                .take()
-                .map(|h| h.stored)
-                .unwrap_or_default();
+            let stored = self.hist.take().map(|h| h.stored).unwrap_or_default();
             self.set_input(&stored);
             self.ring.reset();
             return true;
@@ -1860,7 +1856,12 @@ impl Comint {
                 // glues it onto the front of the first line of the reply. That
                 // is what `comint-prompt-regexp` matches in emacs, where the
                 // prompt was already consumed by the time the reply arrives.
-                lines.push(strip_gdb_prompts(line).chars().skip(skip).collect::<String>());
+                lines.push(
+                    strip_gdb_prompts(line)
+                        .chars()
+                        .skip(skip)
+                        .collect::<String>(),
+                );
             }
             sb.truncate(mark);
         }
@@ -2469,17 +2470,26 @@ mod tests {
         c.hist_type('g');
         assert_eq!(c.input, "git commit -m x", "first older input matching `g`");
         c.hist_type('i');
-        assert_eq!(c.input, "git commit -m x", "`gi` still matches where we are");
+        assert_eq!(
+            c.input, "git commit -m x",
+            "`gi` still matches where we are"
+        );
 
         c.hist_repeat(false);
-        assert_eq!(c.input, "git status", "C-r steps past `cargo test` to the next match");
+        assert_eq!(
+            c.input, "git status",
+            "C-r steps past `cargo test` to the next match"
+        );
 
         c.hist_delete_char();
         assert_eq!(c.input, "git commit -m x", "DEL undoes the repeat");
 
         // A pattern that matches nothing fails without moving, and says so.
         c.hist_type('z');
-        assert_eq!(c.input, "git commit -m x", "a failing search leaves point put");
+        assert_eq!(
+            c.input, "git commit -m x",
+            "a failing search leaves point put"
+        );
         let prompt = Comint::hist_prompt(c.hist.as_ref().unwrap());
         assert_eq!(prompt, "failing history regexp I-search backward: ");
 

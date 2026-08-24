@@ -4638,7 +4638,9 @@ impl Editor {
 
     /// Where `id` sits in the buffer line, counting from 0.
     pub fn buffer_position(&self, id: DocumentId) -> Option<usize> {
-        self.ordered_document_ids().iter().position(|&buf| buf == id)
+        self.ordered_document_ids()
+            .iter()
+            .position(|&buf| buf == id)
     }
 
     /// Write the reconciled order back, so the reordering operations below act on

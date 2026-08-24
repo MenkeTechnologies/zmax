@@ -3265,7 +3265,13 @@ impl EditorView {
         let new_btn = if x + Self::str_width(" + ") <= pills_end {
             let start = x;
             x = surface
-                .set_stringn(x, viewport.y, " + ", (pills_end - x) as usize, inactive_style)
+                .set_stringn(
+                    x,
+                    viewport.y,
+                    " + ",
+                    (pills_end - x) as usize,
+                    inactive_style,
+                )
                 .0;
             (start, x)
         } else {
@@ -5002,7 +5008,10 @@ impl EditorView {
                                 Range::point(pos)
                             }
                         };
-                        doc.set_selection(view_id, Selection::single(selected.anchor, selected.head));
+                        doc.set_selection(
+                            view_id,
+                            Selection::single(selected.anchor, selected.head),
+                        );
                         // Visual-line and visual-block are mutually exclusive and
                         // both commands below are toggles, so whatever the previous
                         // click left has to go first — otherwise a triple click

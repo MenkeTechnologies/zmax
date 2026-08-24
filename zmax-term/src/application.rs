@@ -2357,10 +2357,8 @@ impl Application {
                 let line = if req.sink == "{}" {
                     sel.to_string()
                 } else {
-                    req.sink.replace(
-                        "{}",
-                        &crate::commands::typed::quote_command_arg(sel),
-                    )
+                    req.sink
+                        .replace("{}", &crate::commands::typed::quote_command_arg(sel))
                 };
                 let mut cx = crate::compositor::Context {
                     editor: &mut self.editor,

@@ -881,7 +881,10 @@ fn open_cmdline_window(compositor: &mut Compositor, cx: &mut Context, name: &str
         return;
     }
     let (view, doc) = current!(cx.editor);
-    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let pos = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     let transaction =
         zmax_core::Transaction::insert(doc.text(), doc.selection(view.id), line.into());
     doc.apply(&transaction, view.id);
@@ -2187,11 +2190,12 @@ impl Prompt {
             return;
         }
         self.isearch_reversed = !self.isearch_reversed;
-        cx.editor.set_status(if self.isearch_reversed == self.isearch_forward {
-            "search direction: backward"
-        } else {
-            "search direction: forward"
-        });
+        cx.editor
+            .set_status(if self.isearch_reversed == self.isearch_forward {
+                "search direction: backward"
+            } else {
+                "search direction: forward"
+            });
         self.isearch_step_reversed(cx);
     }
 

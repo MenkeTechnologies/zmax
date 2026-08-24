@@ -3925,14 +3925,8 @@ fn goto_screen_line_middle(cx: &mut Context) {
         let start_of_screen_line = range.cursor(text);
         // Half a screenwidth in *display* columns — the formatter expands tabs
         // and counts wide characters, as vim's coladvance() does.
-        let (pos, _) = char_idx_at_visual_offset(
-            text,
-            start_of_screen_line,
-            0,
-            half,
-            &text_fmt,
-            &annotations,
-        );
+        let (pos, _) =
+            char_idx_at_visual_offset(text, start_of_screen_line, 0, half, &text_fmt, &annotations);
         // "or as much as possible": rest on the line's last character rather
         // than on its line ending; an empty line stays put.
         let line = text.char_to_line(start_of_screen_line);
@@ -12722,8 +12716,7 @@ fn search_selection_impl(cx: &mut Context, detect_word_boundaries: bool) {
         .map(|selection| {
             // Vim `*`/`#`: with a bare cursor (no real selection) search the WORD
             // under the cursor, not the single char.
-            let (from, to) =
-                expand_bare_cursor_to_word(text, selection.from(), selection.to());
+            let (from, to) = expand_bare_cursor_to_word(text, selection.from(), selection.to());
             let add_boundary_prefix = detect_word_boundaries && is_at_word_start(text, from);
             let add_boundary_suffix = detect_word_boundaries && is_at_word_end(text, to);
 
@@ -13619,9 +13612,9 @@ fn isearch_emoji_by_name(cx: &mut Context) {
         return;
     }
     // `(interactive "p")`: no argument means one copy.
-    let count = cx
-        .prefix_arg()
-        .map_or(1, |arg| arg.value().max(1).min(i64::from(u16::MAX)) as usize);
+    let count = cx.prefix_arg().map_or(1, |arg| {
+        arg.value().max(1).min(i64::from(u16::MAX)) as usize
+    });
 
     let columns = [
         ui::PickerColumn::new("emoji", |e: &Emoji, _: &()| e.0.into()),
@@ -33840,9 +33833,7 @@ fn goto_diag_impl(
         };
 
         let selection = match (diag, direction) {
-            (Some(diag), Direction::Forward) => {
-                Selection::single(diag.range.start, diag.range.end)
-            }
+            (Some(diag), Direction::Forward) => Selection::single(diag.range.start, diag.range.end),
             // NOTE: the selection is reversed because we're jumping to the
             // previous diagnostic.
             (Some(diag), Direction::Backward) => {
@@ -45522,10 +45513,7 @@ fn emoji_picker(cx: &mut Context, entries: Vec<Emoji>) {
 /// recently-used emoji glyphs." The list is filled by every insertion from the
 /// picker; emacs seeds its own with two faces, zmax starts empty and says so.
 fn emoji_recent(cx: &mut Context) {
-    let recent = EMOJI_RECENT
-        .lock()
-        .map(|r| r.clone())
-        .unwrap_or_default();
+    let recent = EMOJI_RECENT.lock().map(|r| r.clone()).unwrap_or_default();
     if recent.is_empty() {
         cx.editor
             .set_error("emoji-recent: no emoji has been inserted yet");
@@ -52789,9 +52777,7 @@ fn edit_kbd_macro(cx: &mut Context) {
             // `C-h l`: the recent keystrokes, as a macro.
             if answer == "C-h l" {
                 match lossage_macro_string(cx.editor) {
-                    Some(keys) => {
-                        edit_macro_prompt_cx(cx, "Edit lossage as macro: ".into(), keys)
-                    }
+                    Some(keys) => edit_macro_prompt_cx(cx, "Edit lossage as macro: ".into(), keys),
                     None => cx.editor.set_status("no recent keys recorded yet"),
                 }
                 return;
@@ -55083,7 +55069,12 @@ impl ObjectEdge {
 // from the cursor to an object's start or end. The object itself is picked by
 // the next keypress, exactly as for `mi` / `ma`.
 fn select_to_textobject_around_start(cx: &mut Context) {
-    select_textobject_edge_then(cx, textobject::TextObject::Around, ObjectEdge::ToStart, None);
+    select_textobject_edge_then(
+        cx,
+        textobject::TextObject::Around,
+        ObjectEdge::ToStart,
+        None,
+    );
 }
 fn select_to_textobject_around_end(cx: &mut Context) {
     select_textobject_edge_then(cx, textobject::TextObject::Around, ObjectEdge::ToEnd, None);
@@ -55105,7 +55096,12 @@ fn extend_to_textobject_around_end(cx: &mut Context) {
     );
 }
 fn select_to_textobject_inner_start(cx: &mut Context) {
-    select_textobject_edge_then(cx, textobject::TextObject::Inside, ObjectEdge::ToStart, None);
+    select_textobject_edge_then(
+        cx,
+        textobject::TextObject::Inside,
+        ObjectEdge::ToStart,
+        None,
+    );
 }
 fn select_to_textobject_inner_end(cx: &mut Context) {
     select_textobject_edge_then(cx, textobject::TextObject::Inside, ObjectEdge::ToEnd, None);
@@ -66155,7 +66151,9 @@ fn nroff_electric_newline(cx: &mut Context) -> bool {
 fn view_mode(cx: &mut Context) {
     let entry_point = {
         let (view, doc) = current_ref!(cx.editor);
-        doc.selection(view.id).primary().cursor(doc.text().slice(..))
+        doc.selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..))
     };
     let doc = doc_mut!(cx.editor);
     let id = doc.id();

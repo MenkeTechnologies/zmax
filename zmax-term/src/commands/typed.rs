@@ -17401,7 +17401,11 @@ fn filter_reject_impl(
     // point cursor filter a single character's worth of text, i.e. nothing.
     let span = line_filter_span(doc, view.id);
     let text = doc.text();
-    let s: String = text.slice(..).slice(span.start..span.end).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(span.start..span.end)
+        .chunks()
+        .collect();
     let new = filter_lines(&s, pattern, keep)?;
     let transaction = Transaction::change(
         text,
@@ -41443,8 +41447,7 @@ fn prepend_to_file(
     };
     let mut out = body.into_bytes();
     out.extend_from_slice(&existing);
-    std::fs::write(&path, &out)
-        .map_err(|e| anyhow!("prepend-to-file: {}: {e}", path.display()))?;
+    std::fs::write(&path, &out).map_err(|e| anyhow!("prepend-to-file: {}: {e}", path.display()))?;
     cx.editor
         .set_status(format!("prepended region to {}", path.display()));
     Ok(())
@@ -41820,7 +41823,9 @@ fn shada_line_col(text: zmax_core::ropey::RopeSlice, pos: usize) -> (usize, usiz
 /// The inverse of [`shada_line_col`], clamped to the buffer — a file edited
 /// outside the session can be shorter than it was when the mark was written.
 fn shada_char_pos(text: zmax_core::ropey::RopeSlice, line: usize, col: usize) -> usize {
-    let row = line.saturating_sub(1).min(text.len_lines().saturating_sub(1));
+    let row = line
+        .saturating_sub(1)
+        .min(text.len_lines().saturating_sub(1));
     pos_at_coords(text, zmax_core::Position::new(row, col), true).min(text.len_chars())
 }
 
@@ -42151,7 +42156,12 @@ fn shada_state(editor: &Editor, limits: &ShadaLimits) -> Vec<shada::Entry> {
         (shada::HISTORY_CMD, ':', limits.cmd_history, None),
         // "Third item is only valid for search history" — the character the
         // search was started with, `/` for a forward search.
-        (shada::HISTORY_SEARCH, '/', limits.search_history, Some(b'/')),
+        (
+            shada::HISTORY_SEARCH,
+            '/',
+            limits.search_history,
+            Some(b'/'),
+        ),
     ] {
         if cap == 0 {
             continue;
@@ -42408,8 +42418,8 @@ fn rshada(
     }
     use crate::shada::EntryKind;
     let path = shada_path(&args);
-    let bytes = std::fs::read(&path)
-        .map_err(|e| anyhow!("rshada: cannot read {}: {e}", path.display()))?;
+    let bytes =
+        std::fs::read(&path).map_err(|e| anyhow!("rshada: cannot read {}: {e}", path.display()))?;
     let (entries, critical) = crate::shada::decode_file(&bytes);
 
     // Registers first: a name this session already wrote is left alone unless
@@ -67810,7 +67820,11 @@ fn execute_command_line_inner(
                     bail!("E13: file exists (add ! to override): {}", target.display());
                 }
             }
-            let name = if append { "append-to-file" } else { "write-region" };
+            let name = if append {
+                "append-to-file"
+            } else {
+                "write-region"
+            };
             let cmd = TYPABLE_COMMAND_MAP.get(name).unwrap();
             execute_command(cx, cmd, &file, event)?;
             if quit {
@@ -68955,13 +68969,19 @@ fn ex_z_window(
         // overrides the count: (cnt - 1) / 2 lines on each side.
         Some('.') => {
             let half = (cnt - 1) / 2;
-            ZWindow::Span(if lno > half { lno - half } else { 1 }, (lno + half).min(last))
+            ZWindow::Span(
+                if lno > half { lno - half } else { 1 },
+                (lno + half).min(last),
+            )
         }
         // "Center with hyphens": like `.`, with a rule above and below the line.
         Some('=') => {
             let half = (cnt - 1) / 2;
             ZWindow::Centred {
-                before: (if lno > half { lno - half } else { 1 }, lno.saturating_sub(1)),
+                before: (
+                    if lno > half { lno - half } else { 1 },
+                    lno.saturating_sub(1),
+                ),
                 line: lno,
                 after: (lno + 1, (lno + half).saturating_sub(1).min(last)),
             }
@@ -69049,7 +69069,11 @@ fn ex_z_impl(
     {
         let (view, doc) = current!(cx.editor);
         let text = doc.text();
-        let pos = text.line_to_char(cursor_line.saturating_sub(1).min(last_real_line(text.slice(..))));
+        let pos = text.line_to_char(
+            cursor_line
+                .saturating_sub(1)
+                .min(last_real_line(text.slice(..))),
+        );
         doc.set_selection(view.id, Selection::point(pos));
     }
     super::show_text_in_scratch(cx.editor, &out);
@@ -69878,7 +69902,10 @@ mod vim_set_tests {
         assert_eq!(split_semicolon_address("/a/;/b/"), Some(("/a/", "/b/")));
         assert_eq!(split_semicolon_address("/a;b/"), None);
         assert_eq!(split_semicolon_address("?a;b?;3"), Some(("?a;b?", "3")));
-        assert_eq!(split_semicolon_address("/a\\/;b/;$"), Some(("/a\\/;b/", "$")));
+        assert_eq!(
+            split_semicolon_address("/a\\/;b/;$"),
+            Some(("/a\\/;b/", "$"))
+        );
         assert_eq!(split_semicolon_address("1,$"), None);
         assert_eq!(split_semicolon_address(";"), Some(("", "")));
         // The range parser has to hand `;` ranges to the resolver in the first place.
@@ -71921,11 +71948,7 @@ mod vim_set_tests {
         }
         // 'shada' `<N` caps lines, not values: the boundaries are re-walked over
         // what survives, so the restored values still line up.
-        let entry = shada_register_entry(
-            'a',
-            &["one\ntwo".to_string(), "three".to_string()],
-            2,
-        );
+        let entry = shada_register_entry('a', &["one\ntwo".to_string(), "three".to_string()], 2);
         assert_eq!(entry.contents, vec!["one", "two"]);
         assert_eq!(shada_register_restore(&entry), vec!["one\ntwo".to_string()]);
         // An nvim-written entry has no `zv` at all: the whole line array is one
@@ -71938,7 +71961,10 @@ mod vim_set_tests {
             unnamed: false,
             value_lines: Vec::new(),
         };
-        assert_eq!(shada_register_restore(&nvim), vec!["one\ntwo\n".to_string()]);
+        assert_eq!(
+            shada_register_restore(&nvim),
+            vec!["one\ntwo\n".to_string()]
+        );
     }
 
     /// `:uptime` reads `ps -o etime=`, whose format is `[[dd-]hh:]mm:ss`.
@@ -72928,7 +72954,10 @@ mod vim_set_tests {
         assert_eq!(d.files, 100);
         assert_eq!(d.lines, 50);
         assert_eq!(d.kb, 10);
-        assert_eq!(d.removable, vec!["/tmp/".to_string(), "/private/".to_string()]);
+        assert_eq!(
+            d.removable,
+            vec!["/tmp/".to_string(), "/private/".to_string()]
+        );
         assert!(d.file_marks, "the default 'shada' has no `f0`");
         assert_eq!(d.buffers, None, "the default 'shada' has no `%`");
         // Explicit caps win; the flags that name state zmax has none of (`!`
@@ -72963,10 +72992,7 @@ mod vim_set_tests {
         );
         // `r` is case-insensitive and may be given several times.
         let r = shada_limits("r/Tmp/,r/Volumes/", 0);
-        assert!(shada_removable(
-            &r,
-            std::path::Path::new("/tmp/scratch.rs")
-        ));
+        assert!(shada_removable(&r, std::path::Path::new("/tmp/scratch.rs")));
         assert!(shada_removable(
             &r,
             std::path::Path::new("/Volumes/usb/notes.md")

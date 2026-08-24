@@ -4781,14 +4781,19 @@ mod test {
         );
         assert!(!doc.apply_temporary(&tx, view.id));
         assert_eq!(doc.text().to_string(), "line one\n", "text is untouched");
-        assert!(!doc.is_modified(), "a refused change does not dirty the buffer");
+        assert!(
+            !doc.is_modified(),
+            "a refused change does not dirty the buffer"
+        );
 
         // Moving around an unmodifiable buffer is the point of one: a transaction
         // that only carries a selection changes no text, so it still applies.
         let motion = Transaction::new(doc.text()).with_selection(Selection::single(4, 4));
         assert!(doc.apply(&motion, view.id), "cursor motion is not a change");
         assert_eq!(
-            doc.selection(view.id).primary().cursor(doc.text().slice(..)),
+            doc.selection(view.id)
+                .primary()
+                .cursor(doc.text().slice(..)),
             4
         );
 
