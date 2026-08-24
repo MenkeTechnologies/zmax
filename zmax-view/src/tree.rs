@@ -1367,10 +1367,30 @@ mod test {
     use crate::editor::GutterConfig;
     use crate::DocumentId;
 
+    /// `winminwidth`/`winminheight` live in process-wide statics (they are vim
+    /// options, set once per session), so a test that raises the floor is visible
+    /// to every other test running in parallel. Every test that writes a floor —
+    /// or asserts against one — takes this lock and runs alone.
+    static WIN_MIN_FLOOR: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Hold the floor lock for the rest of the test and start from the shipped
+    /// defaults. Poisoning is ignored and the floors are reset on entry so that a
+    /// test that panics part-way through — before restoring what it raised —
+    /// cannot cascade into failures in the others.
+    fn lock_win_min_floor() -> std::sync::MutexGuard<'static, ()> {
+        let guard = WIN_MIN_FLOOR
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        set_win_min_width(3);
+        set_win_min_height(2);
+        guard
+    }
+
     // vim `winminwidth`: a resize that would push a window below the floor is
     // refused outright, exactly as vim refuses to shrink past `winminwidth`.
     #[test]
     fn winminwidth_is_the_resize_floor() {
+        let _floor = lock_win_min_floor();
         let mut tree = Tree::new(Rect::new(0, 0, 40, 20));
         let left = tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
         tree.split_with(
@@ -1401,6 +1421,7 @@ mod test {
     // all (`resize_view_taller` and friends were dead there).
     #[test]
     fn the_last_pane_resizes_against_its_previous_sibling() {
+        let _floor = lock_win_min_floor();
         let mut tree = Tree::new(Rect::new(0, 0, 40, 20));
         let left = tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
         let right = tree.split_with(
@@ -1447,6 +1468,7 @@ mod test {
     // the process-wide option statics that the other tests in this file read.)
     #[test]
     fn winwidth_grows_the_focused_window_and_winheight_the_stack() {
+        let _floor = lock_win_min_floor();
         let mut tree = Tree::new(Rect::new(0, 0, 100, 40));
         let left = tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
         let right = tree.split_with(

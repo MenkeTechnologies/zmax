@@ -568,7 +568,7 @@ fn strip_line_comment(line: &str) -> &str {
 
 /// The column vim's lisp indenter puts the line after `text` at. A port of
 /// `get_lisp_indent` (nvim src/nvim/indent.c:1679), the function `:set lisp`
-/// runs for <Enter>, `cc`/`S` and `=`.
+/// runs for `<Enter>`, `cc`/`S` and `=`.
 ///
 /// vim works in three steps, in this order:
 ///
@@ -658,7 +658,7 @@ fn lisp_open_bracket(lines: &[&str]) -> Option<(usize, usize)> {
         // "braces inside of quotes are ignored, but only if there is an even
         // number of quotes in the line" — with an odd count vim cannot tell
         // which half is the string, and gives up on skipping it.
-        let do_quotes = lisp_quote_count(line) % 2 == 0;
+        let do_quotes = lisp_quote_count(line).is_multiple_of(2);
         let mut in_quote = false;
         let mut i = 0;
         while i < end {
@@ -706,7 +706,7 @@ fn lisp_unescaped(b: &[u8], i: usize) -> bool {
     while j > 0 && b[j - 1] == b'\\' {
         j -= 1;
     }
-    (i - j) % 2 == 0
+    (i - j).is_multiple_of(2)
 }
 
 /// vim's `do_quotes` count for one line: the `"` characters, skipping `\"` and

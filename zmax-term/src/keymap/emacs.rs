@@ -126,9 +126,9 @@ fn add_typables(mode: &mut KeyTrie) {
 ///
 /// so `F1 k` and `C-h k` are one binding, not two — which is why the node is
 /// built once and cloned onto `F1`. (`<help>` has no zmax key event, so that
-/// alias is dropped.) The map itself is [`spacemacs::ch_prefix`], the same
+/// alias is dropped.) The map itself is [`super::spacemacs::ch_prefix`], the same
 /// curated `help-map` port the spacemacs preset overlays; the `C-h *` rows of
-/// [`spacemacs::CXCH_FULL`] (`C-h a`, `C-h d`, `C-h 4 i`, `C-h 4 s`, the
+/// [`super::spacemacs::CXCH_FULL`] (`C-h a`, `C-h d`, `C-h 4 i`, `C-h 4 s`, the
 /// `C-h C-*` GNU-documentation keys) go down first so the curated bindings win
 /// on collision, exactly as they do there.
 fn add_help_map(mode: &mut KeyTrie) {

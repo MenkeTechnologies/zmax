@@ -718,11 +718,9 @@ impl Selection {
 
     /// The characters covered by either selection (vis `|`).
     ///
-    /// vis sweeps the two sorted lists and merges what overlaps; [`normalize`]
+    /// vis sweeps the two sorted lists and merges what overlaps; `normalize`
     /// already does exactly that to the concatenation, adjacent-but-touching
     /// ranges staying separate in both.
-    ///
-    /// [`normalize`]: Selection::normalize
     #[must_use]
     pub fn union(&self, other: &Selection) -> Selection {
         Selection::new(

@@ -1812,9 +1812,9 @@ impl Comint {
     /// reader threads split the process output on newlines and gdb's `(gdb) `
     /// prompt carries none, so there is no prompt *line* to stop at: the reply
     /// is taken to be complete once the output has stayed quiet for
-    /// [`FETCH_QUIET`], and — since emacs's loop can also be entered against a
+    /// `FETCH_QUIET`, and — since emacs's loop can also be entered against a
     /// debugger that never answers — the whole wait is capped at
-    /// [`FETCH_TIMEOUT`] rather than hanging the panel.
+    /// `FETCH_TIMEOUT` rather than hanging the panel.
     fn fetch_lines(&mut self, command: &str, skip: usize) -> Vec<String> {
         use std::time::{Duration, Instant};
         /// Output quiet for this long ends the reply (stands in for the prompt).

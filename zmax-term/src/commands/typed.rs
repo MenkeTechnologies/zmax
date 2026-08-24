@@ -25716,7 +25716,7 @@ fn vim_opt_canonical(tok: &str) -> (String, String) {
 /// store keeps whichever the user typed).
 ///
 /// `Err(())` rejects the token, which fails the whole `:set` line with
-/// "E474: Invalid argument: <token>". `Ok(Some(v))` is a value nvim rewrites
+/// "E474: Invalid argument: `<token>`". `Ok(Some(v))` is a value nvim rewrites
 /// before storing it; `Ok(None)` stores the value as typed.
 fn vim_num_option_fixup(name: &str, value: &str) -> Result<Option<&'static str>, ()> {
     match name {
@@ -32723,7 +32723,7 @@ fn ex_modifier(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
 }
 
 /// vim `:[count]verb[ose] {command}` (various.txt:499-520) — "Execute {command}
-/// with 'verbose' set to [count]. If [count] is omitted one is used.
+/// with 'verbose' set to \[count\]. If \[count\] is omitted one is used.
 /// ":0verbose" can be used to set 'verbose' to zero." The previous value comes
 /// back when {command} is done, so the setting really is scoped to it.
 ///
@@ -41829,6 +41829,9 @@ fn shada_char_pos(text: zmax_core::ropey::RopeSlice, line: usize, col: usize) ->
     pos_at_coords(text, zmax_core::Position::new(row, col), true).min(text.len_chars())
 }
 
+/// Parked ShaDa marks per file: canonical path -> (mark name, 1-based line, column).
+type PendingShadaMarks = std::collections::HashMap<std::path::PathBuf, Vec<(char, usize, usize)>>;
+
 thread_local! {
     /// Marks `:rshada` read for files no buffer holds yet, keyed by canonical
     /// path. nvim stores marks per file and applies them when the file itself is
@@ -41836,9 +41839,8 @@ thread_local! {
     /// When a file is read and 'shada' is non-empty, the marks for that file are
     /// read from the ShaDa file." — so they wait here for the `DocumentDidOpen`
     /// hook [`install_shada_mark_hook`] installs, instead of being dropped.
-    static PENDING_SHADA_MARKS: std::cell::RefCell<
-        std::collections::HashMap<std::path::PathBuf, Vec<(char, usize, usize)>>,
-    > = std::cell::RefCell::new(std::collections::HashMap::new());
+    static PENDING_SHADA_MARKS: std::cell::RefCell<PendingShadaMarks> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
 }
 
 /// Park a mark (name, 1-based line, column — the shape a ShaDa position carries)
@@ -41868,7 +41870,7 @@ fn install_shada_mark_hook() {
             let path = event
                 .editor
                 .document(event.doc)
-                .and_then(|doc| doc.path().map(|p| zmax_stdx::path::canonicalize(p)));
+                .and_then(|doc| doc.path().map(zmax_stdx::path::canonicalize));
             let Some(marks) =
                 path.and_then(|p| PENDING_SHADA_MARKS.with(|m| m.borrow_mut().remove(&p)))
             else {
@@ -43984,7 +43986,7 @@ fn read_target(text: &zmax_core::Rope, line: usize) -> usize {
 /// command's output, linewise. `at` is the char position to insert at, resolved
 /// from the command's address by [`execute_command_line_inner`]; `None` means
 /// after the cursor's line, which is what a bare `:r` does ("Insert the file
-/// [name] below the cursor", `:h :read`).
+/// \[name\] below the cursor", `:h :read`).
 fn read_impl(
     cx: &mut compositor::Context,
     args: Args,
@@ -73286,9 +73288,7 @@ mod vim_set_tests {
         assert!(parse_wordnik("<html><body>no definitions here</body></html>").is_empty());
 
         // `define-word-limit` caps the list.
-        let many: String = std::iter::repeat("<li><abbr>n.</abbr> a word</li>")
-            .take(WORDNIK_LIMIT + 5)
-            .collect();
+        let many: String = "<li><abbr>n.</abbr> a word</li>".repeat(WORDNIK_LIMIT + 5);
         assert_eq!(parse_wordnik(&many).len(), WORDNIK_LIMIT);
 
         // Entities in the body come back as their characters.

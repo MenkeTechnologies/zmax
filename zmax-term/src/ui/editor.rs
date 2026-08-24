@@ -3141,14 +3141,18 @@ impl EditorView {
             let from_bg = from.bg.or(fill);
             let to_bg = to_bg.or(fill);
             if from_bg == to_bg {
-                let mut style = Style::default();
-                style.fg = from.fg.or(fill);
-                style.bg = from_bg;
+                let style = Style {
+                    fg: from.fg.or(fill),
+                    bg: from_bg,
+                    ..Default::default()
+                };
                 (SEP_R_THIN, style)
             } else {
-                let mut style = Style::default();
-                style.fg = from_bg;
-                style.bg = to_bg;
+                let style = Style {
+                    fg: from_bg,
+                    bg: to_bg,
+                    ..Default::default()
+                };
                 (SEP_R, style)
             }
         };
@@ -3283,9 +3287,11 @@ impl EditorView {
         // into the label, so it wears the label's background as its foreground.
         let label_x = right_edge.saturating_sub(label_width);
         if label_x >= viewport.x {
-            let mut label_sep = Style::default();
-            label_sep.fg = label_style.bg.or(fill);
-            label_sep.bg = fill;
+            let label_sep = Style {
+                fg: label_style.bg.or(fill),
+                bg: fill,
+                ..Default::default()
+            };
             let after = surface
                 .set_stringn(
                     label_x,

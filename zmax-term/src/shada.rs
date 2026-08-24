@@ -1237,9 +1237,9 @@ mod tests {
             },
             1,
         );
-        let mut bytes = encode_file(&[good.clone()], 10);
+        let mut bytes = encode_file(std::slice::from_ref(&good), 10);
         let complete = bytes.len();
-        bytes.extend_from_slice(&encode_file(&[good.clone()], 10));
+        bytes.extend_from_slice(&encode_file(std::slice::from_ref(&good), 10));
         bytes.truncate(complete + 3);
         let (entries, error) = decode_file(&bytes);
         assert_eq!(entries, vec![good]);
@@ -1257,7 +1257,7 @@ mod tests {
             },
             50,
         );
-        let (back, error) = decode_file(&encode_file(&[variable.clone()], 10));
+        let (back, error) = decode_file(&encode_file(std::slice::from_ref(&variable), 10));
         assert_eq!(error, None);
         assert_eq!(back, vec![variable.clone()]);
         let merged = merge(back, Vec::new());

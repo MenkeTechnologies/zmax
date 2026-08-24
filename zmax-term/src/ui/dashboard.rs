@@ -373,7 +373,8 @@ impl DashboardPanel {
                     .filled_style(good)
                     .unfilled_style(dim)
                     .label(Span::styled("RAM", text))
-                    .line_set(ratatui::symbols::line::THICK);
+                    .filled_symbol(ratatui::symbols::line::THICK_HORIZONTAL)
+                    .unfilled_symbol(ratatui::symbols::line::THICK_HORIZONTAL);
                 render(lg, Rect::new(inner.x, inner.y, inner.width, 1), surface);
             }
             if inner.height >= 2 {
@@ -382,7 +383,8 @@ impl DashboardPanel {
                     .filled_style(warn)
                     .unfilled_style(dim)
                     .label(Span::styled("swp", text))
-                    .line_set(ratatui::symbols::line::THICK);
+                    .filled_symbol(ratatui::symbols::line::THICK_HORIZONTAL)
+                    .unfilled_symbol(ratatui::symbols::line::THICK_HORIZONTAL);
                 render(lg, Rect::new(inner.x, inner.y + 1, inner.width, 1), surface);
             }
             if inner.height >= 4 {

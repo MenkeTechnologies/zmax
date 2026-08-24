@@ -292,7 +292,7 @@ fn vim_bck_word(slice: RopeSlice, mut pos: usize, count: usize, long: bool) -> u
     pos
 }
 
-/// vim `w` caret. See [`vim_fwd_word`].
+/// vim `w` caret. See the private `vim_fwd_word` helper.
 ///
 /// Start from the visual caret ([`Range::cursor`]), not `range.head`: in normal
 /// mode the cursor is a 1-wide block whose head sits one grapheme past the caret,
@@ -303,17 +303,17 @@ pub fn move_next_word_start_vim(slice: RopeSlice, range: Range, count: usize) ->
     Range::point(vim_fwd_word(slice, range.cursor(slice), count, false))
 }
 
-/// vim `W` caret. See [`vim_fwd_word`].
+/// vim `W` caret. See the private `vim_fwd_word` helper.
 pub fn move_next_long_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
     Range::point(vim_fwd_word(slice, range.cursor(slice), count, true))
 }
 
-/// vim `b` caret. See [`vim_bck_word`].
+/// vim `b` caret. See the private `vim_bck_word` helper.
 pub fn move_prev_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
     Range::point(vim_bck_word(slice, range.cursor(slice), count, false))
 }
 
-/// vim `B` caret. See [`vim_bck_word`].
+/// vim `B` caret. See the private `vim_bck_word` helper.
 pub fn move_prev_long_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
     Range::point(vim_bck_word(slice, range.cursor(slice), count, true))
 }

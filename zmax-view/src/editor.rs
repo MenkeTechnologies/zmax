@@ -2142,7 +2142,7 @@ pub struct Editor {
     /// and what `move_buffer` / `sort_buffers` rearrange. `documents` is keyed by
     /// [`DocumentId`], so on its own it can only ever be in open order; vim's
     /// `:buffers` order and AstroNvim's `vim.t.bufs` are a list the user may
-    /// permute, hence a list of our own. Maintained by [`Editor::new_document`]
+    /// permute, hence a list of our own. Maintained by `Editor::new_document`
     /// and every site that removes from `documents`; read through
     /// [`Editor::ordered_document_ids`], which reconciles it with `documents`
     /// so a stale or missing entry can never hide a buffer.

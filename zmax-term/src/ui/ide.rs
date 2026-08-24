@@ -4553,7 +4553,8 @@ impl Ide {
                 .filled_style(bar)
                 .unfilled_style(dim)
                 .label(Span::styled(format!("{:.0}%", frac * 100.0), text))
-                .line_set(symbols::line::THICK);
+                .filled_symbol(symbols::line::THICK_HORIZONTAL)
+                .unfilled_symbol(symbols::line::THICK_HORIZONTAL);
             render(lg, Rect::new(inner.x, y, inner.width, 1), surface);
         }
     }
