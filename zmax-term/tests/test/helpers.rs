@@ -526,6 +526,15 @@ pub fn assert_file_has_content(file: &mut NamedTempFile, content: &str) -> anyho
     Ok(())
 }
 
+/// Assert the file at `path` holds `content`. For the write tests, whose target
+/// must *not* exist beforehand — vim refuses `:w {file}` onto an existing file
+/// with E13 — so there is no `NamedTempFile` handle to read back through.
+pub fn assert_path_has_content(path: &std::path::Path, content: &str) -> anyhow::Result<()> {
+    let file_content = std::fs::read_to_string(path)?;
+    assert_eq!(file_content, content);
+    Ok(())
+}
+
 pub fn assert_status_not_error(editor: &Editor) {
     if let Some((_, sev)) = editor.get_status() {
         assert_ne!(&Severity::Error, sev);

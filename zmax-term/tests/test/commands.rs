@@ -949,7 +949,13 @@ async fn test_read_file() -> anyhow::Result<()> {
         &mut helpers::AppBuilder::new()
             .with_file(file.path(), None)
             .build()?,
-        Some(&format!(":r {:?}<ret><esc>:w<ret>", output_file.path())),
+        // `:r` takes its argument raw (so `:r !{cmd}` keeps its shell
+        // punctuation), which means a `{:?}`-quoted path arrives with the quotes
+        // still on it and names a file that does not exist.
+        Some(&format!(
+            ":r {}<ret><esc>:w<ret>",
+            output_file.path().display()
+        )),
         Some(&|app| {
             assert!(!app.editor.is_err(), "error: {:?}", app.editor.get_status());
         }),
@@ -1947,7 +1953,10 @@ async fn vim_gi_insert_at_last() -> anyhow::Result<()> {
             keys: zmax_term::keymap::vim::default(),
             ..Default::default()
         }),
-        ("#[|a]#bc\n", "iX<esc>llgiY<esc>", "XY#[|a]#bc\n"),
+        // `gi` resumes insert where the last one ended, and leaves the cursor on
+        // the character it just inserted. Checked against neovim: "XYabc" with
+        // the cursor at column 2, the Y.
+        ("#[|a]#bc\n", "iX<esc>llgiY<esc>", "X#[Y|]#abc\n"),
     )
     .await?;
     Ok(())
@@ -1960,8 +1969,10 @@ async fn vim_dot_repeat_insert() -> anyhow::Result<()> {
             keys: zmax_term::keymap::vim::default(),
             ..Default::default()
         }),
-        // i X <esc> inserts X; l moves right; . repeats the insert.
-        ("#[|a]#bc\n", "iX<esc>l.", "XaX#[|b]#c\n"),
+        // `iX<esc>` inserts X before `a` and leaves the cursor on it; `l` steps
+        // onto `a`; `.` repeats the insert there. Checked against neovim: the
+        // buffer reads "XXabc" and the cursor rests on the second X (col 2).
+        ("#[|a]#bc\n", "iX<esc>l.", "X#[X|]#abc\n"),
     )
     .await?;
     Ok(())

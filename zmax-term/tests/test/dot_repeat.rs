@@ -60,7 +60,7 @@ async fn dot_repeats_change_in_quotes_on_new_line() -> anyhow::Result<()> {
             r#"ci"NEW<esc>j."#,
             indoc! {r##"
                 foo "NEW" end
-                bar "NEW#["|]# xyz"##},
+                bar "NE#[W|]#" xyz"##},
         ),
     )
     .await?;
@@ -81,7 +81,7 @@ async fn dot_repeats_change_in_quotes_cursor_before() -> anyhow::Result<()> {
             r#"ci"NEW<esc>j."#,
             indoc! {r##"
                 "NEW" xxxxxxxx
-                zzzz "NEW#["|]# yy"##},
+                zzzz "NE#[W|]#" yy"##},
         ),
     )
     .await?;
@@ -122,7 +122,7 @@ async fn dot_repeats_change_in_parens() -> anyhow::Result<()> {
             r#"ci(NEW<esc>j."#,
             indoc! {r##"
                 foo (NEW) end
-                bar (NEW#[)|]# xyz"##},
+                bar (NE#[W|]#) xyz"##},
         ),
     )
     .await?;
@@ -136,6 +136,11 @@ async fn dot_repeats_replace_char() -> anyhow::Result<()> {
     Ok(())
 }
 
+// A change ends with the cursor on the last character it inserted, so every `.`
+// of an insert-carrying operator above lands on the `W` of "NEW" rather than on
+// the delimiter after it. Checked against neovim: `ci(NEW<Esc>j.` over
+// `bar (bbbbb) xyz` leaves line 2, column 8.
+//
 // NOTE: operator + insert + intermediate motion (e.g. `cwX<esc>w.`) does not yet
 // repeat faithfully — the replayed operator interacts with the selection-model
 // motions. Pure normal-mode changes (above), text-object operators

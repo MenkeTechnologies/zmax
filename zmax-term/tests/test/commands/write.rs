@@ -78,7 +78,10 @@ async fn test_exit_wo_buffer_wo_path() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_exit_w_buffer_wo_file() -> anyhow::Result<()> {
-    let mut file = tempfile::NamedTempFile::new()?;
+    // A path that does not exist yet: `:x {file}` onto an existing file is E13
+    // ("File exists (add ! to override)"), exactly as in vim, and then the editor
+    // reports the error instead of exiting.
+    let file = helpers::temp_path("exit-w-buffer.txt");
     test_key_sequence(
         // try to write without destination
         &mut AppBuilder::new().build()?,
@@ -90,7 +93,7 @@ async fn test_exit_w_buffer_wo_file() -> anyhow::Result<()> {
     test_key_sequence(
         // try to write with path succeeds
         &mut AppBuilder::new().build()?,
-        Some(format!("iMicCheck<esc>:x {}<ret>", file.path().to_string_lossy()).as_ref()),
+        Some(format!("iMicCheck<esc>:x {}<ret>", file.display()).as_ref()),
         Some(&|app| {
             assert!(!app.editor.is_err());
         }),
@@ -98,7 +101,7 @@ async fn test_exit_w_buffer_wo_file() -> anyhow::Result<()> {
     )
     .await?;
 
-    helpers::assert_file_has_content(&mut file, &LineFeedHandling::Native.apply("MicCheck"))?;
+    helpers::assert_path_has_content(&file, &LineFeedHandling::Native.apply("MicCheck"))?;
 
     Ok(())
 }
@@ -119,7 +122,7 @@ async fn test_write_quit_fail() -> anyhow::Result<()> {
 
             let doc = docs.pop().unwrap();
             assert_eq!(
-                Some(path::normalize(file.path())),
+                Some(path::normalize(&file)),
                 doc.path().map(ToOwned::to_owned)
             );
             assert_eq!(&Severity::Error, app.editor.get_status().unwrap().1);
@@ -350,11 +353,12 @@ async fn test_write_fail_mod_flag() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_write_scratch_to_new_path() -> anyhow::Result<()> {
-    let mut file = tempfile::NamedTempFile::new()?;
+    // The path must not exist yet — writing onto an existing file needs `:w!`.
+    let file = helpers::temp_path("scratch-to-new-path.txt");
 
     test_key_sequence(
         &mut AppBuilder::new().build()?,
-        Some(format!("ihello<esc>:w {}<ret>", file.path().to_string_lossy()).as_ref()),
+        Some(format!("ihello<esc>:w {}<ret>", file.display()).as_ref()),
         Some(&|app| {
             assert!(!app.editor.is_err());
 
@@ -363,7 +367,7 @@ async fn test_write_scratch_to_new_path() -> anyhow::Result<()> {
 
             let doc = docs.pop().unwrap();
             assert_eq!(
-                Some(path::normalize(file.path())),
+                Some(path::normalize(&file)),
                 doc.path().map(ToOwned::to_owned)
             );
         }),
@@ -371,7 +375,7 @@ async fn test_write_scratch_to_new_path() -> anyhow::Result<()> {
     )
     .await?;
 
-    helpers::assert_file_has_content(&mut file, &LineFeedHandling::Native.apply("hello"))?;
+    helpers::assert_path_has_content(&file, &LineFeedHandling::Native.apply("hello"))?;
 
     Ok(())
 }
@@ -504,7 +508,8 @@ async fn test_write_code_actions_on_save_without_server_still_saves() -> anyhow:
 #[tokio::test(flavor = "multi_thread")]
 async fn test_write_new_path() -> anyhow::Result<()> {
     let mut file1 = tempfile::NamedTempFile::new().unwrap();
-    let mut file2 = tempfile::NamedTempFile::new().unwrap();
+    // file2 is only a *name*: `:w {file}` onto a file that already exists is E13.
+    let file2 = helpers::temp_path("write-new-path.txt");
     let mut app = helpers::AppBuilder::new()
         .with_file(file1.path(), None)
         .build()?;
@@ -521,11 +526,11 @@ async fn test_write_new_path() -> anyhow::Result<()> {
                 }),
             ),
             (
-                Some(&format!(":w {}<ret>", file2.path().to_string_lossy())),
+                Some(&format!(":w {}<ret>", file2.display())),
                 Some(&|app| {
                     let doc = doc!(app.editor);
                     assert!(!app.editor.is_err());
-                    assert_eq!(&path::normalize(file2.path()), doc.path().unwrap());
+                    assert_eq!(&path::normalize(&file2), doc.path().unwrap());
                     assert!(app.editor.document_by_path(file1.path()).is_none());
                 }),
             ),
@@ -539,8 +544,8 @@ async fn test_write_new_path() -> anyhow::Result<()> {
         &LineFeedHandling::Native.apply("i can eat glass, it will not hurt me\n"),
     )?;
 
-    helpers::assert_file_has_content(
-        &mut file2,
+    helpers::assert_path_has_content(
+        &file2,
         &LineFeedHandling::Native.apply("i can eat glass, it will not hurt me\n"),
     )?;
 
