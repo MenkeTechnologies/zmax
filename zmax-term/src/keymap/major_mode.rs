@@ -365,6 +365,22 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // switched back to the previous file). It used to run the same toggle.
     ("view", "n", "e",         "View", "view_mode"), // e:   View-exit
     ("view", "n", "q",         "View", "view_quit"), // q:   View-quit
+
+    // -- Tests (`SPC m t …`, the major-mode leader) --------------------------
+    // Spacemacs binds the test runners under each *language* layer's `SPC m`
+    // map, which is why they can share the chord with org-mode's `SPC m t`
+    // (org-todo): different major modes, different maps. Here the same split
+    // falls out of the overlay — `space m t` opens as a prefix only in a
+    // language that binds one of these, and org keeps the base leaf.
+    //
+    // Normal/Select only: `space` is a typing key in Insert. Nothing opens in
+    // the `vim` preset either, where `space` is `move_char_right` rather than a
+    // prefix, so the leader stays stripped there.
+    // SPC m t b : run this file's tests. Every language whose `buffer_test_command`
+    // arm exists, which is the set whose layer binds the chord.
+    ("ruby python elixir go rust javascript typescript tsx jsx java kotlin scala clojure c-sharp php haskell elisp", "ns", "space m t b", "Tests", ":test-buffer"),
+    // SPC m t q : run one named test — the languages `:test-function` filters for.
+    ("rust go python ruby javascript typescript tsx jsx java kotlin elixir", "ns", "space m t q", "Tests", ":test-function"),
 ];
 
 /// The overlay tries, built once: mode -> language -> the major-mode [`KeyTrie`].

@@ -344,6 +344,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space h T v", "Help", ":tutor"),                                 // SPC h T v : evil tutor
     ("space h d c", "Help",    ":character-info"),                     // SPC h d c : describe char under point
     ("space p e",   "Project", "edit_project_config"),                // SPC p e : edit project-local .zmax/config.toml (dir-locals)
+    ("space p G",   "Project", ":regenerate-tags"),                   // SPC p G : regenerate the project's etags/gtags index
     ("space f e i", "Files",   ":config-open"),                       // SPC f e i : open init/config
     ("space f e e", "Files",   "show_environment"),                   // SPC f e e : show editor environment variables
     ("space f e E", "Files",   "reimport_shell_env"),                 // SPC f e E : reload env from the shell

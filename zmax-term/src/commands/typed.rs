@@ -2966,23 +2966,77 @@ fn ex_projectile_invalidate_cache(
     Ok(())
 }
 
-/// The file-level test command spacemacs' `SPC m t b` runs, for the languages
-/// whose layer binds that chord to a *file* runner: the ruby layer's runners
-/// (rspec-mode `rspec-verify` — "run current spec file", minitest-mode
-/// `minitest-verify` — "run current file", whose command is `ruby -Ilib:test
-/// FILE`) and the python layer's current-module test ("launch all tests of the
-/// current module (file)"). Which ruby runner applies is decided the way
-/// rspec-mode decides it is in charge: a `*_spec.rb` file, or one under `spec/`.
-/// `None` for every other language, where the layer binds no file runner either.
-fn buffer_test_command(lang: &str, file: &std::path::Path) -> Option<String> {
+/// The dotted namespace/class a JVM- or Lisp-style runner names a file by:
+/// the path under the project root with its source-root prefix and extension
+/// dropped, separators turned into dots, and (for Clojure) underscores into
+/// hyphens. `src/main/scala/com/x/FooSpec.scala` -> `com.x.FooSpec`;
+/// `test/my_app/core_test.clj` -> `my-app.core-test`.
+fn test_namespace_of(rel: &std::path::Path, dashes: bool) -> String {
+    const SOURCE_ROOTS: &[&str] = &[
+        "src", "test", "tests", "spec", "main", "java", "scala", "kotlin", "clj", "cljc", "cljs",
+    ];
+    let stem = rel.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+    let mut parts: Vec<String> = rel
+        .parent()
+        .map(|p| {
+            p.components()
+                .map(|c| c.as_os_str().to_string_lossy().to_string())
+                .skip_while(|c| SOURCE_ROOTS.contains(&c.as_str()))
+                .collect()
+        })
+        .unwrap_or_default();
+    parts.push(stem.to_string());
+    let joined = parts.join(".");
+    if dashes {
+        joined.replace('_', "-")
+    } else {
+        joined
+    }
+}
+
+/// The file-level test command spacemacs' `SPC m t b` runs, per language layer.
+///
+/// Each layer binds the chord to its own runner, and this is the shell form of
+/// what that runner runs:
+///
+/// * ruby — rspec-mode `rspec-verify` ("run current spec file") or minitest-mode
+///   `minitest-verify` ("run current file", `ruby -Ilib:test FILE`). Which one
+///   applies is decided the way rspec-mode decides it is in charge: a
+///   `*_spec.rb` file, or one under a `spec/` directory *of the project* — the
+///   check is on `rel`, so a checkout that happens to live under some ancestor
+///   named `spec` no longer routes every ruby file to rspec.
+/// * python — the layer's current-module test, `pytest FILE`.
+/// * elixir — `mix test FILE`, the exunit layer's file runner.
+/// * go — `go test -v ./DIR`, the package the file belongs to (go's test unit is
+///   the package; there is no file-level target).
+/// * rust — `cargo test`, which is what the rust layer's chord runs: cargo's
+///   test unit is the crate.
+/// * javascript/typescript — `npm test -- FILE`, the layer's file runner.
+/// * java/kotlin — `mvn test -Dtest=CLASS`, the class being the file's stem.
+/// * scala — `sbt "testOnly FQCN"`, the fully-qualified name from the path.
+/// * clojure — `lein test NS`, the namespace from the path (underscores in a
+///   path are hyphens in a namespace).
+/// * csharp — `dotnet test`, the project-level runner the layer's chord uses.
+/// * php — `vendor/bin/phpunit FILE` when the project vendors it, else `phpunit FILE`.
+/// * haskell — `cabal test` in a cabal project, else `stack test`.
+/// * elisp — `emacs -Q --batch -l ert -l FILE -f ert-run-tests-batch-and-exit`,
+///   the batch form of `ert-run-tests-interactively`.
+///
+/// `None` for a language whose layer binds no file runner; the caller reports it.
+fn buffer_test_command(
+    lang: &str,
+    file: &std::path::Path,
+    root: &std::path::Path,
+) -> Option<String> {
     let quoted = shell_single_quote(&file.to_string_lossy());
+    let rel = file.strip_prefix(root).unwrap_or(file);
     match lang {
         "ruby" => {
             let is_spec = file
                 .file_name()
                 .and_then(|n| n.to_str())
                 .is_some_and(|n| n.ends_with("_spec.rb"))
-                || file.components().any(|c| c.as_os_str() == "spec");
+                || rel.components().any(|c| c.as_os_str() == "spec");
             Some(if is_spec {
                 format!("bundle exec rspec {quoted}")
             } else {
@@ -2990,6 +3044,48 @@ fn buffer_test_command(lang: &str, file: &std::path::Path) -> Option<String> {
             })
         }
         "python" => Some(format!("pytest {quoted}")),
+        "elixir" => Some(format!("mix test {quoted}")),
+        "go" => {
+            let dir = rel.parent().filter(|p| !p.as_os_str().is_empty());
+            let pkg = dir.map_or_else(
+                || ".".to_string(),
+                |d| format!("./{}", d.to_string_lossy().replace('\\', "/")),
+            );
+            Some(format!("go test -v {}", shell_single_quote(&pkg)))
+        }
+        "rust" => Some("cargo test".to_string()),
+        "javascript" | "typescript" | "tsx" | "jsx" => Some(format!("npm test -- {quoted}")),
+        "java" | "kotlin" => {
+            let class = rel.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
+            Some(format!("mvn test -Dtest={}", shell_single_quote(class)))
+        }
+        "scala" => Some(format!(
+            "sbt {}",
+            shell_single_quote(&format!("testOnly {}", test_namespace_of(rel, false)))
+        )),
+        "clojure" => Some(format!(
+            "lein test {}",
+            shell_single_quote(&test_namespace_of(rel, true))
+        )),
+        "c-sharp" | "csharp" => Some("dotnet test".to_string()),
+        "php" => Some(if root.join("vendor/bin/phpunit").exists() {
+            format!("vendor/bin/phpunit {quoted}")
+        } else {
+            format!("phpunit {quoted}")
+        }),
+        "haskell" => Some(
+            if std::fs::read_dir(root).is_ok_and(|rd| {
+                rd.flatten()
+                    .any(|e| e.path().extension().and_then(|x| x.to_str()) == Some("cabal"))
+            }) {
+                "cabal test".to_string()
+            } else {
+                "stack test".to_string()
+            },
+        ),
+        "elisp" | "emacs-lisp" => Some(format!(
+            "emacs -Q --batch -l ert -l {quoted} -f ert-run-tests-batch-and-exit"
+        )),
         _ => None,
     }
 }
@@ -3015,7 +3111,8 @@ fn ex_test_buffer(
     let Some(path) = path else {
         bail!("test-buffer: buffer has no file");
     };
-    let Some(command) = buffer_test_command(&lang, &path) else {
+    let root = zmax_loader::find_workspace().0;
+    let Some(command) = buffer_test_command(&lang, &path, &root) else {
         bail!("test-buffer: no test command for {lang}");
     };
     write_all_impl(
@@ -3027,7 +3124,6 @@ fn ex_test_buffer(
             code_actions: true,
         },
     )?;
-    let root = zmax_loader::find_workspace().0;
     run_compile(
         cx,
         &format!(
@@ -45143,11 +45239,77 @@ fn sudo_write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
 // -Re -f "%s" %s`) in the project root and then visits the TAGS file it wrote,
 // so the tag commands immediately see the new index.
 
-/// `projectile-regenerate-tags` (`SPC p G`): rebuild `TAGS` at the project root
-/// with `ctags -Re` and make it the visited tags table.
+/// The command `:regenerate-tags` was last given for each project root —
+/// projectile keeps the same per-project override in `projectile-tags-command`,
+/// which is why a bare re-run repeats what was typed rather than falling back to
+/// the default generator.
+static PROJECTILE_TAGS_CMDS: std::sync::Mutex<Vec<(std::path::PathBuf, String)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// GNU GLOBAL's `global -x` output turned into the same table `etags` produces,
+/// so a project indexed with `gtags` answers the tag commands unchanged.
+///
+/// Each line is `NAME LINE FILE TEXT`, the file relative to the root `global`
+/// ran in. The byte offset etags records is not in that output and only guards
+/// against a moved line, so it is left at 0 and the line number carries the
+/// lookup.
+fn global_index_to_tags(out: &str) -> Vec<zmax_core::etags::TagsFile> {
+    let mut files: Vec<zmax_core::etags::TagsFile> = Vec::new();
+    for line in out.lines() {
+        let mut it = line.split_whitespace();
+        let (Some(name), Some(lno), Some(path)) = (it.next(), it.next(), it.next()) else {
+            continue;
+        };
+        let Ok(line_no) = lno.parse::<usize>() else {
+            continue;
+        };
+        let text = line
+            .split_whitespace()
+            .nth(3)
+            .map(|_| {
+                // Everything after the third field, with its original spacing.
+                let mut rest = line;
+                for _ in 0..3 {
+                    rest = rest
+                        .trim_start()
+                        .split_once(char::is_whitespace)
+                        .map_or("", |x| x.1);
+                }
+                rest.trim_start().to_string()
+            })
+            .unwrap_or_default();
+        let tag = zmax_core::etags::Tag {
+            name: name.to_string(),
+            pattern: text,
+            line: line_no,
+            byte_offset: 0,
+        };
+        match files.iter_mut().find(|f| f.path == path) {
+            Some(f) => f.tags.push(tag),
+            None => files.push(zmax_core::etags::TagsFile {
+                path: path.to_string(),
+                tags: vec![tag],
+            }),
+        }
+    }
+    files
+}
+
+/// `projectile-regenerate-tags` (`SPC p G`): rebuild the project's tag index at
+/// its root and make it the table the tag commands read.
+///
+/// `:regenerate-tags [command]` — with no argument the command is the one this
+/// root was last given (projectile's per-project `projectile-tags-command`),
+/// else the default `ctags -Re -f TAGS .`. With an argument, that command runs
+/// instead and is remembered for the root.
+///
+/// Both projectile tag backends are covered, chosen by what the command wrote:
+/// an etags `TAGS` file is parsed directly, and a `GTAGS` database (what the
+/// `ggtags` backend's `gtags` builds) is read back through `global -x`, which
+/// gives the same name/line/file rows the rest of the tag machinery wants.
 fn projectile_regenerate_tags(
     cx: &mut compositor::Context,
-    _args: Args,
+    args: Args,
     event: PromptEvent,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -45157,29 +45319,71 @@ fn projectile_regenerate_tags(
     let root = zmax_loader::find_workspace().0;
     // `projectile-tags-file-name` — the etags table `:visit-tags-table` reads.
     let tags_file = root.join("TAGS");
-    let out = std::process::Command::new("ctags")
-        .arg("-Re")
-        .arg("-f")
-        .arg(&tags_file)
-        .arg(&root)
+    let given = args.join(" ");
+    let given = given.trim();
+    let command = if given.is_empty() {
+        PROJECTILE_TAGS_CMDS
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(r, _)| *r == root)
+            .map(|(_, c)| c.clone())
+            .unwrap_or_else(|| "ctags -Re -f TAGS .".to_string())
+    } else {
+        let mut remembered = PROJECTILE_TAGS_CMDS.lock().unwrap();
+        match remembered.iter_mut().find(|(r, _)| *r == root) {
+            Some(slot) => slot.1 = given.to_string(),
+            None => remembered.push((root.clone(), given.to_string())),
+        }
+        given.to_string()
+    };
+
+    let shell = vim_shell_argv(&cx.editor.config().shell);
+    if shell.is_empty() {
+        bail!("regenerate-tags: no shell configured");
+    }
+    let out = std::process::Command::new(&shell[0])
+        .args(&shell[1..])
+        .arg(&command)
         .current_dir(&root)
         .output()
-        .map_err(|e| anyhow!("regenerate-tags: failed to run `ctags`: {e}"))?;
+        .map_err(|e| anyhow!("regenerate-tags: failed to run `{command}`: {e}"))?;
     if !out.status.success() {
         bail!(
-            "regenerate-tags: ctags failed: {}",
+            "regenerate-tags: `{command}` failed: {}",
             String::from_utf8_lossy(&out.stderr).trim()
         );
     }
-    let src = std::fs::read_to_string(&tags_file)
-        .map_err(|e| anyhow!("regenerate-tags: {}: {e}", tags_file.display()))?;
-    let table = zmax_core::etags::parse(&src);
+
+    // ggtags: the generator wrote a GLOBAL database rather than a TAGS file.
+    let gtags_db = root.join("GTAGS");
+    let (table, wrote) = if gtags_db.exists() && !tags_file.exists() {
+        let listed = std::process::Command::new("global")
+            .args(["-x", "-e", ".*"])
+            .current_dir(&root)
+            .output()
+            .map_err(|e| anyhow!("regenerate-tags: GTAGS built but `global` failed: {e}"))?;
+        if !listed.status.success() {
+            bail!(
+                "regenerate-tags: `global -x` failed: {}",
+                String::from_utf8_lossy(&listed.stderr).trim()
+            );
+        }
+        (
+            global_index_to_tags(&String::from_utf8_lossy(&listed.stdout)),
+            gtags_db,
+        )
+    } else {
+        let src = std::fs::read_to_string(&tags_file)
+            .map_err(|e| anyhow!("regenerate-tags: {}: {e}", tags_file.display()))?;
+        (zmax_core::etags::parse(&src), tags_file)
+    };
     let tags: usize = table.iter().map(|f| f.tags.len()).sum();
     let files = table.len();
     *super::tags_table().write().unwrap() = Some((root, table));
     cx.editor.set_status(format!(
         "regenerate-tags: {tags} tags in {files} files → {}",
-        tags_file.display()
+        wrote.display()
     ));
     Ok(())
 }
@@ -66068,10 +66272,15 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "regenerate-tags",
         aliases: &["projectile-regenerate-tags"],
-        doc: "Rebuild the project's TAGS file with `ctags -Re` and visit it (projectile-regenerate-tags, SPC p G).",
+        doc: "Rebuild the project's tag index and visit it; takes the generator command, remembered per project (projectile-regenerate-tags, SPC p G).",
         fun: projectile_regenerate_tags,
         completer: CommandCompleter::none(),
-        signature: Signature::DEFAULT,
+        signature: Signature {
+            // The whole tail is the generator command line, spaces and all.
+            positionals: (0, None),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "syntime",
@@ -74611,6 +74820,44 @@ mod vim_option_consumer_tests {
         );
         set_buf_hidden_action(id, "");
         assert!(BUFHIDDEN.with(|b| b.borrow().is_empty()));
+    }
+}
+
+#[cfg(test)]
+mod tags_backend_tests {
+    use super::*;
+
+    /// `global -x` rows become the same table `etags` produces, so a project
+    /// indexed by the ggtags backend answers the tag commands unchanged. The
+    /// text after the third field is the source line, spacing intact.
+    #[test]
+    fn global_x_rows_become_a_tags_table() {
+        let out = "\
+main               12 src/main.rs    fn main() {
+Editor             30 src/editor.rs  pub struct Editor {
+close              77 src/editor.rs      pub fn close(&mut self) {
+";
+        let table = global_index_to_tags(out);
+        assert_eq!(table.len(), 2, "one section per file, in first-seen order");
+        assert_eq!(table[0].path, "src/main.rs");
+        assert_eq!(table[0].tags[0].name, "main");
+        assert_eq!(table[0].tags[0].line, 12);
+        assert_eq!(table[0].tags[0].pattern, "fn main() {");
+        // The second file collects both of its tags.
+        assert_eq!(table[1].path, "src/editor.rs");
+        assert_eq!(
+            table[1]
+                .tags
+                .iter()
+                .map(|t| t.name.as_str())
+                .collect::<Vec<_>>(),
+            ["Editor", "close"]
+        );
+        // Indentation inside the source line survives.
+        assert_eq!(table[1].tags[1].pattern, "pub fn close(&mut self) {");
+
+        // Rows that are not `NAME LINE FILE …` are skipped rather than panicking.
+        assert!(global_index_to_tags("garbage\n\nname notanumber file\n").is_empty());
     }
 }
 
