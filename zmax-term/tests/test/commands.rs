@@ -1284,7 +1284,7 @@ async fn substitute_vim_magic_group() -> anyhow::Result<()> {
     // `\(fo\|ba\)o` is a group + alternation in vim magic; without translation it
     // would search for the literal text "(fo|ba)o". The harness default preset is
     // spacemacs (vim base), so translation applies and both words are replaced.
-    test(("#[|f]#oo bao\n", r":s/\(fo\|ba\)o/X/g<ret>", "#[X|]# X\n")).await?;
+    test_vim(("#[|f]#oo bao\n", r":s/\(fo\|ba\)o/X/g<ret>", "#[X|]# X\n")).await?;
     Ok(())
 }
 
@@ -1292,21 +1292,21 @@ async fn substitute_vim_magic_group() -> anyhow::Result<()> {
 async fn substitute_vim_magic_quantifier() -> anyhow::Result<()> {
     // vim `a\+` is one-or-more `a`; a raw Rust pattern reads `a\+` as the literal
     // "a+" (absent here). Translation makes it a quantifier that matches "aaa".
-    test(("#[|a]#aa bbb\n", r":s/a\+/X/<ret>", "#[X|]# bbb\n")).await?;
+    test_vim(("#[|a]#aa bbb\n", r":s/a\+/X/<ret>", "#[X|]# bbb\n")).await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn substitute_uppercase_region() -> anyhow::Result<()> {
     // `\U\1` uppercases the whole captured group.
-    test(("#[|f]#oo bar\n", r":s/\(foo\)/\U\1/<ret>", "#[F|]#OO bar\n")).await?;
+    test_vim(("#[|f]#oo bar\n", r":s/\(foo\)/\U\1/<ret>", "#[F|]#OO bar\n")).await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn substitute_titlecase_next_char() -> anyhow::Result<()> {
     // `\u\1` uppercases only the first character of the group (title case).
-    test(("#[|f]#oo bar\n", r":s/\(foo\)/\u\1/<ret>", "#[F|]#oo bar\n")).await?;
+    test_vim(("#[|f]#oo bar\n", r":s/\(foo\)/\u\1/<ret>", "#[F|]#oo bar\n")).await?;
     Ok(())
 }
 
@@ -1314,7 +1314,7 @@ async fn substitute_titlecase_next_char() -> anyhow::Result<()> {
 async fn substitute_lowercase_region_until_end() -> anyhow::Result<()> {
     // `\L\1\E \2` lowercases the first group, then `\E` restores normal case for
     // the second group.
-    test((
+    test_vim((
         "#[|F]#OO BAR\n",
         r":s/\(FOO\) \(BAR\)/\L\1\E \2/<ret>",
         "#[f|]#oo BAR\n",
@@ -1598,7 +1598,7 @@ async fn substitute_backreference() -> anyhow::Result<()> {
     // replacement `[\1]` inserts it. (In the vim/spacemacs presets the substitute
     // pattern is vim-magic, so a bare `(o+)` would match the literal text "(o+)";
     // the group needs the backslash form `\(…\)`.)
-    test(("#[|f]#oozoo\n", r":s/\(o\+\)/[\1]/<ret>", "#[f|]#[oo]zoo\n")).await?;
+    test_vim(("#[|f]#oozoo\n", r":s/\(o\+\)/[\1]/<ret>", "#[f|]#[oo]zoo\n")).await?;
     Ok(())
 }
 

@@ -274,6 +274,27 @@ pub async fn test_with_config<T: Into<TestCase>>(
 /// in `test_with_config`, so a test that chains a couple of dozen cases — vim's
 /// `find_char` drives 24 — stacks that much state into one generator and
 /// overflows the 2 MiB test thread. On the heap each case costs one pointer.
+/// Like [`test`], but under the vim preset — its keys *and* its name. The name
+/// is what turns on `Editor::vim_semantics`, which gates every vim-only rule the
+/// engine has: `:s` magic patterns, the `\U`/`\u` case escapes in a replacement,
+/// and the insert/search cursor placement. A case that exercises one of those
+/// belongs here rather than in [`test`], whose selection-first preset switches
+/// them all off.
+pub fn test_vim<'a, T: Into<TestCase> + 'a>(
+    test_case: T,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + 'a>> {
+    let config = Config {
+        editor: test_editor_config(),
+        keys: zmax_term::keymap::vim::default(),
+        keymap: "vim".to_string(),
+        ..Default::default()
+    };
+    Box::pin(test_with_config(
+        AppBuilder::new().with_config(config),
+        test_case,
+    ))
+}
+
 pub fn test<'a, T: Into<TestCase> + 'a>(
     test_case: T,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + 'a>> {

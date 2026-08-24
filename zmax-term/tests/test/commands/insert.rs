@@ -559,6 +559,10 @@ async fn test_jump_undo_redo() -> anyhow::Result<()> {
     // (the shipped default is now vim, where `U` is not redo).
     let mut config = Config {
         keys: keymap::default::default(),
+        // Name the preset the keys come from: the name is what decides
+        // `vim_semantics`, and vim's "cursor onto the last inserted character"
+        // rule would otherwise apply to selection-first keys.
+        keymap: "helix".to_string(),
         ..Default::default()
     };
     config.keys.insert(

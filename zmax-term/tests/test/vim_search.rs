@@ -2307,8 +2307,11 @@ async fn vim_digraphs_lists_table() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_z_prints_line_window() -> anyhow::Result<()> {
-    // vim `:z {count}` prints `count` lines starting at the current line into a
-    // scratch buffer. Cursor on line 2 ("l2"), `:z 3` -> l2,l3,l4.
+    // vim `:z {count}` prints a window of `count` lines into a scratch buffer,
+    // starting at the line *after* the addressed one when the command carries
+    // neither an address nor a type — nvi's "if no line specified, move to the
+    // next one", which vim keeps ("`:z` or `:z+`: one page down"). Checked
+    // against neovim: with the cursor on line 3, `:z 3` writes l3, l4, l5.
     let mut app = vim()
         .with_input_text("l0\nl1\n#[l|]#2\nl3\nl4\nl5")
         .build()?;
@@ -2319,7 +2322,7 @@ async fn vim_z_prints_line_window() -> anyhow::Result<()> {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
             assert_eq!(
                 buffer(app).trim_start_matches('\n'),
-                "l2\nl3\nl4\n",
+                "l3\nl4\nl5\n",
                 ":z 3 window"
             );
         }),
@@ -2331,8 +2334,12 @@ async fn vim_z_prints_line_window() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_checkpath_lists_includes() -> anyhow::Result<()> {
-    // vim `:checkpath` lists the files #included by the current buffer, from both
-    // the `"..."` and `<...>` forms.
+    // vim `:checkpath` lists the includes it could *not* find in 'path', echoing
+    // each as it was written. Checked against neovim on the same buffer:
+    //
+    //   --- Included files not found in path ---
+    //   "foo.h"
+    //   <bar/baz.h>
     let mut app = vim()
         .with_input_text("#[#|]#include \"foo.h\"\nint x;\n#include <bar/baz.h>")
         .build()?;
@@ -2343,7 +2350,7 @@ async fn vim_checkpath_lists_includes() -> anyhow::Result<()> {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
             assert_eq!(
                 buffer(app).trim_start_matches('\n'),
-                "foo.h\nbar/baz.h\n",
+                "--- Included files not found in path ---\n\"foo.h\"\n<bar/baz.h>\n",
                 ":checkpath list"
             );
         }),

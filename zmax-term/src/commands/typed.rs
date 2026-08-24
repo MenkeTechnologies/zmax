@@ -68824,7 +68824,10 @@ fn vi_usage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
 /// The include names the current buffer names, found with the 'include' pattern
 /// (default: a C `#include`). The pattern's first capture group, or the first
 /// `"…"`/`<…>` run on the matched line, is the included name.
-fn buffer_include_names(cx: &compositor::Context) -> anyhow::Result<Vec<String>> {
+/// Each include's bare name and the raw `"…"`/`<…>` token it was written as —
+/// `:checkpath` echoes the delimited form, exactly as vim's `show_pat_in_path`
+/// does, while the 'path' lookup wants the name on its own.
+fn buffer_include_names(cx: &compositor::Context) -> anyhow::Result<Vec<(String, String)>> {
     let pat = vim_opt_str_alias("include", "inc")
         .filter(|p| !p.trim().is_empty())
         .unwrap_or_else(|| r#"^\s*#\s*include"#.to_string());
@@ -68840,12 +68843,12 @@ fn buffer_include_names(cx: &compositor::Context) -> anyhow::Result<Vec<String>>
             .map(|i| m.start() + i)
             .unwrap_or(haystack.len());
         let line = &haystack[m.start()..line_end];
-        let name = match name_re.captures(line) {
-            Some(c) => c[1].to_string(),
+        let (name, raw) = match name_re.captures(line) {
+            Some(c) => (c[1].to_string(), c[0].to_string()),
             None => continue,
         };
-        if !out.contains(&name) {
-            out.push(name);
+        if !out.iter().any(|(n, _): &(String, String)| n == &name) {
+            out.push((name, raw));
         }
     }
     Ok(out)
@@ -68899,33 +68902,26 @@ fn checkpath_all_cmd(
 
 fn checkpath_impl(cx: &mut compositor::Context, all: bool) -> anyhow::Result<()> {
     let names = buffer_include_names(cx)?;
-    if names.is_empty() {
-        cx.editor.set_status("No included files found");
-        return Ok(());
-    }
+    // vim reports a buffer with no includes the same way it reports one whose
+    // includes all resolved (checked against neovim: both print "All included
+    // files were found"), so there is no separate empty case.
     let mut out = String::new();
-    let mut missing = 0usize;
-    for name in names {
+    for (name, raw) in names {
         let fname = apply_includeexpr(cx, &name)?;
         match find_in_path(cx, &fname) {
-            Some(p) if all => out.push_str(&format!("{name} -> {}\n", p.display())),
+            Some(p) if all => out.push_str(&format!("{raw} -> {}\n", p.display())),
             Some(_) => {}
-            None => {
-                missing += 1;
-                out.push_str(&format!("{name} NOT FOUND\n"));
-            }
+            // vim's `show_pat_in_path` echoes the include as it was written,
+            // delimiters and all, with nothing appended.
+            None => out.push_str(&format!("{raw}\n")),
         }
     }
     if out.is_empty() {
-        cx.editor
-            .set_status("All included files were found in 'path'");
+        cx.editor.set_status("All included files were found");
         return Ok(());
     }
     if !all {
-        out.insert_str(
-            0,
-            &format!("--- Included files not found in 'path' ({missing}) ---\n"),
-        );
+        out.insert_str(0, "--- Included files not found in path ---\n");
     }
     super::show_text_in_scratch(cx.editor, &out);
     Ok(())

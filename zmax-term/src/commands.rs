@@ -7797,6 +7797,10 @@ fn sneak_or_substitute_char(cx: &mut Context) {
         doc.set_selection(view.id, extended);
     }
     change_selection(cx);
+    // The count was spent selecting the characters, exactly as it is for `cc`
+    // and `o`; it must not also repeat the typed text on the way out of insert.
+    // vim's `3sX` leaves one "X" in place of three characters, not "XXX".
+    cx.editor.insert_count = 1;
 }
 
 /// `S`: vim-sneak backward when `editor.vim-sneak` is on, else vim substitute-line.
@@ -40305,13 +40309,23 @@ fn percent_item_at_or_after(text: RopeSlice, pos: usize) -> usize {
 }
 
 fn match_brackets(cx: &mut Context) {
+    // vim's `%` scans forward to the next item on the line when the cursor is not
+    // on one; helix's `mm` matches the bracket the cursor's syntax node belongs
+    // to, which from inside `{ x + 1 }` is the closing brace rather than the
+    // opening one the vim scan finds. Only the vim-base presets get vim's rule.
+    let vim = cx.editor.vim_semantics;
     let (view, doc) = current!(cx.editor);
     let is_select = cx.editor.mode == Mode::Select;
     let text = doc.text();
     let text_slice = text.slice(..);
 
     let selection = doc.selection(view.id).clone().transform(|range| {
-        let pos = percent_item_at_or_after(text_slice, range.cursor(text_slice));
+        let cursor = range.cursor(text_slice);
+        let pos = if vim {
+            percent_item_at_or_after(text_slice, cursor)
+        } else {
+            cursor
+        };
         let matched = doc
             .syntax()
             .map_or_else(
