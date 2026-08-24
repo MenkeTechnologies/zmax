@@ -385,7 +385,7 @@ dependencies = [
 
 [[package]]
 name = "awkrs"
-version = "0.4.21"
+version = "0.5.0"
 dependencies = [
  "bincode",
  "chrono",
@@ -6416,7 +6416,7 @@ dependencies = [
 
 [[package]]
 name = "phplang"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "bigdecimal",
@@ -7557,7 +7557,7 @@ dependencies = [
 
 [[package]]
 name = "rubylang"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "bincode",
  "corosensei",
