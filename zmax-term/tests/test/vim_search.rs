@@ -988,12 +988,13 @@ fn shipped() -> AppBuilder {
     })
 }
 
-// vim `zM` / `zR` on a buffer nobody ran `:set foldmethod=…` on. The default
-// 'foldmethod' is `manual`, which computes no folds, so both used to iterate an
-// empty fold set and do nothing at all. `zM` now folds the buffer's tree-sitter
-// function regions and `zR` re-opens them.
+// vim `zM` closes every fold the buffer's 'foldmethod' defines — including the
+// regions no `z` command has touched yet — and `zR` re-opens them. The method
+// has to be set: `manual`, the default, defines no folds until `zf` makes one,
+// and neither zmax nor vim invents any (checked against neovim: `zM` on a fresh
+// rust buffer leaves `foldclosed()` at -1).
 #[tokio::test(flavor = "multi_thread")]
-async fn vim_fold_close_all_folds_functions_without_foldmethod() -> anyhow::Result<()> {
+async fn vim_fold_close_all_closes_every_syntax_region() -> anyhow::Result<()> {
     let mut app = shipped()
         .with_input_text(
             "#[f|]#n foo() {\n    let a = 1;\n    let b = 2;\n}\nfn bar() {\n    baz();\n}",
@@ -1002,7 +1003,7 @@ async fn vim_fold_close_all_folds_functions_without_foldmethod() -> anyhow::Resu
     test_key_sequences(
         &mut app,
         vec![
-            (Some(":lang rust<ret>"), None),
+            (Some(":lang rust<ret>:set foldmethod=syntax<ret>zR"), None),
             (
                 Some("zM"),
                 Some(&|app: &zmax_term::application::Application| {
@@ -1057,8 +1058,9 @@ async fn vim_fold_close_all_folds_untouched_regions_after_manual_fold() -> anyho
         &mut app,
         vec![
             (Some(":lang rust<ret>"), None),
-            // zfj: a manual fold over the current + next line, without building
-            // the whole fold set. Only this one fold exists afterwards.
+            // zfj: a manual fold over the current + next line. 'foldmethod' is
+            // still `manual`, so this is the only fold the buffer has — nothing
+            // computed the function regions.
             (
                 Some("zfj"),
                 Some(&|app: &zmax_term::application::Application| {
@@ -1070,6 +1072,9 @@ async fn vim_fold_close_all_folds_untouched_regions_after_manual_fold() -> anyho
                     );
                 }),
             ),
+            // Now give the buffer a method that computes regions. `zM` has to
+            // merge those in and close them, not stop at the hand-made fold.
+            (Some(":set foldmethod=syntax<ret>zR"), None),
             (
                 Some("zM"),
                 Some(&|app: &zmax_term::application::Application| {
@@ -1119,8 +1124,17 @@ async fn vim_fold_more_and_less_step_one_level_at_a_time() -> anyhow::Result<()>
                         doc.folds().max_level() - 1,
                         "zm dropped 'foldlevel' by exactly one"
                     );
-                    // The deepest fold (the `if` body) closed; the function header did not.
-                    assert!(doc.folds().is_line_hidden(2), "the inner block folded");
+                    // The deepest fold closed; the function around it did not.
+                    // With 'foldmethod=indent' that fold is the `if` body —
+                    // 0-based lines 2..=3 — and a closed fold still shows its
+                    // own first line, so line 3 is what disappears. Checked
+                    // against neovim on the same buffer: after `zR` then `zm`,
+                    // `foldclosed()` is -1,-1,3,3,-1,-1,-1 (1-based).
+                    assert!(doc.folds().is_line_hidden(3), "the inner block folded");
+                    assert!(
+                        !doc.folds().is_line_hidden(2),
+                        "the closed fold still shows its first line"
+                    );
                     assert!(
                         !doc.folds().is_line_hidden(1),
                         "zm is not zM — the outer function stays open"
@@ -1149,10 +1163,11 @@ async fn vim_fold_more_and_less_step_one_level_at_a_time() -> anyhow::Result<()>
     Ok(())
 }
 
-// vim `za` with no 'foldmethod' set: the fold family populates the fold set on
-// demand, so toggling on a function line collapses that function only.
+// vim `za` toggles the fold at the cursor and leaves its siblings alone. The
+// buffer needs a 'foldmethod' that defines folds first — `manual`, the default,
+// has none until `zf` makes one.
 #[tokio::test(flavor = "multi_thread")]
-async fn vim_fold_toggle_without_foldmethod_folds_function_at_cursor() -> anyhow::Result<()> {
+async fn vim_fold_toggle_folds_the_function_at_the_cursor() -> anyhow::Result<()> {
     let mut app = shipped()
         .with_input_text(
             "#[f|]#n foo() {\n    let a = 1;\n    let b = 2;\n}\nfn bar() {\n    baz();\n}",
@@ -1161,7 +1176,7 @@ async fn vim_fold_toggle_without_foldmethod_folds_function_at_cursor() -> anyhow
     test_key_sequences(
         &mut app,
         vec![
-            (Some(":lang rust<ret>"), None),
+            (Some(":lang rust<ret>:set foldmethod=syntax<ret>zR"), None),
             (
                 Some("za"),
                 Some(&|app: &zmax_term::application::Application| {

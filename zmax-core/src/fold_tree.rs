@@ -1191,10 +1191,18 @@ impl LevelGetter for SyntaxLevelGetter<'_> {
 pub fn syntax_levels(ranges: &[(usize, usize)], line_count: usize) -> Vec<i32> {
     let mut levels = vec![0; line_count];
     for &(s, e) in ranges {
+        // The range's *first* line keeps the enclosing level. That is vim's
+        // convention for a syntax fold region and it is load-bearing twice over:
+        // `SyntaxLevelGetter` takes the maximum of a line's level and the next
+        // one's, which is what pulls the header into the fold it opens; and it is
+        // the only thing separating two siblings that touch. Counting the header
+        // too left `fn foo() {…}` immediately followed by `fn bar() {…}` at level
+        // 1 on every line, with no dip between them, so the tree builder saw one
+        // run and produced a single fold over both.
         for level in levels
             .iter_mut()
             .take(e.min(line_count.saturating_sub(1)) + 1)
-            .skip(s)
+            .skip(s + 1)
         {
             *level += 1;
         }
@@ -1654,13 +1662,24 @@ mod test {
 
     #[test]
     fn syntax_levels_count_covering_ranges_and_nest() {
-        // A class spanning 0..=9 with a method at 2..=4: the method's lines sit
-        // at depth 2, everything else in the class at 1.
+        // A class spanning 0..=9 with a method at 2..=4: the method's body sits
+        // at depth 2, the rest of the class at 1. Each range's first line — the
+        // `class`/`def` header — keeps the enclosing level, which is what makes
+        // the level rise *into* the fold and what keeps two touching regions
+        // apart.
         let levels = syntax_levels(&[(0, 9), (2, 4)], 12);
-        assert_eq!(levels, vec![1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0]);
+        assert_eq!(levels, vec![0, 1, 1, 2, 2, 1, 1, 1, 1, 1, 0, 0]);
+
+        // Two functions back to back: the level dips on each header, so the
+        // builder sees two runs rather than one block from the first line of the
+        // first to the last line of the second.
+        assert_eq!(
+            syntax_levels(&[(0, 3), (4, 6)], 7),
+            vec![0, 1, 1, 1, 0, 1, 1]
+        );
 
         // A range running past the buffer is clamped, not a panic.
-        assert_eq!(syntax_levels(&[(0, 99)], 3), vec![1, 1, 1]);
+        assert_eq!(syntax_levels(&[(0, 99)], 3), vec![0, 1, 1]);
         assert!(syntax_levels(&[], 0).is_empty());
     }
 
@@ -1675,15 +1694,19 @@ mod test {
         fold_update(&mut gap, &mut getter, 8, &mut manual, &mut changed);
 
         assert_eq!(spans(&gap), vec![(1, 6)], "outer capture becomes one fold");
-        // Parent top 1 + child top 1 = absolute lines 2..=5, one line above the
-        // raw capture (0-based 2..=4 → vim 3..=5). That is the point of taking
-        // the maximum of this line's level and the next: the fold starts on the
-        // line *before* the level rises, so a `class Foo:` header sits inside
-        // its own fold rather than above it.
+        // Both folds come out as exactly the captures they were built from:
+        // 0-based 0..=5 and 2..=4, which are vim lines 1..=6 and 3..=5. Taking
+        // the maximum of a line's level and the next one's is what puts each
+        // header inside the fold it opens rather than above it.
+        assert_eq!(
+            all_ranges(&gap),
+            vec![(1, 6), (3, 5)],
+            "each capture folds as itself, header included"
+        );
         assert_eq!(
             spans(&gap[0].nested),
-            vec![(1, 4)],
-            "nested fold starts a line early, per foldlevelSyntax"
+            vec![(2, 3)],
+            "the nested fold is stored relative to its parent"
         );
     }
 
