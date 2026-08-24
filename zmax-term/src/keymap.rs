@@ -559,7 +559,7 @@ impl Keymaps {
         if key!(Esc) == key {
             if !self.state.is_empty() {
                 // Note that Esc is not included here
-                return KeymapResult::Cancelled(self.state.drain(..).collect());
+                return KeymapResult::Cancelled(std::mem::take(&mut self.state));
             }
             self.sticky = None;
         }
@@ -644,7 +644,7 @@ impl Keymaps {
                 self.state.clear();
                 KeymapResult::MatchedSequence(cmds.clone())
             }
-            None => KeymapResult::Cancelled(self.state.drain(..).collect()),
+            None => KeymapResult::Cancelled(std::mem::take(&mut self.state)),
         }
     }
 }

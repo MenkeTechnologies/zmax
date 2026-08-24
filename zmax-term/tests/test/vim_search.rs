@@ -107,14 +107,18 @@ async fn n_after_backward_search_continues_backward() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn magic_group_and_alternation_matches() -> anyhow::Result<()> {
     // `\(bar\)` is a group in vim; untranslated it would hunt for the literal
-    // "(bar)" which is absent. It must select "bar".
+    // "(bar)" which is absent, so the search would fail outright. The match is
+    // "bar" at offset 4 — and a vim search leaves the cursor on the match's first
+    // character rather than selecting it (see `vim_semantics` in `search_impl`),
+    // so the block cursor covers exactly the `b`.
     let mut app = vim().with_input_text("#[f|]#oo bar baz").build()?;
     test_key_sequence(
         &mut app,
         Some(r"/\(ba\|qu\)r<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(primary_fragment(app), "bar", "group+alternation matched");
+            assert_eq!(primary_from(app), 4, "group+alternation matched `bar`");
+            assert_eq!(primary_fragment(app), "b", "cursor sits on the match start");
         }),
         false,
     )
@@ -125,15 +129,16 @@ async fn magic_group_and_alternation_matches() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn bare_plus_is_literal() -> anyhow::Result<()> {
     // In vim magic `a+b` is the literal text "a+b" (the `+` is not a quantifier).
-    // The buffer has no "ab", so a raw-Rust `a+b` would find nothing; the vim
-    // reading selects the literal "a+b".
+    // The buffer has no "ab", so a raw-Rust `a+b` would find nothing at all; the
+    // vim reading lands on the literal "a+b" at offset 3.
     let mut app = vim().with_input_text("#[x|]#x a+b yy").build()?;
     test_key_sequence(
         &mut app,
         Some("/a+b<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(primary_fragment(app), "a+b", "bare + treated as literal");
+            assert_eq!(primary_from(app), 3, "bare + treated as literal");
+            assert_eq!(primary_fragment(app), "a", "cursor sits on the match start");
         }),
         false,
     )
@@ -147,14 +152,18 @@ async fn bare_plus_is_literal() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn counted_quantifier_matches() -> anyhow::Result<()> {
-    // vim `a\{3}` — exactly three a's.
-    let mut app = vim().with_input_text("#[b|]#b aaaa cc").build()?;
+    // vim `a\{3}` — three a's in a row. The buffer holds runs of one, two and
+    // three, so the count is what picks the landing spot: the only run of three
+    // starts at offset 5. A pattern read as a plain `a` would stop at 2 instead,
+    // and one read as the literal `a{3}` would not match at all.
+    let mut app = vim().with_input_text("#[a|]# aa aaa").build()?;
     test_key_sequence(
         &mut app,
         Some(r"/a\{3}<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(primary_fragment(app), "aaa", "counted quantifier matched");
+            assert_eq!(primary_from(app), 5, "counted quantifier matched");
+            assert_eq!(primary_fragment(app), "a", "cursor sits on the match start");
         }),
         false,
     )

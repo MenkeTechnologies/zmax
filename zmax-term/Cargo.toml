@@ -147,8 +147,11 @@ dashmap = "6.2"
 
 # System stats for the Preferences → Dashboard tab (CPU/memory/process/disks/net).
 sysinfo = "0.38"
-# `time::Date` for the Dashboard's Calendar widget.
-time = "0.3"
+# `time::Date` for the Dashboard's Calendar widget, and `OffsetDateTime::now_local`
+# for the date/time insert commands. `local-offset` is what provides `now_local`:
+# it used to arrive by feature unification from another crate on macOS, which left
+# the Linux release builds failing to compile it.
+time = { version = "0.3", features = ["local-offset"] }
 # Small, self-seeding PRNG for the insert generators (UUIDs, passwords).
 fastrand = "2"
 # Integrated terminal: a real PTY (portable-pty) parsed into a screen grid (vt100).
