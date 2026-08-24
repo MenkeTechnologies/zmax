@@ -2352,6 +2352,12 @@ pub struct Editor {
     /// (vim) / the emacs `*Messages*` buffer. Capped to the most recent entries.
     pub messages: Vec<(Cow<'static, str>, Severity)>,
     pub autoinfo: Option<Info>,
+
+    /// Spacemacs `SPC t k m` / `SPC t k t` / `SPC t k M`: a which-key popup that
+    /// *stays* — the keymap listing is pinned until `SPC t k k` takes it down,
+    /// rather than living for one pending chord the way [`Editor::autoinfo`]
+    /// does. The renderer falls back to this whenever no chord is pending.
+    pub persistent_autoinfo: Option<Info>,
     /// A pending fzf.vim-style pick (`:Files`/`:Colors`/`:Maps`/…), drained by
     /// the terminal layer into the in-process arb picker.
     /// A command fills this; the terminal layer (which owns the TTY) drains it,
@@ -2713,6 +2719,7 @@ impl Editor {
             status_msg: None,
             messages: Vec::new(),
             autoinfo: None,
+            persistent_autoinfo: None,
             pending_fzf: None,
             pending_tty_command: None,
             lsp_progress: None,

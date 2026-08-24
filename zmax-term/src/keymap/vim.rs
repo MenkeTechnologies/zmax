@@ -334,7 +334,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t s",   "Toggles", "toggle_diagnostics"),                  // SPC t s : toggle diagnostics (flycheck)
     ("space t C-S-l", "Toggles", ":toggle soft-wrap.enable"),          // SPC t C-S-l : visual line navigation
     ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
-    ("space t k k", "Toggles", ":toggle auto-info"),                   // SPC t k k : which-key persistent state
+    ("space t k k", "Toggles", "which_key_hide"),                     // SPC t k k : take the pinned popup down
     ("space t p", "Toggles", ":toggle auto-pairs"),                    // SPC t p : smartparens (auto-pairs)
     ("space t C-p", "Toggles", ":toggle auto-pairs"),                  // SPC t C-p : global smartparens
     // SPC T c (theme_picker) is a static command, bound in the macro keymap below.
@@ -373,8 +373,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
 
     // Toggles / help.
     ("space t S",   "Toggles", "flyspell_mode"),      // SPC t S : toggle spell checking (flyspell)
-    ("space t k m", "Toggles", "describe_keymap"),    // SPC t k m : show the major-mode keymap
-    ("space t k t", "Toggles", "describe_bindings"),  // SPC t k t : show the top-level keymap
+    ("space t k m", "Toggles", "which_key_major_mode"),   // SPC t k m : pin the major-mode keymap (which-key)
+    ("space t k t", "Toggles", "which_key_top_level"),    // SPC t k t : pin the top-level keymap (which-key)
     ("space h d K", "Help",    "describe_keymap"),    // SPC h d K : describe a keymap
 
     // Goto / project.
@@ -394,7 +394,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // zmax switches the whole keymap preset, which is the same knob.
     ("space t E e", "Editing style", ":keymap emacs"),      // SPC t E e : emacs editing style (holy mode)
     ("space t E h", "Editing style", ":keymap spacemacs"),  // SPC t E h : hybrid (vim keys + emacs prefixes in insert)
-    ("space t k M", "Toggles", "describe_keymap"),          // SPC t k M : full major-mode keymap
+    ("space t k M", "Toggles", "which_key_major_mode_full"), // SPC t k M : pin the full major-mode keymap
 
     // Text / lookup.
     ("space x w d", "Text", ":dictionary-search"),          // SPC x w d : define the word at point
@@ -3440,8 +3440,8 @@ mod tests {
             ("space K e l", "kmacro_edit_lossage"),
             ("space K e s", "kmacro_step_edit_macro"),
             ("space t S", "flyspell_mode"),
-            ("space t k m", "describe_keymap"),
-            ("space t k t", "describe_bindings"),
+            ("space t k m", "which_key_major_mode"),
+            ("space t k t", "which_key_top_level"),
             ("space h d K", "describe_keymap"),
             ("space m g G", "xref_find_definitions_other_window"),
             ("space p !", "project_shell_command"),

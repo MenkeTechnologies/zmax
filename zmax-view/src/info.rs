@@ -2,7 +2,7 @@ use crate::register::Registers;
 use std::{borrow::Cow, fmt::Write};
 use zmax_core::unicode::width::UnicodeWidthStr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Info box used in editor. Rendering logic will be in other crate.
 pub struct Info {
     /// Title shown at top.

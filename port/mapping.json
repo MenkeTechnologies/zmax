@@ -41066,19 +41066,21 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_t_k_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:which_key_major_mode",
    "key:normal:space t k m"
   ],
-  "note": "describe_keymap lists the current mode's bindings; spacemacs toggles a persistent which-key popup"
+  "note": "Spacemacs's `SPC t k` family pins a which-key popup that stays up until `SPC t k k` takes it down, which is now what these chords do: `Editor::persistent_autoinfo` holds the pinned listing and the key handler falls back to it whenever no pending chord has claimed the popup, so it survives keystrokes instead of living for one chord. Re-running the same chord toggles it off, as in spacemacs. Pinned by `tests/test/spacemacs_states.rs::spc_t_k_pins_a_persistent_which_key_popup`, which shows the popup surviving a keystroke and going away on `SPC t k k`. `SPC t k m` (`which_key_major_mode`) pins the major-mode overlay for the buffer's language, titled with it."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_t_k_t",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:which_key_top_level",
    "key:normal:space t k t"
   ],
-  "note": "describe_bindings lists the top-level bindings; spacemacs toggles a persistent which-key popup"
+  "note": "Spacemacs's `SPC t k` family pins a which-key popup that stays up until `SPC t k k` takes it down, which is now what these chords do: `Editor::persistent_autoinfo` holds the pinned listing and the key handler falls back to it whenever no pending chord has claimed the popup, so it survives keystrokes instead of living for one chord. Re-running the same chord toggles it off, as in spacemacs. Pinned by `tests/test/spacemacs_states.rs::spc_t_k_pins_a_persistent_which_key_popup`, which shows the popup surviving a keystroke and going away on `SPC t k k`. `SPC t k t` (`which_key_top_level`) pins the top-level keymap of the current mode."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_k_c_f",
@@ -43127,11 +43129,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_t_k_m_46",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:which_key_major_mode_full",
    "key:normal:space t k M"
   ],
-  "note": "-> describe_keymap: shows the keymap once, not a persistent overlay"
+  "note": "Spacemacs's `SPC t k` family pins a which-key popup that stays up until `SPC t k k` takes it down, which is now what these chords do: `Editor::persistent_autoinfo` holds the pinned listing and the key handler falls back to it whenever no pending chord has claimed the popup, so it survives keystrokes instead of living for one chord. Re-running the same chord toggles it off, as in spacemacs. Pinned by `tests/test/spacemacs_states.rs::spc_t_k_pins_a_persistent_which_key_popup`, which shows the popup surviving a keystroke and going away on `SPC t k k`. `SPC t k M` (`which_key_major_mode_full`) pins the full listing: the major-mode overlay plus the leader's `SPC m` group, which is the rest of what spacemacs shows for a major mode."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_w_d",

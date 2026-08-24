@@ -770,6 +770,10 @@ impl MappableCommand {
         view_order_manuals, "Open where to get the GNU manuals (emacs view-order-manuals)",
         view_external_packages, "Open GNU ELPA / external packages (emacs view-external-packages)",
         describe_keymap, "List every binding of the current mode's keymap (emacs describe-keymap)",
+        which_key_top_level, "Pin the top-level keymap as a which-key popup (spacemacs SPC t k t)",
+        which_key_major_mode, "Pin the major mode's keymap as a which-key popup (spacemacs SPC t k m)",
+        which_key_major_mode_full, "Pin the full major-mode keymap as a which-key popup (spacemacs SPC t k M)",
+        which_key_hide, "Take the pinned which-key popup down (spacemacs SPC t k k)",
         describe_prefix_bindings, "List the sub-bindings of a prefix (emacs describe-prefix-bindings)",
         describe_categories, "List the character categories zmax recognises (emacs describe-categories)",
         list_character_sets, "List the Unicode blocks zmax knows (emacs list-character-sets)",
@@ -32526,6 +32530,111 @@ fn dump_mode_keymap(compositor: &mut Compositor, cx: &mut compositor::Context, h
 /// describe-keymap — list every binding of a keymap. zmax keymaps are per-mode
 /// (Normal/Select/Insert), not named Emacs keymap variables, so this describes the
 /// current mode's keymap in full.
+/// Pin `info` as the which-key popup that stays up (spacemacs's persistent
+/// which-key), or take the pinned one down when it is already showing that map.
+/// Toggling on the same chord is what `SPC t k m` does in spacemacs.
+fn pin_which_key(editor: &mut Editor, info: zmax_view::info::Info) {
+    let same = editor
+        .persistent_autoinfo
+        .as_ref()
+        .is_some_and(|pinned| pinned.title == info.title);
+    if same {
+        editor.persistent_autoinfo = None;
+        editor.autoinfo = None;
+        return;
+    }
+    editor.autoinfo = Some(info.clone());
+    editor.persistent_autoinfo = Some(info);
+}
+
+/// Spacemacs `SPC t k t`: pin the *top-level* keymap as a which-key popup that
+/// stays up until `SPC t k k` takes it down.
+fn which_key_top_level(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let Some(view) = compositor.find::<ui::EditorView>() else {
+            return;
+        };
+        let mode = cx.editor.mode;
+        let Some(node) = view.keymaps.map()[&mode].node().cloned() else {
+            return;
+        };
+        let mut info = node.infobox();
+        info.title = "Top-level keymap".into();
+        pin_which_key(cx.editor, info);
+    }));
+}
+
+/// The major-mode overlay's popup for the focused document's language, titled
+/// with the language so it is obvious which mode's map is pinned.
+fn major_mode_infobox(cx: &mut compositor::Context) -> Option<zmax_view::info::Info> {
+    let language = doc!(cx.editor).major_mode()?.to_string();
+    let mode = cx.editor.mode;
+    let overlay = crate::keymap::major_mode::overlay(&language, mode)?;
+    let node = overlay.node()?;
+    let mut info = node.infobox();
+    info.title = format!("{language}-mode keymap").into();
+    Some(info)
+}
+
+/// Spacemacs `SPC t k m`: pin the current major mode's keymap.
+fn which_key_major_mode(cx: &mut Context) {
+    cx.callback
+        .push(Box::new(|_compositor, cx| match major_mode_infobox(cx) {
+            Some(info) => pin_which_key(cx.editor, info),
+            None => cx
+                .editor
+                .set_error("no major-mode keymap for this buffer's language"),
+        }));
+}
+
+/// Spacemacs `SPC t k M`: pin the *full* major-mode keymap — the mode's own
+/// chords together with the leader's major-mode group (`SPC m …`), which is the
+/// rest of what spacemacs shows for a major mode.
+fn which_key_major_mode_full(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let mut rows: Vec<(String, String)> = Vec::new();
+        if let Some(info) = major_mode_infobox(cx) {
+            for line in info.text.lines() {
+                if let Some((key, desc)) = line.split_once(char::is_whitespace) {
+                    rows.push((key.trim().to_string(), desc.trim().to_string()));
+                }
+            }
+        }
+        if let Some(view) = compositor.find::<ui::EditorView>() {
+            let mode = cx.editor.mode;
+            let leader = view.keymaps.map()[&mode]
+                .search(&[
+                    "space".parse::<zmax_view::input::KeyEvent>().unwrap(),
+                    "m".parse::<zmax_view::input::KeyEvent>().unwrap(),
+                ])
+                .and_then(|trie| trie.node().cloned());
+            if let Some(node) = leader {
+                for line in node.infobox().text.lines() {
+                    if let Some((key, desc)) = line.split_once(char::is_whitespace) {
+                        rows.push((format!("SPC m {}", key.trim()), desc.trim().to_string()));
+                    }
+                }
+            }
+        }
+        if rows.is_empty() {
+            cx.editor
+                .set_error("no major-mode keymap for this buffer's language");
+            return;
+        }
+        let info = zmax_view::info::Info::new("Full major-mode keymap", &rows);
+        pin_which_key(cx.editor, info);
+    }));
+}
+
+/// Spacemacs `SPC t k k`: take the pinned which-key popup down.
+fn which_key_hide(cx: &mut Context) {
+    if cx.editor.persistent_autoinfo.take().is_none() {
+        cx.editor.set_status("no pinned keymap popup");
+        return;
+    }
+    cx.editor.autoinfo = None;
+}
+
 fn describe_keymap(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
         let header = format!("Keymap — {:?} mode", cx.editor.mode);

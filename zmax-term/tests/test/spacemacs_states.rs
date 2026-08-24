@@ -433,3 +433,53 @@ async fn c_tab_cycles_the_visited_buffer_ring() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// Spacemacs's `SPC t k` family pins a which-key popup that *stays* — the
+/// listing survives the next keystrokes and `SPC t k k` takes it down. The
+/// chords used to run `describe_keymap`/`describe_bindings`, which dump the map
+/// into a scratch buffer once.
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_t_k_pins_a_persistent_which_key_popup() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("<space>tkt"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let pinned = app.editor.persistent_autoinfo.as_ref();
+                    assert_eq!(
+                        pinned.map(|i| i.title.to_string()).as_deref(),
+                        Some("Top-level keymap"),
+                        "the top-level map is pinned"
+                    );
+                    assert!(app.editor.autoinfo.is_some(), "and it is showing");
+                }),
+            ),
+            // An ordinary keystroke does not take it down.
+            (
+                Some("l"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert!(
+                        app.editor.persistent_autoinfo.is_some(),
+                        "the pin survives a keystroke"
+                    );
+                    assert!(app.editor.autoinfo.is_some(), "and stays on screen");
+                }),
+            ),
+            // `SPC t k k` does.
+            (
+                Some("<space>tkk"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert!(app.editor.persistent_autoinfo.is_none(), "unpinned");
+                    assert!(app.editor.autoinfo.is_none(), "and gone from the screen");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

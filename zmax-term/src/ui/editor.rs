@@ -3659,6 +3659,12 @@ impl EditorView {
         } else {
             None
         };
+        // A pinned keymap listing (`SPC t k m`/`t`/`M`) shows whenever nothing
+        // else has claimed the popup, so it survives keystrokes instead of
+        // living for one pending chord.
+        if cxt.editor.autoinfo.is_none() {
+            cxt.editor.autoinfo = cxt.editor.persistent_autoinfo.clone();
+        }
 
         // vim i_CTRL-O one-shot: if the flag was already armed when this event
         // began, the command about to run is the "one command" that should be
@@ -3762,7 +3768,12 @@ impl EditorView {
                     execute_command(command);
                 }
             }
-            KeymapResult::NotFound | KeymapResult::Cancelled(_) => return Some(key_result),
+            KeymapResult::NotFound | KeymapResult::Cancelled(_) => {
+                if cxt.editor.autoinfo.is_none() {
+                    cxt.editor.autoinfo = cxt.editor.persistent_autoinfo.clone();
+                }
+                return Some(key_result);
+            }
         }
 
         // Emacs `repeat-mode`: the command came out of a chord of two or more
