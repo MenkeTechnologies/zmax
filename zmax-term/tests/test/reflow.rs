@@ -3,10 +3,7 @@ use super::*;
 use zmax_term::config::Config;
 
 fn vim() -> AppBuilder {
-    AppBuilder::new().with_config(Config {
-        keys: zmax_term::keymap::vim::default(),
-        ..Default::default()
-    })
+    preset_app("vim")
 }
 
 fn cursor_line(app: &zmax_term::application::Application) -> usize {

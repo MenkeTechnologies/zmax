@@ -11,10 +11,7 @@ use zmax_term::config::Config;
 //   * a count is levels, not lines (change.txt:511 `{Visual}[count]>`), which
 //     zmax's operator path deliberately reads as lines for `3>>`.
 fn vim() -> AppBuilder {
-    AppBuilder::new().with_config(Config {
-        keys: zmax_term::keymap::vim::default(),
-        ..Default::default()
-    })
+    preset_app("vim")
 }
 
 fn doc_text(app: &zmax_term::application::Application) -> String {

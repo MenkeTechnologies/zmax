@@ -170,10 +170,8 @@ const SELECTION_HISTORY_LEN: usize = 256;
 
 /// vim's error for a change to a buffer that will not take one. `Document::apply`
 /// refuses the transaction and returns `false`; a caller that wants to tell the
-/// user why reports this. It is vim's `modifiable` wording rather than `readonly`'s
-/// because zmax stores both options in the one `Document::readonly` flag, and
-/// `modifiable` is the one vim checks when a *change* is attempted (`readonly`
-/// only guards the write — see [`E45_READONLY`]).
+/// user why reports this. `modifiable` is the option vim checks when a *change*
+/// is attempted; `readonly` only guards the write — see [`E45_READONLY`].
 pub const E21_NOT_MODIFIABLE: &str = "E21: Cannot make changes, 'modifiable' is off";
 
 /// vim's error for `:w` on a read-only buffer. `:w!` overrides it, and — unless
@@ -388,8 +386,9 @@ pub struct Document {
     // when document was used for most-recent-used buffer picker
     pub focused_at: std::time::Instant,
 
-    /// vim `readonly`, and — because `:set nomodifiable` writes this same flag —
-    /// vim `modifiable` inverted. Set explicitly (`:set ro`, `:view`, dired's
+    /// vim `readonly`. Independent of [`Document::modifiable`], as in vim: `:set
+    /// modifiable` does not clear this and `:set nomodifiable` does not set it
+    /// (checked against neovim). Set explicitly (`:set ro`, `:view`, dired's
     /// read-only visit, the emacs `file-locked` abort) or detected from the file's
     /// permissions by [`Document::detect_readonly`]. Enforced in `save_impl`: a
     /// plain `:w` is refused with [`E45_READONLY`], `:w!` overrides.

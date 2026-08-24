@@ -4,10 +4,7 @@ use zmax_term::config::Config;
 
 // vim keymap (the harness default is the selection-first keymap).
 fn vim() -> AppBuilder {
-    AppBuilder::new().with_config(Config {
-        keys: zmax_term::keymap::vim::default(),
-        ..Default::default()
-    })
+    preset_app("vim")
 }
 
 /// vim `u` after a charwise change puts the cursor on the first character of the

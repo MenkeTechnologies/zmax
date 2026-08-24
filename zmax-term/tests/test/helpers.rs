@@ -274,6 +274,21 @@ pub async fn test_with_config<T: Into<TestCase>>(
 /// in `test_with_config`, so a test that chains a couple of dozen cases — vim's
 /// `find_char` drives 24 — stacks that much state into one generator and
 /// overflows the 2 MiB test thread. On the heap each case costs one pointer.
+/// An `AppBuilder` for one keymap preset: its keys, its *name* (which is what
+/// `Application::new` reads `vim_semantics` and the start mode from), and the
+/// integration editor config — language servers off, autosave off. Building the
+/// config by hand and leaving `editor` at its default starts a real language
+/// server for whatever the test opens, and its "Language server exited" then
+/// lands on the status line the test is about to read.
+pub fn preset_app(name: &str) -> AppBuilder {
+    AppBuilder::new().with_config(Config {
+        editor: test_editor_config(),
+        keys: zmax_term::keymap::preset(name).unwrap_or_else(|| panic!("unknown preset {name}")),
+        keymap: name.to_string(),
+        ..Default::default()
+    })
+}
+
 /// Like [`test`], but under the vim preset — its keys *and* its name. The name
 /// is what turns on `Editor::vim_semantics`, which gates every vim-only rule the
 /// engine has: `:s` magic patterns, the `\U`/`\u` case escapes in a replacement,

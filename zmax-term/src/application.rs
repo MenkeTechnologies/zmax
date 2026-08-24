@@ -782,7 +782,15 @@ impl Application {
                         // set in `handle_document_write`) can run before the `DocumentSavedEvent` is processed. Slow file I/O on Windows
                         // (atomic_save's rename/fsync dance over the still-open temp file) makes this race observable.
                         // Errors produce an event too, so it cannot hang.
-                        if _idle_handled && self.editor.write_count == 0 {
+                        //
+                        // A queued `ConfigEvent` counts the same way: `:set number`
+                        // hands the new config up for the Application to store, so
+                        // reporting idle with one still in the channel let a test
+                        // read the config the `:set` was about to replace.
+                        if _idle_handled
+                            && self.editor.write_count == 0
+                            && self.editor.config_events.1.is_empty()
+                        {
                             return true;
                         }
                     }

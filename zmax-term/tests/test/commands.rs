@@ -241,7 +241,9 @@ async fn test_multi_selection_shell_commands() -> anyhow::Result<()> {
     ))
     .await?;
 
-    // insert-output
+    // insert-output: the command's own trailing newline is part of what it
+    // printed, and `!` inserts what it printed. Only a *filter* (`|`, which
+    // feeds the selection in on stdin) drops a newline the input did not have.
     test((
         indoc! {"\
             #[|lorem]#
@@ -250,14 +252,17 @@ async fn test_multi_selection_shell_commands() -> anyhow::Result<()> {
             "},
         "!echo foo<ret>",
         indoc! {"\
-            #[|foo]#lorem
-            #(|foo)#ipsum
-            #(|foo)#dolor
+            #[|foo
+            ]#lorem
+            #(|foo
+            )#ipsum
+            #(|foo
+            )#dolor
             "},
     ))
     .await?;
 
-    // append-output
+    // append-output: same rule, at the other end of each selection.
     test((
         indoc! {"\
             #[|lorem]#
@@ -265,10 +270,19 @@ async fn test_multi_selection_shell_commands() -> anyhow::Result<()> {
             #(|dolor)#
             "},
         "<A-!>echo foo<ret>",
+        // The marker line's own newline is not part of the text (`print` skips a
+        // line end that is both inside the selection and right after it), so the
+        // blank line after each marker is what carries `echo`'s newline.
         indoc! {"\
-            lorem#[|foo]#
-            ipsum#(|foo)#
-            dolor#(|foo)#
+            lorem#[|foo
+            ]#
+
+            ipsum#(|foo
+            )#
+
+            dolor#(|foo
+            )#
+
             "},
     ))
     .await?;

@@ -5,10 +5,7 @@ use zmax_term::config::Config;
 // New vim motions implemented as real commands (g_/gM/go). Pin the vim keymap
 // (harness default is the selection-first keymap; see `helpers::test_config`).
 fn vim() -> AppBuilder {
-    AppBuilder::new().with_config(Config {
-        keys: zmax_term::keymap::vim::default(),
-        ..Default::default()
-    })
+    preset_app("vim")
 }
 
 #[tokio::test(flavor = "multi_thread")]

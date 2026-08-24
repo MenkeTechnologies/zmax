@@ -8,10 +8,7 @@ use zmax_term::config::Config;
 // product semantics. The harness default keymap is `spacemacs`, which carries
 // the vim base, so `vim_semantics` is on and the multiplication applies.
 fn vim() -> AppBuilder {
-    AppBuilder::new().with_config(Config {
-        keys: zmax_term::keymap::vim::default(),
-        ..Default::default()
-    })
+    preset_app("vim")
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -1015,9 +1015,12 @@ async fn set_tabstop_sets_document_tab_width() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn set_readonly_modifiable_toggles_document_flag() -> anyhow::Result<()> {
-    // vim `:set readonly`/`modifiable`/`nomodifiable` toggle the buffer's
-    // read-only flag (they are opposites).
+async fn set_readonly_and_modifiable_are_separate_flags() -> anyhow::Result<()> {
+    // vim's 'readonly' and 'modifiable' are two options, not one inverted twice:
+    // 'readonly' refuses the *write* (E45, `:w!` overrides) while 'modifiable'
+    // refuses the *change* (E21). Checked against neovim: after `:set readonly`
+    // then `:set modifiable`, `&readonly` is still 1, and `:set nomodifiable`
+    // leaves it at 1 rather than setting it.
     test_key_sequences(
         &mut AppBuilder::new().build()?,
         vec![
@@ -1025,25 +1028,25 @@ async fn set_readonly_modifiable_toggles_document_flag() -> anyhow::Result<()> {
                 Some(":set readonly<ret>"),
                 Some(&|app| {
                     assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-                    assert!(
-                        zmax_view::doc!(app.editor).readonly,
-                        "readonly sets the flag"
-                    );
+                    let doc = zmax_view::doc!(app.editor);
+                    assert!(doc.readonly, "readonly sets the flag");
+                    assert!(doc.modifiable, "readonly does not block changes");
                 } as _),
             ),
             (
                 Some(":set modifiable<ret>"),
                 Some(&|app| {
-                    assert!(
-                        !zmax_view::doc!(app.editor).readonly,
-                        "modifiable clears it"
-                    );
+                    let doc = zmax_view::doc!(app.editor);
+                    assert!(doc.modifiable, "modifiable sets its own flag");
+                    assert!(doc.readonly, "modifiable leaves readonly alone");
                 } as _),
             ),
             (
                 Some(":set nomodifiable<ret>"),
                 Some(&|app| {
-                    assert!(zmax_view::doc!(app.editor).readonly, "nomodifiable sets it");
+                    let doc = zmax_view::doc!(app.editor);
+                    assert!(!doc.modifiable, "nomodifiable clears its own flag");
+                    assert!(doc.readonly, "nomodifiable leaves readonly alone");
                 } as _),
             ),
         ],

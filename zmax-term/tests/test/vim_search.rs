@@ -9,10 +9,7 @@ use zmax_term::config::Config;
 // is on and translation applies. Each test picks a buffer where the vim reading
 // and the raw-Rust reading select different text.
 fn vim() -> AppBuilder {
-    AppBuilder::new().with_config(Config {
-        keys: zmax_term::keymap::vim::default(),
-        ..Default::default()
-    })
+    preset_app("vim")
 }
 
 /// The text of the primary selection after a search.
