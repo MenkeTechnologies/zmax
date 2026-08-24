@@ -119,7 +119,7 @@ fn cx_prefix() -> KeyTrie {
             // with a prefix it takes it from the comment above and realigns.
             ";" => comment_set_column,      // C-x ;: comment-set-column
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
-            "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
+            "C-x" => exchange_point_and_mark, // C-x C-x: exchange-point-and-mark (rectangle-aware)
             // rectangle-mark-mode is its own command (it makes the *region*
             // rectangular); `visual_block_mode` was the nearest vim mode switch.
             "space" => rectangle_mark_mode, // C-x SPC: rectangle-mark-mode
@@ -540,7 +540,7 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     // rectangle-number-lines: insert an incrementing number in front of each line
     // the region covers. `:number-lines` (0 args = start at 1) is the port; it
     // numbers the selected lines rather than the rectangle's left edge.
-    ("C-x r N", "Registers", ":number-lines"),
+    ("C-x r N", "Registers", ":rectangle-number-lines"), // C-x r N: rectangle-number-lines
     ("C-x r o", "Registers", "open_rectangle"),          // C-x r o: open-rectangle (insert blanks, shift text right)
     // The register commands, not the kill-ring ones: C-x r r copies the rectangle
     // *into a register*, C-x r s copies the region *into a register* (C-x r SPC is
@@ -594,7 +594,7 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     // The `vc-*` ports exist, so every C-x v chord runs the command the Emacs manual
     // names for it instead of the nearest git_* approximation (a magit dispatch menu
     // is not `vc-revert`, and a branch picker is not `vc-create-tag`).
-    ("C-x v !", "VCS", "git_status"),
+    ("C-x v !", "VCS", "vc_edit_next_command"), // C-x v !: edit the next VC command
     ("C-x v +", "VCS", "git_pull"),
     ("C-x v =", "VCS", "git_diff"),
     ("C-x v a", "VCS", "vc_update_change_log"), // vc-update-change-log

@@ -209,3 +209,122 @@ async fn c_x_z_repeats_the_last_command() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// Emacs `C-x r N` is rectangle-number-lines: the numbers go in at the
+/// rectangle's left edge, not at the start of each whole line — that is
+/// `number-lines`, which the chord used to run.
+#[tokio::test(flavor = "multi_thread")]
+async fn c_x_r_n_numbers_at_the_rectangle_edge() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#aaa\nbbbb\ncccc\n")
+        .build()?;
+    // A rectangle two columns in, spanning the three lines.
+    test_key_sequence(
+        &mut app,
+        Some("ll<C-space>jj<C-x>rN"),
+        Some(&|app: &zmax_term::application::Application| {
+            let (_v, doc) = zmax_view::current_ref!(app.editor);
+            let text = doc.text().to_string();
+            for line in text.lines().take(3) {
+                assert!(
+                    line.starts_with("aa") || line.starts_with("bb") || line.starts_with("cc"),
+                    "the line keeps its first two columns: {line:?}"
+                );
+            }
+            assert!(
+                text.contains("aa 1") || text.contains("aa1"),
+                "the number went in at the rectangle's edge: {text:?}"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Emacs rebinds `C-x C-x` inside `rectangle-mark-mode`, so the one chord is
+/// `exchange-point-and-mark` over an ordinary region and
+/// `rectangle-exchange-point-and-mark` — the opposite *corner* — over a
+/// rectangular one. It used to be the plain swap in both.
+#[tokio::test(flavor = "multi_thread")]
+async fn c_x_c_x_walks_the_rectangle_corners() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bcd\nefgh\nijkl\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            // A rectangle from (0,0) to (2,2): the cursor is at the bottom-right.
+            (
+                Some("<C-x><space>jjll"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert!(app.editor.block.is_some(), "rectangle-mark-mode is on");
+                    let (view, doc) = zmax_view::current_ref!(app.editor);
+                    let text = doc.text().slice(..);
+                    let cursor = doc.selection(view.id).primary().cursor(text);
+                    assert_eq!(text.char_to_line(cursor), 2, "cursor on the last row");
+                }),
+            ),
+            // `C-x C-x` moves it to the opposite corner — the other row.
+            (
+                Some("<C-x><C-x>"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (view, doc) = zmax_view::current_ref!(app.editor);
+                    let text = doc.text().slice(..);
+                    let cursor = doc.selection(view.id).primary().cursor(text);
+                    assert_eq!(
+                        text.char_to_line(cursor),
+                        0,
+                        "the opposite corner is on the first row"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Emacs `C-x v !` is `vc-edit-next-command`: it arms the *next* VC command to
+/// open in the minibuffer for editing before it runs. The chord ran
+/// `git_status`, which is a different command entirely.
+#[tokio::test(flavor = "multi_thread")]
+async fn c_x_v_bang_arms_the_next_vc_command() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("<C-x>v!"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let status = app.editor.get_status().map(|(msg, _)| msg.to_string());
+                    assert_eq!(
+                        status.as_deref(),
+                        Some("Edit the next VC command before it runs"),
+                        "the chord arms the edit rather than opening the status view"
+                    );
+                }),
+            ),
+            // The next VC command (`SPC g P`, push) hands its line to the prompt
+            // instead of shelling out — the prompt is what has the keyboard now,
+            // so the editor is not reporting a push in flight.
+            (
+                Some("<space>gP"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let status = app.editor.get_status().map(|(msg, _)| msg.to_string());
+                    assert_ne!(
+                        status.as_deref(),
+                        Some("git: pushing…"),
+                        "the push was handed to the prompt, not run"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

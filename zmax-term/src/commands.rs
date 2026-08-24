@@ -2617,6 +2617,8 @@ impl MappableCommand {
         string_rectangle, "Replace each line's rectangle segment with a string you type (emacs string-rectangle)",
         rectangle_mark_mode, "Toggle rectangular region selection (emacs rectangle-mark-mode)",
         rectangle_exchange_point_and_mark, "Move point to the opposite corner of the rectangle (emacs rectangle-exchange-point-and-mark)",
+        exchange_point_and_mark, "Swap point and mark; the opposite rectangle corner in rectangle-mark-mode (emacs C-x C-x)",
+        vc_edit_next_command, "Edit the next VC command before it runs (emacs vc-edit-next-command, C-x v !)",
         customize_group, "Edit the settings of one configuration group (emacs customize-group)",
         customize_apropos, "Search the settings whose name or value matches a pattern (emacs customize-apropos)",
         customize_changed, "List the settings changed from their built-in defaults (emacs customize-changed)",
@@ -47708,6 +47710,44 @@ fn git_async(
     label: &'static str,
     reload_worktree: bool,
 ) {
+    // Emacs `vc-edit-next-command` (`C-x v !`): the *next* VC command is shown
+    // in the minibuffer to be edited before it runs. The flag is one-shot, so
+    // the re-entry below runs the edited line rather than prompting again.
+    if VC_EDIT_NEXT.swap(false, std::sync::atomic::Ordering::Relaxed) {
+        let line = format!("git {}", args.join(" "));
+        ui::prompt_with_input(
+            cx,
+            "VC command: ".into(),
+            line,
+            Some(':'),
+            |_editor, _input| Vec::new(),
+            move |cx, input, event| {
+                if event != PromptEvent::Validate {
+                    return;
+                }
+                // The edited line is a command line: split on whitespace and
+                // drop a leading `git`, which is the program, not an argument.
+                let mut parts: Vec<String> = input.split_whitespace().map(str::to_string).collect();
+                if parts.first().is_some_and(|p| p == "git") {
+                    parts.remove(0);
+                }
+                if parts.is_empty() {
+                    cx.editor.set_error("vc-edit-next-command: no command");
+                    return;
+                }
+                let mut cx = Context {
+                    register: None,
+                    count: None,
+                    editor: cx.editor,
+                    callback: Vec::new(),
+                    on_next_key_callback: None,
+                    jobs: cx.jobs,
+                };
+                git_async(&mut cx, busy, parts, label, reload_worktree);
+            },
+        );
+        return;
+    }
     cx.editor.set_status(format!("git: {busy}"));
     cx.jobs.callback(async move {
         let res = tokio::task::spawn_blocking(move || {
@@ -47740,6 +47780,21 @@ fn git_async(
             },
         )))
     });
+}
+
+/// Emacs `vc-edit-next-command` (`C-x v !`): arm the next VC command to be shown
+/// in the minibuffer for editing before it runs. One-shot — `git_async` takes
+/// the flag as it fires.
+static VC_EDIT_NEXT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// `C-x v !`: "Edit the VC command about to be run". The next VC command that
+/// shells out to git opens its command line in the prompt instead of running
+/// straight away, so flags can be added (`--force-with-lease`, a different
+/// remote) before it goes.
+fn vc_edit_next_command(cx: &mut Context) {
+    VC_EDIT_NEXT.store(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor
+        .set_status("Edit the next VC command before it runs");
 }
 
 /// SPC g P: push the current branch to its upstream remote.
@@ -70970,6 +71025,21 @@ fn rectangle_exchange_point_and_mark(cx: &mut Context) {
         return;
     }
     block_swap_corners(cx);
+}
+
+/// Emacs `C-x C-x`: `exchange-point-and-mark`, which inside
+/// `rectangle-mark-mode` is `rectangle-exchange-point-and-mark` — emacs rebinds
+/// the chord in that minor mode's own map, so one key does both.
+///
+/// With a rectangular region live the cursor moves to the opposite *corner*
+/// (and `C-x C-x` again walks on round the four); with an ordinary region it is
+/// the plain swap of the region's ends.
+fn exchange_point_and_mark(cx: &mut Context) {
+    if cx.editor.block.is_some() {
+        block_swap_corners(cx);
+    } else {
+        flip_selections(cx);
+    }
 }
 
 // ---------------------------------------------------------------------------

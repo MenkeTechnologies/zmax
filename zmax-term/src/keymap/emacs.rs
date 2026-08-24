@@ -64,7 +64,7 @@ const EMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("C-A-o",   "Edit",   ":split-line"),             // C-M-o: split-line
     ("C-x C-o", "Edit",   ":delete-blank-lines"),     // C-x C-o: delete-blank-lines
     ("C-x r t", "Rect",   ":string-rectangle"),       // C-x r t: string-rectangle
-    ("C-x r N", "Rect",   ":number-lines"),           // C-x r N: rectangle-number-lines
+    ("C-x r N", "Rect",   ":rectangle-number-lines"), // C-x r N: rectangle-number-lines
     ("C-x z",   "Edit",   ":repeat"),                 // C-x z: repeat last command
     // GUD. Emacs binds `C-c C-d` (gud-remove) in the debugger's source buffer;
     // this preset has no other claim on `C-c C-d`, unlike the spacemacs default
@@ -340,7 +340,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "left" => goto_previous_buffer, // C-x <left>: previous-buffer
             "C-;" => toggle_comments,       // C-x C-;: comment-line
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
-            "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
+            "C-x" => exchange_point_and_mark, // C-x C-x: exchange-point-and-mark (rectangle-aware)
             "C-t" => transpose_line,        // C-x C-t: transpose-lines
             "h" => select_all,              // C-x h: mark-whole-buffer
             "C-l" => switch_to_lowercase,   // C-x C-l: downcase-region
@@ -494,7 +494,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "right" => goto_next_buffer,    // C-x <right>: next-buffer
             "left" => goto_previous_buffer, // C-x <left>: previous-buffer
             "h" => select_all,              // C-x h: mark-whole-buffer
-            "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
+            "C-x" => exchange_point_and_mark, // C-x C-x: exchange-point-and-mark (rectangle-aware)
         },
     });
 

@@ -23317,12 +23317,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x r N",
    "typable:rectangle-number-lines"
   ],
-  "note": "Same as emacs.keybinding.c_x_r_n: `:rectangle-number-lines` (typed.rs:39924) does number at the rectangle's left edge with emacs's START/FORMAT arguments, but the chord at keymap/spacemacs.rs:543 still runs `:number-lines` (whole-line numbering). The gap is one table row in each of keymap/spacemacs.rs and keymap/emacs.rs."
+  "note": "`C-x r N` runs `:rectangle-number-lines` now (keymap/spacemacs.rs, keymap/emacs.rs): the numbers go in at the rectangle's left edge with emacs's START/FORMAT arguments. The chord ran `:number-lines`, which numbers whole lines - the one table row each map was missing. Pinned by `tests/test/spacemacs_states.rs::c_x_r_n_numbers_at_the_rectangle_edge`, which marks a rectangle two columns in and asserts the first two columns of every line survive."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_o",
@@ -23537,11 +23537,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_bang",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-x v !"
+   "key:normal:C-x v !",
+   "static:vc_edit_next_command"
   ],
-  "note": "git_status"
+  "note": "`C-x v !` is `vc-edit-next-command`: it arms the next VC command to be shown in the minibuffer for editing before it runs, so a flag can be added (`--force-with-lease`, another remote) on the way. `vc_edit_next_command` (commands.rs) sets a one-shot flag that `git_async` - the entry point every network VC command goes through - takes as it fires, opening the assembled `git ...` line in the prompt and running the edited line instead. The chord ran `git_status`, a different command. Pinned by `tests/test/spacemacs_states.rs::c_x_v_bang_arms_the_next_vc_command`, which arms it and shows the following push going to the prompt rather than out to git."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_plus",
@@ -45059,12 +45060,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_r_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x r N",
    "typable:rectangle-number-lines"
   ],
-  "note": "The command emacs asks for now exists \u2014 `:rectangle-number-lines` (zmax-term/src/commands/typed.rs:39924, registered typed.rs:64241) inserts an incrementing number at the left edge of the rectangle the selection spans, taking emacs's START and FORMAT as two optional arguments (`:rectangle-number-lines 1 \"%03d. \"` gives `001. `, `002. `). Still partial because the CHORD is wired to the wrong one: keymap/emacs.rs:67 and keymap/spacemacs.rs:543 both bind `C-x r N` to `:number-lines`, which prepends numbers to the selected LINES rather than at the rectangle column. Repointing those two table rows closes this."
+  "note": "`C-x r N` runs `:rectangle-number-lines` now (keymap/spacemacs.rs, keymap/emacs.rs): the numbers go in at the rectangle's left edge with emacs's START/FORMAT arguments. The chord ran `:number-lines`, which numbers whole lines - the one table row each map was missing. Pinned by `tests/test/spacemacs_states.rs::c_x_r_n_numbers_at_the_rectangle_edge`, which marks a rectangle two columns in and asserts the first two columns of every line survive."
  },
  {
   "spec_id": "emacs.keybinding.c_c_c_n_lparengud_rparen",
@@ -48285,11 +48286,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_v_bang",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-x v !"
+   "key:normal:C-x v !",
+   "static:vc_edit_next_command"
   ],
-  "note": "vc-edit-next-command -> git_status: no port that edits the next VC command before it runs"
+  "note": "`C-x v !` is `vc-edit-next-command`: it arms the next VC command to be shown in the minibuffer for editing before it runs, so a flag can be added (`--force-with-lease`, another remote) on the way. `vc_edit_next_command` (commands.rs) sets a one-shot flag that `git_async` - the entry point every network VC command goes through - takes as it fires, opening the assembled `git ...` line in the prompt and running the edited line instead. The chord ran `git_status`, a different command. Pinned by `tests/test/spacemacs_states.rs::c_x_v_bang_arms_the_next_vc_command`, which arms it and shows the following push going to the prompt rather than out to git."
  },
  {
   "spec_id": "emacs.keybinding.c_x_w_d",
@@ -49502,12 +49504,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_x_comma_in_rectangle_mark_mode",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x C-x",
-   "static:flip_selections"
+   "static:exchange_point_and_mark"
   ],
-  "note": "exchange-point-and-mark. In rectangle-mark-mode Emacs cycles the four corners; zmax swaps the selection's ends"
+  "note": "`C-x C-x` runs `exchange_point_and_mark`, which is rectangle-aware the way emacs's rebinding in `rectangle-mark-mode`'s own map is: with a rectangular region live it moves point to the opposite *corner* (`block_swap_corners`), and with an ordinary region it is the plain swap of the region's ends. The chord ran `flip_selections` in both cases. Pinned by `tests/test/spacemacs_states.rs::c_x_c_x_walks_the_rectangle_corners`, which marks a rectangle spanning three rows and asserts the chord moves the cursor from the last row to the first."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_v_d",
