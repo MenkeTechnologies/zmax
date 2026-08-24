@@ -759,6 +759,7 @@ impl MappableCommand {
         emoji_list, "Pick an emoji by name and insert it (emacs emoji-list)",
         complete_emoji, "Complete the `:name` being typed into an emoji (spacemacs company-emoji)",
         http_send_request, "Send the .http request under the cursor and show the response (restclient C-c C-c)",
+        nixos_options, "Browse NixOS options by name, type and default (spacemacs nixos layer)",
         emoji_recent, "Insert one of the recently-used emoji (emacs emoji-recent, C-x 8 e r)",
         view_hello_file, "Show a multi-script greeting sample (emacs view-hello-file, C-h h)",
         view_echo_area_messages, "Show the last echo-area message (emacs view-echo-area-messages, C-h e)",
@@ -74506,6 +74507,39 @@ fn open_dribble_file(cx: &mut Context) {
 
 #[cfg(test)]
 mod gap_command_tests {
+    /// NixOS's `options.json`: an object keyed by option name, whose `default`
+    /// and `description` are sometimes a bare string and sometimes `{"text": …}`.
+    #[test]
+    fn nixos_options_json_parses_both_field_shapes() {
+        let src = r#"{
+          "services.nginx.enable": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to enable Nginx."
+          },
+          "networking.hostName": {
+            "type": "string",
+            "default": {"text": "\"nixos\""},
+            "description": {"text": "The name of the machine."}
+          }
+        }"#;
+        let options = parse_nixos_options(src);
+        // Sorted by name, so networking comes first.
+        assert_eq!(options.len(), 2);
+        assert_eq!(options[0].name, "networking.hostName");
+        assert_eq!(options[0].kind, "string");
+        assert_eq!(options[0].default, "\"nixos\"");
+        assert_eq!(options[0].description, "The name of the machine.");
+        assert_eq!(options[1].name, "services.nginx.enable");
+        // A non-string default keeps its JSON rendering rather than vanishing.
+        assert_eq!(options[1].default, "false");
+        assert_eq!(options[1].description, "Whether to enable Nginx.");
+
+        // Junk is empty, not a panic.
+        assert!(parse_nixos_options("not json").is_empty());
+        assert!(parse_nixos_options("[]").is_empty());
+    }
+
     /// restclient.el's buffer shape: `###`-separated requests, `METHOD URL`,
     /// header lines, a blank line, then the body. The request that runs is the
     /// one the cursor is inside.
@@ -74982,6 +75016,111 @@ const PACKAGE_ARCHIVES: &[(&str, &str)] = &[
 /// Every package currently installed on disk.
 pub(crate) fn installed_packages() -> Vec<Installed> {
     pkg::installed_packages(&elpa_dir())
+}
+
+// --- nixos options ----------------------------------------------------------
+// The nixos layer's browser (`helm-nixos-options`): every NixOS option with its
+// type, default and description. NixOS ships that as `options.json`; the
+// `nixos-option` CLI answers about one option on a configured system.
+
+/// One row of the NixOS options index.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct NixosOption {
+    pub name: String,
+    pub kind: String,
+    pub default: String,
+    pub description: String,
+}
+
+/// Parse NixOS's `options.json`: an object keyed by option name, each value
+/// carrying `type`, `default` (sometimes `{"text": …}`) and `description`
+/// (sometimes `{"text": …}` in newer releases). Missing fields read as empty
+/// rather than dropping the option, since the name is what the browser is for.
+///
+/// Pure, so the shape is unit-tested without a NixOS system to hand.
+pub(crate) fn parse_nixos_options(src: &str) -> Vec<NixosOption> {
+    let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(src) else {
+        return Vec::new();
+    };
+    // `{"text": "…"}` and a bare string are both used; numbers and booleans
+    // appear as defaults too.
+    let flat = |v: Option<&serde_json::Value>| -> String {
+        match v {
+            Some(serde_json::Value::String(s)) => s.clone(),
+            Some(serde_json::Value::Object(o)) => o
+                .get("text")
+                .and_then(|t| t.as_str())
+                .map(str::to_string)
+                .unwrap_or_default(),
+            Some(serde_json::Value::Null) | None => String::new(),
+            Some(other) => other.to_string(),
+        }
+    };
+    let mut out: Vec<NixosOption> = map
+        .into_iter()
+        .map(|(name, value)| {
+            let obj = value.as_object();
+            NixosOption {
+                name,
+                kind: flat(obj.and_then(|o| o.get("type"))),
+                default: flat(obj.and_then(|o| o.get("default"))),
+                description: flat(obj.and_then(|o| o.get("description"))),
+            }
+        })
+        .collect();
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    out
+}
+
+/// Where the options index lives: `$NIXOS_OPTIONS_JSON` if set, else the path a
+/// configured NixOS puts it at.
+fn nixos_options_path() -> std::path::PathBuf {
+    std::env::var_os("NIXOS_OPTIONS_JSON")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from("/run/current-system/sw/share/doc/nixos/options.json")
+        })
+}
+
+/// The nixos layer's options browser: pick an option by name and insert it, with
+/// its type, default and description shown as you scan.
+fn nixos_options(cx: &mut Context) {
+    let path = nixos_options_path();
+    let src = match std::fs::read_to_string(&path) {
+        Ok(src) => src,
+        Err(e) => {
+            cx.editor.set_error(format!(
+                "nixos-options: {}: {e} (set NIXOS_OPTIONS_JSON to point at one)",
+                path.display()
+            ));
+            return;
+        }
+    };
+    let options = parse_nixos_options(&src);
+    if options.is_empty() {
+        cx.editor
+            .set_error(format!("nixos-options: no options in {}", path.display()));
+        return;
+    }
+    let columns = [
+        ui::PickerColumn::new("option", |o: &NixosOption, _: &()| o.name.as_str().into()),
+        ui::PickerColumn::new("type", |o: &NixosOption, _: &()| o.kind.as_str().into()),
+        ui::PickerColumn::new("default", |o: &NixosOption, _: &()| {
+            o.default.as_str().into()
+        }),
+        ui::PickerColumn::new("description", |o: &NixosOption, _: &()| {
+            // One line: the picker is a list, and the docs run long.
+            o.description.lines().next().unwrap_or("").into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, options, (), move |cx, option, _action| {
+        let (view, doc) = current!(cx.editor);
+        let selection = doc.selection(view.id);
+        let transaction = Transaction::insert(doc.text(), selection, option.name.as_str().into());
+        doc.apply(&transaction, view.id);
+        doc.append_changes_to_history(view);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 // --- restclient (`.http` / `.rest` request files) ---------------------------

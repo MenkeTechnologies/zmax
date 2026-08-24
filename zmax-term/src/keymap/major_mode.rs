@@ -379,6 +379,10 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // SPC m t b : run this file's tests. Every language whose `buffer_test_command`
     // arm exists, which is the set whose layer binds the chord.
     ("ruby python elixir go rust javascript typescript tsx jsx java kotlin scala clojure c-sharp php haskell elisp", "ns", "space m t b", "Tests", ":test-buffer"),
+    // -- nixos ---------------------------------------------------------------
+    // The layer's options browser, on the major-mode leader in nix buffers.
+    ("nix", "ns", "space m o", "Nix", "nixos_options"),
+
     // -- web-beautify --------------------------------------------------------
     // The layer binds `SPC m = =` per web mode to its beautifier; the leader's
     // `SPC m =` is the format group, so the flavour-picking command goes in the

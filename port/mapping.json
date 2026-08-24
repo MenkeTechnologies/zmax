@@ -43335,11 +43335,13 @@
  },
  {
   "spec_id": "spacemacs.layer.os_nixos",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "language:nix"
+   "language:nix",
+   "static:nixos_options",
+   "key:major-nix:space m o"
   ],
-  "note": "nixos layer -> nix grammar + nil/nixd; no nixos-options browser"
+  "note": "The nix grammar with nil/nixd, and - the gap the old note named - the layer's options browser. `nixos_options` (`SPC m o` in nix buffers) reads NixOS's `options.json` ($NIXOS_OPTIONS_JSON, else the path a configured system puts it at) and offers every option in a picker with its type, default and the first line of its description, inserting the name that is chosen. The index parse handles both field shapes NixOS releases use (a bare string and a text object) and keeps a non-string default as its JSON rendering; it is unit-tested (nixos_options_json_parses_both_field_shapes), the file itself being a NixOS artefact rather than something this machine can produce."
  },
  {
   "spec_id": "spacemacs.layer.frameworks_react",
