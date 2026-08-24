@@ -39899,11 +39899,11 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_x",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z x +"
   ],
-  "note": "text_scale_increase scales one step; no font-scaling transient state"
+  "note": "text_scale_increase inside the `SPC z x` font-scaling transient state (keymap/vim.rs:2207, `sticky=true`): the state stays up after the key acts, so `+`/`=`/`k` keep scaling, `-`/`_`/`j` keep shrinking, `0` resets and `q` leaves - spacemacs's zoom transient state. The scale is `Editor::text_scale`, stepped on the terminal with OSC 50 and reported on the status line. Pinned by `tests/test/spacemacs_states.rs::font_scaling_transient_state_keeps_scaling`, which enters with `+` and keeps scaling with bare `+`/`k` to +3, then resets with `0`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_x_163",
@@ -39911,103 +39911,103 @@
   "evidence": [
    "key:normal:space z x ="
   ],
-  "note": "text-scale-increase"
+  "note": "text_scale_increase inside the `SPC z x` font-scaling transient state (keymap/vim.rs:2207, `sticky=true`): the state stays up after the key acts, so `+`/`=`/`k` keep scaling, `-`/`_`/`j` keep shrinking, `0` resets and `q` leaves - spacemacs's zoom transient state. The scale is `Editor::text_scale`, stepped on the terminal with OSC 50 and reported on the status line. Pinned by `tests/test/spacemacs_states.rs::font_scaling_transient_state_keeps_scaling`, which enters with `+` and keeps scaling with bare `+`/`k` to +3, then resets with `0`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_x_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z x k"
   ],
-  "note": "text_scale_increase scales one step; no font-scaling transient state"
+  "note": "text_scale_increase inside the `SPC z x` font-scaling transient state (keymap/vim.rs:2207, `sticky=true`): the state stays up after the key acts, so `+`/`=`/`k` keep scaling, `-`/`_`/`j` keep shrinking, `0` resets and `q` leaves - spacemacs's zoom transient state. The scale is `Editor::text_scale`, stepped on the terminal with OSC 50 and reported on the status line. Pinned by `tests/test/spacemacs_states.rs::font_scaling_transient_state_keeps_scaling`, which enters with `+` and keeps scaling with bare `+`/`k` to +3, then resets with `0`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_x_165",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z x -"
   ],
-  "note": "text_scale_decrease scales one step; no font-scaling transient state"
+  "note": "text_scale_decrease inside the `SPC z x` font-scaling transient state (keymap/vim.rs:2207, `sticky=true`): the state stays up after the key acts, so `+`/`=`/`k` keep scaling, `-`/`_`/`j` keep shrinking, `0` resets and `q` leaves - spacemacs's zoom transient state. The scale is `Editor::text_scale`, stepped on the terminal with OSC 50 and reported on the status line. Pinned by `tests/test/spacemacs_states.rs::font_scaling_transient_state_keeps_scaling`, which enters with `+` and keeps scaling with bare `+`/`k` to +3, then resets with `0`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_x_166",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z x _"
   ],
-  "note": "text_scale_decrease scales one step; no font-scaling transient state"
+  "note": "text_scale_decrease inside the `SPC z x` font-scaling transient state (keymap/vim.rs:2207, `sticky=true`): the state stays up after the key acts, so `+`/`=`/`k` keep scaling, `-`/`_`/`j` keep shrinking, `0` resets and `q` leaves - spacemacs's zoom transient state. The scale is `Editor::text_scale`, stepped on the terminal with OSC 50 and reported on the status line. Pinned by `tests/test/spacemacs_states.rs::font_scaling_transient_state_keeps_scaling`, which enters with `+` and keeps scaling with bare `+`/`k` to +3, then resets with `0`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_x_j",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z x j"
   ],
-  "note": "text_scale_decrease scales one step; no font-scaling transient state"
+  "note": "text_scale_decrease inside the `SPC z x` font-scaling transient state (keymap/vim.rs:2207, `sticky=true`): the state stays up after the key acts, so `+`/`=`/`k` keep scaling, `-`/`_`/`j` keep shrinking, `0` resets and `q` leaves - spacemacs's zoom transient state. The scale is `Editor::text_scale`, stepped on the terminal with OSC 50 and reported on the status line. Pinned by `tests/test/spacemacs_states.rs::font_scaling_transient_state_keeps_scaling`, which enters with `+` and keeps scaling with bare `+`/`k` to +3, then resets with `0`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_x_0",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z x 0"
   ],
-  "note": "text_scale_reset resets the scale; no font-scaling transient state"
+  "note": "text_scale_reset inside the `SPC z x` font-scaling transient state (keymap/vim.rs:2207, `sticky=true`): the state stays up after the key acts, so `+`/`=`/`k` keep scaling, `-`/`_`/`j` keep shrinking, `0` resets and `q` leaves - spacemacs's zoom transient state. The scale is `Editor::text_scale`, stepped on the terminal with OSC 50 and reported on the status line. Pinned by `tests/test/spacemacs_states.rs::font_scaling_transient_state_keeps_scaling`, which enters with `+` and keeps scaling with bare `+`/`k` to +3, then resets with `0`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_f",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z f +"
   ],
-  "note": "frame_zoom_in zooms one step; no frame-scaling transient state"
+  "note": "frame_zoom_in inside the `SPC z f` frame-scaling transient state (keymap/vim.rs:2213, `sticky=true`): `+`/`=`/`k` zoom in, `-`/`_`/`j` zoom out, `0` unzooms and `q` leaves, with the state staying up between keys. A terminal frame has no font of its own, so this drives the same OSC 50 steps as the text family while keeping its own `Editor::frame_scale` counter for `zoom-frm-unzoom` to report and reset. Pinned by `tests/test/spacemacs_states.rs::frame_scaling_transient_state_keeps_zooming`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_f_169",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z f ="
   ],
-  "note": "frame zoom in"
+  "note": "frame_zoom_in inside the `SPC z f` frame-scaling transient state (keymap/vim.rs:2213, `sticky=true`): `+`/`=`/`k` zoom in, `-`/`_`/`j` zoom out, `0` unzooms and `q` leaves, with the state staying up between keys. A terminal frame has no font of its own, so this drives the same OSC 50 steps as the text family while keeping its own `Editor::frame_scale` counter for `zoom-frm-unzoom` to report and reset. Pinned by `tests/test/spacemacs_states.rs::frame_scaling_transient_state_keeps_zooming`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_f_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z f k"
   ],
-  "note": "frame_zoom_in zooms one step; no frame-scaling transient state"
+  "note": "frame_zoom_in inside the `SPC z f` frame-scaling transient state (keymap/vim.rs:2213, `sticky=true`): `+`/`=`/`k` zoom in, `-`/`_`/`j` zoom out, `0` unzooms and `q` leaves, with the state staying up between keys. A terminal frame has no font of its own, so this drives the same OSC 50 steps as the text family while keeping its own `Editor::frame_scale` counter for `zoom-frm-unzoom` to report and reset. Pinned by `tests/test/spacemacs_states.rs::frame_scaling_transient_state_keeps_zooming`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_f_171",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z f -"
   ],
-  "note": "frame_zoom_out zooms one step; no frame-scaling transient state"
+  "note": "frame_zoom_out inside the `SPC z f` frame-scaling transient state (keymap/vim.rs:2213, `sticky=true`): `+`/`=`/`k` zoom in, `-`/`_`/`j` zoom out, `0` unzooms and `q` leaves, with the state staying up between keys. A terminal frame has no font of its own, so this drives the same OSC 50 steps as the text family while keeping its own `Editor::frame_scale` counter for `zoom-frm-unzoom` to report and reset. Pinned by `tests/test/spacemacs_states.rs::frame_scaling_transient_state_keeps_zooming`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_f_172",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z f _"
   ],
-  "note": "frame_zoom_out zooms one step; no frame-scaling transient state"
+  "note": "frame_zoom_out inside the `SPC z f` frame-scaling transient state (keymap/vim.rs:2213, `sticky=true`): `+`/`=`/`k` zoom in, `-`/`_`/`j` zoom out, `0` unzooms and `q` leaves, with the state staying up between keys. A terminal frame has no font of its own, so this drives the same OSC 50 steps as the text family while keeping its own `Editor::frame_scale` counter for `zoom-frm-unzoom` to report and reset. Pinned by `tests/test/spacemacs_states.rs::frame_scaling_transient_state_keeps_zooming`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_f_j",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z f j"
   ],
-  "note": "frame_zoom_out zooms one step; no frame-scaling transient state"
+  "note": "frame_zoom_out inside the `SPC z f` frame-scaling transient state (keymap/vim.rs:2213, `sticky=true`): `+`/`=`/`k` zoom in, `-`/`_`/`j` zoom out, `0` unzooms and `q` leaves, with the state staying up between keys. A terminal frame has no font of its own, so this drives the same OSC 50 steps as the text family while keeping its own `Editor::frame_scale` counter for `zoom-frm-unzoom` to report and reset. Pinned by `tests/test/spacemacs_states.rs::frame_scaling_transient_state_keeps_zooming`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_z_f_0",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space z f 0"
   ],
-  "note": "frame_zoom_reset resets the zoom; no frame-scaling transient state"
+  "note": "frame_zoom_reset inside the `SPC z f` frame-scaling transient state (keymap/vim.rs:2213, `sticky=true`): `+`/`=`/`k` zoom in, `-`/`_`/`j` zoom out, `0` unzooms and `q` leaves, with the state staying up between keys. A terminal frame has no font of its own, so this drives the same OSC 50 steps as the text family while keeping its own `Editor::frame_scale` counter for `zoom-frm-unzoom` to report and reset. Pinned by `tests/test/spacemacs_states.rs::frame_scaling_transient_state_keeps_zooming`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_w_x_8",

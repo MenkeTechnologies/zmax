@@ -34,6 +34,7 @@ mod test {
     mod operator_count;
     mod reflow;
     mod signs;
+    mod spacemacs_states;
     mod splits;
     mod tab_bar;
     mod tag_stack;
