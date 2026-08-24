@@ -621,6 +621,41 @@ pub mod requests {
         pub granularity: Option<String>,
     }
 
+    /// `stepInTargets` — the call sites the debug adapter can step *into* on the
+    /// line the frame is stopped at, which is what JetBrains's Smart Step Into
+    /// offers to choose between. Guarded by `supports_step_in_targets_request`.
+    #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct StepInTargetsArguments {
+        pub frame_id: usize,
+    }
+
+    #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct StepInTarget {
+        pub id: usize,
+        pub label: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub line: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub column: Option<usize>,
+    }
+
+    #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct StepInTargetsResponse {
+        pub targets: Vec<StepInTarget>,
+    }
+
+    #[derive(Debug)]
+    pub enum StepInTargets {}
+
+    impl Request for StepInTargets {
+        type Arguments = StepInTargetsArguments;
+        type Result = StepInTargetsResponse;
+        const COMMAND: &'static str = "stepInTargets";
+    }
+
     #[derive(Debug)]
     pub enum StepIn {}
 

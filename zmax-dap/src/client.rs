@@ -522,6 +522,30 @@ impl Client {
         self.call::<requests::StepIn>(args)
     }
 
+    /// `stepIn` into a specific call site (`stepInTargets` id) — JetBrains's
+    /// Smart Step Into, where a line with several calls asks which one to enter.
+    pub fn step_in_target(
+        &self,
+        thread_id: ThreadId,
+        target_id: usize,
+    ) -> impl Future<Output = Result<Value>> {
+        let args = requests::StepInArguments {
+            thread_id,
+            target_id: Some(target_id),
+            granularity: None,
+        };
+
+        self.call::<requests::StepIn>(args)
+    }
+
+    /// The call sites the adapter can step into on the frame's current line.
+    pub async fn step_in_targets(&self, frame_id: usize) -> Result<Vec<requests::StepInTarget>> {
+        let args = requests::StepInTargetsArguments { frame_id };
+
+        let response = self.request::<requests::StepInTargets>(args).await?;
+        Ok(response.targets)
+    }
+
     pub fn step_out(&self, thread_id: ThreadId) -> impl Future<Output = Result<Value>> {
         let args = requests::StepOutArguments {
             thread_id,

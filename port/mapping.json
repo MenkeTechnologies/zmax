@@ -11679,11 +11679,12 @@
  },
  {
   "spec_id": "jetbrains.navigate-from-symbol.go-to-super-method",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_definition"
+   "static:goto_super_method",
+   "key:normal:space g ^"
   ],
-  "note": ""
+  "note": "LSP has no go-to-super request, so `goto_super_method` (commands/lsp.rs) composes the three the IDE itself uses: `documentSymbol` finds the innermost type enclosing the cursor and takes the method name at point, `typeHierarchy/supertypes` gives that type's parents, and a `documentSymbol` on each parent finds the member of the same name. One hit jumps, several open the goto picker, and none reports 'No super method found' rather than falling back to `goto_definition`, which would land back on the method the cursor is already in. Bound at `SPC g ^`."
  },
  {
   "spec_id": "jetbrains.navigate-from-symbol.go-to-implementation-s",
@@ -18913,11 +18914,12 @@
  },
  {
   "spec_id": "jetbrains.coding-assistance.smart-completion",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:completion"
+   "static:smart_type_completion",
+   "key:normal:space i t"
   ],
-  "note": "no type filtering"
+  "note": "`smart_type_completion` (commands.rs) filters the server's completion list to the candidates whose signature names the type the caret is expected to produce. LSP never states that type, so it is read off the line before the caret - an annotated binding (`let x: Foo = `), a C/Java-style declaration (`Foo x = `), a cast, or a return arrow - by `expected_type_before`, with `first_type_word` reducing `&'a mut a::Foo<T>` to `Foo`. Items are kept when their `labelDetails.description` or `detail` names that type as a whole word, so `Foo` does not match `FooBar`. Nothing to filter by leaves the list unfiltered; a type that matches nothing says so instead of silently offering everything. Both readers are unit-tested (`expected_type_comes_off_the_line_before_the_caret`, `type_filter_matches_whole_words_only`)."
  },
  {
   "spec_id": "jetbrains.coding-assistance.override-methods",
@@ -18972,11 +18974,13 @@
  },
  {
   "spec_id": "jetbrains.run-debug.smart-step-into",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:dap_step_in"
+   "static:dap_smart_step_in",
+   "key:normal:S-F7",
+   "key:normal:space d I"
   ],
-  "note": "step-in ~ smart step into"
+  "note": "JetBrains Smart Step Into is DAP's `stepInTargets`: the adapter lists the call sites on the line the frame is stopped at and `stepIn` takes the chosen target's id. `dap_smart_step_in` (commands/dap.rs) asks for the targets on the active frame, steps straight in when there is one, and opens a picker of the call labels when there are several. Adapters that do not advertise `supportsStepInTargetsRequest`, frames the adapter refuses, and lines with no targets fall through to a plain step-in, so the key always steps. Bound on Shift-F7 (the IntelliJ chord) and `SPC d I`; the request/response types are in zmax-dap-types and the client methods in zmax-dap."
  },
  {
   "spec_id": "jetbrains.vcs.show-history",

@@ -1784,6 +1784,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // emacs `S-<f10>` is `context-menu-open`: the menu `down-mouse-3` pops up,
         // from the keyboard, at point.
         "S-F10" => context_menu_open,          // Shift-F10: the context menu at point
+        // IntelliJ binds Smart Step Into to Shift-F7 (plain F7 is its step-into,
+        // which is F11 here); the chord is free and is what a JetBrains user
+        // reaches for.
+        "S-F7" => dap_smart_step_in,           // Shift-F7: smart step into (pick the call)
         "F11" => dap_step_in,                  // F11     : step in
         "S-F11" => dap_step_out,               // Shift-F11: step out
 
@@ -1895,6 +1899,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             },
             "i" => { "Insert"
                 "u" => unicode_picker,             // SPC i u : search unicode chars and insert (helm-unicode)
+                "t" => smart_type_completion,      // SPC i t : complete with what fits the expected type (JetBrains Ctrl-Shift-Space)
                 "U" => { "UUID"
                     "1" => insert_uuid_v1,         // SPC i U 1 : time-based UUIDv1
                     "4" => insert_uuid_v4,         // SPC i U 4 : random UUIDv4
@@ -2169,6 +2174,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "c" => dap_continue,               // SPC d c : continue
                 "C" => dap_run_to_cursor,          // SPC d C : run to cursor (JetBrains Run To Cursor)
                 "i" => dap_step_in,                // SPC d i : step in
+                "I" => dap_smart_step_in,          // SPC d I : smart step into (pick the call)
                 "o" => dap_step_out,               // SPC d o : step out
                 "n" => dap_next,                   // SPC d n : step over
                 "p" => dap_pause,                  // SPC d p : pause
@@ -2379,6 +2385,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "t" => smeargle,               // SPC g H t : highlight by last updated time
                 },
                 "T" => type_hierarchy_supertypes,  // SPC g T : type hierarchy — supertypes (JetBrains Ctrl-H)
+                "^" => goto_super_method,          // SPC g ^ : the method this one overrides (JetBrains Cmd U)
                 "U" => type_hierarchy_subtypes,    // SPC g U : type hierarchy — subtypes
                 "b" => git_blame_line,             // SPC g b : git blame current line (spacemacs magit-blame)
                 "s" => git_status,                 // SPC g s : magit status porcelain (Spacemacs magit-status)

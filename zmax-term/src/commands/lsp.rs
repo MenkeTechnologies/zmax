@@ -1633,6 +1633,206 @@ fn type_hierarchy_impl(cx: &mut Context, supertypes: bool) {
     });
 }
 
+/// The innermost class/interface/struct/enum/trait whose range covers `pos`,
+/// as a flat walk over a `documentSymbol` response.
+fn enclosing_type_symbol(
+    response: &lsp::DocumentSymbolResponse,
+    pos: lsp::Position,
+) -> Option<(String, lsp::Position)> {
+    fn covers(range: &lsp::Range, pos: lsp::Position) -> bool {
+        range.start <= pos && pos <= range.end
+    }
+    fn is_type(kind: lsp::SymbolKind) -> bool {
+        matches!(
+            kind,
+            lsp::SymbolKind::CLASS
+                | lsp::SymbolKind::INTERFACE
+                | lsp::SymbolKind::STRUCT
+                | lsp::SymbolKind::ENUM
+                | lsp::SymbolKind::OBJECT
+        )
+    }
+    fn walk(
+        symbols: &[lsp::DocumentSymbol],
+        pos: lsp::Position,
+        found: &mut Option<(String, lsp::Position)>,
+    ) {
+        for sym in symbols {
+            if !covers(&sym.range, pos) {
+                continue;
+            }
+            if is_type(sym.kind) {
+                // Deeper hits overwrite shallower ones: innermost wins.
+                *found = Some((sym.name.clone(), sym.selection_range.start));
+            }
+            if let Some(children) = &sym.children {
+                walk(children, pos, found);
+            }
+        }
+    }
+    match response {
+        lsp::DocumentSymbolResponse::Nested(symbols) => {
+            let mut found = None;
+            walk(symbols, pos, &mut found);
+            found
+        }
+        // The flat form carries no ranges to nest by; take the innermost type
+        // whose location covers the position.
+        lsp::DocumentSymbolResponse::Flat(symbols) => symbols
+            .iter()
+            .filter(|s| is_type(s.kind) && covers(&s.location.range, pos))
+            .min_by_key(|s| {
+                (
+                    s.location
+                        .range
+                        .end
+                        .line
+                        .saturating_sub(s.location.range.start.line),
+                    s.location.range.end.character,
+                )
+            })
+            .map(|s| (s.name.clone(), s.location.range.start)),
+    }
+}
+
+/// Every member named `name` in a `documentSymbol` response, as locations.
+fn members_named(
+    response: &lsp::DocumentSymbolResponse,
+    uri: &lsp::Url,
+    name: &str,
+) -> Vec<lsp::Location> {
+    fn walk(
+        symbols: &[lsp::DocumentSymbol],
+        uri: &lsp::Url,
+        name: &str,
+        out: &mut Vec<lsp::Location>,
+    ) {
+        for sym in symbols {
+            if sym.name == name
+                && matches!(
+                    sym.kind,
+                    lsp::SymbolKind::METHOD
+                        | lsp::SymbolKind::FUNCTION
+                        | lsp::SymbolKind::PROPERTY
+                        | lsp::SymbolKind::FIELD
+                        | lsp::SymbolKind::CONSTRUCTOR
+                )
+            {
+                out.push(lsp::Location::new(uri.clone(), sym.selection_range));
+            }
+            if let Some(children) = &sym.children {
+                walk(children, uri, name, out);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    match response {
+        lsp::DocumentSymbolResponse::Nested(symbols) => walk(symbols, uri, name, &mut out),
+        lsp::DocumentSymbolResponse::Flat(symbols) => out.extend(
+            symbols
+                .iter()
+                .filter(|s| s.name == name)
+                .map(|s| s.location.clone()),
+        ),
+    }
+    out
+}
+
+/// JetBrains "Go to Super Method" (Cmd U / Ctrl U): from a method that overrides
+/// or implements another, jump to the one it overrides.
+///
+/// LSP has no single request for this, so it is the three standard ones the IDE
+/// itself composes: `documentSymbol` finds the type enclosing the cursor and the
+/// method name at point, `typeHierarchy/supertypes` gives that type's parents,
+/// and a `documentSymbol` on each parent finds the member of the same name. One
+/// hit jumps; several open the goto picker. Falls back to nothing found rather
+/// than to `goto_definition`, which would land back on the method you are on.
+pub fn goto_super_method(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let language_server =
+        language_server_with_feature!(cx.editor, doc, LanguageServerFeature::TypeHierarchy);
+    let ls_id = language_server.id();
+    let offset_encoding = language_server.offset_encoding();
+    let pos = doc.position(view.id, offset_encoding);
+
+    // The method name at point — what we look for in each supertype.
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let (from, to) = super::expand_bare_cursor_to_word(text, range.from(), range.to());
+    let name = text.slice(from..to).to_string().trim().to_string();
+    if name.is_empty() {
+        cx.editor.set_error("No method under cursor");
+        return;
+    }
+
+    let identifier = doc.identifier();
+    let Some(symbols) = language_server.document_symbols(identifier.clone()) else {
+        cx.editor
+            .set_error("Language server does not support document symbols");
+        return;
+    };
+    let client = cx.editor.language_servers.get_by_id(ls_id).cloned();
+
+    cx.jobs.callback(async move {
+        let err = |msg: &'static str| {
+            Ok(Callback::EditorCompositor(Box::new(
+                move |editor: &mut Editor, _: &mut Compositor| editor.set_error(msg),
+            )))
+        };
+        let Some(client) = client else {
+            return err("language server is no longer available");
+        };
+        let Some(symbols) = symbols.await? else {
+            return err("No symbols in this file");
+        };
+        let Some((_type_name, type_pos)) = enclosing_type_symbol(&symbols, pos) else {
+            return err("No enclosing type for a super method");
+        };
+
+        // The type hierarchy is anchored on the *type*, not the method.
+        let Some(prepare) = client.prepare_type_hierarchy(identifier, type_pos) else {
+            return err("Type hierarchy is not available here");
+        };
+        let Some(item) = prepare.await?.and_then(|items| items.into_iter().next()) else {
+            return err("No type under cursor for type hierarchy");
+        };
+        let supertypes = match client.type_hierarchy_supertypes(item) {
+            Some(future) => future.await?.unwrap_or_default(),
+            None => Vec::new(),
+        };
+        if supertypes.is_empty() {
+            return err("No supertypes: this method overrides nothing");
+        }
+
+        let mut locations: Vec<Location> = Vec::new();
+        for parent in supertypes {
+            let Some(request) =
+                client.document_symbols(lsp::TextDocumentIdentifier::new(parent.uri.clone()))
+            else {
+                continue;
+            };
+            let Some(parent_symbols) = request.await? else {
+                continue;
+            };
+            for hit in members_named(&parent_symbols, &parent.uri, &name) {
+                if let Some(loc) = lsp_location_to_location(hit, offset_encoding) {
+                    locations.push(loc);
+                }
+            }
+        }
+
+        Ok(Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                if locations.is_empty() {
+                    editor.set_error("No super method found");
+                } else {
+                    goto_impl(editor, compositor, locations);
+                }
+            },
+        )))
+    });
+}
+
 pub fn signature_help(cx: &mut Context) {
     cx.editor
         .handlers

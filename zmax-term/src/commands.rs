@@ -1130,6 +1130,8 @@ impl MappableCommand {
         call_hierarchy_outgoing_calls, "Call hierarchy: what the symbol calls",
         type_hierarchy_supertypes, "Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H)",
         type_hierarchy_subtypes, "Type hierarchy: subtypes of the symbol",
+        goto_super_method, "Go to the method this one overrides (JetBrains Go to Super Method, Cmd U)",
+        smart_type_completion, "Complete with only what fits the expected type (JetBrains Smart Type Completion, Ctrl-Shift-Space)",
         goto_window_top, "Goto window top",
         what_line, "Report the line number of point (emacs what-line)",
         what_page, "Report the page number and line within the page (emacs what-page)",
@@ -2281,6 +2283,7 @@ impl MappableCommand {
         dap_run_to_cursor, "Run the debugger up to the cursor line (JetBrains Run To Cursor)",
         dap_pause, "Pause program execution",
         dap_step_in, "Step in",
+        dap_smart_step_in, "Step into a chosen call on this line (JetBrains Smart Step Into, Shift F7)",
         dap_step_out, "Step out",
         dap_next, "Step to next",
         dap_variables, "List variables",
@@ -49670,6 +49673,198 @@ fn semantic_analyze_possible_completions(cx: &mut Context) {
     );
 }
 
+/// The type the caret position is expected to produce, read off the text before
+/// it — JetBrains's Smart Type Completion filters to what fits here.
+///
+/// The forms are the ones a declaration or a return takes across the C-family,
+/// Rust, Go, TypeScript and Java: an annotated binding (`let x: Foo = `,
+/// `x: Foo = `, `Foo x = `), a cast (`(Foo) `, `as Foo`), and a return arrow
+/// (`-> Foo {`). `None` when the line says nothing about the type, which leaves
+/// the completion unfiltered rather than guessing.
+fn expected_type_before(prefix: &str) -> Option<String> {
+    let trimmed = prefix.trim_end();
+    // `... = <caret>` — the type is whatever was annotated on the binding.
+    if let Some(before_eq) = trimmed.strip_suffix('=').map(str::trim_end) {
+        // `let x: Foo`, `x: Foo`, `const x: Foo`
+        if let Some((_, ty)) = before_eq.rsplit_once(':') {
+            let ty = ty.trim().trim_end_matches(&['{', '('][..]).trim();
+            // The annotation may lead with sigils and a lifetime (`&'a mut Foo`),
+            // so the name is whatever survives `first_type_word`, not the first
+            // character of the annotation.
+            let name = first_type_word(ty);
+            if name.chars().next().is_some_and(char::is_alphabetic) {
+                return Some(name);
+            }
+        }
+        // `Foo x`, `final Foo x` — a C/Java-style declaration.
+        let mut words = before_eq.split_whitespace().rev();
+        let (Some(_name), Some(ty)) = (words.next(), words.next()) else {
+            return None;
+        };
+        let name = first_type_word(ty);
+        if name.chars().next().is_some_and(char::is_alphabetic) {
+            return Some(name);
+        }
+        return None;
+    }
+    // `return <caret>` inside a function whose arrow is on the same line.
+    if let Some((_, after)) = trimmed.rsplit_once("->") {
+        let ty = after.trim().trim_end_matches('{').trim();
+        if !ty.is_empty() {
+            return Some(first_type_word(ty));
+        }
+    }
+    // A cast: `(Foo) <caret>` or `<caret> as Foo` written before the caret.
+    if let Some(rest) = trimmed
+        .rsplit_once(')')
+        .and_then(|(head, _)| head.rsplit_once('('))
+    {
+        let ty = rest.1.trim();
+        if !ty.is_empty()
+            && ty
+                .chars()
+                .all(|c| c.is_alphanumeric() || "_:<>&' ".contains(c))
+        {
+            return Some(first_type_word(ty));
+        }
+    }
+    None
+}
+
+/// The identifier a type expression is named by: `Vec<Foo>` -> `Vec`,
+/// `&'a mut Foo` -> `Foo`, `foo.Bar` -> `Bar`.
+fn first_type_word(ty: &str) -> String {
+    // Drop everything in front of the name: sigils, a lifetime, and the
+    // qualifiers that can precede a type but never are one.
+    let mut rest = ty.trim();
+    loop {
+        let stripped = rest.trim_start_matches(['&', '*']).trim_start();
+        let stripped = match stripped.split_whitespace().next() {
+            Some(word)
+                if word.starts_with('\'')
+                    || matches!(word, "mut" | "dyn" | "impl" | "const" | "final" | "static") =>
+            {
+                stripped[word.len()..].trim_start()
+            }
+            _ => stripped,
+        };
+        if stripped == rest {
+            break;
+        }
+        rest = stripped;
+    }
+    let head = rest.split(['<', '(', ' ', ',']).next().unwrap_or(rest);
+    // A qualified name is written `a::B` or `a.B`; the type is the last segment.
+    let head = head.rsplit("::").next().unwrap_or(head);
+    head.rsplit('.').next().unwrap_or(head).to_string()
+}
+
+/// JetBrains "Smart Type Completion" (Ctrl-Shift-Space): the completion list
+/// filtered to the candidates that fit the type the caret is expected to
+/// produce, rather than everything in scope.
+///
+/// LSP has no "expected type" request, so the type comes from the line — the
+/// annotation, declaration, cast or return arrow before the caret
+/// ([`expected_type_before`]) — and the server's completion items are kept when
+/// their `detail` (the signature the server renders, e.g. `fn new() -> Vec<T>`)
+/// names that type. With nothing to filter by, this is plain completion; with a
+/// type that matches nothing, it says so rather than silently offering the full
+/// list.
+fn smart_type_completion(cx: &mut Context) {
+    use zmax_lsp::lsp;
+    let (expected, start, request) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        let line_start = text.line_to_char(line);
+        let prefix = text.slice(line_start..cursor).to_string();
+        // The word being typed is replaced by the pick, as in any completion.
+        let word_start = prefix
+            .char_indices()
+            .rev()
+            .find(|(_, c)| !(c.is_alphanumeric() || *c == '_'))
+            .map_or(line_start, |(i, c)| {
+                line_start + prefix[..i + c.len_utf8()].chars().count()
+            });
+        let Some(language_server) = doc
+            .language_servers_with_feature(LanguageServerFeature::Completion)
+            .next()
+        else {
+            cx.editor
+                .set_error("smart-type-completion: no completion provider");
+            return;
+        };
+        let offset_encoding = language_server.offset_encoding();
+        let pos = doc.position(view.id, offset_encoding);
+        let context = lsp::CompletionContext {
+            trigger_kind: lsp::CompletionTriggerKind::INVOKED,
+            trigger_character: None,
+        };
+        (
+            expected_type_before(&prefix),
+            word_start,
+            language_server.completion(doc.identifier(), pos, None, context),
+        )
+    };
+    let Some(future) = request else {
+        cx.editor
+            .set_error("smart-type-completion: no completion provider");
+        return;
+    };
+    cx.callback(
+        future,
+        move |editor, compositor, response: Option<lsp::CompletionResponse>| {
+            let items = match response {
+                Some(lsp::CompletionResponse::Array(items)) => items,
+                Some(lsp::CompletionResponse::List(list)) => list.items,
+                None => Vec::new(),
+            };
+            let matching: Vec<String> = items
+                .iter()
+                .filter(|item| match &expected {
+                    None => true,
+                    Some(ty) => {
+                        let detail = item
+                            .label_details
+                            .as_ref()
+                            .and_then(|d| d.description.clone())
+                            .or_else(|| item.detail.clone())
+                            .unwrap_or_default();
+                        type_word_matches(&detail, ty)
+                    }
+                })
+                .map(|item| {
+                    item.insert_text
+                        .clone()
+                        .unwrap_or_else(|| item.label.clone())
+                })
+                .collect();
+            if matching.is_empty() {
+                match &expected {
+                    Some(ty) => {
+                        editor.set_error(format!("smart-type-completion: nothing of type {ty}"))
+                    }
+                    None => editor.set_error("smart-type-completion: no completions at point"),
+                }
+                return;
+            }
+            let title = match &expected {
+                Some(ty) => format!("completions of type {ty}"),
+                None => "completions".to_string(),
+            };
+            complete_from_editor(editor, compositor, start, matching, &title);
+        },
+    );
+}
+
+/// Whether `detail` — a server-rendered signature — names `ty` as a whole word.
+fn type_word_matches(detail: &str, ty: &str) -> bool {
+    detail
+        .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .any(|word| word == ty)
+}
+
 /// `xref-find-definitions-other-frame` (`C-x 5 .`): jump to the definition of
 /// the symbol at point in another frame. The etags branch is
 /// [`xref_find_definitions_other_window`]'s, for the same reason.
@@ -57621,6 +57816,30 @@ fn complete_from(cx: &mut Context, start: usize, candidates: Vec<String>, what: 
         apply_completion(cx.editor, start, item);
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// [`complete_from`]'s picker, for a caller that holds the editor and the
+/// compositor rather than a `Context` — an LSP response callback, which is where
+/// the smart-type list arrives.
+fn complete_from_editor(
+    editor: &mut Editor,
+    compositor: &mut Compositor,
+    start: usize,
+    candidates: Vec<String>,
+    what: &str,
+) {
+    if candidates.is_empty() {
+        editor.set_error(format!("E433: No {what} completion found"));
+        return;
+    }
+    let columns = [ui::PickerColumn::new(
+        what.to_string(),
+        |item: &String, _: &()| item.as_str().into(),
+    )];
+    let picker = Picker::new(columns, 0, candidates, (), move |cx, item, _action| {
+        apply_completion(cx.editor, start, item);
+    });
+    compositor.push(Box::new(overlaid(picker)));
 }
 
 /// vim `i_CTRL-X CTRL-L`: complete whole lines. Every other line of the buffer
@@ -73615,6 +73834,49 @@ fn open_dribble_file(cx: &mut Context) {
 
 #[cfg(test)]
 mod gap_command_tests {
+    /// JetBrains Smart Type Completion filters to what fits the expected type,
+    /// which LSP never states; it is read off the line before the caret.
+    #[test]
+    fn expected_type_comes_off_the_line_before_the_caret() {
+        // Annotated bindings, across the syntaxes that write them differently.
+        assert_eq!(
+            expected_type_before("let v: Vec<Foo> = ").as_deref(),
+            Some("Vec")
+        );
+        assert_eq!(
+            expected_type_before("    const x: Foo = ").as_deref(),
+            Some("Foo")
+        );
+        assert_eq!(
+            expected_type_before("x: crate::a::Bar = ").as_deref(),
+            Some("Bar")
+        );
+        // C/Java-style `Type name = `.
+        assert_eq!(expected_type_before("  Foo bar = ").as_deref(), Some("Foo"));
+        // A return arrow on the same line.
+        assert_eq!(
+            expected_type_before("fn f() -> Result { ").as_deref(),
+            Some("Result")
+        );
+        // Reference and smart-pointer noise is not the type's name.
+        assert_eq!(
+            expected_type_before("let r: &'a mut Foo = ").as_deref(),
+            Some("Foo")
+        );
+        // Nothing to go on leaves completion unfiltered.
+        assert_eq!(expected_type_before("foo.ba"), None);
+        assert_eq!(expected_type_before(""), None);
+    }
+
+    /// The filter is whole-word: `Foo` must not match `FooBar` or `foo`.
+    #[test]
+    fn type_filter_matches_whole_words_only() {
+        assert!(type_word_matches("fn new() -> Foo", "Foo"));
+        assert!(type_word_matches("pub fn get(&self) -> Option<Foo>", "Foo"));
+        assert!(!type_word_matches("fn new() -> FooBar", "Foo"));
+        assert!(!type_word_matches("fn new() -> foo", "Foo"));
+    }
+
     use super::*;
 
     /// A bare cursor is a 1-char range in Helix, so `SPC *` / `*` / dumb-jump

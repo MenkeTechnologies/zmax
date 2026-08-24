@@ -565,6 +565,73 @@ pub fn dap_step_in(cx: &mut Context) {
     }
 }
 
+/// JetBrains "Smart Step Into" (Shift+F7): on a line with several calls, ask
+/// *which* call to step into instead of entering the first one.
+///
+/// DAP models exactly this with `stepInTargets`: the adapter lists the call
+/// sites on the frame's current line, and `stepIn` takes the chosen target's id.
+/// Adapters that do not advertise `supportsStepInTargetsRequest`, and lines with
+/// a single target, fall through to a plain step-in, so the key always steps.
+pub fn dap_smart_step_in(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+
+    let Some(thread_id) = debugger.thread_id else {
+        cx.editor
+            .set_error("Currently active thread is not stopped. Switch the thread.");
+        return;
+    };
+
+    // The frame the user is looking at — its line is the one with the calls.
+    let frame_id = debugger
+        .active_frame
+        .and_then(|frame| Some(debugger.stack_frames.get(&thread_id)?.get(frame)?.id))
+        .filter(|_| {
+            debugger
+                .capabilities()
+                .supports_step_in_targets_request
+                .unwrap_or(false)
+        });
+
+    let Some(frame_id) = frame_id else {
+        dap_step_in(cx);
+        return;
+    };
+
+    let targets = match block_on(debugger.step_in_targets(frame_id)) {
+        Ok(targets) => targets,
+        // An adapter may advertise the request and still refuse a given frame;
+        // stepping in is still what the key is for.
+        Err(_) => {
+            dap_step_in(cx);
+            return;
+        }
+    };
+
+    match targets.len() {
+        0 => dap_step_in(cx),
+        1 => {
+            let request = debugger.step_in_target(thread_id, targets[0].id);
+            dap_callback(cx.jobs, request, |editor, _compositor, _response: ()| {
+                debugger!(editor).resume_application();
+            });
+        }
+        _ => {
+            let columns = [ui::PickerColumn::new(
+                "call",
+                |item: &zmax_dap::requests::StepInTarget, _: &()| item.label.clone().into(),
+            )];
+            let picker = Picker::new(columns, 0, targets, (), move |cx, target, _action| {
+                let debugger = debugger!(cx.editor);
+                let request = debugger.step_in_target(thread_id, target.id);
+                dap_callback(cx.jobs, request, |editor, _compositor, _response: ()| {
+                    debugger!(editor).resume_application();
+                });
+            });
+            cx.push_layer(Box::new(picker));
+        }
+    }
+}
+
 pub fn dap_step_out(cx: &mut Context) {
     let debugger = debugger!(cx.editor);
 
