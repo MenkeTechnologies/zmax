@@ -471,6 +471,7 @@ impl MappableCommand {
         extend_prev_char, "Extend to previous occurrence of char",
         repeat_last_motion, "Repeat last motion",
         repeat_last_command, "Run the last command again (emacs repeat, C-x z)",
+        command_log_mode, "Toggle the live *command-log* buffer (spacemacs command-log layer)",
         repeat_find_char, "Repeat last find in same direction (;)",
         repeat_find_char_reverse, "Repeat last find in opposite direction (,)",
         replace, "Replace with new char",
@@ -7866,6 +7867,78 @@ fn extend_prev_char(cx: &mut Context) {
 /// `repeat_last_command` never records itself, so `C-x z z z` keeps repeating
 /// the command that came before it rather than the repeat.
 static LAST_COMMAND: std::sync::Mutex<Option<MappableCommand>> = std::sync::Mutex::new(None);
+
+/// Spacemacs's command-log layer (`command-log-mode`): while on, every command
+/// the key dispatcher runs is appended to a live `*command-log*` buffer, so the
+/// log builds up as you type instead of being asked for after the fact the way
+/// `view-lossage` is.
+static COMMAND_LOG_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The buffer name the log is written to, and looked up by.
+const COMMAND_LOG_BUFFER: &str = "*command-log*";
+
+/// Whether the live command log is on.
+pub(crate) fn command_log_enabled() -> bool {
+    COMMAND_LOG_ON.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Append one line to the live command log, if its buffer is still open. Called
+/// from the key dispatcher after each command, which is the only place that
+/// knows both the keys and the command.
+pub(crate) fn command_log_append(editor: &mut Editor, keys: &str, command: &str) {
+    if !command_log_enabled() {
+        return;
+    }
+    // Logging the log's own scrolling would drown the log.
+    let Some(doc_id) = editor
+        .documents()
+        .find(|doc| doc.display_name() == COMMAND_LOG_BUFFER)
+        .map(|doc| doc.id())
+    else {
+        return;
+    };
+    let line = if keys.is_empty() {
+        format!("{command}\n")
+    } else {
+        format!("{keys:<12} {command}\n")
+    };
+    let Some(doc) = editor.document_mut(doc_id) else {
+        return;
+    };
+    let end = doc.text().len_chars();
+    let transaction = Transaction::change(doc.text(), [(end, end, Some(line.into()))].into_iter());
+    let view_id = editor.tree.focus;
+    let doc = editor.document_mut(doc_id).expect("checked above");
+    doc.apply(&transaction, view_id);
+}
+
+/// Spacemacs's command-log layer: toggle the live `*command-log*` side buffer.
+/// On, it opens in a split and fills as commands run; off, the flag is cleared
+/// and the buffer is left behind as an ordinary scratch buffer.
+fn command_log_mode(cx: &mut Context) {
+    let on = !command_log_enabled();
+    COMMAND_LOG_ON.store(on, std::sync::atomic::Ordering::Relaxed);
+    if !on {
+        cx.editor.set_status("command-log-mode disabled");
+        return;
+    }
+    let existing = cx
+        .editor
+        .documents()
+        .find(|doc| doc.display_name() == COMMAND_LOG_BUFFER)
+        .map(|doc| doc.id());
+    match existing {
+        Some(id) => cx.editor.switch(id, Action::HorizontalSplit),
+        None => {
+            cx.editor.new_file(Action::HorizontalSplit);
+            let (view, doc) = current!(cx.editor);
+            doc.ensure_view_init(view.id);
+            doc.set_buffer_name(Some(COMMAND_LOG_BUFFER.to_string()));
+        }
+    }
+    cx.editor
+        .set_status("command-log-mode enabled — commands log to *command-log*");
+}
 
 /// Record `command` as the one `repeat` would re-run. Called for every command
 /// the keymap dispatches (`ui::editor`), which is emacs's `last-repeatable-command`.

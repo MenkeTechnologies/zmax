@@ -47464,12 +47464,14 @@
  },
  {
   "spec_id": "spacemacs.layer.tools_command_log",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:view_lossage",
-   "static:lossage_size"
+   "static:lossage_size",
+   "static:command_log_mode",
+   "key:normal:space t C-l"
   ],
-  "note": "view-lossage on demand with a configurable ring; no live side-buffer command log"
+  "note": "The layer's two halves are both here now. `view-lossage` (with `lossage-size`) answers \"what did I just press\" after the fact, and `command-log-mode` (`SPC t C-l`, `command_log_mode`) is the layer's live side buffer: while it is on, the key dispatcher appends every command it runs - the chord and the command name - to a `*command-log*` buffer opened in a split, so the log builds as you type. Toggling it off leaves the buffer behind as an ordinary scratch buffer. Pinned by `tests/test/spacemacs_states.rs::command_log_mode_logs_commands_as_they_run`."
  },
  {
   "spec_id": "spacemacs.layer.os_osx",

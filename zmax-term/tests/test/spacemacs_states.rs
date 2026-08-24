@@ -568,3 +568,47 @@ async fn spc_d_m_d_3_resolves_and_merges_common_files() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+/// The command-log layer's `command-log-mode`: a live side buffer that fills as
+/// commands run, rather than `view-lossage`'s after-the-fact dump.
+#[tokio::test(flavor = "multi_thread")]
+async fn command_log_mode_logs_commands_as_they_run() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bcdef\n")
+        .build()?;
+    let log_text = |app: &zmax_term::application::Application| -> String {
+        app.editor
+            .documents()
+            .find(|doc| doc.display_name() == "*command-log*")
+            .map(|doc| doc.text().to_string())
+            .unwrap_or_default()
+    };
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("<space>t<C-l>"), None),
+            // Two ordinary commands land in the log with the keys that ran them.
+            (
+                Some("ll"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let text = log_text(app);
+                    assert!(
+                        text.matches("move_char_right").count() >= 2,
+                        "both presses were logged: {text:?}"
+                    );
+                    assert!(text.contains('l'), "the keys are logged too: {text:?}");
+                }),
+            ),
+            // Toggling off stops the log growing.
+            (
+                Some("<space>t<C-l>"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

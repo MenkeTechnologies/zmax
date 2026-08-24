@@ -336,6 +336,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t C-S-l", "Toggles", ":toggle soft-wrap.enable"),          // SPC t C-S-l : visual line navigation
     ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
     ("space t k k", "Toggles", "which_key_hide"),                     // SPC t k k : take the pinned popup down
+    ("space t C-l", "Toggles", "command_log_mode"),                   // SPC t C-l : live *command-log* buffer
     ("space t p", "Toggles", ":toggle auto-pairs"),                    // SPC t p : smartparens (auto-pairs)
     ("space t C-p", "Toggles", ":toggle auto-pairs"),                  // SPC t C-p : global smartparens
     // SPC T c (theme_picker) is a static command, bound in the macro keymap below.

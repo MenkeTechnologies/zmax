@@ -3679,6 +3679,17 @@ impl EditorView {
             // would otherwise repeat repeating.
             commands::record_last_command(command);
             command.execute(cxt);
+            // command-log-mode: the live log wants the keys *and* the command,
+            // which only this dispatch knows.
+            if commands::command_log_enabled() {
+                let keys: String = chord_prefix
+                    .iter()
+                    .chain(std::iter::once(&event))
+                    .map(|k| k.key_sequence_format())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                commands::command_log_append(cxt.editor, &keys, command.name());
+            }
             zmax_event::dispatch(PostCommand { command, cx: cxt });
 
             // spacemacs `nav-flash`: the layer advises a fixed set of navigation
