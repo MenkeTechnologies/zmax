@@ -48845,13 +48845,14 @@
  },
  {
   "spec_id": "spacemacs.layer.emacs_better_defaults",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:goto_first_nonwhitespace",
    "static:delete_word_backward",
-   "static:fill_region_as_paragraph"
+   "static:fill_region_as_paragraph",
+   "static:yank_from_kill_ring"
   ],
-  "note": "the behaviors this layer rebinds already exist as commands: C-a beginning-of-line-or-code -> goto_first_nonwhitespace, C-w backward-kill-word-or-region -> delete_word_backward, M-q fill/unfill -> fill_region_as_paragraph. Auto-indent-on-paste (C-y with a prefix arg) is not implemented"
+  "note": "The behaviours this layer rebinds all exist: `C-a` beginning-of-line-or-code -> `goto_first_nonwhitespace`, `C-w` backward-kill-word-or-region -> `delete_word_backward`, `M-q` fill/unfill -> `fill_region_as_paragraph`, and - the last gap - auto-indent-on-paste: `C-u C-y` re-indents what it yanks to the indentation of the line it lands on (`yank_from_kill_ring` runs the kill through `reindent_block` under a prefix argument), while a plain `C-y` yanks it verbatim. Pinned by `tests/test/spacemacs_states.rs::c_u_c_y_reindents_what_it_yanks`."
  },
  {
   "spec_id": "spacemacs.layer.misc_dtrt_indent",
@@ -51519,14 +51520,17 @@
  },
  {
   "spec_id": "spacemacs.layer.fun_emoji",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:emoji_list",
    "static:emoji_describe",
    "static:emoji_recent",
-   "key:normal:C-x 8 e e"
+   "static:complete_emoji",
+   "key:normal:C-x 8 e e",
+   "key:normal:space i e",
+   "key:normal:space a f e"
   ],
-  "note": "Gap (4) of the old note is closed: emoji_list is bound now \u2014 the emacs emoji map is live at C-x 8 e (e/i/l/s -> emoji_list, d -> emoji_describe, r -> emoji_recent, commands.rs:45204 over the list emoji_add_recent fills on each insert), so the commands are no longer palette-only. Still partial: `SPC i e` is an unclaimed empty slot in the spacemacs Insert group and was never written; `SPC a f` is a terminal leaf (file_explorer), so the layer's `SPC a f e` browse chord is structurally unreachable without converting that slot to a submap; and company-emoji completion has no counterpart anywhere in the completion paths."
+  "note": "All three of the old note's gaps are closed. The emacs emoji map is live at `C-x 8 e` (e/i/l/s -> `emoji_list`, d -> `emoji_describe`, r -> `emoji_recent`, over the recent list `emoji_add_recent` fills on each insert); `SPC i e` inserts one from the picker, filling the slot the spacemacs Insert group left empty; `SPC a f` is a prefix now, as it is in spacemacs, so the layer's `SPC a f e` browse chord resolves (the file tree keeps `SPC a f f`, and `SPC a d` still opens the same explorer); and company-emoji's completion is `complete_emoji` (`SPC i E`), which replaces the `:name` being typed with the matching glyph, matching on the CLDR name with `_`/`-` read as spaces. Pinned by `tests/test/spacemacs_states.rs::emoji_layer_chords_resolve_and_complete`."
  },
  {
   "spec_id": "emacs.command.auto_revert_tail_mode",

@@ -757,6 +757,7 @@ impl MappableCommand {
         describe_char, "Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =)",
         emoji_describe, "Say what the emoji after point is called (emacs emoji-describe)",
         emoji_list, "Pick an emoji by name and insert it (emacs emoji-list)",
+        complete_emoji, "Complete the `:name` being typed into an emoji (spacemacs company-emoji)",
         emoji_recent, "Insert one of the recently-used emoji (emacs emoji-recent, C-x 8 e r)",
         view_hello_file, "Show a multi-script greeting sample (emacs view-hello-file, C-h h)",
         view_echo_area_messages, "Show the last echo-area message (emacs view-echo-area-messages, C-h e)",
@@ -36598,6 +36599,19 @@ fn yank_from_kill_ring(cx: &mut Context) {
     };
     let count = cx.count();
     let mode = cx.editor.mode;
+    // spacemacs's better-defaults layer: `C-u C-y` yanks *and* re-indents what
+    // it yanked to the indentation of the line it lands on, which is the
+    // layer's auto-indent-on-paste.
+    let text = if cx.prefix_arg().is_some() {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let line = doc.selection(view.id).primary().cursor_line(slice);
+        let l = slice.line(line);
+        let n = l.first_non_whitespace_char().unwrap_or(0);
+        reindent_block(&text, &l.slice(..n).to_string())
+    } else {
+        text
+    };
     let (view, doc) = current!(cx.editor);
     paste_impl(
         &[text],
@@ -46046,6 +46060,37 @@ fn emoji_describe(cx: &mut Context) {
 /// character-entry idiom is the fuzzy picker `unicode_picker` uses, so the group
 /// and subgroup are columns to narrow on rather than headings to scroll to, and
 /// the skin-tone variants Emacs hides behind a derived sub-menu are listed flat.
+/// company-emoji's completion, as a vim-style completer: the `:word` being typed
+/// before the cursor is completed to the emoji whose CLDR name matches, so
+/// `:smil` offers 🙂 and friends. The candidates are the glyphs themselves —
+/// what company-emoji inserts — and the `:word` they replace goes with them.
+fn complete_emoji(cx: &mut Context) {
+    let (start, prefix) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        let line_start = text.line_to_char(line);
+        let before: String = text.slice(line_start..cursor).to_string();
+        // The token is `:` plus the letters after it, as company-emoji reads it.
+        match before.rfind(':') {
+            Some(i) => {
+                let word = before[i + 1..].to_string();
+                (line_start + before[..i].chars().count(), word)
+            }
+            None => (cursor, String::new()),
+        }
+    };
+    let needle = prefix.trim().to_lowercase().replace(['_', '-'], " ");
+    let candidates: Vec<String> = EMOJI
+        .iter()
+        .filter(|(_, name, _, _)| needle.is_empty() || name.to_lowercase().contains(&needle))
+        .map(|(glyph, _, _, _)| (*glyph).to_string())
+        .take(200)
+        .collect();
+    complete_from(cx, start, candidates, "emoji");
+}
+
 fn emoji_list(cx: &mut Context) {
     emoji_picker(cx, EMOJI.to_vec());
 }

@@ -652,3 +652,78 @@ async fn tmux_navigate_is_bound_on_both_window_maps() -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+/// The better-defaults layer's auto-indent-on-paste: `C-u C-y` yanks *and*
+/// re-indents what it yanked to the line it lands on. Plain `C-y` does not.
+#[tokio::test(flavor = "multi_thread")]
+async fn c_u_c_y_reindents_what_it_yanks() -> anyhow::Result<()> {
+    let mut app = preset_app("emacs")
+        .with_input_text("#[i|]#f x:\n    pass\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            // Kill the un-indented first line, then land inside the indented block.
+            (Some("<C-space><C-e><C-w>"), None),
+            (
+                Some("<C-n><C-e><C-u><C-y>"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (_v, doc) = zmax_view::current_ref!(app.editor);
+                    let text = doc.text().to_string();
+                    assert!(
+                        text.contains("    pass    if x:") || text.contains("    if x:"),
+                        "the yank was re-indented to its new home: {text:?}"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// The emoji layer's three chords: `SPC i e` inserts one from the picker,
+/// `SPC a f e` browses them, and `SPC i E` is company-emoji's completion — the
+/// `:name` being typed becomes the glyph.
+#[tokio::test(flavor = "multi_thread")]
+async fn emoji_layer_chords_resolve_and_complete() -> anyhow::Result<()> {
+    use zmax_term::keymap::{KeymapResult, Keymaps};
+    use zmax_view::document::Mode;
+
+    let resolve = |keys: &str| -> Option<String> {
+        let mut keymaps = Keymaps::default();
+        let mut last = None;
+        for key in keys.split(' ') {
+            last = match keymaps.get(Mode::Normal, key.parse().expect("valid key")) {
+                KeymapResult::Matched(cmd) => Some(cmd.name().to_string()),
+                _ => None,
+            };
+        }
+        last
+    };
+    assert_eq!(resolve("space i e").as_deref(), Some("emoji_list"));
+    assert_eq!(resolve("space a f e").as_deref(), Some("emoji_list"));
+    assert_eq!(resolve("space i E").as_deref(), Some("complete_emoji"));
+    // The file tree kept a chord when `SPC a f` became a prefix.
+    assert_eq!(resolve("space a f f").as_deref(), Some("file_explorer"));
+
+    // The completion itself: `:catf` offers the cat faces, replacing the token.
+    let mut app = preset_app("spacemacs").with_input_text("#[|]#").build()?;
+    test_key_sequence(
+        &mut app,
+        Some("i:grinning cat<esc><space>iE<ret>"),
+        Some(&|app: &zmax_term::application::Application| {
+            let (_v, doc) = zmax_view::current_ref!(app.editor);
+            let text = doc.text().to_string();
+            assert!(
+                !text.contains(':'),
+                "the `:name` token was replaced by a glyph: {text:?}"
+            );
+            assert!(!text.trim().is_empty(), "something was inserted");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

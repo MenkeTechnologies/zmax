@@ -1849,7 +1849,14 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "c" => ai_commit_message,          // SPC a c : AI git commit message
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
                 "d" => file_explorer,              // SPC a d : dired (file manager)
-                "f" => file_explorer,              // SPC a f : file tree
+                // The emoji layer hangs its browser off `SPC a f`, so that slot is
+                // a prefix (as it is in spacemacs) rather than a leaf; the file
+                // tree keeps its place one key deeper, and `SPC a d` still opens
+                // the same explorer as dired.
+                "f" => { "Fun"
+                    "f" => file_explorer,          // SPC a f f : file tree
+                    "e" => emoji_list,             // SPC a f e : browse emoji (emoji layer)
+                },
                 "o" => { "Org"
                     "a" => org_agenda,             // SPC a o a : org agenda (Spacemacs org-agenda)
                     "c" => org_capture,            // SPC a o c : org capture (Spacemacs org-capture)
@@ -1922,6 +1929,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "i" => { "Insert"
                 "u" => unicode_picker,             // SPC i u : search unicode chars and insert (helm-unicode)
                 "t" => smart_type_completion,      // SPC i t : complete with what fits the expected type (JetBrains Ctrl-Shift-Space)
+                "e" => emoji_list,                 // SPC i e : pick an emoji and insert it (emoji layer)
+                "E" => complete_emoji,             // SPC i E : complete the `:name` being typed into an emoji
                 "U" => { "UUID"
                     "1" => insert_uuid_v1,         // SPC i U 1 : time-based UUIDv1
                     "4" => insert_uuid_v4,         // SPC i U 4 : random UUIDv4
