@@ -186,7 +186,7 @@ impl WorkspaceTrust {
     }
 
     /// A trust state that grants every capability. Use for non-interactive contexts (CLI grammar
-    /// build, `hx --health`) where prompting isn't meaningful. Identical to [`Self::new`] now that
+    /// build, `zmax --health`) where prompting isn't meaningful. Identical to [`Self::new`] now that
     /// trust is permanently disabled.
     pub fn fully_trusted() -> Self {
         Self::new(Config::default())

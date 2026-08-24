@@ -174,7 +174,7 @@ pub fn fetch_grammars(strict: bool) -> Result<()> {
     if !errors.is_empty() {
         let len = errors.len();
         for (i, (grammar, error)) in errors.into_iter().enumerate() {
-            println!("Failure {}/{len}: {grammar} {error}", i + 1);
+            println!("Failure {}/{len}: {grammar} {error:#}", i + 1);
         }
         if strict {
             bail!("{len} grammars failed to fetch");
@@ -253,7 +253,7 @@ pub fn build_grammars(target: Option<String>, strict: bool) -> Result<()> {
     if !errors.is_empty() {
         let len = errors.len();
         for (i, (grammar_id, error)) in errors.into_iter().enumerate() {
-            println!("Failure {}/{len}: {grammar_id} {error}", i + 1);
+            println!("Failure {}/{len}: {grammar_id} {error:#}", i + 1);
         }
         if strict {
             bail!("{len} grammars failed to build");
@@ -526,7 +526,25 @@ fn build_grammar(grammar: GrammarConfiguration, target: Option<&str>) -> Result<
         // with `../`) would resolve against the wrong base and the parser file
         // would not be found. Git sources sidestep this because `runtime_dirs()`
         // is already absolute.
+        //
+        // A relative path in `languages.toml` is anchored to the runtime directory,
+        // not to whatever directory zmax was invoked from -- the shipped stryke entry
+        // (`../runtime/grammars/sources/stryke`) otherwise resolves against the CWD and
+        // `zmax -g build` fails from anywhere but a workspace crate directory.
         let p = PathBuf::from(&path);
+        let p = if p.is_relative() {
+            let anchored = crate::runtime_dirs()
+                .first()
+                .expect("No runtime directories provided") // guaranteed by post-condition
+                .join(&p);
+            if anchored.exists() {
+                anchored
+            } else {
+                p
+            }
+        } else {
+            p
+        };
         std::fs::canonicalize(&p).unwrap_or(p)
     } else {
         crate::runtime_dirs()
@@ -539,14 +557,14 @@ fn build_grammar(grammar: GrammarConfiguration, target: Option<&str>) -> Result<
 
     let grammar_dir_entries = grammar_dir.read_dir().with_context(|| {
         format!(
-            "Failed to read directory {:?}. Did you use 'hx --grammar fetch'?",
+            "Failed to read directory {:?}. Did you use 'zmax -g fetch'?",
             grammar_dir
         )
     })?;
 
     if grammar_dir_entries.count() == 0 {
         return Err(anyhow!(
-            "Directory {:?} is empty. Did you use 'hx --grammar fetch'?",
+            "Directory {:?} is empty. Did you use 'zmax -g fetch'?",
             grammar_dir
         ));
     };
