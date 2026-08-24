@@ -328,3 +328,108 @@ async fn c_x_v_bang_arms_the_next_vc_command() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// Spacemacs `SPC D f p` is `ediff-patch-file`: it *asks* for the patch and for
+/// the file to patch, then opens original ⇔ patched in the ediff view. The chord
+/// ran `diff-ediff-patch`, which takes the patch from the current buffer and
+/// never asks — a different emacs command.
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_d_f_p_asks_for_the_patch_and_the_file() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let target = dir.path().join("hello.txt");
+    std::fs::write(&target, "one\ntwo\n")?;
+    let patch = dir.path().join("change.patch");
+    std::fs::write(
+        &patch,
+        format!(
+            "--- a/{name}\n+++ b/{name}\n@@ -1,2 +1,2 @@\n one\n-two\n+TWO\n",
+            name = "hello.txt"
+        ),
+    )?;
+
+    let mut app = preset_app("spacemacs")
+        .with_file(target.clone(), None)
+        .build()?;
+    let keys = format!(
+        "<space>Dfp{}<ret>{}<ret>",
+        patch.display(),
+        target.display()
+    );
+    test_key_sequence(
+        &mut app,
+        Some(&keys),
+        Some(&|app: &zmax_term::application::Application| {
+            assert!(
+                !app.editor.is_err(),
+                "the patch applied: {:?}",
+                app.editor.get_status()
+            );
+            // The ediff view holds the patched text; the file on disk is
+            // untouched until the review is applied.
+            assert_eq!(
+                std::fs::read_to_string(&target).unwrap(),
+                "one\ntwo\n",
+                "the file is only rewritten when the review is applied"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Spacemacs `C-TAB` cycles *through* the buffers this window has visited; the
+/// chord used to run `goto_last_accessed_file`, which only ever toggled between
+/// the last two. Three buffers make the difference visible: two presses reach
+/// the oldest, and the reverse chord walks back.
+#[tokio::test(flavor = "multi_thread")]
+async fn c_tab_cycles_the_visited_buffer_ring() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let (a, b, c) = (
+        dir.path().join("a.txt"),
+        dir.path().join("b.txt"),
+        dir.path().join("c.txt"),
+    );
+    for (p, text) in [(&a, "aaa\n"), (&b, "bbb\n"), (&c, "ccc\n")] {
+        std::fs::write(p, text)?;
+    }
+    let mut app = preset_app("spacemacs").with_file(a.clone(), None).build()?;
+    let name = |app: &zmax_term::application::Application| {
+        let (_v, doc) = zmax_view::current_ref!(app.editor);
+        doc.path()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    };
+    let open_b = format!(":open {}<ret>", b.display());
+    let open_c = format!(":open {}<ret>", c.display());
+    test_key_sequences(
+        &mut app,
+        vec![
+            // Visit a, b, c — c is on screen, the ring holds b then a.
+            (Some(&open_b), None),
+            (Some(&open_c), None),
+            (
+                Some("<C-tab>"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert_eq!(name(app), "b.txt", "one press: the previous buffer");
+                }),
+            ),
+            (
+                Some("<C-tab>"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert_eq!(name(app), "a.txt", "two presses: the one before that");
+                }),
+            ),
+            (
+                Some("<A-C-tab>"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert_eq!(name(app), "b.txt", "the reverse chord walks back");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

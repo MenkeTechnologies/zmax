@@ -1142,6 +1142,8 @@ impl MappableCommand {
         goto_window_center, "Goto window center",
         goto_window_bottom, "Goto window bottom",
         goto_last_accessed_file, "Goto last accessed file",
+        cycle_buffer_backward, "Cycle back through this window's visited buffers (C-TAB)",
+        cycle_buffer_forward, "Cycle forward through this window's visited buffers (C-S-TAB)",
         goto_last_modified_file, "Goto last modified file",
         goto_last_modification, "Goto last modification",
         goto_older_change, "vim g;: jump to an older change-list position",
@@ -1221,6 +1223,7 @@ impl MappableCommand {
         vc_dir_mark_by_regexp, "Mark VC-directory files matching a regexp (emacs vc-dir-mark-by-regexp)",
         vc_dir_mark_registered_files, "Mark every registered file in the VC directory (emacs vc-dir-mark-registered-files)",
         log_edit_done, "Finish the commit message and commit (emacs log-edit-done)",
+        ediff_patch_file, "Apply a patch to a file and review the result in ediff (emacs ediff-patch-file, SPC D f p)",
         log_edit_show_diff, "Show the diff of what is being committed (emacs log-edit-show-diff)",
         log_edit_show_files, "List the files being committed (emacs log-edit-show-files)",
         log_edit_insert_changelog, "Seed the commit message from the ChangeLog (emacs log-edit-insert-changelog)",
@@ -28459,6 +28462,101 @@ fn ediff_patch_buffer(cx: &mut Context) {
     cx.push_layer(Box::new(prompt));
 }
 
+/// Spacemacs `SPC D f p` (emacs `ediff-patch-file`): read a patch — from an open
+/// buffer, or from a file when the answer names no buffer — apply it to a *file*
+/// on disk, and open the result in the ediff view.
+///
+/// The sibling of [`ediff_patch_buffer`], and asked in the same order emacs asks:
+/// the patch first (`ediff-get-patch-buffer`), then what to patch ("File to
+/// patch"), which defaults to the file the current buffer is visiting. It is not
+/// `diff-ediff-patch`, which the chord used to run: that one takes the patch from
+/// the buffer it is called in and never asks.
+fn ediff_patch_file(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Patch is in buffer (or file): ".into(),
+        None,
+        ui::completers::buffer,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            if input.is_empty() {
+                return;
+            }
+            let patch = cx
+                .editor
+                .documents()
+                .find(|d| d.display_name().as_ref() == input)
+                .map(|d| d.text().to_string())
+                .or_else(|| {
+                    let path = zmax_stdx::path::expand_tilde(std::path::Path::new(input));
+                    std::fs::read_to_string(path).ok()
+                });
+            let Some(patch) = patch else {
+                cx.editor.set_error(format!(
+                    "ediff-patch-file: no buffer or readable file named {input}"
+                ));
+                return;
+            };
+            ediff_patch_file_target(cx, patch);
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// The "File to patch" half of [`ediff_patch_file`]. Pushed through a job
+/// callback for the same reason [`ediff_patch_buffer_target`] is.
+fn ediff_patch_file_target(cx: &mut crate::compositor::Context, patch: String) {
+    // The file the command was run from is the default, as it is in emacs.
+    let default = doc!(cx.editor)
+        .path()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default();
+    let seed = default.clone();
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                "File to patch: ".into(),
+                None,
+                ui::completers::filename,
+                move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+                    if ev != PromptEvent::Validate {
+                        return;
+                    }
+                    let input = input.trim();
+                    let target = if input.is_empty() {
+                        default.clone()
+                    } else {
+                        input.to_string()
+                    };
+                    if target.is_empty() {
+                        cx.editor.set_error("ediff-patch-file: no file to patch");
+                        return;
+                    }
+                    let path =
+                        zmax_stdx::path::expand_tilde(std::path::Path::new(&target)).into_owned();
+                    // Open it, then patch that buffer: the ediff view writes the
+                    // reviewed result back into the buffer, which is what emacs
+                    // leaves for you to save.
+                    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+                        cx.editor.set_error(format!(
+                            "ediff-patch-file: cannot open {}: {e}",
+                            path.display()
+                        ));
+                        return;
+                    }
+                    let doc = doc!(cx.editor).id();
+                    ediff_patch_buffer_apply(cx, &patch, doc);
+                },
+            )
+            .with_line(seed.clone(), _editor);
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
 /// The "Which buffer to patch?" half of [`ediff_patch_buffer`]. The prompt is
 /// pushed through a job callback because `Prompt` is not `Send` and there is no
 /// compositor to push onto from inside another prompt's callback.
@@ -33692,6 +33790,52 @@ fn goto_column_impl(cx: &mut Context, movement: Movement) {
     });
     // vim `|` (goto column) is a plain intra-line move, not a jump command.
     doc.set_selection(view.id, selection);
+}
+
+/// Spacemacs `C-TAB` / `C-S-TAB`: cycle through the buffers this window has
+/// visited, rather than toggling between the last two.
+///
+/// The ring is the window's own access history (`View::docs_access_history`,
+/// most-recently-visited last), rotated one step per press: `C-TAB` walks back
+/// into older buffers, `C-S-TAB` walks toward the newer ones. Rotating rather
+/// than popping is what makes it a *ring* — the set of buffers is unchanged, so
+/// holding either key walks all the way round and back to where it started.
+fn cycle_buffer(cx: &mut Context, backward: bool) {
+    let current = doc!(cx.editor).id();
+    let view = view_mut!(cx.editor);
+    // `add_to_history` on the way out will move `current` to the end, so the
+    // ring is the history plus the buffer on screen.
+    let Some(target) = (if backward {
+        view.docs_access_history.pop()
+    } else if view.docs_access_history.is_empty() {
+        None
+    } else {
+        Some(view.docs_access_history.remove(0))
+    }) else {
+        cx.editor
+            .set_error("no other buffer visited in this window");
+        return;
+    };
+    cx.editor.switch(target, Action::Replace);
+    // Put the buffer we came from back at the far end, so the next press
+    // continues around the ring instead of bouncing between two.
+    let view = view_mut!(cx.editor);
+    view.docs_access_history.retain(|&id| id != current);
+    if backward {
+        view.docs_access_history.insert(0, current);
+    } else {
+        view.docs_access_history.push(current);
+    }
+}
+
+/// `C-TAB`: the previously visited buffer, then the one before it, …
+fn cycle_buffer_backward(cx: &mut Context) {
+    cycle_buffer(cx, true);
+}
+
+/// `C-S-TAB`: back toward the most recently visited buffer.
+fn cycle_buffer_forward(cx: &mut Context) {
+    cycle_buffer(cx, false);
 }
 
 fn goto_last_accessed_file(cx: &mut Context) {

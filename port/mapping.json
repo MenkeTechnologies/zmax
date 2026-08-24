@@ -48418,11 +48418,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_d_f_p",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:ediff_patch_file",
    "key:normal:space D f p"
   ],
-  "note": "ediff-patch-file -> diff_ediff_patch: applies the patch in the current buffer instead of prompting for one"
+  "note": "`SPC D f p` runs `ediff_patch_file`, a real port of emacs `ediff-patch-file`: it asks for the patch first (an open buffer's name, else a file to read - `ediff-get-patch-buffer`), then for the file to patch, defaulting to the one the current buffer is visiting, and opens original vs patched in the ediff view where applying writes the reviewed result back. The chord used to run `diff_ediff_patch`, which is emacs's `diff-ediff-patch`: it takes the patch from the buffer it is called in and never asks. Pinned by `tests/test/spacemacs_states.rs::spc_d_f_p_asks_for_the_patch_and_the_file`, which answers both prompts and checks the file on disk is left for the review to write."
  },
  {
   "spec_id": "spacemacs.keybinding.t_81",
@@ -48444,11 +48445,13 @@
  },
  {
   "spec_id": "spacemacs.keybinding.c_tab_c_s_tab",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-tab"
+   "static:cycle_buffer_backward",
+   "key:normal:C-tab",
+   "key:normal:A-C-tab"
   ],
-  "note": "cycle through previously visited buffers -> goto_last_accessed_file: toggles to the last-accessed file, no ring"
+  "note": "`C-TAB` cycles through the buffers this window has visited - `cycle_buffer_backward` rotates `View::docs_access_history` one step per press, so holding it walks back through the ring and round again rather than toggling between the last two (`goto_last_accessed_file`, which the chord used to run). `C-M-TAB` (`cycle_buffer_forward`) is the other direction: spacemacs puts that half on `C-S-TAB`, which in zmax is emacs's own `tab-previous` - ported, and cited by `emacs.keybinding.s_c_tab` - so the ring's forward half takes the free chord instead of displacing a binding that is equally real. Pinned by `tests/test/spacemacs_states.rs::c_tab_cycles_the_visited_buffer_ring`, which visits three files and walks the ring in both directions."
  },
  {
   "spec_id": "emacs.command.facemenu_set_face",

@@ -411,7 +411,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // `ediff-patch-file`: apply the patch in the current buffer to its target and
     // review the result side by side. Spacemacs prompts for the patch buffer; the
     // zmax port takes the patch from the buffer you run it in.
-    ("space D f p", "Diff", "diff_ediff_patch"),            // SPC D f p : ediff-patch-file
+    ("space D f p", "Diff", "ediff_patch_file"),            // SPC D f p : ediff-patch-file (asks for the patch and the file)
 
     // ediff merge sessions (SPC D m). `SPC D m f f` (merge a file into the
     // buffer) is above; these are the three-way / two-buffer merges, which the
@@ -1587,7 +1587,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "U"       => undo_line,          // U: undo all latest changes on one line
         "F1"      => help,               // <F1> = <Help>: open the Help browser
         "C-t"     => tag_pop,            // CTRL-T = pop the tag stack (:pop)
-        "C-tab"   => goto_last_accessed_file, // CTRL-<Tab> = go to last accessed tab
+        // Spacemacs `C-TAB`/`C-S-TAB`: cycle through the buffers this window has
+        // visited. Not a two-buffer toggle — the ring keeps going.
+        "C-tab"   => cycle_buffer_backward,   // CTRL-<Tab>   = previously visited buffer
+        // The other direction. Spacemacs puts it on `C-S-TAB`, which here is
+        // emacs's own `tab-previous` (ported, and cited as such), so the ring's
+        // forward half takes the free `C-M-TAB` rather than displacing it.
+        "A-C-tab" => cycle_buffer_forward,    // CTRL-M-<Tab> = back toward the newest buffer
 
         // --- emacs/readline keys (Meta space is free in the vim keymap) -----
         "A-x"     => command_palette,     // M-x
