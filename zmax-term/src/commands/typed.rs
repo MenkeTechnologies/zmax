@@ -40120,6 +40120,51 @@ fn delete_trailing_whitespace(
     Ok(())
 }
 
+/// The web-beautify layer (`web-beautify-js` / `-css` / `-html`): filter the
+/// selection — or the whole buffer, as the layer's commands do with no region —
+/// through js-beautify. The flavour is the argument (`js`, `css`, `html`) or, with
+/// none, the buffer's language, which is how the layer picks a command per mode.
+///
+/// js-beautify ships all three as one binary family (`js-beautify`,
+/// `css-beautify`, `html-beautify`), each reading stdin with `-f -`.
+fn ex_web_beautify(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let given = args.first().map(|a| a.trim().to_ascii_lowercase());
+    let flavour = match given.as_deref() {
+        Some("js") | Some("javascript") | Some("json") => "js",
+        Some("css") | Some("scss") | Some("less") => "css",
+        Some("html") | Some("xml") | Some("vue") => "html",
+        Some(other) => bail!("web-beautify: unknown flavour {other} (js, css or html)"),
+        None => match doc!(cx.editor).language_name().unwrap_or("") {
+            "javascript" | "typescript" | "jsx" | "tsx" | "json" => "js",
+            "css" | "scss" | "less" => "css",
+            "html" | "xml" | "vue" | "svelte" => "html",
+            other => bail!("web-beautify: no beautifier for {other}"),
+        },
+    };
+    // No region means the whole buffer, which is what the layer's commands do.
+    {
+        let (view, doc) = current!(cx.editor);
+        let selection = doc.selection(view.id);
+        if selection.primary().len() <= 1 && selection.len() == 1 {
+            let end = doc.text().len_chars();
+            doc.set_selection(view.id, Selection::single(0, end));
+        }
+    }
+    super::shell(
+        cx,
+        &format!("{flavour}-beautify -f -"),
+        &super::ShellBehavior::Replace,
+    );
+    Ok(())
+}
+
 /// csv-mode `csv-sort-fields` / `csv-sort-numeric-fields` (`:csv-sort-fields N`):
 /// sort the selected CSV/TSV lines by one field, counting from 1. `--numeric`
 /// compares the field as a number; the first line is kept in place as a header
@@ -64767,6 +64812,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "web-beautify",
+        aliases: &["web-beautify-js", "web-beautify-css", "web-beautify-html"],
+        doc: "Beautify the selection (or the buffer) with js-beautify; the flavour follows the language unless one is given.",
+        fun: ex_web_beautify,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

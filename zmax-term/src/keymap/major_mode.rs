@@ -379,6 +379,12 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // SPC m t b : run this file's tests. Every language whose `buffer_test_command`
     // arm exists, which is the set whose layer binds the chord.
     ("ruby python elixir go rust javascript typescript tsx jsx java kotlin scala clojure c-sharp php haskell elisp", "ns", "space m t b", "Tests", ":test-buffer"),
+    // -- web-beautify --------------------------------------------------------
+    // The layer binds `SPC m = =` per web mode to its beautifier; the leader's
+    // `SPC m =` is the format group, so the flavour-picking command goes in the
+    // web languages' overlays where the layer puts it.
+    ("javascript typescript jsx tsx json css scss less html xml vue svelte", "ns", "space m = b", "Format", ":web-beautify"),
+
     // -- restclient (`.http` / `.rest` request files) ------------------------
     // restclient.el binds `C-c C-c` to "send the request under point"; the
     // buffer's language is `http`, so that is where the chord lives.

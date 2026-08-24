@@ -48828,12 +48828,13 @@
  },
  {
   "spec_id": "spacemacs.layer.tools_web_beautify",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:format_selections",
-   "typable:format"
+   "typable:web-beautify",
+   "key:major-javascript:space m = b",
+   "static:format_selections"
   ],
-  "note": "the same formatter slot as the prettier layer - js-beautify is another formatter = { command = ... } entry in languages.toml, run by format_selections / :format. No js-beautify default is wired"
+  "note": "The layer's three commands are `:web-beautify` (aliases `:web-beautify-js`, `-css`, `-html`): the selection - or the whole buffer, as the layer's commands do with no region - is filtered through js-beautify, the flavour taken from the argument or, with none, from the buffer's language, which is how the layer picks a command per mode. Bound at `SPC m = b` in the web languages' overlays, beside the format group the prettier layer's `SPC m = =` lives in, so the two formatters sit side by side rather than one displacing the other as a languages.toml default would."
  },
  {
   "spec_id": "spacemacs.layer.tools_ranger",
