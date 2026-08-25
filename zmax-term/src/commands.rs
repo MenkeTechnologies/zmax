@@ -53964,9 +53964,14 @@ struct KmacroStep {
     at: usize,
     /// `kmacro-step-edit-new-macro`: the keys kept so far.
     edited: Vec<KeyEvent>,
-    /// `kmacro-step-edit-action`: while set, a key equal to it is accepted
-    /// without asking (TAB = "execute while same").
-    repeat: Option<KeyEvent>,
+    /// `kmacro-step-edit-action`: while set, the next key is accepted without
+    /// asking as long as it runs the *same command* (TAB = "execute while
+    /// same"). Emacs compares commands, not keystrokes — it binds both `C-n` and
+    /// `<down>` to `next-line`, and TAB carries on across the pair — so the key
+    /// is kept alongside the command it resolved to, and either matching is a
+    /// repeat. A key that opens a prefix map has no command to compare and falls
+    /// back to keystroke equality.
+    repeat: Option<(KeyEvent, Option<String>)>,
     /// `kmacro-step-edit-help`: whether the response list is shown (`?` toggles).
     help: bool,
 }
@@ -54011,6 +54016,18 @@ fn kmacro_key_str(key: KeyEvent) -> String {
     }
 }
 
+/// The command a single key runs in the editor's current mode under the live
+/// keymap preset, when it is a whole binding. `None` where there is no command
+/// identity to compare: a key that opens a prefix map, a key bound to a command
+/// *sequence*, or an unbound one.
+fn kmacro_key_command(editor: &Editor, key: KeyEvent) -> Option<String> {
+    let preset = crate::keymap::preset(&crate::keymap::current_preset())?;
+    match preset.get(&editor.mode)?.search(&[key])? {
+        crate::keymap::KeyTrie::MappableCommand(cmd) => Some(cmd.name().to_string()),
+        _ => None,
+    }
+}
+
 /// The `Macro: <kept> <pending> <future>` line `kmacro-step-edit-prompt` puts
 /// above the question.
 fn kmacro_macro_line(state: &KmacroStep) -> String {
@@ -54037,10 +54054,15 @@ fn kmacro_step(cx: &mut Context, state: KmacroStep) {
         kmacro_step_finish(cx, state.edited);
         return;
     };
-    // TAB's `kmacro-step-edit-action`: keep accepting while the key repeats.
-    if state.repeat == Some(pending) {
-        kmacro_step_act(cx, state, true);
-        return;
+    // TAB's `kmacro-step-edit-action`: keep accepting while the command repeats.
+    if let Some((key, command)) = &state.repeat {
+        let same_command = command
+            .as_deref()
+            .is_some_and(|name| kmacro_key_command(cx.editor, pending).as_deref() == Some(name));
+        if *key == pending || same_command {
+            kmacro_step_act(cx, state, true);
+            return;
+        }
     }
     let mut body: Vec<(String, String)> = vec![(
         format!("[{}/{}]", state.at + 1, state.keys.len()),
@@ -54075,7 +54097,7 @@ fn kmacro_step(cx: &mut Context, state: KmacroStep) {
         match event.to_string().as_str() {
             "y" | "space" => kmacro_step_act(cx, state, true),
             "tab" => {
-                state.repeat = Some(pending);
+                state.repeat = Some((pending, kmacro_key_command(cx.editor, pending)));
                 kmacro_step_act(cx, state, true);
             }
             "n" | "d" | "C-d" | "backspace" | "del" => {
@@ -57843,10 +57865,36 @@ fn goto_next_tabstop_impl(cx: &mut Context, direction: Direction) {
     }
 }
 
+/// How many trailing keys of a recording are the chord that ended it. `Q` ends a
+/// recording with one key, emacs's `C-x )` with two — and popping a fixed one
+/// left the stray `C-x` in the macro, so `C-x ( x x C-x )` replayed (and stepped)
+/// as three keys where emacs records two. The count is read back out of the
+/// keymap rather than assumed.
+fn macro_terminator_len(editor: &Editor, keys: &[KeyEvent]) -> usize {
+    let Some(preset) = crate::keymap::preset(&crate::keymap::current_preset()) else {
+        return 1;
+    };
+    let Some(trie) = preset.get(&editor.mode) else {
+        return 1;
+    };
+    (1..=keys.len().min(4))
+        .rev()
+        .find(|n| {
+            matches!(
+                trie.search(&keys[keys.len() - n..]),
+                Some(crate::keymap::KeyTrie::MappableCommand(cmd))
+                    if matches!(cmd.name(), "record_macro" | "kmacro_end_macro")
+            )
+        })
+        .unwrap_or(1)
+}
+
 fn record_macro(cx: &mut Context) {
     if let Some((reg, mut keys)) = cx.editor.macro_recording.take() {
-        // Remove the keypress which ends the recording
-        keys.pop();
+        // Remove the chord which ends the recording — one key for `Q`, two for
+        // emacs's `C-x )`.
+        let terminator = macro_terminator_len(cx.editor, &keys);
+        keys.truncate(keys.len().saturating_sub(terminator));
         let s = keys
             .into_iter()
             .map(|key| {

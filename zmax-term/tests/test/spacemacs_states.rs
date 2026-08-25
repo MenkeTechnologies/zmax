@@ -1036,3 +1036,66 @@ async fn compile_does_not_block_the_editor() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+/// Emacs records the keys between `C-x (` and `C-x )` — and *only* those. zmax
+/// popped a single key when the recording ended, so the `C-x` of the two-key
+/// terminator stayed in the macro: `C-x ( x x C-x )` replayed as three keys and
+/// stepped as `[1/3]` with a trailing `<C-x>`.
+#[tokio::test(flavor = "multi_thread")]
+async fn kmacro_recording_drops_the_whole_terminator_chord() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bcdef\n")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-x>(xx<C-x>)"),
+        Some(&|app: &zmax_term::application::Application| {
+            let recorded = app
+                .editor
+                .registers
+                .read('@', &app.editor)
+                .and_then(|mut values| values.next().map(|v| v.to_string()))
+                .unwrap_or_default();
+            assert_eq!(
+                recorded, "xx",
+                "the two-key C-x ) terminator is not part of the macro"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// `kmacro-step-edit-macro`'s TAB is "execute while same", and emacs means the
+/// same *command*, not the same keystroke — it binds `C-n` and `<down>` to
+/// `next-line` and carries on across the pair. zmax compared keystrokes, so TAB
+/// stopped and re-asked at the second key; here `j` and `C-n` are both
+/// `move_line_down`, and one TAB walks the whole macro.
+#[tokio::test(flavor = "multi_thread")]
+async fn kmacro_step_edit_tab_repeats_on_the_command_not_the_key() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#\nb\nc\nd\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            // Record `j` then `C-n` — different keys, one command.
+            (Some("<C-x>(j<C-n><C-x>)"), None),
+            (Some("<C-x><C-k><space>"), None),
+            (
+                Some("<tab>"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert_eq!(
+                        app.editor.get_status().map(|(msg, _)| msg.to_string()),
+                        Some("Keyboard macro step-edited".to_string()),
+                        "one TAB accepted both keys, so the walk is over"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
