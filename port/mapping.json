@@ -22438,11 +22438,11 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_comma_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-c , l"
   ],
-  "note": "semantic-analyze-possible-completions: the completion popup at point, not a completion list in another window (rebound from symbol_picker)"
+  "note": "`C-c , l` is semantic_analyze_possible_completions, which asks the language server for the completions at point and lists them - label, kind and detail per line, under 'Possible completions are:' - in another window, leaving the buffer they were asked about alone. That is what the emacs command does: its own docstring says \"When called interactively, displays the list of possible completions in a buffer\" (read out of emacs 31.1). The old note - that this was the completion popup at point - described the `completion` command this chord used to run."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_comma_spc",
@@ -23122,12 +23122,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_e",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x C-k e",
    "static:edit_kbd_macro"
   ],
-  "note": "Same as emacs.keybinding.c_x_c_k_e: the chord now prompts for which macro to edit (last / lossage / a named macro or register) at commands.rs:52455. Remaining gap is the one-line minibuffer editor instead of emacs's *Edit Macro* buffer."
+  "note": "`C-x C-k e` prompts for which macro to edit (last / lossage / a named macro or register) and opens emacs's `*Edit Macro*` buffer on it - edmacro.el's own template (the `;; Keyboard Macro Editor.` header, `;; Original keys:`, `Command:`/`Key:` and the `Macro:` section), in `edmacro` major mode. That is where edmacro's map lives, keyed on the mode in keymap/major_mode.rs: `C-c C-c` (edmacro-finish-edit) compiles what the buffer now says and makes it the last macro, `C-c C-q` inserts a literal key's written name, `C-c C-r` sets the macro from the region's lines. It used to be a one-line minibuffer editor, which left the last two commands with no buffer to run in. Pinned by `tests/test/spacemacs_states.rs::edit_kbd_macro_opens_the_edit_macro_buffer` and `::edmacro_finish_edit_installs_the_edited_macro`."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_l",
@@ -25791,12 +25791,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_c_k_e",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x C-k e",
    "static:edit_kbd_macro"
   ],
-  "note": "The old note ('does not prompt for a named macro') is stale: C-x C-k e runs edit_kbd_macro (commands.rs:52455), which prompts 'Keyboard macro to edit (RET or C-x e last, C-h l lossage, name or register): ' with completion over zmax_core::kmacro::named_macros() and resolves RET/C-x e to the last macro and C-h l to the lossage \u2014 emacs's own interactive spec. Still partial because the editing surface is a one-line minibuffer, not the *Edit Macro* buffer."
+  "note": "`C-x C-k e` prompts for which macro to edit (last / lossage / a named macro or register) and opens emacs's `*Edit Macro*` buffer on it - edmacro.el's own template (the `;; Keyboard Macro Editor.` header, `;; Original keys:`, `Command:`/`Key:` and the `Macro:` section), in `edmacro` major mode. That is where edmacro's map lives, keyed on the mode in keymap/major_mode.rs: `C-c C-c` (edmacro-finish-edit) compiles what the buffer now says and makes it the last macro, `C-c C-q` inserts a literal key's written name, `C-c C-r` sets the macro from the region's lines. It used to be a one-line minibuffer editor, which left the last two commands with no buffer to run in. Pinned by `tests/test/spacemacs_states.rs::edit_kbd_macro_opens_the_edit_macro_buffer` and `::edmacro_finish_edit_installs_the_edited_macro`."
  },
  {
   "spec_id": "emacs.keybinding.c_x_c_k_l",

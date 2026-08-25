@@ -310,6 +310,12 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // put on the buffer they open, and in both Emacs binds `C-c C-c` to "install
     // what the buffer now says" (Editing Abbrevs, Tab Stops).
     ("edit-abbrevs", "nsi", "C-c C-c", "Abbrevs", "define_abbrevs"),               // edit-abbrevs-redefine
+    // Edit Macro (edmacro-mode), the buffer `edit-kbd-macro` opens. edmacro.el's
+    // whole map: "C-c C-c" edmacro-finish-edit, "C-c C-q" edmacro-insert-key,
+    // "C-c C-r" edmacro-set-macro-to-region-lines.
+    ("edmacro", "nsi", "C-c C-c", "Edit Macro", "edmacro_finish_edit"),
+    ("edmacro", "nsi", "C-c C-q", "Edit Macro", "edmacro_insert_key"),
+    ("edmacro", "nsi", "C-c C-r", "Edit Macro", "edmacro_set_macro_to_region_lines"),
     ("edit-tab-stops", "nsi", "C-c C-c", "Tab stops", "edit_tab_stops_note_changes"), // edit-tab-stops-note-changes
 
     // -- Nroff (nroff-mode) --------------------------------------------------

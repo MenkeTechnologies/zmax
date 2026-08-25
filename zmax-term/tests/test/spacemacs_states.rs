@@ -1099,3 +1099,76 @@ async fn kmacro_step_edit_tab_repeats_on_the_command_not_the_key() -> anyhow::Re
     .await?;
     Ok(())
 }
+
+/// `C-x C-k C-e` (`edit-kbd-macro`) opens emacs's `*Edit Macro*` buffer — the
+/// edmacro.el template, in `edmacro` major mode, where `C-c C-c` installs what
+/// the buffer says. It used to be a one-line minibuffer prompt, which left
+/// `edmacro-insert-key` and `edmacro-set-macro-to-region-lines` with no buffer
+/// to run in.
+#[tokio::test(flavor = "multi_thread")]
+async fn edit_kbd_macro_opens_the_edit_macro_buffer() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bcdef\n")
+        .build()?;
+    // Record `xx`, then open the editor on the last macro.
+    test_key_sequence(&mut app, Some("<C-x>(xx<C-x>)"), None, false).await?;
+    test_key_sequence(&mut app, Some("<C-x><C-k><C-e>"), None, false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<ret>"),
+        Some(&|app: &zmax_term::application::Application| {
+            let (_v, doc) = zmax_view::current_ref!(app.editor);
+            let text = doc.text().to_string();
+            assert!(
+                text.starts_with(";; Keyboard Macro Editor."),
+                "edmacro's own template: {text:?}"
+            );
+            assert!(
+                text.contains(";; Original keys: xx") && text.contains("\nMacro:\n"),
+                "with the original keys and the Macro header: {text:?}"
+            );
+            assert_eq!(
+                doc.major_mode(),
+                Some("edmacro"),
+                "in edmacro major mode, where C-c C-c lives"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// `C-c C-c` in that buffer (`edmacro-finish-edit`) compiles what the buffer now
+/// says and makes it the last macro.
+#[tokio::test(flavor = "multi_thread")]
+async fn edmacro_finish_edit_installs_the_edited_macro() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bcdef\n")
+        .build()?;
+    test_key_sequence(&mut app, Some("<C-x>(xx<C-x>)"), None, false).await?;
+    test_key_sequence(&mut app, Some("<C-x><C-k><C-e>"), None, false).await?;
+    // Land on the macro line (the last line of the template) and append a key.
+    test_key_sequence(&mut app, Some("<ret>GAy"), None, false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-c><C-c>"),
+        Some(&|app: &zmax_term::application::Application| {
+            assert_eq!(
+                app.editor.get_status().map(|(msg, _)| msg.to_string()),
+                Some("Keyboard macro updated".to_string()),
+                "C-c C-c installs the macro"
+            );
+            let recorded = app
+                .editor
+                .registers
+                .read('@', &app.editor)
+                .and_then(|mut values| values.next().map(|v| v.to_string()))
+                .unwrap_or_default();
+            assert_eq!(recorded, "xxy", "the edited keys became the macro");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

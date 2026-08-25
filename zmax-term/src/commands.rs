@@ -1882,6 +1882,7 @@ impl MappableCommand {
         kmacro_end_or_call_macro_repeat, "Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat)",
         kmacro_edit_macro, "Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro)",
         edit_kbd_macro, "Ask which keyboard macro to edit, then edit its keys (emacs edit-kbd-macro, C-x C-k e)",
+        edmacro_finish_edit, "Install what the *Edit Macro* buffer says as the last keyboard macro (emacs edmacro-finish-edit, C-c C-c)",
         edmacro_insert_key, "Read one literal key and insert its written name at point (emacs edmacro-insert-key)",
         edmacro_set_macro_to_region_lines, "Set the kbd macro to the lines the region covers (emacs edmacro-set-macro-to-region-lines)",
         kmacro_step_edit_macro, "Step through the last kbd macro key by key, editing as you go (emacs kmacro-step-edit-macro)",
@@ -53779,47 +53780,109 @@ fn kmacro_end_or_call_macro_repeat(cx: &mut Context) {
 /// Shared macro editor: open the given macro key-string in a prompt, and on
 /// accept re-parse it and store it back as the last macro (ring head + `@`).
 fn edit_macro_prompt(cx: &mut Context, title: std::borrow::Cow<'static, str>, initial: String) {
-    let prompt = edit_macro_prompt_component(title, initial, cx.editor);
-    cx.push_layer(Box::new(prompt));
+    edit_macro_buffer(cx.editor, &title, &initial);
 }
 
-/// The *Edit Macro* prompt itself: `initial` is the macro's keys as text, and
-/// accepting parses them and makes them the last macro.
-fn edit_macro_prompt_component(
-    title: std::borrow::Cow<'static, str>,
-    initial: String,
-    editor: &Editor,
-) -> crate::ui::prompt::Prompt {
-    crate::ui::prompt::Prompt::new(
-        title,
-        None,
-        |_editor: &Editor, _input: &str| Vec::new(),
-        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
-            if event != PromptEvent::Validate {
-                return;
-            }
-            match zmax_view::input::parse_macro(input) {
-                Ok(_) => {
-                    let s = input.to_string();
-                    macro_ring_push(s.clone());
-                    let _ = cx.editor.registers.write('@', vec![s]);
-                    cx.editor.set_status("Keyboard macro updated");
-                }
-                Err(err) => cx.editor.set_error(format!("Invalid macro: {err}")),
-            }
-        },
-    )
-    .with_line(initial, editor)
+/// The `*Edit Macro*` buffer emacs's `edit-kbd-macro` opens, with edmacro.el's
+/// own template:
+///
+/// ```text
+/// ;; Keyboard Macro Editor.  Press C-c C-c to finish; press C-x k RET to cancel.
+/// ;; Original keys: xx
+///
+/// Command: last-kbd-macro
+/// Key: none
+///
+/// Macro:
+///
+/// xx
+/// ```
+///
+/// The buffer is in `edmacro` major mode, which is where `C-c C-c`
+/// (`edmacro-finish-edit`), `C-c C-q` (`edmacro-insert-key`) and `C-c C-r`
+/// (`edmacro-set-macro-to-region-lines`) live — see keymap/major_mode.rs. It used
+/// to be a one-line minibuffer prompt, which left those three commands with no
+/// buffer to run in.
+fn edit_macro_buffer(editor: &mut Editor, title: &str, keys: &str) {
+    let body = format!(
+        ";; Keyboard Macro Editor.  Press C-c C-c to finish; press C-x k RET to cancel.\n\
+         ;; Original keys: {keys}\n\
+         \n\
+         Command: last-kbd-macro\n\
+         Key: none\n\
+         \n\
+         Macro:\n\
+         \n\
+         {keys}\n"
+    );
+    show_text_in_scratch(editor, &body);
+    // The scratch buffer opens holding one empty line, which the insert leaves
+    // above the template; emacs's *Edit Macro* starts at the header.
+    {
+        let (view, doc) = current!(editor);
+        if doc.text().len_chars() > 0 && doc.text().char(0) == '\n' {
+            let transaction = Transaction::change(doc.text(), std::iter::once((0, 1, None)));
+            doc.apply(&transaction, view.id);
+            doc.append_changes_to_history(view);
+        }
+    }
+    doc_mut!(editor).set_major_mode(Some("edmacro"));
+    editor.set_status(format!("{title}C-c C-c to install, C-x k RET to cancel"));
 }
 
-/// The same prompt opened from inside *another* prompt's callback, which has only
-/// a compositor context: the layer goes up through a job callback, exactly as
+/// The macro text of an `*Edit Macro*` buffer: everything after the blank line
+/// that follows the `Macro:` header, with the `;;` comment lines and the
+/// `Command:` / `Key:` headers dropped. `edmacro-finish-edit` reads the buffer
+/// the same way round: headers first, then the rest as the macro.
+fn edmacro_macro_text(buffer: &str) -> Option<String> {
+    let (_, after) = buffer.split_once("\nMacro:")?;
+    let text = after.trim_start_matches(|c| c == '\r' || c == '\n');
+    let joined: String = text
+        .lines()
+        .map(str::trim_end)
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .concat();
+    Some(joined).filter(|joined| !joined.is_empty())
+}
+
+/// Emacs `edmacro-finish-edit` (`C-c C-c` in `*Edit Macro*`): compile what the
+/// buffer now says and make it the last keyboard macro.
+fn edmacro_finish_edit(cx: &mut Context) {
+    let (is_edmacro, buffer) = {
+        let doc = doc!(cx.editor);
+        (
+            doc.major_mode() == Some("edmacro"),
+            doc.text().to_string(),
+        )
+    };
+    if !is_edmacro {
+        cx.editor
+            .set_error("edmacro-finish-edit: not in an *Edit Macro* buffer");
+        return;
+    }
+    let Some(macro_str) = edmacro_macro_text(&buffer) else {
+        cx.editor.set_error("edmacro-finish-edit: no macro text");
+        return;
+    };
+    if let Err(err) = zmax_view::input::parse_macro(&macro_str) {
+        cx.editor.set_error(format!("Invalid macro: {err}"));
+        return;
+    }
+    macro_ring_push(macro_str.clone());
+    let _ = cx.editor.registers.write('@', vec![macro_str]);
+    cx.editor.set_status("Keyboard macro updated");
+}
+
+/// The same buffer opened from inside a prompt's callback, which has only a
+/// compositor context: the work goes up through a job callback, exactly as
 /// [`prompt_then_cx`] does it.
 fn edit_macro_prompt_cx(cx: &mut crate::compositor::Context, title: String, initial: String) {
     let call: job::Callback = Callback::EditorCompositor(Box::new(
         move |editor: &mut Editor, compositor: &mut Compositor| {
-            let prompt = edit_macro_prompt_component(title.into(), initial, editor);
-            compositor.push(Box::new(prompt));
+            // The buffer replaces whatever prompt asked which macro to edit.
+            compositor.pop();
+            edit_macro_buffer(editor, &title, &initial);
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
