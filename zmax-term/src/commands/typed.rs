@@ -2407,7 +2407,7 @@ fn with_compilation<R>(f: impl FnOnce(&mut zmax_core::compilation::CompilationLi
 /// `SPC m t b`, `SPC p T` and every `:compile`-backed build come through here.
 /// [`run_compile_capture`] is the synchronous twin, kept for vim `:make`, which
 /// has to jump to the first error the moment it returns.
-fn run_compile(cx: &mut compositor::Context, command: &str) -> anyhow::Result<()> {
+pub(crate) fn run_compile_command(cx: &mut compositor::Context, command: &str) -> anyhow::Result<()> {
     sandbox_check("shell command")?;
     let command = command.trim().to_string();
     if command.is_empty() {
@@ -2555,7 +2555,7 @@ fn compile(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     if command.trim().is_empty() {
         return recompile(cx, args, event);
     }
-    run_compile(cx, &command)
+    run_compile_command(cx, &command)
 }
 
 /// `:recompile` — Emacs `recompile`: re-run the last `compile` command.
@@ -2565,7 +2565,7 @@ fn recompile(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     }
     let last = COMPILE_COMMAND.with(|c| c.borrow().clone());
     match last {
-        Some(cmd) => run_compile(cx, &cmd),
+        Some(cmd) => run_compile_command(cx, &cmd),
         None => bail!("recompile: no previous compile command"),
     }
 }
@@ -2884,109 +2884,7 @@ const PROJECTILE_TEST_TYPES: &[(&str, &[&str], &str, &str)] = &[
     ("haskell-cabal", &["*.cabal"], "", "cabal test"),
 ];
 
-/// Whether every marker of a projectile project type is present in `root`
-/// (projectile's `projectile-verify-files`: a marker list means AND).
-fn projectile_markers_present(root: &std::path::Path, markers: &[&str]) -> bool {
-    markers
-        .iter()
-        .all(|marker| match marker.strip_prefix("*.") {
-            // projectile's `?*.csproj`-style wildcards: any file with that extension.
-            Some(ext) => std::fs::read_dir(root)
-                .map(|rd| {
-                    rd.flatten()
-                        .any(|e| e.path().extension().and_then(|e| e.to_str()) == Some(ext))
-                })
-                .unwrap_or(false),
-            None => root.join(marker).exists(),
-        })
-}
 
-/// The compilation subdirectory (projectile `:compilation-dir`) and `:test`
-/// command of `root`'s projectile project type, or `None` when no registered
-/// type matches.
-fn projectile_test_type(root: &std::path::Path) -> Option<(&'static str, String)> {
-    PROJECTILE_TEST_TYPES
-        .iter()
-        .find(|(_, markers, ..)| projectile_markers_present(root, markers))
-        .map(|(_, _, dir, cmd)| {
-            let cmd = cmd.replace("%t", &std::env::temp_dir().to_string_lossy());
-            (*dir, cmd)
-        })
-}
-
-/// The command `projectile-test-project` was last given for each project root
-/// (projectile's `projectile-test-cmd-map`), so a bare re-run repeats what was
-/// typed instead of falling back to the detected default.
-static PROJECTILE_TEST_CMDS: std::sync::Mutex<Vec<(std::path::PathBuf, String)>> =
-    std::sync::Mutex::new(Vec::new());
-
-/// `:projectile-test-project [command]` — projectile `projectile-test-project`
-/// (spacemacs `SPC p T`): run the project's test command in the project root,
-/// collecting its output into the compilation list. With a command argument,
-/// run that instead and remember it for this root (projectile keeps the same
-/// per-project override); with none, use the remembered command, else the
-/// detected project type's `:test`. Modified buffers are written first, as
-/// projectile's `:save-buffers t` does.
-fn ex_projectile_test_project(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
-    if event != PromptEvent::Validate {
-        return Ok(());
-    }
-    let root = zmax_loader::find_workspace().0;
-    let given = args.join(" ");
-    let given = given.trim();
-    let (subdir, command) = if given.is_empty() {
-        let remembered = PROJECTILE_TEST_CMDS
-            .lock()
-            .unwrap()
-            .iter()
-            .find(|(dir, _)| *dir == root)
-            .map(|(_, cmd)| cmd.clone());
-        match remembered {
-            Some(cmd) => ("", cmd),
-            None => match projectile_test_type(&root) {
-                Some((dir, cmd)) => (dir, cmd),
-                // projectile: "No repo type specific test command found" for a
-                // project whose type registers no `:test`.
-                None => bail!(
-                    "projectile-test-project: no test command for {}",
-                    root.display()
-                ),
-            },
-        }
-    } else {
-        let mut saved = PROJECTILE_TEST_CMDS.lock().unwrap();
-        match saved.iter_mut().find(|(dir, _)| *dir == root) {
-            Some((_, cmd)) => *cmd = given.to_string(),
-            None => saved.push((root.clone(), given.to_string())),
-        }
-        ("", given.to_string())
-    };
-    write_all_impl(
-        cx,
-        WriteAllOptions {
-            force: false,
-            write_scratch: false,
-            auto_format: true,
-            code_actions: true,
-        },
-    )?;
-    let dir = if subdir.is_empty() {
-        root.clone()
-    } else {
-        root.join(subdir)
-    };
-    run_compile(
-        cx,
-        &format!(
-            "cd {} && {command}",
-            shell_single_quote(&dir.to_string_lossy())
-        ),
-    )
-}
 
 /// `:projectile-invalidate-cache` — projectile `projectile-invalidate-cache`
 /// (spacemacs `SPC p I`): drop the current project's cached file list so the next
@@ -3168,7 +3066,7 @@ fn ex_test_buffer(
             code_actions: true,
         },
     )?;
-    run_compile(
+    run_compile_command(
         cx,
         &format!(
             "cd {} && {command}",
@@ -3242,7 +3140,7 @@ fn ex_test_function(
         },
     )?;
     let root = zmax_loader::find_workspace().0;
-    run_compile(
+    run_compile_command(
         cx,
         &format!(
             "cd {} && {command}",
@@ -3269,7 +3167,7 @@ fn ex_test_function(
 /// current file's directory, or the workspace root for a buffer with no file.
 fn dotnet_command(cx: &mut compositor::Context, cmd: &str) -> anyhow::Result<()> {
     let dir = dotnet_default_directory(cx);
-    run_compile(
+    run_compile_command(
         cx,
         &format!("cd {} && {cmd}", shell_single_quote(&dir.to_string_lossy())),
     )
@@ -9392,7 +9290,7 @@ fn arduino_compile(
     require_tool(embedded::ARDUINO_CLI)?;
     let settings = embedded::load();
     let argv = embedded::arduino_compile(&settings).map_err(|e| anyhow!(e))?;
-    run_compile(cx, &embedded::shell_join(&argv))
+    run_compile_command(cx, &embedded::shell_join(&argv))
 }
 
 /// `:arduino-upload` (alias `:aupload`) — build + flash to the connected board.
@@ -9434,7 +9332,7 @@ fn arduino_compile_flags(cx: &mut compositor::Context, extra: &[String]) -> anyh
     require_tool(embedded::ARDUINO_CLI)?;
     let settings = embedded::load();
     let argv = embedded::arduino_compile_with(&settings, extra).map_err(|e| anyhow!(e))?;
-    run_compile(cx, &embedded::shell_join(&argv))
+    run_compile_command(cx, &embedded::shell_join(&argv))
 }
 
 /// Shared helper: `arduino-cli compile --upload <extra…>` in a terminal panel.
@@ -10287,7 +10185,7 @@ fn pio_build(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
         embedded::shell_join(&embedded::pio_build(&settings))
     );
-    run_compile(cx, &cmd)
+    run_compile_command(cx, &cmd)
 }
 
 /// `:pio-upload` — PlatformIO `pio run -t upload`, live in a terminal panel.
@@ -10752,7 +10650,7 @@ fn arduino_compile_export(
     require_tool(embedded::ARDUINO_CLI)?;
     let settings = embedded::load();
     let argv = embedded::arduino_compile_export(&settings).map_err(|e| anyhow!(e))?;
-    run_compile(cx, &embedded::shell_join(&argv))
+    run_compile_command(cx, &embedded::shell_join(&argv))
 }
 
 /// `:arduino-burn-bootloader` (alias `:arduino-bootloader`) — flash the
@@ -10972,7 +10870,7 @@ fn pio_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
         embedded::shell_join(&embedded::pio_clean(&settings))
     );
-    run_compile(cx, &cmd)
+    run_compile_command(cx, &cmd)
 }
 
 /// `:pio-test` — run the PlatformIO project's unit tests (`pio test`); failures
@@ -10989,7 +10887,7 @@ fn pio_test(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
         embedded::shell_join(&embedded::pio_test(&settings))
     );
-    run_compile(cx, &cmd)
+    run_compile_command(cx, &cmd)
 }
 
 /// `:pio-check` — PlatformIO static code analysis (`pio check`); findings land
@@ -11006,7 +10904,7 @@ fn pio_check(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
         embedded::shell_join(&embedded::pio_check(&settings))
     );
-    run_compile(cx, &cmd)
+    run_compile_command(cx, &cmd)
 }
 
 /// `:pio-boards [query]` — the PlatformIO Board Explorer.
@@ -11291,7 +11189,7 @@ fn pio_compile_target(cx: &mut compositor::Context, target: &str) -> anyhow::Res
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
         embedded::shell_join(&embedded::pio_run_target(&settings, target))
     );
-    run_compile(cx, &cmd)
+    run_compile_command(cx, &cmd)
 }
 
 /// Spawn a `pio run -t <target>` flashing action (`uploadfs`, `uploadeep`,
@@ -12485,7 +12383,7 @@ fn pio_test_filter(
         embedded::shell_join(&[settings.sketch_dir().to_string_lossy().into_owned()]),
         embedded::shell_join(&embedded::pio_test_filter(&settings, pattern.trim()))
     );
-    run_compile(cx, &cmd)
+    run_compile_command(cx, &cmd)
 }
 
 /// `:pio-check-severity <low|medium|high>` — static analysis filtered by minimum
@@ -12510,7 +12408,7 @@ fn pio_check_severity(
         embedded::shell_join(&[settings.sketch_dir().to_string_lossy().into_owned()]),
         embedded::shell_join(&embedded::pio_check_severity(&settings, &sev))
     );
-    run_compile(cx, &cmd)
+    run_compile_command(cx, &cmd)
 }
 
 /// `:pio-tool-install <spec>` — install a tool package globally (`pio pkg install
@@ -12889,7 +12787,7 @@ fn pio_run_compile(cx: &mut compositor::Context, argv: Vec<String>) -> anyhow::R
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
         embedded::shell_join(&argv)
     );
-    run_compile(cx, &cmd)
+    run_compile_command(cx, &cmd)
 }
 
 /// `:pio-build-verbose` — verbose build (`pio run -v`).
@@ -51849,11 +51747,451 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "projectile-test-project",
         aliases: &["test-project"],
-        doc: "Run the project's test command in the project root (projectile projectile-test-project, spacemacs SPC p T).",
-        fun: ex_projectile_test_project,
-        completer: CommandCompleter::all(completers::filename),
+        doc: "Run the project's test command in the project root (projectile-test-project, C-c p c t, spacemacs SPC p T).",
+        fun: crate::commands::projectile::test_project,
+        completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file",
+        aliases: &[],
+        doc: "Jump to a project file (projectile-find-file, C-c p f).",
+        fun: crate::commands::projectile::find_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-all",
+        aliases: &[],
+        doc: "Jump to any project file, ignore rules included (projectile-find-file-all).",
+        fun: crate::commands::projectile::find_file_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-test-file",
+        aliases: &[],
+        doc: "Jump to a project test file (projectile-find-test-file, C-c p T).",
+        fun: crate::commands::projectile::find_test_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-changed-file",
+        aliases: &[],
+        doc: "Jump to a file changed in this project (projectile-find-changed-file, C-c p C).",
+        fun: crate::commands::projectile::find_changed_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-other-file",
+        aliases: &[],
+        doc: "Switch to the file with the same name and a different extension (projectile-find-other-file, C-c p a).",
+        fun: crate::commands::projectile::find_other_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-dir",
+        aliases: &[],
+        doc: "Jump to a project directory (projectile-find-dir, C-c p d).",
+        fun: crate::commands::projectile::find_dir,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-in-directory",
+        aliases: &[],
+        doc: "Jump to a file in any directory, project or not (projectile-find-file-in-directory, C-c p l).",
+        fun: crate::commands::projectile::find_file_in_directory,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-in-known-projects",
+        aliases: &[],
+        doc: "Jump to a file in any known project (projectile-find-file-in-known-projects, C-c p F).",
+        fun: crate::commands::projectile::find_file_in_known_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-kill-buffers",
+        aliases: &[],
+        doc: "Close this project's buffers (projectile-kill-buffers, C-c p k).",
+        fun: crate::commands::projectile::kill_buffers,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-save-project-buffers",
+        aliases: &[],
+        doc: "Save this project's modified buffers (projectile-save-project-buffers, C-c p S).",
+        fun: crate::commands::projectile::save_project_buffers,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-next-project-buffer",
+        aliases: &[],
+        doc: "Switch to the next buffer of this project (projectile-next-project-buffer).",
+        fun: crate::commands::projectile::next_project_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-previous-project-buffer",
+        aliases: &[],
+        doc: "Switch to the previous buffer of this project (projectile-previous-project-buffer).",
+        fun: crate::commands::projectile::previous_project_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-toggle-project-read-only",
+        aliases: &[],
+        doc: "Make every buffer of this project read-only, or writable again (projectile-toggle-project-read-only).",
+        fun: crate::commands::projectile::toggle_project_read_only,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-configure-project",
+        aliases: &[],
+        doc: "Run the project's configure command (projectile-configure-project, C-c p c o).",
+        fun: crate::commands::projectile::configure_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-compile-project",
+        aliases: &[],
+        doc: "Run the project's compile command (projectile-compile-project, C-c p c c).",
+        fun: crate::commands::projectile::compile_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-install-project",
+        aliases: &[],
+        doc: "Run the project's install command (projectile-install-project, C-c p c i).",
+        fun: crate::commands::projectile::install_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-package-project",
+        aliases: &[],
+        doc: "Run the project's package command (projectile-package-project, C-c p c p).",
+        fun: crate::commands::projectile::package_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-project",
+        aliases: &[],
+        doc: "Run the project's run command (projectile-run-project, C-c p c r).",
+        fun: crate::commands::projectile::run_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-repeat-last-command",
+        aliases: &[],
+        doc: "Re-run the last project command (projectile-repeat-last-command).",
+        fun: crate::commands::projectile::repeat_last_command,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-discard-command-cache",
+        aliases: &[],
+        doc: "Forget this project's remembered lifecycle commands (projectile-discard-command-cache).",
+        fun: crate::commands::projectile::discard_command_cache,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-shell-command-in-root",
+        aliases: &[],
+        doc: "Run a shell command in the project root (projectile-run-shell-command-in-root, C-c p !).",
+        fun: crate::commands::projectile::run_shell_command_in_root,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-configure-subproject",
+        aliases: &[],
+        doc: "Run the configure command of the nearest subproject (projectile-configure-subproject, C-c p c m o).",
+        fun: crate::commands::projectile::configure_subproject,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-compile-subproject",
+        aliases: &[],
+        doc: "Run the compile command of the nearest subproject (projectile-compile-subproject, C-c p c m c).",
+        fun: crate::commands::projectile::compile_subproject,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-test-subproject",
+        aliases: &[],
+        doc: "Run the test command of the nearest subproject (projectile-test-subproject, C-c p c m t).",
+        fun: crate::commands::projectile::test_subproject,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-install-subproject",
+        aliases: &[],
+        doc: "Run the install command of the nearest subproject (projectile-install-subproject, C-c p c m i).",
+        fun: crate::commands::projectile::install_subproject,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-package-subproject",
+        aliases: &[],
+        doc: "Run the package command of the nearest subproject (projectile-package-subproject, C-c p c m p).",
+        fun: crate::commands::projectile::package_subproject,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-subproject",
+        aliases: &[],
+        doc: "Run the run command of the nearest subproject (projectile-run-subproject, C-c p c m r).",
+        fun: crate::commands::projectile::run_subproject,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-in-subproject",
+        aliases: &[],
+        doc: "Jump to a file in one of this project's subprojects (projectile-find-file-in-subproject, C-c p c m f).",
+        fun: crate::commands::projectile::find_file_in_subproject,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-open-project",
+        aliases: &[],
+        doc: "Switch to a project that currently has buffers open (projectile-switch-open-project, C-c p q).",
+        fun: crate::commands::projectile::switch_open_project,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-add-known-project",
+        aliases: &[],
+        doc: "Add a directory to the known projects (projectile-add-known-project, C-c p A). Defaults to the current project.",
+        fun: crate::commands::projectile::add_known_project,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-remove-known-project",
+        aliases: &[],
+        doc: "Remove a project from the known projects (projectile-remove-known-project).",
+        fun: crate::commands::projectile::remove_known_project,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-remove-current-project-from-known-projects",
+        aliases: &[],
+        doc: "Remove the current project from the known projects (projectile-remove-current-project-from-known-projects).",
+        fun: crate::commands::projectile::remove_current_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-clear-known-projects",
+        aliases: &[],
+        doc: "Forget every known project (projectile-clear-known-projects).",
+        fun: crate::commands::projectile::clear_known_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-cleanup-known-projects",
+        aliases: &[],
+        doc: "Drop known projects whose directory is gone (projectile-cleanup-known-projects).",
+        fun: crate::commands::projectile::cleanup_known_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-forget-projects-under",
+        aliases: &[],
+        doc: "Forget every known project under a directory (projectile-forget-projects-under).",
+        fun: crate::commands::projectile::forget_projects_under,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-discover-projects-in-directory",
+        aliases: &[],
+        doc: "Find the projects under a directory and remember them (projectile-discover-projects-in-directory); optional second argument is the depth.",
+        fun: crate::commands::projectile::discover_projects_in_directory,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (1, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-discover-projects-in-search-path",
+        aliases: &[],
+        doc: "Find projects in projectile-project-search-path / $ZMAX_PROJECT_SEARCH_PATH and remember them (projectile-discover-projects-in-search-path).",
+        fun: crate::commands::projectile::discover_projects_in_search_path,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-to-most-recent-project",
+        aliases: &[],
+        doc: "Switch to the most recently visited other project (projectile-switch-to-most-recent-project).",
+        fun: crate::commands::projectile::switch_to_most_recent_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-add-and-switch-project",
+        aliases: &[],
+        doc: "Remember a project directory and switch to it (projectile-add-and-switch-project).",
+        fun: crate::commands::projectile::add_and_switch_project,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-project-info",
+        aliases: &[],
+        doc: "Report the current project's name, type and root (projectile-project-info).",
+        fun: crate::commands::projectile::project_info,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

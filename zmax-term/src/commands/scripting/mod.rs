@@ -508,6 +508,30 @@ pub fn elisp_global_bool(name: &str) -> Option<bool> {
     })
 }
 
+/// Read an elisp variable's *global* value as a list of strings — the shape a
+/// path defcustom takes (`projectile-project-search-path`, …). A bare string is
+/// read as a one-element list, which is what elisp code that sets such a variable
+/// to a single path leaves behind. `None` when the variable was never bound.
+pub fn elisp_global_string_list(name: &str) -> Option<Vec<String>> {
+    elisp::ensure_builtins();
+    elisprs::with_host(|h| {
+        let sym = h.intern(name);
+        match h.raw_global_value(&sym).ok()? {
+            elisprs::Value::Str(s) => Some(vec![s.to_string()]),
+            elisprs::Value::Array(items) => Some(
+                items
+                    .iter()
+                    .filter_map(|v| match v {
+                        elisprs::Value::Str(s) => Some(s.to_string()),
+                        _ => None,
+                    })
+                    .collect(),
+            ),
+            _ => None,
+        }
+    })
+}
+
 // Tracks whether the vimlrs -> editor host hooks have been installed on this
 // thread (see install_viml_hooks). thread_local because vimlrs state is
 // thread-local and the hooks bridge into it.

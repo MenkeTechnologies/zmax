@@ -24,6 +24,11 @@ pub fn elisp_global_bool(_name: &str) -> Option<bool> {
     None
 }
 
+/// See [`crate::commands::scripting::elisp_global_string_list`].
+pub fn elisp_global_string_list(_name: &str) -> Option<Vec<String>> {
+    None
+}
+
 /// See [`crate::commands::scripting::eval_viml`].
 pub fn eval_viml(_cx: &mut compositor::Context, _src: &str) -> Result<String, String> {
     Err(DISABLED.to_string())

@@ -1,0 +1,1423 @@
+[
+ {
+  "id": "projectile.command.add_and_switch_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-add-and-switch-project",
+  "desc": "Add PROJECT-ROOT to the list of known projects and switch to it.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14129"
+ },
+ {
+  "id": "projectile.command.add_known_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-add-known-project",
+  "desc": "Add PROJECT-ROOT to the list of known projects.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14120",
+  "key": "C-c p A"
+ },
+ {
+  "id": "projectile.command.ag",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-ag",
+  "desc": "Run an ag search with SEARCH-TERM in the project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8719",
+  "key": "C-c p s a"
+ },
+ {
+  "id": "projectile.command.bookmark_delete",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-bookmark-delete",
+  "desc": "Delete the project bookmark named NAME.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15364",
+  "key": "C-c p B d"
+ },
+ {
+  "id": "projectile.command.bookmark_jump",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-bookmark-jump",
+  "desc": "Jump to the project bookmark named NAME.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15342",
+  "key": "C-c p B j"
+ },
+ {
+  "id": "projectile.command.bookmark_set",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-bookmark-set",
+  "desc": "Set a bookmark named NAME at point, scoped to the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15325",
+  "key": "C-c p B s"
+ },
+ {
+  "id": "projectile.command.cache_current_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-cache-current-file",
+  "desc": "Add the currently visited file to the cache.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L2502",
+  "key": "C-c p z"
+ },
+ {
+  "id": "projectile.command.cleanup_known_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-cleanup-known-projects",
+  "desc": "Remove known projects that don't exist anymore.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14001"
+ },
+ {
+  "id": "projectile.command.clear_known_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-clear-known-projects",
+  "desc": "Clear both `projectile-known-projects' and `projectile-known-projects-file'.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14054"
+ },
+ {
+  "id": "projectile.command.compile_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-compile-project",
+  "desc": "Run project compilation command.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13011",
+  "key": "C-c p c c"
+ },
+ {
+  "id": "projectile.command.compile_subproject",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-compile-subproject",
+  "desc": "Run the compile lifecycle command in the nearest subproject.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13066",
+  "key": "C-c p c m c"
+ },
+ {
+  "id": "projectile.command.configure_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-configure-project",
+  "desc": "Run project configure command.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13001",
+  "key": "C-c p c o"
+ },
+ {
+  "id": "projectile.command.configure_subproject",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-configure-subproject",
+  "desc": "Run the configure lifecycle command in the nearest subproject.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13066",
+  "key": "C-c p c m o"
+ },
+ {
+  "id": "projectile.command.dashboard",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dashboard",
+  "desc": "Show a dashboard summarising the project around `default-directory'.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L16830",
+  "key": "C-c p P"
+ },
+ {
+  "id": "projectile.command.dired",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dired",
+  "desc": "Open `dired' at the root of the project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11588",
+  "key": "C-c p D"
+ },
+ {
+  "id": "projectile.command.dired_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dired-other-frame",
+  "desc": "As `projectile-dired', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 D"
+ },
+ {
+  "id": "projectile.command.dired_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dired-other-window",
+  "desc": "As `projectile-dired', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 D"
+ },
+ {
+  "id": "projectile.command.discard_command_cache",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-discard-command-cache",
+  "desc": "Discard the cached lifecycle commands for the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11744"
+ },
+ {
+  "id": "projectile.command.discard_root_cache",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-discard-root-cache",
+  "desc": "Clear `projectile-project-root-cache' without touching other caches.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L1979"
+ },
+ {
+  "id": "projectile.command.discover_projects_in_directory",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-discover-projects-in-directory",
+  "desc": "Discover any projects in DIRECTORY and add them to the projectile cache.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L2797"
+ },
+ {
+  "id": "projectile.command.discover_projects_in_search_path",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-discover-projects-in-search-path",
+  "desc": "Discover projects in `projectile-project-search-path'.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L2841"
+ },
+ {
+  "id": "projectile.command.dispatch",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dispatch",
+  "desc": "Dispatch menu for Projectile commands.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L17399",
+  "key": "C-c p m"
+ },
+ {
+  "id": "projectile.command.dispatch_args",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dispatch--args",
+  "desc": "Return the active `projectile-dispatch' switches, or nil.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L17136"
+ },
+ {
+  "id": "projectile.command.dispatch_replace_review",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dispatch-replace-review",
+  "desc": "Reviewable replace honouring the `--regexp' and `--case-sensitive' switches.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L17245"
+ },
+ {
+  "id": "projectile.command.dispatch_search_review",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dispatch-search-review",
+  "desc": "Reviewable search honouring the `--regexp' and `--case-sensitive' switches.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L17217"
+ },
+ {
+  "id": "projectile.command.dispatch_search_siblings",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-dispatch-search-siblings",
+  "desc": "Sibling-project search honouring the search switches.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L17232"
+ },
+ {
+  "id": "projectile.command.display_buffer",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-display-buffer",
+  "desc": "Display a project buffer in another window without selecting it.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4610",
+  "key": "C-c p 4 C-o"
+ },
+ {
+  "id": "projectile.command.doctor",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-doctor",
+  "desc": "Diagnose Projectile's view of the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L16219",
+  "key": "C-c p H"
+ },
+ {
+  "id": "projectile.command.edit_dir_locals",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-edit-dir-locals",
+  "desc": "Edit or create a .dir-locals.el file of the project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15470",
+  "key": "C-c p E"
+ },
+ {
+  "id": "projectile.command.embark_switch_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-embark-switch-project",
+  "desc": "Switch to PROJECT.  An Embark action for a project candidate.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L18581"
+ },
+ {
+  "id": "projectile.command.embark_vc",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-embark-vc",
+  "desc": "Open the VC interface for PROJECT.  An Embark action for a project candidate.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L18586"
+ },
+ {
+  "id": "projectile.command.find_changed_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-changed-file",
+  "desc": "Jump to a file changed in the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L7773",
+  "key": "C-c p C"
+ },
+ {
+  "id": "projectile.command.find_dir",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-dir",
+  "desc": "Jump to a project's directory using completion.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5562",
+  "key": "C-c p d"
+ },
+ {
+  "id": "projectile.command.find_dir_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-dir-other-frame",
+  "desc": "As `projectile-find-dir', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 d"
+ },
+ {
+  "id": "projectile.command.find_dir_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-dir-other-window",
+  "desc": "As `projectile-find-dir', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 d"
+ },
+ {
+  "id": "projectile.command.find_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file",
+  "desc": "Jump to a project's file using completion.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5418",
+  "key": "C-c p f"
+ },
+ {
+  "id": "projectile.command.find_file_all",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-all",
+  "desc": "Jump to any file in the project, ignoring VCS and projectile ignore rules.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5433"
+ },
+ {
+  "id": "projectile.command.find_file_dwim",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-dwim",
+  "desc": "Jump to a project's files using completion based on context.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5360",
+  "key": "C-c p g"
+ },
+ {
+  "id": "projectile.command.find_file_dwim_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-dwim-other-frame",
+  "desc": "As `projectile-find-file-dwim', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 g"
+ },
+ {
+  "id": "projectile.command.find_file_dwim_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-dwim-other-window",
+  "desc": "As `projectile-find-file-dwim', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 g"
+ },
+ {
+  "id": "projectile.command.find_file_in_directory",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-in-directory",
+  "desc": "Jump to a file in a (maybe regular) DIRECTORY.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13940",
+  "key": "C-c p l"
+ },
+ {
+  "id": "projectile.command.find_file_in_known_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-in-known-projects",
+  "desc": "Jump to a file in any of the known projects.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13963",
+  "key": "C-c p F"
+ },
+ {
+  "id": "projectile.command.find_file_in_sibling_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-in-sibling-projects",
+  "desc": "Jump to a file in the current project or any related to it.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15151",
+  "key": "C-c p n f"
+ },
+ {
+  "id": "projectile.command.find_file_in_subproject",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-in-subproject",
+  "desc": "Jump to a file in one of the current project's subprojects.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L12643",
+  "key": "C-c p c m f"
+ },
+ {
+  "id": "projectile.command.find_file_of_kind",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-of-kind",
+  "desc": "Jump to a project file of a chosen file kind using completion.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L6213",
+  "key": "C-c p j"
+ },
+ {
+  "id": "projectile.command.find_file_of_kind_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-of-kind-other-frame",
+  "desc": "As `projectile-find-file-of-kind', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 j"
+ },
+ {
+  "id": "projectile.command.find_file_of_kind_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-of-kind-other-window",
+  "desc": "As `projectile-find-file-of-kind', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 j"
+ },
+ {
+  "id": "projectile.command.find_file_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-other-frame",
+  "desc": "As `projectile-find-file', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 f"
+ },
+ {
+  "id": "projectile.command.find_file_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-file-other-window",
+  "desc": "As `projectile-find-file', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 f"
+ },
+ {
+  "id": "projectile.command.find_implementation_or_test_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-implementation-or-test-other-frame",
+  "desc": "As `projectile-find-implementation-or-test', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 t"
+ },
+ {
+  "id": "projectile.command.find_implementation_or_test_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-implementation-or-test-other-window",
+  "desc": "As `projectile-find-implementation-or-test', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 t"
+ },
+ {
+  "id": "projectile.command.find_other_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-other-file",
+  "desc": "Switch between files with the same name but different extensions.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5216",
+  "key": "C-c p a"
+ },
+ {
+  "id": "projectile.command.find_other_file_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-other-file-other-frame",
+  "desc": "As `projectile-find-other-file', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 a"
+ },
+ {
+  "id": "projectile.command.find_other_file_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-other-file-other-window",
+  "desc": "As `projectile-find-other-file', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 a"
+ },
+ {
+  "id": "projectile.command.find_references",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-references",
+  "desc": "Find textual references to SYMBOL across the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8770",
+  "key": "C-c p ?, C-c p s x"
+ },
+ {
+  "id": "projectile.command.find_related_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-related-file",
+  "desc": "Open related file.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5700"
+ },
+ {
+  "id": "projectile.command.find_test_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-find-test-file",
+  "desc": "Jump to a project's test file using completion.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5587",
+  "key": "C-c p T"
+ },
+ {
+  "id": "projectile.command.forget_projects_under",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-forget-projects-under",
+  "desc": "Remove known projects located under DIRECTORY.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14017"
+ },
+ {
+  "id": "projectile.command.grep",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-grep",
+  "desc": "Perform rgrep in the project (the grep `projectile-search' backend).",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8697",
+  "key": "C-c p s g"
+ },
+ {
+  "id": "projectile.command.ibuffer",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-ibuffer",
+  "desc": "Open an IBuffer window showing all buffers in the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15392",
+  "key": "C-c p I"
+ },
+ {
+  "id": "projectile.command.index_project_async",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-index-project-async",
+  "desc": "Index PROJECT-ROOT in the background and populate the files cache.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4150"
+ },
+ {
+  "id": "projectile.command.install_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-install-project",
+  "desc": "Run project install command.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13032",
+  "key": "C-c p c i"
+ },
+ {
+  "id": "projectile.command.install_subproject",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-install-subproject",
+  "desc": "Run the install lifecycle command in the nearest subproject.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13066",
+  "key": "C-c p c m i"
+ },
+ {
+  "id": "projectile.command.internal_find_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile--find-file",
+  "desc": "Jump to a project's file using completion.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5399"
+ },
+ {
+  "id": "projectile.command.internal_run_subproject_phase",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile--run-subproject-phase",
+  "desc": "Run lifecycle PHASE in the nearest subproject of the current file.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13061"
+ },
+ {
+  "id": "projectile.command.invalidate_cache",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-invalidate-cache",
+  "desc": "Remove the current project's files from `projectile-projects-cache'.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L1922",
+  "key": "C-c p i"
+ },
+ {
+  "id": "projectile.command.invalidate_cache_all",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-invalidate-cache-all",
+  "desc": "Invalidate the caches of every known project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L1953"
+ },
+ {
+  "id": "projectile.command.kill_buffers",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-kill-buffers",
+  "desc": "Kill project buffers.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11530",
+  "key": "C-c p k"
+ },
+ {
+  "id": "projectile.command.multi_occur",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-multi-occur",
+  "desc": "Do a `multi-occur' in the project's buffers.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4635",
+  "key": "C-c p o"
+ },
+ {
+  "id": "projectile.command.multi_occur_in_sibling_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-multi-occur-in-sibling-projects",
+  "desc": "Do a `multi-occur' in the buffers of the current project and related ones.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15182",
+  "key": "C-c p n o"
+ },
+ {
+  "id": "projectile.command.next_project_buffer",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-next-project-buffer",
+  "desc": "In selected window switch to the next project buffer.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15426",
+  "key": "C-c p <right>"
+ },
+ {
+  "id": "projectile.command.other_frame_command",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-other-frame-command",
+  "desc": "Show the buffer of the next Projectile command in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L17105",
+  "key": "C-c p 5 5"
+ },
+ {
+  "id": "projectile.command.other_window_command",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-other-window-command",
+  "desc": "Show the buffer of the next Projectile command in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L17088",
+  "key": "C-c p 4 4"
+ },
+ {
+  "id": "projectile.command.package_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-package-project",
+  "desc": "Run project package command.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13042",
+  "key": "C-c p c p"
+ },
+ {
+  "id": "projectile.command.package_subproject",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-package-subproject",
+  "desc": "Run the package lifecycle command in the nearest subproject.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13066",
+  "key": "C-c p c m p"
+ },
+ {
+  "id": "projectile.command.previous_project_buffer",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-previous-project-buffer",
+  "desc": "In selected window switch to the previous project buffer.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15433",
+  "key": "C-c p <left>"
+ },
+ {
+  "id": "projectile.command.project_buffers_other_buffer",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-project-buffers-other-buffer",
+  "desc": "Switch to the most recently selected buffer project buffer.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4621",
+  "key": "C-c p ESC"
+ },
+ {
+  "id": "projectile.command.project_info",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-project-info",
+  "desc": "Display info for current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L7557"
+ },
+ {
+  "id": "projectile.command.purge_dir_from_cache",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-purge-dir-from-cache",
+  "desc": "Purge DIR from the cache of the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L2054"
+ },
+ {
+  "id": "projectile.command.purge_file_from_cache",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-purge-file-from-cache",
+  "desc": "Purge FILE from the cache of the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L2032"
+ },
+ {
+  "id": "projectile.command.read_buffer_to_switch",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-read-buffer-to-switch",
+  "desc": "Read the name of a buffer to switch to, prompting with PROMPT.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4519"
+ },
+ {
+  "id": "projectile.command.recentf",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-recentf",
+  "desc": "Show a list of recently visited files in a project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11637",
+  "key": "C-c p e"
+ },
+ {
+  "id": "projectile.command.remove_current_project_from_known_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-remove-current-project-from-known-projects",
+  "desc": "Remove the current project from the list of known projects.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14089"
+ },
+ {
+  "id": "projectile.command.remove_known_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-remove-known-project",
+  "desc": "Remove PROJECT from the list of known projects.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14068"
+ },
+ {
+  "id": "projectile.command.repeat_last_command",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-repeat-last-command",
+  "desc": "Run last projectile external command.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13514"
+ },
+ {
+  "id": "projectile.command.repeat_last_task",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-repeat-last-task",
+  "desc": "Re-run the last task executed in the current project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13638",
+  "key": "C-c p c X"
+ },
+ {
+  "id": "projectile.command.replace",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace",
+  "desc": "Replace a literal string in the project's files.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9254",
+  "key": "C-c p r"
+ },
+ {
+  "id": "projectile.command.replace_apply",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--apply",
+  "desc": "Apply every enabled match, grouped by file, then re-run the search.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10386"
+ },
+ {
+  "id": "projectile.command.replace_export",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--export",
+  "desc": "Export the enabled matches to a `grep-mode' buffer for editing with wgrep.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10590"
+ },
+ {
+  "id": "projectile.command.replace_flush_files",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--flush-files",
+  "desc": "Remove matches whose project-relative file matches REGEXP.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10249"
+ },
+ {
+  "id": "projectile.command.replace_flush_matches",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--flush-matches",
+  "desc": "Remove matches whose context line matches REGEXP.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10237"
+ },
+ {
+  "id": "projectile.command.replace_goto_next_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--goto-next-file",
+  "desc": "Move point to the next file header.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10051"
+ },
+ {
+  "id": "projectile.command.replace_goto_next_match",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--goto-next-match",
+  "desc": "Move point to the next match line.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10027"
+ },
+ {
+  "id": "projectile.command.replace_goto_prev_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--goto-prev-file",
+  "desc": "Move point to the previous file header.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10065"
+ },
+ {
+  "id": "projectile.command.replace_goto_prev_match",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--goto-prev-match",
+  "desc": "Move point to the previous match line.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10039"
+ },
+ {
+  "id": "projectile.command.replace_keep_files",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--keep-files",
+  "desc": "Keep only matches whose project-relative file matches REGEXP.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10243"
+ },
+ {
+  "id": "projectile.command.replace_keep_matches",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--keep-matches",
+  "desc": "Keep only matches whose context line matches REGEXP.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10231"
+ },
+ {
+  "id": "projectile.command.replace_quit",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--quit",
+  "desc": "Cancel any in-flight scan and quit the results window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11113"
+ },
+ {
+  "id": "projectile.command.replace_refresh",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--refresh",
+  "desc": "Re-run the search and redraw the results buffer.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10149"
+ },
+ {
+  "id": "projectile.command.replace_regexp",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace-regexp",
+  "desc": "Replace a regexp in the project's files.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9286"
+ },
+ {
+  "id": "projectile.command.replace_regexp_review",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace-regexp-review",
+  "desc": "Review and apply a project-wide regexp replacement.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11153"
+ },
+ {
+  "id": "projectile.command.replace_review",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace-review",
+  "desc": "Review and apply a literal project-wide replacement.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11142",
+  "key": "C-c p R"
+ },
+ {
+  "id": "projectile.command.replace_set_replacement",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--set-replacement",
+  "desc": "Re-read the replacement string and re-render the previews.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10118"
+ },
+ {
+  "id": "projectile.command.replace_toggle",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--toggle",
+  "desc": "Toggle whether the match on the current line will be applied.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10093"
+ },
+ {
+  "id": "projectile.command.replace_toggle_case",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--toggle-case",
+  "desc": "Toggle case sensitivity of the search, re-scan, and re-render.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10156"
+ },
+ {
+  "id": "projectile.command.replace_toggle_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--toggle-file",
+  "desc": "Toggle all matches in the file of the match on the current line.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10102"
+ },
+ {
+  "id": "projectile.command.replace_toggle_regexp",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--toggle-regexp",
+  "desc": "Toggle between literal and regexp search, re-scan, and re-render.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10172"
+ },
+ {
+  "id": "projectile.command.replace_toggle_word",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--toggle-word",
+  "desc": "Toggle whole-word matching of the search, re-scan, and re-render.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10195"
+ },
+ {
+  "id": "projectile.command.replace_undo",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace-undo",
+  "desc": "Revert the last project-wide replace applied from the replace reviewer.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10511",
+  "key": "C-c p u"
+ },
+ {
+  "id": "projectile.command.replace_visit",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-replace--visit",
+  "desc": "Visit the match on the current line in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L10079"
+ },
+ {
+  "id": "projectile.command.report_copy",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-report-copy",
+  "desc": "Copy the current report buffer to the kill ring as plain text.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15616"
+ },
+ {
+  "id": "projectile.command.reset_known_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-reset-known-projects",
+  "desc": "Clear known projects and rediscover.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14061"
+ },
+ {
+  "id": "projectile.command.ripgrep",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-ripgrep",
+  "desc": "Run a ripgrep (rg) search with SEARCH-TERM in the project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8735",
+  "key": "C-c p s r"
+ },
+ {
+  "id": "projectile.command.run",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run",
+  "desc": "Run a shell, REPL or terminal in the project root.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9011",
+  "key": "C-c p x r"
+ },
+ {
+  "id": "projectile.command.run_async_shell_command_in_root",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-async-shell-command-in-root",
+  "desc": "Invoke `async-shell-command' in the project's root.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8824",
+  "key": "C-c p &"
+ },
+ {
+  "id": "projectile.command.run_command_in_root",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-command-in-root",
+  "desc": "Invoke `execute-extended-command' in the project's root.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8810"
+ },
+ {
+  "id": "projectile.command.run_eat",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-eat",
+  "desc": "Invoke `eat' in the project's root (the eat `projectile-run' backend).",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9066",
+  "key": "C-c p x x"
+ },
+ {
+  "id": "projectile.command.run_eat_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-eat-other-window",
+  "desc": "As `projectile-run-eat', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p x 4 x"
+ },
+ {
+  "id": "projectile.command.run_eshell",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-eshell",
+  "desc": "Invoke `eshell' in the project's root (the eshell `projectile-run' backend).",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9031",
+  "key": "C-c p x e"
+ },
+ {
+  "id": "projectile.command.run_gdb",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-gdb",
+  "desc": "Invoke `gdb' in the project's root.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8831",
+  "key": "C-c p x g"
+ },
+ {
+  "id": "projectile.command.run_ghostel",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-ghostel",
+  "desc": "Invoke `ghostel' in the project's root (the ghostel `projectile-run' backend).",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9080",
+  "key": "C-c p x G"
+ },
+ {
+  "id": "projectile.command.run_ghostel_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-ghostel-other-window",
+  "desc": "As `projectile-run-ghostel', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p x 4 G"
+ },
+ {
+  "id": "projectile.command.run_ielm",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-ielm",
+  "desc": "Invoke `ielm' in the project's root (the ielm `projectile-run' backend).",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9038",
+  "key": "C-c p x i"
+ },
+ {
+  "id": "projectile.command.run_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-project",
+  "desc": "Run project run command.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13052",
+  "key": "C-c p c r"
+ },
+ {
+  "id": "projectile.command.run_shell",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-shell",
+  "desc": "Invoke `shell' in the project's root (the shell `projectile-run' backend).",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9024",
+  "key": "C-c p x s"
+ },
+ {
+  "id": "projectile.command.run_shell_command_in_root",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-shell-command-in-root",
+  "desc": "Invoke `shell-command' in the project's root.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8817",
+  "key": "C-c p !"
+ },
+ {
+  "id": "projectile.command.run_subproject",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-subproject",
+  "desc": "Run the run lifecycle command in the nearest subproject.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13066",
+  "key": "C-c p c m r"
+ },
+ {
+  "id": "projectile.command.run_task",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-task",
+  "desc": "Run one of the current project's named tasks.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13610",
+  "key": "C-c p c x"
+ },
+ {
+  "id": "projectile.command.run_term",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-term",
+  "desc": "Invoke `term' in the project's root (the term `projectile-run' backend).",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9045",
+  "key": "C-c p x t"
+ },
+ {
+  "id": "projectile.command.run_test_at_point",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-test-at-point",
+  "desc": "Run the test around point, if any.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13454",
+  "key": "C-c p c ."
+ },
+ {
+  "id": "projectile.command.run_vterm",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-vterm",
+  "desc": "Invoke `vterm' in the project's root (the vterm `projectile-run' backend).",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L9052",
+  "key": "C-c p x v"
+ },
+ {
+  "id": "projectile.command.run_vterm_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-run-vterm-other-window",
+  "desc": "As `projectile-run-vterm', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p x 4 v"
+ },
+ {
+  "id": "projectile.command.save_project_buffers",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-save-project-buffers",
+  "desc": "Save all project buffers.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11551",
+  "key": "C-c p S"
+ },
+ {
+  "id": "projectile.command.search",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-search",
+  "desc": "Search the project for SEARCH-TERM using `projectile-search-backend'.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L8674",
+  "key": "C-c p s s"
+ },
+ {
+  "id": "projectile.command.search_in_sibling_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-search-in-sibling-projects",
+  "desc": "Search the current project and the ones related to it, reviewing the matches.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15159",
+  "key": "C-c p n s"
+ },
+ {
+  "id": "projectile.command.search_regexp_review",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-search-regexp-review",
+  "desc": "Search the project for an Emacs regexp and review the matches read-only.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11369",
+  "key": "C-c p s X"
+ },
+ {
+  "id": "projectile.command.search_review",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-search-review",
+  "desc": "Search the project for a literal string and review the matches read-only.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11356",
+  "key": "C-c p s R"
+ },
+ {
+  "id": "projectile.command.search_to_replace",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-search--to-replace",
+  "desc": "Hand the current search to the reviewable replace UI.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11269"
+ },
+ {
+  "id": "projectile.command.session_forget",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-session-forget",
+  "desc": "Delete PROJECT's saved session file.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L18368",
+  "key": "C-c p w f"
+ },
+ {
+  "id": "projectile.command.session_restore",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-session-restore",
+  "desc": "Restore PROJECT's saved session into the selected frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L18328",
+  "key": "C-c p w r"
+ },
+ {
+  "id": "projectile.command.session_restore_all",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-session-restore-all",
+  "desc": "Reopen every saved project's session into its own tab.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L18428",
+  "key": "C-c p w R"
+ },
+ {
+  "id": "projectile.command.session_save",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-session-save",
+  "desc": "Save the current window layout and buffers as PROJECT's session.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L18294",
+  "key": "C-c p w s"
+ },
+ {
+  "id": "projectile.command.session_save_all",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-session-save-all",
+  "desc": "Save the session of every open project in one go.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L18412",
+  "key": "C-c p w S"
+ },
+ {
+  "id": "projectile.command.session_switch_to_buffer",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-session-switch-to-buffer",
+  "desc": "Switch to a buffer belonging to the current tab's project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L18055",
+  "key": "C-c p w b"
+ },
+ {
+  "id": "projectile.command.switch_open_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-open-project",
+  "desc": "Switch to a project we have currently opened.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13787",
+  "key": "C-c p q"
+ },
+ {
+  "id": "projectile.command.switch_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-project",
+  "desc": "Switch to a project we have visited before.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13770",
+  "key": "C-c p p"
+ },
+ {
+  "id": "projectile.command.switch_project_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-project-other-frame",
+  "desc": "As `projectile-switch-project', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 p"
+ },
+ {
+  "id": "projectile.command.switch_project_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-project-other-window",
+  "desc": "As `projectile-switch-project', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 p"
+ },
+ {
+  "id": "projectile.command.switch_sibling_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-sibling-project",
+  "desc": "Switch to a project related to the current one.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14997",
+  "key": "C-c p n p"
+ },
+ {
+  "id": "projectile.command.switch_to_buffer",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-to-buffer",
+  "desc": "Switch to a project buffer.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4598",
+  "key": "C-c p b"
+ },
+ {
+  "id": "projectile.command.switch_to_buffer_in_sibling_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-to-buffer-in-sibling-projects",
+  "desc": "Switch to a buffer of the current project or of one related to it.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15174",
+  "key": "C-c p n b"
+ },
+ {
+  "id": "projectile.command.switch_to_buffer_other_frame",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-to-buffer-other-frame",
+  "desc": "As `projectile-switch-to-buffer', showing the buffer in another frame.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 5 b"
+ },
+ {
+  "id": "projectile.command.switch_to_buffer_other_window",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-to-buffer-other-window",
+  "desc": "As `projectile-switch-to-buffer', showing the buffer in another window.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L4546",
+  "key": "C-c p 4 b"
+ },
+ {
+  "id": "projectile.command.switch_to_most_recent_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-to-most-recent-project",
+  "desc": "Switch to the project recorded in `projectile-most-recent-project'.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13822"
+ },
+ {
+  "id": "projectile.command.switch_worktree",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-switch-worktree",
+  "desc": "Switch to another checkout of the current project\\\\='s repository.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L14733",
+  "key": "C-c p W"
+ },
+ {
+  "id": "projectile.command.test_project",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-test-project",
+  "desc": "Run project test command.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13022",
+  "key": "C-c p c t"
+ },
+ {
+  "id": "projectile.command.test_subproject",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-test-subproject",
+  "desc": "Run the test lifecycle command in the nearest subproject.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L13066",
+  "key": "C-c p c m t"
+ },
+ {
+  "id": "projectile.command.todos",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-todos",
+  "desc": "Collect the project's TODO-style annotations and review them read-only.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11433",
+  "key": "C-c p s t"
+ },
+ {
+  "id": "projectile.command.todos_in_sibling_projects",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-todos-in-sibling-projects",
+  "desc": "Collect TODO-style annotations across the current project and related ones.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L15195",
+  "key": "C-c p n t"
+ },
+ {
+  "id": "projectile.command.toggle_between_implementation_and_test",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-toggle-between-implementation-and-test",
+  "desc": "Toggle between an implementation file and its test file.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L7978",
+  "key": "C-c p t"
+ },
+ {
+  "id": "projectile.command.toggle_project_read_only",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-toggle-project-read-only",
+  "desc": "Toggle project read only.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L5448"
+ },
+ {
+  "id": "projectile.command.toggle_related_file",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-toggle-related-file",
+  "desc": "Jump between the current file and its related files of other kinds.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L6244",
+  "key": "C-c p J"
+ },
+ {
+  "id": "projectile.command.vc",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-vc",
+  "desc": "Open `vc-dir' at the root of the project.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L11602",
+  "key": "C-c p v"
+ },
+ {
+  "id": "projectile.command.version",
+  "source": "projectile",
+  "category": "command",
+  "name": "projectile-version",
+  "desc": "Get the Projectile version as string.",
+  "doc_ref": "https://github.com/bbatsov/projectile/blob/master/projectile.el#L1736"
+ }
+]

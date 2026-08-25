@@ -12,6 +12,7 @@ pub(crate) mod org;
 /// loaded at runtime via `:plugin load`. Independent of the embedded
 /// interpreters, so it is always compiled in.
 pub(crate) mod plugin;
+pub(crate) mod projectile;
 /// Native-plugin package manager. Installs `cdylib` plugins from `owner/repo`,
 /// git URLs, or local paths into a content-addressed global store under
 /// `~/.zmax/pkg/`, records them in `installed.toml`, and loads them through the
@@ -18022,6 +18023,42 @@ fn open_file_literally(cx: &mut Context) {
 /// SPC f L : fuzzy "locate" picker. Runs the system `locate` against the typed query (falling
 /// back to macOS Spotlight's `mdfind -name` when the locate database is unavailable) and opens
 /// the chosen path — Spacemacs `helm-locate`.
+/// Open a picker over a fixed list of paths, opening whichever is chosen — the
+/// shape every "pick one of these project files" command shares (the
+/// `projectile-find-*` family). Takes a `compositor::Context` so a `:` command
+/// can raise it from inside its own callback.
+pub(crate) fn pick_paths(
+    cx: &mut compositor::Context,
+    title: &'static str,
+    root: std::path::PathBuf,
+    paths: Vec<PathBuf>,
+) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            // The column formatter is a plain fn pointer, so the root it strips is
+            // carried as the picker's own data rather than captured.
+            let columns = [PickerColumn::new(
+                title,
+                |item: &PathBuf, root: &std::path::PathBuf| {
+                    item.strip_prefix(root)
+                        .unwrap_or(item)
+                        .display()
+                        .to_string()
+                        .into()
+                },
+            )];
+            let picker = Picker::new(columns, 0, paths, root, |cx, item: &PathBuf, action| {
+                if let Err(e) = cx.editor.open(item, action) {
+                    cx.editor.set_error(format!("open {}: {e}", item.display()));
+                }
+            })
+            .with_preview(|_editor, path| Some((path.as_path().into(), None)));
+            compositor.push(Box::new(overlaid(picker)));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
 fn locate_file(cx: &mut Context) {
     let columns = [PickerColumn::new("path", |item: &PathBuf, _: &()| {
         item.display().to_string().into()
@@ -50565,13 +50602,13 @@ fn log_edit_generate_changelog_from_diff(cx: &mut Context) {
 
 /// The file the known-project list lives in (Emacs `project-list-file`), one
 /// project root per line, most recently switched-to first.
-fn known_projects_file() -> std::path::PathBuf {
+pub(crate) fn known_projects_file() -> std::path::PathBuf {
     zmax_loader::config_dir().join("projects")
 }
 
 /// The known projects, most recently switched-to first. Roots that no longer
 /// exist are dropped, so nothing offers a project that is gone.
-fn known_projects() -> Vec<String> {
+pub(crate) fn known_projects() -> Vec<String> {
     std::fs::read_to_string(known_projects_file())
         .unwrap_or_default()
         .lines()
@@ -50581,7 +50618,7 @@ fn known_projects() -> Vec<String> {
         .collect()
 }
 
-fn write_known_projects(list: &[String]) -> std::io::Result<()> {
+pub(crate) fn write_known_projects(list: &[String]) -> std::io::Result<()> {
     let file = known_projects_file();
     if let Some(parent) = file.parent() {
         std::fs::create_dir_all(parent)?;
@@ -50592,14 +50629,14 @@ fn write_known_projects(list: &[String]) -> std::io::Result<()> {
 /// Remember a project root (Emacs does this whenever you visit a project), so
 /// `project-switch-project` can complete over it and `project-forget-project` has
 /// something to forget.
-fn record_known_project(root: &std::path::Path) {
+pub(crate) fn record_known_project(root: &std::path::Path) {
     let mut list = known_projects();
     zmax_core::project::record_project(&mut list, &root.to_string_lossy());
     let _ = write_known_projects(&list);
 }
 
 /// Completions over the known-project list, for the project prompts.
-fn known_project_completer(_editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
+pub(crate) fn known_project_completer(_editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
     let input = input.trim();
     known_projects()
         .into_iter()
@@ -50610,7 +50647,7 @@ fn known_project_completer(_editor: &Editor, input: &str) -> Vec<ui::prompt::Com
 }
 
 /// Expand a leading `~` in a typed directory.
-fn expand_home(dir: &str) -> std::path::PathBuf {
+pub(crate) fn expand_home(dir: &str) -> std::path::PathBuf {
     match dir.strip_prefix("~") {
         Some(rest) if dir == "~" || dir.starts_with("~/") => std::env::var_os("HOME")
             .map(|home| std::path::PathBuf::from(home).join(rest.trim_start_matches('/')))
@@ -50678,7 +50715,7 @@ fn project_switch_project(cx: &mut Context) {
 }
 
 /// Open `dir` as a project and remember it.
-fn project_switch_to(cx: &mut compositor::Context, dir: std::path::PathBuf) {
+pub(crate) fn project_switch_to(cx: &mut compositor::Context, dir: std::path::PathBuf) {
     record_known_project(&dir);
     let call: job::Callback = Callback::EditorCompositor(Box::new(
         move |editor: &mut Editor, compositor: &mut Compositor| {
