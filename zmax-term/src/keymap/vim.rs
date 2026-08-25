@@ -439,6 +439,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
 
     // --- Toggles the Spacemacs docs list that had no binding here yet ---------
     ("space t n v", "Toggles", "toggle_smooth_scrolling"),      // SPC t n v : smooth scrolling
+    ("space t I",   "Toggles", "aggressive_indent_mode"),       // SPC t I : aggressive-indent mode
+    ("space t m s", "Toggles", "toggle_system_monitor"),        // SPC t m s : system monitor in the minibuffer
     ("space t G",   "Toggles", "ggtags_mode"),                  // SPC t G : ggtags mode
     ("space t y",   "Toggles", "yasnippet_mode"),               // SPC t y : yasnippet mode
     ("space t m c", "Toggles", "toggle_modeline_org_clock"),    // SPC t m c : org task clock
@@ -2061,7 +2063,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "P" => goto_preview_window,       // SPC w P: go to the preview window (parity with C-w)
                 "C-t" => jump_view_up,
                 "t" => toggle_window_dedication,  // SPC w t : toggle window dedication (spacemacs)
-                "b" | "C-b" => jump_view_down,
+                // vim `C-w b` goes to the bottom-most window; spacemacs `SPC w b`
+                // is `spacemacs/switch-to-minibuffer-window`. The two disagree, and
+                // the aliased-modes test allows exactly that divergence (VIM_OWNS in
+                // keymap.rs). `SPC w C-b` stays the bottom-window alias.
+                "b" => switch_to_minibuffer,      // SPC w b : force the focus back to the minibuffer
+                "C-b" => jump_view_down,
                 "W" => rotate_view_reverse,
                 "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)
                 "}" => preview_tag,              // parity with C-w }

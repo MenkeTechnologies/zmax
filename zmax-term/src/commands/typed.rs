@@ -6164,7 +6164,13 @@ fn buffer_gather_paths_impl(editor: &mut Editor, args: Args) -> Vec<DocumentId> 
     for arg in args {
         let doc_id = editor.documents().find_map(|doc| {
             let arg_path = Some(Path::new(arg.as_ref()));
-            if doc.path() == arg_path || doc.relative_path() == arg_path {
+            // The buffer completer offers `display_name`, so a buffer renamed by
+            // `:rename-buffer` has to answer to that name here as well — emacs
+            // `kill-buffer` takes a buffer name, not a path.
+            if doc.path() == arg_path
+                || doc.relative_path() == arg_path
+                || doc.display_name().as_ref() == arg.as_ref()
+            {
                 Some(doc.id())
             } else {
                 None

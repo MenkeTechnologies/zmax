@@ -638,7 +638,6 @@ pub mod completers {
     use zmax_core::command_line::{self, Tokenizer};
     use zmax_core::fuzzy::fuzzy_match;
     use zmax_core::syntax::config::LanguageServerFeature;
-    use zmax_view::document::SCRATCH_BUFFER_NAME;
     use zmax_view::theme;
     use zmax_view::{editor::Config, Editor};
 
@@ -696,11 +695,16 @@ pub mod completers {
     }
 
     pub fn buffer(editor: &Editor, input: &str) -> Vec<Completion> {
-        let names = editor.documents.values().map(|doc| {
-            doc.relative_path()
-                .map(|p| p.display().to_string().into())
-                .unwrap_or_else(|| Cow::from(SCRATCH_BUFFER_NAME))
-        });
+        // Emacs `read-buffer` completes over *buffer names*, and every command
+        // this completer feeds resolves its answer with `Document::display_name`.
+        // Offering `relative_path` instead meant a buffer renamed by
+        // `:rename-buffer` / `:rename-uniquely` was suggested under a name its
+        // own command then refused. `display_name` is the path when no rename
+        // happened, so nothing else changes.
+        let names = editor
+            .documents
+            .values()
+            .map(|doc| Cow::Owned(doc.display_name().into_owned()));
 
         fuzzy_match(input, names, true)
             .into_iter()

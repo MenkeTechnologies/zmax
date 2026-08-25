@@ -264,6 +264,15 @@ pub struct Document {
     /// visits. Cleared by [`Document::set_path`] so save-as adopts the new file
     /// name. See [`zmax_core::buffer_name`].
     buffer_name: Option<String>,
+    /// `aggressive-indent-mode`, which aggressive-indent.el defines with
+    /// `define-minor-mode` and is therefore buffer-local: every change in this
+    /// buffer re-indents the form around each cursor. Off by default, as the
+    /// minor mode is.
+    pub aggressive_indent: bool,
+    /// The [`Document::version`] the last `aggressive-indent-mode` pass left this
+    /// buffer at, so the after-change hook can tell a real edit from a command
+    /// that only moved point — and so its own re-indent does not re-trigger it.
+    pub aggressive_indent_version: Option<i32>,
     relative_path: OnceCell<Option<PathBuf>>,
     /// Lazily-computed workspace root for this document (the ancestor that contains a `.git` /
     /// `.svn` / `.jj` / `.zmax`). Avoids per-call `find_workspace_in` ancestor walks for hot
@@ -1378,6 +1387,8 @@ impl Document {
             active_snippet: None,
             path: None,
             buffer_name: None,
+            aggressive_indent: false,
+            aggressive_indent_version: None,
             relative_path: OnceCell::new(),
             workspace_root: OnceCell::new(),
             encoding,

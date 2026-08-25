@@ -787,3 +787,93 @@ async fn epub_read_renders_the_spine_as_text() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// Spacemacs `SPC t I` (`aggressive-indent-mode`). Two things are pinned here.
+/// The chord itself — the mode used to be reachable only through `M-x` — and
+/// that the re-indent covers *every* cursor: aggressive-indent.el re-indents the
+/// defun around point after each change, and with several cursors each one is a
+/// change site, so the primary alone would leave the other edits crooked.
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_t_i_reindents_the_defun_around_every_cursor() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_file(temp_path("aggressive.rs"), None)
+        .with_input_text(indoc! {"\
+            fn one() {
+            let a = #[1|]#;
+            }
+
+            fn two() {
+            let b = #(2|)#;
+            }
+            "})
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("<space>tI"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert_eq!(
+                        app.editor.get_status().map(|(msg, _)| msg.to_string()),
+                        Some("Aggressive-Indent mode enabled".to_string()),
+                        "SPC t I toggles the mode on"
+                    );
+                }),
+            ),
+            (
+                // One inserted character per cursor; each re-indents its own defun.
+                Some("i0"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (_v, doc) = zmax_view::current_ref!(app.editor);
+                    let text = doc.text().to_string();
+                    assert!(
+                        text.contains("    let a = 01;"),
+                        "the primary cursor's defun is re-indented: {text:?}"
+                    );
+                    assert!(
+                        text.contains("    let b = 02;"),
+                        "the second cursor's defun is re-indented too: {text:?}"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// The other half of `aggressive-indent-mode`: emacs hangs it off
+/// `after-change-functions`, so a change that never goes through the insert path
+/// re-indents as well. `x` (delete-char) is one such change.
+#[tokio::test(flavor = "multi_thread")]
+async fn aggressive_indent_follows_changes_outside_insert_mode() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_file(temp_path("aggressive_normal.rs"), None)
+        .with_input_text(indoc! {"\
+            fn one() {
+            let a = #[1|]#23;
+            }
+            "})
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("<space>tI"), None),
+            (
+                Some("x"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (_v, doc) = zmax_view::current_ref!(app.editor);
+                    let text = doc.text().to_string();
+                    assert!(
+                        text.contains("    let a = 23;"),
+                        "deleting a character re-indents the enclosing defun: {text:?}"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

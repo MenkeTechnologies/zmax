@@ -51436,11 +51436,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_t_iU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "key:normal:space t I",
    "static:aggressive_indent_mode"
   ],
-  "note": "Six gaps. (1) The chord: SPC t I is bound in no shipped preset; the mode is reachable only through the command palette / static name. (2) NEW, count edge case the first skeptic missed: with an emacs prefix argument in Insert mode, ui/editor.rs:3040-3045 sets `cx.count = Some(n)` before the self-insert loop, and c_function_object passes `cx.count()` straight into textobject_treesitter (commands.rs:36484, 36497). So `C-u 8 *` re-indents the 8th-outer enclosing function per inserted char instead of the enclosing defun \u2014 emacs aggressive-indent always uses beginning-of-defun/end-of-defun regardless of prefix arg. The repeat loop also runs the whole re-indent 8 times. (3) NEW, multiple selections: aggressive_indent_after_change only ever looks at the PRIMARY range (c_function_object takes `doc.selection(view.id).primary()`, 36489; the no-syntax fallback also uses `.primary()`), while\u2026"
+  "note": "All three recorded gaps closed. (1) The chord: `SPC t I` is bound in the spacemacs leader's toggle map. (2) The prefix argument no longer widens the re-indent - the textobject count is pinned to 1, because aggressive-indent.el calls `beginning-of-defun`/`end-of-defun`, which is always the enclosing form. (3) Every selection re-indents its own defun (overlapping spans merged), not the primary alone. Two more beyond those: the mode is buffer-local, as `define-minor-mode` makes it in aggressive-indent.el (it was a process-global flag shared with the electric modes, which in emacs really are global), and it now hangs off every change - a paste, a kill, an undo or a `:s///` re-indents, not just typing, which is what `after-change-functions` gives emacs. Recorded divergence: the re-indent runs synchronously off `PostCommand` rather than emacs's 0.05s idle timer (`aggressive-indent-sit-for-time`). Pinned by `tests/test/spacemacs_states.rs::spc_t_i_reindents_the_defun_around_every_cursor` and `::aggressive_indent_follows_changes_outside_insert_mode`."
  },
  {
   "spec_id": "spacemacs.layer.tools_dotnet",
@@ -51649,11 +51650,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_b_121",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "key:normal:C-x 5 C-o",
    "static:display_buffer_other_frame"
   ],
-  "note": "Three divergences, the first two beyond what the first skeptic recorded. (a) Chord: SPC F B is bound to fzf \":BTags\" at zmax-term/src/keymap/vim.rs:69, and the spacemacs frame submap at vim.rs:2140-2144 binds only n/D/O with the comment at vim.rs:2135-2139 stating SPC F f/d/b/B/o belong to the fzf pickers and \"have no slot\" \u2014 permanent by design, not scheduling. Nor is the command bound at emacs's own C-x 5 C-o: that chord is absent from the C-x 5 table (spacemacs.rs:368-381), so the ONLY user path is the SPC SPC / M-x command palette. (b) Prompt/completer mismatch: ui::completers::buffer offers doc.relative_path() (zmax-term/src/ui/mod.rs:685-694) while the callback matches doc.display_name() (commands.rs:65860, document.rs:3360-3366), and display_name returns buffer_name when set. After :rename-buffer / :rename-uniquely (typed.rs:35346, :35372) the completer suggests the path but\u2026"
+  "note": "Reachable by chord now: `C-x 5 C-o` is `display-buffer-other-frame` in emacs's own `ctl-x-5-map` (verified against `emacs -Q --batch`, which prints `C-o -> display-buffer-other-frame`), and both the spacemacs and emacs presets bind it - `SPC F B` stays the fzf `:BTags` picker by design. Two behaviour gaps closed with it: `ui::completers::buffer` now offers `display_name`, the name every command it feeds resolves with (a buffer renamed by `:rename-buffer` used to be suggested under a name its own command refused, and `:buffer-close` now accepts that name too), and the command runs `display-buffer-reuse-window` first, as `display-buffer--other-frame-action` does - a buffer already shown in another frame is reported there instead of making a second frame."
  },
  {
   "spec_id": "emacs.command.xref_etags_mode",
@@ -54460,11 +54462,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_w_b",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "key:normal:space w b",
    "static:switch_to_minibuffer"
   ],
-  "note": "switch_to_minibuffer selects the active minibuffer window. The chord is NOT bound: SPC w mirrors vim's C-w window map (enforced by the aliased_modes_are_same_in_default_keymap invariant) where `b` is jump_view_down"
+  "note": "`SPC w b` is bound now: the spacemacs leader carries `spacemacs/switch-to-minibuffer-window` while vim's `C-w b` keeps go-to-bottom-window (the divergence VIM_OWNS in keymap.rs allows, pinned by `aliased_modes_are_same_in_default_keymap`); `SPC w C-b` stays the bottom-window alias. Recorded divergence: zmax's minibuffer is the prompt layer, which holds the keyboard for as long as it is open, so the `(select-window (active-minibuffer-window))` half has no reachable state to run in and the command reports whether a minibuffer is active."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_w_p_m",
@@ -54477,11 +54480,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_w_p_p",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "key:normal:space w p p",
    "static:close_sticky_popup"
   ],
-  "note": "close_sticky_popup pops the topmost compositor layer (the popup) and errors when only the editor view is up. The chord is NOT bound: `SPC w p` is rotate_view in the shared SPC w / C-w window map"
+  "note": "`SPC w p p` is bound under the spacemacs popup prefix (`SPC w p`, the popwin map): close_sticky_popup pops the topmost compositor layer and errors when only the editor view is up. vim's `C-w p` keeps go-to-previous-window."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_e",

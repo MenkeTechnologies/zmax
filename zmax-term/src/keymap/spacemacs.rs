@@ -422,6 +422,13 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x 5 5", "Frame", "other_frame_prefix"),          // C-x 5 5: other-frame-prefix
     ("C-x 5 b", "Frame", "switch_to_buffer_other_frame"),// C-x 5 b: switch-to-buffer-other-frame
     ("C-x 5 c", "Frame", "clone_frame"),                 // C-x 5 c: clone-frame
+    // `C-x 5 C-o` and `C-x 5 C-f` are in `ctl-x-5-map` too (verified against
+    // `emacs -Q --batch`, which prints `C-o -> display-buffer-other-frame` and
+    // `C-f -> find-file-other-frame`); `C-x 5 C-o` is the only key sequence that
+    // reaches `display-buffer-other-frame`, spacemacs `SPC F B` being taken by
+    // the fzf `:BTags` picker here.
+    ("C-x 5 C-o", "Frame", "display_buffer_other_frame"),// C-x 5 C-o: display-buffer-other-frame
+    ("C-x 5 C-f", "Frame", "find_file_other_frame"),     // C-x 5 C-f: find-file-other-frame
     ("C-x 5 d", "Frame", "dired_other_frame"),           // C-x 5 d: dired-other-frame
     ("C-x 5 f", "Frame", "find_file_other_frame"),       // C-x 5 f: find-file-other-frame
     ("C-x 5 m", "Frame", "compose_mail_other_frame"),    // C-x 5 m: compose-mail-other-frame

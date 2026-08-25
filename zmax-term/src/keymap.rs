@@ -899,6 +899,9 @@ mod tests {
             // spacemacs `SPC w p` is the popup prefix (`SPC w p m` shows
             // *Messages* in a popup, `SPC w p p` closes the popup window).
             'p',
+            // vim `C-w b` goes to the bottom-most window; spacemacs `SPC w b`
+            // is `spacemacs/switch-to-minibuffer-window`.
+            'b',
         ];
         let spc_w = root
             .search(&[key!(' '), key!('w')])
@@ -948,6 +951,16 @@ mod tests {
         assert!(
             matches!(spc_w.get(&key!('p')), Some(KeyTrie::Node(_))),
             "SPC w p is spacemacs's popup prefix"
+        );
+        assert_eq!(
+            ctrl_w.get(&key!('b')).and_then(cmd_name_of),
+            Some("jump_view_down"),
+            "C-w b stays vim's bottom-window"
+        );
+        assert_eq!(
+            spc_w.get(&key!('b')).and_then(cmd_name_of),
+            Some("switch_to_minibuffer"),
+            "SPC w b is spacemacs's switch-to-minibuffer-window"
         );
         // Note: zmax ships the vim keymap, which intentionally does NOT alias
         // `z` and `Z` (vim reserves `Z` for `ZZ`/`ZQ`), so the Zmax `z`==`Z`

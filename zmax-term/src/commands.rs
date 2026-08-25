@@ -71030,8 +71030,6 @@ pub(crate) enum InsertMode {
     ElectricQuote,
     /// `electric-layout-mode`: `;` `{` `}` open a fresh line after themselves.
     ElectricLayout,
-    /// `aggressive-indent-mode`: every change re-indents the enclosing form.
-    AggressiveIndent,
 }
 
 fn insert_modes() -> &'static std::sync::RwLock<HashSet<u8>> {
@@ -71102,9 +71100,55 @@ fn electric_layout_mode(cx: &mut Context) {
 
 /// Spacemacs `SPC t I` (`aggressive-indent-mode`): keep the form you are editing
 /// correctly indented at all times, instead of only indenting the line a newline
-/// opens. Off by default, as the emacs minor mode is.
+/// opens. Off by default, as the emacs minor mode is. Unlike the electric modes
+/// beside it — `electric-indent-mode` and friends are *global* minor modes —
+/// this one is buffer-local (aggressive-indent.el defines it with
+/// `define-minor-mode`, and ships `global-aggressive-indent-mode` separately), so
+/// the flag lives on the [`Document`].
 fn aggressive_indent_mode(cx: &mut Context) {
-    toggle_insert_mode(cx, InsertMode::AggressiveIndent, "Aggressive-Indent mode");
+    let doc = doc_mut!(cx.editor);
+    doc.aggressive_indent = !doc.aggressive_indent;
+    let on = doc.aggressive_indent;
+    cx.editor.set_status(format!(
+        "Aggressive-Indent mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// `aggressive-indent-mode` hangs off `after-change-functions`, so *every* change
+/// re-indents — a paste, a kill, an undo, a `:s///`, not only typing. zmax has no
+/// re-entrant document hook (the change event hands over the `Document` alone,
+/// mid-`apply`), so the equivalent runs here, after each command: emacs's own
+/// `aggressive-indent--idle-timer` defers the work out of the change itself in
+/// exactly the same spirit. Commands that leave the text alone are skipped by
+/// comparing the document version.
+pub(crate) fn aggressive_indent_post_command(cx: &mut Context) {
+    let changed = {
+        let doc = doc_mut!(cx.editor);
+        if !doc.aggressive_indent {
+            return;
+        }
+        let version = doc.version();
+        doc.aggressive_indent_version.replace(version) != Some(version)
+    };
+    if !changed {
+        return;
+    }
+    aggressive_indent_after_change(cx);
+    // The re-indent is itself a change; record where it left the buffer so the
+    // next command does not see it as one.
+    let doc = doc_mut!(cx.editor);
+    doc.aggressive_indent_version = Some(doc.version());
+}
+
+/// Register the `aggressive-indent-mode` after-change hook.
+pub fn register_aggressive_indent_hooks() {
+    use crate::events::PostCommand;
+    use zmax_event::register_hook;
+    register_hook!(move |event: &mut PostCommand<'_, '_>| {
+        aggressive_indent_post_command(event.cx);
+        Ok(())
+    });
 }
 
 /// The after-change half of `aggressive-indent-mode`. aggressive-indent.el's
@@ -71114,29 +71158,67 @@ fn aggressive_indent_mode(cx: &mut Context) {
 /// (or no syntax tree) fall back to the changed line, which is what
 /// `aggressive-indent--softly-indent-region-and-on` starts from.
 ///
-/// Divergences: emacs defers the re-indent to a 0.05s idle timer
-/// (`aggressive-indent-sit-for-time`) and hangs it off `after-change-functions`,
-/// so *every* buffer change triggers it. Here it runs synchronously off the
-/// insert path, so typing and RET re-indent but a paste or an undo does not.
+/// Divergence: emacs defers the re-indent to a 0.05s idle timer
+/// (`aggressive-indent-sit-for-time`); here it runs synchronously — off the
+/// insert path while typing, and off `PostCommand` for every other change (paste,
+/// kill, undo, `:s///`), which is what
+/// [`aggressive_indent_post_command`] covers.
 fn aggressive_indent_after_change(cx: &mut Context) {
-    if !insert_mode_on(InsertMode::AggressiveIndent) {
+    if !doc!(cx.editor).aggressive_indent {
         return;
     }
-    let defun = c_function_object(cx).map(|(_view, from, to)| {
-        let (_view, doc) = current_ref!(cx.editor);
-        let text = doc.text();
-        (
-            text.char_to_line(from),
-            text.char_to_line(to.saturating_sub(1).max(from)),
-        )
-    });
-    let (start, end) = defun.unwrap_or_else(|| {
+    // Every cursor is a change site, so each one re-indents the form it sits in —
+    // the primary alone would leave the other selections' edits crooked. The
+    // textobject count is pinned to 1: aggressive-indent.el calls
+    // `beginning-of-defun`/`end-of-defun`, which is always the *enclosing* form,
+    // while an emacs prefix argument in Insert mode counts insertions and must
+    // not widen the re-indented region.
+    let mut spans: Vec<(usize, usize)> = {
+        let loader = cx.editor.syn_loader.load();
         let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
         doc.selection(view.id)
-            .primary()
-            .line_range(doc.text().slice(..))
-    });
-    c_reindent_lines(cx, start, end);
+            .iter()
+            .map(|range| {
+                doc.syntax()
+                    .and_then(|syntax| {
+                        let obj = textobject::textobject_treesitter(
+                            slice,
+                            *range,
+                            textobject::TextObject::Around,
+                            "function",
+                            syntax,
+                            &loader,
+                            1,
+                        );
+                        (obj.from() != obj.to()).then(|| {
+                            (
+                                text.char_to_line(obj.from()),
+                                text.char_to_line(obj.to().saturating_sub(1).max(obj.from())),
+                            )
+                        })
+                    })
+                    // No parsed function around this cursor: the changed line is
+                    // where `aggressive-indent--softly-indent-region-and-on`
+                    // starts from.
+                    .unwrap_or_else(|| range.line_range(slice))
+            })
+            .collect()
+    };
+    spans.sort_unstable();
+    spans.dedup();
+    // Cursors inside one form share its span; re-indent it once.
+    let mut regions: Vec<(usize, usize)> = Vec::with_capacity(spans.len());
+    for (start, end) in spans {
+        match regions.last_mut() {
+            Some((_, last_end)) if start <= *last_end => *last_end = (*last_end).max(end),
+            _ => regions.push((start, end)),
+        }
+    }
+    for (start, end) in regions {
+        c_reindent_lines(cx, start, end);
+    }
 }
 
 /// `which-function-mode` — read by `ui::statusline::render`, which appends the
@@ -73463,6 +73545,14 @@ fn display_buffer_other_frame(cx: &mut Context) {
                 ));
                 return;
             };
+            // `display-buffer-reuse-window` comes first in
+            // `display-buffer--other-frame-action`: when another frame already
+            // shows the buffer, that *is* the display, and no frame is made.
+            if let Some(frame) = cx.editor.frame_showing(id) {
+                cx.editor
+                    .set_status(format!("{input} already displayed in frame {}", frame + 1));
+                return;
+            }
             let here = cx.editor.current_frame();
             cx.editor.new_frame(id, None);
             let made = cx.editor.current_frame();

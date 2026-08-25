@@ -92,9 +92,14 @@ const EMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("C-x 5 0", "Frame",  "delete_frame"),            // C-x 5 0: delete-frame
     ("C-x 5 1", "Frame",  "delete_other_frames"),     // C-x 5 1: delete-other-frames
     ("C-x 5 2", "Frame",  "make_frame_command"),      // C-x 5 2: make-frame-command
+    ("C-x 5 5", "Frame",  "other_frame_prefix"),      // C-x 5 5: other-frame-prefix
     ("C-x 5 b", "Frame",  "switch_to_buffer_other_frame"), // C-x 5 b
+    ("C-x 5 c", "Frame",  "clone_frame"),             // C-x 5 c: clone-frame
+    ("C-x 5 C-o", "Frame", "display_buffer_other_frame"), // C-x 5 C-o: display-buffer-other-frame
+    ("C-x 5 C-f", "Frame", "find_file_other_frame"),  // C-x 5 C-f: find-file-other-frame
     ("C-x 5 d", "Frame",  "dired_other_frame"),       // C-x 5 d: dired-other-frame
     ("C-x 5 f", "Frame",  "find_file_other_frame"),   // C-x 5 f: find-file-other-frame
+    ("C-x 5 m", "Frame",  "compose_mail_other_frame"),// C-x 5 m: compose-mail-other-frame
     ("C-x 5 o", "Frame",  "other_frame"),             // C-x 5 o: other-frame
     ("C-x 5 r", "Frame",  "find_file_read_only_other_frame"), // C-x 5 r
     ("C-x 5 u", "Frame",  "undelete_frame"),          // C-x 5 u: undelete-frame

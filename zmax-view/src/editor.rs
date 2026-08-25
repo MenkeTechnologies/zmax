@@ -4401,6 +4401,29 @@ impl Editor {
         self.report_frame();
     }
 
+    /// The first frame *other than* the displayed one whose layout already shows
+    /// `doc`. `display-buffer-other-frame` runs
+    /// `display-buffer--other-frame-action`, whose first method is
+    /// `display-buffer-reuse-window` with `(reusable-frames . 0)` — every frame on
+    /// the terminal is fair game, so a buffer already on screen somewhere else
+    /// must not cause a second frame to be made.
+    pub fn frame_showing(&self, doc: DocumentId) -> Option<usize> {
+        fn shows(shape: &crate::tree::TreeShape, doc: DocumentId) -> bool {
+            match shape {
+                crate::tree::TreeShape::Leaf { doc: leaf, .. } => *leaf == doc,
+                crate::tree::TreeShape::Split { children, .. } => {
+                    children.iter().any(|(_, child)| shows(child, doc))
+                }
+            }
+        }
+        self.frames
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| *index != self.current_frame)
+            .find(|(_, frame)| frame.tabs.iter().any(|tab| shows(&tab.shape, doc)))
+            .map(|(index, _)| index)
+    }
+
     /// emacs `clone-frame`: a new frame with a copy of this frame's whole
     /// layout (every tab, every split), displayed immediately.
     pub fn clone_frame(&mut self) {
