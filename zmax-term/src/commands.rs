@@ -17358,6 +17358,62 @@ fn ediff_directories3(cx: &mut Context) {
     cx.push_layer(Box::new(prompt));
 }
 
+/// One row of an `ediff-merge-directories-with-ancestor` session group.
+#[derive(Clone, PartialEq, Eq, Debug)]
+enum MergeGroupRow {
+    /// A name in A, B and ANCESTOR: merged against the ancestor.
+    ThreeWay,
+    /// A name in A and B but not ANCESTOR: merged without one, which is emacs's
+    /// own fallback.
+    TwoWay,
+    /// A row of emacs's `ediff-dir-difference-list`: a name that is not in every
+    /// directory. `ediff-intersect-directories` returns these separately from the
+    /// common list — the session group buffer shows them, and they cannot be
+    /// entered as sessions.
+    OnlyIn(&'static str),
+}
+
+/// The session group for `ediff-merge-directories-with-ancestor`: the merge
+/// sessions first (`ediff-intersect-directories`' common list), then the
+/// directory differences, each sorted by name. REGEXP filters both, as emacs
+/// filters the whole listing.
+fn merge_group_rows(
+    fa: &std::collections::BTreeMap<String, std::path::PathBuf>,
+    fb: &std::collections::BTreeMap<String, std::path::PathBuf>,
+    fanc: &std::collections::BTreeMap<String, std::path::PathBuf>,
+    filter: Option<&Regex>,
+) -> Vec<(String, MergeGroupRow)> {
+    let keep = |name: &String| filter.is_none_or(|re| re.is_match(name));
+    let mut sessions: Vec<(String, MergeGroupRow)> = fa
+        .keys()
+        .filter(|name| fb.contains_key(*name) && keep(name))
+        .map(|name| {
+            let kind = if fanc.contains_key(name) {
+                MergeGroupRow::ThreeWay
+            } else {
+                MergeGroupRow::TwoWay
+            };
+            (name.clone(), kind)
+        })
+        .collect();
+    let mut differences: Vec<(String, MergeGroupRow)> = Vec::new();
+    for (dir, where_, others) in [
+        (fa, "A", [fb, fanc]),
+        (fb, "B", [fa, fanc]),
+        (fanc, "ancestor", [fa, fb]),
+    ] {
+        for name in dir.keys().filter(|name| keep(name)) {
+            if others.iter().all(|other| !other.contains_key(name)) {
+                differences.push((name.clone(), MergeGroupRow::OnlyIn(where_)));
+            }
+        }
+    }
+    sessions.sort_by(|a, b| a.0.cmp(&b.0));
+    differences.sort_by(|a, b| a.0.cmp(&b.0));
+    sessions.extend(differences);
+    sessions
+}
+
 /// Spacemacs `SPC D m d 3` / Emacs `ediff-merge-directories-with-ancestor`:
 /// merge the files that have identical names in A and B, using the same-name
 /// file in ANCESTOR as the common ancestor. Emacs' docstring is the spec here:
@@ -17407,60 +17463,53 @@ fn ediff_merge_directories_with_ancestor(cx: &mut Context) {
                 }
             };
             let (fa, fb, fanc) = (&files[0], &files[1], &files[2]);
-            // The session group: the names common to A and B that pass the
-            // regexp. Ancestor presence only decides *how* each one merges.
-            let mut with_ancestor = Vec::new();
-            let mut without_ancestor = Vec::new();
-            for name in fa.keys() {
-                if !fb.contains_key(name) {
-                    continue;
-                }
-                if !filter.as_ref().is_none_or(|re| re.is_match(name)) {
-                    continue;
-                }
-                if fanc.contains_key(name) {
-                    with_ancestor.push(name.as_str());
-                } else {
-                    without_ancestor.push(name.as_str());
-                }
-            }
-            if with_ancestor.is_empty() && without_ancestor.is_empty() {
-                cx.editor.set_status(
-                    "ediff-merge-directories-with-ancestor: no files common to both directories",
-                );
-                return;
-            }
+            let entries = merge_group_rows(fa, fb, fanc, filter.as_ref());
             // Emacs opens a session group: one merge per common name, entered
-            // one at a time. The group here is a picker over those names;
-            // choosing one runs that file's merge — three-way against the
-            // ancestor when ANCESTOR holds a file of the same name, two-way
-            // otherwise, which is exactly what emacs falls back to.
+            // one at a time, plus the directory differences it cannot merge. The
+            // group here is a picker over those rows; choosing a session runs that
+            // file's merge — three-way against the ancestor when ANCESTOR holds a
+            // file of the same name, two-way otherwise, which is exactly what
+            // emacs falls back to.
             let (dir_a, dir_b, dir_anc) = (
                 args[0].to_string(),
                 args[1].to_string(),
                 args[2].to_string(),
             );
-            let entries: Vec<(String, bool)> = with_ancestor
-                .iter()
-                .map(|n| ((*n).to_string(), true))
-                .chain(without_ancestor.iter().map(|n| ((*n).to_string(), false)))
-                .collect();
+            if entries.is_empty() {
+                cx.editor.set_status(
+                    "ediff-merge-directories-with-ancestor: no files in either directory",
+                );
+                return;
+            }
             let call: job::Callback = Callback::EditorCompositor(Box::new(
                 move |_editor: &mut Editor, compositor: &mut Compositor| {
                     let columns = [
-                        ui::PickerColumn::new("file", |item: &(String, bool), _: &()| {
+                        ui::PickerColumn::new("file", |item: &(String, MergeGroupRow), _: &()| {
                             item.0.as_str().into()
                         }),
-                        ui::PickerColumn::new("merge", |item: &(String, bool), _: &()| {
-                            if item.1 { "3-way (ancestor)" } else { "2-way" }.into()
-                        }),
+                        ui::PickerColumn::new(
+                            "merge",
+                            |item: &(String, MergeGroupRow), _: &()| match &item.1 {
+                                MergeGroupRow::ThreeWay => "3-way (ancestor)".into(),
+                                MergeGroupRow::TwoWay => "2-way".into(),
+                                MergeGroupRow::OnlyIn(where_) => format!("only in {where_}").into(),
+                            },
+                        ),
                     ];
                     let picker = Picker::new(
                         columns,
                         0,
                         entries,
                         (),
-                        move |cx, (name, has_ancestor), _action| {
+                        move |cx, (name, row), _action| {
+                            if let MergeGroupRow::OnlyIn(where_) = row {
+                                // A directory difference, not a session: emacs
+                                // lists it and refuses to merge it.
+                                cx.editor.set_error(format!(
+                                    "ediff-merge-directories-with-ancestor: {name} is only in {where_}"
+                                ));
+                                return;
+                            }
                             let read = |dir: &str| -> Option<String> {
                                 std::fs::read_to_string(
                                     path::expand_tilde(std::path::Path::new(dir)).join(name),
@@ -17473,7 +17522,7 @@ fn ediff_merge_directories_with_ancestor(cx: &mut Context) {
                                 ));
                                 return;
                             };
-                            let ancestor = if *has_ancestor {
+                            let ancestor = if matches!(row, MergeGroupRow::ThreeWay) {
                                 read(&dir_anc).unwrap_or_default()
                             } else {
                                 String::new()
@@ -17525,9 +17574,31 @@ fn ediff_directory_revisions(cx: &mut Context) {
                 },
                 None => None,
             };
+            // Emacs reads DIR with `directory-files`, which does not recurse.
+            // git reports every path under it, so the group is trimmed to the
+            // entries directly in DIR — repo-relative, since that is how git
+            // names them.
+            let dir_prefix = {
+                let root = zmax_loader::find_workspace().0;
+                let abs = std::fs::canonicalize(path::expand_tilde(std::path::Path::new(dir)))
+                    .unwrap_or_else(|_| path::expand_tilde(std::path::Path::new(dir)).into_owned());
+                let root = std::fs::canonicalize(&root).unwrap_or(root);
+                match abs.strip_prefix(&root) {
+                    Ok(rel) if rel.as_os_str().is_empty() => String::new(),
+                    Ok(rel) => format!("{}/", rel.display()),
+                    // DIR is outside the workspace; git already refused, and an
+                    // empty prefix keeps whatever it did report visible.
+                    Err(_) => String::new(),
+                }
+            };
             let matches = |line: &&str| {
-                let name = line.rsplit('/').next().unwrap_or(line);
-                filter.as_ref().is_none_or(|re| re.is_match(name))
+                let Some(rest) = line.strip_prefix(dir_prefix.as_str()) else {
+                    return false;
+                };
+                if rest.contains('/') {
+                    return false;
+                }
+                filter.as_ref().is_none_or(|re| re.is_match(rest))
             };
             let changed = match git_exec(&["diff", "--name-only", "HEAD", "--", dir]) {
                 Ok(out) => out,
@@ -74703,6 +74774,64 @@ fn open_dribble_file(cx: &mut Context) {
                 .set_error(format!("open-dribble-file: {}: {e}", path.display())),
         }
     });
+}
+
+#[cfg(test)]
+mod ediff_group_tests {
+    use super::{merge_group_rows, MergeGroupRow};
+    use std::collections::BTreeMap;
+
+    fn dir(names: &[&str]) -> BTreeMap<String, std::path::PathBuf> {
+        names
+            .iter()
+            .map(|n| ((*n).to_string(), std::path::PathBuf::from(n)))
+            .collect()
+    }
+
+    /// `ediff-intersect-directories` returns `(common-list diff-list)`: the names
+    /// A and B share are merge sessions — three-way where ANCESTOR has the name,
+    /// two-way where it does not — and every name that is not in all three
+    /// directories goes to `ediff-dir-difference-list`, which the group buffer
+    /// lists but cannot enter. The group used to be the intersection alone, so a
+    /// file only in A was simply invisible.
+    #[test]
+    fn merge_group_lists_sessions_then_directory_differences() {
+        let rows = merge_group_rows(
+            &dir(&["both.txt", "shared.txt", "only_a.txt"]),
+            &dir(&["both.txt", "shared.txt", "only_b.txt"]),
+            &dir(&["both.txt", "only_anc.txt"]),
+            None,
+        );
+        assert_eq!(
+            rows,
+            vec![
+                ("both.txt".to_string(), MergeGroupRow::ThreeWay),
+                ("shared.txt".to_string(), MergeGroupRow::TwoWay),
+                ("only_a.txt".to_string(), MergeGroupRow::OnlyIn("A")),
+                ("only_anc.txt".to_string(), MergeGroupRow::OnlyIn("ancestor")),
+                ("only_b.txt".to_string(), MergeGroupRow::OnlyIn("B")),
+            ]
+        );
+    }
+
+    /// REGEXP filters the whole listing, differences included.
+    #[test]
+    fn merge_group_regexp_filters_sessions_and_differences() {
+        let re = regex::Regex::new(r"\.rs$").expect("valid regexp");
+        let rows = merge_group_rows(
+            &dir(&["keep.rs", "drop.txt", "only_a.rs", "only_a.txt"]),
+            &dir(&["keep.rs", "drop.txt"]),
+            &dir(&[]),
+            Some(&re),
+        );
+        assert_eq!(
+            rows,
+            vec![
+                ("keep.rs".to_string(), MergeGroupRow::TwoWay),
+                ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
+            ]
+        );
+    }
 }
 
 #[cfg(test)]

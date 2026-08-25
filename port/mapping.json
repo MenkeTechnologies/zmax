@@ -51505,12 +51505,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_d_d_r",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:ediff_directory_revisions",
    "key:normal:space D d r"
   ],
-  "note": "`SPC D d r` is bound (keymap/vim.rs) and opens the session *group* emacs opens: a picker over the files under DIR whose working copy differs from HEAD, plus the untracked ones marked as unregistered. Choosing an entry opens that file and puts its working copy against `git show HEAD:<file>` in the ediff view - one working-copy-vs-revision session, which is what entering a group entry does in emacs; an unregistered file just opens, having no revision to compare against. An empty answer means the current directory, emacs's own default, instead of erroring. Remaining divergence, recorded rather than argued with: revisions come from git (`git diff --name-only HEAD`) rather than a generic VC backend, git reports a path recursively, and REGEXP is a Rust regex. Chord pinned by `tests/test/spacemacs_states.rs::spc_d_d_r_lists_the_changed_files_as_a_group`."
+  "note": "`SPC D d r` opens the session *group* emacs opens: the files under DIR whose working copy differs from HEAD, plus the untracked ones marked unregistered. Choosing an entry opens that file and puts its working copy against `git show HEAD:<file>` in the ediff view - one working-copy-vs-revision session, which is what entering a group entry does in emacs; an unregistered file just opens, having no revision to compare against. An empty answer means the current directory, emacs's own default. The group is DIR's own entries now, not everything beneath it: emacs reads DIR with `directory-files`, which does not recurse, while git reports every path under the argument, so the listing is trimmed to the level emacs shows. Recorded divergences, both editor-wide rather than particular to this command: revisions come from git, which is zmax's only VCS backend (`zmax-vcs` is git), and REGEXP is a Rust regex. Chord pinned by `tests/test/spacemacs_states.rs::spc_d_d_r_lists_the_changed_files_as_a_group`."
  },
  {
   "spec_id": "emacs.command.emoji_describe",
@@ -51610,12 +51610,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_d_m_d_3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:ediff_merge_directories_with_ancestor",
    "key:normal:space D m d 3"
   ],
-  "note": "`SPC D m d 3` is bound (keymap/vim.rs) and opens the merge session group emacs opens: a picker over the names two directories share, marked three-way where ANCESTOR holds a file of the same name and two-way where it does not. Choosing an entry runs *that file's* merge - `merge_ops::three_way_merge` against the ancestor, or against an empty ancestor when there is none, which is emacs's own fallback - and shows the result with its conflict count, the same path the file-level merges use. It used to write a read-only listing telling you to re-run `SPC D m f 3` per file. Chord pinned by `tests/test/spacemacs_states.rs::spc_d_m_d_3_resolves_and_merges_common_files`. Still partial for the divergence its old note recorded: names unique to A or B are left out of the group, as the group is the intersection."
+  "note": "`SPC D m d 3` opens the session group emacs opens, now including the half it used to drop. `ediff-intersect-directories` returns `(common-list diff-list)`: the names A and B share are merge sessions - three-way where ANCESTOR holds the same name, two-way where it does not, which is emacs's own fallback - and every name that is not in all three directories goes to `ediff-dir-difference-list`, which the group buffer lists but cannot enter. The picker now carries both: sessions first, then the differences marked `only in A` / `only in B` / `only in ancestor`, choosing one of which reports rather than merges. REGEXP filters the whole listing. Pinned by `commands::ediff_group_tests::merge_group_lists_sessions_then_directory_differences` and `::merge_group_regexp_filters_sessions_and_differences`."
  },
  {
   "spec_id": "spacemacs.layer.chat_slack",
