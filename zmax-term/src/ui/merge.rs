@@ -666,10 +666,15 @@ impl DiffView {
     }
 
     /// `ediff-regions-wordwise`: keep showing the regions as they are written,
-    /// but refine each changed row at emacs's word granularity so only the
-    /// differing words are marked.
-    pub fn wordwise(mut self) -> Self {
+    /// but compare them the way emacs does — over the word stream, with line
+    /// structure invisible ([`align_wordwise`]) — and refine each changed row at
+    /// word granularity so only the differing words are marked.
+    pub fn wordwise(mut self, base: &str, doc: &str) -> Self {
         self.word_refine = true;
+        self.rows = align_wordwise(base, doc);
+        self.blocks = compute_blocks(&self.rows);
+        self.row_base = vec![None; self.rows.len()];
+        self.selected = 0;
         self
     }
 
@@ -1614,6 +1619,131 @@ fn ediff_word_segments(line: &str) -> Vec<(String, bool)> {
     segments
 }
 
+/// Every `ediff-forward-word` token in `text`, paired with the line it sits on.
+/// A token never spans a line: white space (newline included) separates tokens
+/// and is not one, which is exactly `ediff-wordify`'s view of the text.
+fn ediff_word_lines(text: &str) -> Vec<(String, usize)> {
+    let mut words = Vec::new();
+    let mut line = 0usize;
+    for (chunk, is_word) in ediff_word_segments(text) {
+        if is_word {
+            words.push((chunk, line));
+        } else {
+            line += chunk.matches('\n').count();
+        }
+    }
+    words
+}
+
+/// The aligned row list for `ediff-regions-wordwise`.
+///
+/// Emacs diffs the *wordified* copies of the two regions — `ediff-wordify` writes
+/// one word per line into a scratch buffer, and `ediff-diff.el` resolves the
+/// resulting indices back to positions in the original buffers — so line
+/// structure is invisible to the comparison. `"foo bar\nbaz"` against
+/// `"foo\nbar baz"` is zero differences there, while a line-wise alignment of the
+/// same two texts reports one. The panes still show lines, so rows are still
+/// lines; which of them are *changed* comes from the word stream, and lines that
+/// only exist because the two sides broke their words differently pair with
+/// nothing rather than counting as a difference.
+fn align_wordwise(base: &str, doc: &str) -> Vec<DiffRow> {
+    let base_words = ediff_word_lines(base);
+    let doc_words = ediff_word_lines(doc);
+    let mut input: InternedInput<String> = InternedInput::default();
+    input.update_before(base_words.iter().map(|(word, _)| word.clone()));
+    input.update_after(doc_words.iter().map(|(word, _)| word.clone()));
+    let diff = Diff::compute(Algorithm::Myers, &input);
+
+    let n_base = split_lines(base).len();
+    let n_doc = split_lines(doc).len();
+    let mut changed_base = vec![false; n_base];
+    let mut changed_doc = vec![false; n_doc];
+    let mut mark = |words: &[(String, usize)], range: std::ops::Range<u32>, out: &mut Vec<bool>| {
+        for (_, line) in &words[range.start as usize..range.end as usize] {
+            if let Some(flag) = out.get_mut(*line) {
+                *flag = true;
+            }
+        }
+    };
+    for hunk in diff.hunks() {
+        mark(&base_words, hunk.before, &mut changed_base);
+        mark(&doc_words, hunk.after, &mut changed_doc);
+    }
+
+    let mut rows = Vec::new();
+    let (mut b, mut d) = (0usize, 0usize);
+    loop {
+        // Lines whose words all matched, on both sides: one row each.
+        while b < n_base && d < n_doc && !changed_base[b] && !changed_doc[d] {
+            rows.push(DiffRow {
+                left: Some(b),
+                right: Some(d),
+                kind: RowKind::Unchanged,
+            });
+            b += 1;
+            d += 1;
+        }
+        // The changed run on each side (either may be empty — a pure insertion
+        // leaves the other side with nothing to mark).
+        let (run_b, run_d) = (b, d);
+        while b < n_base && changed_base[b] {
+            b += 1;
+        }
+        while d < n_doc && changed_doc[d] {
+            d += 1;
+        }
+        if run_b == b && run_d == d {
+            // No change here: one side simply has more lines holding the same
+            // words. Emacs counts that as no difference at all, so the extra
+            // lines are unchanged rows with nothing opposite them.
+            match (b < n_base, d < n_doc) {
+                (true, false) => {
+                    rows.push(DiffRow {
+                        left: Some(b),
+                        right: None,
+                        kind: RowKind::Unchanged,
+                    });
+                    b += 1;
+                }
+                (false, true) => {
+                    rows.push(DiffRow {
+                        left: None,
+                        right: Some(d),
+                        kind: RowKind::Unchanged,
+                    });
+                    d += 1;
+                }
+                _ => break,
+            }
+            continue;
+        }
+        // Pair the overlap as changed rows, then spill the longer side.
+        let common = (b - run_b).min(d - run_d);
+        for i in 0..common {
+            rows.push(DiffRow {
+                left: Some(run_b + i),
+                right: Some(run_d + i),
+                kind: RowKind::Changed,
+            });
+        }
+        for left in run_b + common..b {
+            rows.push(DiffRow {
+                left: Some(left),
+                right: None,
+                kind: RowKind::Removed,
+            });
+        }
+        for right in run_d + common..d {
+            rows.push(DiffRow {
+                left: None,
+                right: Some(right),
+                kind: RowKind::Added,
+            });
+        }
+    }
+    rows
+}
+
 /// [`inline_spans`] at emacs's *word* granularity — the refinement
 /// `ediff-regions-wordwise` shows. The comparison runs over `ediff-forward-word`
 /// tokens (white space is not a token in emacs, so it never differs on its own),
@@ -2271,6 +2401,37 @@ mod tests {
             .map(|(s, _)| s.as_str())
             .collect()
     }
+    /// `ediff-regions-wordwise` compares the *word stream*: emacs wordifies both
+    /// regions into one-word-per-line scratch buffers and diffs those, so where a
+    /// line break falls is invisible to the comparison. `emacs -Q --batch`
+    /// reports zero differences between "foo bar\nbaz" and "foo\nbar baz"; a
+    /// line-wise alignment of the same two texts reports one.
+    #[test]
+    fn wordwise_alignment_ignores_where_the_lines_break() {
+        let rows = align_wordwise("foo bar\nbaz", "foo\nbar baz");
+        assert!(
+            rows.iter().all(|row| row.kind == RowKind::Unchanged),
+            "same words, different line breaks: no difference, got {rows:?}"
+        );
+        assert!(compute_blocks(&rows).is_empty(), "and so no difference block");
+
+        // One side holding the same words on fewer lines is still no difference.
+        let rows = align_wordwise("a b c", "a\nb\nc");
+        assert!(compute_blocks(&rows).is_empty(), "got {rows:?}");
+        assert_eq!(rows.len(), 3, "every line still gets a row: {rows:?}");
+    }
+
+    /// A word that really did change still marks its line — and only its line.
+    #[test]
+    fn wordwise_alignment_marks_the_line_holding_the_changed_word() {
+        let rows = align_wordwise("keep this\nand that", "keep this\nand THAT");
+        let blocks = compute_blocks(&rows);
+        assert_eq!(blocks.len(), 1, "one difference: {rows:?}");
+        assert_eq!(blocks[0].rows, 1..2, "the second line is the changed one");
+        assert_eq!(rows[0].kind, RowKind::Unchanged);
+        assert_eq!(rows[1].kind, RowKind::Changed);
+    }
+
     /// Concatenate every run (reconstructs the original line).
     fn full_text(runs: &[(String, bool)]) -> String {
         runs.iter().map(|(s, _)| s.as_str()).collect()

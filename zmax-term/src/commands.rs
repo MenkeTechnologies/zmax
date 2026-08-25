@@ -17085,7 +17085,7 @@ fn ediff_regions_impl(cx: &mut Context, wordwise: bool) {
             let mut view =
                 crate::ui::merge::DiffView::new(title, cur_id, &region_a, &sel_text).read_only();
             if wordwise {
-                view = view.wordwise();
+                view = view.wordwise(&region_a, &sel_text);
             }
             let call = crate::job::Callback::EditorCompositor(Box::new(
                 move |_e: &mut Editor, comp: &mut crate::compositor::Compositor| {

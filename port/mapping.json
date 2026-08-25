@@ -43148,11 +43148,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_d_r_w",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space D r w"
+   "key:normal:space D r w",
+   "static:ediff_regions_wordwise"
   ],
-  "note": "Partially ported. The four-class `ediff-forward-word` tokenizer (commands.rs:14336-14373) faithfully reproduces `ediff-wordify` \u2014 verified against `emacs -Q --batch`, which prints `foo|(|bar|)|baz-qux|12|.5,|hello|!` for `foo(bar) baz-qux 12.5, hello!`, including the `12` / `.5,` split and `$var` staying one token. Two things still differ from emacs. (a) As currently built and shipped, `SPC D r w` replaces both panes with the wordified scratch text (one token per line: `foo`, `(`, `bar`, `)`, `baz`), whereas emacs shows the regions as written and overlays only the differing words; a rewrite to keep the original text and refine inside a changed row exists in the tree but does not compile (`ui/merge.rs:1658`, `String += &String`), so it is unverified and its unit tests have never run. (b) Difference *blocks* are computed line-wise by `align()`, while emacs computes them over the word stream with line structure invisible (`ediff-diff.el:566-575` resolves word indices via `ediff-goto-word` in the original buffer). Emacs reports 0 differences for `\"foo bar\\nbaz\"` vs `\"foo\\nbar baz\"`; a line-wise alignment of the original texts reports one. For multi-line regions the count and boundaries of difference blocks can therefore disagree with emacs even once the within-row refinement lands."
+  "note": "`SPC D r w` marks region A, then diffs the second region against it at emacs's word granularity. Three parts, all verified against emacs rather than assumed. (1) The four-class `ediff-forward-word` tokenizer reproduces `ediff-wordify`: `emacs -Q --batch` prints `foo|(|bar|)|baz-qux|12|.5,|hello|!` for `foo(bar) baz-qux 12.5, hello!`, including the `12` / `.5,` split, and `$var` staying one token. (2) The panes show the regions as written and the refinement is painted back onto them, as emacs paints it onto the originals rather than showing the wordified scratch text. (3) The difference blocks come from the word stream now, not a line-wise alignment: emacs diffs the wordified copies, so where a line breaks is invisible to the comparison. Checked in emacs - `ediff-wordify` of `\"foo bar\\nbaz\"` and of `\"foo\\nbar baz\"` are `equal`, i.e. zero differences - and `align_wordwise` now agrees, pairing the leftover lines as unchanged instead of reporting a difference. Pinned by `ui::merge::tests::wordwise_alignment_ignores_where_the_lines_break`, `::wordwise_alignment_marks_the_line_holding_the_changed_word` and the three refinement tests beside them."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_d_b",
