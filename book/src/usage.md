@@ -9,7 +9,7 @@ can be accessed via the command `zmax --tutor` or `:tutor`.
 
 ## Modes
 
-In the modal keymap presets (`spacemacs`, `vim`, `helix`, `kakoune`), Zmax has different modes for different tasks. The modeless presets — `emacs`, `cua`, `micro` and `nano` — launch directly in insert mode, have no normal mode, and use that editor's chords instead (`Ctrl-x`/`Ctrl-c`/`Meta` for emacs, `Ctrl-s`/`Ctrl-q` for micro, `^O`/`^W`/`^K` for nano). The main modes of the modal presets are:
+In the modal keymap presets (`spacemacs`, `hybrid`, `vim`, `helix`, `kakoune`), Zmax has different modes for different tasks. The modeless presets — `emacs`, `cua`, `micro` and `nano` — launch directly in insert mode, have no normal mode, and use that editor's chords instead (`Ctrl-x`/`Ctrl-c`/`Meta` for emacs, `Ctrl-s`/`Ctrl-q` for micro, `^O`/`^W`/`^K` for nano). The main modes of the modal presets are:
 
 * [Normal mode](./keymap.md#normal-mode): For navigation and editing commands. This is the mode the modal presets launch in.
 * [Insert mode](./keymap.md#insert-mode): For typing text directly into the document. Access by typing `i` in normal mode.

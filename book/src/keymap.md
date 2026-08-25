@@ -31,7 +31,7 @@
 
 ## Normal mode
 
-Normal mode is the launch mode for the modal keymap presets — `spacemacs` (the default), `vim`, `helix` and `kakoune` — and you return to it from other modes by pressing the `Escape` key. The modeless presets (`emacs`, `cua`, `micro`, `nano`) launch in insert mode and have no normal mode, so the mappings in this section do not apply to them.
+Normal mode is the launch mode for the modal keymap presets — `spacemacs` (the default), `hybrid`, `vim`, `helix` and `kakoune` — and you return to it from other modes by pressing the `Escape` key. The modeless presets (`emacs`, `cua`, `micro`, `nano`) launch in insert mode and have no normal mode, so the mappings in this section do not apply to them.
 
 ### Movement
 

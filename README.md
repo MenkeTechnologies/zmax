@@ -29,8 +29,8 @@ scripting languages — all in one static binary, working on first launch with n
 same thing here. See [`docs/vision.md`](docs/vision.md) for the full design goal
 and an honest, source-derived account of how far it's met.
 
-zmax targets **vim/emacs semantics**.  The keymap presets — **spacemacs** (default), **vim**,
-**helix**, **kakoune**, **micro**, **nano**, **emacs** and **cua** — are
+zmax targets **vim/emacs semantics**.  The keymap presets — **spacemacs** (default), **hybrid**,
+**vim**, **helix**, **kakoune**, **micro**, **nano**, **emacs** and **cua** — are
 selectable with `keymap = "..."` in `config.toml` or
 `:keymap <name>` at runtime (the list is `keymap::PRESETS`; the book's
 [configuration page](book/src/configuration.md#keymap-presets) describes what

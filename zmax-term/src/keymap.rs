@@ -20,6 +20,7 @@ pub use spacemacs::default;
 /// the `:keymap` command.
 pub const PRESETS: &[&str] = &[
     "spacemacs",
+    "hybrid",
     "vim",
     "helix",
     "kakoune",
@@ -57,6 +58,8 @@ pub fn set_current_preset(name: &str) {
 pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
     match name {
         "spacemacs" => Some(spacemacs::default()),
+        // Spacemacs's hybrid editing style: evil, with an emacs insert state.
+        "hybrid" => Some(spacemacs::hybrid()),
         "vim" => Some(vim::default()),
         "helix" => Some(default::default()),
         "kakoune" => Some(kakoune::default()),

@@ -597,6 +597,7 @@ impl MappableCommand {
         align_current, "Auto-align the region into columns, per blank-line section (emacs align-current)",
         align_entire, "Auto-align the whole region into columns as one section (emacs align-entire)",
         align_at_bar, "Align every | into columns (SPC x a |)",
+        align_at_bar_after, "Align every | into columns, padding after the bar (SPC u SPC x a |)",
         align_left_at_char, "Left-align region at a typed delimiter (SPC x a l)",
         align_right_at_char, "Right-align region at a typed delimiter (SPC x a L)",
         buffer_to_window_1, "Move current buffer to window 1 (SPC b . 1)",
@@ -15250,6 +15251,17 @@ fn align_at_bar(cx: &mut Context) {
     let after = cx.prefix_arg().is_some();
     if let Ok(re) = regex::Regex::new(r"\|") {
         align_repeat_region(cx.editor, re, after);
+    }
+}
+
+/// `spacemacs/align-repeat-bar` *with* a prefix argument (`SPC u SPC x a |`):
+/// the padding goes to the whitespace after the bar instead of before it. Under
+/// the spacemacs keymap `C-u` is evil's scroll-up, so the leader reaches emacs's
+/// prefix argument through an explicit `SPC u` chord — the same shape as
+/// `SPC u SPC b d` and the other prefixed leader chords in this keymap.
+fn align_at_bar_after(cx: &mut Context) {
+    if let Ok(re) = regex::Regex::new(r"\|") {
+        align_repeat_region(cx.editor, re, true);
     }
 }
 

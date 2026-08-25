@@ -357,6 +357,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space f C u", "Files",   ":line-ending lf"),                    // SPC f C u : dos -> unix line endings
     ("space e y",   "Errors",  ":yank-diagnostic"),                   // SPC e y : copy error at point
     ("space x x",   "Text",    ":run-shell-command"),                 // SPC x x : quickrun (run a command)
+    ("space u space x a |", "Universal", "align_at_bar_after"),       // SPC u SPC x a | : align-repeat-bar, padding after the bar
     ("space u space b d", "Universal", ":buffer-close"),              // SPC u SPC b d : kill buffer + window
     ("space u space b D", "Universal", "delete_window_and_buffer"),   // SPC u SPC b D : kill visible buffer + window
     ("space u space b m", "Universal", ":buffer-close-others"),       // SPC u SPC b m : kill other buffers
@@ -395,7 +396,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // Editing style (SPC t E) — Spacemacs switches evil/holy/hybrid at runtime;
     // zmax switches the whole keymap preset, which is the same knob.
     ("space t E e", "Editing style", ":keymap emacs"),      // SPC t E e : emacs editing style (holy mode)
-    ("space t E h", "Editing style", ":keymap spacemacs"),  // SPC t E h : hybrid (vim keys + emacs prefixes in insert)
+    ("space t E h", "Editing style", ":keymap hybrid"),     // SPC t E h : hybrid editing style (evil, emacs insert state)
     ("space t k M", "Toggles", "which_key_major_mode_full"), // SPC t k M : pin the full major-mode keymap
 
     // Text / lookup.

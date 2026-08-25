@@ -24570,12 +24570,14 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_11",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a |",
-   "static:align_at_bar"
+   "key:normal:space u space x a |",
+   "static:align_at_bar",
+   "static:align_at_bar_after"
   ],
-  "note": "Re-pointed: the old evidence, align_left_at_char, is SPC x a l (align at a typed delimiter), not this. SPC x a | is align_at_bar (keymap/vim.rs:2314) on the ASCII `|` \u2014 keybindings.el:712 binds \"xa|\" and the `\u00a6` in DOCUMENTATION.org is an org-table artifact. align_lines_repeat (commands.rs:12163) implements align-regexp's REPEAT=t column by column, and align_repeat_region (commands.rs:12253) walks outward over the contiguous matching lines when there is no region (funcs.el:1391-1401); byte-identical to spacemacs/align-repeat-bar driven under emacs -Q --batch. Still partial: the prefix-arg `after` branch is implemented but unreachable \u2014 universal_argument is bound only in the emacs preset (keymap/emacs.rs:142,322) while align_at_bar lives only in the spacemacs SPC tree, so no preset provides both; and under :keymap vim the SPC leader is stripped (vim.rs:2794-2810)."
+  "note": "`SPC x a |` is align_at_bar on the ASCII `|` (keybindings.el:712 binds \"xa|\"; the `\u00a6` in DOCUMENTATION.org is an org-table artifact), implementing align-regexp's REPEAT=t column by column and walking outward over the contiguous matching lines when there is no region - byte-identical to spacemacs/align-repeat-bar driven under `emacs -Q --batch`. The prefix-arg branch is reachable now: `SPC u SPC x a |` runs align_at_bar_after, which pads the whitespace after the bar. Under this keymap `C-u` is evil's scroll-up, so the leader carries the prefix argument as an explicit `SPC u` chord - the same shape as `SPC u SPC b d` and the other prefixed leader chords here."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_e",
@@ -43121,11 +43123,11 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_t_e_h",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space t E h"
   ],
-  "note": "hybrid mode -> :keymap spacemacs; not a true emacs insert state"
+  "note": "`SPC t E h` selects a real hybrid editing style now: `keymap::spacemacs::hybrid` is the spacemacs keymap with the *emacs* preset's Insert mode grafted in, which is what spacemacs's `hybrid-mode` does (it swaps `evil-insert-state-map` for `emacs-state-map` and leaves normal and visual states alone). It used to run `:keymap spacemacs`, i.e. nothing. `ESC` is the one key that cannot come across verbatim - hybrid mode is still evil, so it leaves for normal state instead of opening emacs's `ESC ESC ESC` prefix. Selectable as `keymap = \"hybrid\"` too. Pinned by `keymap::spacemacs::tests::hybrid_style_is_evil_with_an_emacs_insert_state`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_t_k_m_46",

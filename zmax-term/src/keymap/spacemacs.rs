@@ -772,6 +772,30 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     keymap
 }
 
+/// Spacemacs's **hybrid** editing style (`dotspacemacs-editing-style 'hybrid`,
+/// reached with `SPC t E h`): evil everywhere except insert state, which is
+/// emacs. `hybrid-mode` in spacemacs replaces `evil-insert-state-map` with
+/// `emacs-state-map` and leaves normal and visual states alone, so that is
+/// exactly what this preset is — [`default`] with the emacs preset's Insert mode
+/// grafted in.
+///
+/// `ESC` is the one key that cannot come across as emacs binds it: hybrid mode is
+/// still evil, so `ESC` leaves for normal state rather than opening emacs's
+/// `ESC ESC ESC` prefix.
+pub fn hybrid() -> HashMap<Mode, KeyTrie> {
+    let mut keymap = default();
+    if let Some(insert) = super::emacs::default().get(&Mode::Insert) {
+        keymap.insert(Mode::Insert, insert.clone());
+    }
+    if let Some(node) = keymap.get_mut(&Mode::Insert).and_then(KeyTrie::node_mut) {
+        node.insert(
+            "esc".parse::<KeyEvent>().expect("valid key"),
+            KeyTrie::MappableCommand(MappableCommand::normal_mode),
+        );
+    }
+    keymap
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -788,6 +812,39 @@ mod tests {
             Some(KeyTrie::MappableCommand(c)) => Some(c.name().to_string()),
             _ => None,
         }
+    }
+
+    /// The hybrid editing style is evil with an *emacs* insert state: normal mode
+    /// stays the spacemacs/vim one (the `SPC` leader included), insert mode is the
+    /// emacs map, and `ESC` still leaves for normal state rather than opening
+    /// emacs's `ESC ESC ESC` prefix.
+    #[test]
+    fn hybrid_style_is_evil_with_an_emacs_insert_state() {
+        let km = hybrid();
+        assert_eq!(
+            cmd(&km, Mode::Insert, "C-a"),
+            Some("goto_line_start".to_string()),
+            "insert state is emacs: C-a is move-beginning-of-line"
+        );
+        assert_eq!(
+            cmd(&km, Mode::Insert, "C-k"),
+            cmd(&super::super::emacs::default(), Mode::Insert, "C-k"),
+            "insert state is the emacs map itself, not an approximation of it"
+        );
+        assert_eq!(
+            cmd(&km, Mode::Insert, "esc"),
+            Some("normal_mode".to_string()),
+            "ESC leaves insert state, as it does under evil"
+        );
+        assert!(
+            is_prefix(&km, Mode::Normal, "space"),
+            "normal mode keeps the SPC leader"
+        );
+        assert_eq!(
+            cmd(&km, Mode::Normal, "space t E h"),
+            cmd(&default(), Mode::Normal, "space t E h"),
+            "and the editing-style toggles it came from"
+        );
     }
 
     // The shipped keymap (`keymap::default` re-exports this one) must keep vim's

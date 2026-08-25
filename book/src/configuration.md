@@ -48,12 +48,13 @@ Zmax ships the keybinding presets below. Select one with the top-level `keymap`
 key (or switch at runtime with `:keymap <name>`, or in Preferences ▸ Keymap):
 
 ```toml
-keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "kakoune" | "micro" | "nano" | "emacs" | "cua"
+keymap = "spacemacs"   # "spacemacs" (default) | "hybrid" | "vim" | "helix" | "kakoune" | "micro" | "nano" | "emacs" | "cua"
 ```
 
 | Preset | Starts in | Leader / prefixes |
 | --- | --- | --- |
 | `spacemacs` *(default)* | Normal | vim/evil keys + the `SPC` leader **and** the Emacs `C-x` prefix; both open a which-key popup. |
+| `hybrid` | Normal | Spacemacs's hybrid editing style (`SPC t E h`): the spacemacs keymap with an *emacs* insert state — every emacs chord while inserting, `ESC` back to normal. |
 | `vim` | Normal | pure vim — no `SPC` leader and no which-key popup; `C-x` is `decrement`. |
 | `helix` | Normal | the original selection-first keymap with its `SPC` leader. |
 | `nano` | Insert | nano's classic help-bar scheme (`^O` write out, `^W` where is, `^K` cut, `^U` paste, `^G` help, `^X` exit) plus its meta chords. |
