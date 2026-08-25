@@ -22527,12 +22527,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_4_s",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-h 4 s",
    "static:help_find_source"
   ],
-  "note": "help_find_source (zmax-term/src/commands.rs:60981) asks the Help panel for source_location() and, when there is one, opens that file with Action::Replace, puts the cursor on the line and scrolls it into view; with none it reports emacs's 'Source file for the current help item is not defined' and with no help buffer it errors. Partial: source_location (ui/help.rs:3096) only answers for static commands (not `:` typables, options or topics) and resolves by walking the current working directory for `fn <name>(` (help.rs:3206-3229), so the jump works only when the cwd is a zmax source tree and can match a same-named fn in an unrelated project \u2014 emacs resolves from the symbol's recorded source file."
+  "note": "`C-h 4 s` is help_find_source: it asks the Help panel for the item's source location and, when there is one, opens that file with the cursor on the line and scrolls it into view; with none it reports emacs's 'Source file for the current help item is not defined' and with no help buffer it errors. The resolution is what changed. It searched the *working directory* for `fn <name>(`, which meant it could match a same-named fn in an unrelated project and answered for static commands only; it now searches the tree zmax was built from first (recorded at build time, the analogue of emacs resolving a symbol from the file it was loaded from), then the working directory, and a `:` typable resolves to its `TypableCommand` table entry, which is that command's definition site. The scan also reaches the files the commands are in: the 2 MB size cap skipped `commands.rs` (over 3 MB) and `typed.rs` (over 2 MB), i.e. exactly the two files every zmax command is defined in, so the jump could never answer for one. Pinned by `ui::help::tests::help_view_source_reaches_the_multi_megabyte_command_files`, `::help_view_source_finds_a_typable_commands_table_entry` and `::source_roots_start_at_the_tree_zmax_was_built_from`. Remaining, and stated rather than argued with: an *option* or a help topic has no single definition site to jump to, so those entries still report the undefined-source message."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_1",

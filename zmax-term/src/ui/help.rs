@@ -3101,10 +3101,16 @@ impl HelpPanel {
     pub fn source_location(&self) -> Option<(PathBuf, usize)> {
         let i = self.visiting?;
         let e = &self.entries[i];
-        if e.cat != Cat::Commands || e.title.starts_with(':') {
+        if e.cat != Cat::Commands {
             return None;
         }
-        locate_definition(&format!("fn {}(", e.title))
+        // A `:` typable is defined by its `TypableCommand` table entry, a static
+        // command by its `fn`. Emacs resolves either from the symbol's recorded
+        // source file; the analogue here is the definition site in the sources.
+        match e.title.strip_prefix(':') {
+            Some(name) => locate_typable(name),
+            None => locate_definition(&format!("fn {}(", e.title)),
+        }
     }
 
     /// Step the category filter — zmax's own affordance, on `→` / `←` because
@@ -3205,11 +3211,67 @@ impl HelpPanel {
 /// file and 1-based line of the first match. `.gitignore` is honoured and huge
 /// files are skipped, matching the Find-in-Files walker.
 fn locate_definition(needle: &str) -> Option<(PathBuf, usize)> {
-    locate_definition_in(zmax_stdx::env::current_working_dir(), needle)
+    source_roots()
+        .into_iter()
+        .find_map(|root| locate_definition_in(root, needle))
+}
+
+/// Where zmax's own sources are: the tree it was built from, then the working
+/// directory. Emacs resolves a symbol from the file it was *loaded* from, which
+/// is what the build-time path is here — without it, the scan matched a
+/// same-named `fn` in whatever unrelated project the editor happened to be
+/// started in.
+fn source_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    // `zmax-term/` at build time; the workspace root is its parent.
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    if let Some(workspace) = manifest.parent() {
+        if workspace.join("Cargo.toml").is_file() {
+            roots.push(workspace.to_path_buf());
+        }
+    }
+    if manifest.is_dir() && !roots.iter().any(|r| manifest.starts_with(r)) {
+        roots.push(manifest);
+    }
+    let cwd = zmax_stdx::env::current_working_dir();
+    if !roots.iter().any(|root| cwd.starts_with(root)) {
+        roots.push(cwd);
+    }
+    roots
+}
+
+/// The `TypableCommand` table entry that defines `:name` — the definition site of
+/// a typable command, as `fn <name>(` is for a static one.
+fn locate_typable(name: &str) -> Option<(PathBuf, usize)> {
+    let needle = format!("name: \"{name}\",");
+    source_roots()
+        .into_iter()
+        .find_map(|root| locate_line_in(root, &needle))
+}
+
+/// The first source line in `root` that holds `needle` verbatim, with no
+/// `fn`-definition shape required — how a table entry is found.
+fn locate_line_in(root: PathBuf, needle: &str) -> Option<(PathBuf, usize)> {
+    scan_sources(root, |line| line.trim_start().starts_with(needle))
 }
 
 fn locate_definition_in(root: PathBuf, needle: &str) -> Option<(PathBuf, usize)> {
-    const MAX_FILE_BYTES: u64 = 2 * 1024 * 1024;
+    let needle = needle.to_string();
+    scan_sources(root, move |line| {
+        (line.starts_with("fn ") || line.starts_with("pub fn ")) && line.contains(&needle)
+    })
+}
+
+/// Walk `root`'s Rust sources and return the first line `matches` accepts, as
+/// `(file, 1-based line)`. `.gitignore` is honoured and huge files are skipped,
+/// matching the Find-in-Files walker. The predicate sees the line trimmed of its
+/// leading indentation.
+fn scan_sources(root: PathBuf, matches: impl Fn(&str) -> bool) -> Option<(PathBuf, usize)> {
+    // zmax's own command tables live in single multi-megabyte files
+    // (`commands.rs` is over 3 MB), so a 2 MB cap skipped exactly the files every
+    // command is defined in and the resolver could never answer for one. The cap
+    // is only here to keep the walk off generated blobs.
+    const MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
     for entry in ignore::WalkBuilder::new(&root).build().flatten() {
         if !entry.file_type().is_some_and(|t| t.is_file()) {
             continue;
@@ -3225,8 +3287,7 @@ fn locate_definition_in(root: PathBuf, needle: &str) -> Option<(PathBuf, usize)>
             continue;
         };
         for (i, line) in content.lines().enumerate() {
-            let t = line.trim_start();
-            if (t.starts_with("fn ") || t.starts_with("pub fn ")) && t.contains(needle) {
+            if matches(line.trim_start()) {
                 return Some((path.to_path_buf(), i + 1));
             }
         }
@@ -3681,6 +3742,47 @@ mod tests {
         let mut empty = HelpPanel::new();
         empty.filter = "zz-no-such-entry-zz".into();
         assert!(!empty.follow());
+    }
+
+    /// The resolver has to reach the files zmax's commands actually live in:
+    /// `commands.rs` is over 3 MB and `typed.rs` over 2 MB, so the old 2 MB scan
+    /// cap skipped exactly the two files every command is defined in and
+    /// `C-h 4 s` could never answer for one.
+    #[test]
+    fn help_view_source_reaches_the_multi_megabyte_command_files() {
+        let (path, line) = locate_definition("fn help_find_source(")
+            .expect("the command's own definition is in commands.rs");
+        assert!(
+            path.to_string_lossy().ends_with("commands.rs"),
+            "found in the command file: {path:?}"
+        );
+        assert!(line > 0);
+    }
+
+    /// A `:` typable is defined by its `TypableCommand` table entry, not by a
+    /// `fn` of the same name, so `C-h 4 s` on one used to find nothing (the
+    /// resolver only ever looked for `fn <name>(`).
+    #[test]
+    fn help_view_source_finds_a_typable_commands_table_entry() {
+        let (path, line) = locate_typable("write-quit").expect("`:write-quit` is in the table");
+        assert!(
+            path.to_string_lossy().ends_with("typed.rs"),
+            "found in the typable table: {path:?}"
+        );
+        assert!(line > 0);
+        assert!(locate_typable("zz-no-such-typable-command").is_none());
+    }
+
+    /// The scan runs over the tree zmax was built from, so it cannot match a
+    /// same-named `fn` in whatever unrelated project the editor was started in.
+    #[test]
+    fn source_roots_start_at_the_tree_zmax_was_built_from() {
+        let roots = source_roots();
+        let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        assert!(
+            manifest.starts_with(&roots[0]),
+            "the build tree comes first: {roots:?}"
+        );
     }
 
     #[test]
