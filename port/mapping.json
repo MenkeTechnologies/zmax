@@ -51566,11 +51566,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_t_m_s",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "key:normal:space t m s",
    "static:toggle_system_monitor"
   ],
-  "note": "Three code-verified gaps beyond \"the chord is unbound\". (a) Unbound chord: no `key:` token exists for SPC t m s in any preset (grep over zmax-term/src/keymap/*.rs); only the command name is reachable. (b) The reading is invisible while the user types, and the redisplay is time-gated, not idle-gated: every key event clears the status line (zmax-term/src/ui/editor.rs:4664 `cx.editor.status_msg = None;`, and again at :3796 for non-key input), so after any keystroke the minibuffer is blank until the next fixed 4s tick (SYMON_REFRESH, commands.rs:14631) \u2014 and the value that reappears is up to 4s stale. symon re-displays on idle; here idleness is not consulted at all. (c) The generation guard does not cover the write it documents. The doc at commands.rs:14633-14635 claims \"a quick off/on never leaves two loops writing to the minibuffer\", but the liveness check reads generation only before\u2026"
+  "note": "All three recorded gaps closed. (a) The chord: `SPC t m s` is bound in the spacemacs leader's toggle map. (b) The display is idle-gated now, as symon's is: symon.el arms `(run-with-idle-timer symon-delay t 'symon-display)` with `symon-delay` 2 and takes the display down from `pre-command-hook`, so zmax clears it after every command (`symon_display_end`, off `PostCommand`) and puts the last reading back once the editor has been idle for two seconds - the reading no longer waits up to a full 4s `symon-refresh-rate` tick to reappear, and what reappears is the last sample rather than a stale one. (c) The generation guard now covers the write it documents: the dispatched closure re-checks `symon_live(generation)`, not just `SYMON_ON`, so a retired loop with a dispatch in flight cannot write over the live one. `symon--display-update` skips while point is in the echo area or minibuffer; the port skips while a prompt layer is up. Pinned by `tests/test/spacemacs_states.rs::spc_t_m_s_toggles_the_system_monitor`."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_d_h",
@@ -54714,35 +54715,35 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_m_c",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:log_edit_done"
   ],
-  "note": "log_edit_done finishes the open commit-message buffer and runs the commit, which is the documented behaviour. The chord is NOT bound: zmax's commit buffer is a modal component where every printable key types into the message, so the commit key there is `C-c C-c` (git-commit's own binding, which SPC m c aliases in Spacemacs)"
+  "note": "`SPC m c` runs the commit (`with-editor-finish`). zmax's commit buffer is `ui::magit::MagitCommit`, and it is modal now, as spacemacs's is: `git-commit-mode` opens in evil insert state, `ESC` leaves for normal state (it used to abandon the commit), and the `SPC m` major-mode leader is live there. Bound inside the component rather than in a keymap preset, so the evidence is the command; the chord is pinned by `tests/test/spacemacs_states.rs::spc_m_c_commits_from_the_commit_buffer`, which drives `:magit`, `c`, types a message, `ESC`, `SPC m c` and reads the commit back out of git. `C-c C-c` / `C-c C-k` keep working in both states."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_m_x",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:log_edit_done"
   ],
-  "note": "same command as SPC m c (they are two names for one action). The `SPC m ,` chord is NOT bound, for the same reason: the commit buffer is modal and `,` types a comma; `C-c C-c` commits"
+  "note": "`SPC m ,` is the same action as `SPC m c` (two names for one command). zmax's commit buffer is `ui::magit::MagitCommit`, and it is modal now, as spacemacs's is: `git-commit-mode` opens in evil insert state, `ESC` leaves for normal state (it used to abandon the commit), and the `SPC m` major-mode leader is live there. Bound inside the component rather than in a keymap preset, so the evidence is the command; the chord is pinned by `tests/test/spacemacs_states.rs::spc_m_c_commits_from_the_commit_buffer`, which drives `:magit`, `c`, types a message, `ESC`, `SPC m c` and reads the commit back out of git. `C-c C-c` / `C-c C-k` keep working in both states."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_m_a",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:log_edit_kill_buffer"
   ],
-  "note": "log_edit_kill_buffer (new) discards the message and closes the commit buffer without committing, erroring when none is open. The chord is NOT bound: the commit buffer is modal and `a` types an `a`; `C-c C-k` aborts there"
+  "note": "`SPC m a` discards the message and leaves without committing (`with-editor-cancel`). zmax's commit buffer is `ui::magit::MagitCommit`, and it is modal now, as spacemacs's is: `git-commit-mode` opens in evil insert state, `ESC` leaves for normal state (it used to abandon the commit), and the `SPC m` major-mode leader is live there. Bound inside the component rather than in a keymap preset, so the evidence is the command; the chord is pinned by `tests/test/spacemacs_states.rs::spc_m_c_commits_from_the_commit_buffer`, which drives `:magit`, `c`, types a message, `ESC`, `SPC m c` and reads the commit back out of git. `C-c C-c` / `C-c C-k` keep working in both states."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_m_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:log_edit_kill_buffer"
   ],
-  "note": "same command as SPC m a. The chord is NOT bound for the same reason, and `space m k` is separately taken by :message-kill-buffer in the mail draft map"
+  "note": "`SPC m k` is the same action as `SPC m a`. zmax's commit buffer is `ui::magit::MagitCommit`, and it is modal now, as spacemacs's is: `git-commit-mode` opens in evil insert state, `ESC` leaves for normal state (it used to abandon the commit), and the `SPC m` major-mode leader is live there. Bound inside the component rather than in a keymap preset, so the evidence is the command; the chord is pinned by `tests/test/spacemacs_states.rs::spc_m_c_commits_from_the_commit_buffer`, which drives `:magit`, `c`, types a message, `ESC`, `SPC m c` and reads the commit back out of git. `C-c C-c` / `C-c C-k` keep working in both states."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_m_b",

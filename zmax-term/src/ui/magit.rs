@@ -1968,6 +1968,14 @@ pub struct MagitCommit {
     /// The open `M-r`/`M-s` prompt: `true` when searching backward (`M-r`), plus
     /// the substring typed so far.
     searching: Option<(bool, String)>,
+    /// Whether the buffer is in evil *normal* state. Spacemacs opens
+    /// `git-commit-mode` in insert state and `ESC` leaves for normal state, where
+    /// the `SPC m` major-mode leader is live; `ESC` is not an abort there, which
+    /// is why leaving the commit is `SPC m a` / `SPC m k` or `C-c C-k`.
+    normal: bool,
+    /// How far into the `SPC m` leader the user has typed: `None` for nothing,
+    /// `Some(' ')` after `SPC`, `Some('m')` after `SPC m`.
+    leader: Option<char>,
 }
 
 /// The read-only pane `log-edit-show-diff` / `log-edit-show-files` displays.
@@ -1997,6 +2005,9 @@ impl MagitCommit {
             pane: None,
             ring_index: None,
             searching: None,
+            // `git-commit-mode` starts in insert state, as it does in Spacemacs.
+            normal: false,
+            leader: None,
         }
     }
 
@@ -2319,6 +2330,121 @@ impl MagitCommit {
             compositor.pop();
         }))
     }
+
+    /// Leave insert state for normal state, the way `ESC` does under evil: point
+    /// steps back one character unless it is already at the start of the line.
+    fn to_normal(&mut self, cx: &mut Context) {
+        self.normal = true;
+        self.col = self.col.saturating_sub(1);
+        cx.editor
+            .set_status("-- NORMAL -- (SPC m c commit, SPC m a abort, i insert)");
+    }
+
+    /// One key of the `SPC m` major-mode leader. Spacemacs's git-commit bindings
+    /// are `SPC m c` / `SPC m ,` (`with-editor-finish`) and `SPC m a` / `SPC m k`
+    /// (`with-editor-cancel`); anything else drops the chord, as which-key does.
+    fn leader_key(&mut self, key: KeyEvent, cx: &mut Context) -> EventResult {
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        let KeyCode::Char(c) = key.code else {
+            self.leader = None;
+            cx.editor.clear_status();
+            return EventResult::Consumed(None);
+        };
+        match (self.leader, c) {
+            (Some(' '), 'm') => {
+                self.leader = Some('m');
+                cx.editor
+                    .set_status("SPC m- (c commit, `,` commit, a abort, k abort)");
+            }
+            (Some('m'), 'c') | (Some('m'), ',') => {
+                self.leader = None;
+                if let Some(cb) = self.confirm(cx) {
+                    return EventResult::Consumed(Some(cb));
+                }
+            }
+            (Some('m'), 'a') | (Some('m'), 'k') => {
+                self.leader = None;
+                cx.editor.set_status("commit aborted");
+                return EventResult::Consumed(Some(close));
+            }
+            _ => {
+                let typed = self.leader.map(|k| k.to_string()).unwrap_or_default();
+                self.leader = None;
+                cx.editor
+                    .set_status(format!("SPC {typed} is not a prefix for that key"));
+            }
+        }
+        EventResult::Consumed(None)
+    }
+
+    /// Evil normal state over the message: motions, the insert-state entries, and
+    /// the `SPC` leader. Deliberately the subset git-commit-mode is used with —
+    /// this is a commit message, not a buffer to refactor in.
+    fn normal_key(&mut self, key: KeyEvent, cx: &mut Context) -> EventResult {
+        if self.leader.is_some() {
+            return self.leader_key(key, cx);
+        }
+        match key {
+            key!(Esc) => cx.editor.clear_status(),
+            key!(Left) => self.move_left(),
+            key!(Right) => self.move_right(),
+            key!(Up) => self.move_up(),
+            key!(Down) => self.move_down(),
+            KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers,
+            } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => match c {
+                ' ' => {
+                    self.leader = Some(' ');
+                    cx.editor.set_status("SPC- (m major mode)");
+                }
+                'h' => self.move_left(),
+                'j' => self.move_down(),
+                'k' => self.move_up(),
+                'l' => self.move_right(),
+                '0' => self.col = 0,
+                '$' => self.col = self.cur_len().saturating_sub(1),
+                'x' => {
+                    if self.col < self.cur_len() {
+                        let start = char_to_byte(&self.lines[self.row], self.col);
+                        let end = char_to_byte(&self.lines[self.row], self.col + 1);
+                        self.lines[self.row].replace_range(start..end, "");
+                        self.col = self.col.min(self.cur_len().saturating_sub(1));
+                    }
+                }
+                'i' => self.normal = false,
+                'a' => {
+                    if self.col < self.cur_len() {
+                        self.col += 1;
+                    }
+                    self.normal = false;
+                }
+                'I' => {
+                    self.col = 0;
+                    self.normal = false;
+                }
+                'A' => {
+                    self.col = self.cur_len();
+                    self.normal = false;
+                }
+                'o' => {
+                    self.col = self.cur_len();
+                    self.newline();
+                    self.normal = false;
+                }
+                'O' => {
+                    self.lines.insert(self.row, String::new());
+                    self.col = 0;
+                    self.normal = false;
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
 }
 
 impl Component for MagitCommit {
@@ -2385,10 +2511,6 @@ impl Component for MagitCommit {
             return EventResult::Consumed(None);
         }
 
-        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
-            compositor.pop();
-        });
-
         // The `*vc-diff*` / `*vc-log-files*` pane scrolls with PageUp/PageDown and
         // closes with Esc; typing keeps editing the message underneath.
         if let Some(pane) = &mut self.pane {
@@ -2409,8 +2531,12 @@ impl Component for MagitCommit {
             }
         }
 
+        if self.normal {
+            return self.normal_key(key, cx);
+        }
+
         match key {
-            key!(Esc) => return EventResult::Consumed(Some(close)),
+            key!(Esc) => self.to_normal(cx),
             key!(Enter) => self.newline(),
             key!(Backspace) => self.backspace(),
             key!(Left) | ctrl!('b') => self.move_left(),
@@ -2460,7 +2586,11 @@ impl Component for MagitCommit {
             " Commit message"
         };
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "C-c C-c commit  C-c C-d diff  C-c C-f files  C-c C-a ChangeLog  C-c C-w from-diff  Esc cancel";
+        let hint = if self.normal {
+            "NORMAL  SPC m c commit  SPC m a abort  i insert  C-c C-c commit  C-c C-k cancel"
+        } else {
+            "C-c C-c commit  C-c C-d diff  C-c C-f files  C-c C-a ChangeLog  C-c C-k cancel  Esc normal"
+        };
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,

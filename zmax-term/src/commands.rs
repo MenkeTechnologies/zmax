@@ -16088,45 +16088,138 @@ fn symon_sample() -> String {
     )
 }
 
-/// The monitor's timer: re-sample every `symon-refresh-rate` and put the reading
-/// back in the minibuffer, until the mode is turned off (or turned on again,
-/// which supersedes this generation).
+/// symon.el's `symon-delay`: how long the editor must sit idle before the
+/// reading is (re)displayed. symon arms `(run-with-idle-timer symon-delay t
+/// 'symon-display)` and takes the display down again from `pre-command-hook`, so
+/// the echo area belongs to whatever the user is doing and the monitor only
+/// reclaims it once they stop.
+const SYMON_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// How often the idle watch looks — the editor's own idle granularity.
+const SYMON_IDLE_TICK: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// symon's `symon--display-active`: whether the echo area currently belongs to
+/// the monitor. Cleared by every command, the way `pre-command-hook` clears it.
+static SYMON_DISPLAY_ACTIVE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// The most recent sample, so the idle timer can put the reading back without
+/// waiting for the next refresh — and so what reappears is the last thing
+/// measured rather than a blank line.
+static SYMON_LAST_READING: Lazy<std::sync::Mutex<Option<String>>> =
+    Lazy::new(|| std::sync::Mutex::new(None));
+
+/// When input last arrived, which is what "idle" is measured from.
+static SYMON_LAST_INPUT: Lazy<std::sync::Mutex<std::time::Instant>> =
+    Lazy::new(|| std::sync::Mutex::new(std::time::Instant::now()));
+
+/// symon's `pre-command-hook` entry (`symon--display-end`): a command means the
+/// echo area is the user's again. Runs after every command; the reading comes
+/// back once the editor has been idle for `symon-delay`.
+pub(crate) fn symon_display_end() {
+    if !SYMON_ON.load(std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
+    SYMON_DISPLAY_ACTIVE.store(false, std::sync::atomic::Ordering::SeqCst);
+    if let Ok(mut last) = SYMON_LAST_INPUT.lock() {
+        *last = std::time::Instant::now();
+    }
+}
+
+/// Whether this generation of the monitor is still the live one. A quick off/on
+/// retires the previous loops — including any dispatch they have in flight, which
+/// is why the generation is re-checked inside the dispatched closure and not only
+/// around it.
+fn symon_live(generation: u64) -> bool {
+    SYMON_ON.load(std::sync::atomic::Ordering::SeqCst)
+        && SYMON_GENERATION.load(std::sync::atomic::Ordering::SeqCst) == generation
+}
+
+/// Put `reading` in the echo area, unless the minibuffer is where the user is —
+/// `symon--display-update` skips the update when point is in the echo area or the
+/// minibuffer.
+async fn symon_show(generation: u64, reading: String) {
+    job::dispatch(move |editor, compositor| {
+        if !symon_live(generation) || compositor.find::<ui::Prompt>().is_some() {
+            return;
+        }
+        SYMON_DISPLAY_ACTIVE.store(true, std::sync::atomic::Ordering::SeqCst);
+        editor.set_status(reading);
+    })
+    .await;
+}
+
+/// The monitor's refresh timer: re-sample every `symon-refresh-rate`, keep the
+/// reading, and redisplay it when the echo area is still the monitor's.
 async fn symon_loop(generation: u64) -> anyhow::Result<()> {
     loop {
         tokio::time::sleep(SYMON_REFRESH).await;
-        let live = SYMON_ON.load(std::sync::atomic::Ordering::SeqCst)
-            && SYMON_GENERATION.load(std::sync::atomic::Ordering::SeqCst) == generation;
-        if !live {
+        if !symon_live(generation) {
             return Ok(());
         }
         let reading = tokio::task::spawn_blocking(symon_sample)
             .await
             .map_err(|e| anyhow::anyhow!("symon: {e}"))?;
-        job::dispatch(move |editor, _compositor| {
-            if SYMON_ON.load(std::sync::atomic::Ordering::SeqCst) {
-                editor.set_status(reading);
-            }
-        })
-        .await;
+        if let Ok(mut last) = SYMON_LAST_READING.lock() {
+            *last = Some(reading.clone());
+        }
+        if SYMON_DISPLAY_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
+            symon_show(generation, reading).await;
+        }
+    }
+}
+
+/// symon's idle timer: once the editor has been idle for `symon-delay`, the
+/// monitor takes the echo area back and shows the last reading. Without this the
+/// display was time-gated only — any keystroke blanked it until the next 4s
+/// refresh, and what came back was up to 4s stale.
+async fn symon_idle_loop(generation: u64) -> anyhow::Result<()> {
+    loop {
+        tokio::time::sleep(SYMON_IDLE_TICK).await;
+        if !symon_live(generation) {
+            return Ok(());
+        }
+        if SYMON_DISPLAY_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
+            continue;
+        }
+        let idle = SYMON_LAST_INPUT
+            .lock()
+            .map(|last| last.elapsed())
+            .unwrap_or_default();
+        if idle < SYMON_DELAY {
+            continue;
+        }
+        let reading = SYMON_LAST_READING.lock().ok().and_then(|r| r.clone());
+        if let Some(reading) = reading {
+            symon_show(generation, reading).await;
+        }
     }
 }
 
 /// Spacemacs `SPC t m s` (`symon-mode`): toggle the system monitor, which shows
-/// the machine's load in the minibuffer and refreshes itself on symon's timer.
-/// Turning it off stops the timer and clears the reading.
+/// the machine's load in the minibuffer, refreshes itself on symon's timer, and
+/// gives the echo area up to whatever you type until you go idle again.
+/// Turning it off stops both timers and clears the reading.
 fn toggle_system_monitor(cx: &mut Context) {
     let on = !SYMON_ON.load(std::sync::atomic::Ordering::SeqCst);
     SYMON_ON.store(on, std::sync::atomic::Ordering::SeqCst);
     let generation = SYMON_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
     if !on {
+        SYMON_DISPLAY_ACTIVE.store(false, std::sync::atomic::Ordering::SeqCst);
         cx.editor.clear_status();
         cx.editor.set_status("symon-mode disabled");
         return;
     }
     // The first reading has no previous refresh to diff against, so its CPU
     // figure is the average since boot; the timer's readings are instantaneous.
-    cx.editor.set_status(symon_sample());
+    let reading = symon_sample();
+    if let Ok(mut last) = SYMON_LAST_READING.lock() {
+        *last = Some(reading.clone());
+    }
+    SYMON_DISPLAY_ACTIVE.store(true, std::sync::atomic::Ordering::SeqCst);
+    cx.editor.set_status(reading);
     cx.jobs.spawn(symon_loop(generation));
+    cx.jobs.spawn(symon_idle_loop(generation));
 }
 
 /// SPC t - / t C--: keep the cursor vertically centered (large scrolloff).
@@ -71141,12 +71234,16 @@ pub(crate) fn aggressive_indent_post_command(cx: &mut Context) {
     doc.aggressive_indent_version = Some(doc.version());
 }
 
-/// Register the `aggressive-indent-mode` after-change hook.
-pub fn register_aggressive_indent_hooks() {
+/// Register the hooks that run after every command: `aggressive-indent-mode`'s
+/// re-indent (emacs's `after-change-functions`) and symon's `symon--display-end`
+/// (emacs's `pre-command-hook` — the echo area goes back to the user the moment
+/// they do anything).
+pub fn register_post_command_hooks() {
     use crate::events::PostCommand;
     use zmax_event::register_hook;
     register_hook!(move |event: &mut PostCommand<'_, '_>| {
         aggressive_indent_post_command(event.cx);
+        symon_display_end();
         Ok(())
     });
 }

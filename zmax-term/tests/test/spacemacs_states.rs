@@ -877,3 +877,109 @@ async fn aggressive_indent_follows_changes_outside_insert_mode() -> anyhow::Resu
     .await?;
     Ok(())
 }
+
+/// Spacemacs `SPC t m s` (`symon-mode`): the chord is bound, the first reading
+/// lands in the minibuffer as soon as the mode goes on, and the second press
+/// takes it down again.
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_t_m_s_toggles_the_system_monitor() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("<space>tms"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let status = app
+                        .editor
+                        .get_status()
+                        .map(|(msg, _)| msg.to_string())
+                        .unwrap_or_default();
+                    assert!(
+                        status.starts_with("CPU ") && status.contains("MEM "),
+                        "the monitor's first reading is in the minibuffer: {status:?}"
+                    );
+                }),
+            ),
+            (
+                Some("<space>tms"),
+                Some(&|app: &zmax_term::application::Application| {
+                    assert_eq!(
+                        app.editor.get_status().map(|(msg, _)| msg.to_string()),
+                        Some("symon-mode disabled".to_string()),
+                        "the second press turns it off"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Spacemacs `SPC m c` / `SPC m ,` (`with-editor-finish`) and `SPC m a` /
+/// `SPC m k` (`with-editor-cancel`) in the git commit buffer. Spacemacs opens
+/// `git-commit-mode` in evil *insert* state and `ESC` leaves for normal state,
+/// where the major-mode leader is live — so `ESC` is not the abort it used to be
+/// here, and the commit is reachable by the chord a spacemacs user types.
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_m_c_commits_from_the_commit_buffer() -> anyhow::Result<()> {
+    fn git(args: &[&str], cwd: &std::path::Path) -> std::process::Output {
+        std::process::Command::new("git")
+            .args(args)
+            .current_dir(cwd)
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "test@example.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "test@example.com")
+            .env("GIT_CONFIG_COUNT", "2")
+            .env("GIT_CONFIG_KEY_0", "commit.gpgsign")
+            .env("GIT_CONFIG_VALUE_0", "false")
+            .env("GIT_CONFIG_KEY_1", "init.defaultBranch")
+            .env("GIT_CONFIG_VALUE_1", "main")
+            .output()
+            .expect("run git")
+    }
+
+    let repo = tempfile::tempdir()?;
+    let dir = repo.path();
+    assert!(git(&["init"], dir).status.success(), "git init");
+    std::fs::write(dir.join("a.txt"), "one\n")?;
+    assert!(git(&["add", "a.txt"], dir).status.success(), "git add");
+
+    let mut app = preset_app("spacemacs")
+        .with_file(dir.join("a.txt"), None)
+        .build()?;
+    // `:magit` opens the status view and `c` the commit-message buffer.
+    // Each of these has to be its own sequence: the status view is pushed by the
+    // typable's callback, which runs after the sequence it was typed in.
+    test_key_sequence(&mut app, Some(":magit<ret>"), None, false).await?;
+    test_key_sequence(&mut app, Some("c"), None, false).await?;
+    // The message is typed in insert state; `<esc>` leaves for normal state,
+    // where `SPC m c` commits. (`<esc>` used to abandon the whole commit.)
+    test_key_sequence(
+        &mut app,
+        Some("msg<esc>"),
+        Some(&|app: &zmax_term::application::Application| {
+            assert_eq!(
+                app.editor.get_status().map(|(msg, _)| msg.to_string()),
+                Some("-- NORMAL -- (SPC m c commit, SPC m a abort, i insert)".to_string()),
+                "Esc leaves for normal state instead of abandoning the commit"
+            );
+        }),
+        false,
+    )
+    .await?;
+    test_key_sequence(&mut app, Some("<space>mc"), None, false).await?;
+
+    let log = git(&["log", "-1", "--format=%s"], dir);
+    assert_eq!(
+        String::from_utf8_lossy(&log.stdout).trim(),
+        "msg",
+        "SPC m c ran the commit"
+    );
+    Ok(())
+}
