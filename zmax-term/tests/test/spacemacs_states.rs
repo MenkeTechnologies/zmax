@@ -983,3 +983,56 @@ async fn spc_m_c_commits_from_the_commit_buffer() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+/// Spacemacs `SPC m t b` / `SPC p T` run their build through emacs's `compile`,
+/// which is asynchronous — the editor stays live while the build goes. It used
+/// to shell out with `Command::output()` on the UI thread, so a long test run
+/// froze the editor until it finished.
+#[tokio::test(flavor = "multi_thread")]
+async fn compile_does_not_block_the_editor() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    let started = std::time::Instant::now();
+    test_key_sequence(
+        &mut app,
+        Some(":compile sleep 5<ret>"),
+        Some(&|app: &zmax_term::application::Application| {
+            assert_eq!(
+                app.editor.get_status().map(|(msg, _)| msg.to_string()),
+                Some("Compilation started: sleep 5".to_string()),
+                "the build is announced and left to run"
+            );
+        }),
+        false,
+    )
+    .await?;
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(4),
+        "control came back before the build finished, in {:?}",
+        started.elapsed()
+    );
+
+    // ...and the result still arrives: a build that ends reports its error count
+    // from the job callback, which is where the compilation list is filled in.
+    test_key_sequence(&mut app, Some(":compile true<ret>"), None, false).await?;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    let mut status = String::new();
+    while std::time::Instant::now() < deadline {
+        status = app
+            .editor
+            .get_status()
+            .map(|(msg, _)| msg.to_string())
+            .unwrap_or_default();
+        if status.starts_with("Compilation finished") {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        test_key_sequence(&mut app, None, None, false).await?;
+    }
+    assert!(
+        status.starts_with("Compilation finished") && status.ends_with("no errors"),
+        "the finished build reported itself: {status:?}"
+    );
+    Ok(())
+}

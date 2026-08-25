@@ -51473,12 +51473,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_m_t_b",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:test-buffer",
    "key:major-rust:space m t b"
   ],
-  "note": "`:test-buffer` runs the current file's tests into the compilation list, writing the buffers first. The chord resolves now (keymap/major_mode.rs binds `space m t b` per language, shadowing the base `SPC m t` org-todo leaf the way an Emacs major-mode map shadows the global one), and the runner covers the languages whose layer binds the chord: ruby (rspec/minitest), python, elixir, go, rust, javascript/typescript, java/kotlin, scala, clojure, c-sharp, php, haskell and elisp - each the shell form of that layer's own file runner, documented per language at `buffer_test_command`. The rspec/minitest split now tests the *project-relative* path, so a checkout living under some ancestor named `spec` no longer routes every ruby file to rspec. Still partial: `run_compile` shells out with `Command::output()` on the UI thread, so a long test run blocks the editor - that is the compile family's own gap, shared with `:compile`/`SPC p T`, not this command's."
+  "note": "`:test-buffer` runs the current file's tests into the compilation list, writing the buffers first. The chord resolves (keymap/major_mode.rs binds `space m t b` per language, shadowing the base `SPC m t` org-todo leaf the way an Emacs major-mode map shadows the global one), and the runner covers the languages whose layer binds the chord: ruby (rspec/minitest), python, elixir, go, rust, javascript/typescript, java/kotlin, scala, clojure, c-sharp, php, haskell and elisp - each the shell form of that layer's own file runner, documented per language at `buffer_test_command`. The rspec/minitest split tests the *project-relative* path, so a checkout living under some ancestor named `spec` does not route every ruby file to rspec. The last gap is closed: `run_compile` no longer shells out with `Command::output()` on the UI thread, so a long test run does not freeze the editor. It spawns the build on the job runtime and fills the error list, the `:recompile` command and the status line from the callback, which is what emacs's asynchronous `compile` does - the whole compile family (`:compile`, `SPC p T`, the cargo and PlatformIO builds) is non-blocking with it. vim's `:make` keeps the synchronous path (`run_compile_capture`), since it has to jump to the first error the moment it returns. Pinned by `tests/test/spacemacs_states.rs::compile_does_not_block_the_editor`."
  },
  {
   "spec_id": "emacs.command.toggle_debug_on_error",

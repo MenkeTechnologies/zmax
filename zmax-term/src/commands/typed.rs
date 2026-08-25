@@ -2401,8 +2401,52 @@ fn with_compilation<R>(f: impl FnOnce(&mut zmax_core::compilation::CompilationLi
 /// Run `command` through the editor's configured shell, capturing stdout and
 /// stderr together (Emacs interleaves both into `*compilation*`), parse the
 /// output into the global error list, and report the count on the status line.
+///
+/// Asynchronous, as emacs's `compile` is: the build runs on the job runtime and
+/// the editor stays live while it goes, which is what a long test run needs —
+/// `SPC m t b`, `SPC p T` and every `:compile`-backed build come through here.
+/// [`run_compile_capture`] is the synchronous twin, kept for vim `:make`, which
+/// has to jump to the first error the moment it returns.
 fn run_compile(cx: &mut compositor::Context, command: &str) -> anyhow::Result<()> {
-    run_compile_capture(cx, command).map(|_| ())
+    sandbox_check("shell command")?;
+    let command = command.trim().to_string();
+    if command.is_empty() {
+        bail!("compile: needs a command");
+    }
+    // vim `shellcmdflag` / `shellquote` / `shellxquote`: the flags the shell is
+    // invoked with and the quoting placed around the command.
+    let shell = vim_shell_argv(&cx.editor.config().shell);
+    if shell.is_empty() {
+        bail!("compile: no shell configured");
+    }
+    let shell_cmd = vim_shell_quote(&command);
+    cx.editor
+        .set_status(format!("Compilation started: {command}"));
+    cx.jobs.callback(async move {
+        let output = tokio::process::Command::new(&shell[0])
+            .args(&shell[1..])
+            .arg(&shell_cmd)
+            .output()
+            .await
+            .map_err(|e| anyhow::anyhow!("compile: failed to run `{command}`: {e}"))?;
+        // Emacs' `*compilation*` shows stdout and stderr interleaved; most tools
+        // print diagnostics to stderr, so scan both.
+        let mut captured = decode_make_output(&output.stdout);
+        captured.push_str(&decode_make_output(&output.stderr));
+        let status = output.status;
+        let call = crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+            with_compilation(|c| c.set_output(&captured));
+            COMPILE_COMMAND.with(|last| *last.borrow_mut() = Some(command.clone()));
+            let count = with_compilation(|c| c.len());
+            editor.set_status(match count {
+                0 => format!("Compilation finished ({status}); no errors"),
+                1 => format!("Compilation finished ({status}); 1 error"),
+                n => format!("Compilation finished ({status}); {n} errors"),
+            });
+        }));
+        Ok(call)
+    });
+    Ok(())
 }
 
 /// As [`run_compile`], returning the captured output so the caller can also route
