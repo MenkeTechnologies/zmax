@@ -1172,3 +1172,21 @@ async fn edmacro_finish_edit_installs_the_edited_macro() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// Quitting must not panic. `Tree::recalculate` points the focus at the tree's
+/// *root container* once no views are left ("There are no more views, so the
+/// tree should focus itself again"), and the `aggressive-indent` hook — which
+/// runs after every command, including the one that just closed the last window
+/// — then read the focused document and took `Tree::get_mut`'s `unreachable!()`
+/// down with it: `internal error: entered unreachable code`, which is what
+/// v0.4.63 does when you quit.
+#[tokio::test(flavor = "multi_thread")]
+async fn quitting_does_not_panic_in_the_post_command_hook() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    // `ZQ` (quit without saving) is a *keymap* command, so it dispatches
+    // PostCommand after closing the last window — the path the crash came in on.
+    test_key_sequence(&mut app, Some("ZQ"), None, true).await?;
+    Ok(())
+}

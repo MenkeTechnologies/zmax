@@ -71873,8 +71873,18 @@ fn aggressive_indent_mode(cx: &mut Context) {
 /// exactly the same spirit. Commands that leave the text alone are skipped by
 /// comparing the document version.
 pub(crate) fn aggressive_indent_post_command(cx: &mut Context) {
+    // The hook runs after *every* command, and one of them is the command that
+    // closes the last window: `:q` leaves the focused node pointing at the tree's
+    // root container rather than a view, so reading the focused document here
+    // panics (`Tree::get_mut` is `unreachable!()` for a container). Resolve the
+    // focused view first and do nothing when there is not one.
+    let Some(doc_id) = cx.editor.tree.try_get(cx.editor.tree.focus).map(|view| view.doc) else {
+        return;
+    };
     let changed = {
-        let doc = doc_mut!(cx.editor);
+        let Some(doc) = cx.editor.documents.get_mut(&doc_id) else {
+            return;
+        };
         if !doc.aggressive_indent {
             return;
         }
@@ -71887,8 +71897,9 @@ pub(crate) fn aggressive_indent_post_command(cx: &mut Context) {
     aggressive_indent_after_change(cx);
     // The re-indent is itself a change; record where it left the buffer so the
     // next command does not see it as one.
-    let doc = doc_mut!(cx.editor);
-    doc.aggressive_indent_version = Some(doc.version());
+    if let Some(doc) = cx.editor.documents.get_mut(&doc_id) {
+        doc.aggressive_indent_version = Some(doc.version());
+    }
 }
 
 /// Register the hooks that run after every command: `aggressive-indent-mode`'s
@@ -71918,7 +71929,12 @@ pub fn register_post_command_hooks() {
 /// kill, undo, `:s///`), which is what
 /// [`aggressive_indent_post_command`] covers.
 fn aggressive_indent_after_change(cx: &mut Context) {
-    if !doc!(cx.editor).aggressive_indent {
+    // Same guard as the post-command hook: no focused view, nothing to re-indent.
+    let focused = cx.editor.tree.try_get(cx.editor.tree.focus).map(|view| view.doc);
+    let on = focused
+        .and_then(|id| cx.editor.documents.get(&id))
+        .is_some_and(|doc| doc.aggressive_indent);
+    if !on {
         return;
     }
     // Every cursor is a change site, so each one re-indents the form it sits in —
