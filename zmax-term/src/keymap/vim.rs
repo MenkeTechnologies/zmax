@@ -1718,18 +1718,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "A-p" => run_prev_error,   // M-g M-p previous-error
         },
 
-        // M-- : emacs negative argument. The only negative-arg keys with a
-        // distinct action are the word-case commands, which operate on the
-        // *previous* word instead of the next (M-- M-u / M-l / M-c). Both the
-        // Alt-letter and bare-letter continuations are accepted.
-        "A-minus" => { "Negative arg (M--)"
-            "A-u" => upcase_prev_word,      // M-- M-u  upcase previous word
-            "u"   => upcase_prev_word,
-            "A-l" => downcase_prev_word,    // M-- M-l  downcase previous word
-            "l"   => downcase_prev_word,
-            "A-c" => capitalize_prev_word,  // M-- M-c  capitalize previous word
-            "c"   => capitalize_prev_word,
-        },
+        // M-- is emacs's `negative-argument`, read by `handle_prefix_key` like
+        // `M-<digit>` — NOT a keymap node. It used to be one, holding the three
+        // word-case commands (`M-- M-u` / `M-l` / `M-c`), which meant the
+        // argument never reached any other command: `M-- C-x C-e`, whose bare `-`
+        // lifts `eval-expression-print-maximum-character`, had nowhere to put it.
+        // The word-case commands read the negative argument themselves now, which
+        // is how emacs gets the same behaviour out of `(interactive "p")`.
 
         // M-s: the emacs search map (occur / word / symbol isearch). The `M-s h`
         // hi-lock chords are typables, grafted on in EMACS_TYPABLE.

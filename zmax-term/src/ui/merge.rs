@@ -1658,7 +1658,7 @@ fn align_wordwise(base: &str, doc: &str) -> Vec<DiffRow> {
     let n_doc = split_lines(doc).len();
     let mut changed_base = vec![false; n_base];
     let mut changed_doc = vec![false; n_doc];
-    let mut mark = |words: &[(String, usize)], range: std::ops::Range<u32>, out: &mut Vec<bool>| {
+    let mark = |words: &[(String, usize)], range: std::ops::Range<u32>, out: &mut Vec<bool>| {
         for (_, line) in &words[range.start as usize..range.end as usize] {
             if let Some(flag) = out.get_mut(*line) {
                 *flag = true;

@@ -8185,6 +8185,10 @@ fn switch_to_lowercase(cx: &mut Context) {
 /// left over any non-word chars, then over the word, transforms it, and leaves
 /// the cursor at the word's start (matching emacs, which moves back a word).
 fn case_prev_word(cx: &mut Context, f: fn(&str) -> Tendril) {
+    let cursor = {
+        let (view, doc) = current_ref!(cx.editor);
+        doc.selection(view.id).primary().cursor(doc.text().slice(..))
+    };
     let span = {
         let (view, doc) = current_ref!(cx.editor);
         let slice = doc.text().slice(..);
@@ -8208,11 +8212,17 @@ fn case_prev_word(cx: &mut Context, f: fn(&str) -> Tendril) {
         cx.editor.set_status("no word before point");
         return;
     };
+    // Emacs leaves point where it was: `(upcase-word -1)` on "alpha beta| gamma"
+    // gives "alpha BETA| gamma" with point still at 11, not back at the word it
+    // changed. Only the length delta of the replacement moves it.
+    let new_len = new.chars().count();
     let (view, doc) = current!(cx.editor);
     let tx = Transaction::change(doc.text(), std::iter::once((from, to, Some(new))));
     doc.apply(&tx, view.id);
     doc.append_changes_to_history(view);
-    doc.set_selection(view.id, Selection::point(from));
+    let shifted = (cursor + new_len).saturating_sub(to - from);
+    let len = doc.text().len_chars();
+    doc.set_selection(view.id, Selection::point(shifted.min(len)));
 }
 
 /// emacs `M-- M-u` — upper-case the previous word.
@@ -8241,6 +8251,17 @@ fn capitalize_prev_word(cx: &mut Context) {
 }
 
 fn case_word(cx: &mut Context, f: fn(&str) -> Tendril) {
+    // `(interactive "p")` with a negative argument: emacs's word-case commands
+    // then work on the word *before* point (simple.el's `upcase-word` and
+    // friends pass ARG to `forward-word`). `M-- M-u` is that, and it is why the
+    // negative argument has to reach the command rather than be swallowed by a
+    // keymap node.
+    if matches!(cx.prefix_arg(), Some(PrefixArg::Negative))
+        || matches!(cx.prefix_arg(), Some(PrefixArg::Numeric(n)) if n < 0)
+    {
+        case_prev_word(cx, f);
+        return;
+    }
     let span = {
         let (view, doc) = current_ref!(cx.editor);
         let slice = doc.text().slice(..);
@@ -21686,13 +21707,35 @@ fn eval_last_sexp(cx: &mut Context) {
             }
         }
     };
+    // "This command handles `defvar', `defcustom' and `defface' the same way that
+    // `eval-defun' does" (eval-last-sexp's docstring).
+    let src = elisp_force_redefinition(src.trim()).unwrap_or(src);
+    // `eval-last-sexp` truncates long output to `eval-expression-print-length`
+    // (12) and `eval-expression-print-level` (4) — "Normally, this function
+    // truncates long output according to the value of the variables
+    // `eval-expression-print-length' and `eval-expression-print-level'. With a
+    // prefix argument of zero, however, there is no such truncation." The value
+    // is printed by the elisp host as it evaluates, so the limits are set around
+    // the call and cleared after it rather than `let`-bound over the form.
+    let no_truncate = matches!(arg, Some(PrefixArg::Numeric(0)));
     let result = {
         let mut ccx = crate::compositor::Context {
             editor: cx.editor,
             jobs: cx.jobs,
             scroll: None,
         };
-        crate::commands::scripting::eval_elisp(&mut ccx, &src)
+        if !no_truncate {
+            let _ = crate::commands::scripting::eval_elisp(
+                &mut ccx,
+                "(setq print-length (or (and (boundp 'eval-expression-print-length)                  eval-expression-print-length) 12)                  print-level (or (and (boundp 'eval-expression-print-level)                  eval-expression-print-level) 4))",
+            );
+        }
+        let result = crate::commands::scripting::eval_elisp(&mut ccx, &src);
+        let _ = crate::commands::scripting::eval_elisp(
+            &mut ccx,
+            "(setq print-length nil print-level nil)",
+        );
+        result
     };
     let value = match result {
         Ok(value) => value,
@@ -21773,6 +21816,102 @@ fn eval_elisp_line(cx: &mut Context) {
 }
 
 /// SPC m e f / e c: evaluate the enclosing top-level form (≈ paragraph) as elisp.
+/// Split a parenthesised elisp form into its top-level elements as source text.
+/// Strings (with their escapes) and `?c` character literals are stepped over, so
+/// a `"doc (string)"` or a `?\(` never looks like structure. `None` when `src`
+/// is not a single `( … )` form.
+fn sexp_elements(src: &str) -> Option<Vec<String>> {
+    let chars: Vec<char> = src.trim().chars().collect();
+    if chars.first() != Some(&'(') || chars.last() != Some(&')') {
+        return None;
+    }
+    let mut elements = Vec::new();
+    let mut current = String::new();
+    let mut depth = 0usize;
+    let mut i = 1;
+    let end = chars.len() - 1;
+    while i < end {
+        let c = chars[i];
+        match c {
+            '"' => {
+                current.push(c);
+                i += 1;
+                while i < end {
+                    current.push(chars[i]);
+                    if chars[i] == '\\' && i + 1 < end {
+                        i += 1;
+                        current.push(chars[i]);
+                    } else if chars[i] == '"' {
+                        break;
+                    }
+                    i += 1;
+                }
+            }
+            '?' if depth == 0 || depth > 0 => {
+                // A character literal takes the next character — and the one
+                // after it when that is a backslash escape.
+                current.push(c);
+                if i + 1 < end {
+                    i += 1;
+                    current.push(chars[i]);
+                    if chars[i] == '\\' && i + 1 < end {
+                        i += 1;
+                        current.push(chars[i]);
+                    }
+                }
+            }
+            '(' | '[' => {
+                depth += 1;
+                current.push(c);
+            }
+            ')' | ']' => {
+                depth = depth.saturating_sub(1);
+                current.push(c);
+            }
+            c if c.is_whitespace() && depth == 0 => {
+                if !current.is_empty() {
+                    elements.push(std::mem::take(&mut current));
+                }
+            }
+            c => current.push(c),
+        }
+        i += 1;
+    }
+    if !current.is_empty() {
+        elements.push(current);
+    }
+    Some(elements)
+}
+
+/// `elisp--eval-defun-1` (elisp-mode.el): a definition that is *re-*evaluated has
+/// to take effect, which `defcustom` and `defface` otherwise refuse — both skip
+/// the work when the symbol already carries a value or a spec. Emacs rewrites the
+/// form before evaluating it: a `defcustom` is re-set through the variable's own
+/// `:set` function, and a `defface` has its cached `face-defface-spec` /
+/// `face-override-spec` cleared first. Returns the rewritten source, or `None`
+/// for a form that needs no rewrite.
+///
+/// (`defvar` needs none here: zmax's evaluator already re-sets it, which is what
+/// emacs's `(progn (defvar VAR nil …) (setq-default VAR INIT))` rewrite achieves.)
+fn elisp_force_redefinition(src: &str) -> Option<String> {
+    let elements = sexp_elements(src)?;
+    let head = elements.first()?.as_str();
+    let symbol = elements.get(1)?;
+    match head {
+        "defcustom" => {
+            let value = elements.get(2)?;
+            Some(format!(
+                "(progn {src} (funcall (or (get '{symbol} 'custom-set) 'set-default) '{symbol} {value}))"
+            ))
+        }
+        "defface" => Some(format!(
+            "(progn (put '{symbol} 'face-defface-spec nil) \
+             (put '{symbol} 'face-override-spec nil) {src})"
+        )),
+        _ => None,
+    }
+}
+
 fn eval_elisp_defun(cx: &mut Context) {
     let src = {
         let (view, doc) = current!(cx.editor);
@@ -21794,6 +21933,7 @@ fn eval_elisp_defun(cx: &mut Context) {
         let to = text.line_to_char((end + 1).min(text.len_lines()));
         text.slice(from..to).to_string()
     };
+    let src = elisp_force_redefinition(src.trim()).unwrap_or(src);
     run_elisp(cx, &src);
 }
 
@@ -74949,6 +75089,43 @@ fn open_dribble_file(cx: &mut Context) {
                 .set_error(format!("open-dribble-file: {}: {e}", path.display())),
         }
     });
+}
+
+#[cfg(test)]
+mod elisp_redefinition_tests {
+    use super::{elisp_force_redefinition, sexp_elements};
+
+    /// The splitter has to step over strings and character literals, or a
+    /// `"doc (string)"` argument would look like structure.
+    #[test]
+    fn sexp_elements_steps_over_strings_and_character_literals() {
+        assert_eq!(
+            sexp_elements(r#"(defcustom opt 2 "a doc (with parens)")"#).unwrap(),
+            vec!["defcustom", "opt", "2", r#""a doc (with parens)""#]
+        );
+        assert_eq!(
+            sexp_elements(r"(list ?\( ?b (nested form))").unwrap(),
+            vec!["list", r"?\(", "?b", "(nested form)"]
+        );
+        assert_eq!(sexp_elements("not-a-form"), None);
+    }
+
+    /// `elisp--eval-defun-1`: a re-evaluated `defcustom` is re-set through the
+    /// variable's own `:set` function, and a re-evaluated `defface` has its
+    /// cached spec cleared first. Anything else is evaluated as written.
+    #[test]
+    fn definitions_are_rewritten_to_take_effect_again() {
+        let rewritten = elisp_force_redefinition(r#"(defcustom opt 2 "doc")"#).unwrap();
+        assert!(
+            rewritten.contains("(funcall (or (get 'opt 'custom-set) 'set-default) 'opt 2)"),
+            "{rewritten}"
+        );
+        let rewritten = elisp_force_redefinition("(defface fc ((t :weight bold)) \"doc\")").unwrap();
+        assert!(rewritten.contains("(put 'fc 'face-defface-spec nil)"), "{rewritten}");
+        assert!(rewritten.contains("(put 'fc 'face-override-spec nil)"), "{rewritten}");
+        assert_eq!(elisp_force_redefinition("(setq x 1)"), None);
+        assert_eq!(elisp_force_redefinition("(defvar v 1)"), None);
+    }
 }
 
 #[cfg(test)]

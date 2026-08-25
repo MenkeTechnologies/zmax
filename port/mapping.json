@@ -23033,11 +23033,11 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_e",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x C-e"
   ],
-  "note": "`C-x C-e` runs `eval_last_sexp` (bound only in the spacemacs preset). It takes the sexp ending at `selection.primary().cursor(text)` \u2014 emacs's point, the left edge of the block cursor \u2014 so with the cursor on the second `(` of `(+ 1 2)(+ 10 20)` it evaluates the first form and echoes `3 (#o3, #x3, ?\\C-c)`, as emacs does. An empty preceding range errors `elisp: end-of-file`, matching emacs's `(end-of-file)` signal.\n\nInteger results are echoed in emacs's `eval-expression-print-format` shape (simple.el:2003) \u2014 decimal, then `(#o\u2026, #x\u2026[, ?c])`, sign before magnitude for negatives, `prin1-char` forms `?\\C-@` / `?\\C-\\[` / `?\\C-_` / `?\\C-?` for the controls and `?\\(`-style escapes for `\"'();[\\]{}`, with the character part dropped past `eval-expression-print-maximum-character` (127). Verified byte-identical to `emacs -Q --batch --eval '(eval-expression-print-format N)'` on GNU Emacs 30.2 for 0, 3, 27, 32, 40, 65, 92, 127, 233 and -5. Non-integers echo the prin1 form alone; there is no `\u21d2 ` prefix.\n\nPrefix arguments follow `eval-expression-get-print-arguments` (simple.el:2087): any argument other than `nil` or a bare `-` inserts the printed text at point instead of echoing; `nil`/`0` keep the 127 character limit, `-`/`-1` lift it, any other argument suppresses the character form. Driven and matching for no-argument, `M-0` and `M-4`. The `-` and `-1` branches are code-correct but currently unreachable: the spacemacs preset routes no key to `negative-argument` (`M--` falls through as an unbound `<A-minus>`) and `universal-argument` is bound only in the emacs preset, which does not bind `C-x C-e`.\n\n`elisp--eval-defun-1`'s forced re-set (elisp-mode.el:1658) is only matched for `defvar`, and by accident of the evaluator rather than by design: `compile_defvar` (vendor/elisprs/src/compiler.rs:343) emits `SETVAR` unconditionally, so re-evaluating `(defvar v 2)` over `v = 99` yields 2 as in emacs. `defcustom` and `defface` are NOT special-cased and still diverge: re-evaluating a `defcustom` leaves the old value (emacs 2, zmax 99) and re-evaluating a `defface` leaves the old spec (emacs `((t :weight normal))`, zmax `((t :weight bold))`). Both forms do exist in the vendored evaluator \u2014 `vendor/elisprs/src/prelude.rs:5615` and `:5625`, a port of custom.el's declaration half \u2014 so closing this is a matter of porting `elisp--eval-defun-1`'s `custom-declare-variable` / `custom-declare-face` rewrites here, not vendor work. `NO-TRUNCATE` (the `print-length`/`print-level` lift a `0` argument implies) is also not implemented."
+  "note": "`C-x C-e` runs `eval_last_sexp` on the sexp ending at point - emacs's point being the left edge of the block cursor - so with the cursor on the second `(` of `(+ 1 2)(+ 10 20)` it evaluates the first form and echoes `3 (#o3, #x3, ?\\\\C-c)`, as emacs does; an empty preceding range errors `elisp: end-of-file`. Integer results are echoed in `eval-expression-print-format`'s shape, verified byte-identical to `emacs -Q --batch` on 0, 3, 27, 32, 40, 65, 92, 127, 233 and -5. The three remaining gaps are closed. (1) The prefix arguments are reachable: `M--` is emacs's `negative-argument`, read by `handle_prefix_key` like `M-<digit>` - it used to be a *keymap node* holding the three word-case commands, which swallowed the argument before any other command could see it, so `M-- C-x C-e` (the bare `-` that lifts `eval-expression-print-maximum-character`) had nowhere to put it. The word-case commands read the negative argument themselves now, as emacs gets the same behaviour out of `(interactive \\\"p\\\")`, and they leave point where it was, which `(upcase-word -1)` does in emacs. (2) Output truncates to `eval-expression-print-length` (12) and `eval-expression-print-level` (4) and a zero argument lifts both: `(make-list 20 1)` echoes `(1 1 1 1 1 1 1 1 1 1 1 1 ...)`, matching emacs, and `M-0 C-x C-e` prints the whole list. (3) \\\"This command handles `defvar', `defcustom' and `defface' the same way that `eval-defun' does\\\": `elisp--eval-defun-1`'s rewrite is ported, so a re-evaluated `defcustom` is re-set through its own `:set` function and a re-evaluated `defface` has its cached `face-defface-spec` / `face-override-spec` cleared first - both used to be no-ops on a symbol that already had a value or a spec. `defvar` needed no rewrite: zmax's evaluator already re-sets it. Pinned by `tests/test/emacs_keys.rs::c_x_c_e_negative_argument_lifts_the_character_limit`, `::c_x_c_e_truncates_unless_the_argument_is_zero`, `::c_x_c_e_reevaluates_defcustom_and_defface`, `::negative_argument_makes_the_word_case_commands_work_backwards` and `commands::elisp_redefinition_tests::*`."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_b",
@@ -50556,25 +50556,28 @@
   "spec_id": "emacs.keybinding.m_m_u",
   "status": "ported",
   "evidence": [
-   "key:normal:A-minus A-u"
+   "key:normal:A-u",
+   "static:upcase_prev_word"
   ],
-  "note": "M-- M-u upcase previous word"
+  "note": "`M-- M-u` is the negative argument plus the ordinary `upcase-word` chord, which is how emacs gets it: `M--` is `negative-argument` and `upcase-word` is `(interactive \"p\")`, so a negative ARG makes it work on the word *before* point. zmax read the pair as one keymap chord (an `A-minus` node holding these three commands), which meant the argument never reached any other command - `M-- C-x C-e` had nowhere to put it. `M--` now arms the prefix argument in `handle_prefix_key`, as `M-<digit>` does, and the word-case commands read it themselves, leaving point where it was as `(upcase-word -1)` does in emacs. Pinned by `tests/test/emacs_keys.rs::negative_argument_makes_the_word_case_commands_work_backwards`."
  },
  {
   "spec_id": "emacs.keybinding.m_m_l",
   "status": "ported",
   "evidence": [
-   "key:normal:A-minus A-l"
+   "key:normal:A-l",
+   "static:downcase_prev_word"
   ],
-  "note": "M-- M-l downcase previous word"
+  "note": "`M-- M-l` is the negative argument plus the ordinary `downcase-word` chord, which is how emacs gets it: `M--` is `negative-argument` and `downcase-word` is `(interactive \"p\")`, so a negative ARG makes it work on the word *before* point. zmax read the pair as one keymap chord (an `A-minus` node holding these three commands), which meant the argument never reached any other command - `M-- C-x C-e` had nowhere to put it. `M--` now arms the prefix argument in `handle_prefix_key`, as `M-<digit>` does, and the word-case commands read it themselves, leaving point where it was as `(upcase-word -1)` does in emacs. Pinned by `tests/test/emacs_keys.rs::negative_argument_makes_the_word_case_commands_work_backwards`."
  },
  {
   "spec_id": "emacs.keybinding.m_m_c",
   "status": "ported",
   "evidence": [
-   "key:normal:A-minus A-c"
+   "key:normal:A-c",
+   "static:capitalize_prev_word"
   ],
-  "note": "M-- M-c capitalize previous word"
+  "note": "`M-- M-c` is the negative argument plus the ordinary `capitalize-word` chord, which is how emacs gets it: `M--` is `negative-argument` and `capitalize-word` is `(interactive \"p\")`, so a negative ARG makes it work on the word *before* point. zmax read the pair as one keymap chord (an `A-minus` node holding these three commands), which meant the argument never reached any other command - `M-- C-x C-e` had nowhere to put it. `M--` now arms the prefix argument in `handle_prefix_key`, as `M-<digit>` does, and the word-case commands read it themselves, leaving point where it was as `(upcase-word -1)` does in emacs. Pinned by `tests/test/emacs_keys.rs::negative_argument_makes_the_word_case_commands_work_backwards`."
  },
  {
   "spec_id": "spacemacs.keybinding.z_f",
