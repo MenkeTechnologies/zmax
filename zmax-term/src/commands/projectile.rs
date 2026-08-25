@@ -2232,6 +2232,258 @@ pub(crate) fn is_test_file(root: &Path, path: &Path) -> bool {
         || name.contains(".spec.")
 }
 
+/// Projectile's file cache: the file list of each project root, so a second
+/// `projectile-find-file` in a large repository does not walk the tree again.
+/// This is `projectile-projects-cache`, and it is what the cache commands
+/// (`projectile-invalidate-cache` and friends) operate on.
+static FILE_CACHE: once_cell::sync::Lazy<
+    std::sync::Mutex<std::collections::HashMap<PathBuf, Vec<PathBuf>>>,
+> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+
+/// The directory → project-root answers already resolved, projectile's
+/// `projectile-project-root-cache`.
+static ROOT_CACHE: once_cell::sync::Lazy<
+    std::sync::Mutex<std::collections::HashMap<PathBuf, PathBuf>>,
+> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+
+/// The project's files, from the cache when it holds them and from the walker
+/// otherwise (filling the cache on the way out).
+pub(crate) fn cached_project_files(root: &Path) -> Vec<PathBuf> {
+    if let Ok(cache) = FILE_CACHE.lock() {
+        if let Some(files) = cache.get(root) {
+            return files.clone();
+        }
+    }
+    let files = project_files(root, false);
+    if let Ok(mut cache) = FILE_CACHE.lock() {
+        cache.insert(root.to_path_buf(), files.clone());
+    }
+    files
+}
+
+/// Drop `root`'s cached file list. Returns whether there was one.
+fn invalidate(root: &Path) -> bool {
+    FILE_CACHE
+        .lock()
+        .map(|mut cache| cache.remove(root).is_some())
+        .unwrap_or(false)
+}
+
+/// `projectile-invalidate-cache` (`C-c p i`): "Remove the current project's files
+/// from `projectile-projects-cache'."
+pub(crate) fn invalidate_cache(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let had = invalidate(&root);
+    cx.editor.set_status(if had {
+        format!("Invalidated the file cache for {}", root.display())
+    } else {
+        format!("{} had no cached file list", root.display())
+    });
+    Ok(())
+}
+
+/// `projectile-invalidate-cache-all`: "Invalidate the caches of every known
+/// project."
+pub(crate) fn invalidate_cache_all(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dropped = FILE_CACHE
+        .lock()
+        .map(|mut cache| {
+            let n = cache.len();
+            cache.clear();
+            n
+        })
+        .unwrap_or(0);
+    cx.editor
+        .set_status(format!("Invalidated {dropped} project file cache(s)"));
+    Ok(())
+}
+
+/// `projectile-discard-root-cache`: "Clear `projectile-project-root-cache'
+/// without touching other caches."
+pub(crate) fn discard_root_cache(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dropped = ROOT_CACHE
+        .lock()
+        .map(|mut cache| {
+            let n = cache.len();
+            cache.clear();
+            n
+        })
+        .unwrap_or(0);
+    cx.editor
+        .set_status(format!("Discarded {dropped} cached project root(s)"));
+    Ok(())
+}
+
+/// `projectile-purge-file-from-cache`: "Purge FILE from the cache of the current
+/// project."
+pub(crate) fn purge_file_from_cache(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let target = match args.first() {
+        Some(file) => expand_home(file),
+        None => zmax_view::doc!(cx.editor)
+            .path()
+            .map(|p| p.to_path_buf())
+            .ok_or_else(|| {
+                anyhow::anyhow!("projectile-purge-file-from-cache: the buffer is not visiting a file")
+            })?,
+    };
+    let purged = FILE_CACHE
+        .lock()
+        .map(|mut cache| match cache.get_mut(&root) {
+            Some(files) => {
+                let before = files.len();
+                files.retain(|f| *f != target);
+                before != files.len()
+            }
+            None => false,
+        })
+        .unwrap_or(false);
+    cx.editor.set_status(if purged {
+        format!("Purged {} from the project cache", target.display())
+    } else {
+        format!("{} is not in the project cache", target.display())
+    });
+    Ok(())
+}
+
+/// `projectile-purge-dir-from-cache`: "Purge DIR from the cache of the current
+/// project."
+pub(crate) fn purge_dir_from_cache(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(dir) = args.first() else {
+        anyhow::bail!("projectile-purge-dir-from-cache: needs a directory");
+    };
+    let dir = expand_home(dir);
+    let root = project_root();
+    let purged = FILE_CACHE
+        .lock()
+        .map(|mut cache| match cache.get_mut(&root) {
+            Some(files) => {
+                let before = files.len();
+                files.retain(|f| !f.starts_with(&dir));
+                before - files.len()
+            }
+            None => 0,
+        })
+        .unwrap_or(0);
+    cx.editor.set_status(format!(
+        "Purged {purged} file(s) under {} from the project cache",
+        dir.display()
+    ));
+    Ok(())
+}
+
+/// `projectile-cache-current-file` (`C-c p z`): "Add the currently visited file to
+/// the cache."
+pub(crate) fn cache_current_file(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = zmax_view::doc!(cx.editor)
+        .path()
+        .map(|p| p.to_path_buf())
+        .ok_or_else(|| {
+            anyhow::anyhow!("projectile-cache-current-file: the buffer is not visiting a file")
+        })?;
+    let root = project_root();
+    let added = FILE_CACHE
+        .lock()
+        .map(|mut cache| {
+            let files = cache.entry(root.clone()).or_default();
+            if files.contains(&file) {
+                false
+            } else {
+                files.push(file.clone());
+                files.sort();
+                true
+            }
+        })
+        .unwrap_or(false);
+    cx.editor.set_status(if added {
+        format!("Added {} to the project cache", file.display())
+    } else {
+        format!("{} is already cached", file.display())
+    });
+    Ok(())
+}
+
+/// `projectile-index-project-async`: "Index PROJECT-ROOT in the background and
+/// populate the files cache."
+pub(crate) fn index_project_async(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = match args.first() {
+        Some(dir) => expand_home(dir),
+        None => project_root(),
+    };
+    cx.editor
+        .set_status(format!("Indexing {}…", root.display()));
+    cx.jobs.callback(async move {
+        let indexed = tokio::task::spawn_blocking({
+            let root = root.clone();
+            move || {
+                let files = project_files(&root, false);
+                let count = files.len();
+                if let Ok(mut cache) = FILE_CACHE.lock() {
+                    cache.insert(root, files);
+                }
+                count
+            }
+        })
+        .await
+        .map_err(|e| anyhow::anyhow!("projectile-index-project-async: {e}"))?;
+        Ok(crate::job::Callback::Editor(Box::new(
+            move |editor: &mut zmax_view::Editor| {
+                editor.set_status(format!("Indexed {indexed} file(s)"));
+            },
+        )))
+    });
+    Ok(())
+}
+
 /// `projectile-find-file`: "Jump to a project's file using completion."
 pub(crate) fn find_file(
     cx: &mut compositor::Context,
@@ -2242,7 +2494,7 @@ pub(crate) fn find_file(
         return Ok(());
     }
     let root = project_root();
-    crate::commands::pick_paths(cx, "file", root.clone(), project_files(&root, false));
+    crate::commands::pick_paths(cx, "file", root.clone(), cached_project_files(&root));
     Ok(())
 }
 
@@ -2271,7 +2523,7 @@ pub(crate) fn find_test_file(
         return Ok(());
     }
     let root = project_root();
-    let files: Vec<PathBuf> = project_files(&root, false)
+    let files: Vec<PathBuf> = cached_project_files(&root)
         .into_iter()
         .filter(|p| is_test_file(&root, p))
         .collect();
@@ -2340,7 +2592,7 @@ pub(crate) fn find_other_file(
         anyhow::bail!("projectile-find-other-file: no file name to match");
     };
     let root = project_root();
-    let others: Vec<PathBuf> = project_files(&root, false)
+    let others: Vec<PathBuf> = cached_project_files(&root)
         .into_iter()
         .filter(|p| *p != here && p.file_stem().and_then(|s| s.to_str()) == Some(stem.as_str()))
         .collect();
@@ -2585,6 +2837,1197 @@ pub(crate) fn toggle_project_read_only(
     ));
     Ok(())
 }
+
+/// The files under `root` whose text matches `pattern`, via ripgrep — the file
+/// list projectile's replace walks.
+fn files_matching(root: &Path, pattern: &str, literal: bool) -> Vec<PathBuf> {
+    let mut cmd = std::process::Command::new("rg");
+    cmd.arg("-l").arg("--null");
+    if literal {
+        cmd.arg("-F");
+    }
+    cmd.arg("-e").arg(pattern).current_dir(root);
+    cmd.output()
+        .ok()
+        .filter(|out| out.status.success())
+        .map(|out| {
+            String::from_utf8_lossy(&out.stdout)
+                .split('\0')
+                .filter(|s| !s.is_empty())
+                .map(|s| root.join(s))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// What the last project-wide replace overwrote, so `projectile-replace-undo`
+/// can put it back — projectile keeps the same undo state for its replace.
+static REPLACE_UNDO: std::sync::Mutex<Vec<(PathBuf, String)>> = std::sync::Mutex::new(Vec::new());
+
+/// The body of `projectile-replace` (literal) and `projectile-replace-regexp`.
+fn replace_in_project(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+    literal: bool,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (Some(from), Some(to)) = (args.first(), args.get(1)) else {
+        anyhow::bail!(
+            "projectile-replace{}: needs <from> <to>",
+            if literal { "" } else { "-regexp" }
+        );
+    };
+    let (from, to) = (from.to_string(), to.to_string());
+    let root = project_root();
+    let re = if literal {
+        regex::Regex::new(&regex::escape(&from))
+    } else {
+        regex::Regex::new(&from)
+    }
+    .map_err(|e| anyhow::anyhow!("invalid pattern: {e}"))?;
+
+    let mut undo = Vec::new();
+    let mut files = 0usize;
+    let mut total = 0usize;
+    let mut touched = Vec::new();
+    for path in files_matching(&root, &from, literal) {
+        let Ok(content) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let count = re.find_iter(&content).count();
+        if count == 0 {
+            continue;
+        }
+        let new = re.replace_all(&content, to.as_str());
+        if new != content && std::fs::write(&path, new.as_bytes()).is_ok() {
+            undo.push((path.clone(), content));
+            touched.push(path);
+            files += 1;
+            total += count;
+        }
+    }
+    if let Ok(mut state) = REPLACE_UNDO.lock() {
+        *state = undo;
+    }
+    crate::commands::reload_docs_for_paths(cx.editor, &touched);
+    cx.editor
+        .set_status(format!("Replaced {total} occurrence(s) in {files} file(s)"));
+    Ok(())
+}
+
+/// `projectile-replace` (`C-c p r`): "Replace a literal string in the project's
+/// files."
+pub(crate) fn replace(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    replace_in_project(cx, args, event, true)
+}
+
+/// `projectile-replace-regexp`: "Replace a regexp in the project's files."
+pub(crate) fn replace_regexp(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    replace_in_project(cx, args, event, false)
+}
+
+/// `projectile-replace-undo` (`C-c p u`): "Revert the last project-wide replace."
+pub(crate) fn replace_undo(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let saved = REPLACE_UNDO
+        .lock()
+        .map(|mut state| std::mem::take(&mut *state))
+        .unwrap_or_default();
+    if saved.is_empty() {
+        anyhow::bail!("projectile-replace-undo: nothing to undo");
+    }
+    let mut restored = Vec::new();
+    for (path, content) in &saved {
+        if std::fs::write(path, content.as_bytes()).is_ok() {
+            restored.push(path.clone());
+        }
+    }
+    crate::commands::reload_docs_for_paths(cx.editor, &restored);
+    cx.editor
+        .set_status(format!("Reverted the replace in {} file(s)", restored.len()));
+    Ok(())
+}
+
+/// The body of the search commands: projectile's `projectile-search` and its
+/// backend-named twins all end up running one search over the project and
+/// showing the hits, which is what zmax's project grep does.
+fn search_project(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+    command: &str,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        anyhow::bail!("{command}: needs a search term");
+    }
+    crate::commands::typed::grep(cx, args, event)
+}
+
+/// `projectile-search` (`C-c p s s`).
+pub(crate) fn search(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    search_project(cx, args, event, "projectile-search")
+}
+
+/// `projectile-grep` (`C-c p s g`).
+pub(crate) fn grep(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    search_project(cx, args, event, "projectile-grep")
+}
+
+/// `projectile-ag` (`C-c p s a`).
+pub(crate) fn ag(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    search_project(cx, args, event, "projectile-ag")
+}
+
+/// `projectile-ripgrep` (`C-c p s r`).
+pub(crate) fn ripgrep(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    search_project(cx, args, event, "projectile-ripgrep")
+}
+
+/// `projectile-find-references` (`C-c p ?`, `C-c p s x`): "Find textual
+/// references to SYMBOL across the current project" — a word-bounded search, not
+/// the language server's reference set.
+pub(crate) fn find_references(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let symbol = match args.first() {
+        Some(symbol) => symbol.to_string(),
+        None => {
+            // Projectile offers the symbol at point; with no argument that is
+            // what this searches for.
+            let (view, doc) = zmax_view::current_ref!(cx.editor);
+            let text = doc.text().slice(..);
+            let range = doc.selection(view.id).primary();
+            let (from, to) = crate::commands::expand_bare_cursor_to_word(
+                text,
+                range.from(),
+                range.to(),
+            );
+            text.slice(from..to).to_string().trim().to_string()
+        }
+    };
+    if symbol.is_empty() {
+        anyhow::bail!("projectile-find-references: no symbol at point");
+    }
+    let pattern = format!(r"\b{}\b", regex::escape(&symbol));
+    // The search takes its pattern the way a `:` command would parse it.
+    let args = zmax_core::command_line::Args::parse(
+        &pattern,
+        zmax_core::command_line::Signature {
+            positionals: (1, None),
+            ..zmax_core::command_line::Signature::DEFAULT
+        },
+        false,
+        |token| Ok(token.content),
+    )
+    .map_err(|e| anyhow::anyhow!("projectile-find-references: {e}"))?;
+    crate::commands::typed::grep(cx, args, event)
+}
+
+/// `projectile-multi-occur` (`C-c p o`): "Do a `multi-occur' in the project's
+/// buffers" — every line of every *open* project buffer that matches, which is
+/// what multi-occur searches (not the files on disk).
+pub(crate) fn multi_occur(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        anyhow::bail!("projectile-multi-occur: needs a pattern");
+    }
+    let pattern = args.join(" ");
+    let re = regex::Regex::new(&pattern).map_err(|e| anyhow::anyhow!("invalid pattern: {e}"))?;
+    let root = project_root();
+    let mut hits = Vec::new();
+    for id in project_buffer_ids(cx.editor, &root) {
+        let Some(doc) = cx.editor.documents.get(&id) else {
+            continue;
+        };
+        let name = doc
+            .path()
+            .map(|p| p.strip_prefix(&root).unwrap_or(p).display().to_string())
+            .unwrap_or_else(|| doc.display_name().into_owned());
+        for (number, line) in doc.text().lines().enumerate() {
+            let line = line.to_string();
+            if re.is_match(&line) {
+                hits.push(format!("{name}:{}: {}", number + 1, line.trim_end()));
+            }
+        }
+    }
+    if hits.is_empty() {
+        anyhow::bail!("projectile-multi-occur: no matches in the project's buffers");
+    }
+    let count = hits.len();
+    let body = format!("{count} match(es) for {pattern}\n\n{}\n", hits.join("\n"));
+    crate::commands::show_text_in_scratch(cx.editor, &body);
+    Ok(())
+}
+
+/// `projectile-todos` (`C-c p s t`): "Collect the project's TODO-style
+/// annotations."
+pub(crate) fn todos(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    crate::commands::typed::project_todos(cx, args, event)
+}
+
+/// Open zmax's PTY terminal panel with `program` running in the project root —
+/// the shape every `projectile-run-*` terminal command shares. Projectile runs
+/// each of its terminal backends in `projectile-project-root`; the backend that
+/// exists here is the editor's own terminal.
+fn terminal_in_root(
+    cx: &mut compositor::Context,
+    program: String,
+    args: Vec<String>,
+    label: &'static str,
+) -> anyhow::Result<()> {
+    let root = project_root();
+    let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut zmax_view::Editor, compositor: &mut crate::compositor::Compositor| {
+            let argv: Vec<&str> = args.iter().map(String::as_str).collect();
+            match crate::ui::terminal::TerminalPanel::with_command(&program, &argv, Some(&root)) {
+                Ok(panel) => compositor.push(Box::new(panel)),
+                Err(e) => editor.set_error(format!("{label}: {e}")),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `projectile-run-shell` (`C-c p x s`): "Invoke `shell' in the project's root."
+pub(crate) fn run_shell(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+    terminal_in_root(cx, shell, Vec::new(), "projectile-run-shell")
+}
+
+/// `projectile-run-term` (`C-c p x t`): "Invoke `term' in the project's root."
+/// `term`, `vterm`, `eat` and `ghostel` are four emacs terminal *emulators*; zmax
+/// has one PTY panel, so each of their commands opens it in the project root —
+/// the shell you get is the same one emacs's `term` would run.
+pub(crate) fn run_term(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    run_shell(cx, args, event)
+}
+
+/// `projectile-run-vterm` (`C-c p x v`).
+pub(crate) fn run_vterm(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    run_shell(cx, args, event)
+}
+
+/// `projectile-run-eat` (`C-c p x x`).
+pub(crate) fn run_eat(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    run_shell(cx, args, event)
+}
+
+/// `projectile-run-ghostel` (`C-c p x G`).
+pub(crate) fn run_ghostel(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    run_shell(cx, args, event)
+}
+
+/// `projectile-run-eshell` (`C-c p x e`): eshell is emacs's own shell, written in
+/// elisp; zmax's counterpart is the embedded zsh (`zshrs`), run in the project
+/// root.
+pub(crate) fn run_eshell(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+    terminal_in_root(cx, shell, Vec::new(), "projectile-run-eshell")
+}
+
+/// `projectile-run-ielm` (`C-c p x i`): ielm is emacs's elisp REPL. zmax embeds
+/// an elisp interpreter and hosts it in the REPL panel, which is what opens here.
+pub(crate) fn run_ielm(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut zmax_view::Editor, compositor: &mut crate::compositor::Compositor| {
+            compositor.push(Box::new(crate::ui::repl::ReplPanel::new(
+                crate::ui::repl::ReplLang::Elisp,
+            )));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `projectile-run-gdb` (`C-c p x g`): "Invoke `gdb' in the project's root."
+pub(crate) fn run_gdb(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    terminal_in_root(cx, "gdb".to_string(), Vec::new(), "projectile-run-gdb")
+}
+
+/// `projectile-run` (`C-c p x r`): "Run a shell, REPL or terminal in the project
+/// root" — the backend `projectile-run-preference` names, which here is the one
+/// terminal panel.
+pub(crate) fn run(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    run_shell(cx, args, event)
+}
+
+/// `projectile-run-command-in-root`: "Invoke `execute-extended-command' in the
+/// project's root" — a *zmax* command, run with the project root as the working
+/// directory rather than a shell command.
+pub(crate) fn run_command_in_root(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        anyhow::bail!("projectile-run-command-in-root: needs a command");
+    }
+    let root = project_root();
+    let previous = std::env::current_dir().ok();
+    std::env::set_current_dir(&root)
+        .map_err(|e| anyhow::anyhow!("projectile-run-command-in-root: {}: {e}", root.display()))?;
+    let line = args.join(" ");
+    let result = crate::commands::typed::execute_command_line(cx, &line, event);
+    if let Some(previous) = previous {
+        let _ = std::env::set_current_dir(previous);
+    }
+    result
+}
+
+/// `projectile-run-async-shell-command-in-root` (`C-c p &`).
+pub(crate) fn run_async_shell_command_in_root(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    // The compile path already runs the command off the UI thread, which is what
+    // makes the `&` variant asynchronous in emacs.
+    run_shell_command_in_root(cx, args, event)
+}
+
+// ── Sibling projects ────────────────────────────────────────────────────────
+//
+// Projectile calls the projects beside this one — the other checkouts sharing
+// its parent directory — its *siblings*, and mirrors the project-wide commands
+// a level down onto them (`C-c p n …`).
+
+/// The known projects that share this project's parent directory.
+pub(crate) fn sibling_projects(root: &Path) -> Vec<PathBuf> {
+    let Some(parent) = root.parent() else {
+        return Vec::new();
+    };
+    let mut siblings: Vec<PathBuf> = known_projects()
+        .into_iter()
+        .map(PathBuf::from)
+        .filter(|p| p.parent() == Some(parent) && p != root)
+        .collect();
+    // The ones on disk beside it count too, whether or not they are known yet.
+    for candidate in projects_in_directory(parent, 1) {
+        if candidate != *root && !siblings.contains(&candidate) {
+            siblings.push(candidate);
+        }
+    }
+    siblings.sort();
+    siblings.dedup();
+    siblings
+}
+
+/// `projectile-switch-sibling-project` (`C-c p n p`).
+pub(crate) fn switch_sibling_project(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let siblings = sibling_projects(&root);
+    if siblings.is_empty() {
+        anyhow::bail!("projectile-switch-sibling-project: no sibling projects");
+    }
+    match args.first() {
+        Some(dir) => crate::commands::project_switch_to(cx, expand_home(dir)),
+        None if siblings.len() == 1 => {
+            crate::commands::project_switch_to(cx, siblings[0].clone())
+        }
+        None => cx.editor.set_status(format!(
+            "Sibling projects: {} — :projectile-switch-sibling-project <root>",
+            siblings
+                .iter()
+                .map(|p| project_name(p))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )),
+    }
+    Ok(())
+}
+
+/// `projectile-find-file-in-sibling-projects` (`C-c p n f`).
+pub(crate) fn find_file_in_sibling_projects(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let mut files = cached_project_files(&root);
+    for sibling in sibling_projects(&root) {
+        files.extend(cached_project_files(&sibling));
+    }
+    if files.is_empty() {
+        anyhow::bail!("projectile-find-file-in-sibling-projects: nothing to offer");
+    }
+    crate::commands::pick_paths(cx, "file", PathBuf::new(), files);
+    Ok(())
+}
+
+/// `projectile-search-in-sibling-projects` (`C-c p n s`): the same search, run
+/// over this project and the ones beside it.
+pub(crate) fn search_in_sibling_projects(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        anyhow::bail!("projectile-search-in-sibling-projects: needs a search term");
+    }
+    let root = project_root();
+    let mut roots = vec![root.clone()];
+    roots.extend(sibling_projects(&root));
+    let pattern = args.join(" ");
+    let dirs: Vec<String> = roots
+        .iter()
+        .map(|r| shell_quote(&r.to_string_lossy()))
+        .collect();
+    // One ripgrep over every root, into the compilation list the project search
+    // already uses.
+    let command = format!("rg --line-number --no-heading -e {} {}", shell_quote(&pattern), dirs.join(" "));
+    crate::commands::typed::run_compile_command(cx, &command)
+}
+
+/// `projectile-switch-to-buffer-in-sibling-projects` (`C-c p n b`).
+pub(crate) fn switch_to_buffer_in_sibling_projects(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let mut roots = vec![root.clone()];
+    roots.extend(sibling_projects(&root));
+    let ids: Vec<zmax_view::DocumentId> = roots
+        .iter()
+        .flat_map(|r| project_buffer_ids(cx.editor, r))
+        .collect();
+    if ids.is_empty() {
+        anyhow::bail!("projectile-switch-to-buffer-in-sibling-projects: no buffers to switch to");
+    }
+    match args.first() {
+        Some(name) => {
+            let name = name.to_string();
+            let target = ids.iter().copied().find(|id| {
+                cx.editor
+                    .documents
+                    .get(id)
+                    .is_some_and(|doc| doc.display_name().contains(&name))
+            });
+            match target {
+                Some(id) => {
+                    cx.editor.switch(id, zmax_view::editor::Action::Replace);
+                    Ok(())
+                }
+                None => anyhow::bail!(
+                    "projectile-switch-to-buffer-in-sibling-projects: no buffer matching {name}"
+                ),
+            }
+        }
+        None => {
+            let names: Vec<String> = ids
+                .iter()
+                .filter_map(|id| {
+                    cx.editor
+                        .documents
+                        .get(id)
+                        .map(|doc| doc.display_name().into_owned())
+                })
+                .collect();
+            cx.editor.set_status(format!("Buffers: {}", names.join(", ")));
+            Ok(())
+        }
+    }
+}
+
+/// `projectile-multi-occur-in-sibling-projects` (`C-c p n o`).
+pub(crate) fn multi_occur_in_sibling_projects(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        anyhow::bail!("projectile-multi-occur-in-sibling-projects: needs a pattern");
+    }
+    let pattern = args.join(" ");
+    let re = regex::Regex::new(&pattern).map_err(|e| anyhow::anyhow!("invalid pattern: {e}"))?;
+    let root = project_root();
+    let mut roots = vec![root.clone()];
+    roots.extend(sibling_projects(&root));
+    let mut hits = Vec::new();
+    for project in &roots {
+        for id in project_buffer_ids(cx.editor, project) {
+            let Some(doc) = cx.editor.documents.get(&id) else {
+                continue;
+            };
+            let name = doc
+                .path()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| doc.display_name().into_owned());
+            for (number, line) in doc.text().lines().enumerate() {
+                let line = line.to_string();
+                if re.is_match(&line) {
+                    hits.push(format!("{name}:{}: {}", number + 1, line.trim_end()));
+                }
+            }
+        }
+    }
+    if hits.is_empty() {
+        anyhow::bail!("projectile-multi-occur-in-sibling-projects: no matches");
+    }
+    let body = format!(
+        "{} match(es) for {pattern}\n\n{}\n",
+        hits.len(),
+        hits.join("\n")
+    );
+    crate::commands::show_text_in_scratch(cx.editor, &body);
+    Ok(())
+}
+
+/// `projectile-todos-in-sibling-projects` (`C-c p n t`).
+pub(crate) fn todos_in_sibling_projects(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let mut roots = vec![root.clone()];
+    roots.extend(sibling_projects(&root));
+    let dirs: Vec<String> = roots
+        .iter()
+        .map(|r| shell_quote(&r.to_string_lossy()))
+        .collect();
+    let command = format!(
+        "rg --line-number --no-heading -e {} {}",
+        shell_quote(r"\b(TODO|FIXME|HACK|XXX|NOTE)\b"),
+        dirs.join(" ")
+    );
+    crate::commands::typed::run_compile_command(cx, &command)
+}
+
+// ── Worktrees, bookmarks, related files, tasks ──────────────────────────────
+
+/// `projectile-switch-worktree` (`C-c p W`): "Switch to another checkout of the
+/// current project's repository."
+pub(crate) fn switch_worktree(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let out = std::process::Command::new("git")
+        .args(["worktree", "list", "--porcelain"])
+        .current_dir(&root)
+        .output()
+        .map_err(|e| anyhow::anyhow!("projectile-switch-worktree: {e}"))?;
+    if !out.status.success() {
+        anyhow::bail!("projectile-switch-worktree: not a git repository");
+    }
+    let worktrees: Vec<PathBuf> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|line| line.strip_prefix("worktree "))
+        .map(PathBuf::from)
+        .filter(|p| *p != root)
+        .collect();
+    if worktrees.is_empty() {
+        anyhow::bail!("projectile-switch-worktree: this repository has no other checkout");
+    }
+    match args.first() {
+        Some(dir) => crate::commands::project_switch_to(cx, expand_home(dir)),
+        None if worktrees.len() == 1 => {
+            crate::commands::project_switch_to(cx, worktrees[0].clone())
+        }
+        None => cx.editor.set_status(format!(
+            "Worktrees: {} — :projectile-switch-worktree <path>",
+            worktrees
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )),
+    }
+    Ok(())
+}
+
+/// Project-scoped bookmarks live under the project's own name, so two projects
+/// can both have a `main` bookmark — projectile's `projectile-bookmark-set`
+/// prefixes the name the same way.
+fn project_bookmark_name(root: &Path, name: &str) -> String {
+    format!("{}:{name}", project_name(root))
+}
+
+/// `projectile-bookmark-set` (`C-c p B s`).
+pub(crate) fn bookmark_set(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(name) = args.first() else {
+        anyhow::bail!("projectile-bookmark-set: needs a bookmark name");
+    };
+    let full = project_bookmark_name(&project_root(), name);
+    let (view, doc) = zmax_view::current_ref!(cx.editor);
+    let text = doc.text();
+    let pos = doc.selection(view.id).primary().cursor(text.slice(..));
+    let line = text.char_to_line(pos);
+    let column = pos - text.line_to_char(line);
+    let Some(file) = doc.path().map(|p| p.to_string_lossy().into_owned()) else {
+        anyhow::bail!("projectile-bookmark-set: the buffer is not visiting a file");
+    };
+    crate::emacs_bookmark::set(&full, &file, line, Some(column));
+    cx.editor.set_status(format!("Set bookmark {full}"));
+    Ok(())
+}
+
+/// `projectile-bookmark-jump` (`C-c p B j`).
+pub(crate) fn bookmark_jump(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(name) = args.first() else {
+        anyhow::bail!("projectile-bookmark-jump: needs a bookmark name");
+    };
+    let full = project_bookmark_name(&project_root(), name);
+    let Some((_, file, line, column)) = crate::emacs_bookmark::list()
+        .into_iter()
+        .find(|(bookmark, ..)| *bookmark == full)
+    else {
+        anyhow::bail!("projectile-bookmark-jump: no bookmark named {full}");
+    };
+    cx.editor
+        .open(&file, zmax_view::editor::Action::Replace)
+        .map_err(|e| anyhow::anyhow!("projectile-bookmark-jump: {e}"))?;
+    let (view, doc) = zmax_view::current!(cx.editor);
+    let text = doc.text();
+    let line = line.min(text.len_lines().saturating_sub(1));
+    let pos = text.line_to_char(line) + column.unwrap_or(0);
+    let pos = pos.min(text.len_chars());
+    doc.set_selection(view.id, zmax_core::Selection::point(pos));
+    Ok(())
+}
+
+/// `projectile-bookmark-delete` (`C-c p B d`).
+pub(crate) fn bookmark_delete(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(name) = args.first() else {
+        anyhow::bail!("projectile-bookmark-delete: needs a bookmark name");
+    };
+    let full = project_bookmark_name(&project_root(), name);
+    if crate::emacs_bookmark::delete(&full) {
+        cx.editor.set_status(format!("Deleted bookmark {full}"));
+        Ok(())
+    } else {
+        anyhow::bail!("projectile-bookmark-delete: no bookmark named {full}")
+    }
+}
+
+/// `projectile-switch-to-buffer` (`C-c p b`): "Switch to a project buffer."
+pub(crate) fn switch_to_buffer(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let ids = project_buffer_ids(cx.editor, &root);
+    if ids.is_empty() {
+        anyhow::bail!("projectile-switch-to-buffer: no buffers in this project");
+    }
+    match args.first() {
+        Some(name) => {
+            let name = name.to_string();
+            let target = ids.iter().copied().find(|id| {
+                cx.editor
+                    .documents
+                    .get(id)
+                    .is_some_and(|doc| doc.display_name().contains(&name))
+            });
+            match target {
+                Some(id) => {
+                    cx.editor.switch(id, zmax_view::editor::Action::Replace);
+                    Ok(())
+                }
+                None => anyhow::bail!("projectile-switch-to-buffer: no buffer matching {name}"),
+            }
+        }
+        // With no name this is the picker projectile's completing read is.
+        None => {
+            let paths: Vec<PathBuf> = ids
+                .iter()
+                .filter_map(|id| {
+                    cx.editor
+                        .documents
+                        .get(id)
+                        .and_then(|doc| doc.path().map(|p| p.to_path_buf()))
+                })
+                .collect();
+            crate::commands::pick_paths(cx, "project buffer", root, paths);
+            Ok(())
+        }
+    }
+}
+
+/// `projectile-project-buffers-other-buffer` (`C-c p ESC`): "Switch to the most
+/// recently selected buffer project buffer."
+pub(crate) fn project_buffers_other_buffer(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let _ = args;
+    step_project_buffer(cx, false)
+}
+
+/// `projectile-dired` (`C-c p D`): "Open `dired' at the root of the project."
+pub(crate) fn dired(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut zmax_view::Editor, compositor: &mut crate::compositor::Compositor| {
+            match crate::ui::dired::Dired::new(root.clone()) {
+                Ok(dired) => compositor.push(Box::new(crate::ui::overlay::overlaid(dired))),
+                Err(e) => editor.set_error(format!("projectile-dired: {e}")),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `projectile-switch-project` (`C-c p p`): "Switch to a project we have visited
+/// before."
+pub(crate) fn switch_project(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match args.first() {
+        Some(dir) => {
+            crate::commands::project_switch_to(cx, expand_home(dir));
+            Ok(())
+        }
+        None => {
+            let projects = known_projects();
+            if projects.is_empty() {
+                anyhow::bail!("projectile-switch-project: no known projects yet");
+            }
+            let roots: Vec<PathBuf> = projects.into_iter().map(PathBuf::from).collect();
+            cx.editor.set_status(format!(
+                "Known projects: {} — :projectile-switch-project <root>",
+                roots
+                    .iter()
+                    .map(|p| project_name(p))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+            Ok(())
+        }
+    }
+}
+
+/// `projectile-toggle-between-implementation-and-test` (`C-c p t`).
+pub(crate) fn toggle_implementation_and_test(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let here = zmax_view::doc!(cx.editor)
+        .path()
+        .map(|p| p.to_path_buf())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "projectile-toggle-between-implementation-and-test: the buffer is not visiting a file"
+            )
+        })?;
+    let root = project_root();
+    let target = related_counterpart(&root, &here)
+        .ok_or_else(|| anyhow::anyhow!("No matching file found"))?;
+    cx.editor
+        .open(&target, zmax_view::editor::Action::Replace)
+        .map_err(|e| anyhow::anyhow!("projectile-toggle-between-implementation-and-test: {e}"))?;
+    Ok(())
+}
+
+/// The file on the other side of the implementation/test pair: the test for a
+/// source file, the source for a test. Names are matched with the project type's
+/// own `:test-prefix` / `:test-suffix` where it registers them, which is how
+/// projectile pairs the two.
+pub(crate) fn related_counterpart(root: &Path, file: &Path) -> Option<PathBuf> {
+    let name = file.file_name()?.to_str()?;
+    let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("");
+    let stem = file.file_stem()?.to_str()?;
+    let kind = project_type_of(root);
+    let prefix = kind.and_then(|k| k.test_prefix);
+    let suffix = kind.and_then(|k| k.test_suffix);
+
+    // The stems that would name the counterpart, in projectile's own shapes.
+    let mut wanted: Vec<String> = Vec::new();
+    if is_test_file(root, file) {
+        if let Some(prefix) = prefix {
+            if let Some(rest) = stem.strip_prefix(prefix) {
+                wanted.push(rest.to_string());
+            }
+        }
+        if let Some(suffix) = suffix {
+            if let Some(rest) = stem.strip_suffix(suffix) {
+                wanted.push(rest.to_string());
+            }
+            // `.test`-style suffixes sit in the name, not the stem.
+            if let Some(rest) = name.strip_suffix(&format!("{suffix}.{ext}")) {
+                wanted.push(rest.trim_end_matches('.').to_string());
+            }
+        }
+        for fallback in ["_test", "_spec", "Test", "Spec"] {
+            if let Some(rest) = stem.strip_suffix(fallback) {
+                wanted.push(rest.to_string());
+            }
+        }
+        if let Some(rest) = stem.strip_prefix("test_") {
+            wanted.push(rest.to_string());
+        }
+    } else {
+        if let Some(prefix) = prefix {
+            wanted.push(format!("{prefix}{stem}"));
+        }
+        if let Some(suffix) = suffix {
+            wanted.push(format!("{stem}{suffix}"));
+        }
+        for fallback in ["_test", "_spec", "Test", "Spec"] {
+            wanted.push(format!("{stem}{fallback}"));
+        }
+        wanted.push(format!("test_{stem}"));
+    }
+    wanted.retain(|w| !w.is_empty());
+
+    cached_project_files(root).into_iter().find(|candidate| {
+        if candidate == file {
+            return false;
+        }
+        let Some(candidate_stem) = candidate.file_stem().and_then(|s| s.to_str()) else {
+            return false;
+        };
+        let same_extension = candidate.extension().and_then(|e| e.to_str()).unwrap_or("") == ext;
+        same_extension
+            && wanted.iter().any(|want| candidate_stem == want)
+            && is_test_file(root, candidate) != is_test_file(root, file)
+    })
+}
+
+// ── Display variants (`C-c p 4 …` / `C-c p 5 …`) ────────────────────────────
+//
+// Projectile's own words: "These are Projectile's take on the Emacs 28
+// `other-window-prefix' and `other-frame-prefix' commands (C-x 4 4 and C-x 5 5):
+// they arrange for the buffer displayed by the *next* command to go to another
+// window or frame". zmax has that same override — `Editor::pending_display`,
+// which the next plain display consumes — so each variant is its base command
+// with the override armed.
+
+/// `projectile-other-window-command` (`C-c p 4 4`): the next command's buffer
+/// goes to another window.
+pub(crate) fn other_window_command(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.pending_display = Some(zmax_view::editor::DisplayTarget::Window);
+    cx.editor
+        .set_status("The next buffer will be displayed in another window");
+    Ok(())
+}
+
+/// `projectile-other-frame-command` (`C-c p 5 5`).
+pub(crate) fn other_frame_command(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.pending_display = Some(zmax_view::editor::DisplayTarget::Frame);
+    cx.editor
+        .set_status("The next buffer will be displayed in another frame");
+    Ok(())
+}
+
+/// Define a `-other-window` / `-other-frame` twin of a command: arm the display
+/// override, then run the base command.
+macro_rules! display_variant {
+    ($name:ident, $base:path, $target:ident, $doc:expr) => {
+        #[doc = $doc]
+        pub(crate) fn $name(
+            cx: &mut compositor::Context,
+            args: zmax_core::command_line::Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            cx.editor.pending_display =
+                Some(zmax_view::editor::DisplayTarget::$target);
+            let result = $base(cx, args, event);
+            if result.is_err() {
+                // Nothing was displayed, so the override must not linger for
+                // whatever the user does next.
+                cx.editor.pending_display = None;
+            }
+            result
+        }
+    };
+}
+
+display_variant!(
+    find_file_other_window,
+    find_file,
+    Window,
+    "`projectile-find-file-other-window` (`C-c p 4 f`)."
+);
+display_variant!(
+    find_file_other_frame,
+    find_file,
+    Frame,
+    "`projectile-find-file-other-frame` (`C-c p 5 f`)."
+);
+display_variant!(
+    find_dir_other_window,
+    find_dir,
+    Window,
+    "`projectile-find-dir-other-window` (`C-c p 4 d`)."
+);
+display_variant!(
+    find_dir_other_frame,
+    find_dir,
+    Frame,
+    "`projectile-find-dir-other-frame` (`C-c p 5 d`)."
+);
+display_variant!(
+    find_other_file_other_window,
+    find_other_file,
+    Window,
+    "`projectile-find-other-file-other-window` (`C-c p 4 a`)."
+);
+display_variant!(
+    find_other_file_other_frame,
+    find_other_file,
+    Frame,
+    "`projectile-find-other-file-other-frame` (`C-c p 5 a`)."
+);
+display_variant!(
+    switch_to_buffer_other_window,
+    switch_to_buffer,
+    Window,
+    "`projectile-switch-to-buffer-other-window` (`C-c p 4 b`)."
+);
+display_variant!(
+    switch_to_buffer_other_frame,
+    switch_to_buffer,
+    Frame,
+    "`projectile-switch-to-buffer-other-frame` (`C-c p 5 b`)."
+);
+display_variant!(
+    dired_other_window,
+    dired,
+    Window,
+    "`projectile-dired-other-window` (`C-c p 4 D`)."
+);
+display_variant!(
+    dired_other_frame,
+    dired,
+    Frame,
+    "`projectile-dired-other-frame` (`C-c p 5 D`)."
+);
+display_variant!(
+    switch_project_other_window,
+    switch_project,
+    Window,
+    "`projectile-switch-project-other-window` (`C-c p 4 p`)."
+);
+display_variant!(
+    switch_project_other_frame,
+    switch_project,
+    Frame,
+    "`projectile-switch-project-other-frame` (`C-c p 5 p`)."
+);
+display_variant!(
+    find_implementation_or_test_other_window,
+    toggle_implementation_and_test,
+    Window,
+    "`projectile-find-implementation-or-test-other-window` (`C-c p 4 t`)."
+);
+display_variant!(
+    find_implementation_or_test_other_frame,
+    toggle_implementation_and_test,
+    Frame,
+    "`projectile-find-implementation-or-test-other-frame` (`C-c p 5 t`)."
+);
+display_variant!(
+    run_vterm_other_window,
+    run_vterm,
+    Window,
+    "`projectile-run-vterm-other-window` (`C-c p x 4 v`)."
+);
+display_variant!(
+    run_eat_other_window,
+    run_eat,
+    Window,
+    "`projectile-run-eat-other-window` (`C-c p x 4 x`)."
+);
+display_variant!(
+    run_ghostel_other_window,
+    run_ghostel,
+    Window,
+    "`projectile-run-ghostel-other-window` (`C-c p x 4 G`)."
+);
 
 #[cfg(test)]
 mod tests {

@@ -2886,27 +2886,6 @@ const PROJECTILE_TEST_TYPES: &[(&str, &[&str], &str, &str)] = &[
 
 
 
-/// `:projectile-invalidate-cache` — projectile `projectile-invalidate-cache`
-/// (spacemacs `SPC p I`): drop the current project's cached file list so the next
-/// project file operation re-scans the tree. zmax's file picker walks the project
-/// fresh on every open (it keeps no `projectile-projects-cache`), so there is no
-/// persistent file listing to purge — the re-scan projectile forces already
-/// happens unconditionally here. Report it the way projectile does.
-fn ex_projectile_invalidate_cache(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
-    if event != PromptEvent::Validate {
-        return Ok(());
-    }
-    let root = zmax_loader::find_workspace().0;
-    cx.editor.set_status(format!(
-        "Invalidated Projectile cache for {}.",
-        root.display()
-    ));
-    Ok(())
-}
 
 /// The dotted namespace/class a JVM- or Lisp-style runner names a file by:
 /// the path under the project root with its source-root prefix and extension
@@ -14357,7 +14336,7 @@ pub(crate) fn spawn_into_run_console(cx: &mut compositor::Context, cmd: String) 
 
 /// `:grep <pattern>` — search the project and stream jumpable results into the
 /// Run console.
-fn grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+pub(crate) fn grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -23033,7 +23012,7 @@ fn rename_word(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
 
 /// `:todos` — scan the whole project for TODO/FIXME-style markers, jumpable in
 /// the Run console (the Todo tab only scans the current buffer).
-fn project_todos(
+pub(crate) fn project_todos(
     cx: &mut compositor::Context,
     _args: Args,
     event: PromptEvent,
@@ -52064,6 +52043,677 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "projectile-replace",
+        aliases: &[],
+        doc: "Replace a literal string across the project's files (projectile-replace, C-c p r).",
+        fun: crate::commands::projectile::replace,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-replace-regexp",
+        aliases: &[],
+        doc: "Replace a regexp across the project's files (projectile-replace-regexp).",
+        fun: crate::commands::projectile::replace_regexp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-replace-undo",
+        aliases: &[],
+        doc: "Revert the last project-wide replace (projectile-replace-undo, C-c p u).",
+        fun: crate::commands::projectile::replace_undo,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-search",
+        aliases: &[],
+        doc: "Search the project (projectile-search, C-c p s s).",
+        fun: crate::commands::projectile::search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-grep",
+        aliases: &[],
+        doc: "Search the project, the grep backend's name for it (projectile-grep, C-c p s g).",
+        fun: crate::commands::projectile::grep,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-ag",
+        aliases: &[],
+        doc: "Search the project, the ag backend's name for it (projectile-ag, C-c p s a).",
+        fun: crate::commands::projectile::ag,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-ripgrep",
+        aliases: &[],
+        doc: "Search the project, the ripgrep backend's name for it (projectile-ripgrep, C-c p s r).",
+        fun: crate::commands::projectile::ripgrep,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-references",
+        aliases: &[],
+        doc: "Find textual references to a symbol across the project (projectile-find-references, C-c p ?).",
+        fun: crate::commands::projectile::find_references,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-multi-occur",
+        aliases: &[],
+        doc: "List every matching line of the project's open buffers (projectile-multi-occur, C-c p o).",
+        fun: crate::commands::projectile::multi_occur,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-todos",
+        aliases: &[],
+        doc: "Collect the project's TODO-style annotations (projectile-todos, C-c p s t).",
+        fun: crate::commands::projectile::todos,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run",
+        aliases: &[],
+        doc: "Open a terminal in the project root (projectile-run, C-c p x r).",
+        fun: crate::commands::projectile::run,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-shell",
+        aliases: &[],
+        doc: "Open a shell in the project root (projectile-run-shell, C-c p x s).",
+        fun: crate::commands::projectile::run_shell,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-term",
+        aliases: &[],
+        doc: "Open a terminal in the project root (projectile-run-term, C-c p x t).",
+        fun: crate::commands::projectile::run_term,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-vterm",
+        aliases: &[],
+        doc: "Open a terminal in the project root (projectile-run-vterm, C-c p x v).",
+        fun: crate::commands::projectile::run_vterm,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-eat",
+        aliases: &[],
+        doc: "Open a terminal in the project root (projectile-run-eat, C-c p x x).",
+        fun: crate::commands::projectile::run_eat,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-ghostel",
+        aliases: &[],
+        doc: "Open a terminal in the project root (projectile-run-ghostel, C-c p x G).",
+        fun: crate::commands::projectile::run_ghostel,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-eshell",
+        aliases: &[],
+        doc: "Open the shell in the project root (projectile-run-eshell, C-c p x e).",
+        fun: crate::commands::projectile::run_eshell,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-ielm",
+        aliases: &[],
+        doc: "Open the elisp REPL for this project (projectile-run-ielm, C-c p x i).",
+        fun: crate::commands::projectile::run_ielm,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-gdb",
+        aliases: &[],
+        doc: "Run gdb in the project root (projectile-run-gdb, C-c p x g).",
+        fun: crate::commands::projectile::run_gdb,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-command-in-root",
+        aliases: &[],
+        doc: "Run a zmax command with the project root as the working directory (projectile-run-command-in-root).",
+        fun: crate::commands::projectile::run_command_in_root,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-async-shell-command-in-root",
+        aliases: &[],
+        doc: "Run a shell command in the project root without blocking (projectile-run-async-shell-command-in-root, C-c p &).",
+        fun: crate::commands::projectile::run_async_shell_command_in_root,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-invalidate-cache-all",
+        aliases: &[],
+        doc: "Invalidate every project's file cache (projectile-invalidate-cache-all).",
+        fun: crate::commands::projectile::invalidate_cache_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-discard-root-cache",
+        aliases: &[],
+        doc: "Forget the cached project-root answers (projectile-discard-root-cache).",
+        fun: crate::commands::projectile::discard_root_cache,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-purge-file-from-cache",
+        aliases: &[],
+        doc: "Drop a file from this project's file cache (projectile-purge-file-from-cache).",
+        fun: crate::commands::projectile::purge_file_from_cache,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-purge-dir-from-cache",
+        aliases: &[],
+        doc: "Drop a directory's files from this project's cache (projectile-purge-dir-from-cache).",
+        fun: crate::commands::projectile::purge_dir_from_cache,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-cache-current-file",
+        aliases: &[],
+        doc: "Add the current file to this project's cache (projectile-cache-current-file, C-c p z).",
+        fun: crate::commands::projectile::cache_current_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-index-project-async",
+        aliases: &[],
+        doc: "Index a project's files into the cache in the background (projectile-index-project-async).",
+        fun: crate::commands::projectile::index_project_async,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-sibling-project",
+        aliases: &[],
+        doc: "Switch to a project beside this one (projectile-switch-sibling-project, C-c p n p).",
+        fun: crate::commands::projectile::switch_sibling_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-in-sibling-projects",
+        aliases: &[],
+        doc: "Jump to a file in this project or one beside it (projectile-find-file-in-sibling-projects, C-c p n f).",
+        fun: crate::commands::projectile::find_file_in_sibling_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-search-in-sibling-projects",
+        aliases: &[],
+        doc: "Search this project and the ones beside it (projectile-search-in-sibling-projects, C-c p n s).",
+        fun: crate::commands::projectile::search_in_sibling_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-to-buffer-in-sibling-projects",
+        aliases: &[],
+        doc: "Switch to a buffer of this project or one beside it (projectile-switch-to-buffer-in-sibling-projects, C-c p n b).",
+        fun: crate::commands::projectile::switch_to_buffer_in_sibling_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-multi-occur-in-sibling-projects",
+        aliases: &[],
+        doc: "List matching lines across the buffers of this project and the ones beside it (projectile-multi-occur-in-sibling-projects, C-c p n o).",
+        fun: crate::commands::projectile::multi_occur_in_sibling_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-todos-in-sibling-projects",
+        aliases: &[],
+        doc: "Collect TODO-style annotations across this project and the ones beside it (projectile-todos-in-sibling-projects, C-c p n t).",
+        fun: crate::commands::projectile::todos_in_sibling_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-worktree",
+        aliases: &[],
+        doc: "Switch to another checkout of this repository (projectile-switch-worktree, C-c p W).",
+        fun: crate::commands::projectile::switch_worktree,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-bookmark-set",
+        aliases: &[],
+        doc: "Set a bookmark scoped to this project (projectile-bookmark-set, C-c p B s).",
+        fun: crate::commands::projectile::bookmark_set,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-bookmark-jump",
+        aliases: &[],
+        doc: "Jump to a bookmark of this project (projectile-bookmark-jump, C-c p B j).",
+        fun: crate::commands::projectile::bookmark_jump,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-bookmark-delete",
+        aliases: &[],
+        doc: "Delete a bookmark of this project (projectile-bookmark-delete, C-c p B d).",
+        fun: crate::commands::projectile::bookmark_delete,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-to-buffer",
+        aliases: &[],
+        doc: "Switch to a buffer of this project (projectile-switch-to-buffer, C-c p b).",
+        fun: crate::commands::projectile::switch_to_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-project-buffers-other-buffer",
+        aliases: &[],
+        doc: "Switch to the previously selected project buffer (projectile-project-buffers-other-buffer, C-c p ESC).",
+        fun: crate::commands::projectile::project_buffers_other_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dired",
+        aliases: &[],
+        doc: "Open Dired at the project root (projectile-dired, C-c p D).",
+        fun: crate::commands::projectile::dired,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-project",
+        aliases: &[],
+        doc: "Switch to a known project (projectile-switch-project, C-c p p).",
+        fun: crate::commands::projectile::switch_project,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-toggle-between-implementation-and-test",
+        aliases: &[],
+        doc: "Switch between a file and its test (projectile-toggle-between-implementation-and-test, C-c p t).",
+        fun: crate::commands::projectile::toggle_implementation_and_test,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-other-window-command",
+        aliases: &[],
+        doc: "Display the next command's buffer in another window (projectile-other-window-command, C-c p 4 4).",
+        fun: crate::commands::projectile::other_window_command,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-other-frame-command",
+        aliases: &[],
+        doc: "Display the next command's buffer in another frame (projectile-other-frame-command, C-c p 5 5).",
+        fun: crate::commands::projectile::other_frame_command,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-other-window",
+        aliases: &[],
+        doc: "Jump to a project file in another window (projectile-find-file-other-window, C-c p 4 f).",
+        fun: crate::commands::projectile::find_file_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-other-frame",
+        aliases: &[],
+        doc: "Jump to a project file in another frame (projectile-find-file-other-frame, C-c p 5 f).",
+        fun: crate::commands::projectile::find_file_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-dir-other-window",
+        aliases: &[],
+        doc: "Jump to a project directory in another window (projectile-find-dir-other-window, C-c p 4 d).",
+        fun: crate::commands::projectile::find_dir_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-dir-other-frame",
+        aliases: &[],
+        doc: "Jump to a project directory in another frame (projectile-find-dir-other-frame, C-c p 5 d).",
+        fun: crate::commands::projectile::find_dir_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-other-file-other-window",
+        aliases: &[],
+        doc: "Switch to the same-named file in another window (projectile-find-other-file-other-window, C-c p 4 a).",
+        fun: crate::commands::projectile::find_other_file_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-other-file-other-frame",
+        aliases: &[],
+        doc: "Switch to the same-named file in another frame (projectile-find-other-file-other-frame, C-c p 5 a).",
+        fun: crate::commands::projectile::find_other_file_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-to-buffer-other-window",
+        aliases: &[],
+        doc: "Switch to a project buffer in another window (projectile-switch-to-buffer-other-window, C-c p 4 b).",
+        fun: crate::commands::projectile::switch_to_buffer_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-to-buffer-other-frame",
+        aliases: &[],
+        doc: "Switch to a project buffer in another frame (projectile-switch-to-buffer-other-frame, C-c p 5 b).",
+        fun: crate::commands::projectile::switch_to_buffer_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dired-other-window",
+        aliases: &[],
+        doc: "Open Dired at the project root in another window (projectile-dired-other-window, C-c p 4 D).",
+        fun: crate::commands::projectile::dired_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dired-other-frame",
+        aliases: &[],
+        doc: "Open Dired at the project root in another frame (projectile-dired-other-frame, C-c p 5 D).",
+        fun: crate::commands::projectile::dired_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-project-other-window",
+        aliases: &[],
+        doc: "Switch to a known project in another window (projectile-switch-project-other-window, C-c p 4 p).",
+        fun: crate::commands::projectile::switch_project_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-switch-project-other-frame",
+        aliases: &[],
+        doc: "Switch to a known project in another frame (projectile-switch-project-other-frame, C-c p 5 p).",
+        fun: crate::commands::projectile::switch_project_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-implementation-or-test-other-window",
+        aliases: &[],
+        doc: "Open the file's test (or implementation) in another window (projectile-find-implementation-or-test-other-window, C-c p 4 t).",
+        fun: crate::commands::projectile::find_implementation_or_test_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-implementation-or-test-other-frame",
+        aliases: &[],
+        doc: "Open the file's test (or implementation) in another frame (projectile-find-implementation-or-test-other-frame, C-c p 5 t).",
+        fun: crate::commands::projectile::find_implementation_or_test_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-vterm-other-window",
+        aliases: &[],
+        doc: "Open a project terminal in another window (projectile-run-vterm-other-window, C-c p x 4 v).",
+        fun: crate::commands::projectile::run_vterm_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-eat-other-window",
+        aliases: &[],
+        doc: "Open a project terminal in another window (projectile-run-eat-other-window, C-c p x 4 x).",
+        fun: crate::commands::projectile::run_eat_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-ghostel-other-window",
+        aliases: &[],
+        doc: "Open a project terminal in another window (projectile-run-ghostel-other-window, C-c p x 4 G).",
+        fun: crate::commands::projectile::run_ghostel_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "projectile-switch-open-project",
         aliases: &[],
         doc: "Switch to a project that currently has buffers open (projectile-switch-open-project, C-c p q).",
@@ -52198,8 +52848,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "projectile-invalidate-cache",
         aliases: &[],
-        doc: "Invalidate the project file cache so the next find-file re-scans (projectile-invalidate-cache, spacemacs SPC p I).",
-        fun: ex_projectile_invalidate_cache,
+        doc: "Invalidate the project file cache so the next find-file re-scans (projectile-invalidate-cache, C-c p i, spacemacs SPC p I).",
+        fun: crate::commands::projectile::invalidate_cache,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
@@ -68032,7 +68682,7 @@ fn parse_command_args<'a>(
 /// buffer that the command just stopped showing (`:edit`, `:bnext`, `:buffer`, a
 /// window close) is dropped here — which is the point in vim where it happens
 /// too ("when the buffer is no longer displayed in a window").
-fn execute_command_line(
+pub(crate) fn execute_command_line(
     cx: &mut compositor::Context,
     input: &str,
     event: PromptEvent,

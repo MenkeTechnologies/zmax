@@ -12929,7 +12929,7 @@ fn extend_search_prev_vim(cx: &mut Context) {
 /// ≤1-char range over a word char grows to the whole surrounding word (vim's
 /// `*`/`#`/`SPC *` semantics); anything longer, or a cursor on a non-word char,
 /// is returned unchanged.
-fn expand_bare_cursor_to_word(text: RopeSlice, from: usize, to: usize) -> (usize, usize) {
+pub(crate) fn expand_bare_cursor_to_word(text: RopeSlice, from: usize, to: usize) -> (usize, usize) {
     if to.saturating_sub(from) > 1 || from >= text.len_chars() || !char_is_word(text.char(from)) {
         return (from, to);
     }
