@@ -22518,12 +22518,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_4_i",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-h 4 i",
    "static:info_search_other_window"
   ],
-  "note": "The old note ('same as C-h i, and in the current window') is stale on both counts. info_search_other_window (zmax-term/src/commands.rs:49387) is info-other-window: with no prefix it goes straight to the Info directory node `(dir)Top` (emacs reads a file name only under a prefix argument, info.el:780-787) and with a prefix it prompts 'Info file name: '; either way info_node_in_other_window renders the node first and only then calls display_other_window (commands.rs:17490), which focuses an existing non-focused view and splits only when this is the sole window \u2014 so a node that does not exist leaves the layout untouched. Still partial: the target is a plain scratch buffer, not an Info-mode buffer, so n/p/u/l navigation, Info history and cross-reference following do not exist, and each invocation re-renders rather than re-displaying an existing *info* buffer (info.el:821-824)."
+  "note": "`C-h 4 i` is info_search_other_window, emacs's `info-other-window`: with no prefix it goes straight to the Info directory node `(dir)Top` (emacs reads a file name only under a prefix argument, info.el:780-787) and with a prefix it prompts 'Info file name: '; either way display_other_window focuses an existing non-focused view and splits only when this is the sole window. The node now lands in an Info-*mode* buffer rather than a plain scratch dump, which was the recorded gap: info.el's reading keys are live in it, keyed on the major mode in keymap/major_mode.rs - `n`/`p`/`u` walk the node's own Next/Prev/Up pointers (read off the `File: \u2026, Node: \u2026` header the way `Info-extract-pointer` reads them), `l` walks the history `Info-history-back` keeps per buffer, `d` opens the directory of manuals, `t` this manual's Top node, and `RET` follows the menu entry or cross-reference at point. `SPC h i` and the apropos picker open the same kind of buffer. Recorded divergence: nodes are rendered by shelling out to `info`, so each move re-renders rather than re-displaying a cached *info* buffer. Pinned by `commands::info_mode_tests::*` and `tests/test/emacs_keys.rs::c_h_4_i_opens_an_info_mode_buffer`."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_4_s",
@@ -25100,11 +25100,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c_h_4_i",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-h 4 i"
   ],
-  "note": "C-h 4 i is emacs `info-other-window` (info.el:780-787), whose interactive spec prompts for a file name only under a non-numeric prefix arg; with no prefix it opens the Info directory Top node in another window, reusing an existing window (display-buffer with `inhibit-same-window`, info.el:826-830) and splitting only when the frame has one window \u2014 all three confirmed by driving `emacs -Q -nw` in a pty. zmax's `info_search_other_window` (commands.rs:38822) is now written to match: it renders `(dir)Top` via `render_info_node` (commands.rs:15109, shells `info -o - \"(dir)Top\"`), then `display_other_window` (commands.rs:15125) focuses an existing non-focused view \u2014 splitting only when this is the sole window \u2014 and `show_text_in_scratch` replaces that view's buffer; a render failure sets an error and leaves the layout alone, and there is no picker to abort. NOT YET VERIFIED BEHAVIORALLY: the working tree does not compile (unrelated `shell_impl_async` and `ui/merge.rs` errors), and the last built binary predates this change and still shows the old `info --apropos` picker seeded at point, so the three divergences are closed in source only. Remaining divergences regardless: the target is a plain scratch buffer, not an Info-mode `*info*` buffer (no n/p/u/l navigation, no Info history, and each invocation re-renders rather than re-displaying an existing buffer as info.el:821-824 does); the prefix-argument forms (`read-file-name \"Info file name: \"` and the numeric `*info*<N>` buffer) are unimplemented; and the key is bound only in the spacemacs preset (spacemacs.rs:314) \u2014 the emacs preset binds C-h to delete_char_backward (emacs.rs:130) and has no help prefix, so C-h 4 i is unreachable there."
+  "note": "`C-h 4 i` is info_search_other_window, emacs's `info-other-window`: with no prefix it goes straight to the Info directory node `(dir)Top` (emacs reads a file name only under a prefix argument, info.el:780-787) and with a prefix it prompts 'Info file name: '; either way display_other_window focuses an existing non-focused view and splits only when this is the sole window. The node now lands in an Info-*mode* buffer rather than a plain scratch dump, which was the recorded gap: info.el's reading keys are live in it, keyed on the major mode in keymap/major_mode.rs - `n`/`p`/`u` walk the node's own Next/Prev/Up pointers (read off the `File: \u2026, Node: \u2026` header the way `Info-extract-pointer` reads them), `l` walks the history `Info-history-back` keeps per buffer, `d` opens the directory of manuals, `t` this manual's Top node, and `RET` follows the menu entry or cross-reference at point. `SPC h i` and the apropos picker open the same kind of buffer. Recorded divergence: nodes are rendered by shelling out to `info`, so each move re-renders rather than re-displaying a cached *info* buffer. Pinned by `commands::info_mode_tests::*` and `tests/test/emacs_keys.rs::c_h_4_i_opens_an_info_mode_buffer`."
  },
  {
   "spec_id": "emacs.keybinding.c_h_a",

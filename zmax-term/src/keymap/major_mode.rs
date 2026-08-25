@@ -310,6 +310,18 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // put on the buffer they open, and in both Emacs binds `C-c C-c` to "install
     // what the buffer now says" (Editing Abbrevs, Tab Stops).
     ("edit-abbrevs", "nsi", "C-c C-c", "Abbrevs", "define_abbrevs"),               // edit-abbrevs-redefine
+    // Info (Info-mode), the buffer an info node is rendered into. The reading
+    // keys of info.el: n/p/u walk the Next/Prev/Up pointers, l the history, d the
+    // directory of manuals, t this manual's Top node, and RET follows the menu
+    // item or cross-reference at point.
+    ("info", "ns", "n", "Info", "info_next"),
+    ("info", "ns", "p", "Info", "info_prev"),
+    ("info", "ns", "u", "Info", "info_up"),
+    ("info", "ns", "l", "Info", "info_history_back"),
+    ("info", "ns", "d", "Info", "info_directory"),
+    ("info", "ns", "t", "Info", "info_top_node"),
+    ("info", "ns", "ret", "Info", "info_follow_nearest_node"),
+
     // Edit Macro (edmacro-mode), the buffer `edit-kbd-macro` opens. edmacro.el's
     // whole map: "C-c C-c" edmacro-finish-edit, "C-c C-q" edmacro-insert-key,
     // "C-c C-r" edmacro-set-macro-to-region-lines.

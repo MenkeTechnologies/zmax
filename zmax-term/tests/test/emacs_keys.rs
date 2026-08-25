@@ -339,3 +339,63 @@ async fn c_x_c_e_reevaluates_defcustom_and_defface() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// `C-h 4 i` (`info-other-window`) opens an Info-*mode* buffer, not a plain
+/// scratch dump of the node: info.el's reading keys are live in it — `n`/`p`/`u`
+/// walk the node's Next/Prev/Up pointers, `l` the history, `RET` follows the
+/// menu item at point. Skipped where the `info` program or its directory node is
+/// not installed, which is what the reader shells out to.
+#[tokio::test(flavor = "multi_thread")]
+async fn c_h_4_i_opens_an_info_mode_buffer() -> anyhow::Result<()> {
+    let has_info = std::process::Command::new("info")
+        .args(["-o", "-", "(dir)Top"])
+        .output()
+        .map(|out| out.status.success() && !out.stdout.is_empty())
+        .unwrap_or(false);
+    if !has_info {
+        eprintln!("skipping: no `info` directory node on this machine");
+        return Ok(());
+    }
+    let mut app = preset_app("spacemacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-h>4i"),
+        Some(&|app: &zmax_term::application::Application| {
+            let (_v, doc) = zmax_view::current_ref!(app.editor);
+            assert_eq!(
+                doc.major_mode(),
+                Some("info"),
+                "the node lands in an Info-mode buffer"
+            );
+            assert!(
+                doc.text().to_string().starts_with("File:"),
+                "showing an info node: {:?}",
+                doc.text().to_string().chars().take(40).collect::<String>()
+            );
+        }),
+        false,
+    )
+    .await?;
+    // `n` on the directory node has no Next pointer, and Info says so rather than
+    // doing nothing — the buffer is navigable, which a scratch dump was not.
+    test_key_sequence(
+        &mut app,
+        Some("n"),
+        Some(&|app: &zmax_term::application::Application| {
+            let status = app
+                .editor
+                .get_status()
+                .map(|(msg, _)| msg.to_string())
+                .unwrap_or_default();
+            assert!(
+                status.starts_with("info ") || status.contains("\"Next\" pointer"),
+                "n either moved or reported that there is nowhere to move: {status:?}"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

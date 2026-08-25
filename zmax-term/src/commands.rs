@@ -688,6 +688,13 @@ impl MappableCommand {
         edit_project_config, "Edit the project-local .zmax/config.toml (SPC p e)",
         man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
         info_search, "Search GNU info manuals (apropos) and view the selected node (SPC h i)",
+        info_next, "Info: the next node at this level (emacs Info-next, n)",
+        info_prev, "Info: the previous node at this level (emacs Info-prev, p)",
+        info_up, "Info: the node this one is a subnode of (emacs Info-up, u)",
+        info_history_back, "Info: back to the node visited before this one (emacs Info-history-back, l)",
+        info_directory, "Info: the top-level directory of manuals (emacs Info-directory, d)",
+        info_top_node, "Info: the Top node of this manual (emacs Info-top-node, t)",
+        info_follow_nearest_node, "Info: follow the menu item or cross-reference at point (emacs Info-follow-nearest-node, RET)",
         info_goto_emacs_key_command_node, "Go to the Emacs manual node for the command a key runs (emacs Info-goto-emacs-key-command-node, C-h K)",
         info_lookup_file, "Look the file name at point up in the Info file index (emacs info-lookup-file)",
         dash_at_point, "Look the symbol at point up in the Dash/Zeal offline docsets (spacemacs dash layer, SPC d d)",
@@ -18168,6 +18175,228 @@ fn render_info_node(node: &str) -> Option<String> {
         .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
 }
 
+/// Info-mode state: which node a buffer is showing and the nodes visited before
+/// it. Emacs keeps the same pair in `Info-current-node` / `Info-history`, which
+/// is what `l` (`Info-history-back`) walks.
+struct InfoState {
+    node: String,
+    history: Vec<String>,
+}
+
+thread_local! {
+    static INFO_BUFFERS: std::cell::RefCell<HashMap<DocumentId, InfoState>> =
+        std::cell::RefCell::new(HashMap::new());
+}
+
+/// The `File: bash.info,  Node: Top,  Next: …,  Prev: …,  Up: …` line every Info
+/// node starts with, as `(key, value)` pairs. Fields are separated by a comma and
+/// whitespace, which is how `info` writes them and how `Info-extract-pointer`
+/// reads them back.
+fn info_header(text: &str) -> Vec<(String, String)> {
+    let Some(first) = text.lines().next() else {
+        return Vec::new();
+    };
+    if !first.starts_with("File:") {
+        return Vec::new();
+    }
+    first
+        .split(',')
+        .filter_map(|field| {
+            let (key, value) = field.split_once(':')?;
+            Some((key.trim().to_string(), value.trim().to_string()))
+        })
+        .collect()
+}
+
+/// One header field of the node in `text`, by name (`Next`, `Prev`, `Up`, …).
+fn info_header_field(text: &str, name: &str) -> Option<String> {
+    info_header(text)
+        .into_iter()
+        .find(|(key, _)| key == name)
+        .map(|(_, value)| value)
+        .filter(|value| !value.is_empty())
+}
+
+/// Resolve a node reference against the file the current node came from:
+/// `Introduction` in `bash.info` is `(bash)Introduction`, while `(dir)` and
+/// `(emacs)Top` already name their file.
+fn info_qualify(text: &str, node: &str) -> String {
+    if node.starts_with('(') {
+        return node.to_string();
+    }
+    match info_header_field(text, "File") {
+        Some(file) => {
+            let file = file.trim_end_matches(".info");
+            format!("({file}){node}")
+        }
+        None => node.to_string(),
+    }
+}
+
+/// Render `node` into the current buffer as an Info-mode buffer, remembering
+/// where it came from so `l` can walk back. `record` is the node being left, if
+/// this is a move rather than the first display.
+fn info_display_node(editor: &mut Editor, node: &str, record: Option<String>) -> bool {
+    let Some(content) = render_info_node(node) else {
+        editor.set_error(format!("could not open info node {node}"));
+        return false;
+    };
+    let (view, doc) = current!(editor);
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(content.as_str().into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    doc.set_selection(view.id, Selection::point(0));
+    let id = doc.id();
+    doc.set_major_mode(Some("info"));
+    INFO_BUFFERS.with(|buffers| {
+        let mut buffers = buffers.borrow_mut();
+        let state = buffers.entry(id).or_insert_with(|| InfoState {
+            node: node.to_string(),
+            history: Vec::new(),
+        });
+        if let Some(from) = record {
+            state.history.push(from);
+        }
+        state.node = node.to_string();
+    });
+    editor.set_status(format!("info {node}"));
+    true
+}
+
+/// Open `node` in a fresh Info buffer (the first display, from `SPC h i` or
+/// `C-h i`), rather than moving an existing one.
+fn info_open_node(editor: &mut Editor, node: &str) {
+    show_text_in_scratch(editor, "");
+    info_display_node(editor, node, None);
+}
+
+/// The node the current buffer is showing, when it is an Info buffer.
+fn info_current_node(editor: &Editor) -> Option<String> {
+    let doc = doc!(editor);
+    if doc.major_mode() != Some("info") {
+        return None;
+    }
+    let id = doc.id();
+    INFO_BUFFERS.with(|buffers| buffers.borrow().get(&id).map(|state| state.node.clone()))
+}
+
+/// Follow the `Next` / `Prev` / `Up` pointer of the node on screen — emacs's
+/// `Info-next` (`n`), `Info-prev` (`p`) and `Info-up` (`u`).
+fn info_follow_pointer(cx: &mut Context, field: &str, command: &str) {
+    let Some(from) = info_current_node(cx.editor) else {
+        cx.editor
+            .set_error(format!("{command}: not in an Info buffer"));
+        return;
+    };
+    let text = doc!(cx.editor).text().to_string();
+    let Some(target) = info_header_field(&text, field) else {
+        cx.editor
+            .set_error(format!("No \"{field}\" pointer for this node"));
+        return;
+    };
+    let node = info_qualify(&text, &target);
+    info_display_node(cx.editor, &node, Some(from));
+}
+
+/// Emacs `Info-next` (`n`): the next node at this level.
+fn info_next(cx: &mut Context) {
+    info_follow_pointer(cx, "Next", "Info-next");
+}
+
+/// Emacs `Info-prev` (`p`): the previous node at this level.
+fn info_prev(cx: &mut Context) {
+    info_follow_pointer(cx, "Prev", "Info-prev");
+}
+
+/// Emacs `Info-up` (`u`): the node this one is a subnode of.
+fn info_up(cx: &mut Context) {
+    info_follow_pointer(cx, "Up", "Info-up");
+}
+
+/// Emacs `Info-history-back` (`l`): back to the node visited before this one.
+fn info_history_back(cx: &mut Context) {
+    let Some(_) = info_current_node(cx.editor) else {
+        cx.editor.set_error("Info-history-back: not in an Info buffer");
+        return;
+    };
+    let id = doc!(cx.editor).id();
+    let previous = INFO_BUFFERS.with(|buffers| {
+        buffers
+            .borrow_mut()
+            .get_mut(&id)
+            .and_then(|state| state.history.pop())
+    });
+    match previous {
+        Some(node) => {
+            info_display_node(cx.editor, &node, None);
+        }
+        None => cx.editor.set_error("This is the first Info node you looked at"),
+    }
+}
+
+/// Emacs `Info-directory` (`d`): the top-level directory of manuals.
+fn info_directory(cx: &mut Context) {
+    let from = info_current_node(cx.editor);
+    info_display_node(cx.editor, "(dir)Top", from);
+}
+
+/// Emacs `Info-top-node` (`t`): the `Top` node of the manual being read.
+fn info_top_node(cx: &mut Context) {
+    let Some(from) = info_current_node(cx.editor) else {
+        cx.editor.set_error("Info-top-node: not in an Info buffer");
+        return;
+    };
+    let text = doc!(cx.editor).text().to_string();
+    let node = info_qualify(&text, "Top");
+    info_display_node(cx.editor, &node, Some(from));
+}
+
+/// The Info node named by a menu entry (`* Name::`, `* Name: Target.`) or a
+/// cross-reference (`*Note Name::`) on `line`, if the cursor is on one.
+fn info_reference_on_line(line: &str) -> Option<String> {
+    let rest = line
+        .strip_prefix("* ")
+        .or_else(|| line.split("*Note ").nth(1))
+        .or_else(|| line.split("*note ").nth(1))?;
+    // `* Name::` and `*Note Name::` name the node directly; `* Name: Target.`
+    // names it after the colon.
+    if let Some((name, _)) = rest.split_once("::") {
+        return Some(name.trim().to_string());
+    }
+    let (_, target) = rest.split_once(": ")?;
+    let target = target.trim().trim_end_matches('.');
+    (!target.is_empty()).then(|| target.to_string())
+}
+
+/// Emacs `Info-follow-nearest-node` (`RET`): follow the menu entry or
+/// cross-reference the cursor is on.
+fn info_follow_nearest_node(cx: &mut Context) {
+    let Some(from) = info_current_node(cx.editor) else {
+        cx.editor
+            .set_error("Info-follow-nearest-node: not in an Info buffer");
+        return;
+    };
+    let (text, line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        (
+            text.to_string(),
+            text.line(text.char_to_line(cursor)).to_string(),
+        )
+    };
+    let Some(reference) = info_reference_on_line(line.trim_end()) else {
+        cx.editor
+            .set_error("Point is not on a menu item or cross-reference");
+        return;
+    };
+    let node = info_qualify(&text, &reference);
+    info_display_node(cx.editor, &node, Some(from));
+}
+
 /// Emacs `display-buffer` with `(inhibit-same-window . t)` — the action
 /// `info-other-window` passes (info.el:826-830). The fallback action reuses an
 /// existing window before it pops up a new one, so a new split is created only
@@ -18259,14 +18488,10 @@ fn info_search(cx: &mut Context) {
             0,
             [],
             (),
-            move |cx, item: &InfoEntry, _action| match render_info_node(&item.node) {
-                Some(content) => {
-                    show_text_in_scratch(cx.editor, &content);
-                    cx.editor.set_status(format!("info {}", item.node));
-                }
-                None => cx
-                    .editor
-                    .set_error(format!("could not open info node {}", item.node)),
+            move |cx, item: &InfoEntry, _action| {
+                // An Info-mode buffer: the node's own `n`/`p`/`u`/`l`/`RET`
+                // navigation is live from here, as it is in emacs.
+                info_open_node(cx.editor, &item.node);
             },
         )
         .with_dynamic_query(get_nodes, Some(275));
@@ -50943,14 +51168,11 @@ fn info_search_other_window(cx: &mut Context) {
 /// window is chosen by [`display_other_window`] *after* the node renders, so a
 /// node that does not exist leaves the layout untouched.
 fn info_node_in_other_window(editor: &mut Editor, node: &str) {
-    match render_info_node(node) {
-        Some(content) => {
-            display_other_window(editor);
-            show_text_in_scratch(editor, &content);
-            editor.set_status(format!("info {node}"));
-        }
-        None => editor.set_error(format!("could not open info node {node}")),
-    }
+    display_other_window(editor);
+    // An Info-mode buffer, not a plain scratch dump: `n`/`p`/`u` walk the node
+    // pointers, `l` the history and `RET` follows a menu item, as info.el binds
+    // them.
+    info_open_node(editor, node);
 }
 
 /// `xref-query-replace-in-results`: regex query-replace across the project.
@@ -75089,6 +75311,56 @@ fn open_dribble_file(cx: &mut Context) {
                 .set_error(format!("open-dribble-file: {}: {e}", path.display())),
         }
     });
+}
+
+#[cfg(test)]
+mod info_mode_tests {
+    use super::{info_header_field, info_qualify, info_reference_on_line};
+
+    const NODE: &str = "File: bash.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)\n\nBash Features\n";
+
+    /// The header line every Info node starts with is what `Info-extract-pointer`
+    /// reads the Next/Prev/Up targets out of.
+    #[test]
+    fn header_fields_come_off_the_first_line() {
+        assert_eq!(info_header_field(NODE, "File").as_deref(), Some("bash.info"));
+        assert_eq!(info_header_field(NODE, "Node").as_deref(), Some("Top"));
+        assert_eq!(
+            info_header_field(NODE, "Next").as_deref(),
+            Some("Introduction")
+        );
+        assert_eq!(info_header_field(NODE, "Up").as_deref(), Some("(dir)"));
+        assert_eq!(info_header_field("not an info node", "Next"), None);
+    }
+
+    /// A pointer names a node in the same file unless it names its own file, so
+    /// `Introduction` in `bash.info` is `(bash)Introduction` while `(dir)` and
+    /// `(emacs)Top` are already qualified.
+    #[test]
+    fn node_references_are_qualified_against_the_current_file() {
+        assert_eq!(info_qualify(NODE, "Introduction"), "(bash)Introduction");
+        assert_eq!(info_qualify(NODE, "(dir)"), "(dir)");
+        assert_eq!(info_qualify(NODE, "(emacs)Top"), "(emacs)Top");
+    }
+
+    /// `RET` follows whatever the cursor's line names: a menu entry, a menu entry
+    /// with a separate target, or a cross-reference.
+    #[test]
+    fn menu_entries_and_cross_references_name_their_node() {
+        assert_eq!(
+            info_reference_on_line("* Introduction::           What is Bash?").as_deref(),
+            Some("Introduction")
+        );
+        assert_eq!(
+            info_reference_on_line("* Shell Builtins: Bourne Shell Builtins.").as_deref(),
+            Some("Bourne Shell Builtins")
+        );
+        assert_eq!(
+            info_reference_on_line("see *Note Basic Shell Features:: for more").as_deref(),
+            Some("Basic Shell Features")
+        );
+        assert_eq!(info_reference_on_line("ordinary paragraph text"), None);
+    }
 }
 
 #[cfg(test)]
