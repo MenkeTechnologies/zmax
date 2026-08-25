@@ -10994,7 +10994,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "ropey",
  "toml 1.1.2+spec-1.1.0",
@@ -11177,7 +11177,7 @@ checksum = "3be3d40e40a133f9c916ee3f9f4fa2d9d63435b5fbe1bfc6d9dae0aa0ada1513"
 
 [[package]]
 name = "zmax-core"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -11214,7 +11214,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-dap"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "anyhow",
  "futures-executor",
@@ -11234,7 +11234,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-dap-types"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "serde",
  "serde_json",
@@ -11242,7 +11242,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-event"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "anyhow",
  "foldhash 0.2.0",
@@ -11256,7 +11256,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-loader"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "anyhow",
  "cc",
@@ -11278,7 +11278,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-lsp"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -11312,15 +11312,15 @@ dependencies = [
 
 [[package]]
 name = "zmax-native"
-version = "0.4.63"
+version = "0.4.64"
 
 [[package]]
 name = "zmax-parsec"
-version = "0.4.63"
+version = "0.4.64"
 
 [[package]]
 name = "zmax-stdx"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "bitflags 2.13.0",
  "dunce",
@@ -11341,7 +11341,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-term"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "age",
  "anyhow",
@@ -11419,7 +11419,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-tui"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "arrayvec",
  "bitflags 2.13.0",
@@ -11436,7 +11436,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-vcs"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -11452,7 +11452,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-view"
-version = "0.4.63"
+version = "0.4.64"
 dependencies = [
  "anyhow",
  "arc-swap",
