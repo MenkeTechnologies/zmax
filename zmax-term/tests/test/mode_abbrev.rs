@@ -40,3 +40,78 @@ async fn define_mode_abbrev_populates_the_mode_table() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// Emacs `only-global-abbrevs` (abbrev.el's defcustom, nil by default): when it
+/// is non-nil the mode-abbrev commands define into the *global* table instead of
+/// the buffer's mode-local one. The routing was written but never observed; this
+/// drives `C-x a l` with the variable set and reads the store back.
+#[tokio::test(flavor = "multi_thread")]
+async fn only_global_abbrevs_reroutes_add_mode_abbrev_to_the_global_table() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs")
+        .with_input_text("ogaexpansion#[ |]#\n")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":elisp (setq only-global-abbrevs t)<ret>"),
+        None,
+        false,
+    )
+    .await?;
+    // `C-x a l` takes the word before point as the expansion and prompts for the
+    // name; with only-global-abbrevs set it defines globally.
+    test_key_sequence(&mut app, Some("<C-x>al"), None, false).await?;
+    test_key_sequence(&mut app, Some("oganame<ret>"), None, false).await?;
+
+    let store = std::fs::read_to_string(
+        std::env::var("ZMAX_ABBREV_FILE").expect("the harness points the store at a temp file"),
+    )
+    .unwrap_or_default();
+    assert!(
+        store
+            .lines()
+            .any(|line| line == "oganame\togaexpansion"),
+        "the abbrev went into the global table: {store:?}"
+    );
+    assert!(
+        !store.lines().any(|line| line.ends_with("\toganame\togaexpansion")),
+        "and not into a mode table: {store:?}"
+    );
+    // Leave the variable as it was for the rest of the process.
+    test_key_sequence(
+        &mut app,
+        Some(":elisp (setq only-global-abbrevs nil)<ret>"),
+        None,
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Mode-local abbrev tables used to live only in memory, so a mode abbrev was
+/// lost on restart while a global one persisted. Emacs writes every table to
+/// `abbrev-file-name` and reads them all back, and the store keeps them the same
+/// way now: `mode\tname\texpansion` rows beside the global `name\texpansion`
+/// ones, in the one file.
+#[tokio::test(flavor = "multi_thread")]
+async fn mode_abbrevs_are_written_to_the_store() -> anyhow::Result<()> {
+    let mut app = preset_app("spacemacs").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":define-mode-abbrev persistzz persisted-expansion<ret>"),
+        None,
+        false,
+    )
+    .await?;
+    let store = std::fs::read_to_string(
+        std::env::var("ZMAX_ABBREV_FILE").expect("the harness points the store at a temp file"),
+    )
+    .unwrap_or_default();
+    assert!(
+        store
+            .lines()
+            .any(|line| line.ends_with("\tpersistzz\tpersisted-expansion")
+                && line.matches('\t').count() == 2),
+        "the mode table is on disk with its mode: {store:?}"
+    );
+    Ok(())
+}

@@ -25021,28 +25021,18 @@ fn abbrev_confirm<F>(cx: &mut compositor::Context, question: String, f: F)
 where
     F: FnOnce(&mut compositor::Context) + Send + 'static,
 {
-    // `Prompt` is not `Send`, so it is built inside the (main-thread) compositor
-    // callback; `f` is FnOnce, so it is taken out of the FnMut prompt callback.
-    let mut f = Some(f);
+    // The component is not `Send`, so it is built inside the (main-thread)
+    // compositor callback.
     let call: job::Callback = Callback::EditorCompositor(Box::new(
         move |_editor: &mut Editor, compositor: &mut Compositor| {
-            let prompt = crate::ui::prompt::Prompt::new(
-                question.into(),
-                None,
-                ui::completers::none,
-                move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
-                    if event != PromptEvent::Validate {
-                        return;
-                    }
-                    let yes = input.trim().eq_ignore_ascii_case("y")
-                        || input.trim().eq_ignore_ascii_case("yes");
-                    match (yes, f.take()) {
-                        (true, Some(f)) => f(cx),
-                        _ => cx.editor.set_status("abbrev unchanged"),
-                    }
-                },
-            );
-            compositor.push(Box::new(prompt));
+            // `y-or-n-p` reads a single keystroke — `y` commits, there is no
+            // `RET` after it. (`yes-or-no-p`, the spelled-out question, is the
+            // one that reads a line, and abbrev.el does not ask that here.)
+            compositor.push(Box::new(crate::ui::confirm::Confirm::new(
+                question,
+                "abbrev unchanged",
+                f,
+            )));
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
@@ -25296,11 +25286,80 @@ fn unexpand_span(
 /// of the inserted text, and record the expansion for `unexpand-abbrev`. `name`
 /// is the abbrev symbol and the exact text removed (`last-abbrev` /
 /// `last-abbrev-text` in emacs).
+/// Emacs `abbrev-all-caps` (nil by default): when an all-caps abbrev expands to
+/// several words, upcase the whole expansion rather than each word's initial.
+fn abbrev_all_caps() -> bool {
+    crate::commands::scripting::elisp_global_bool("abbrev-all-caps").unwrap_or(false)
+}
+
+/// Upcase the first letter of each word in `text`, leaving the rest as written —
+/// emacs `upcase-initials-region`.
+fn upcase_initials(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut in_word = false;
+    for c in text.chars() {
+        if c.is_alphanumeric() {
+            if in_word {
+                out.push(c);
+            } else {
+                out.extend(c.to_uppercase());
+            }
+            in_word = true;
+        } else {
+            out.push(c);
+            in_word = false;
+        }
+    }
+    out
+}
+
+/// `abbrev-insert`'s capitalisation adjustment (abbrev.el:861-882). The stored
+/// abbrev name is downcased, so when the text actually typed differs from it and
+/// holds an upper-case letter, the expansion is adjusted to match: an all-caps
+/// abbrev upcases each word's initial where the expansion is more than one word
+/// (and the whole expansion otherwise, or when `abbrev-all-caps` is set), while
+/// an abbrev with only some caps upcases just the first initial.
+///
+/// Verified against GNU Emacs 31.1 with `foo` -> `bar baz` and `qux` -> `quux`:
+/// `foo`/`fOO` -> `bar baz`, `Foo` -> `Bar baz`, `FOO` -> `Bar Baz`,
+/// `Qux` -> `Quux`, `QUX` -> `QUUX`.
+fn abbrev_adjust_case(name: &str, expansion: &str, all_caps: bool) -> String {
+    // `(when (and (not (equal name (symbol-name abbrev))) (string-match
+    // "[[:upper:]]" name))` — the stored symbol name is the downcased one.
+    if name == name.to_lowercase() || !name.chars().any(char::is_uppercase) {
+        return expansion.to_string();
+    }
+    if name.chars().any(char::is_lowercase) {
+        // Some caps: capitalise the first initial of the expansion.
+        return upcase_initials(expansion)
+            .chars()
+            .zip(expansion.chars())
+            .scan(false, |done, (upper, original)| {
+                Some(if !*done && original.is_alphanumeric() {
+                    *done = true;
+                    upper
+                } else {
+                    original
+                })
+            })
+            .collect();
+    }
+    // All caps.
+    let words = expansion.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty());
+    if !all_caps && words.count() > 1 {
+        upcase_initials(expansion)
+    } else {
+        expansion.to_uppercase()
+    }
+}
+
 fn abbrev_do_expand(editor: &mut Editor, start: usize, end: usize, name: &str, expansion: &str) {
+    // `abbrev-insert` case-adjusts the expansion to match the abbrev as typed.
+    let expansion = abbrev_adjust_case(name, expansion, abbrev_all_caps());
     let (view, doc) = current!(editor);
     let transaction = Transaction::change(
         doc.text(),
-        std::iter::once((start, end, Some(Tendril::from(expansion)))),
+        std::iter::once((start, end, Some(Tendril::from(expansion.as_str())))),
     );
     doc.apply(&transaction, view.id);
     let new_pos = start + expansion.chars().count();
@@ -55499,9 +55558,14 @@ fn toggle_readonly(cx: &mut Context) {
 /// With the prefix argument (`C-u C-x w d`, FLAG=t) the window becomes *strongly*
 /// dedicated, and changing its buffer signals an error instead.
 fn toggle_window_dedication(cx: &mut Context) {
-    // `C-u C-x w d` in the emacs presets; `C-u` is not a prefix command in the
-    // spacemacs/vim keymaps, where a leading count is the prefix argument.
-    let strong = cx.prefix_arg().is_some() || cx.count.is_some();
+    // `(if (consp flag) t …)` — only a *raw* prefix (`C-u`) dedicates strongly.
+    // A numeric prefix (`C-u 4`, `M-4`, or a leading count under the
+    // spacemacs/vim keymaps, where `C-u` is not a prefix command) is a non-nil
+    // non-t FLAG, which `toggle-window-dedicated-flag`'s docstring says gives
+    // "the same kind of non-strong dedication" as the default value
+    // `interactive` — the weak dedication below. This used to be the other way
+    // round: any leading count dedicated strongly and a bare `C-u` weakly.
+    let strong = cx.prefix_arg().is_some_and(|arg| arg.is_raw());
     let view = view_mut!(cx.editor);
     // `(if (window-dedicated-p window) (set-window-dedicated-p window nil)
     //      (set-window-dedicated-p window flag))` — the toggle drops any
@@ -74822,6 +74886,47 @@ fn open_dribble_file(cx: &mut Context) {
                 .set_error(format!("open-dribble-file: {}: {e}", path.display())),
         }
     });
+}
+
+#[cfg(test)]
+mod abbrev_case_tests {
+    use super::abbrev_adjust_case;
+
+    /// `abbrev-insert` (abbrev.el:861-882) adjusts the expansion's case to the
+    /// abbrev as typed. Every expectation here was read out of GNU Emacs 31.1,
+    /// which expands `foo` -> `bar baz` and `qux` -> `quux` this way.
+    #[test]
+    fn expansion_follows_the_case_of_the_abbrev_as_typed() {
+        for (typed, want) in [
+            ("foo", "bar baz"),
+            ("Foo", "Bar baz"),
+            ("FOO", "Bar Baz"),
+            ("fOO", "Bar baz"),
+        ] {
+            assert_eq!(abbrev_adjust_case(typed, "bar baz", false), want, "{typed}");
+        }
+        // A single-word expansion has no initials to spread over, so an all-caps
+        // abbrev upcases the whole of it.
+        assert_eq!(abbrev_adjust_case("Qux", "quux", false), "Quux");
+        assert_eq!(abbrev_adjust_case("QUX", "quux", false), "QUUX");
+    }
+
+    /// `abbrev-all-caps` non-nil upcases the whole expansion for an all-caps
+    /// abbrev, instead of each word's initial.
+    #[test]
+    fn abbrev_all_caps_upcases_the_whole_expansion() {
+        assert_eq!(abbrev_adjust_case("FOO", "bar baz", true), "BAR BAZ");
+        // It has no say over the some-caps branch.
+        assert_eq!(abbrev_adjust_case("Foo", "bar baz", true), "Bar baz");
+    }
+
+    /// Punctuation before the first letter is skipped, as
+    /// `(skip-syntax-forward "^w")` skips it.
+    #[test]
+    fn leading_punctuation_is_skipped_when_capitalising() {
+        assert_eq!(abbrev_adjust_case("Foo", "(bar baz)", false), "(Bar baz)");
+        assert_eq!(abbrev_adjust_case("FOO", "(bar baz)", false), "(Bar Baz)");
+    }
 }
 
 #[cfg(test)]

@@ -14,6 +14,7 @@ pub mod centipede;
 pub mod checkers;
 pub mod chess;
 pub mod comint;
+pub mod confirm;
 mod completion;
 pub mod connectfour;
 pub mod context_menu;

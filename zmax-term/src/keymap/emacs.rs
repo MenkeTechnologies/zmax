@@ -500,6 +500,19 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "left" => goto_previous_buffer, // C-x <left>: previous-buffer
             "h" => select_all,              // C-x h: mark-whole-buffer
             "C-x" => exchange_point_and_mark, // C-x C-x: exchange-point-and-mark (rectangle-aware)
+            // The abbrev-defining commands take the *region* as the expansion
+            // when the mark is active (abbrev.el:365), which is precisely when
+            // this map is the live one — without them here that branch could
+            // not be reached from the keyboard at all.
+            "'" => expand_abbrev,           // C-x ': expand-abbrev
+            "a" => { "Abbrev"
+                "g" => define_abbrev,       // C-x a g: add-global-abbrev
+                "l" => add_mode_abbrev,     // C-x a l: add-mode-abbrev
+                "i" => { "Inverse abbrev"
+                    "g" => inverse_add_global_abbrev, // C-x a i g: inverse-add-global-abbrev
+                    "l" => inverse_add_mode_abbrev,   // C-x a i l: inverse-add-mode-abbrev
+                },
+            },
         },
     });
 

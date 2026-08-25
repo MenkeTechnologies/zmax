@@ -92,3 +92,54 @@ async fn emacs_transpose_chars() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// `C-x w d` (`toggle-window-dedicated`) takes its FLAG from the prefix
+/// argument: `(if (consp flag) t …)`, so only a *raw* `C-u` dedicates strongly.
+/// A numeric prefix is a non-nil non-t FLAG, which
+/// `toggle-window-dedicated-flag`'s own docstring says gives "the same kind of
+/// non-strong dedication" as its default. zmax had this inverted — any leading
+/// count dedicated strongly and a bare `C-u` weakly.
+#[tokio::test(flavor = "multi_thread")]
+async fn c_x_w_d_dedicates_strongly_only_for_a_raw_prefix() -> anyhow::Result<()> {
+    let mut app = preset_app("emacs")
+        .with_input_text("#[a|]#bc\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("<C-u>4<C-x>wd"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let status = app
+                        .editor
+                        .get_status()
+                        .map(|(msg, _)| msg.to_string())
+                        .unwrap_or_default();
+                    assert!(
+                        status.starts_with("Window is now dedicated"),
+                        "a numeric prefix dedicates weakly: {status:?}"
+                    );
+                }),
+            ),
+            // Toggle back off, then strongly with the raw prefix.
+            (Some("<C-x>wd"), None),
+            (
+                Some("<C-u><C-x>wd"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let status = app
+                        .editor
+                        .get_status()
+                        .map(|(msg, _)| msg.to_string())
+                        .unwrap_or_default();
+                    assert!(
+                        status.starts_with("Window is now strongly dedicated"),
+                        "a raw C-u dedicates strongly: {status:?}"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

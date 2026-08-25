@@ -1,7 +1,9 @@
 //! Emacs abbrevs (`C-x a g` define, `C-x '` expand).
 //!
 //! A persistent table of abbreviation -> expansion, stored at
-//! `<config-dir>/abbrevs` as `name\texpansion` lines. This ports emacs's
+//! `<config-dir>/abbrevs`: `name\texpansion` lines for the global table and
+//! `mode\tname\texpansion` lines for the major-mode tables, both in the one file
+//! emacs keeps them in. This ports emacs's
 //! *explicit* expansion (`expand-abbrev`, `C-x '`) plus a define command;
 //! auto-expansion as you type (full `abbrev-mode`) would need an insert-keypress
 //! hook and is left for later — explicit expansion is the non-invasive core.
@@ -18,7 +20,28 @@ use zmax_loader::config_dir;
 
 const FILE_NAME: &str = "abbrevs";
 
+/// Where the tests point the store, so persisting a mode abbrev in a test cannot
+/// touch the user's real `abbrevs` file.
+#[cfg(test)]
+static STORE_OVERRIDE: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+/// Point the store at `path` for the rest of the test process.
+#[cfg(test)]
+fn set_store_path_for_tests(path: PathBuf) {
+    *STORE_OVERRIDE.lock().unwrap() = Some(path);
+}
+
 fn store_path() -> PathBuf {
+    #[cfg(test)]
+    if let Some(path) = STORE_OVERRIDE.lock().unwrap().clone() {
+        return path;
+    }
+    // Emacs keeps the store's location in `abbrev-file-name`; `ZMAX_ABBREV_FILE`
+    // is that knob here, and it is what the integration tests point at a temp
+    // file so they never write to the user's own abbrevs.
+    if let Some(path) = std::env::var_os("ZMAX_ABBREV_FILE") {
+        return PathBuf::from(path);
+    }
     config_dir().join(FILE_NAME)
 }
 
@@ -63,24 +86,70 @@ fn format_line(name: &str, expansion: &str) -> String {
     format!("{}\t{}", name, escape(expansion))
 }
 
-fn load() -> Vec<(String, String)> {
-    match std::fs::read_to_string(store_path()) {
-        Ok(s) => s.lines().filter_map(parse_line).collect(),
-        Err(_) => Vec::new(),
+/// Parse one mode row, `mode\tname\texpansion`. Global rows are two-field, so a
+/// store written before mode tables were persisted still reads.
+fn parse_mode_line(line: &str) -> Option<(String, String, String)> {
+    let (mode, rest) = line.split_once('\t')?;
+    let (name, exp) = rest.split_once('\t')?;
+    if mode.is_empty() || name.is_empty() {
+        return None;
     }
+    Some((mode.to_string(), name.to_string(), unescape(exp)))
 }
 
-fn save(rows: &[(String, String)]) {
-    let body: String = rows
+fn format_mode_line(mode: &str, name: &str, expansion: &str) -> String {
+    format!("{}\t{}\t{}", mode, name, escape(expansion))
+}
+
+/// Everything in the store: the global table's rows and the mode-local tables.
+/// Emacs keeps both in one abbrev file (`write-abbrev-file` writes a
+/// `define-abbrev-table` form per table), which is why one file holds both here.
+fn load_all() -> (Vec<(String, String)>, HashMap<String, HashMap<String, String>>) {
+    let text = match std::fs::read_to_string(store_path()) {
+        Ok(text) => text,
+        Err(_) => return (Vec::new(), HashMap::new()),
+    };
+    let mut global = Vec::new();
+    let mut modes: HashMap<String, HashMap<String, String>> = HashMap::new();
+    for line in text.lines() {
+        if let Some((mode, name, exp)) = parse_mode_line(line) {
+            modes.entry(mode).or_default().insert(name, exp);
+        } else if let Some(row) = parse_line(line) {
+            global.push(row);
+        }
+    }
+    (global, modes)
+}
+
+fn save_all(global: &[(String, String)], modes: &HashMap<String, HashMap<String, String>>) {
+    let mut lines: Vec<String> = global
         .iter()
         .map(|(n, e)| format_line(n, e))
-        .collect::<Vec<_>>()
-        .join("\n");
+        .collect::<Vec<_>>();
+    let mut mode_names: Vec<&String> = modes.keys().collect();
+    mode_names.sort();
+    for mode in mode_names {
+        let table = &modes[mode];
+        let mut names: Vec<&String> = table.keys().collect();
+        names.sort();
+        for name in names {
+            lines.push(format_mode_line(mode, name, &table[name]));
+        }
+    }
     let path = store_path();
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let _ = std::fs::write(path, body);
+    let _ = std::fs::write(path, lines.join("\n"));
+}
+
+fn load() -> Vec<(String, String)> {
+    load_all().0
+}
+
+fn save(rows: &[(String, String)]) {
+    // Rewriting the store must not drop the mode tables sharing the file.
+    save_all(rows, &mode_tables().lock().unwrap().clone());
 }
 
 /// Define (or replace) an abbrev.
@@ -166,29 +235,45 @@ pub fn define_from_text(text: &str) -> usize {
 // global table above stays file-backed, matching the `abbrevs` file emacs
 // persists by default while mode abbrevs are typically (re)defined per session.
 
+/// The mode tables, read from the store on first use so a mode abbrev survives a
+/// restart the way a global one does (emacs writes every table to
+/// `abbrev-file-name` and reads them all back at startup).
 static MODE_TABLES: Lazy<Mutex<HashMap<String, HashMap<String, String>>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+    Lazy::new(|| Mutex::new(load_all().1));
+
+fn mode_tables() -> &'static Mutex<HashMap<String, HashMap<String, String>>> {
+    &MODE_TABLES
+}
+
+/// Write the mode tables back to the store, keeping the global rows.
+fn save_mode_tables(tables: &HashMap<String, HashMap<String, String>>) {
+    let global = load_all().0;
+    save_all(&global, tables);
+}
 
 /// `define-mode-abbrev` — define (or replace) `name → expansion` in `mode`'s
 /// local abbrev table.
 pub fn define_mode(mode: &str, name: &str, expansion: &str) {
-    MODE_TABLES
-        .lock()
-        .unwrap()
+    let mut tables = MODE_TABLES.lock().unwrap();
+    tables
         .entry(mode.to_string())
         .or_default()
         .insert(name.to_string(), expansion.to_string());
+    save_mode_tables(&tables);
 }
 
 /// `(define-abbrev table name nil)` with a nil expansion — emacs's way of
 /// undefining an abbrev, which `add-mode-abbrev` reaches with a negative prefix
 /// argument. Returns whether the mode's table had it.
 pub fn undefine_mode(mode: &str, name: &str) -> bool {
-    MODE_TABLES
-        .lock()
-        .unwrap()
+    let mut tables = MODE_TABLES.lock().unwrap();
+    let removed = tables
         .get_mut(mode)
-        .is_some_and(|t| t.remove(name).is_some())
+        .is_some_and(|table| table.remove(name).is_some());
+    if removed {
+        save_mode_tables(&tables);
+    }
+    removed
 }
 
 /// Look up `name` in `mode`'s local abbrev table only.
@@ -399,9 +484,12 @@ mod tests {
 
     #[test]
     fn mode_tables_are_local_to_their_mode() {
-        // Hermetic: touches only the in-memory MODE_TABLES, never the file store,
-        // so it can't pollute the user's `abbrevs` file. Names are unique to this
-        // test to survive the shared process-global map.
+        // Hermetic: the store is pointed at a temp file first, so persisting a
+        // mode abbrev here cannot touch the user's `abbrevs` file. Names are
+        // unique to this test to survive the shared process-global map.
+        set_store_path_for_tests(
+            std::env::temp_dir().join("zmax-abbrev-mode-tables-test-store"),
+        );
         define_mode("mtl_rust", "mtl_only", "rust-only");
         define_mode("mtl_rust", "mtl_two", "rust-two");
         // Resolvable only within its own mode.

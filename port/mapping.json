@@ -22976,19 +22976,19 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_a_i_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x a i l"
   ],
-  "note": "Ports inverse-add-abbrev (lisp/abbrev.el:413-444) for C-x a i l. The name span comes from abbrev_nth_word_span, a faithful port of (forward-word (1+ (- arg))) / (skip-syntax-backward \"^w\") / (backward-word 1): verified against emacs 30.2 on \"alpha beta gamma delta\" for arg=1/2/0/-1 -> beta/alpha/gamma/delta, all matching (C-u and M-- reach it in the emacs preset; in spacemacs, evil shadows both, so use M-<digit>, matching real spacemacs). The prompt is verbatim emacs wording, 'Expansion for Mode abbrev \"Foo\": '. The definition is keyed on (downcase name), and lookup case-folds like abbrev--symbol (lowercase first, verbatim fallback), so defining on \"Foo\" and later typing \"foo\" + C-x ' expands. Redefining an existing name prompts 'Foo expands into \"bar\"; redefine? (y or n) ' with correct y/n semantics. After defining, the abbreviation standing in the buffer is expanded via abbrev_do_expand.\n\nDiverges from emacs in three ways. (a) The expansion is inserted verbatim; emacs case-adjusts it in abbrev-insert:861-882 whenever the buffer text differs in case from the stored (downcased) symbol -- which is this command's mainline path. Emacs turns \"Foo \" into \"Bar baz \" and \"FOO \" into \"Bar Baz \"; zmax produces \"bar baz \" for both. Only all-lowercase abbreviations round-trip identically. This lives in the shared expansion path, so plain C-x ' is affected too. (b) The redefine confirmation is a text-entry minibuffer requiring y+RET; emacs's y-or-n-p commits on the single \"y\" keystroke (y-or-n-p-insert-y inserts and exits). (c) Mode-local abbrev tables remain process-local (emacs_abbrev.rs:166), so a mode abbrev defined here is lost on restart while the global table persists."
+  "note": "Ports inverse-add-abbrev (lisp/abbrev.el:413-444) for C-x a i l. The name span comes from abbrev_nth_word_span, a faithful port of (forward-word (1+ (- arg))) / (skip-syntax-backward \"^w\") / (backward-word 1): verified against emacs 30.2 on \"alpha beta gamma delta\" for arg=1/2/0/-1 -> beta/alpha/gamma/delta. The prompt is verbatim emacs wording, 'Expansion for Mode abbrev \"Foo\": '. The definition is keyed on (downcase name), and lookup case-folds like abbrev--symbol, so defining on \"Foo\" and later typing \"foo\" + C-x ' expands. All three recorded divergences are closed. (a) abbrev-insert's capitalisation adjustment (abbrev.el:861-882) is ported: an all-caps abbrev upcases each word's initial where the expansion is more than one word and the whole of it otherwise (or when `abbrev-all-caps` is set), and an abbrev with only some caps upcases the first initial. Read out of GNU Emacs 31.1 with foo -> \"bar baz\" and qux -> \"quux\": foo/fOO -> \"bar baz\", Foo -> \"Bar baz\", FOO -> \"Bar Baz\", Qux -> \"Quux\", QUX -> \"QUUX\", and \"(bar baz)\" -> \"(Bar baz)\" / \"(Bar Baz)\". This is the shared expansion path, so plain C-x ' gets it too. (b) The redefine confirmation is `y-or-n-p` now - a single keystroke, y/SPC yes, n/DEL no, C-g quits - not a text prompt needing y+RET. (c) Mode-local tables are written to the store beside the global ones (`mode\\tname\\texpansion` rows in the same file emacs keeps every table in), so a mode abbrev survives a restart. Pinned by `commands::abbrev_case_tests::*` and `tests/test/mode_abbrev.rs::mode_abbrevs_are_written_to_the_store`."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_a_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x a l"
   ],
-  "note": "`C-x a l` (add-mode-abbrev) is implemented and driven end-to-end in the spacemacs preset: the expansion is the word before point or the active region, only the name is prompted for (`Mode abbrev that expands into \"X\": `, abbrev.el:367), the name is downcased before it is stored (abbrev.el:375), redefining an existing name asks `NAME expands into \"OLD\"; redefine? (y or n)` (abbrev.el:373), a negative prefix argument switches the prompt to `Undefine Mode abbrev: ` and removes the entry (abbrev.el:368), and a positive prefix argument takes N words back. Definitions land in a per-major-mode table keyed by zmax's language id (`.txt` -> `text`), separate from the file-backed global table, matching `only-global-abbrevs` = nil. Known divergences: `only-global-abbrevs` handling is newly written but unverified \u2014 the last runnable binary ignores the variable and still defines into the mode table when it is `t`, and the tree does not currently compile, so the reroute to the global table has never been observed; the emacs-style prefix argument (N words, 0 = region, negative = undefine) is only reachable in the emacs preset, since spacemacs normal state has no universal-argument and a bare count is ignored; in the emacs preset the `C-x a` submap is missing while the mark is active, so the region-as-expansion branch is unreachable there; and mode-local abbrev tables live only in memory for the session, where Emacs persists them through the abbrev file."
+  "note": "`C-x a l` (add-mode-abbrev) is implemented and driven end-to-end: the expansion is the word before point or the active region, only the name is prompted for (`Mode abbrev that expands into \"X\": `, abbrev.el:367), the name is downcased before it is stored (abbrev.el:375), redefining an existing name asks `NAME expands into \"OLD\"; redefine? (y or n)` (abbrev.el:373) and takes the single keystroke `y-or-n-p` reads, a negative prefix argument switches the prompt to `Undefine Mode abbrev: ` and removes the entry (abbrev.el:368), and a positive prefix argument takes N words back. Definitions land in a per-major-mode table keyed by zmax's language id (`.txt` -> `text`), separate from the global table, matching `only-global-abbrevs` = nil. The three recorded gaps are closed: `only-global-abbrevs` is *observed* rerouting the definition into the global table (driven through `:elisp (setq only-global-abbrevs t)` and read back out of the store); the `C-x a` submap is bound in the emacs preset's Select mode as well, so the region-as-expansion branch - which is only reachable *with* a live region - can be typed there; and mode tables persist, written to the store as `mode\\tname\\texpansion` rows beside the global ones. Remaining divergence, editor-wide rather than particular to this command: the emacs-style prefix argument (N words, 0 = region, negative = undefine) is reachable in the emacs preset, where `C-u` is universal-argument; under the spacemacs leader a bare count is not a prefix argument. Pinned by `tests/test/mode_abbrev.rs::only_global_abbrevs_reroutes_add_mode_abbrev_to_the_global_table` and `::mode_abbrevs_are_written_to_the_store`."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_plus",
@@ -23163,12 +23163,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_spc",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x C-k space",
    "static:kmacro_step_edit_macro"
   ],
-  "note": "Same as emacs.keybinding.c_x_c_k_spc: the stepper is real and the whole kmacro-step-edit-map is honoured (verified over a pty). Remaining divergences are TAB act-repeat keying on the repeated key rather than the dispatched command, and the trailing C-x that macro recording keeps from `C-x )`."
+  "note": "Same as emacs.keybinding.c_x_c_k_spc: the stepper is real and the whole kmacro-step-edit-map is honoured. Both remaining divergences are closed - TAB (act-repeat) continues on the *command* now, resolving each pending key through the live keymap and comparing command identity the way emacs does (it binds C-n and <down> both to next-line), and recording trims the whole terminator chord, so `C-x ( x x C-x )` records the two keys emacs records rather than three with a trailing <C-x>. Pinned by `tests/test/spacemacs_states.rs::kmacro_step_edit_tab_repeats_on_the_command_not_the_key` and `::kmacro_recording_drops_the_whole_terminator_chord`."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_x",
@@ -23738,12 +23738,12 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_d",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x w d",
    "static:toggle_window_dedication"
   ],
-  "note": "The old note ('buffer_picker') is stale. C-x w d is toggle_window_dedication (zmax-term/src/commands.rs:54140), a real tri-state on the view: it drops any dedication first and applies the strong flag only when turning it on, echoing emacs's 'Window is {no longer|now|now strongly} dedicated to buffer %s' verbatim; a strongly dedicated window refuses a buffer switch and a weakly dedicated one causes display-buffer-style redirection into an existing other window (zmax-view/src/editor.rs:3183, :3256-3262). Still partial: the prefix-argument mapping is inverted relative to emacs (emacs gives STRONG only for a raw cons prefix and leaves a numeric prefix weak; zmax treats any leading count as strong and a bare C-u as weak), and emacs's default `interactive` third state, which auto-clears on a manual buffer switch, is not modelled."
+  "note": "`C-x w d` is toggle_window_dedication, a real tri-state on the view: it drops any dedication first and applies the strong flag only when turning it on, echoing emacs's 'Window is {no longer|now|now strongly} dedicated to buffer %s' verbatim; a strongly dedicated window refuses a buffer switch and a weakly dedicated one causes display-buffer-style redirection into an existing other window. The prefix mapping matches emacs now: `(if (consp flag) t ...)` means only a *raw* `C-u` dedicates strongly, while a numeric prefix (or a leading count, the spacemacs/vim keymaps having no `C-u` prefix command) is a non-nil non-t FLAG - which `toggle-window-dedicated-flag`'s own docstring, read out of emacs 31.1, says gives \"the same kind of non-strong dedication\" as its default value `interactive`. It was the other way round: any leading count dedicated strongly and a bare `C-u` weakly. That docstring also settles the old note's second point: `interactive` is not a third dedication state, it is an ordinary non-strong one. Pinned by `tests/test/emacs_keys.rs::c_x_w_d_dedicates_strongly_only_for_a_raw_prefix`."
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_h",
@@ -42331,12 +42331,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_c_k_spc",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x C-k space",
    "static:kmacro_step_edit_macro"
   ],
-  "note": "The old note ('edits the whole macro; no per-key stepping') is stale. kmacro-step-edit-macro is a real interleaved stepper, driven over a pty in the default preset: the full kmacro-step-edit-map is honoured (y/SPC execute, d/n/DEL/C-d skip and advance, f keeps a key without executing, !/c run the rest, C-k skips the rest but saves the accepted prefix, i/I/r/R/a/A per kmacro.el with I and R consuming one key sequence and i/r looping until C-j, ? toggles help without advancing, an unbound key re-asks at the same index); q and C-g leave accepted edits applied with last_kbd_macro unrewritten (kmacro.el:1290-1293); the prompt renders 'Macro: <kept> [<pending>] <future>' with '[n/m] : Next command: <key>'. Still partial on two points: TAB (act-repeat) continues on the repeated KEY rather than the dispatched command, because zmax has no command identity for a dispatched key (emacs auto-acts a second <down> after C-n; zmax re-prompts), and macro recording keeps the terminating C-x of `C-x )`, so a two-keystroke macro steps as [1/3] with a spurious trailing <C-x>."
+  "note": "Same as emacs.keybinding.c_x_c_k_spc: the stepper is real and the whole kmacro-step-edit-map is honoured. Both remaining divergences are closed - TAB (act-repeat) continues on the *command* now, resolving each pending key through the live keymap and comparing command identity the way emacs does (it binds C-n and <down> both to next-line), and recording trims the whole terminator chord, so `C-x ( x x C-x )` records the two keys emacs records rather than three with a trailing <C-x>. Pinned by `tests/test/spacemacs_states.rs::kmacro_step_edit_tab_repeats_on_the_command_not_the_key` and `::kmacro_recording_drops_the_whole_terminator_chord`."
  },
  {
   "spec_id": "emacs.keybinding.c_x_c_m_plus",
@@ -48310,11 +48310,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_w_d",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x w d"
   ],
-  "note": "`C-x w d` (toggle-window-dedication) is implemented in the SPACEMACS keymap only (keymap/spacemacs.rs:555); it is unbound in the emacs preset, where the keys self-insert into the buffer and, because zmax autosaves, write to the file. Dedication is a real tri-state on the view (`View::dedicated_strong`), and the echo string reproduces emacs's own \"Window is {no longer|now|now strongly} dedicated to buffer %s\" verbatim -- the plain toggle is byte-identical to emacs 30.2. Verified matching: a strongly dedicated window refuses a buffer switch (zmax echoes \"Window is strongly dedicated to its buffer\"; emacs signals \"Window is dedicated to '<buf>'\" -- same refusal, different wording), and a weakly dedicated window causes `display-buffer`-style redirection into an existing other window instead of splitting a third, falling back to a split only when no other window exists. NOT matching: the prefix-argument mapping is inverted relative to emacs. emacs gives STRONG dedication only for a raw cons prefix (bare `C-u`) and leaves a NUMERIC prefix weak (`C-u 4` sets dedicated-p=4 and prints \"now dedicated\"); zmax treats any leading count (2, 4, 16) as strong and a bare `C-u` as plain/weak. Emacs's default `toggle-window-dedicated-flag` value `interactive` -- a third state that auto-clears on a manual buffer switch -- is not modelled."
+  "note": "`C-x w d` is toggle_window_dedication, a real tri-state on the view: it drops any dedication first and applies the strong flag only when turning it on, echoing emacs's 'Window is {no longer|now|now strongly} dedicated to buffer %s' verbatim; a strongly dedicated window refuses a buffer switch and a weakly dedicated one causes display-buffer-style redirection into an existing other window. The prefix mapping matches emacs now: `(if (consp flag) t ...)` means only a *raw* `C-u` dedicates strongly, while a numeric prefix (or a leading count, the spacemacs/vim keymaps having no `C-u` prefix command) is a non-nil non-t FLAG - which `toggle-window-dedicated-flag`'s own docstring, read out of emacs 31.1, says gives \"the same kind of non-strong dedication\" as its default value `interactive`. It was the other way round: any leading count dedicated strongly and a bare `C-u` weakly. That docstring also settles the old note's second point: `interactive` is not a third dedication state, it is an ordinary non-strong one. Pinned by `tests/test/emacs_keys.rs::c_x_w_d_dedicates_strongly_only_for_a_raw_prefix`."
  },
  {
   "spec_id": "emacs.keybinding.c_x_ret_c",
