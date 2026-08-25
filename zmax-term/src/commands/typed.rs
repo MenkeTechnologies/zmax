@@ -52714,6 +52714,424 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "projectile-run-task",
+        aliases: &[],
+        doc: "Run one of this project's named tasks (projectile-run-task, C-c p c x).",
+        fun: crate::commands::projectile::run_task,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-repeat-last-task",
+        aliases: &[],
+        doc: "Re-run the last task (projectile-repeat-last-task, C-c p c X).",
+        fun: crate::commands::projectile::repeat_last_task,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-run-test-at-point",
+        aliases: &[],
+        doc: "Run the test around the cursor (projectile-run-test-at-point, C-c p c .).",
+        fun: crate::commands::projectile::run_test_at_point,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-session-save",
+        aliases: &[],
+        doc: "Save this project's windows as its session (projectile-session-save, C-c p w s).",
+        fun: crate::commands::projectile::session_save,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-session-restore",
+        aliases: &[],
+        doc: "Reopen a project's saved session (projectile-session-restore, C-c p w r).",
+        fun: crate::commands::projectile::session_restore,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-session-forget",
+        aliases: &[],
+        doc: "Delete a project's saved session (projectile-session-forget, C-c p w f).",
+        fun: crate::commands::projectile::session_forget,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-session-save-all",
+        aliases: &[],
+        doc: "Save the session of every open project (projectile-session-save-all, C-c p w S).",
+        fun: crate::commands::projectile::session_save_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-session-restore-all",
+        aliases: &[],
+        doc: "Reopen every saved project session (projectile-session-restore-all, C-c p w R).",
+        fun: crate::commands::projectile::session_restore_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-session-switch-to-buffer",
+        aliases: &[],
+        doc: "Switch to a buffer of this project's session (projectile-session-switch-to-buffer, C-c p w b).",
+        fun: crate::commands::projectile::session_switch_to_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-version",
+        aliases: &[],
+        doc: "Report the projectile surface this port implements (projectile-version).",
+        fun: crate::commands::projectile::version,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-edit-dir-locals",
+        aliases: &[],
+        doc: "Edit the project's .dir-locals.el (projectile-edit-dir-locals, C-c p E).",
+        fun: crate::commands::projectile::edit_dir_locals,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dashboard",
+        aliases: &[],
+        doc: "Summarise the project — type, files, commands, tasks, siblings (projectile-dashboard, C-c p P).",
+        fun: crate::commands::projectile::dashboard,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-doctor",
+        aliases: &[],
+        doc: "Diagnose projectile's view of this project (projectile-doctor, C-c p H).",
+        fun: crate::commands::projectile::doctor,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-report-copy",
+        aliases: &[],
+        doc: "Copy the current report buffer to the yank register (projectile-report-copy).",
+        fun: crate::commands::projectile::report_copy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dispatch",
+        aliases: &[],
+        doc: "Show the projectile command menu for this project (projectile-dispatch, C-c p m).",
+        fun: crate::commands::projectile::dispatch,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-recentf",
+        aliases: &[],
+        doc: "Jump to a recently visited file of this project (projectile-recentf, C-c p e).",
+        fun: crate::commands::projectile::recentf,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-ibuffer",
+        aliases: &[],
+        doc: "List this project's buffers (projectile-ibuffer, C-c p I).",
+        fun: crate::commands::projectile::ibuffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-vc",
+        aliases: &[],
+        doc: "Open the VC view at the project root (projectile-vc, C-c p v).",
+        fun: crate::commands::projectile::vc,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-display-buffer",
+        aliases: &[],
+        doc: "Show a project buffer in another window without selecting it (projectile-display-buffer, C-c p 4 C-o).",
+        fun: crate::commands::projectile::display_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-read-buffer-to-switch",
+        aliases: &[],
+        doc: "Report the project buffers the switch commands offer (projectile-read-buffer-to-switch).",
+        fun: crate::commands::projectile::read_buffer_to_switch,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-reset-known-projects",
+        aliases: &[],
+        doc: "Forget the known projects and rediscover them (projectile-reset-known-projects).",
+        fun: crate::commands::projectile::reset_known_projects,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-dwim",
+        aliases: &[],
+        doc: "Jump to the project file named at the cursor, or pick one (projectile-find-file-dwim, C-c p g).",
+        fun: crate::commands::projectile::find_file_dwim,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-dwim-other-window",
+        aliases: &[],
+        doc: "As projectile-find-file-dwim, in another window (C-c p 4 g).",
+        fun: crate::commands::projectile::find_file_dwim_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-dwim-other-frame",
+        aliases: &[],
+        doc: "As projectile-find-file-dwim, in another frame (C-c p 5 g).",
+        fun: crate::commands::projectile::find_file_dwim_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-of-kind",
+        aliases: &[],
+        doc: "Jump to a project file of a chosen kind — test, impl or an extension (projectile-find-file-of-kind, C-c p j).",
+        fun: crate::commands::projectile::find_file_of_kind,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-of-kind-other-window",
+        aliases: &[],
+        doc: "As projectile-find-file-of-kind, in another window (C-c p 4 j).",
+        fun: crate::commands::projectile::find_file_of_kind_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-file-of-kind-other-frame",
+        aliases: &[],
+        doc: "As projectile-find-file-of-kind, in another frame (C-c p 5 j).",
+        fun: crate::commands::projectile::find_file_of_kind_other_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-find-related-file",
+        aliases: &[],
+        doc: "Open the current file's related file (projectile-find-related-file).",
+        fun: crate::commands::projectile::find_related_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-toggle-related-file",
+        aliases: &[],
+        doc: "Jump between the current file and its related file (projectile-toggle-related-file, C-c p J).",
+        fun: crate::commands::projectile::toggle_related_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-replace-review",
+        aliases: &[],
+        doc: "Review a literal project-wide replacement before applying it (projectile-replace-review, C-c p R).",
+        fun: crate::commands::projectile::replace_review,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-replace-regexp-review",
+        aliases: &[],
+        doc: "Review a regexp project-wide replacement before applying it (projectile-replace-regexp-review).",
+        fun: crate::commands::projectile::replace_regexp_review,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-search-review",
+        aliases: &[],
+        doc: "Search the project and review the matches (projectile-search-review, C-c p s R).",
+        fun: crate::commands::projectile::search_review,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-search-regexp-review",
+        aliases: &[],
+        doc: "Search the project with a regexp and review the matches (projectile-search-regexp-review, C-c p s X).",
+        fun: crate::commands::projectile::search_regexp_review,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-search--to-replace",
+        aliases: &[],
+        doc: "Hand a search to the reviewable replace (projectile-search--to-replace).",
+        fun: crate::commands::projectile::search_to_replace,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dispatch--args",
+        aliases: &[],
+        doc: "Report or set the dispatch switches --regexp / --case-sensitive (projectile-dispatch--args).",
+        fun: crate::commands::projectile::dispatch_args,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dispatch-search-review",
+        aliases: &[],
+        doc: "Reviewable search honouring the dispatch switches (projectile-dispatch-search-review).",
+        fun: crate::commands::projectile::dispatch_search_review,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dispatch-replace-review",
+        aliases: &[],
+        doc: "Reviewable replace honouring the dispatch switches (projectile-dispatch-replace-review).",
+        fun: crate::commands::projectile::dispatch_replace_review,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-dispatch-search-siblings",
+        aliases: &[],
+        doc: "Sibling-project search honouring the dispatch switches (projectile-dispatch-search-siblings).",
+        fun: crate::commands::projectile::dispatch_search_siblings,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "projectile-switch-open-project",
         aliases: &[],
         doc: "Switch to a project that currently has buffers open (projectile-switch-open-project, C-c p q).",

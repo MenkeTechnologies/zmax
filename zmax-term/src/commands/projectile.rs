@@ -2261,6 +2261,14 @@ pub(crate) fn cached_project_files(root: &Path) -> Vec<PathBuf> {
     files
 }
 
+/// Whether `root`'s file list is cached — read by `projectile-doctor`.
+pub(crate) fn cache_is_warm(root: &Path) -> bool {
+    FILE_CACHE
+        .lock()
+        .map(|cache| cache.contains_key(root))
+        .unwrap_or(false)
+}
+
 /// Drop `root`'s cached file list. Returns whether there was one.
 fn invalidate(root: &Path) -> bool {
     FILE_CACHE
@@ -2909,13 +2917,214 @@ fn replace_in_project(
             total += count;
         }
     }
-    if let Ok(mut state) = REPLACE_UNDO.lock() {
-        *state = undo;
-    }
+    record_replace_undo(undo);
     crate::commands::reload_docs_for_paths(cx.editor, &touched);
     cx.editor
         .set_status(format!("Replaced {total} occurrence(s) in {files} file(s)"));
     Ok(())
+}
+
+/// Remember what a project-wide replace overwrote, so `projectile-replace-undo`
+/// can put it back. Shared with the reviewable replace, which writes the same way.
+pub(crate) fn record_replace_undo(undo: Vec<(PathBuf, String)>) {
+    if let Ok(mut state) = REPLACE_UNDO.lock() {
+        *state = undo;
+    }
+}
+
+/// `projectile-replace-review` (`C-c p R`): "Review and apply a literal
+/// project-wide replacement" — the matches are gathered into a buffer where each
+/// one can be toggled, filtered or visited, and only the enabled ones are
+/// written back.
+pub(crate) fn replace_review(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    open_review(cx, args, event, true, false)
+}
+
+/// `projectile-replace-regexp-review`: the same, with a regexp.
+pub(crate) fn replace_regexp_review(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    open_review(cx, args, event, true, true)
+}
+
+/// `projectile-search-review` (`C-c p s R`): the same buffer, read-only.
+pub(crate) fn search_review(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    open_review(cx, args, event, false, false)
+}
+
+/// `projectile-search-regexp-review` (`C-c p s X`).
+pub(crate) fn search_regexp_review(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    open_review(cx, args, event, false, true)
+}
+
+/// Open the reviewer: `replacing` chooses the replace flavour over the read-only
+/// search one, `regexp` the pattern syntax. The dispatch switches widen both.
+fn open_review(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+    replacing: bool,
+    regexp: bool,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(pattern) = args.first().map(|p| p.to_string()) else {
+        anyhow::bail!("needs a search term");
+    };
+    let replacement = args.get(1).map(|r| r.to_string());
+    if replacing && replacement.is_none() {
+        anyhow::bail!("needs <from> <to>");
+    }
+    let switches = dispatch_switches();
+    let regexp = regexp || switches.regexp;
+    let case_sensitive = switches.case_sensitive;
+    let root = project_root();
+    let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut zmax_view::Editor, compositor: &mut crate::compositor::Compositor| {
+            let mut review = match (replacing, replacement.clone()) {
+                (true, Some(replacement)) => crate::ui::projectile_review::Review::replace(
+                    root.clone(),
+                    pattern.clone(),
+                    replacement,
+                    regexp,
+                ),
+                _ => crate::ui::projectile_review::Review::search(
+                    root.clone(),
+                    pattern.clone(),
+                    regexp,
+                ),
+            };
+            review.set_case_sensitive(case_sensitive);
+            compositor.push(Box::new(crate::ui::overlay::overlaid(review)));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `projectile-dispatch`'s switches: the `--regexp` / `--case-sensitive` toggles
+/// the dispatch menu carries into the search and replace commands it launches.
+#[derive(Clone, Copy)]
+pub(crate) struct DispatchSwitches {
+    pub regexp: bool,
+    pub case_sensitive: bool,
+}
+
+static DISPATCH_SWITCHES: std::sync::Mutex<DispatchSwitches> =
+    std::sync::Mutex::new(DispatchSwitches {
+        regexp: false,
+        case_sensitive: true,
+    });
+
+/// The switches in force — `projectile-dispatch--args`.
+pub(crate) fn dispatch_switches() -> DispatchSwitches {
+    DISPATCH_SWITCHES
+        .lock()
+        .map(|switches| *switches)
+        .unwrap_or(DispatchSwitches {
+            regexp: false,
+            case_sensitive: true,
+        })
+}
+
+/// `projectile-dispatch--args`: "Return the active `projectile-dispatch'
+/// switches, or nil." Setting them is how the dispatch menu's toggles work, so
+/// this both reports and (with an argument) sets them.
+pub(crate) fn dispatch_args(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if !args.is_empty() {
+        let mut switches = dispatch_switches();
+        for arg in args.into_iter() {
+            match arg.as_ref() {
+                "--regexp" => switches.regexp = true,
+                "--no-regexp" => switches.regexp = false,
+                "--case-sensitive" => switches.case_sensitive = true,
+                "--no-case-sensitive" => switches.case_sensitive = false,
+                other => anyhow::bail!(
+                    "projectile-dispatch--args: unknown switch {other} (--regexp, --no-regexp, \
+                     --case-sensitive, --no-case-sensitive)"
+                ),
+            }
+        }
+        if let Ok(mut state) = DISPATCH_SWITCHES.lock() {
+            *state = switches;
+        }
+    }
+    let switches = dispatch_switches();
+    cx.editor.set_status(format!(
+        "dispatch switches: {} {}",
+        if switches.regexp {
+            "--regexp"
+        } else {
+            "--no-regexp"
+        },
+        if switches.case_sensitive {
+            "--case-sensitive"
+        } else {
+            "--no-case-sensitive"
+        }
+    ));
+    Ok(())
+}
+
+/// `projectile-dispatch-search-review`: "Reviewable search honouring the
+/// `--regexp' and `--case-sensitive' switches."
+pub(crate) fn dispatch_search_review(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    search_review(cx, args, event)
+}
+
+/// `projectile-dispatch-replace-review`: the same for the replace reviewer.
+pub(crate) fn dispatch_replace_review(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    replace_review(cx, args, event)
+}
+
+/// `projectile-dispatch-search-siblings`: "Sibling-project search honouring the
+/// search switches."
+pub(crate) fn dispatch_search_siblings(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    search_in_sibling_projects(cx, args, event)
+}
+
+/// `projectile-search--to-replace`: "Hand the current search to the reviewable
+/// replace UI."
+pub(crate) fn search_to_replace(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    replace_review(cx, args, event)
 }
 
 /// `projectile-replace` (`C-c p r`): "Replace a literal string in the project's
@@ -4029,6 +4238,943 @@ display_variant!(
     "`projectile-run-ghostel-other-window` (`C-c p x 4 G`)."
 );
 
+// ── Tasks ───────────────────────────────────────────────────────────────────
+//
+// `projectile-run-task` picks among the tasks the project's own tooling defines
+// — npm scripts, just recipes, Taskfile tasks, Makefile targets and the like,
+// each named after the tool that defines it (`npm:build`, `make:test`), which is
+// what keeps the providers from colliding.
+
+/// The tasks `root`'s tooling defines, as `(name, command)`.
+pub(crate) fn discovered_tasks(root: &Path) -> Vec<(String, String)> {
+    let mut tasks = Vec::new();
+    let json_keys = |file: &str, section: &str| -> Vec<String> {
+        let Ok(text) = std::fs::read_to_string(root.join(file)) else {
+            return Vec::new();
+        };
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else {
+            return Vec::new();
+        };
+        value
+            .get(section)
+            .and_then(|s| s.as_object())
+            .map(|obj| obj.keys().cloned().collect())
+            .unwrap_or_default()
+    };
+    for name in json_keys("package.json", "scripts") {
+        tasks.push((format!("npm:{name}"), format!("npm run {name}")));
+    }
+    for name in json_keys("deno.json", "tasks") {
+        tasks.push((format!("deno:{name}"), format!("deno task {name}")));
+    }
+    for name in json_keys("composer.json", "scripts") {
+        tasks.push((
+            format!("composer:{name}"),
+            format!("composer run-script {name}"),
+        ));
+    }
+    for justfile in ["justfile", ".justfile", "Justfile"] {
+        let Ok(text) = std::fs::read_to_string(root.join(justfile)) else {
+            continue;
+        };
+        for name in recipe_names(&text) {
+            tasks.push((format!("just:{name}"), format!("just {name}")));
+        }
+        break;
+    }
+    for taskfile in ["Taskfile.yml", "Taskfile.yaml"] {
+        let Ok(text) = std::fs::read_to_string(root.join(taskfile)) else {
+            continue;
+        };
+        for name in yaml_section_keys(&text, "tasks") {
+            tasks.push((format!("task:{name}"), format!("task {name}")));
+        }
+        break;
+    }
+    for makefile in ["Makefile", "makefile", "GNUmakefile"] {
+        let Ok(text) = std::fs::read_to_string(root.join(makefile)) else {
+            continue;
+        };
+        for name in recipe_names(&text) {
+            tasks.push((format!("make:{name}"), format!("make {name}")));
+        }
+        break;
+    }
+    if root.join("Rakefile").exists() {
+        tasks.push(("rake:default".to_string(), "rake".to_string()));
+    }
+    tasks.sort();
+    tasks.dedup();
+    tasks
+}
+
+/// The `name:` targets a Makefile or justfile declares: a name at the start of a
+/// line, followed by a colon. Pattern rules (`%.o:`), variable assignments
+/// (`name := …`) and comments are not targets.
+pub(crate) fn recipe_names(text: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    for line in text.lines() {
+        if line.starts_with([' ', '\t', '#']) || line.trim().is_empty() {
+            continue;
+        }
+        let Some((name, rest)) = line.split_once(':') else {
+            continue;
+        };
+        if rest.starts_with('=') {
+            continue;
+        }
+        let name = name.trim();
+        if name.is_empty() || name.contains(['%', '$', '(', ' ']) || name.starts_with('.') {
+            continue;
+        }
+        names.push(name.to_string());
+    }
+    names.dedup();
+    names
+}
+
+/// The keys directly under a top-level YAML `section:` block — enough to read a
+/// Taskfile's task names without a YAML parser.
+pub(crate) fn yaml_section_keys(text: &str, section: &str) -> Vec<String> {
+    let mut keys = Vec::new();
+    let mut inside = false;
+    let mut indent = None;
+    for line in text.lines() {
+        if line.trim_start().starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
+        let line_indent = line.len() - line.trim_start().len();
+        if !inside {
+            if line_indent == 0 && line.trim_start().starts_with(&format!("{section}:")) {
+                inside = true;
+            }
+            continue;
+        }
+        if line_indent == 0 {
+            break;
+        }
+        let depth = *indent.get_or_insert(line_indent);
+        if line_indent != depth {
+            continue;
+        }
+        if let Some((key, _)) = line.trim().split_once(':') {
+            let key = key.trim();
+            if !key.is_empty() && !key.starts_with('-') {
+                keys.push(key.to_string());
+            }
+        }
+    }
+    keys
+}
+
+/// Where the last task run in a project is remembered, for
+/// `projectile-repeat-last-task`.
+fn last_task_file() -> PathBuf {
+    zmax_loader::config_dir().join("projectile-last-task")
+}
+
+/// `projectile-run-task` (`C-c p c x`): "Run one of the current project's named
+/// tasks."
+pub(crate) fn run_task(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let tasks = discovered_tasks(&root);
+    if tasks.is_empty() {
+        anyhow::bail!("No tasks defined for the current project");
+    }
+    let Some(name) = args.first() else {
+        cx.editor.set_status(format!(
+            "Tasks: {} — :projectile-run-task <name>",
+            tasks
+                .iter()
+                .map(|(name, _)| name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+        return Ok(());
+    };
+    let name = name.to_string();
+    let Some((_, command)) = tasks.iter().find(|(task, _)| *task == name) else {
+        anyhow::bail!("No task named `{name}' in the current project");
+    };
+    let _ = std::fs::write(
+        last_task_file(),
+        format!("{}\t{name}\t{command}", root.to_string_lossy()),
+    );
+    let in_root = format!("cd {} && {command}", shell_quote(&root.to_string_lossy()));
+    crate::commands::typed::run_compile_command(cx, &in_root)
+}
+
+/// `projectile-repeat-last-task` (`C-c p c X`).
+pub(crate) fn repeat_last_task(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let saved = std::fs::read_to_string(last_task_file()).unwrap_or_default();
+    let mut parts = saved.splitn(3, '\t');
+    let (Some(root), Some(_name), Some(command)) = (parts.next(), parts.next(), parts.next())
+    else {
+        anyhow::bail!("projectile-repeat-last-task: no task has been run yet");
+    };
+    let in_root = format!("cd {} && {command}", shell_quote(root));
+    crate::commands::typed::run_compile_command(cx, &in_root)
+}
+
+/// `projectile-run-test-at-point` (`C-c p c .`): "Run the test around point, if
+/// any" — the project's test command, narrowed to the test the cursor is in.
+pub(crate) fn run_test_at_point(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let name = {
+        let (view, doc) = zmax_view::current_ref!(cx.editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        test_name_around(&text.to_string(), text.char_to_line(cursor))
+    };
+    let Some(name) = name else {
+        anyhow::bail!("projectile-run-test-at-point: no test around point");
+    };
+    let base = phase_command(&root, Phase::Test)
+        .ok_or_else(|| anyhow::anyhow!("projectile-run-test-at-point: no test command"))?;
+    // Every test runner this table names takes the test's name as its filter
+    // argument, which is how projectile narrows the run to one test.
+    let command = format!("{base} {}", shell_quote(&name));
+    let in_root = format!("cd {} && {command}", shell_quote(&root.to_string_lossy()));
+    crate::commands::typed::run_compile_command(cx, &in_root)
+}
+
+/// The name of the test the cursor is inside: the nearest declaration at or
+/// above `line` that reads like a test — `fn name`, `def name`, `func Name`,
+/// `it("name")`, `test("name")`, `describe("name")`.
+pub(crate) fn test_name_around(text: &str, line: usize) -> Option<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let quoted = regex::Regex::new(r#"^\s*(?:it|test|describe|context)\s*\(\s*["'`]([^"'`]+)"#)
+        .expect("valid regex");
+    let declared = regex::Regex::new(
+        r"^\s*(?:pub\s+)?(?:async\s+)?(?:fn|def|func|sub)\s+([A-Za-z_][A-Za-z0-9_]*)",
+    )
+    .expect("valid regex");
+    for index in (0..=line.min(lines.len().saturating_sub(1))).rev() {
+        let candidate = lines[index];
+        if let Some(caps) = quoted.captures(candidate) {
+            return Some(caps[1].to_string());
+        }
+        if let Some(caps) = declared.captures(candidate) {
+            let name = caps[1].to_string();
+            if name.contains("test") {
+                return Some(name);
+            }
+            // A plain function is only the test when the line above marks it as
+            // one (`#[test]`, `@Test`, `[Test]`).
+            if index > 0 {
+                let marker = lines[index - 1].trim();
+                if marker.contains("[test") || marker.contains("@Test") || marker.contains("[Test")
+                {
+                    return Some(name);
+                }
+            }
+        }
+    }
+    None
+}
+
+// ── Sessions ────────────────────────────────────────────────────────────────
+//
+// A project's session is the windows and buffers it was left with.
+// `projectile-session-save` writes them, `projectile-session-restore` opens them
+// again — per project, so switching back to one picks up where it was left.
+
+/// The file a project's session is written to.
+fn session_file(root: &Path) -> PathBuf {
+    let slug: String = root
+        .to_string_lossy()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect();
+    zmax_loader::config_dir()
+        .join("projectile-sessions")
+        .join(slug)
+}
+
+/// Write `root`'s open files (and which one is focused) as its session.
+fn save_session(cx: &mut compositor::Context, root: &Path) -> anyhow::Result<usize> {
+    let focus = cx.editor.tree.focus;
+    let mut files = Vec::new();
+    let mut focused = 0usize;
+    let views: Vec<(zmax_view::ViewId, zmax_view::DocumentId)> = cx
+        .editor
+        .tree
+        .views()
+        .map(|(view, _)| (view.id, view.doc))
+        .collect();
+    for (view_id, doc_id) in views {
+        let Some(doc) = cx.editor.documents.get(&doc_id) else {
+            continue;
+        };
+        let Some(path) = doc.path() else { continue };
+        if !path.starts_with(root) {
+            continue;
+        }
+        if view_id == focus {
+            focused = files.len();
+        }
+        files.push(path.to_string_lossy().into_owned());
+    }
+    if files.is_empty() {
+        anyhow::bail!("projectile-session-save: no project windows to save");
+    }
+    let file = session_file(root);
+    if let Some(parent) = file.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&file, format!("{focused}\n{}", files.join("\n")))?;
+    Ok(files.len())
+}
+
+/// `projectile-session-save` (`C-c p w s`).
+pub(crate) fn session_save(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let saved = save_session(cx, &root)?;
+    cx.editor.set_status(format!(
+        "Saved {saved} window(s) as the session for {}",
+        project_name(&root)
+    ));
+    Ok(())
+}
+
+/// Open the files `root`'s session holds, focusing the one it was left on.
+fn restore_session(cx: &mut compositor::Context, root: &Path) -> anyhow::Result<usize> {
+    let text = std::fs::read_to_string(session_file(root))
+        .map_err(|_| anyhow::anyhow!("{} has no saved session", project_name(root)))?;
+    let mut lines = text.lines();
+    let focused: usize = lines.next().unwrap_or("0").trim().parse().unwrap_or(0);
+    let files: Vec<PathBuf> = lines
+        .filter(|line| !line.trim().is_empty())
+        .map(PathBuf::from)
+        .collect();
+    if files.is_empty() {
+        anyhow::bail!("{} has an empty session", project_name(root));
+    }
+    for (index, path) in files.iter().enumerate() {
+        let action = if index == 0 {
+            zmax_view::editor::Action::Replace
+        } else {
+            zmax_view::editor::Action::VerticalSplit
+        };
+        let _ = cx.editor.open(path, action);
+    }
+    let views: Vec<zmax_view::ViewId> = cx.editor.tree.traverse().map(|(id, _)| id).collect();
+    if let Some(&id) = views.get(focused) {
+        cx.editor.focus(id);
+    }
+    Ok(files.len())
+}
+
+/// `projectile-session-restore` (`C-c p w r`).
+pub(crate) fn session_restore(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = match args.first() {
+        Some(dir) => expand_home(dir),
+        None => project_root(),
+    };
+    let restored = restore_session(cx, &root)?;
+    cx.editor.set_status(format!(
+        "Restored {restored} window(s) of {}",
+        project_name(&root)
+    ));
+    Ok(())
+}
+
+/// `projectile-session-forget` (`C-c p w f`).
+pub(crate) fn session_forget(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = match args.first() {
+        Some(dir) => expand_home(dir),
+        None => project_root(),
+    };
+    match std::fs::remove_file(session_file(&root)) {
+        Ok(()) => {
+            cx.editor
+                .set_status(format!("Forgot the session for {}", project_name(&root)));
+            Ok(())
+        }
+        Err(_) => anyhow::bail!("{} has no saved session", project_name(&root)),
+    }
+}
+
+/// `projectile-session-save-all` (`C-c p w S`).
+pub(crate) fn session_save_all(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let projects = open_projects(cx.editor);
+    if projects.is_empty() {
+        anyhow::bail!("projectile-session-save-all: no project buffers are open");
+    }
+    let mut saved = 0;
+    for project in &projects {
+        if save_session(cx, Path::new(project)).is_ok() {
+            saved += 1;
+        }
+    }
+    cx.editor
+        .set_status(format!("Saved {saved} project session(s)"));
+    Ok(())
+}
+
+/// `projectile-session-restore-all` (`C-c p w R`).
+pub(crate) fn session_restore_all(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut restored = 0;
+    for project in known_projects() {
+        if restore_session(cx, Path::new(&project)).is_ok() {
+            restored += 1;
+        }
+    }
+    if restored == 0 {
+        anyhow::bail!("projectile-session-restore-all: no saved sessions");
+    }
+    cx.editor
+        .set_status(format!("Restored {restored} project session(s)"));
+    Ok(())
+}
+
+/// `projectile-session-switch-to-buffer` (`C-c p w b`).
+pub(crate) fn session_switch_to_buffer(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    switch_to_buffer(cx, args, event)
+}
+
+// ── Reports, dispatch and the odds and ends ─────────────────────────────────
+
+/// `projectile-version`: "Get the Projectile version as string."
+pub(crate) fn version(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.set_status(format!(
+        "Projectile surface ported from projectile 3.5.0-snapshot into zmax {}",
+        env!("CARGO_PKG_VERSION")
+    ));
+    Ok(())
+}
+
+/// `projectile-edit-dir-locals` (`C-c p E`).
+pub(crate) fn edit_dir_locals(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = project_root().join(".dir-locals.el");
+    cx.editor
+        .open(&file, zmax_view::editor::Action::Replace)
+        .map_err(|e| anyhow::anyhow!("projectile-edit-dir-locals: {e}"))?;
+    Ok(())
+}
+
+/// The lines `projectile-dashboard` shows: what projectile knows about the
+/// project around point.
+fn dashboard_lines(cx: &mut compositor::Context, root: &Path) -> Vec<String> {
+    let kind = project_type(root);
+    let files = cached_project_files(root);
+    let tests = files.iter().filter(|f| is_test_file(root, f)).count();
+    let buffers = project_buffer_ids(cx.editor, root).len();
+    let tasks = discovered_tasks(root);
+    let siblings = sibling_projects(root);
+    let phase_line = |phase: Phase| {
+        format!(
+            "  {:<10} {}",
+            phase.name(),
+            phase_command(root, phase).unwrap_or_else(|| "—".to_string())
+        )
+    };
+    let mut lines = vec![
+        format!("Project: {}", project_name(root)),
+        format!("Root:    {}", root.display()),
+        format!("Type:    {kind}"),
+        format!("Files:   {} ({tests} test file(s))", files.len()),
+        format!("Buffers: {buffers} open"),
+        String::new(),
+        "Lifecycle commands:".to_string(),
+        phase_line(Phase::Configure),
+        phase_line(Phase::Compile),
+        phase_line(Phase::Test),
+        phase_line(Phase::Install),
+        phase_line(Phase::Package),
+        phase_line(Phase::Run),
+    ];
+    if !tasks.is_empty() {
+        lines.push(String::new());
+        lines.push("Tasks:".to_string());
+        for (name, command) in &tasks {
+            lines.push(format!("  {name:<20} {command}"));
+        }
+    }
+    if !siblings.is_empty() {
+        lines.push(String::new());
+        lines.push("Sibling projects:".to_string());
+        for sibling in &siblings {
+            lines.push(format!("  {}", sibling.display()));
+        }
+    }
+    lines
+}
+
+/// `projectile-dashboard` (`C-c p P`).
+pub(crate) fn dashboard(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let body = format!("{}\n", dashboard_lines(cx, &root).join("\n"));
+    crate::commands::show_text_in_scratch(cx.editor, &body);
+    Ok(())
+}
+
+/// `projectile-doctor` (`C-c p H`): "Diagnose Projectile's view of the current
+/// project" — what it resolved, and what is missing for the commands that would
+/// not work.
+pub(crate) fn doctor(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let mut lines = vec![
+        format!("Project root:   {}", root.display()),
+        format!("Project type:   {}", project_type(&root)),
+        format!(
+            "Known project:  {}",
+            if known_projects().iter().any(|p| Path::new(p) == root) {
+                "yes"
+            } else {
+                "no — :projectile-add-known-project adds it"
+            }
+        ),
+        format!(
+            "File cache:     {}",
+            if cache_is_warm(&root) {
+                "warm"
+            } else {
+                "cold — :projectile-index-project-async fills it"
+            }
+        ),
+    ];
+    for (tool, why) in [
+        ("git", "changed files, worktrees and the VC view"),
+        ("rg", "project search and replace"),
+    ] {
+        let found = std::process::Command::new(tool)
+            .arg("--version")
+            .output()
+            .map(|out| out.status.success())
+            .unwrap_or(false);
+        lines.push(format!(
+            "{tool:<15} {}",
+            if found {
+                format!("found — {why}")
+            } else {
+                format!("MISSING — {why} will not work")
+            }
+        ));
+    }
+    for phase in [Phase::Compile, Phase::Test, Phase::Run] {
+        lines.push(format!(
+            "{:<15} {}",
+            format!("{}:", phase.name()),
+            phase_command(&root, phase)
+                .unwrap_or_else(|| "no command for this project type".to_string())
+        ));
+    }
+    let body = format!("{}\n", lines.join("\n"));
+    crate::commands::show_text_in_scratch(cx.editor, &body);
+    Ok(())
+}
+
+/// `projectile-report-copy`: "Copy the current report buffer to the kill ring as
+/// plain text."
+pub(crate) fn report_copy(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = zmax_view::doc!(cx.editor).text().to_string();
+    if text.trim().is_empty() {
+        anyhow::bail!("projectile-report-copy: this buffer is empty");
+    }
+    let lines = text.lines().count();
+    cx.editor.registers.write('"', vec![text])?;
+    cx.editor
+        .set_status(format!("Copied {lines} line(s) to the yank register"));
+    Ok(())
+}
+
+/// `projectile-dispatch` (`C-c p m`): "Dispatch menu for Projectile commands."
+pub(crate) fn dispatch(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let mut lines = vec![
+        format!(
+            "Projectile — {} ({})",
+            project_name(&root),
+            project_type(&root)
+        ),
+        String::new(),
+        "Find      :projectile-find-file  -dir  -test-file  -other-file  -changed-file".to_string(),
+        "Buffers   :projectile-switch-to-buffer  -kill-buffers  -save-project-buffers".to_string(),
+        "Search    :projectile-search  -find-references  -multi-occur  -todos".to_string(),
+        "Replace   :projectile-replace  -replace-regexp  -replace-review  -replace-undo".to_string(),
+        "Build     :projectile-compile-project  -test-project  -run-project  -run-task".to_string(),
+        "Projects  :projectile-switch-project  -switch-open-project  -switch-sibling-project"
+            .to_string(),
+        "Sessions  :projectile-session-save  -session-restore".to_string(),
+        "Report    :projectile-dashboard  -doctor  -project-info".to_string(),
+    ];
+    let tasks = discovered_tasks(&root);
+    if !tasks.is_empty() {
+        lines.push(String::new());
+        lines.push(format!(
+            "Tasks     {}",
+            tasks
+                .iter()
+                .map(|(name, _)| name.as_str())
+                .collect::<Vec<_>>()
+                .join("  ")
+        ));
+    }
+    let body = format!("{}\n", lines.join("\n"));
+    crate::commands::show_text_in_scratch(cx.editor, &body);
+    Ok(())
+}
+
+/// `projectile-recentf` (`C-c p e`).
+pub(crate) fn recentf(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let files: Vec<PathBuf> = crate::recent_files::load()
+        .into_iter()
+        .filter(|path| path.starts_with(&root))
+        .collect();
+    if files.is_empty() {
+        anyhow::bail!("projectile-recentf: no recently visited files in this project");
+    }
+    crate::commands::pick_paths(cx, "recent file", root, files);
+    Ok(())
+}
+
+/// `projectile-ibuffer` (`C-c p I`).
+pub(crate) fn ibuffer(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let ids = project_buffer_ids(cx.editor, &root);
+    if ids.is_empty() {
+        anyhow::bail!("projectile-ibuffer: no buffers in this project");
+    }
+    let mut lines = vec![
+        format!("{} buffer(s) in {}", ids.len(), project_name(&root)),
+        String::new(),
+    ];
+    for id in ids {
+        if let Some(doc) = cx.editor.documents.get(&id) {
+            lines.push(format!(
+                "{}{}",
+                if doc.is_modified() { "* " } else { "  " },
+                doc.display_name()
+            ));
+        }
+    }
+    let body = format!("{}\n", lines.join("\n"));
+    crate::commands::show_text_in_scratch(cx.editor, &body);
+    Ok(())
+}
+
+/// `projectile-vc` (`C-c p v`): "Open `vc-dir' at the root of the project."
+pub(crate) fn vc(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    crate::commands::typed::execute_command_line(cx, "magit", event)
+}
+
+/// `projectile-display-buffer` (`C-c p 4 C-o`): "Display a project buffer in
+/// another window without selecting it."
+pub(crate) fn display_buffer(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let here = cx.editor.tree.focus;
+    switch_to_buffer_other_window(cx, args, event)?;
+    // "without selecting it": the window that was focused stays focused.
+    cx.editor.focus(here);
+    Ok(())
+}
+
+/// `projectile-read-buffer-to-switch`: the completing read behind the
+/// switch-to-buffer family; on its own it reports what it would offer.
+pub(crate) fn read_buffer_to_switch(
+    cx: &mut compositor::Context,
+    _args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = project_root();
+    let names: Vec<String> = project_buffer_ids(cx.editor, &root)
+        .into_iter()
+        .filter_map(|id| {
+            cx.editor
+                .documents
+                .get(&id)
+                .map(|doc| doc.display_name().into_owned())
+        })
+        .collect();
+    if names.is_empty() {
+        anyhow::bail!("projectile-read-buffer-to-switch: no buffers in this project");
+    }
+    cx.editor
+        .set_status(format!("Project buffers: {}", names.join(", ")));
+    Ok(())
+}
+
+/// `projectile-reset-known-projects`: "Clear known projects and rediscover."
+pub(crate) fn reset_known_projects(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    write_known_projects(&[])?;
+    discover_projects_in_search_path(cx, args, event).or_else(|_| {
+        cx.editor
+            .set_status("Cleared the known projects; nothing to rediscover");
+        Ok(())
+    })
+}
+
+/// `projectile-find-file-dwim` (`C-c p g`): "Jump to a project's files using
+/// completion based on context."
+pub(crate) fn find_file_dwim(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let at_point = {
+        let (view, doc) = zmax_view::current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let (from, to) =
+            crate::commands::expand_bare_cursor_to_word(text, range.from(), range.to());
+        text.slice(from..to).to_string().trim().to_string()
+    };
+    if at_point.is_empty() {
+        return find_file(cx, args, event);
+    }
+    let root = project_root();
+    let matches: Vec<PathBuf> = cached_project_files(&root)
+        .into_iter()
+        .filter(|path| {
+            path.file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|name| name.contains(&at_point))
+        })
+        .collect();
+    match matches.len() {
+        0 => find_file(cx, args, event),
+        1 => {
+            let target = matches[0].clone();
+            cx.editor
+                .open(&target, zmax_view::editor::Action::Replace)
+                .map_err(|e| anyhow::anyhow!("projectile-find-file-dwim: {e}"))?;
+            Ok(())
+        }
+        _ => {
+            crate::commands::pick_paths(cx, "file", root, matches);
+            Ok(())
+        }
+    }
+}
+
+/// The files of a chosen kind — `test`, `impl`, or an extension.
+fn files_of_kind(root: &Path, kind: &str) -> Vec<PathBuf> {
+    let files = cached_project_files(root);
+    match kind {
+        "test" => files.into_iter().filter(|f| is_test_file(root, f)).collect(),
+        "impl" | "implementation" => files
+            .into_iter()
+            .filter(|f| !is_test_file(root, f))
+            .collect(),
+        other => files
+            .into_iter()
+            .filter(|f| {
+                f.extension()
+                    .and_then(|e| e.to_str())
+                    .is_some_and(|ext| ext == other)
+            })
+            .collect(),
+    }
+}
+
+/// `projectile-find-file-of-kind` (`C-c p j`).
+pub(crate) fn find_file_of_kind(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(kind) = args.first() else {
+        anyhow::bail!("projectile-find-file-of-kind: needs a kind (test, impl, or an extension)");
+    };
+    let root = project_root();
+    let files = files_of_kind(&root, kind);
+    if files.is_empty() {
+        anyhow::bail!("projectile-find-file-of-kind: no {kind} files in this project");
+    }
+    crate::commands::pick_paths(cx, "file", root, files);
+    Ok(())
+}
+
+display_variant!(
+    find_file_dwim_other_window,
+    find_file_dwim,
+    Window,
+    "`projectile-find-file-dwim-other-window` (`C-c p 4 g`)."
+);
+display_variant!(
+    find_file_dwim_other_frame,
+    find_file_dwim,
+    Frame,
+    "`projectile-find-file-dwim-other-frame` (`C-c p 5 g`)."
+);
+display_variant!(
+    find_file_of_kind_other_window,
+    find_file_of_kind,
+    Window,
+    "`projectile-find-file-of-kind-other-window` (`C-c p 4 j`)."
+);
+display_variant!(
+    find_file_of_kind_other_frame,
+    find_file_of_kind,
+    Frame,
+    "`projectile-find-file-of-kind-other-frame` (`C-c p 5 j`)."
+);
+
+/// `projectile-find-related-file`: "Open related file."
+pub(crate) fn find_related_file(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    toggle_implementation_and_test(cx, args, event)
+}
+
+/// `projectile-toggle-related-file` (`C-c p J`).
+pub(crate) fn toggle_related_file(
+    cx: &mut compositor::Context,
+    args: zmax_core::command_line::Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    toggle_implementation_and_test(cx, args, event)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4091,6 +5237,83 @@ mod tests {
         // The shared fallbacks still apply.
         assert!(is_test_file(root, &root.join("tests/whatever.go")));
         assert!(is_test_file(root, &root.join("spec/thing_spec.rb")));
+    }
+
+    /// Task names carry the tool that defines them (`npm:build`, `make:test`),
+    /// which is what keeps projectile's task providers from colliding.
+    #[test]
+    fn tasks_are_discovered_from_the_projects_own_tooling() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        std::fs::write(
+            root.join("package.json"),
+            r#"{"scripts": {"build": "tsc", "test": "vitest"}}"#,
+        )
+        .expect("write");
+        std::fs::write(
+            root.join("Makefile"),
+            "all:\n\tcc x.c\n\ncheck: all\n\t./a.out\n",
+        )
+        .expect("write");
+        let tasks = discovered_tasks(root);
+        let names: Vec<&str> = tasks.iter().map(|(name, _)| name.as_str()).collect();
+        assert!(names.contains(&"npm:build"), "{names:?}");
+        assert!(names.contains(&"npm:test"), "{names:?}");
+        assert!(names.contains(&"make:all"), "{names:?}");
+        assert!(names.contains(&"make:check"), "{names:?}");
+        let build = tasks.iter().find(|(name, _)| name == "npm:build").unwrap();
+        assert_eq!(build.1, "npm run build");
+    }
+
+    /// A Makefile's targets are the names before a colon at the start of a line —
+    /// not its variables, its pattern rules or its special targets.
+    #[test]
+    fn recipe_names_skip_variables_and_pattern_rules() {
+        let text =
+            "CC := cc\n%.o: %.c\n\t$(CC) -c $<\n.PHONY: all\nall: build\nbuild:\n\techo hi\n";
+        assert_eq!(recipe_names(text), vec!["all", "build"]);
+    }
+
+    /// A Taskfile's task names are the keys one level under `tasks:`.
+    #[test]
+    fn yaml_section_keys_reads_the_tasks_block() {
+        let text = "version: '3'\n\ntasks:\n  build:\n    cmds:\n      - go build\n  test:\n    cmds:\n      - go test\nsilent: true\n";
+        assert_eq!(yaml_section_keys(text, "tasks"), vec!["build", "test"]);
+        assert!(yaml_section_keys(text, "nope").is_empty());
+    }
+
+    /// `projectile-run-test-at-point` narrows the run to the test the cursor is
+    /// in, which means finding its name from the declaration above point.
+    #[test]
+    fn the_test_around_point_is_the_nearest_declaration() {
+        let rust = "fn helper() {}\n\n#[test]\nfn checks_the_thing() {\n    assert!(true);\n}\n";
+        assert_eq!(
+            test_name_around(rust, 4).as_deref(),
+            Some("checks_the_thing")
+        );
+        let js = "describe(\"suite\", () => {\n  it(\"does the thing\", () => {\n    expect(1).toBe(1);\n  });\n});\n";
+        assert_eq!(test_name_around(js, 2).as_deref(), Some("does the thing"));
+        assert_eq!(test_name_around("let x = 1;\n", 0), None);
+    }
+
+    /// The implementation/test pair is matched with the project type's own
+    /// `:test-suffix`, so a Go file pairs with `_test.go` and back again.
+    #[test]
+    fn the_related_file_is_the_other_half_of_the_pair() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        std::fs::write(root.join("go.mod"), "module x\n").expect("write");
+        std::fs::write(root.join("thing.go"), "package x\n").expect("write");
+        std::fs::write(root.join("thing_test.go"), "package x\n").expect("write");
+        assert_eq!(
+            related_counterpart(root, &root.join("thing.go")),
+            Some(root.join("thing_test.go"))
+        );
+        assert_eq!(
+            related_counterpart(root, &root.join("thing_test.go")),
+            Some(root.join("thing.go"))
+        );
+        assert_eq!(related_counterpart(root, &root.join("go.mod")), None);
     }
 
     /// `projectile-project-type` is decided by the marker file at the root — the

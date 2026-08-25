@@ -657,6 +657,126 @@ pub(super) const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x *", "C-x *", "command_palette"),
 ];
 
+/// Projectile's own command map, `C-c p` — the prefix `projectile-mode` binds it
+/// under, and the chords `projectile-command-map` gives each command (parsed from
+/// projectile.el, and kept beside the port's denominator in
+/// `port/data/projectile.json`). Every entry runs the `:` command of the same
+/// name, so `C-c p f` is `projectile-find-file` here as it is there.
+#[rustfmt::skip]
+pub(super) const PROJECTILE_MAP: &[(&str, &str, &str)] = &[
+    ("C-c p !", "Projectile", ":projectile-run-shell-command-in-root"),
+    ("C-c p &", "Projectile", ":projectile-run-async-shell-command-in-root"),
+    ("C-c p 4 4", "Projectile", ":projectile-other-window-command"),
+    ("C-c p 4 C-o", "Projectile", ":projectile-display-buffer"),
+    ("C-c p 4 D", "Projectile", ":projectile-dired-other-window"),
+    ("C-c p 4 a", "Projectile", ":projectile-find-other-file-other-window"),
+    ("C-c p 4 b", "Projectile", ":projectile-switch-to-buffer-other-window"),
+    ("C-c p 4 d", "Projectile", ":projectile-find-dir-other-window"),
+    ("C-c p 4 f", "Projectile", ":projectile-find-file-other-window"),
+    ("C-c p 4 g", "Projectile", ":projectile-find-file-dwim-other-window"),
+    ("C-c p 4 j", "Projectile", ":projectile-find-file-of-kind-other-window"),
+    ("C-c p 4 p", "Projectile", ":projectile-switch-project-other-window"),
+    ("C-c p 4 t", "Projectile", ":projectile-find-implementation-or-test-other-window"),
+    ("C-c p 5 5", "Projectile", ":projectile-other-frame-command"),
+    ("C-c p 5 D", "Projectile", ":projectile-dired-other-frame"),
+    ("C-c p 5 a", "Projectile", ":projectile-find-other-file-other-frame"),
+    ("C-c p 5 b", "Projectile", ":projectile-switch-to-buffer-other-frame"),
+    ("C-c p 5 d", "Projectile", ":projectile-find-dir-other-frame"),
+    ("C-c p 5 f", "Projectile", ":projectile-find-file-other-frame"),
+    ("C-c p 5 g", "Projectile", ":projectile-find-file-dwim-other-frame"),
+    ("C-c p 5 j", "Projectile", ":projectile-find-file-of-kind-other-frame"),
+    ("C-c p 5 p", "Projectile", ":projectile-switch-project-other-frame"),
+    ("C-c p 5 t", "Projectile", ":projectile-find-implementation-or-test-other-frame"),
+    ("C-c p ?", "Projectile", ":projectile-find-references"),
+    ("C-c p A", "Projectile", ":projectile-add-known-project"),
+    ("C-c p B d", "Projectile", ":projectile-bookmark-delete"),
+    ("C-c p B j", "Projectile", ":projectile-bookmark-jump"),
+    ("C-c p B s", "Projectile", ":projectile-bookmark-set"),
+    ("C-c p C", "Projectile", ":projectile-find-changed-file"),
+    ("C-c p D", "Projectile", ":projectile-dired"),
+    ("C-c p E", "Projectile", ":projectile-edit-dir-locals"),
+    ("C-c p F", "Projectile", ":projectile-find-file-in-known-projects"),
+    ("C-c p H", "Projectile", ":projectile-doctor"),
+    ("C-c p I", "Projectile", ":projectile-ibuffer"),
+    ("C-c p J", "Projectile", ":projectile-toggle-related-file"),
+    ("C-c p P", "Projectile", ":projectile-dashboard"),
+    ("C-c p R", "Projectile", ":projectile-replace-review"),
+    ("C-c p S", "Projectile", ":projectile-save-project-buffers"),
+    ("C-c p T", "Projectile", ":projectile-find-test-file"),
+    ("C-c p W", "Projectile", ":projectile-switch-worktree"),
+    ("C-c p a", "Projectile", ":projectile-find-other-file"),
+    ("C-c p b", "Projectile", ":projectile-switch-to-buffer"),
+    ("C-c p c .", "Projectile", ":projectile-run-test-at-point"),
+    ("C-c p c X", "Projectile", ":projectile-repeat-last-task"),
+    ("C-c p c c", "Projectile", ":projectile-compile-project"),
+    ("C-c p c i", "Projectile", ":projectile-install-project"),
+    ("C-c p c m c", "Projectile", ":projectile-compile-subproject"),
+    ("C-c p c m f", "Projectile", ":projectile-find-file-in-subproject"),
+    ("C-c p c m i", "Projectile", ":projectile-install-subproject"),
+    ("C-c p c m o", "Projectile", ":projectile-configure-subproject"),
+    ("C-c p c m p", "Projectile", ":projectile-package-subproject"),
+    ("C-c p c m r", "Projectile", ":projectile-run-subproject"),
+    ("C-c p c m t", "Projectile", ":projectile-test-subproject"),
+    ("C-c p c o", "Projectile", ":projectile-configure-project"),
+    ("C-c p c p", "Projectile", ":projectile-package-project"),
+    ("C-c p c r", "Projectile", ":projectile-run-project"),
+    ("C-c p c t", "Projectile", ":projectile-test-project"),
+    ("C-c p c x", "Projectile", ":projectile-run-task"),
+    ("C-c p d", "Projectile", ":projectile-find-dir"),
+    ("C-c p e", "Projectile", ":projectile-recentf"),
+    ("C-c p esc", "Projectile", ":projectile-project-buffers-other-buffer"),
+    ("C-c p f", "Projectile", ":projectile-find-file"),
+    ("C-c p g", "Projectile", ":projectile-find-file-dwim"),
+    ("C-c p i", "Projectile", ":projectile-invalidate-cache"),
+    ("C-c p j", "Projectile", ":projectile-find-file-of-kind"),
+    ("C-c p k", "Projectile", ":projectile-kill-buffers"),
+    ("C-c p l", "Projectile", ":projectile-find-file-in-directory"),
+    ("C-c p left", "Projectile", ":projectile-previous-project-buffer"),
+    ("C-c p m", "Projectile", ":projectile-dispatch"),
+    ("C-c p n b", "Projectile", ":projectile-switch-to-buffer-in-sibling-projects"),
+    ("C-c p n f", "Projectile", ":projectile-find-file-in-sibling-projects"),
+    ("C-c p n o", "Projectile", ":projectile-multi-occur-in-sibling-projects"),
+    ("C-c p n p", "Projectile", ":projectile-switch-sibling-project"),
+    ("C-c p n s", "Projectile", ":projectile-search-in-sibling-projects"),
+    ("C-c p n t", "Projectile", ":projectile-todos-in-sibling-projects"),
+    ("C-c p o", "Projectile", ":projectile-multi-occur"),
+    ("C-c p p", "Projectile", ":projectile-switch-project"),
+    ("C-c p q", "Projectile", ":projectile-switch-open-project"),
+    ("C-c p r", "Projectile", ":projectile-replace"),
+    ("C-c p right", "Projectile", ":projectile-next-project-buffer"),
+    ("C-c p s R", "Projectile", ":projectile-search-review"),
+    ("C-c p s X", "Projectile", ":projectile-search-regexp-review"),
+    ("C-c p s a", "Projectile", ":projectile-ag"),
+    ("C-c p s g", "Projectile", ":projectile-grep"),
+    ("C-c p s r", "Projectile", ":projectile-ripgrep"),
+    ("C-c p s s", "Projectile", ":projectile-search"),
+    ("C-c p s t", "Projectile", ":projectile-todos"),
+    ("C-c p s x", "Projectile", ":projectile-find-references"),
+    ("C-c p t", "Projectile", ":projectile-toggle-between-implementation-and-test"),
+    ("C-c p u", "Projectile", ":projectile-replace-undo"),
+    ("C-c p v", "Projectile", ":projectile-vc"),
+    ("C-c p w R", "Projectile", ":projectile-session-restore-all"),
+    ("C-c p w S", "Projectile", ":projectile-session-save-all"),
+    ("C-c p w b", "Projectile", ":projectile-session-switch-to-buffer"),
+    ("C-c p w f", "Projectile", ":projectile-session-forget"),
+    ("C-c p w r", "Projectile", ":projectile-session-restore"),
+    ("C-c p w s", "Projectile", ":projectile-session-save"),
+    ("C-c p x 4 G", "Projectile", ":projectile-run-ghostel-other-window"),
+    ("C-c p x 4 v", "Projectile", ":projectile-run-vterm-other-window"),
+    ("C-c p x 4 x", "Projectile", ":projectile-run-eat-other-window"),
+    ("C-c p x G", "Projectile", ":projectile-run-ghostel"),
+    ("C-c p x e", "Projectile", ":projectile-run-eshell"),
+    ("C-c p x g", "Projectile", ":projectile-run-gdb"),
+    ("C-c p x i", "Projectile", ":projectile-run-ielm"),
+    ("C-c p x r", "Projectile", ":projectile-run"),
+    ("C-c p x s", "Projectile", ":projectile-run-shell"),
+    ("C-c p x t", "Projectile", ":projectile-run-term"),
+    ("C-c p x v", "Projectile", ":projectile-run-vterm"),
+    ("C-c p x x", "Projectile", ":projectile-run-eat"),
+    ("C-c p z", "Projectile", ":projectile-cache-current-file"),
+];
+
+
 /// Spacemacs's own overrides of an evil (vim) binding — chords where Spacemacs
 /// deliberately rebinds a key the vim base already owns, so the two presets
 /// differ. Format: (chord, submap-label, command). Applied to **Normal mode
@@ -720,6 +840,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         //    bound in every mode.
         if let Some(node) = trie.node_mut() {
             for (chord, label, cmd) in CXCH_FULL {
+                add_chord(node, chord, label, cmd);
+            }
+            // Projectile's own `C-c p` command map, on the prefix
+            // `projectile-mode` binds it under.
+            for (chord, label, cmd) in PROJECTILE_MAP {
                 add_chord(node, chord, label, cmd);
             }
         }
@@ -844,6 +969,33 @@ mod tests {
             cmd(&km, Mode::Normal, "space t E h"),
             cmd(&default(), Mode::Normal, "space t E h"),
             "and the editing-style toggles it came from"
+        );
+    }
+
+    /// Projectile's `C-c p` command map is bound: every chord of
+    /// `projectile-command-map` reaches the `:` command of the same name, so the
+    /// muscle memory of `C-c p f` / `C-c p s s` / `C-c p c c` works here.
+    #[test]
+    fn projectile_command_map_is_on_c_c_p() {
+        let km = default();
+        for (chord, want) in [
+            ("C-c p f", "projectile-find-file"),
+            ("C-c p p", "projectile-switch-project"),
+            ("C-c p s s", "projectile-search"),
+            ("C-c p c c", "projectile-compile-project"),
+            ("C-c p c m t", "projectile-test-subproject"),
+            ("C-c p 4 f", "projectile-find-file-other-window"),
+            ("C-c p 5 b", "projectile-switch-to-buffer-other-frame"),
+            ("C-c p w s", "projectile-session-save"),
+            ("C-c p x 4 v", "projectile-run-vterm-other-window"),
+        ] {
+            assert_eq!(cmd(&km, Mode::Normal, chord).as_deref(), Some(want), "{chord}");
+        }
+        // The whole map is there, not a sample of it.
+        assert_eq!(
+            PROJECTILE_MAP.len(),
+            110,
+            "every chord projectile's command map binds to a ported command"
         );
     }
 

@@ -61051,6 +61051,46 @@
   "note": "`:projectile-add-known-project`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.ag",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-ag"
+  ],
+  "note": "`:projectile-ag`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.bookmark_delete",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-bookmark-delete"
+  ],
+  "note": "`:projectile-bookmark-delete`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.bookmark_jump",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-bookmark-jump"
+  ],
+  "note": "`:projectile-bookmark-jump`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.bookmark_set",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-bookmark-set"
+  ],
+  "note": "`:projectile-bookmark-set`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.cache_current_file",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-cache-current-file"
+  ],
+  "note": "`:projectile-cache-current-file`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.cleanup_known_projects",
   "status": "ported",
   "evidence": [
@@ -61099,6 +61139,14 @@
   "note": "`:projectile-configure-subproject`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.dashboard",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-dashboard"
+  ],
+  "note": "`:projectile-dashboard`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.dired",
   "status": "ported",
   "evidence": [
@@ -61107,12 +61155,36 @@
   "note": "`projectile-dired` opens Dired; zmax's Dired opens at the project root when the buffer is in one."
  },
  {
+  "spec_id": "projectile.command.dired_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-dired-other-frame"
+  ],
+  "note": "`:projectile-dired-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.dired_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-dired-other-window"
+  ],
+  "note": "`:projectile-dired-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.discard_command_cache",
   "status": "ported",
   "evidence": [
    "typable:projectile-discard-command-cache"
   ],
   "note": "`:projectile-discard-command-cache`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.discard_root_cache",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-discard-root-cache"
+  ],
+  "note": "`:projectile-discard-root-cache`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.discover_projects_in_directory",
@@ -61131,12 +61203,84 @@
   "note": "`:projectile-discover-projects-in-search-path`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.dispatch",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-dispatch"
+  ],
+  "note": "`:projectile-dispatch`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.dispatch_args",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-dispatch--args"
+  ],
+  "note": "`:projectile-dispatch--args`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.dispatch_replace_review",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-dispatch-replace-review"
+  ],
+  "note": "`:projectile-dispatch-replace-review`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.dispatch_search_review",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-dispatch-search-review"
+  ],
+  "note": "`:projectile-dispatch-search-review`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.dispatch_search_siblings",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-dispatch-search-siblings"
+  ],
+  "note": "`:projectile-dispatch-search-siblings`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.display_buffer",
   "status": "ported",
   "evidence": [
    "static:display_buffer"
   ],
   "note": "`projectile-display-buffer` is display_buffer, which shows a buffer in another window without selecting it."
+ },
+ {
+  "spec_id": "projectile.command.doctor",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-doctor"
+  ],
+  "note": "`:projectile-doctor`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.edit_dir_locals",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-edit-dir-locals"
+  ],
+  "note": "`:projectile-edit-dir-locals`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.embark_switch_project",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-switch-project"
+  ],
+  "note": "`projectile-embark-switch-project` is the Embark *action* for a project candidate \u2014 Embark being the emacs completion-framework layer that offers actions on the thing at point. zmax's pickers act on the selected entry directly, so the action is the command: `:projectile-switch-project`. Recorded divergence: there is no Embark integration layer to register it with, because there is no Embark."
+ },
+ {
+  "spec_id": "projectile.command.embark_vc",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-vc"
+  ],
+  "note": "`projectile-embark-vc` is the Embark action for a project candidate, i.e. `:projectile-vc` on the picked project. Same recorded divergence as `projectile-embark-switch-project`."
  },
  {
   "spec_id": "projectile.command.find_changed_file",
@@ -61155,6 +61299,22 @@
   "note": "`:projectile-find-dir`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.find_dir_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-dir-other-frame"
+  ],
+  "note": "`:projectile-find-dir-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_dir_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-dir-other-window"
+  ],
+  "note": "`:projectile-find-dir-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.find_file",
   "status": "ported",
   "evidence": [
@@ -61169,6 +61329,30 @@
    "typable:projectile-find-file-all"
   ],
   "note": "`:projectile-find-file-all`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_file_dwim",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-dwim"
+  ],
+  "note": "`:projectile-find-file-dwim`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_file_dwim_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-dwim-other-frame"
+  ],
+  "note": "`:projectile-find-file-dwim-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_file_dwim_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-dwim-other-window"
+  ],
+  "note": "`:projectile-find-file-dwim-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.find_file_in_directory",
@@ -61187,6 +61371,14 @@
   "note": "`:projectile-find-file-in-known-projects`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.find_file_in_sibling_projects",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-in-sibling-projects"
+  ],
+  "note": "`:projectile-find-file-in-sibling-projects`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.find_file_in_subproject",
   "status": "ported",
   "evidence": [
@@ -61195,12 +61387,100 @@
   "note": "`:projectile-find-file-in-subproject`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.find_file_of_kind",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-of-kind"
+  ],
+  "note": "`:projectile-find-file-of-kind`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_file_of_kind_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-of-kind-other-frame"
+  ],
+  "note": "`:projectile-find-file-of-kind-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_file_of_kind_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-of-kind-other-window"
+  ],
+  "note": "`:projectile-find-file-of-kind-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_file_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-other-frame"
+  ],
+  "note": "`:projectile-find-file-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_file_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file-other-window"
+  ],
+  "note": "`:projectile-find-file-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_implementation_or_test_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-implementation-or-test-other-frame"
+  ],
+  "note": "`:projectile-find-implementation-or-test-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_implementation_or_test_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-implementation-or-test-other-window"
+  ],
+  "note": "`:projectile-find-implementation-or-test-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.find_other_file",
   "status": "ported",
   "evidence": [
    "typable:projectile-find-other-file"
   ],
   "note": "`:projectile-find-other-file`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_other_file_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-other-file-other-frame"
+  ],
+  "note": "`:projectile-find-other-file-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_other_file_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-other-file-other-window"
+  ],
+  "note": "`:projectile-find-other-file-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_references",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-references"
+  ],
+  "note": "`:projectile-find-references`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.find_related_file",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-related-file"
+  ],
+  "note": "`:projectile-find-related-file`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.find_test_file",
@@ -61219,12 +61499,28 @@
   "note": "`:projectile-forget-projects-under`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.grep",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-grep"
+  ],
+  "note": "`:projectile-grep`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.ibuffer",
   "status": "ported",
   "evidence": [
    "static:project_list_buffers"
   ],
   "note": "`projectile-ibuffer` is project_list_buffers: the buffer list, restricted to the project."
+ },
+ {
+  "spec_id": "projectile.command.index_project_async",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-index-project-async"
+  ],
+  "note": "`:projectile-index-project-async`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.install_project",
@@ -61243,12 +61539,36 @@
   "note": "`:projectile-install-subproject`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.internal_find_file",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-find-file"
+  ],
+  "note": "`projectile--find-file` is the private body `projectile-find-file` and its display variants share; here that is `find_file`'s picker, which every variant runs with the display override armed."
+ },
+ {
+  "spec_id": "projectile.command.internal_run_subproject_phase",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-compile-subproject"
+  ],
+  "note": "`projectile--run-subproject-phase` is the private body the six `projectile-*-subproject` commands share; here that is `subproject_lifecycle`, which resolves the nearest subproject and runs the phase's command in it."
+ },
+ {
   "spec_id": "projectile.command.invalidate_cache",
   "status": "ported",
   "evidence": [
    "typable:projectile-invalidate-cache"
   ],
   "note": "`:projectile-invalidate-cache`. zmax's file picker walks the project on each open, so the cache this drops is the picker's, not a persisted index."
+ },
+ {
+  "spec_id": "projectile.command.invalidate_cache_all",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-invalidate-cache-all"
+  ],
+  "note": "`:projectile-invalidate-cache-all`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.kill_buffers",
@@ -61259,12 +61579,44 @@
   "note": "`:projectile-kill-buffers`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.multi_occur",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-multi-occur"
+  ],
+  "note": "`:projectile-multi-occur`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.multi_occur_in_sibling_projects",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-multi-occur-in-sibling-projects"
+  ],
+  "note": "`:projectile-multi-occur-in-sibling-projects`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.next_project_buffer",
   "status": "ported",
   "evidence": [
    "typable:projectile-next-project-buffer"
   ],
   "note": "`:projectile-next-project-buffer`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.other_frame_command",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-other-frame-command"
+  ],
+  "note": "`:projectile-other-frame-command`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.other_window_command",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-other-window-command"
+  ],
+  "note": "`:projectile-other-window-command`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.package_project",
@@ -61291,12 +61643,44 @@
   "note": "`:projectile-previous-project-buffer`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.project_buffers_other_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-project-buffers-other-buffer"
+  ],
+  "note": "`:projectile-project-buffers-other-buffer`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.project_info",
   "status": "ported",
   "evidence": [
    "typable:projectile-project-info"
   ],
   "note": "`:projectile-project-info`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.purge_dir_from_cache",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-purge-dir-from-cache"
+  ],
+  "note": "`:projectile-purge-dir-from-cache`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.purge_file_from_cache",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-purge-file-from-cache"
+  ],
+  "note": "`:projectile-purge-file-from-cache`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.read_buffer_to_switch",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-read-buffer-to-switch"
+  ],
+  "note": "`:projectile-read-buffer-to-switch`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.recentf",
@@ -61331,12 +61715,324 @@
   "note": "`:projectile-repeat-last-command`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.repeat_last_task",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-repeat-last-task"
+  ],
+  "note": "`:projectile-repeat-last-task`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.replace",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace"
+  ],
+  "note": "`:projectile-replace`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.replace_apply",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`!` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_export",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`e` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_flush_files",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`D` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_flush_matches",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`d` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_goto_next_file",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`M-n` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_goto_next_match",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`n` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_goto_prev_file",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`M-p` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_goto_prev_match",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`p` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_keep_files",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`K` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_keep_matches",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`k` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_quit",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`q` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_refresh",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`g` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_regexp",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-regexp"
+  ],
+  "note": "`:projectile-replace-regexp`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.replace_regexp_review",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-regexp-review"
+  ],
+  "note": "`:projectile-replace-regexp-review`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.replace_review",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`:projectile-replace-review`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.replace_set_replacement",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`r` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_toggle",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`t` / `SPC` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_toggle_case",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`c` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_toggle_file",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`f` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_toggle_regexp",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`x` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_toggle_word",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`w` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.replace_undo",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-undo"
+  ],
+  "note": "`:projectile-replace-undo`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.replace_visit",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-replace-review"
+  ],
+  "note": "`RET` in the reviewable replace buffer (`ui/projectile_review.rs`), which `:projectile-replace-review` / `:projectile-search-review` open. These are `projectile-replace-mode-map`'s own keys, not global commands, so they live on the component the same way they live on the mode; the chord is the one projectile binds."
+ },
+ {
+  "spec_id": "projectile.command.report_copy",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-report-copy"
+  ],
+  "note": "`:projectile-report-copy`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.reset_known_projects",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-reset-known-projects"
+  ],
+  "note": "`:projectile-reset-known-projects`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.ripgrep",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-ripgrep"
+  ],
+  "note": "`:projectile-ripgrep`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run"
+  ],
+  "note": "`:projectile-run`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_async_shell_command_in_root",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-async-shell-command-in-root"
+  ],
+  "note": "`:projectile-run-async-shell-command-in-root`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_command_in_root",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-command-in-root"
+  ],
+  "note": "`:projectile-run-command-in-root`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_eat",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-eat"
+  ],
+  "note": "`:projectile-run-eat`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_eat_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-eat-other-window"
+  ],
+  "note": "`:projectile-run-eat-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_eshell",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-eshell"
+  ],
+  "note": "`:projectile-run-eshell`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_gdb",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-gdb"
+  ],
+  "note": "`:projectile-run-gdb`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_ghostel",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-ghostel"
+  ],
+  "note": "`:projectile-run-ghostel`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_ghostel_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-ghostel-other-window"
+  ],
+  "note": "`:projectile-run-ghostel-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_ielm",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-ielm"
+  ],
+  "note": "`:projectile-run-ielm`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.run_project",
   "status": "ported",
   "evidence": [
    "typable:projectile-run-project"
   ],
   "note": "`:projectile-run-project`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_shell",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-shell"
+  ],
+  "note": "`:projectile-run-shell`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.run_shell_command_in_root",
@@ -61355,12 +62051,140 @@
   "note": "`:projectile-run-subproject`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.run_task",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-task"
+  ],
+  "note": "`:projectile-run-task`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_term",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-term"
+  ],
+  "note": "`:projectile-run-term`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_test_at_point",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-test-at-point"
+  ],
+  "note": "`:projectile-run-test-at-point`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_vterm",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-vterm"
+  ],
+  "note": "`:projectile-run-vterm`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.run_vterm_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-run-vterm-other-window"
+  ],
+  "note": "`:projectile-run-vterm-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.save_project_buffers",
   "status": "ported",
   "evidence": [
    "typable:projectile-save-project-buffers"
   ],
   "note": "`:projectile-save-project-buffers`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.search",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-search"
+  ],
+  "note": "`:projectile-search`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.search_in_sibling_projects",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-search-in-sibling-projects"
+  ],
+  "note": "`:projectile-search-in-sibling-projects`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.search_regexp_review",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-search-regexp-review"
+  ],
+  "note": "`:projectile-search-regexp-review`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.search_review",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-search-review"
+  ],
+  "note": "`:projectile-search-review`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.search_to_replace",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-search--to-replace"
+  ],
+  "note": "`:projectile-search--to-replace`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.session_forget",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-session-forget"
+  ],
+  "note": "`:projectile-session-forget`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.session_restore",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-session-restore"
+  ],
+  "note": "`:projectile-session-restore`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.session_restore_all",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-session-restore-all"
+  ],
+  "note": "`:projectile-session-restore-all`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.session_save",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-session-save"
+  ],
+  "note": "`:projectile-session-save`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.session_save_all",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-session-save-all"
+  ],
+  "note": "`:projectile-session-save-all`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.session_switch_to_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-session-switch-to-buffer"
+  ],
+  "note": "`:projectile-session-switch-to-buffer`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.switch_open_project",
@@ -61379,6 +62203,30 @@
   "note": "`projectile-switch-project` is project_switch_project: it completes over the known projects (`<config-dir>/projects`, most recent first) and opens the chosen root."
  },
  {
+  "spec_id": "projectile.command.switch_project_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-switch-project-other-frame"
+  ],
+  "note": "`:projectile-switch-project-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.switch_project_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-switch-project-other-window"
+  ],
+  "note": "`:projectile-switch-project-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.switch_sibling_project",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-switch-sibling-project"
+  ],
+  "note": "`:projectile-switch-sibling-project`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.switch_to_buffer",
   "status": "ported",
   "evidence": [
@@ -61387,12 +62235,44 @@
   "note": "`projectile-switch-to-buffer` is buffer_picker over the open buffers."
  },
  {
+  "spec_id": "projectile.command.switch_to_buffer_in_sibling_projects",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-switch-to-buffer-in-sibling-projects"
+  ],
+  "note": "`:projectile-switch-to-buffer-in-sibling-projects`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.switch_to_buffer_other_frame",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-switch-to-buffer-other-frame"
+  ],
+  "note": "`:projectile-switch-to-buffer-other-frame`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.switch_to_buffer_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-switch-to-buffer-other-window"
+  ],
+  "note": "`:projectile-switch-to-buffer-other-window`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.switch_to_most_recent_project",
   "status": "ported",
   "evidence": [
    "typable:projectile-switch-to-most-recent-project"
   ],
   "note": "`:projectile-switch-to-most-recent-project`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.switch_worktree",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-switch-worktree"
+  ],
+  "note": "`:projectile-switch-worktree`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "projectile.command.test_project",
@@ -61411,6 +62291,22 @@
   "note": "`:projectile-test-subproject`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.todos",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-todos"
+  ],
+  "note": "`:projectile-todos`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
+  "spec_id": "projectile.command.todos_in_sibling_projects",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-todos-in-sibling-projects"
+  ],
+  "note": "`:projectile-todos-in-sibling-projects`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.toggle_between_implementation_and_test",
   "status": "ported",
   "evidence": [
@@ -61427,12 +62323,28 @@
   "note": "`:projectile-toggle-project-read-only`. Ported in `commands/projectile.rs`, zmax's port of projectile over the project model it already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
+  "spec_id": "projectile.command.toggle_related_file",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-toggle-related-file"
+  ],
+  "note": "`:projectile-toggle-related-file`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
+ },
+ {
   "spec_id": "projectile.command.vc",
   "status": "ported",
   "evidence": [
    "static:git_status"
   ],
   "note": "`projectile-vc` is git_status, the magit-style VC view of the project."
+ },
+ {
+  "spec_id": "projectile.command.version",
+  "status": "ported",
+  "evidence": [
+   "typable:projectile-version"
+  ],
+  "note": "`:projectile-version`. Ported in `commands/projectile.rs` over the project model zmax already has (`find_workspace` resolves the root, `<config-dir>/projects` holds the known list)."
  },
  {
   "spec_id": "sam.compound-addresses.a1",

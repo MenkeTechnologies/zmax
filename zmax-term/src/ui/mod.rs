@@ -81,6 +81,7 @@ pub mod powerline;
 pub mod preferences;
 pub mod proced;
 pub mod project;
+pub mod projectile_review;
 pub mod prompt;
 pub mod query_replace;
 pub mod rat;

@@ -4,7 +4,7 @@ This directory holds the **port report** infrastructure: the instrument that
 measures how much of the *other terminal editors'* feature surface zmax
 implements — the vim, emacs and helix families it descends from, and the rest of
 the field beside them: kakoune, vis, sam, ed, nvi, vile, mg, nano, micro, mcedit,
-ne, dte, the Neovim distributions, fzf.vim, JetBrains and Cursor. zmax starts
+ne, dte, the Neovim distributions, fzf.vim, projectile, JetBrains and Cursor. zmax starts
 from a modal core and is being built out toward the union of those editors; this
 report tracks that build-out.
 
@@ -32,6 +32,7 @@ report tracks that build-out.
 | `spacemacs_bindings.json` | Spacemacs `doc/DOCUMENTATION.org` |
 | `spacemacs_layers.json` | Spacemacs `layers/` git tree |
 | `fzf_vim.json` | junegunn/fzf.vim — Commands reference |
+| `projectile.json` | bbatsov/projectile `projectile.el` (3.5.0-snapshot) — every interactive command, the 27 its `--define-display-variants` / `--define-subproject-commands` macros generate included, each with the `C-c p` chord `projectile-command-map` binds it and a line-anchored `doc_ref` |
 | `kakoune.json` | kakoune `doc/pages/keys.asciidoc` + `commands.asciidoc` (menu keys carry their prefix: `g h`, `<a-z> u`) |
 | `vis.json` | `vis(1)` — its vi side and the sam command language |
 | `sam.json` | plan9port `sam(1)` |
