@@ -12643,7 +12643,9 @@ fn searcher(cx: &mut Context, direction: Direction) {
                 cx.editor.last_search_forward = matches!(direction, Direction::Forward);
                 // `[count]/pat`: advance to the count-th match.
                 let mut mat = None;
+                let mut wrapped = false;
                 for _ in 0..count.max(1) {
+                    let before = cursor_byte(cx.editor);
                     mat = search_impl(
                         cx.editor,
                         &regex,
@@ -12653,6 +12655,14 @@ fn searcher(cx: &mut Context, direction: Direction) {
                         wrap_around,
                         false,
                     );
+                    if mat.is_some() {
+                        wrapped |= search_wrapped(before, cursor_byte(cx.editor), direction);
+                    }
+                }
+                // vim shows the search count for `/pat` as well as for `n`/`N`;
+                // report it before the offset moves the cursor off the match.
+                if mat.is_some() {
+                    report_search_count(cx.editor, &regex, wrapped);
                 }
                 // vim search offset: reposition the cursor relative to the match.
                 if cx.editor.vim_semantics {
@@ -12766,6 +12776,135 @@ fn apply_search_offset(editor: &mut Editor, offset: &str, mat: Option<(usize, us
     doc.set_selection(view.id, Selection::point(new));
 }
 
+/// The primary cursor's byte offset — the position `searchcount()` counts
+/// against, and the one a wrap is detected from.
+fn cursor_byte(editor: &Editor) -> usize {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    text.char_to_byte(doc.selection(view.id).primary().cursor(text))
+}
+
+/// vim `searchcount()` (vimfn.txt:8470) over an ordered iterator of match byte
+/// ranges: `(current, total, exceeded)`.
+///
+/// `current` is the number of matches whose start is at or before `cursor_byte`,
+/// which is what nvim reports — verified by driving nvim 0.12.5 on the same
+/// buffer: the cursor before the first match gives 0, on a match's first byte
+/// gives that match's 1-based index, and past a match but before the next keeps
+/// the earlier index.
+///
+/// `maxcount` is `'maxsearchcount'`: "when the number of matches exceeds this
+/// value, Vim shows `>` instead of the exact count to keep searching fast"
+/// (options.txt). Counting therefore stops at `maxcount + 1` on each side of the
+/// cursor — the value nvim itself reports when the limit is hit — and `exceeded`
+/// is nvim's `incomplete: 2`. Pure — unit tested.
+fn search_count_from_matches(
+    matches: impl Iterator<Item = (usize, usize)>,
+    cursor_byte: usize,
+    maxcount: usize,
+) -> (usize, usize, bool) {
+    let cap = maxcount.saturating_add(1);
+    let mut before = 0usize; // matches at or before the cursor
+    let mut after = 0usize; // matches after it
+    for (start, _end) in matches {
+        if start <= cursor_byte {
+            if before < cap {
+                before += 1;
+            }
+        } else {
+            if after < cap {
+                after += 1;
+            }
+            // Both sides are saturated: nothing further can change the report.
+            if before >= cap && after >= cap {
+                break;
+            }
+        }
+    }
+    let total = (before + after).min(cap);
+    (before.min(cap), total, total > maxcount)
+}
+
+/// The search-count message vim shows when `'shortmess'` lacks `S`
+/// (options.txt `shm-S`: "do not show search count message when searching, e.g.
+/// `[1/5]`"), or `None` when it has it.
+///
+/// Over the limit the counts are prefixed with `>`, following the shape
+/// `searchcount()`'s own documented statusline example builds: `[>cur/>tot]`
+/// when both exceed it, `[cur/>tot]` when only the total does. A wrapped search
+/// is reported by a `W` before the count rather than by the
+/// "search hit BOTTOM, continuing at TOP" line — "when the S flag is not present
+/// […] those messages are only indicated by a `W` (Mnemonic: Wrapped) letter
+/// before the search count statistics" — and `shm-s` drops that `W` too.
+/// Pure — unit tested.
+fn search_count_status(
+    current: usize,
+    total: usize,
+    exceeded: bool,
+    wrapped: bool,
+    shortmess: &str,
+) -> Option<String> {
+    if shortmess.contains('S') {
+        return None;
+    }
+    let count = if exceeded && current >= total {
+        format!("[>{current}/>{total}]")
+    } else if exceeded {
+        format!("[{current}/>{total}]")
+    } else {
+        format!("[{current}/{total}]")
+    };
+    Some(if wrapped && !shortmess.contains('s') {
+        format!("W {count}")
+    } else {
+        count
+    })
+}
+
+/// Show the search count for the pattern just searched, as vim does after
+/// `/pat`, `n` and `N`. A no-op under `'shortmess'` `S`, which is where the
+/// `'maxsearchcount'` cap and this whole message live.
+fn report_search_count(editor: &mut Editor, regex: &rope::Regex, wrapped: bool) {
+    let shortmess = crate::commands::typed::vim_opt_str_alias("shortmess", "shm")
+        .unwrap_or_else(|| "ltToOCF".to_string());
+    if shortmess.contains('S') {
+        return;
+    }
+    // options.txt: "The value must be between 1 and 9999."
+    let maxcount = crate::commands::typed::vim_opt_num("maxsearchcount")
+        .or_else(|| crate::commands::typed::vim_opt_num("msc"))
+        .unwrap_or(999)
+        .clamp(1, 9999);
+    let (view, doc) = current!(editor);
+    let text = doc.text().slice(..);
+    let cursor_byte = text.char_to_byte(doc.selection(view.id).primary().cursor(text));
+    let (current, total, exceeded) = search_count_from_matches(
+        regex
+            .find_iter(text.regex_input())
+            .map(|m| (m.start(), m.end())),
+        cursor_byte,
+        maxcount,
+    );
+    if total == 0 {
+        return;
+    }
+    if let Some(msg) = search_count_status(current, total, exceeded, wrapped, &shortmess) {
+        editor.set_status(msg);
+    }
+}
+
+/// Whether a search that started at `before` and landed on `after` wrapped the
+/// end of the buffer: a forward search that did not move forward, or a backward
+/// search that did not move backward. This is vim's "search hit BOTTOM" /
+/// "search hit TOP" condition, which `'shortmess'` reports as a `W` before the
+/// search count. Pure — unit tested.
+fn search_wrapped(before: usize, after: usize, direction: Direction) -> bool {
+    match direction {
+        Direction::Forward => after <= before,
+        Direction::Backward => after >= before,
+    }
+}
+
 fn search_next_or_prev_impl(cx: &mut Context, movement: Movement, direction: Direction) {
     let count = cx.count();
     let register = cx
@@ -12798,8 +12937,11 @@ fn search_next_or_prev_impl(cx: &mut Context, movement: Movement, direction: Dir
                 let (view, doc) = current!(cx.editor);
                 push_jump(view, doc);
             }
+            let mut wrapped = false;
+            let mut hit = false;
             for _ in 0..count {
-                search_impl(
+                let before = cursor_byte(cx.editor);
+                let mat = search_impl(
                     cx.editor,
                     &regex,
                     movement,
@@ -12808,6 +12950,16 @@ fn search_next_or_prev_impl(cx: &mut Context, movement: Movement, direction: Dir
                     wrap_around,
                     true,
                 );
+                if mat.is_some() {
+                    hit = true;
+                    wrapped |= search_wrapped(before, cursor_byte(cx.editor), direction);
+                }
+            }
+            // vim `shm-S`: the search count replaces the wrap message, which is
+            // why this runs after the moves and overwrites what `search_impl`
+            // set — the wrap is folded into the count as its `W` prefix.
+            if hit {
+                report_search_count(cx.editor, &regex, wrapped);
             }
         } else {
             let error = format!("Invalid regex: {}", query);
@@ -58939,7 +59091,14 @@ fn keyword_pattern(editor: &mut Editor, define: bool) -> Option<Regex> {
         // vim 'define' — the default matches C's `#define`, and a language can
         // point it elsewhere (`:set define=^\\s*let`, …).
         let define = typed::vim_opt_str("define").unwrap_or_else(|| r"^\s*#\s*define".to_string());
-        format!(r"(?:{define})\s+{word}\b")
+        // options.txt 'isident': "The characters given by this option are
+        // included in identifiers. […] It is also used […] after a match of the
+        // 'define' option: {match with 'define'}{non-ID chars}{defined name}{non-ID
+        // char}". So the name is terminated by a character the option leaves OUT,
+        // not by the engine's own `\b` — `:set isident=@,48-57,_,-` makes
+        // `FOO-BAR` one name.
+        let ident = crate::vim_regex::ident_class_body();
+        format!(r"(?:{define})[^{ident}]+{word}(?:[^{ident}]|$)")
     } else {
         format!(r"\b{word}\b")
     };
@@ -75842,6 +76001,90 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod search_count_tests {
+    use super::{search_count_from_matches, search_count_status, search_wrapped};
+    use zmax_core::movement::Direction;
+
+    /// Match byte ranges of `aa` in "zz\naa bb\ncc aa\naa dd\n" — the fixture
+    /// nvim 0.12.5 was driven on to fix these semantics.
+    const MATCHES: [(usize, usize); 3] = [(3, 5), (12, 14), (15, 17)];
+
+    #[test]
+    fn current_counts_the_matches_at_or_before_the_cursor() {
+        let at = |cursor| search_count_from_matches(MATCHES.into_iter(), cursor, 999);
+        // Cursor before the first match: nvim reports current 0, total 3.
+        assert_eq!(at(0), (0, 3, false));
+        // On a match's first byte: that match's 1-based index.
+        assert_eq!(at(3), (1, 3, false));
+        assert_eq!(at(12), (2, 3, false));
+        assert_eq!(at(15), (3, 3, false));
+        // Past a match but before the next: the earlier index stands.
+        assert_eq!(at(7), (1, 3, false));
+        // No matches at all: nothing to report.
+        assert_eq!(
+            search_count_from_matches(std::iter::empty(), 0, 999),
+            (0, 0, false)
+        );
+    }
+
+    #[test]
+    fn maxsearchcount_caps_both_halves_of_the_count() {
+        // 'maxsearchcount' 2 over three matches: nvim reports total maxcount + 1
+        // and incomplete 2, which is `exceeded` here.
+        let (current, total, exceeded) =
+            search_count_from_matches(MATCHES.into_iter(), 15, 2);
+        assert_eq!((total, exceeded), (3, true));
+        assert!(current <= 3);
+        // Under the limit nothing is capped.
+        assert_eq!(
+            search_count_from_matches(MATCHES.into_iter(), 15, 3),
+            (3, 3, false)
+        );
+    }
+
+    #[test]
+    fn the_count_message_follows_shortmess() {
+        // Default 'shortmess' has no S, so the count shows.
+        assert_eq!(
+            search_count_status(2, 5, false, false, "ltToOCF").as_deref(),
+            Some("[2/5]")
+        );
+        // S drops it entirely.
+        assert_eq!(search_count_status(2, 5, false, false, "ltToOCFS"), None);
+        // A wrap is a `W` before the count, and `s` drops that `W`.
+        assert_eq!(
+            search_count_status(1, 5, false, true, "ltToOCF").as_deref(),
+            Some("W [1/5]")
+        );
+        assert_eq!(
+            search_count_status(1, 5, false, true, "ltToOCFs").as_deref(),
+            Some("[1/5]")
+        );
+        // Over 'maxsearchcount': `>` on whichever half exceeded it.
+        assert_eq!(
+            search_count_status(2, 1000, true, false, "").as_deref(),
+            Some("[2/>1000]")
+        );
+        assert_eq!(
+            search_count_status(1000, 1000, true, false, "").as_deref(),
+            Some("[>1000/>1000]")
+        );
+    }
+
+    #[test]
+    fn a_search_that_did_not_advance_in_its_direction_wrapped() {
+        assert!(!search_wrapped(3, 12, Direction::Forward));
+        assert!(search_wrapped(15, 3, Direction::Forward));
+        assert!(!search_wrapped(15, 3, Direction::Backward));
+        assert!(search_wrapped(3, 15, Direction::Backward));
+        // Landing where it started is a wrap: the only match is the one under
+        // the cursor, so vim reports having hit the end and come round.
+        assert!(search_wrapped(7, 7, Direction::Forward));
+        assert!(search_wrapped(7, 7, Direction::Backward));
     }
 }
 

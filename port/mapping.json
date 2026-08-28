@@ -56532,11 +56532,11 @@
  },
  {
   "spec_id": "neovim.option.helpfile",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": ":set helpfile is accepted, stored and queryable (:set helpfile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "\"Name of the main help file. [...] Environment variables are expanded |:set_env|. For example: \\\"$VIMRUNTIME/doc/help.txt\\\"\" (options.txt). `:help` with no subject opens the file the option names (open_help, zmax-term/src/commands/typed.rs), with `$VAR`/`${VAR}` and a leading `~` expanded -- an undefined variable expands to nothing, as in vim, and expand_env_vars is unit tested. Unset, or naming a file that is not there, leaves zmax's built-in help browser as the main help, which is what zmax's help is: it ships no $VIMRUNTIME/doc/help.txt for the default value to point at."
  },
  {
   "spec_id": "neovim.option.helpheight",
@@ -56684,11 +56684,11 @@
  },
  {
   "spec_id": "neovim.option.isident",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": "accepted and round-trips, but not honored: no consumer exists anywhere in the tree"
+  "note": "\"The characters given by this option are included in identifiers. Identifiers are used in recognizing environment variables and after a match of the 'define' option. It is also used for `\\\\i` in a pattern\" (options.txt). Both consumers exist now. `\\\\i`/`\\\\I` in a search or substitute pattern are translated from the live option value (zmax-term/src/vim_regex.rs ident_class / class_atom; they previously fell through to a literal `i`), with `\\\\I` the same set minus the digits, and `\\\\k`/`\\\\K` gained the same treatment from 'iskeyword'. The `[d`/`[D`/`[CTRL-D` family terminates the defined name with a character the option leaves out rather than with the engine's own `\\\\b` (commands.rs keyword_pattern), which is options.txt's \"{match with 'define'}{non-ID chars}{defined name}{non-ID char}\" -- so `:set isident=@,48-57,_,-` really makes `FOO-BAR` one name. The option format (single chars, decimal codes, `lo-hi` ranges, `@` for alphabetic, `^x` to exclude, `,,` for a literal comma) is parsed by vim_char_class_body, unit tested including the negated form the 'define' terminator needs."
  },
  {
   "spec_id": "neovim.option.iskeyword",
@@ -56934,11 +56934,11 @@
  },
  {
   "spec_id": "neovim.option.maxsearchcount",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": "accepted and round-trips, but not honored: no search-count display ([3/17]) exists \u2014 nothing to cap"
+  "note": "\"Maximum number of matches shown for the search count status |shm-S|. When the number of matches exceeds this value, Vim shows '>' instead of the exact count [...] The value must be between 1 and 9999\" (options.txt). There is a search count to cap now: report_search_count (zmax-term/src/commands.rs) runs after `/pat`, `n` and `N` and sets the `[current/total]` status shm-S describes. search_count_from_matches implements searchcount()'s own semantics -- `current` is the number of matches at or before the cursor, verified by driving nvim 0.12.5 on one buffer (cursor before the first match gives 0, on a match's first byte gives its 1-based index, past a match but before the next keeps the earlier index) -- and stops counting at 'maxsearchcount' + 1 on each side of the cursor, which is the number nvim itself reports when the limit is hit. Over the limit the counts carry the `>` prefix in the shape searchcount()'s documented statusline example builds. The option is read per search and clamped to 1..9999 as options.txt requires."
  },
  {
   "spec_id": "neovim.option.menuitems",
@@ -57534,7 +57534,7 @@
   "evidence": [
    "typable:set"
   ],
-  "note": "the flags zmax emits a message for are honored (W = no 'written' message, etc.); flags for messages zmax never prints have nothing to suppress"
+  "note": "The flags zmax emits a message for are honored. `W` drops the 'written' message and `w` shortens it (zmax-term/src/application.rs). New: `S` suppresses the search count message and `s` drops the `W` (Wrapped) marker in front of it -- \"when the S flag is not present [...] the 'search hit BOTTOM, continuing at TOP' and 'search hit TOP, continuing at BOTTOM' messages are only indicated by a 'W' letter before the search count statistics\" (options.txt shm-S), which is how the count and the wrap message are folded into one line here too. Still partial: the flags for messages zmax never prints (file-info truncation, `:intro`, swap-file notices, \u2026) have nothing to suppress."
  },
  {
   "spec_id": "neovim.option.showbreak",

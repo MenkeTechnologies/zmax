@@ -70016,6 +70016,15 @@ fn open_help(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    // vim `'helpfile'` (options.txt): "Name of the main help file. […]
+    // Environment variables are expanded." `:help` with no subject opens it, so
+    // `:set helpfile=…` points the bare `:help` at a file instead of the built-in
+    // browser. Unset — the default, whose `$VIMRUNTIME/doc/help.txt` zmax does not
+    // ship — leaves the browser as the main help, which is what zmax's help *is*.
+    if let Some(path) = helpfile_path() {
+        cx.editor.open(&path, Action::Replace)?;
+        return Ok(());
+    }
     let callback = async move {
         let call: job::Callback = job::Callback::EditorCompositor(Box::new(
             |_editor: &mut Editor, compositor: &mut Compositor| {
@@ -70026,6 +70035,58 @@ fn open_help(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     };
     cx.jobs.callback(callback);
     Ok(())
+}
+
+/// The file `'helpfile'` names, with `$VAR` / `${VAR}` and a leading `~`
+/// expanded, or `None` when the option is unset or names a file that is not
+/// there — in which case the built-in help browser stands in for it.
+fn helpfile_path() -> Option<std::path::PathBuf> {
+    let raw = vim_opt_str_alias("helpfile", "hf")?;
+    let expanded = expand_env_vars(&raw);
+    let path = zmax_stdx::path::expand_tilde(std::path::Path::new(&expanded)).into_owned();
+    path.is_file().then_some(path)
+}
+
+/// Expand `$VAR` and `${VAR}` in an option value, as vim's `:set_env` does. An
+/// undefined variable expands to nothing, which is vim's behaviour too. Pure —
+/// unit tested.
+fn expand_env_vars(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut chars = value.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '$' {
+            out.push(c);
+            continue;
+        }
+        let braced = chars.peek() == Some(&'{');
+        if braced {
+            chars.next();
+        }
+        let mut name = String::new();
+        while let Some(&n) = chars.peek() {
+            if braced {
+                chars.next();
+                if n == '}' {
+                    break;
+                }
+                name.push(n);
+            } else if n.is_ascii_alphanumeric() || n == '_' {
+                chars.next();
+                name.push(n);
+            } else {
+                break;
+            }
+        }
+        // A bare `$` with no name after it stays a `$`.
+        if name.is_empty() {
+            out.push('$');
+            continue;
+        }
+        if let Ok(value) = std::env::var(&name) {
+            out.push_str(&value);
+        }
+    }
+    out
 }
 
 /// `:plugin load|unload|list` — the native-plugin manager, the port of zsh's
@@ -74528,6 +74589,29 @@ mod vim_set_tests {
                 ("select", "block")
             ]
         );
+    }
+
+    /// vim `'helpfile'`: "Environment variables are expanded |:set_env|. For
+    /// example: \"$VIMRUNTIME/doc/help.txt\"." (options.txt).
+    #[test]
+    fn option_values_expand_environment_variables() {
+        std::env::set_var("ZMAX_TEST_RUNTIME", "/opt/zmax");
+        std::env::remove_var("ZMAX_TEST_MISSING");
+        assert_eq!(
+            expand_env_vars("$ZMAX_TEST_RUNTIME/doc/help.txt"),
+            "/opt/zmax/doc/help.txt"
+        );
+        assert_eq!(
+            expand_env_vars("${ZMAX_TEST_RUNTIME}/doc/help.txt"),
+            "/opt/zmax/doc/help.txt"
+        );
+        // An undefined variable expands to nothing, as it does in vim.
+        assert_eq!(expand_env_vars("a${ZMAX_TEST_MISSING}b"), "ab");
+        assert_eq!(expand_env_vars("a$ZMAX_TEST_MISSING/b"), "a/b");
+        // A `$` that names nothing stays a `$`, and a value with none is untouched.
+        assert_eq!(expand_env_vars("costs $ 5"), "costs $ 5");
+        assert_eq!(expand_env_vars("/usr/share/help.txt"), "/usr/share/help.txt");
+        std::env::remove_var("ZMAX_TEST_RUNTIME");
     }
 
     #[test]
