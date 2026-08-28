@@ -2285,12 +2285,13 @@ impl Prompt {
         self.isearch_yank_len = Some(len);
     }
 
-    /// Emacs `isearch-yank-pop-only` (`M-y`): replace the kill `C-y` just
-    /// appended with the next-older one. Called anywhere else than straight
-    /// after a kill yank it only pops the last kill — that is what the
-    /// `-only` in the name means, as against `isearch-yank-pop`, which would
-    /// open a minibuffer to pick from the ring.
-    fn isearch_yank_pop(&mut self, cx: &mut Context) {
+    /// Emacs `isearch-yank-pop-only` (`M-y`, the key isearch-mode-map binds):
+    /// replace the kill `C-y` just appended with the next-older one. Called
+    /// anywhere else than straight after a kill yank it only pops the last kill —
+    /// that is what the `-only` in the name means, as against `isearch-yank-pop`,
+    /// which opens a read over the whole ring instead
+    /// (`commands::isearch_yank_from_kill_ring`, reachable by name).
+    fn isearch_yank_pop_only(&mut self, cx: &mut Context) {
         let previous = self.isearch_yank_len.filter(|len| {
             *len <= self.line.len() && self.line.is_char_boundary(self.line.len() - len)
         });
@@ -3374,7 +3375,7 @@ impl Component for Prompt {
             ctrl!('y') if isearch_ctl => self.isearch_yank_kill(cx),
             // `isearch-yank-pop-only`: swap the kill `C-y` just appended for the
             // next-older one; anywhere else it only pops the last kill.
-            alt!('y') if isearch => self.isearch_yank_pop(cx),
+            alt!('y') if isearch => self.isearch_yank_pop_only(cx),
             // `isearch-quote-char`: the next character goes into the search string
             // as itself, quoted so a regexp search cannot read it as an operator.
             ctrl!('q') if isearch_ctl => {

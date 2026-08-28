@@ -108,6 +108,13 @@ pub fn next_entry(current_sel: &[(usize, usize)]) -> Option<String> {
     r.entries.get(r.index).cloned()
 }
 
+/// The whole ring, most-recent first — Emacs's `kill-ring` list. Used by the
+/// commands that let the user *pick* a kill rather than walk to it
+/// (`read-from-kill-ring`, and `isearch-yank-from-kill-ring` through it).
+pub fn entries() -> Vec<String> {
+    RING.lock().unwrap().entries.clone()
+}
+
 /// Record the selection a yank-pop left behind, so a subsequent pop can verify
 /// it and keep cycling.
 pub fn set_yank_sel(sel: Vec<(usize, usize)>) {
@@ -126,6 +133,23 @@ mod tests {
     fn reset() {
         let mut r = RING.lock().unwrap();
         *r = KillRing::default();
+    }
+
+    #[test]
+    fn entries_are_the_whole_ring_most_recent_first() {
+        let _g = TEST_GUARD.lock();
+        reset();
+        assert!(entries().is_empty());
+        record("one".into());
+        record("two".into());
+        record("three".into());
+        // `kill-ring` order: the newest kill is first, which is the order the
+        // kill-ring read shows and the order `next_entry` walks.
+        assert_eq!(entries(), vec!["three", "two", "one"]);
+        // A copy, so a caller cannot edit the ring through it.
+        let mut taken = entries();
+        taken.clear();
+        assert_eq!(entries().len(), 3);
     }
 
     #[test]

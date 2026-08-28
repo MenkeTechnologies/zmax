@@ -962,7 +962,9 @@ impl MappableCommand {
         isearch_yank_line, "Extend the search to end of line (emacs isearch-yank-line)",
         isearch_yank_until_char, "Extend the search up to a given char (emacs isearch-yank-until-char)",
         isearch_yank_kill, "Extend the search with the kill-ring top (emacs isearch-yank-kill)",
-        isearch_yank_pop, "Extend the search with a kill-ring entry (emacs isearch-yank-pop)",
+        isearch_yank_pop, "Extend the search with a kill-ring entry, browsing the ring when the last command was not a yank (emacs isearch-yank-pop)",
+        isearch_yank_pop_only, "Swap the just-yanked kill for the next-older one (emacs isearch-yank-pop-only, M-y)",
+        isearch_yank_from_kill_ring, "Pick a kill-ring entry and append it to the search (emacs isearch-yank-from-kill-ring)",
         isearch_yank_x_selection, "Extend the search with the clipboard selection (emacs isearch-yank-x-selection)",
         isearch_del_char, "Shorten the search string by one char (emacs isearch-del-char)",
         isearch_delete_char, "Shorten the search string by one char (emacs isearch-delete-char)",
@@ -13456,7 +13458,29 @@ fn isearch_yank_kill(cx: &mut Context) {
 /// Called anywhere other than straight after a kill yank it just yanks the top
 /// kill — that is what the `-only` in the name means (isearch.el:2652-2658),
 /// as against `isearch-yank-pop`, which opens a minibuffer over the ring.
+fn isearch_yank_pop_only(cx: &mut Context) {
+    isearch_pop(cx, PopFallback::YankKill)
+}
+
+/// Emacs `isearch-yank-pop` (isearch.el:2669-2679): the same replacement, but
+/// "when this command is called not immediately after a `isearch-yank-kill' or a
+/// `isearch-yank-pop', it activates the minibuffer to read a string from the
+/// `kill-ring' as `yank-pop' does" — which is [`isearch_yank_from_kill_ring`].
 fn isearch_yank_pop(cx: &mut Context) {
+    isearch_pop(cx, PopFallback::FromKillRing)
+}
+
+/// What a pop does when the last command was not a yank: the one line that
+/// separates `isearch-yank-pop` from `isearch-yank-pop-only`.
+#[derive(Clone, Copy)]
+enum PopFallback {
+    /// `-only`: "it only pops the last killed string" (isearch.el:2694-2698).
+    YankKill,
+    /// The kill-ring browser (isearch.el:2677).
+    FromKillRing,
+}
+
+fn isearch_pop(cx: &mut Context, fallback: PopFallback) {
     if !isearch_ensure_session(cx) {
         cx.editor.set_error("No current search to extend");
         return;
@@ -13466,7 +13490,10 @@ fn isearch_yank_pop(cx: &mut Context) {
             .filter(|len| *len <= s.raw.len() && s.raw.is_char_boundary(s.raw.len() - len))
     });
     let Some(len) = previous else {
-        isearch_yank_kill(cx);
+        match fallback {
+            PopFallback::YankKill => isearch_yank_kill(cx),
+            PopFallback::FromKillRing => isearch_yank_from_kill_ring(cx),
+        }
         return;
     };
     let Some(older) = crate::emacs_kill::next_entry(crate::ui::prompt::ISEARCH_YANK_SEL) else {
@@ -13502,6 +13529,41 @@ fn replace_trailing_yank(raw: &str, yank_len: usize, older: &str, regexp: bool) 
     };
     out.push_str(&addition);
     (out, addition.len())
+}
+
+/// Emacs `isearch-yank-from-kill-ring` (isearch.el:2654-2667): "Read a string
+/// from the `kill-ring' and append it to the search string."
+///
+/// Emacs reads it with `read-from-kill-ring`, a completing-read over the whole
+/// ring; zmax's completing-read over a list of values is a picker, so this is
+/// that picker over `kill_ring::entries()` — most-recent first, as `kill-ring`
+/// is. The chosen string goes on through [`isearch_yank_text`], which does the
+/// `regexp-quote` Emacs does for a regexp search, and the yank length is recorded
+/// so a following `M-y` swaps this entry out rather than appending to it.
+fn isearch_yank_from_kill_ring(cx: &mut Context) {
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search to extend");
+        return;
+    }
+    let entries = crate::emacs_kill::entries();
+    if entries.is_empty() {
+        cx.editor.set_error("Kill ring is empty");
+        return;
+    }
+    let columns = [ui::PickerColumn::new("kill", |e: &String, _: &()| {
+        // A kill spans lines; the picker is one row per entry, so newlines and
+        // tabs are shown the way Emacs's `query-replace-descr` shows them.
+        e.replace('\n', "⏎").replace('\t', "⇥").into()
+    })];
+    let picker = Picker::new(columns, 0, entries, (), |cx, entry, _action| {
+        let added = isearch_yank_text(cx.editor, entry);
+        crate::emacs_kill::begin_yank(crate::ui::prompt::ISEARCH_YANK_SEL.to_vec());
+        isearch_with(|s| s.yank_len = Some(added));
+    });
+    // Emacs prompts "Yank from kill-ring: "; the picker has no prompt string of
+    // its own, so the same words go to the status line before it opens.
+    cx.editor.set_status("Yank from kill-ring:");
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// Append `text` to the search string and re-run the search, returning how many
@@ -13839,9 +13901,17 @@ fn isearch_complete(cx: &mut Context) {
             show_text_in_scratch(cx.editor, &out);
         }
         search::TryCompletion::None => {
+            // isearch.el:3437 — `(message "No completion")` and *no* edit; the
+            // search carries on under the string that was already there.
             cx.editor.set_error("No completion");
+            return;
         }
     }
+    // "The completed string is then editable in the minibuffer" (isearch.el:3442):
+    // every branch of `isearch-complete1` that returns t is followed by
+    // `isearch-edit-string`, including the ambiguous one that only listed the
+    // candidates. Only the "No completion" branch above skips it.
+    isearch_edit_string(cx);
 }
 
 /// Insert a character into the search string by its digraph mnemonic (a two-key

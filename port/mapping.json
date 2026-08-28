@@ -9978,7 +9978,7 @@
   "evidence": [
    "static:isearch_complete"
   ],
-  "note": "completes the search string from the most recent history entry, not emacs's full isearch completion"
+  "note": "isearch_complete (zmax-term/src/commands.rs) is a port of isearch-complete1 (isearch.el:3415-3438), not the one-history-entry completion the old note described: it runs try_completion over the WHOLE search ring (zmax-core/src/search.rs try_completion_fold, with emacs's completion-ignore-case bound to case-fold-search), extends the search string on a longer shared prefix, reports the sole match unchanged, lists every candidate in a scratch buffer under emacs's \"Possible completions are:\" header when the candidates agree on nothing further, and says \"No completion\" when none match. It now also does what isearch-complete adds on top of complete1 (isearch.el:3440-3452): every branch that succeeds hands off to isearch_edit_string, so the completed string is editable in the minibuffer, and only the \"No completion\" branch skips it. One divergence remains: emacs completes a regexp search against regexp-search-ring and a literal one against search-ring, while zmax has a single search history (the `/` register, vim's) that both read."
  },
  {
   "spec_id": "emacs.command.isearch_del_char",
@@ -10264,11 +10264,11 @@
  },
  {
   "spec_id": "emacs.command.isearch_yank_pop",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:isearch_yank_pop"
   ],
-  "note": "Appends the kill-ring top like isearch-yank-kill; cycling the ring in place (true yank-pop) is not tracked."
+  "note": "Ported against isearch.el:2669-2679, which differs from isearch-yank-pop-only in exactly one branch: called immediately after a yank it replaces the just-yanked kill with the next-older one, and called anywhere else it \"activates the minibuffer to read a string from the kill-ring as yank-pop does\" rather than falling back on isearch-yank-kill. isearch_pop (zmax-term/src/commands.rs) takes that branch as a PopFallback: isearch_yank_pop passes FromKillRing, the new isearch_yank_pop_only passes YankKill. The read is isearch_yank_from_kill_ring (isearch.el:2654-2667) \u2014 emacs's read-from-kill-ring is a completing-read over the whole ring, and zmax's completing-read over a list of values is a picker, so it is a picker over emacs_kill::entries() (the ring, most-recent first, newlines and tabs shown as \u23ce/\u21e5 the way query-replace-descr shows them), prompting emacs's \"Yank from kill-ring: \". The chosen string goes on through isearch_yank_text, which regexp-quotes it for a regexp search as emacs does, and records the yank length so a following M-y swaps it out. M-y stays on isearch-yank-pop-only, the command isearch-mode-map binds there."
  },
  {
   "spec_id": "emacs.command.isearch_yank_symbol_or_char",
