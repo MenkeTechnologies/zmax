@@ -2426,6 +2426,10 @@ impl MappableCommand {
         keymap_set, "Bind a key in one keymap — normal/select/insert (emacs keymap-set)",
         keymap_unset, "Remove a key's binding from one keymap (emacs keymap-unset)",
         keymap_substitute, "Rebind every key that runs OLD so it runs NEW (emacs keymap-substitute)",
+        keymap_local_set, "Bind a key in the buffer's local (major-mode) keymap (emacs keymap-local-set)",
+        keymap_local_unset, "Unset a key in the buffer's local keymap; a count removes the binding (emacs keymap-local-unset)",
+        global_set_key, "Bind a key sequence to a command globally (emacs global-set-key)",
+        define_key, "Bind a key in a named keymap — normal/select/insert/local (emacs define-key)",
         describe_function, "Describe a command — its doc and key bindings (emacs describe-function, C-h f)",
         describe_key_briefly, "Echo, in one line, the command a key runs (emacs describe-key-briefly, C-h c)",
         describe_variable, "Describe an editor/vim variable — value and default (emacs describe-variable, C-h v)",
@@ -62368,6 +62372,204 @@ fn keymap_unset_in(
             match result {
                 Ok(msg) => cx.editor.set_status(msg),
                 Err(e) => cx.editor.set_error(e),
+            }
+        },
+    );
+}
+
+/// The editor modes Emacs's *local* (major-mode) map covers: the same two the
+/// global rebinding commands write, because a local binding shadows a global one
+/// and has to reach it in every mode it is live in.
+const KEYMAP_LOCAL_MODES: [Mode; 2] = [Mode::Normal, Mode::Select];
+
+/// What a local-keymap prompt does with the key it reads.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum LocalKeyAction {
+    /// `keymap-local-set`: read `KEY COMMAND` and bind it.
+    Set,
+    /// `keymap-local-unset` without REMOVE: shadow the chord so the global
+    /// binding does not show through.
+    Unset,
+    /// `keymap-local-unset` with REMOVE (its prefix arg): delete the local entry,
+    /// so the global binding is reachable again.
+    Remove,
+}
+
+/// The focused buffer's Emacs major mode — the key a local binding is stored
+/// against. `None` for a buffer with neither an explicit major mode nor a
+/// language, which is Emacs's "no local keymap".
+fn current_major_mode(editor: &Editor) -> Option<String> {
+    doc!(editor).major_mode().map(str::to_string)
+}
+
+/// The prompt behind `keymap-local-set` / `keymap-local-unset`, and behind
+/// `define-key`'s `local` keymap. Opened through a job callback so it can be
+/// reached from a `compositor::Context` — a chained prompt, as
+/// [`keymap_prompt_in_mode`] is.
+fn keymap_local_prompt(
+    cx: &mut compositor::Context,
+    major_mode: String,
+    action: LocalKeyAction,
+) {
+    let call = job::Callback::EditorCompositor(Box::new(move |editor, compositor| {
+        let title: std::borrow::Cow<'static, str> = match action {
+            LocalKeyAction::Set => "Set key locally (KEY COMMAND): ".into(),
+            LocalKeyAction::Unset => "Unset key locally (KEY): ".into(),
+            LocalKeyAction::Remove => "Remove local binding (KEY): ".into(),
+        };
+        let mut prompt = ui::Prompt::new(
+            title,
+            None,
+            move |editor, input| match action {
+                LocalKeyAction::Set => keymap_command_completer(editor, input),
+                _ => Vec::new(),
+            },
+            move |cx, input, event| {
+                if event != PromptEvent::Validate {
+                    return;
+                }
+                let mode = major_mode.clone();
+                let result = match action {
+                    LocalKeyAction::Set => {
+                        keymap_split_spec(input).and_then(|(key_spec, name)| {
+                            // Reject an unknown command before it reaches the map.
+                            name.parse::<MappableCommand>()
+                                .map_err(|e| e.to_string())
+                                .and_then(|_| keymap_parse_keys(&key_spec))
+                                .map(|keys| {
+                                    let chord = keys.join(" ");
+                                    crate::keymap::major_mode::set_user_binding(
+                                        &KEYMAP_LOCAL_MODES,
+                                        &mode,
+                                        &chord,
+                                        &name,
+                                    );
+                                    format!("{chord} → {name}  (local to {mode})")
+                                })
+                        })
+                    }
+                    LocalKeyAction::Unset => keymap_parse_keys(input.trim()).map(|keys| {
+                        let chord = keys.join(" ");
+                        crate::keymap::major_mode::unset_user_binding(
+                            &KEYMAP_LOCAL_MODES,
+                            &mode,
+                            &chord,
+                        );
+                        format!("{chord} unset  (local to {mode})")
+                    }),
+                    LocalKeyAction::Remove => keymap_parse_keys(input.trim()).map(|keys| {
+                        let chord = keys.join(" ");
+                        if crate::keymap::major_mode::remove_user_binding(
+                            &KEYMAP_LOCAL_MODES,
+                            &mode,
+                            &chord,
+                        ) {
+                            format!("{chord} removed from the {mode} map")
+                        } else {
+                            format!("{chord} had no local binding in {mode}")
+                        }
+                    }),
+                };
+                match result {
+                    Ok(msg) => cx.editor.set_status(msg),
+                    Err(e) => cx.editor.set_error(e),
+                }
+            },
+        );
+        prompt.recalculate_completion(editor);
+        compositor.push(Box::new(prompt));
+    }));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Open a local-keymap prompt from a static command, reporting Emacs's "no local
+/// keymap" case when the buffer has no major mode to hang one on.
+fn keymap_local_command(cx: &mut Context, action: LocalKeyAction) {
+    let Some(major_mode) = current_major_mode(cx.editor) else {
+        cx.editor
+            .set_error("Buffer has no major mode, so it has no local keymap");
+        return;
+    };
+    cx.callback.push(Box::new(move |_compositor, cx| {
+        keymap_local_prompt(cx, major_mode, action);
+    }));
+}
+
+/// Emacs `keymap-local-set`: "Give KEY a local binding as COMMAND. […] The
+/// binding goes in the current buffer's local keymap, which in most cases is
+/// shared with all other buffers in the same major mode" (keymap.el).
+///
+/// zmax's local keymap *is* the major-mode overlay (`keymap::major_mode`), so the
+/// binding is stored against the buffer's major mode and every buffer in that
+/// mode sees it — the same scope Emacs describes. A chord bound here shadows both
+/// the shipped major-mode chord and the global keymap, as Emacs's local map
+/// shadows the global one.
+fn keymap_local_set(cx: &mut Context) {
+    keymap_local_command(cx, LocalKeyAction::Set)
+}
+
+/// Emacs `keymap-local-unset`: "Remove local binding of KEY (if any). […] If
+/// REMOVE is non-nil (interactively, the prefix arg), remove the binding instead
+/// of unsetting it" (keymap.el). A count prefix is zmax's prefix arg, so `2` (or
+/// any count) selects removal and a bare call unsets.
+fn keymap_local_unset(cx: &mut Context) {
+    let action = if cx.count.is_some() {
+        LocalKeyAction::Remove
+    } else {
+        LocalKeyAction::Unset
+    };
+    keymap_local_command(cx, action)
+}
+
+/// Emacs `global-set-key`: the older name for [`keymap_global_set`], and the one
+/// the manual's Init Rebinding node uses. Same binding, same global map; Emacs
+/// keeps both names and so does zmax, because that is the name muscle memory and
+/// twenty years of init files reach for.
+fn global_set_key(cx: &mut Context) {
+    keymap_set_in(
+        cx,
+        "Set key globally (KEY COMMAND): ".into(),
+        &KEYMAP_GLOBAL_MODES,
+    );
+}
+
+/// Emacs `define-key`: bind a key in a *named* keymap. Emacs's keymaps are
+/// objects; zmax's are its three editor modes plus the buffer's local
+/// (major-mode) map, so the keymap is named `normal`, `select`, `insert` or
+/// `local` — and `local` routes to the map `(current-local-map)` names.
+fn define_key(cx: &mut Context) {
+    let major_mode = current_major_mode(cx.editor);
+    ui::prompt(
+        cx,
+        "Keymap (normal/select/insert/local): ".into(),
+        None,
+        |_editor, input| {
+            zmax_core::fuzzy::fuzzy_match(
+                input,
+                ["normal", "select", "insert", "local"].map(String::from),
+                false,
+            )
+            .into_iter()
+            .map(|(name, _)| ((0..), name.into()))
+            .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            match input.trim() {
+                "local" => match major_mode.clone() {
+                    Some(mode) => keymap_local_prompt(cx, mode, LocalKeyAction::Set),
+                    None => cx
+                        .editor
+                        .set_error("Buffer has no major mode, so it has no local keymap"),
+                },
+                "normal" => keymap_prompt_in_mode(cx, "normal", false),
+                "select" => keymap_prompt_in_mode(cx, "select", false),
+                "insert" => keymap_prompt_in_mode(cx, "insert", false),
+                other => cx.editor.set_error(format!(
+                    "no keymap named `{other}` (normal/select/insert/local)"
+                )),
             }
         },
     );

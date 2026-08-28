@@ -41,8 +41,9 @@
 //!    chords whose Emacs meaning *is* a typing action (TeX's `"`, C's
 //!    `C-c C-d` hungry-delete) are live only in Insert.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use super::{spacemacs::add_chord, KeyTrie, KeyTrieNode, Mode};
 
@@ -448,9 +449,132 @@ fn overlays() -> &'static HashMap<Mode, HashMap<String, KeyTrie>> {
     })
 }
 
+/// Bindings added at runtime by Emacs's `keymap-local-set` / `keymap-local-unset`,
+/// keyed by `(mode, major mode)`.
+///
+/// "The binding goes in the current buffer's local keymap, which in most cases is
+/// shared with all other buffers in the same major mode" (keymap.el's own
+/// `keymap-local-set` docstring). That is exactly the scope of an overlay here,
+/// so a local binding is stored against the buffer's major mode and every buffer
+/// in that mode sees it — Emacs's behaviour, not an approximation of it.
+///
+/// An entry bound to `None` is Emacs's *unset* (`keymap-local-unset` without its
+/// REMOVE argument): the chord is shadowed so the global binding does not show
+/// through, rather than the local entry being deleted. REMOVE deletes it.
+static USER_BINDINGS: Mutex<Vec<UserBinding>> = Mutex::new(Vec::new());
+
+/// One runtime local binding. Kept as a list rather than a map so the insertion
+/// order — the order the user made the bindings in — is what rebuilds the trie.
+#[derive(Clone)]
+struct UserBinding {
+    mode: Mode,
+    major_mode: String,
+    chord: String,
+    /// The command name, or `None` for an unset chord (bound to `no_op`).
+    command: Option<String>,
+}
+
+/// Emacs `keymap-local-set`: bind `chord` to `command` in `major_mode`'s map, for
+/// each of `modes`. Replaces any existing local binding of the same chord.
+pub fn set_user_binding(modes: &[Mode], major_mode: &str, chord: &str, command: &str) {
+    write_user_binding(modes, major_mode, chord, Some(command.to_string()));
+}
+
+/// Emacs `keymap-local-unset` without REMOVE: shadow `chord` in `major_mode`'s
+/// map so the global binding does not show through.
+pub fn unset_user_binding(modes: &[Mode], major_mode: &str, chord: &str) {
+    write_user_binding(modes, major_mode, chord, None);
+}
+
+/// Emacs `keymap-local-unset` with REMOVE: delete the local entry entirely, so
+/// whatever the global map binds is reachable again. Returns whether one went.
+pub fn remove_user_binding(modes: &[Mode], major_mode: &str, chord: &str) -> bool {
+    let mut bindings = USER_BINDINGS.lock().unwrap();
+    let before = bindings.len();
+    bindings.retain(|b| {
+        !(modes.contains(&b.mode) && b.major_mode == major_mode && b.chord == chord)
+    });
+    bindings.len() != before
+}
+
+fn write_user_binding(modes: &[Mode], major_mode: &str, chord: &str, command: Option<String>) {
+    let mut bindings = USER_BINDINGS.lock().unwrap();
+    for mode in modes {
+        bindings.retain(|b| {
+            !(b.mode == *mode && b.major_mode == major_mode && b.chord == chord)
+        });
+        bindings.push(UserBinding {
+            mode: *mode,
+            major_mode: major_mode.to_string(),
+            chord: chord.to_string(),
+            command: command.clone(),
+        });
+    }
+}
+
+/// Every runtime local binding, for `describe-bindings`-style listing and tests.
+/// `(mode, major mode, chord, command)`, with `None` for an unset chord.
+pub fn user_bindings() -> Vec<(Mode, String, String, Option<String>)> {
+    USER_BINDINGS
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|b| {
+            (
+                b.mode,
+                b.major_mode.clone(),
+                b.chord.clone(),
+                b.command.clone(),
+            )
+        })
+        .collect()
+}
+
+/// Drop every runtime local binding (test isolation).
+#[cfg(test)]
+fn clear_user_bindings() {
+    USER_BINDINGS.lock().unwrap().clear();
+}
+
 /// The major-mode overlay for `language` in `mode`, if that language has one.
-pub fn overlay(language: &str, mode: Mode) -> Option<&'static KeyTrie> {
-    overlays().get(&mode)?.get(language)
+///
+/// Borrowed when the mode has only its compiled-in bindings — the common case,
+/// and the one on the key-press path — and owned when `keymap-local-set` has
+/// added to it, in which case the runtime bindings are merged over the compiled
+/// ones so a local binding shadows a shipped major-mode chord, as Emacs's does.
+pub fn overlay(language: &str, mode: Mode) -> Option<Cow<'static, KeyTrie>> {
+    let base = overlays().get(&mode).and_then(|m| m.get(language));
+    let user: Vec<UserBinding> = {
+        let bindings = USER_BINDINGS.lock().unwrap();
+        if bindings.is_empty() {
+            return base.map(Cow::Borrowed);
+        }
+        bindings
+            .iter()
+            .filter(|b| b.mode == mode && b.major_mode == language)
+            .cloned()
+            .collect()
+    };
+    if user.is_empty() {
+        return base.map(Cow::Borrowed);
+    }
+    let mut trie = base.cloned().unwrap_or_else(|| {
+        KeyTrie::Node(KeyTrieNode::new("Local", Default::default()))
+    });
+    if let KeyTrie::Node(root) = &mut trie {
+        for b in &user {
+            // An unset chord is bound to `no_op`: it swallows the key so the
+            // global binding underneath does not run, which is what Emacs's
+            // "unset" (as against "remove") means.
+            add_chord(
+                root,
+                &b.chord,
+                "Local",
+                b.command.as_deref().unwrap_or("no_op"),
+            );
+        }
+    }
+    Some(Cow::Owned(trie))
 }
 
 #[cfg(test)]
@@ -458,6 +582,11 @@ mod tests {
     use super::*;
     use crate::keymap::{preset, KeymapResult, Keymaps, MappableCommand};
     use zmax_view::input::KeyEvent;
+
+    /// The runtime binding store is a process-global static, and the overlay
+    /// assertions elsewhere in this module read through it; serialize the tests
+    /// that write to it so cargo's parallel harness cannot interleave them.
+    static USER_BINDING_TEST_GUARD: Mutex<()> = Mutex::new(());
 
     fn cmd_at(trie: &KeyTrie, chord: &str) -> Option<String> {
         let keys: Vec<KeyEvent> = chord.split(' ').map(|k| k.parse().unwrap()).collect();
@@ -467,12 +596,74 @@ mod tests {
         }
     }
 
+    /// `keymap-local-set` binds in the buffer's local (major-mode) map, so the
+    /// binding must reach the trie the key path consults, shadow the shipped
+    /// major-mode chord on the same keys, and be scoped to that one major mode.
+    /// `keymap-local-unset` shadows a chord with `no_op`; its REMOVE form takes
+    /// the local entry away again.
+    #[test]
+    fn a_local_binding_shadows_the_major_mode_map_and_only_its_own_mode() {
+        let _guard = USER_BINDING_TEST_GUARD.lock();
+        clear_user_bindings();
+
+        // A chord the shipped org overlay owns: `C-c C-t` is org-todo.
+        let shipped = cmd_at(&overlay("org", Mode::Normal).unwrap(), "C-c C-t");
+        assert_eq!(shipped.as_deref(), Some("org_todo"));
+
+        set_user_binding(&[Mode::Normal], "org", "C-c C-t", "goto_line");
+        assert_eq!(
+            cmd_at(&overlay("org", Mode::Normal).unwrap(), "C-c C-t").as_deref(),
+            Some("goto_line"),
+            "a local binding must win over the shipped major-mode chord"
+        );
+        // Scoped to the major mode it was made in, and to the editor mode.
+        assert!(overlay("rust", Mode::Normal)
+            .and_then(|t| cmd_at(&t, "C-c C-t"))
+            .is_none());
+        assert_ne!(
+            cmd_at(&overlay("org", Mode::Select).unwrap(), "C-c C-t").as_deref(),
+            Some("goto_line")
+        );
+
+        // A brand-new chord in a major mode with no shipped overlay at all still
+        // gets a map — Emacs's `use-local-map` on a buffer that had none.
+        set_user_binding(&[Mode::Normal], "toml", "C-c z", "goto_line");
+        assert_eq!(
+            cmd_at(&overlay("toml", Mode::Normal).unwrap(), "C-c z").as_deref(),
+            Some("goto_line")
+        );
+
+        // Unset shadows with no_op so the global binding does not show through;
+        // REMOVE takes the entry away and the shipped chord comes back.
+        unset_user_binding(&[Mode::Normal], "org", "C-c C-t");
+        assert_eq!(
+            cmd_at(&overlay("org", Mode::Normal).unwrap(), "C-c C-t").as_deref(),
+            Some("no_op")
+        );
+        assert!(remove_user_binding(&[Mode::Normal], "org", "C-c C-t"));
+        assert_eq!(
+            cmd_at(&overlay("org", Mode::Normal).unwrap(), "C-c C-t").as_deref(),
+            Some("org_todo")
+        );
+        assert!(!remove_user_binding(&[Mode::Normal], "org", "C-c C-t"));
+
+        assert_eq!(user_bindings().len(), 1);
+        clear_user_bindings();
+        // With the store empty the overlay is the shipped one again, borrowed.
+        assert!(matches!(
+            overlay("org", Mode::Normal),
+            Some(std::borrow::Cow::Borrowed(_))
+        ));
+    }
+
     /// Every row must name a real command, parse as a chord, and still resolve to
     /// a leaf inside its own overlay — a typo'd command name compiles (these are
     /// strings resolved at runtime) and a chord sitting on another chord's prefix
     /// key silently swallows it.
     #[test]
     fn every_major_mode_chord_resolves() {
+        // Reads the overlay, which the runtime binding store can add to.
+        let _guard = USER_BINDING_TEST_GUARD.lock();
         for (languages, modes, chord, _, name) in MAJOR_MODE_KEYS {
             assert!(
                 name.parse::<MappableCommand>().is_ok(),
@@ -505,7 +696,7 @@ mod tests {
                     // identity check is unchanged: the chord must land on exactly the
                     // command the row names.
                     assert_eq!(
-                        cmd_at(trie, chord).as_deref(),
+                        cmd_at(&trie, chord).as_deref(),
                         Some(name.trim_start_matches(':')),
                         "{language}/{mode}: `{chord}` does not resolve to `{name}` — \
                          another chord's prefix is shadowing it"
@@ -536,6 +727,8 @@ mod tests {
     /// language, and leaves every other language alone.
     #[test]
     fn overlay_shadows_the_global_chord_only_in_its_language() {
+        // Reads the overlay, which the runtime binding store can add to.
+        let _guard = USER_BINDING_TEST_GUARD.lock();
         let mut keymaps = Keymaps::new(Box::new(arc_swap::access::Constant(
             preset("spacemacs").unwrap(),
         )));

@@ -4827,12 +4827,11 @@
  },
  {
   "spec_id": "emacs.command.define_key",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:map",
-   "typable:noremap"
+   "static:define_key"
   ],
-  "note": "emacs define-key binds a key in a given keymap; zmax analogue is the vim :map/:noremap runtime rebinding. Partial: vim notation and mode-maps differ from emacs named keymaps"
+  "note": "emacs's define-key binds a key in a *named* keymap; emacs keymaps are objects, zmax's are its three editor modes plus the buffer's local (major-mode) map. define_key (zmax-term/src/commands.rs) therefore reads the keymap name first -- normal, select, insert or local, with completion -- and then KEY COMMAND in emacs kbd notation, routing `local` to the same map (current-local-map) names (keymap_local_prompt) and the three mode names to the per-mode writer keymap-set uses. An unknown keymap name is reported rather than silently bound elsewhere."
  },
  {
   "spec_id": "emacs.command.define_mail_abbrev",
@@ -8557,12 +8556,11 @@
  },
  {
   "spec_id": "emacs.command.global_set_key",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:map",
-   "typable:nnoremap"
+   "static:global_set_key"
   ],
-  "note": "emacs global-set-key -> zmax :map/:nnoremap rebind a key globally at runtime (vim-syntax ex command)"
+  "note": "emacs's older name for keymap-global-set, and the one the manual's Init Rebinding node uses. global_set_key (zmax-term/src/commands.rs) is that command under that name: it prompts emacs's \"Set key globally: \", reads the key in emacs kbd notation (emacs_kbd_to_zmax), rejects an unknown command before it reaches the config, and writes the binding into the global (Normal + Select) keymap live. With the command palette now matching a command's emacs spelling, `M-x global-set-key` finds it."
  },
  {
   "spec_id": "emacs.command.global_tab_line_mode",
@@ -10505,21 +10503,19 @@
  },
  {
   "spec_id": "emacs.command.keymap_local_set",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:map",
-   "typable:noremap"
+   "static:keymap_local_set"
   ],
-  "note": "emacs keymap-local-set binds in the buffer-local (major-mode) map; zmax analogue is the vim :map system. Partial: no true buffer-local keymap, and notation differs"
+  "note": "keymap.el's own docstring settles the scope: \"The binding goes in the current buffer's local keymap, which in most cases is shared with all other buffers in the same major mode.\" zmax's local keymap IS the major-mode overlay (zmax-term/src/keymap/major_mode.rs), so keymap_local_set stores the binding against the focused buffer's Document::major_mode() and every buffer in that mode sees it -- the same scope emacs describes, not an approximation. major_mode::overlay merges the runtime bindings over the shipped ones and Keymaps::get_with_language consults that overlay before the base keymap, so a local binding shadows both the shipped major-mode chord and the global map, as emacs's local map shadows the global one; a major mode with no shipped overlay gets one made (emacs's use-local-map on a buffer that had none). The key is read in emacs's own kbd notation (zmax_core::kbd::emacs_kbd_to_zmax) and the command name is validated before it reaches the map. Tested at major_mode.rs a_local_binding_shadows_the_major_mode_map_and_only_its_own_mode, including the scoping to one major mode and one editor mode."
  },
  {
   "spec_id": "emacs.command.keymap_local_unset",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:unmap",
-   "typable:nunmap"
+   "static:keymap_local_unset"
   ],
-  "note": "emacs keymap-local-unset removes a buffer-local binding; zmax analogue is vim :unmap. Partial: no true buffer-local keymap"
+  "note": "\"Remove local binding of KEY (if any). [...] If REMOVE is non-nil (interactively, the prefix arg), remove the binding instead of unsetting it\" (keymap.el:148-160). Both halves are ported: without a count the chord is shadowed with no_op so the global binding does not show through (major_mode::unset_user_binding), and with a count -- zmax's prefix arg -- the local entry is deleted so whatever the global map binds is reachable again (remove_user_binding), which reports whether one went. Same emacs kbd notation as keymap-local-set. Both paths asserted in major_mode.rs a_local_binding_shadows_the_major_mode_map_and_only_its_own_mode, including that the shipped major-mode chord comes back after a remove."
  },
  {
   "spec_id": "emacs.command.keymap_set",
