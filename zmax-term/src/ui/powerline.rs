@@ -167,6 +167,34 @@ pub fn snapshot(editor: &Editor) -> Option<Status> {
 }
 
 /// vim-airline powerline status bar: ❮mode❯❮paste❯❮⎇ branch❯❮path❯ … ❮ft❯❮enc❯❮pos❯.
+/// The position pill, honoring Emacs's `line-number-mode` and
+/// `column-number-mode` the same way the plain status line's `Position` element
+/// does: both on gives `12:5`, `line-number-mode` alone `12`, `column-number-mode`
+/// alone `:5`, and with both off the pill is dropped entirely. The scroll
+/// percentage is a line-position construct, so it follows `line-number-mode`
+/// alone — which is why the pill can still appear with only a percentage in it.
+/// `ln_glyph` is the caller's line-number glyph. Pure — unit tested.
+fn position_segment(
+    st: &Status,
+    ln_glyph: &str,
+    line_number_mode: bool,
+    column_number_mode: bool,
+) -> Option<String> {
+    let (ln, co) = st.lncol;
+    let coords = match (line_number_mode, column_number_mode) {
+        (true, true) => Some(format!("{ln}:{co}")),
+        (true, false) => Some(ln.to_string()),
+        (false, true) => Some(format!(":{co}")),
+        (false, false) => None,
+    };
+    match (line_number_mode, coords) {
+        (true, Some(coords)) => Some(format!(" {}%  {ln_glyph} {coords} ", st.pct)),
+        (true, None) => Some(format!(" {}% ", st.pct)),
+        (false, Some(coords)) => Some(format!(" {ln_glyph} {coords} ")),
+        (false, None) => None,
+    }
+}
+
 /// Segments are coloured pills joined by powerline separators ( / ), mode colour by Normal/
 /// Insert/Visual, just like the classic airline theme.
 pub fn render(surface: &mut Surface, theme: &zmax_view::Theme, area: Rect, st: &Status) {
@@ -267,11 +295,14 @@ pub fn render(surface: &mut Surface, theme: &zmax_view::Theme, area: Rect, st: &
     if !st.encoding.is_empty() {
         right.push((format!(" {} ", st.encoding), seg(gray, grayfg)));
     }
-    let (ln, co) = st.lncol;
-    right.push((
-        format!(" {}%  {LN} {}:{} ", st.pct, ln, co),
-        seg(mode_bg, mode_fg).add_modifier(bold),
-    ));
+    if let Some(text) = position_segment(
+        st,
+        LN,
+        crate::commands::line_number_mode_enabled(),
+        crate::ui::statusline::column_number_mode_enabled(),
+    ) {
+        right.push((text, seg(mode_bg, mode_fg).add_modifier(bold)));
+    }
 
     let right_edge = area.x + area.width;
 
@@ -340,6 +371,30 @@ mod test {
         (0..width)
             .filter_map(|x| surface.get(x, 0).map(|cell| cell.symbol.to_string()))
             .collect()
+    }
+
+    #[test]
+    fn the_position_pill_follows_line_and_column_number_mode() {
+        let mut st = status();
+        st.lncol = (12, 5);
+        st.pct = 40;
+        // Emacs `mode-line-position`, all four cases. The percentage is a
+        // line-position construct, so it goes with `line-number-mode`.
+        assert_eq!(
+            position_segment(&st, "L", true, true).as_deref(),
+            Some(" 40%  L 12:5 ")
+        );
+        assert_eq!(
+            position_segment(&st, "L", true, false).as_deref(),
+            Some(" 40%  L 12 ")
+        );
+        assert_eq!(
+            position_segment(&st, "L", false, true).as_deref(),
+            Some(" L :5 ")
+        );
+        // Both off: the whole pill goes, as the plain status line drops its
+        // `Position` element.
+        assert_eq!(position_segment(&st, "L", false, false), None);
     }
 
     fn status() -> Status {

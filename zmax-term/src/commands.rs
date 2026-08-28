@@ -32845,6 +32845,26 @@ fn recent_files_switcher(cx: &mut Context) {
     ));
 }
 
+/// The text the command palette matches a query against, which is deliberately
+/// not the text it draws.
+///
+/// `M-x` is an Emacs gesture and the Emacs manual names its commands
+/// `column-number-mode`, while zmax names the same static command
+/// `column_number_mode` — the spelling every keymap, doc, mapping and `:` command
+/// refers to, and the one the palette draws. Matching both spellings is what lets
+/// Emacs muscle memory find a command without renaming anything. A typable
+/// command is already kebab-cased, so its second spelling is the bare name
+/// without the `:` a `M-x` user would not type. Pure — unit tested.
+fn command_palette_match_text(item: &MappableCommand) -> String {
+    match item {
+        MappableCommand::Static { name, .. } => format!("{name} {}", name.replace('_', "-")),
+        MappableCommand::Typable { name, .. } => format!(":{name} {name}"),
+        MappableCommand::Macro { .. } => {
+            unreachable!("macros aren't included in the command palette")
+        }
+    }
+}
+
 pub fn command_palette(cx: &mut Context) {
     command_palette_impl(cx, None);
 }
@@ -32888,7 +32908,8 @@ fn command_palette_impl(cx: &mut Context, root: Option<std::path::PathBuf>) {
                     MappableCommand::Macro { .. } => {
                         unreachable!("macros aren't included in the command palette")
                     }
-                }),
+                })
+                .matching(|item: &MappableCommand, _| command_palette_match_text(item)),
                 ui::PickerColumn::new(
                     "bindings",
                     |item: &MappableCommand, keymap: &crate::keymap::ReverseKeymap| {
@@ -75549,6 +75570,62 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod command_palette_tests {
+    use super::{command_palette_match_text, MappableCommand};
+
+    fn static_cmd(name: &'static str) -> MappableCommand {
+        MappableCommand::Static {
+            name,
+            fun: |_cx| {},
+            doc: "",
+        }
+    }
+
+    #[test]
+    fn the_palette_matches_the_emacs_spelling_of_a_command() {
+        let item = static_cmd("column_number_mode");
+        let text = command_palette_match_text(&item);
+        assert_eq!(text, "column_number_mode column-number-mode");
+
+        // Both spellings really reach the command through the matcher the picker
+        // uses, and neither reaches it through the name the column draws alone.
+        let candidates = [text.as_str()];
+        for query in ["column-number-mode", "column_number_mode"] {
+            assert!(
+                !zmax_core::fuzzy::fuzzy_match(query, candidates, false).is_empty(),
+                "`M-x {query}` should find column_number_mode"
+            );
+        }
+        assert!(
+            zmax_core::fuzzy::fuzzy_match(
+                "column-number-mode",
+                ["column_number_mode"],
+                false
+            )
+            .is_empty(),
+            "the drawn name alone cannot match the Emacs spelling — that is why \
+             the match text exists"
+        );
+    }
+
+    #[test]
+    fn a_typable_command_matches_with_and_without_the_colon() {
+        let item = MappableCommand::Typable {
+            name: "auto-save-mode".to_string(),
+            args: String::new(),
+            doc: String::new(),
+        };
+        let text = command_palette_match_text(&item);
+        assert_eq!(text, ":auto-save-mode auto-save-mode");
+        // `M-x auto-save-mode` (no colon) is the Emacs gesture; `:auto-save-mode`
+        // is the zmax one. Both find it.
+        for query in ["auto-save-mode", ":auto-save-mode"] {
+            assert!(!zmax_core::fuzzy::fuzzy_match(query, [text.as_str()], false).is_empty());
+        }
     }
 }
 

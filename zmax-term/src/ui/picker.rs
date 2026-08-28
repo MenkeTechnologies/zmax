@@ -216,6 +216,10 @@ impl<T, D> Injector<T, D> {
 
 type ColumnFormatFn<T, D> = for<'a> fn(&'a T, &'a D) -> Cell<'a>;
 
+/// The text a column is *matched* against when it differs from the text the
+/// column draws. See [`Column::matching`].
+type MatchTextFn<T, D> = for<'a> fn(&'a T, &'a D) -> String;
+
 pub struct Column<T, D> {
     name: Arc<str>,
     format: ColumnFormatFn<T, D>,
@@ -224,6 +228,8 @@ pub struct Column<T, D> {
     /// global search) is not used for filtering twice.
     filter: bool,
     hidden: bool,
+    /// Text to match against instead of the cell's own, set by [`Column::matching`].
+    match_text: Option<MatchTextFn<T, D>>,
 }
 
 impl<T, D> Column<T, D> {
@@ -233,6 +239,7 @@ impl<T, D> Column<T, D> {
             format,
             filter: true,
             hidden: false,
+            match_text: None,
         }
     }
 
@@ -245,7 +252,24 @@ impl<T, D> Column<T, D> {
             format,
             filter: false,
             hidden: true,
+            match_text: None,
         }
+    }
+
+    /// Match this column against text the column does not draw.
+    ///
+    /// A picker matches a bare query against its primary column only, and the
+    /// text nucleo sees is normally the text the cell shows. This separates the
+    /// two so one column can be *findable* under a second spelling without that
+    /// spelling taking a column of screen: the command palette matches both
+    /// `column_number_mode` (zmax's name, the one it draws) and
+    /// `column-number-mode` (the Emacs name `M-x` users type).
+    ///
+    /// Matched characters are not highlighted in a column with its own match
+    /// text, because the match offsets index that text rather than the cell.
+    pub fn matching(mut self, match_text: MatchTextFn<T, D>) -> Self {
+        self.match_text = Some(match_text);
+        self
     }
 
     pub fn without_filtering(mut self) -> Self {
@@ -258,6 +282,9 @@ impl<T, D> Column<T, D> {
     }
 
     fn format_text<'a>(&self, item: &'a T, data: &'a D) -> Cow<'a, str> {
+        if let Some(match_text) = self.match_text {
+            return match_text(item, data).into();
+        }
         let text: String = self.format(item, data).content.into();
         text.into()
     }
@@ -403,8 +430,11 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             |_editor: &mut Context, _pattern: &str, _event: PromptEvent| {},
         );
 
+        // One width per *drawn* column: a hidden column contributes no cell to a
+        // row, so giving it a width would shift every column after it.
         let widths = columns
             .iter()
+            .filter(|column| !column.hidden)
             .map(|column| Constraint::Length(column.name.chars().count() as u16))
             .collect();
 
@@ -860,16 +890,27 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             let mut widths = self.widths.iter_mut();
             let mut matcher_index = 0;
 
-            Row::new(self.columns.iter().map(|column| {
+            Row::new(self.columns.iter().filter_map(|column| {
                 if column.hidden {
-                    return Cell::default();
+                    // A hidden column still occupies a matcher slot when it is
+                    // filtered (`Column::searchable`), so keep the index in step
+                    // with `matcher_columns` — the highlight offsets of every
+                    // later column depend on it. It contributes no cell, which is
+                    // what keeps `widths` (drawn columns only) aligned.
+                    if column.filter {
+                        matcher_index += 1;
+                    }
+                    return None;
                 }
 
                 let Some(Constraint::Length(max_width)) = widths.next() else {
                     unreachable!();
                 };
                 let mut cell = column.format(item.data, &self.editor_data);
-                let width = if column.filter {
+                // A column matched against text it does not draw has match
+                // offsets that index that text, not this cell — highlighting them
+                // here would underline the wrong characters, so it is skipped.
+                let width = if column.filter && column.match_text.is_none() {
                     snapshot.pattern().column_pattern(matcher_index).indices(
                         item.matcher_columns[matcher_index].slice(..),
                         &mut matcher,
@@ -929,7 +970,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                     *max_width = width as u16;
                 }
 
-                cell
+                Some(cell)
             }))
         });
 
@@ -941,25 +982,21 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             .widths(&self.widths);
 
         // -- Header
-        if self.columns.len() > 1 {
+        if self.columns.iter().filter(|c| !c.hidden).count() > 1 {
             let active_column = self.query.active_column(self.prompt.position());
             let header_style = cx.editor.theme.get("ui.picker.header");
             let header_column_style = cx.editor.theme.get("ui.picker.header.column");
 
             table = table.header(
-                Row::new(self.columns.iter().map(|column| {
-                    if column.hidden {
-                        Cell::default()
-                    } else {
-                        let style =
-                            if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
-                                cx.editor.theme.get("ui.picker.header.column.active")
-                            } else {
-                                header_column_style
-                            };
+                Row::new(self.columns.iter().filter(|c| !c.hidden).map(|column| {
+                    let style =
+                        if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
+                            cx.editor.theme.get("ui.picker.header.column.active")
+                        } else {
+                            header_column_style
+                        };
 
-                        Cell::from(Span::styled(Cow::from(&*column.name), style))
-                    }
+                    Cell::from(Span::styled(Cow::from(&*column.name), style))
                 }))
                 .style(header_style),
             );

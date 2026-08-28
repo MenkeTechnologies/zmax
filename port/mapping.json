@@ -4066,10 +4066,9 @@
   "spec_id": "emacs.command.column_number_mode",
   "status": "partial",
   "evidence": [
-   "static:column_number_mode",
-   "static:toggle_modeline_position"
+   "static:column_number_mode"
   ],
-  "note": "Re-pointed at the real command \u2014 the old evidence, toggle_modeline_position, is a different (SPC t m p) toggle. column_number_mode (zmax-term/src/commands.rs:71573) flips ui::statusline::COLUMN_NUMBER_MODE with fetch_xor and echoes emacs's own 'Column-Number mode enabled/disabled'; statusline.rs:544 render_position reproduces emacs's four-case mode-line-position (both on ' 12:5 ', line-number-mode alone ' 12 ', column-number-mode alone ' :5 ', neither -> the Position element is dropped at statusline.rs:98-109). Still partial: the IDE workbench statusline (ide.rs:2661) draws position unconditionally and reads neither flag, so on the default UI the toggle prints its message but nothing changes; COLUMN_NUMBER_MODE defaults to true where emacs defaults to nil; and the M-x picker matches only the snake_case name."
+  "note": "column_number_mode (zmax-term/src/commands.rs) flips ui::statusline::COLUMN_NUMBER_MODE and echoes emacs's own 'Column-Number mode enabled/disabled'. Both status lines now reproduce emacs's four-case mode-line-position: the plain one at statusline.rs render_position (both on ' 12:5 ', line-number-mode alone ' 12 ', column-number-mode alone ' :5 ', neither drops the Position element), and the IDE workbench powerline at ui/powerline.rs position_segment, which used to draw the pill unconditionally and now honors both flags and drops the pill when both are off (the scroll percentage follows line-number-mode alone, as it does on the plain line). M-x also finds the command under its emacs spelling now: the palette matches `column-number-mode` as well as `column_number_mode` (commands.rs command_palette_match_text, via the picker's new Column::matching). One divergence left: COLUMN_NUMBER_MODE starts on, where emacs's defcustom starts nil -- zmax ships a status line that shows the column, and turning it off by default would degrade the shipped UI to match a default the toggle reaches anyway."
  },
  {
   "spec_id": "emacs.command.comint_bol_or_process_mark",
@@ -55828,11 +55827,11 @@
  },
  {
   "spec_id": "neovim.option.cedit",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": ":set cedit is accepted, stored and queryable (:set cedit?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "\"The key used in Command-line Mode to open the command-line window. Only non-printable keys are allowed. [...] The key can be specified as a single character [...] or a letter preceded with a caret\" (options.txt). cedit_key (zmax-term/src/commands/typed.rs:1714) reads the option and parse_cedit (:1718) accepts every notation vim documents -- `CTRL-F`, `<C-F>`, `\\\\<C-f>`, `^F`, a bare character -- with an empty value the way vim turns the key off; the prompt tests that at typed.rs:74479. Prompt::handle_event (zmax-term/src/ui/prompt.rs:3127) fires on that key, aborts the line and opens the command-line window on what was typed so far -- `q:` for a `:` line, `q/`/`q?` for a search -- which is the window cmdline.txt says 'cedit' opens. The earlier note pre-dated the implementation."
  },
  {
   "spec_id": "neovim.option.channel",
