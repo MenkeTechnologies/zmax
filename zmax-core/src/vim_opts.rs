@@ -75,6 +75,24 @@ pub fn get_bool(names: &[&str]) -> bool {
     )
 }
 
+/// [`get_bool`] for an option whose vim default is *on* (`'termsync'`,
+/// `'more'`, …): the stored value decides when the user has `:set` it, and
+/// `default` stands in when they have not.
+pub fn get_bool_or(names: &[&str], default: bool) -> bool {
+    match get(names).as_deref() {
+        Some("on" | "1" | "true" | "yes" | "y") => true,
+        Some(_) => false,
+        None => default,
+    }
+}
+
+/// Whether a comma-separated list option contains `word` (`'redrawdebug'`,
+/// `'diffopt'`, `'jumpoptions'`, … — vim's flag-list options). Surrounding
+/// whitespace is ignored, as vim's own `check_opt_strings` does.
+pub fn list_contains(names: &[&str], word: &str) -> bool {
+    get(names).is_some_and(|v| v.split(',').any(|item| item.trim() == word))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -111,5 +129,22 @@ mod test {
         reset("all");
         assert_eq!(get(&["pi"]), None);
         assert_eq!(get(&["chistory"]), None);
+    }
+
+    #[test]
+    fn default_on_booleans_and_flag_lists() {
+        clear();
+        // Never set: the caller's default stands (vim `'termsync'` is on).
+        assert!(get_bool_or(&["termsync"], true));
+        set("termsync", "off");
+        assert!(!get_bool_or(&["termsync"], true));
+        set("termsync", "on");
+        assert!(get_bool_or(&["termsync"], true));
+
+        assert!(!list_contains(&["redrawdebug", "rdb"], "line"));
+        set("rdb", "compositor, line");
+        assert!(list_contains(&["redrawdebug", "rdb"], "line"));
+        assert!(list_contains(&["redrawdebug", "rdb"], "compositor"));
+        assert!(!list_contains(&["redrawdebug", "rdb"], "flush"));
     }
 }

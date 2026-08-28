@@ -216,6 +216,7 @@ where
             render_file_modification_indicator
         }
         zmax_view::editor::StatusLineElement::ReadOnlyIndicator => render_read_only_indicator,
+        zmax_view::editor::StatusLineElement::Busy => render_busy,
         zmax_view::editor::StatusLineElement::FileEncoding => render_file_encoding,
         zmax_view::editor::StatusLineElement::FileLineEnding => render_file_line_ending,
         zmax_view::editor::StatusLineElement::FileIndentStyle => render_file_indent_style,
@@ -815,6 +816,39 @@ where
     write(context, title.into());
 }
 
+/// vim `'busy'` (options.txt, number, local to buffer, default 0): "Sets a
+/// buffer \"busy\" status. Indicated in the default statusline. When busy status
+/// is larger then 0 busy flag is shown in statusline." The value is read from the
+/// buffer's own `:setlocal` map so a split showing a busy buffer flags it even
+/// while a different buffer is focused; the session-wide `:set busy` is the
+/// fallback for a buffer with no local value, exactly as `:set`'s two-level
+/// scope defines it.
+fn render_busy<'a, F>(context: &mut RenderContext<'a>, write: F)
+where
+    F: Fn(&mut RenderContext<'a>, Span<'a>) + Copy,
+{
+    let title = if buffer_is_busy(
+        context.doc.vim_local_opts.get("busy").map(String::as_str),
+        crate::commands::typed::vim_opt_str("busy").as_deref(),
+    ) {
+        " [busy] "
+    } else {
+        ""
+    };
+    write(context, title.into());
+}
+
+/// Whether a buffer counts as busy: its own `:setlocal busy` value if it has
+/// one, else the session-wide `:set busy`, parsed as a number and compared
+/// against vim's "larger then 0". A value that is not a number is not a busy
+/// count and reads as not busy. Pure — unit tested.
+fn buffer_is_busy(local: Option<&str>, global: Option<&str>) -> bool {
+    local
+        .or(global)
+        .and_then(|v| v.trim().parse::<i64>().ok())
+        .is_some_and(|n| n > 0)
+}
+
 fn render_file_base_name<'a, F>(context: &mut RenderContext<'a>, write: F)
 where
     F: Fn(&mut RenderContext<'a>, Span<'a>) + Copy,
@@ -906,5 +940,26 @@ where
 {
     if context.focused && context.doc.code_action_hints(context.view.id) {
         write(context, " ⋮ ".into())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::buffer_is_busy;
+
+    #[test]
+    fn busy_flag_prefers_the_buffers_own_value() {
+        // Never set anywhere: vim's default 0, so no flag.
+        assert!(!buffer_is_busy(None, None));
+        // `:set busy=2` with no local value: the session value decides.
+        assert!(buffer_is_busy(None, Some("2")));
+        // A buffer's `:setlocal busy=0` wins over a busy session default —
+        // otherwise every buffer would flag while one plugin is working.
+        assert!(!buffer_is_busy(Some("0"), Some("3")));
+        assert!(buffer_is_busy(Some("1"), Some("0")));
+        // "larger then 0": negatives and non-numbers are not a busy count.
+        assert!(!buffer_is_busy(Some("-1"), None));
+        assert!(!buffer_is_busy(Some("yes"), None));
+        assert!(!buffer_is_busy(Some(""), None));
     }
 }

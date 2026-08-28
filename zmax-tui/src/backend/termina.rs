@@ -435,6 +435,14 @@ impl TerminaBackend {
     // after clearing the terminal).
 
     fn start_synchronized_render(&mut self) -> io::Result<()> {
+        // vim `'termsync'` (options.txt, default on): "If the host terminal
+        // supports it, buffer all screen updates made during a redraw cycle so
+        // that each screen is displayed in the terminal all at once." `:set
+        // notermsync` therefore stops us emitting the DECSET 2026 pair even on a
+        // terminal that advertises it.
+        if !zmax_core::vim_opts::get_bool_or(&["termsync"], true) {
+            return Ok(());
+        }
         if self.capabilities.synchronized_output && !self.is_synchronized_output_set {
             write!(self.terminal, "{}", decset!(SynchronizedOutput))?;
             self.is_synchronized_output_set = true;
@@ -524,7 +532,21 @@ impl Backend for TerminaBackend {
         let mut underline_style = UnderlineStyle::Reset;
         let mut modifier = Modifier::empty();
         let mut last_pos: Option<(u16, u16)> = None;
+        // vim `'redrawdebug'` "line": with `'writedelay'` set, pause after each
+        // line drawn on the screen so the paint order is visible. Read once per
+        // draw; `None` (the default) costs nothing in the cell loop below.
+        let line_delay = crate::backend::redraw_debug_delay("line");
         for (x, y, cell) in content {
+            if let Some(delay) = line_delay {
+                // The delay is *after* each line, so it fires when this cell
+                // starts a row the previous cell was not on. Flush first — an
+                // unflushed line is invisible, which would make the delay
+                // useless for watching the redraw.
+                if matches!(last_pos, Some(p) if p.1 != y) {
+                    self.terminal.flush()?;
+                    std::thread::sleep(delay);
+                }
+            }
             // Move the cursor if the previous location was not (x - 1, y)
             if !matches!(last_pos, Some(p) if x == p.0 + 1 && y == p.1) {
                 write!(
@@ -598,6 +620,15 @@ impl Backend for TerminaBackend {
 
         write!(self.terminal, "{}", Csi::Sgr(csi::Sgr::Reset))?;
 
+        // The last row has no successor to trigger the check above, so close the
+        // draw with its delay too.
+        if let Some(delay) = line_delay {
+            if last_pos.is_some() {
+                self.terminal.flush()?;
+                std::thread::sleep(delay);
+            }
+        }
+
         Ok(())
     }
 
@@ -657,7 +688,12 @@ impl Backend for TerminaBackend {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.terminal.flush()
+        self.terminal.flush()?;
+        // vim `'redrawdebug'` "flush": pause after each flush event.
+        if let Some(delay) = crate::backend::redraw_debug_delay("flush") {
+            std::thread::sleep(delay);
+        }
+        Ok(())
     }
 
     fn supports_true_color(&self) -> bool {

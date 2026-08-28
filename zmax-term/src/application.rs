@@ -536,6 +536,21 @@ impl Application {
     }
 
     async fn render(&mut self) {
+        // vim `'lazyredraw'` (options.txt, default off): "the screen will not be
+        // redrawn while executing macros, registers and other commands that have
+        // not been typed. […] To force an update use `:redraw`." `macro_replaying`
+        // is exactly zmax's "these keys were not typed" marker — both `@q` and a
+        // `:map` rhs key sequence mark it for the duration of the replay — and
+        // `:redraw` sets `compositor.full_redraw`, which is the documented escape
+        // hatch, so it still paints. The frame is not lost: `needs_redraw` stays
+        // set, so the first render after the macro ends draws the final state.
+        if !self.editor.macro_replaying.is_empty()
+            && !self.compositor.full_redraw
+            && crate::commands::typed::vim_opt_bool_alias("lazyredraw", "lz")
+        {
+            self.editor.needs_redraw = true;
+            return;
+        }
         if self.compositor.full_redraw {
             self.terminal.clear().expect("Cannot clear the terminal");
             self.compositor.full_redraw = false;

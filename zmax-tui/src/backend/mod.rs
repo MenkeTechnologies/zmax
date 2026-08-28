@@ -43,6 +43,23 @@ pub fn suppress_bold_inverse_default_colors() -> bool {
     SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS.load(std::sync::atomic::Ordering::Relaxed)
 }
 
+/// vim `'redrawdebug'` + `'writedelay'` (options.txt): the debug delay to take
+/// after a unit of drawing, or `None` when the pair leaves it off — which is the
+/// default, so nothing on the render path pays for this beyond one option read.
+///
+/// `'writedelay'` is "the number of milliseconds to wait after each line or each
+/// flush" and "only takes effect together with 'redrawdebug'"; which unit it
+/// applies to is the `'redrawdebug'` flag: `line` "introduce a delay after each
+/// line drawn on the screen", `flush` "introduce a delay after each flush
+/// event". `flag` is the one the call site draws.
+pub fn redraw_debug_delay(flag: &str) -> Option<std::time::Duration> {
+    if !zmax_core::vim_opts::list_contains(&["redrawdebug", "rdb"], flag) {
+        return None;
+    }
+    let ms = zmax_core::vim_opts::get_num(&["writedelay", "wd"])?;
+    (ms > 0).then(|| std::time::Duration::from_millis(ms as u64))
+}
+
 /// The modifier a cell is actually drawn with.
 ///
 /// Port of the bold check at the end of `realize_tty_face` in Emacs'

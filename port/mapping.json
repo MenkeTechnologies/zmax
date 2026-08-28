@@ -55796,11 +55796,11 @@
  },
  {
   "spec_id": "neovim.option.busy",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": ":set busy is accepted, stored and queryable (:set busy?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "'busy' is a buffer-local counter shown in the default statusline: the new `Busy` statusline element (zmax-view/src/editor.rs StatusLineElement::Busy, shipped in StatusLineConfig::default's left group; rendered by zmax-term/src/ui/statusline.rs render_busy) prints ` [busy] ` while the buffer's `:setlocal busy` is above zero and nothing otherwise, so an idle buffer's line is unchanged. The buffer's own value wins over the session-wide `:set busy`, which is what makes it per-buffer in a split. options.txt 'busy'."
  },
  {
   "spec_id": "neovim.option.casemap",
@@ -56787,11 +56787,11 @@
  },
  {
   "spec_id": "neovim.option.lazyredraw",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": ":set lazyredraw is accepted, stored and queryable (:set lazyredraw?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "\"The screen will not be redrawn while executing macros, registers and other commands that have not been typed. [...] To force an update use :redraw\" (options.txt). Application::render (zmax-term/src/application.rs) returns without painting while `Editor::macro_replaying` is non-empty and 'lazyredraw' is on -- that marker is set for both `@q` register replay and a `:map` rhs key sequence, i.e. exactly the keys the user did not type -- and leaves `needs_redraw` set so the first frame after the macro shows the final state. `:redraw` sets `compositor.full_redraw`, which the gate honors, so the documented escape hatch still paints."
  },
  {
   "spec_id": "neovim.option.lhistory",
@@ -57257,7 +57257,7 @@
   "evidence": [
    "typable:set"
   ],
-  "note": ":set redrawdebug is accepted, stored and queryable (:set redrawdebug?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "The two flags that are about *timing* are honored, via 'writedelay': `line` delays after each line drawn (TerminaBackend::draw, zmax-tui/src/backend/termina.rs) and `flush` delays after each flush (TerminaBackend::flush); backend::redraw_debug_delay reads the pair. Partial for the three flags that describe nvim's *multigrid compositor*, which zmax has no equivalent of: `compositor` flashes each compositor redraw event by type, `nothrottle` turns off message-grid scroll joining, and `invalid` aborts on compositor inconsistency. zmax draws a single grid straight to the backend, so there is no compositor event stream to colour, throttle or check."
  },
  {
   "spec_id": "neovim.option.redrawtime",
@@ -57919,11 +57919,11 @@
  },
  {
   "spec_id": "neovim.option.termsync",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": ":set termsync is accepted, stored and queryable (:set termsync?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "\"If the host terminal supports it, buffer all screen updates made during a redraw cycle so that each screen is displayed in the terminal all at once\" (options.txt). zmax already emitted the DECSET/DECRST 2026 pair around each frame; TerminaBackend::start_synchronized_render (zmax-tui/src/backend/termina.rs) now returns early when 'termsync' is off, so `:set notermsync` stops the synchronized-output wrapping even on a terminal that advertises the capability, and `:set termsync` restores it."
  },
  {
   "spec_id": "neovim.option.textwidth",
@@ -58376,11 +58376,11 @@
  },
  {
   "spec_id": "neovim.option.writedelay",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": ":set writedelay is accepted, stored and queryable (:set writedelay?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "\"The number of milliseconds to wait after each line or each flush\", and \"only takes effect together with 'redrawdebug'\" (options.txt). backend::redraw_debug_delay (zmax-tui/src/backend/mod.rs) pairs the two: with `redrawdebug` naming `line`, TerminaBackend::draw flushes and sleeps 'writedelay' ms whenever a cell starts a row the previous cell was not on (and once more after the final row); with `flush`, TerminaBackend::flush sleeps after each flush. `:set writedelay=0` or an unset 'redrawdebug' costs one option read and no delay."
  },
  {
   "spec_id": "neovim.visual-mode.a",

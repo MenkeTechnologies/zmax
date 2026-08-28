@@ -153,9 +153,9 @@ The `[editor.statusline]` key takes the following sub-keys:
 | Key           | Description | Default |
 | ---           | ---         | ---     |
 | `powerline`   | Draw the frame-wide powerline bar; `false` gives every window its own status line built from the keys below | `true` |
-| `left`        | A list of elements aligned to the left of the statusline | `["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]` |
+| `left`        | A list of elements aligned to the left of the statusline | `["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator", "busy"]` |
 | `center`      | A list of elements aligned to the middle of the statusline | `[]` |
-| `right`       | A list of elements aligned to the right of the statusline | `["diagnostics", "selections", "register", "position", "file-encoding"]` |
+| `right`       | A list of elements aligned to the right of the statusline | `["diagnostics", "ci-status", "trailing-whitespace", "mixed-indent", "selections", "register", "file-type", "file-encoding", "file-format-icon", "position", "position-percentage"]` |
 | `separator`   | The character used to separate elements in the statusline | `"│"` |
 | `mode.normal` | The text shown in the `mode` element for normal mode | `"NOR"` |
 | `mode.insert` | The text shown in the `mode` element for insert mode | `"INS"` |
@@ -178,6 +178,7 @@ The following statusline elements can be configured:
 | `file-line-ending` | The file line endings (CRLF or LF) |
 | `file-indent-style` | The file indentation style |
 | `read-only-indicator` | An indicator that shows `[readonly]` when a file cannot be written |
+| `busy` | vim `'busy'`: shows `[busy]` while the buffer's `:setlocal busy` count is above zero, and nothing otherwise |
 | `total-line-numbers` | The total line numbers of the opened file |
 | `file-type` | The type of the opened file |
 | `diagnostics` | The number of warnings and/or errors |

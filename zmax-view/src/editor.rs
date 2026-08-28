@@ -916,6 +916,11 @@ impl Default for StatusLineConfig {
                 E::FileName,
                 E::ReadOnlyIndicator,
                 E::FileModificationIndicator,
+                // vim `'busy'`: "Sets a buffer 'busy' status. Indicated in the
+                // default statusline." (options.txt). Renders nothing until a
+                // buffer is actually marked busy, so the default line is
+                // unchanged for every buffer that is not.
+                E::Busy,
             ],
             center: vec![],
             right: vec![
@@ -982,6 +987,10 @@ pub enum StatusLineElement {
 
     /// An indicator that shows `"[readonly]"` when a file cannot be written
     ReadOnlyIndicator,
+
+    /// vim `'busy'`: the buffer's busy flag, shown while `:setlocal busy` is
+    /// greater than zero and hidden otherwise
+    Busy,
 
     /// The file encoding
     FileEncoding,
