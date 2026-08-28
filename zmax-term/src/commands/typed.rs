@@ -8147,11 +8147,54 @@ fn ide(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow:
 /// buffer (right). Changed/added/removed lines are aligned and highlighted with
 /// synchronized scrolling and `n`/`p` change-to-change navigation. Requires a
 /// git diff base for the file (otherwise a status message is shown).
-fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn diff(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    open_diff(cx.editor, cx.jobs);
+    // Emacs `diff OLD NEW &optional SWITCHES` (vc/diff.el:89): "Find and display
+    // the differences between OLD and NEW files", running `diff-command` with
+    // `diff-switches` (default "-u", diff.el:41) and showing the output in
+    // diff-mode. With no arguments zmax keeps its own git-HEAD side-by-side view,
+    // which is the thing `:diff` has always been.
+    let old = args.first().map(|s| s.to_string());
+    let new = args.get(1).map(|s| s.to_string());
+    let (Some(old), Some(new)) = (old, new) else {
+        if args.len() == 1 {
+            bail!("diff: expected OLD and NEW (two files), or no argument for the git diff");
+        }
+        open_diff(cx.editor, cx.jobs);
+        return Ok(());
+    };
+    let switches = args
+        .get(2)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "-u".to_string());
+    let output = std::process::Command::new("diff")
+        .args(switches.split_whitespace())
+        .arg(&old)
+        .arg(&new)
+        .output()
+        .map_err(|e| anyhow::anyhow!("diff: {e}"))?;
+    // `diff` exits 1 when the files differ, which is the interesting case; only a
+    // status above that is a real failure (missing file, bad switch).
+    if output.status.code().is_none_or(|c| c > 1) {
+        bail!(
+            "diff: {}",
+            String::from_utf8_lossy(&output.stderr).trim().to_string()
+        );
+    }
+    let text = String::from_utf8_lossy(&output.stdout).into_owned();
+    if text.trim().is_empty() {
+        cx.editor
+            .set_status(format!("No differences between {old} and {new}"));
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(crate::ui::diffmode::DiffMode::new(text)));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
     Ok(())
 }
 
@@ -51012,11 +51055,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "diff",
         aliases: &["gdiff"],
-        doc: "Open a read-only side-by-side diff of the buffer vs. its git HEAD version.",
+        doc: "With no argument, a side-by-side diff of the buffer vs. its git HEAD version; with OLD NEW [SWITCHES], the differences between two files in diff-mode (emacs diff).",
         fun: diff,
-        completer: CommandCompleter::none(),
+        completer: CommandCompleter::all(completers::filename),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, Some(3)),
             ..Signature::DEFAULT
         },
     },

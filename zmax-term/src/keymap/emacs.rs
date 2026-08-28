@@ -167,8 +167,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-p" => move_visual_line_up,
         "C-a" => goto_line_start,
         "C-e" => goto_line_end,             // move-end-of-line (stops before the newline)
-        "A-f" => move_next_word_end,        // M-f: forward-word
-        "A-b" => move_prev_word_start,      // M-b: backward-word
+        "A-f" => forward_word,              // M-f: forward-word
+        "A-b" => backward_word,             // M-b: backward-word
         "A-m" => goto_first_nonwhitespace,  // M-m: back-to-indentation
         "A-<" => goto_file_start,           // M-<: beginning-of-buffer
         "A->" => goto_last_line,            // M->: end-of-buffer
@@ -401,8 +401,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-p" => extend_visual_line_up,
         "C-a" => goto_line_start,
         "C-e" => goto_line_end,
-        "A-f" => extend_next_word_end,
-        "A-b" => extend_prev_word_start,
+        "A-f" => extend_forward_word,
+        "A-b" => extend_backward_word,
         "A-m" => extend_to_first_nonwhitespace, // M-m: back-to-indentation (extend)
         "A-<" => goto_file_start,
         "A->" => goto_last_line,
@@ -436,8 +436,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-p" | "up"    => move_visual_line_up,
         "C-a" | "home"  => goto_line_start,
         "C-e" | "end"   => goto_line_end,
-        "A-f" => move_next_word_end,
-        "A-b" => move_prev_word_start,
+        "A-f" => forward_word,
+        "A-b" => backward_word,
         "A-m" => goto_first_nonwhitespace,  // M-m: back-to-indentation
         "A-<" => goto_file_start,
         "A->" => goto_last_line,

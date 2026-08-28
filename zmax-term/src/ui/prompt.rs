@@ -180,6 +180,9 @@ struct HistorySearchRead {
     prompt: Cow<'static, str>,
     /// `M-r` walks to older entries, `M-s` to newer ones.
     backward: bool,
+    /// Emacs's `(prefix-numeric-value current-prefix-arg)`: how many matching
+    /// entries to walk. The key gives 1; the command passes its count.
+    count: usize,
 }
 
 /// Emacs's `minibuffer-history-search-history`: the regexps `M-r` / `M-s` have
@@ -1716,46 +1719,6 @@ impl Prompt {
         self.move_end();
         true
     }
-
-    /// Emacs `previous-matching-history-element` (`M-r`) and
-    /// `next-matching-history-element` (`M-s`): put on the line the next history
-    /// entry — older when `backward`, newer when not — that matches a regexp.
-    ///
-    /// Emacs reads the regexp in a recursive minibuffer; here the line itself is
-    /// the regexp (as in `comint-history-isearch-backward-regexp`), and it keeps
-    /// being the regexp for as long as the command is repeated, so `M-r M-r`
-    /// walks back through the matches. `Err` is a bad regexp; `Ok(false)` means
-    /// no (further) history entry matches.
-    pub fn matching_history_element(
-        &mut self,
-        editor: &Editor,
-        backward: bool,
-    ) -> Result<bool, String> {
-        if self.history_register.is_none() {
-            return Err("this prompt keeps no history".to_string());
-        }
-        let pattern = match &self.history_search {
-            Some((pat, applied)) if *applied == self.line => pat.clone(),
-            _ => self.line.clone(),
-        };
-        if pattern.is_empty() {
-            return Err("no regexp — type one first".to_string());
-        }
-        // The walk itself is shared with the `M-r` / `M-s` keys, which read the
-        // regexp in a recursive minibuffer instead of taking it off the line.
-        let Some((index, entry, offset)) =
-            self.find_matching_history(editor, &pattern, backward)?
-        else {
-            return Ok(false);
-        };
-        self.line = entry;
-        self.history_pos = Some(index);
-        self.history_search = Some((pattern, self.line.clone()));
-        self.cursor = clamp_to_boundary(&self.line, offset);
-        self.exit_selection();
-        Ok(true)
-    }
-
     /// Accept the line — store it in the history register and fire the
     /// `Validate` callback. This is exactly what `Enter` does; `false` means the
     /// prompt must stay open (a directory completion was selected, and the
@@ -2588,7 +2551,7 @@ impl Prompt {
     /// element matching regexp" / "Next element matching regexp" — with the newest
     /// `minibuffer-history-search-history` entry shown as ` (default REGEXP)`,
     /// because that is what empty input reuses.
-    fn begin_history_search(&mut self, editor: &Editor, backward: bool) {
+    pub(crate) fn begin_history_search(&mut self, editor: &Editor, backward: bool, count: usize) {
         // A prompt that keeps no history has nothing to search, and the read is not
         // recursive into itself: `M-r` while it is open would lose the answer the
         // first one set aside.
@@ -2601,6 +2564,7 @@ impl Prompt {
             cursor: std::mem::replace(&mut self.cursor, 0),
             prompt: std::mem::replace(&mut self.prompt, Cow::Owned(prompt)),
             backward,
+            count: count.max(1),
         });
         self.recalculate_completion(editor);
     }
@@ -2628,7 +2592,15 @@ impl Prompt {
             return;
         }
         push_history_search_regexp(&pattern);
-        self.apply_matching_history(cx, &pattern, saved.backward);
+        // Emacs's N argument: walk N matching entries, stopping at the first
+        // step that finds none (which reports "No earlier matching history item").
+        for _ in 0..saved.count {
+            let before = self.history_pos;
+            self.apply_matching_history(cx, &pattern, saved.backward);
+            if self.history_pos == before {
+                break;
+            }
+        }
     }
 
     /// `Esc` / `C-g` in that recursive minibuffer (`abort-recursive-edit`): the
@@ -3432,7 +3404,7 @@ impl Component for Prompt {
                 if isearch {
                     self.isearch_toggle(cx, IsearchToggle::Regexp);
                 } else {
-                    self.begin_history_search(cx.editor, true);
+                    self.begin_history_search(cx.editor, true, 1);
                 }
             }
             // dte `M-r` — "Reverse search direction": the search in flight turns
@@ -3447,7 +3419,7 @@ impl Component for Prompt {
                 self.pending_isearch_s = true;
                 if !isearch {
                     self.pending_isearch_s = false;
-                    self.begin_history_search(cx.editor, false);
+                    self.begin_history_search(cx.editor, false, 1);
                 }
             }
 

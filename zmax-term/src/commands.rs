@@ -419,6 +419,12 @@ impl MappableCommand {
         block_append, "Visual-block: append at the right column, padding short rows (A)",
         move_next_word_start, "Move to start of next word",
         move_prev_word_start, "Move to start of previous word",
+        forward_word, "Move forward over a word, emacs-style (emacs forward-word, M-f)",
+        backward_word, "Move back to the start of a word, emacs-style (emacs backward-word, M-b)",
+        right_word, "Move a word rightward (emacs right-word)",
+        left_word, "Move a word leftward (emacs left-word)",
+        extend_forward_word, "Extend the selection forward over a word (emacs forward-word with the mark active)",
+        extend_backward_word, "Extend the selection back over a word (emacs backward-word with the mark active)",
         move_next_word_end, "Move to end of next word",
         move_prev_word_end, "Move to end of previous word",
         move_next_long_word_start, "Move to start of next long word",
@@ -2687,8 +2693,8 @@ impl MappableCommand {
         term_char_mode, "Terminal: send every key straight to the process (emacs term-char-mode)",
         term_pager_toggle, "Terminal: stop output after each screenful (emacs term-pager-toggle)",
         switch_to_completions, "Move into the list of completions (emacs switch-to-completions)",
-        previous_matching_history_element, "Recall the newest older history entry matching the regexp on the line (emacs previous-matching-history-element)",
-        next_matching_history_element, "Recall the oldest newer history entry matching the regexp on the line (emacs next-matching-history-element)",
+        previous_matching_history_element, "Read a regexp, then recall the newest older history entry matching it (emacs previous-matching-history-element)",
+        next_matching_history_element, "Read a regexp, then recall the oldest newer history entry matching it (emacs next-matching-history-element)",
         line_number_mode, "Toggle the cursor position display in the mode line (emacs line-number-mode)",
         column_number_mode, "Toggle the column number display in the mode line (emacs column-number-mode)",
         size_indication_mode, "Toggle the buffer size display in the mode line (emacs size-indication-mode)",
@@ -6296,6 +6302,111 @@ fn vim_move_prev_long_word_end(cx: &mut Context) {
 
 fn move_next_word_start(cx: &mut Context) {
     move_word_impl(cx, movement::move_next_word_start)
+}
+
+/// Emacs's word constituents (syntax class `w`).
+///
+/// In every mode that ships with Emacs, `_` and `-` are *symbol* constituents,
+/// not word ones — verified by driving `emacs -Q --batch` over
+/// `"foo.bar baz_qux  end"`: `forward-word` stops at 3, 7, 11, 15, 20, so it
+/// stopped inside `baz_qux` at the `_`, and `backward-word` stops at 17, 12, 8,
+/// 4, 0. That is a run of alphanumerics and nothing else, which is what vim's
+/// `w`/`b` do NOT do (vim counts `_` as a word char, so `baz_qux` is one word to
+/// it, and it stops on punctuation runs that Emacs skips over).
+fn is_emacs_word_char(c: char) -> bool {
+    c.is_alphanumeric()
+}
+
+/// One step of Emacs's `forward-word` / `backward-word` from character index
+/// `pos`: skip the non-word characters in the direction of travel, then move
+/// over the word characters. Forward therefore lands *after* the word and
+/// backward lands *on* its first character, which is what the emacs probe above
+/// measured. Pure — unit tested.
+fn emacs_word_step(text: RopeSlice, pos: usize, forward: bool) -> usize {
+    let len = text.len_chars();
+    let mut pos = pos.min(len);
+    if forward {
+        while pos < len && !is_emacs_word_char(text.char(pos)) {
+            pos += 1;
+        }
+        while pos < len && is_emacs_word_char(text.char(pos)) {
+            pos += 1;
+        }
+    } else {
+        while pos > 0 && !is_emacs_word_char(text.char(pos - 1)) {
+            pos -= 1;
+        }
+        while pos > 0 && is_emacs_word_char(text.char(pos - 1)) {
+            pos -= 1;
+        }
+    }
+    pos
+}
+
+/// `count` steps of [`emacs_word_step`]. Pure — unit tested.
+fn emacs_word_target(text: RopeSlice, pos: usize, forward: bool, count: usize) -> usize {
+    let mut pos = pos;
+    for _ in 0..count.max(1) {
+        let next = emacs_word_step(text, pos, forward);
+        if next == pos {
+            break;
+        }
+        pos = next;
+    }
+    pos
+}
+
+/// Shared body of the Emacs word motions: move (or extend to) the word boundary
+/// `count` steps away.
+fn emacs_word_move(cx: &mut Context, forward: bool, extend: bool) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let target = emacs_word_target(text, range.cursor(text), forward, count);
+        if extend {
+            range.put_cursor(text, target, true)
+        } else {
+            Range::point(target)
+        }
+    });
+    doc.set_selection(view.id, selection);
+}
+
+/// Emacs `forward-word` (`M-f`): "move point forward ARG words", i.e. skip any
+/// non-word characters, then move over the word — landing after it.
+fn forward_word(cx: &mut Context) {
+    emacs_word_move(cx, true, false)
+}
+
+/// Emacs `backward-word` (`M-b`): the same motion backward, landing on the
+/// word's first character.
+fn backward_word(cx: &mut Context) {
+    emacs_word_move(cx, false, false)
+}
+
+/// Emacs `right-word`: "`(if (eq (current-bidi-paragraph-direction) 'left-to-right)
+/// (forward-word n) (backward-word n))`". zmax renders left-to-right, so this is
+/// `forward-word` — the bidi branch has no reachable state here.
+fn right_word(cx: &mut Context) {
+    forward_word(cx)
+}
+
+/// Emacs `left-word`: the mirror of [`right_word`], `backward-word` in a
+/// left-to-right paragraph.
+fn left_word(cx: &mut Context) {
+    backward_word(cx)
+}
+
+/// `forward-word` with the mark active — the Select-mode form Emacs gets from
+/// `shift-select-mode` / an active region.
+fn extend_forward_word(cx: &mut Context) {
+    emacs_word_move(cx, true, true)
+}
+
+/// `backward-word` with the mark active.
+fn extend_backward_word(cx: &mut Context) {
+    emacs_word_move(cx, false, true)
 }
 
 fn move_prev_word_start(cx: &mut Context) {
@@ -63387,13 +63498,24 @@ fn next_matching_history_element(cx: &mut Context) {
 }
 
 /// Shared body of the two matching-history-element commands.
+///
+/// Emacs's interactive spec reads the regexp in a *recursive* minibuffer with
+/// `enable-recursive-minibuffers` bound on, defaulting to the last one used, and
+/// takes the prefix arg as the number of matching entries to walk (simple.el):
+///
+/// ```elisp
+/// (interactive (let* ((enable-recursive-minibuffers t)
+///                     (regexp (read-from-minibuffer …)))
+///                (list regexp (prefix-numeric-value current-prefix-arg))))
+/// ```
+///
+/// So the command opens the same recursive read the `M-r` / `M-s` keys open —
+/// it used to take the regexp off the line instead, which is not what emacs
+/// prompts for — and a count walks that many matches.
 fn matching_history_element(cx: &mut Context, backward: bool) {
+    let count = cx.count();
     minibuffer_action(cx, move |prompt, cx| {
-        match prompt.matching_history_element(cx.editor, backward) {
-            Ok(true) => {}
-            Ok(false) => cx.editor.set_status("No matching history element"),
-            Err(e) => cx.editor.set_error(e),
-        }
+        prompt.begin_history_search(cx.editor, backward, count);
         false
     });
 }
@@ -76001,6 +76123,56 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod emacs_word_tests {
+    use super::{emacs_word_step, emacs_word_target};
+    use zmax_core::Rope;
+
+    /// The stops `emacs -Q --batch` reported for `forward-word` / `backward-word`
+    /// over this buffer. `_` is a *symbol* constituent in every shipped mode, not
+    /// a word one, so `baz_qux` is two words to Emacs where it is one to vim.
+    const TEXT: &str = "foo.bar baz_qux  end";
+
+    #[test]
+    fn forward_word_matches_emacs() {
+        let rope = Rope::from_str(TEXT);
+        let text = rope.slice(..);
+        let mut pos = 0;
+        let mut stops = Vec::new();
+        while pos < text.len_chars() {
+            pos = emacs_word_step(text, pos, true);
+            stops.push(pos);
+        }
+        assert_eq!(stops, vec![3, 7, 11, 15, 20]);
+    }
+
+    #[test]
+    fn backward_word_matches_emacs() {
+        let rope = Rope::from_str(TEXT);
+        let text = rope.slice(..);
+        let mut pos = text.len_chars();
+        let mut stops = Vec::new();
+        while pos > 0 {
+            pos = emacs_word_step(text, pos, false);
+            stops.push(pos);
+        }
+        assert_eq!(stops, vec![17, 12, 8, 4, 0]);
+    }
+
+    #[test]
+    fn a_count_walks_that_many_words_and_stops_at_the_edge() {
+        let rope = Rope::from_str(TEXT);
+        let text = rope.slice(..);
+        assert_eq!(emacs_word_target(text, 0, true, 3), 11);
+        assert_eq!(emacs_word_target(text, 20, false, 2), 12);
+        // Past the last word the position stops moving rather than wrapping.
+        assert_eq!(emacs_word_target(text, 0, false, 4), 0);
+        assert_eq!(emacs_word_target(text, 20, true, 4), 20);
+        // A count of zero still takes one step, as `cx.count()` never yields 0.
+        assert_eq!(emacs_word_target(text, 0, true, 0), 3);
     }
 }
 

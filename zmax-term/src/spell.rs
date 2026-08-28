@@ -558,6 +558,15 @@ fn match_case(model: &str, candidate: &str) -> String {
 mod tests {
     use super::*;
 
+    /// The spell state these tests drive is process-global: the `spelllang` /
+    /// `spellfile` / `spellsuggest` option store, the ispell session, and the
+    /// in-memory good/bad word lists. Cargo runs tests in one process in
+    /// parallel, so one test setting `spelllang` to its own compiled dictionary
+    /// changes which words another test's `is_misspelled` calls resolve against.
+    /// Every test that touches any of that takes this guard, the same way the
+    /// kill-ring and major-mode tests serialize their own globals.
+    static SPELL_TEST_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn flyspell_toggles_per_buffer_and_modes_are_exclusive() {
         let a = DocumentId::default();
@@ -583,6 +592,7 @@ mod tests {
 
     #[test]
     fn detects_and_suggests() {
+        let _guard = SPELL_TEST_GUARD.lock();
         if dict().is_empty() {
             return; // no system dictionary on this box — feature degrades to no-op
         }
@@ -605,6 +615,7 @@ mod tests {
     /// `double`, `timeout:…`) are accepted without changing the internal method.
     #[test]
     fn spellsuggest_value_language() {
+        let _guard = SPELL_TEST_GUARD.lock();
         assert_eq!(spellsuggest_limit("best"), None, "no number => zmax's cap");
         assert_eq!(spellsuggest_limit("best,10"), Some(10));
         assert_eq!(spellsuggest_limit("fast,timeout:5000,3"), Some(3));
@@ -627,6 +638,7 @@ mod tests {
     /// `file:` replacement is offered first.
     #[test]
     fn spellsuggest_caps_and_seeds_the_suggestion_list() {
+        let _guard = SPELL_TEST_GUARD.lock();
         if dict().is_empty() {
             return; // no system dictionary on this box
         }
@@ -660,6 +672,7 @@ mod tests {
     /// whose entry count header and `/FLAGS` suffixes are not words.
     #[test]
     fn spelllang_resolves_dictionaries_and_parses_hunspell() {
+        let _guard = SPELL_TEST_GUARD.lock();
         let words = parse_dict("3\nHaus/A\nBaum\n\nStraße/QN\n", true);
         assert!(words.contains("haus"), "affix flags are stripped");
         assert!(words.contains("baum"));
@@ -687,6 +700,7 @@ mod tests {
     /// it, and `:set spelllang={name}` then checks against exactly those words.
     #[test]
     fn mkspell_installs_a_dictionary_spelllang_finds() {
+        let _guard = SPELL_TEST_GUARD.lock();
         let (path, n) = install_dict(
             "zmaxtestlang",
             "# a comment\nzmaxword\nfrobnicate/AB\nzmaxword\n",
@@ -721,6 +735,7 @@ mod tests {
     /// process because nothing ever leaves memory.
     #[test]
     fn internal_word_list_is_never_persisted() {
+        let _guard = SPELL_TEST_GUARD.lock();
         if dict().is_empty() {
             return; // no system dictionary on this box — feature degrades to no-op
         }
@@ -753,6 +768,7 @@ mod tests {
     /// exactly as a restarted Ispell would reload its personal dictionary.
     #[test]
     fn kill_ispell_resets_the_session_but_keeps_the_persisted_lists() {
+        let _guard = SPELL_TEST_GUARD.lock();
         if dict().is_empty() {
             return; // no system dictionary on this box — feature degrades to no-op
         }
@@ -795,6 +811,7 @@ mod tests {
     /// zmax's own `spell-good`.
     #[test]
     fn spellfile_redirects_the_good_word_list() {
+        let _guard = SPELL_TEST_GUARD.lock();
         let dir = std::env::temp_dir().join("zmax-spellfile-test");
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("en.utf-8.add");

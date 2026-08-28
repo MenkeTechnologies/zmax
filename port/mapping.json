@@ -2756,9 +2756,10 @@
   "spec_id": "emacs.command.backward_word",
   "status": "ported",
   "evidence": [
-   "key:normal:b"
+   "static:backward_word",
+   "key:emacs:A-b"
   ],
-  "note": ""
+  "note": "Real emacs word semantics, not vim's. `emacs -Q --batch` over \"foo.bar baz_qux  end\" reports forward-word stopping at 3, 7, 11, 15, 20 and backward-word at 17, 12, 8, 4, 0 -- so a word is a run of ALPHANUMERICS (`_` is a symbol constituent in every shipped mode, which is why it stops inside `baz_qux`), forward lands after the word and backward on its first character. vim's `w`/`b`, which these used to be bound to, count `_` as a word char and stop on punctuation runs emacs skips. emacs_word_step / emacs_word_target (zmax-term/src/commands.rs) reproduce both stop sequences exactly, asserted against those probed numbers, and the emacs preset's M-f/M-b are bound to them (with extend_forward_word / extend_backward_word for an active mark)."
  },
  {
   "spec_id": "emacs.command.balance_windows",
@@ -5854,11 +5855,11 @@
  },
  {
   "spec_id": "emacs.command.diff",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:diff"
   ],
-  "note": "diff buffer vs git HEAD (not two arbitrary files)"
+  "note": "emacs `diff OLD NEW &optional SWITCHES` (vc/diff.el:89) finds and displays the differences between two files, running diff-command with diff-switches (default \"-u\", diff.el:41) and showing the output in diff-mode. `:diff OLD NEW [SWITCHES]` does that: it runs diff with those switches, treats exit 1 (files differ) as the interesting case and only a higher status as an error, reports \"No differences\" on identical files, and opens the unified diff in zmax's diff-mode overlay (ui::diffmode::DiffMode) -- emacs's *Diff* buffer. With no argument `:diff` keeps its own side-by-side buffer-vs-git-HEAD view."
  },
  {
   "spec_id": "emacs.command.diff_add_change_log_entries_other_window",
@@ -7890,11 +7891,11 @@
  },
  {
   "spec_id": "emacs.command.find_dired",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:dired:A-f"
   ],
-  "note": "find-dired -> zmax M-f (find-name-dired approximates the generic find; results shown in a scratch buffer)"
+  "note": "The old note described a scratch-buffer dump; the command is a real port. `M-f` in Dired reads emacs's two prompts in emacs's order -- \"Run find in directory: \" defaulting to the directory Dired is on, then \"Run find (with args): \" (find-dired.el:189-190) -- and runs `find . \\\\( ARGS \\\\)` through `sh -c` in that directory, so ARGS is shell-parsed and quoting, globs and `-o` alternations mean what find and the shell say they mean (find-dired.el:194 hands the line to start-file-process-shell-command for the same reason). Empty ARGS lists the tree, as emacs's empty-string case does. The hits become THE DIRED LISTING, moved to the searched directory, so they are markable, deletable and visitable -- which is the point of inserting find output into a Dired buffer rather than printing it."
  },
  {
   "spec_id": "emacs.command.find_file",
@@ -8293,9 +8294,10 @@
   "spec_id": "emacs.command.forward_word",
   "status": "ported",
   "evidence": [
-   "key:normal:w"
+   "static:forward_word",
+   "key:emacs:A-f"
   ],
-  "note": ""
+  "note": "Real emacs word semantics, not vim's. `emacs -Q --batch` over \"foo.bar baz_qux  end\" reports forward-word stopping at 3, 7, 11, 15, 20 and backward-word at 17, 12, 8, 4, 0 -- so a word is a run of ALPHANUMERICS (`_` is a symbol constituent in every shipped mode, which is why it stops inside `baz_qux`), forward lands after the word and backward on its first character. vim's `w`/`b`, which these used to be bound to, count `_` as a word char and stop on punctuation runs emacs skips. emacs_word_step / emacs_word_target (zmax-term/src/commands.rs) reproduce both stop sequences exactly, asserted against those probed numbers, and the emacs preset's M-f/M-b are bound to them (with extend_forward_word / extend_backward_word for an active mark)."
  },
  {
   "spec_id": "emacs.command.frameset_to_register",
@@ -11025,11 +11027,11 @@
  },
  {
   "spec_id": "emacs.command.left_word",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:move_prev_word_start"
+   "static:left_word"
   ],
-  "note": "Moves left by one word = left-word (word semantics differ slightly)."
+  "note": "The mirror of right-word: backward-word in a left-to-right paragraph. Real emacs word semantics, not vim's. `emacs -Q --batch` over \"foo.bar baz_qux  end\" reports forward-word stopping at 3, 7, 11, 15, 20 and backward-word at 17, 12, 8, 4, 0 -- so a word is a run of ALPHANUMERICS (`_` is a symbol constituent in every shipped mode, which is why it stops inside `baz_qux`), forward lands after the word and backward on its first character. vim's `w`/`b`, which these used to be bound to, count `_` as a word char and stop on punctuation runs emacs skips. emacs_word_step / emacs_word_target (zmax-term/src/commands.rs) reproduce both stop sequences exactly, asserted against those probed numbers, and the emacs preset's M-f/M-b are bound to them (with extend_forward_word / extend_backward_word for an active mark)."
  },
  {
   "spec_id": "emacs.command.lgrep",
@@ -12064,11 +12066,11 @@
  },
  {
   "spec_id": "emacs.command.next_matching_history_element",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:next_matching_history_element"
   ],
-  "note": "same, forward"
+  "note": "As previous-matching-history-element, walking to newer entries: the same recursive regexp read (M-s's), the same count handling."
  },
  {
   "spec_id": "emacs.command.next_window_any_frame",
@@ -13176,11 +13178,11 @@
  },
  {
   "spec_id": "emacs.command.previous_matching_history_element",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:previous_matching_history_element"
   ],
-  "note": "searches history backward for a regexp; the regexp is the line, not read in a recursive minibuffer"
+  "note": "emacs's interactive spec reads the regexp in a RECURSIVE minibuffer with enable-recursive-minibuffers bound on, defaulting to the last one used, and takes the prefix arg as the number of matching entries to walk (simple.el). The command used to take the regexp off the line instead, which is not what emacs prompts for; it now opens the same recursive read the M-r key opens (Prompt::begin_history_search, zmax-term/src/ui/prompt.rs, with its \"Previous element matching regexp\" prompt and the ` (default REGEXP)` an empty answer reuses), and a count walks that many matches, stopping at the first step that finds none. The line-as-pattern variant it used is gone."
  },
  {
   "spec_id": "emacs.command.print_buffer",
@@ -13880,9 +13882,9 @@
   "spec_id": "emacs.command.right_word",
   "status": "ported",
   "evidence": [
-   "static:move_next_word_start"
+   "static:right_word"
   ],
-  "note": "move_next_word_start moves point rightward by a word, like right-word/forward-word."
+  "note": "emacs's right-word is \"(if (eq (current-bidi-paragraph-direction) 'left-to-right) (forward-word n) (backward-word n))\". zmax renders left-to-right, so it is forward-word -- now a real port of emacs's word semantics rather than vim's `w`. Real emacs word semantics, not vim's. `emacs -Q --batch` over \"foo.bar baz_qux  end\" reports forward-word stopping at 3, 7, 11, 15, 20 and backward-word at 17, 12, 8, 4, 0 -- so a word is a run of ALPHANUMERICS (`_` is a symbol constituent in every shipped mode, which is why it stops inside `baz_qux`), forward lands after the word and backward on its first character. vim's `w`/`b`, which these used to be bound to, count `_` as a word char and stop on punctuation runs emacs skips. emacs_word_step / emacs_word_target (zmax-term/src/commands.rs) reproduce both stop sequences exactly, asserted against those probed numbers, and the emacs preset's M-f/M-b are bound to them (with extend_forward_word / extend_backward_word for an active mark)."
  },
  {
   "spec_id": "emacs.command.rmail",

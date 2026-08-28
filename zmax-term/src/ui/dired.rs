@@ -144,6 +144,11 @@ enum Pending {
     Diff(String),
     /// `dired-compare-directories`: mark entries that differ from this directory.
     CompareDir,
+    /// `find-dired`'s FIRST prompt: the directory to run `find` in. Emacs's
+    /// interactive spec reads it before the args (`(read-directory-name "Run find
+    /// in directory: " …)`, find-dired.el:189), so the read is two-legged; the
+    /// answer is carried into [`Pending::FindArgs`].
+    FindDir,
     /// `dired-do-find-regexp`: grep the targets for a regexp, show the hits.
     FindRegexp(Vec<String>),
     /// First leg of a `% R`/`% C`/`% H`/`% S`/`% Y` regexp file op: read the
@@ -155,7 +160,7 @@ enum Pending {
     GotoSubdir,
     /// `find-dired`: the whole find ARGS string, shell-parsed and run as
     /// `find . \( ARGS \)`.
-    FindArgs,
+    FindArgs(std::path::PathBuf),
     /// `find-name-dired`: list files under the tree whose name matches this glob.
     FindName,
     /// `find-grep-dired`: list files under the tree whose contents match this regexp.
@@ -1972,7 +1977,21 @@ impl Dired {
             // `find-dired` takes the ARGS verbatim — emacs reads them with
             // `read-string "Run find (with args): "` and pastes them into the
             // command, so anything find understands goes.
-            Pending::FindArgs => self.run_find_args(text, cx),
+            Pending::FindDir => {
+                // An empty answer is emacs's default — the directory Dired is on.
+                let dir = if text.trim().is_empty() {
+                    self.dir.clone()
+                } else {
+                    zmax_stdx::path::expand_tilde(std::path::Path::new(text.trim())).into_owned()
+                };
+                if !dir.is_dir() {
+                    cx.editor
+                        .set_error(format!("find-dired: {} is not a directory", dir.display()));
+                    return;
+                }
+                self.begin_input("Run find (with args): ", Pending::FindArgs(dir));
+            }
+            Pending::FindArgs(dir) => self.run_find_args(&dir, text, cx),
             Pending::FindName => {
                 if !text.is_empty() {
                     self.run_find(&["-name", text], "find-name", cx);
@@ -2604,7 +2623,7 @@ impl Dired {
     /// ARGS lists the tree, as emacs's empty-string case does (no parens).
     /// zmax stats the hits itself, so it asks find for the plain path list
     /// rather than for `-ls` output it would have to parse back.
-    fn run_find_args(&mut self, args: &str, cx: &mut Context) {
+    fn run_find_args(&mut self, dir: &std::path::Path, args: &str, cx: &mut Context) {
         let args = args.trim();
         let command = if args.is_empty() {
             "find .".to_string()
@@ -2614,8 +2633,13 @@ impl Dired {
         let out = std::process::Command::new("sh")
             .arg("-c")
             .arg(&command)
-            .current_dir(&self.dir)
+            .current_dir(dir)
             .output();
+        // Emacs's find-dired buffer is Dired ON THE DIRECTORY IT SEARCHED, so a
+        // find run somewhere else moves the listing there before showing the hits.
+        if dir != self.dir {
+            self.dir = dir.to_path_buf();
+        }
         self.list_find_output(out, "find", cx);
     }
 
@@ -3629,7 +3653,9 @@ impl Component for Dired {
             // M-f — find-dired: the whole find ARGS string, emacs's prompt
             // verbatim. M-F keeps find-name-dired, which is the same command with
             // the ARGS built from a glob (`-name PATTERN`), on its own chord.
-            alt!('f') => self.begin_input("Run find (with args): ", Pending::FindArgs), // find-dired
+            // Emacs reads the directory first, then the args, and defaults the
+            // directory to the one Dired is on (find-dired.el:189-190).
+            alt!('f') => self.begin_input("Run find in directory: ", Pending::FindDir), // find-dired
             alt!('F') => self.begin_input("Find name (glob): ", Pending::FindName), // find-name-dired
             alt!('g') => self.begin_input("Find grep (regexp): ", Pending::FindGrep), // find-grep-dired
             // ---- ported: epa (gpg) file operations ----
