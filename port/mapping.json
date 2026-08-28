@@ -2561,11 +2561,11 @@
  },
  {
   "spec_id": "emacs.command.apropos_local_variable",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:config_variable_search"
+   "static:apropos_local_variable"
   ],
-  "note": "partial: zmax config variables are global, not buffer-local; apropos over the editor config variables"
+  "note": "\"Show buffer-local variables whose names match the specified PATTERN\" (apropos.el). The old note said zmax config variables are global; the buffer-local universe exists and apropos-local-value already enumerated it, so that enumeration is now shared (buffer_local_variables, zmax-term/src/commands.rs): the ten Document-owned per-buffer settings (buffer-file-name, major-mode, buffer-file-coding-system, buffer-line-ending, indent-tabs-mode, tab-width, indent-width, buffer-read-only, buffer-modified-p, buffer-size), everything `:setlocal` wrote for the buffer (Document::vim_local_opts), and the file's own prop line / Local Variables block (zmax_core::file_locals). apropos-local-variable matches the pattern against the NAME, the way apropos-variable does; apropos-local-value keeps matching the printed value, which is what apropos-value-internal does. The pattern is read with apropos-read-pattern's own rule (a regexp when it contains a regexp character, else a deduped word-list alternation) and the hits render as an *Apropos*-style listing headed with emacs's \"Buffer `X' has the following local variables matching `P':\"."
  },
  {
   "spec_id": "emacs.command.apropos_user_option",
@@ -10070,11 +10070,11 @@
  },
  {
   "spec_id": "emacs.command.isearch_help_map",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:isearch_help_map"
   ],
-  "note": "shows the incremental-search help buffer: every isearch-* command with the chord the live keymap binds it to (or M-x when unbound) and its documentation, read from the command table and the live reverse keymap so it cannot go stale \u2014 the isearch-describe-bindings/isearch-describe-mode content of the map. NOT done: it is not reachable as C-h C-h from inside the search prompt (run it as a command), and the map's other entries are not separate sub-commands."
+  "note": "The note pre-dated the work: the map IS reachable from inside the search prompt and its entries ARE separate sub-commands. `C-h` (and <f1>) while a search is running arms the prefix (Prompt::pending_ctrl_h, zmax-term/src/ui/prompt.rs), which is what emacs's isearch-mode-map does with help-char, and the next key runs the map: `C-h`/`?`/<f1> -> isearch-help-for-help (the option list isearch.el:504-516 builds), `b` -> isearch-describe-bindings, `k` -> isearch-describe-key -- which goes on reading after `M-s` or `C-x`, the two prefixes inside a search, and reports an unbound sequence as undefined -- `m` -> isearch-describe-mode, and `q` -> help-quit, which only takes the box down. The standalone isearch_help_map command still renders the whole map as a buffer, read from the command table and the live reverse keymap so it cannot go stale."
  },
  {
   "spec_id": "emacs.command.isearch_highlight_lines_matching_regexp",

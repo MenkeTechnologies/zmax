@@ -803,6 +803,7 @@ impl MappableCommand {
         package_search, "Search configured language packages and describe one (SPC h p)",
         config_variable_search, "Search editor config variables, copy path on select (SPC h .)",
         apropos_local_value, "Search buffer-local variables by value (emacs apropos-local-value, SPC h v)",
+        apropos_local_variable, "Search buffer-local variables by name (emacs apropos-local-variable)",
         clone_indirect_buffer, "Clone the current buffer into a shared-document split (SPC b N i)",
         clone_indirect_from_buffer, "Open an existing buffer in a shared-document split (SPC b N C-i)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
@@ -19757,83 +19758,103 @@ fn apropos_pattern_regex(pattern: &str) -> Result<Regex, regex::Error> {
         .build()
 }
 
+/// The buffer-local variables of the focused document, as `(buffer name,
+/// [(variable, printed value)])`.
+///
+/// Emacs enumerates every symbol that is buffer-local-if-set. zmax's equivalent
+/// universe is the state a `Document` owns per buffer: what `:setlocal` wrote,
+/// what the file's own prop line / Local Variables block asked for, and the
+/// document settings that are per-buffer rather than global. Shared by
+/// `apropos-local-variable` (matches the name) and `apropos-local-value`
+/// (matches the printed value).
+fn buffer_local_variables(editor: &Editor) -> (String, Vec<(String, String)>) {
+    let doc = doc!(editor);
+    let mut vars: Vec<(String, String)> = vec![
+        (
+            "buffer-file-name".into(),
+            doc.path()
+                .map_or_else(|| "nil".into(), |p| p.display().to_string()),
+        ),
+        (
+            "major-mode".into(),
+            doc.language_name().unwrap_or("fundamental").to_string(),
+        ),
+        (
+            "buffer-file-coding-system".into(),
+            doc.encoding().name().to_string(),
+        ),
+        (
+            "buffer-line-ending".into(),
+            format!("{:?}", doc.line_ending),
+        ),
+        ("indent-tabs-mode".into(), format!("{:?}", doc.indent_style)),
+        ("tab-width".into(), doc.tab_width().to_string()),
+        ("indent-width".into(), doc.indent_width().to_string()),
+        ("buffer-read-only".into(), doc.readonly.to_string()),
+        ("buffer-modified-p".into(), doc.is_modified().to_string()),
+        ("buffer-size".into(), doc.text().len_chars().to_string()),
+    ];
+    let mut names: Vec<&String> = doc.vim_local_opts.keys().collect();
+    names.sort();
+    for name in names {
+        vars.push((name.clone(), doc.vim_local_opts[name].clone()));
+    }
+    vars.extend(zmax_core::file_locals::local_vars(&doc.text().to_string()));
+    (doc.display_name().into_owned(), vars)
+}
+
+/// Emacs `apropos-local-variable`: "Show buffer-local variables whose names
+/// match the specified PATTERN." The same enumeration
+/// [`buffer_local_variables`] gives `apropos-local-value`, matched against the
+/// NAME the way `apropos-variable` does rather than against the printed value.
+fn apropos_local_variable(cx: &mut Context) {
+    apropos_locals(cx, true)
+}
+
+/// Emacs `apropos-local-value`: the same buffer-local variables, matched against
+/// the printed VALUE — `apropos-value-internal` (apropos.el:970-985) never looks
+/// at the symbol name.
 fn apropos_local_value(cx: &mut Context) {
-    prompt_then(
-        cx,
-        "Search for value of buffer-local variable (word list or regexp): ",
-        |cx, pattern| {
-            let re = match apropos_pattern_regex(pattern) {
-                Ok(re) => re,
-                Err(e) => {
-                    cx.editor.set_error(format!("apropos: bad pattern: {e}"));
-                    return;
-                }
-            };
+    apropos_locals(cx, false)
+}
 
-            // Emacs enumerates every symbol that is buffer-local-if-set. zmax's
-            // equivalent universe is the state a Document owns per buffer: what
-            // `:setlocal` wrote, what the file's own prop line / Local Variables
-            // block asked for, and the document settings that are per-buffer
-            // rather than global.
-            let (buffer_name, vars) = {
-                let doc = doc!(cx.editor);
-                let mut vars: Vec<(String, String)> = vec![
-                    (
-                        "buffer-file-name".into(),
-                        doc.path()
-                            .map_or_else(|| "nil".into(), |p| p.display().to_string()),
-                    ),
-                    (
-                        "major-mode".into(),
-                        doc.language_name().unwrap_or("fundamental").to_string(),
-                    ),
-                    (
-                        "buffer-file-coding-system".into(),
-                        doc.encoding().name().to_string(),
-                    ),
-                    (
-                        "buffer-line-ending".into(),
-                        format!("{:?}", doc.line_ending),
-                    ),
-                    ("indent-tabs-mode".into(), format!("{:?}", doc.indent_style)),
-                    ("tab-width".into(), doc.tab_width().to_string()),
-                    ("indent-width".into(), doc.indent_width().to_string()),
-                    ("buffer-read-only".into(), doc.readonly.to_string()),
-                    ("buffer-modified-p".into(), doc.is_modified().to_string()),
-                    ("buffer-size".into(), doc.text().len_chars().to_string()),
-                ];
-
-                let mut names: Vec<&String> = doc.vim_local_opts.keys().collect();
-                names.sort();
-                for name in names {
-                    vars.push((name.clone(), doc.vim_local_opts[name].clone()));
-                }
-                vars.extend(zmax_core::file_locals::local_vars(&doc.text().to_string()));
-                (doc.display_name().into_owned(), vars)
-            };
-
-            // `apropos-value-internal` (apropos.el:970-985) matches the regexp
-            // against the *printed* value, never the symbol name.
-            let hits: Vec<(String, String)> = vars
-                .into_iter()
-                .filter(|(_, value)| re.is_match(value))
-                .collect();
-
-            if hits.is_empty() {
-                cx.editor
-                    .set_error(format!("No apropos matches for '{pattern}'"));
+/// Shared body of the two buffer-local apropos commands. `by_name` picks which
+/// half of each pair the pattern is matched against.
+fn apropos_locals(cx: &mut Context, by_name: bool) {
+    let title = if by_name {
+        "Search for buffer-local variable (word list or regexp): "
+    } else {
+        "Search for value of buffer-local variable (word list or regexp): "
+    };
+    prompt_then(cx, title, move |cx, pattern| {
+        let re = match apropos_pattern_regex(pattern) {
+            Ok(re) => re,
+            Err(e) => {
+                cx.editor.set_error(format!("apropos: bad pattern: {e}"));
                 return;
             }
+        };
 
-            let mut out = format!(
-                "Buffer `{buffer_name}' has the following local variables matching `{pattern}':\n\n"
-            );
-            for (name, value) in &hits {
-                out.push_str(&format!("{name}\n  {value}\n"));
-            }
-            show_text_in_scratch(cx.editor, &out);
-        },
-    );
+        let (buffer_name, vars) = buffer_local_variables(cx.editor);
+        let hits: Vec<(String, String)> = vars
+            .into_iter()
+            .filter(|(name, value)| re.is_match(if by_name { name } else { value }))
+            .collect();
+
+        if hits.is_empty() {
+            cx.editor
+                .set_error(format!("No apropos matches for '{pattern}'"));
+            return;
+        }
+
+        let mut out = format!(
+            "Buffer `{buffer_name}' has the following local variables matching `{pattern}':\n\n"
+        );
+        for (name, value) in &hits {
+            out.push_str(&format!("{name}\n  {value}\n"));
+        }
+        show_text_in_scratch(cx.editor, &out);
+    });
 }
 
 /// SPC h p : "search packages" — a picker over every configured language (zmax' analogue of a
