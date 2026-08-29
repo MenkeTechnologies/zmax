@@ -104,6 +104,22 @@ pub struct Cursor {
     pub valid: u8,
 }
 
+/// A half-open span of the buffer in char offsets, as [`HostApi::selection`]
+/// and [`HostApi::diagnostic`] report one.
+///
+/// `anchor` is the end that stays put when a selection is extended and `head`
+/// is the end that moves, so `head < anchor` for a backwards selection --
+/// unlike vim's `'<`/`'>`, which are always in document order. `valid` is 0
+/// when the index was out of range.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Span {
+    pub anchor: usize,
+    pub head: usize,
+    pub line: usize,
+    pub valid: u8,
+}
+
 #[repr(C)]
 pub struct HostApi {
     /// Must equal [`ABI_VERSION`]. Checked by the plugin's own `declare_plugin!`
@@ -180,6 +196,57 @@ pub struct HostApi {
     /// that assumes one would silently act on part of the user's intent; this
     /// is what tells it there are more.
     pub selection_count: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `getpos("'<")`/`getpos("'>")` for one selection, by index. See
+    /// [`Span`]; `valid` is 0 past the last selection.
+    pub selection: extern "C" fn(host: *const HostApi, index: usize) -> Span,
+    /// The text between two char offsets, clamped to the buffer. vim
+    /// `getbufline` reads whole lines; this reads a span, which is what a
+    /// [`Span`] from `selection` or `diagnostic` addresses. Release with
+    /// `free_cstring`.
+    pub text_range: extern "C" fn(host: *const HostApi, from: usize, to: usize) -> *mut c_char,
+
+    /// vim `getbufinfo()` — how many buffers are open.
+    pub buffer_count: extern "C" fn(host: *const HostApi) -> usize,
+    /// The display name of the `index`th open buffer, in the editor's own
+    /// order. Null past the last one. Release with `free_cstring`.
+    pub buffer_name: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// vim `getqflist()` — how many diagnostics the current buffer has.
+    pub diagnostic_count: extern "C" fn(host: *const HostApi) -> usize,
+    /// Where the `index`th diagnostic is. `valid` is 0 past the last one.
+    pub diagnostic: extern "C" fn(host: *const HostApi, index: usize) -> Span,
+    /// The `index`th diagnostic's message, or null past the last one. Release
+    /// with `free_cstring`.
+    pub diagnostic_message: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+    /// The `index`th diagnostic's severity as `hint`, `info`, `warning` or
+    /// `error`. A diagnostic whose server left the severity unset reads as
+    /// `warning`, matching how the editor treats it. Null past the last one.
+    pub diagnostic_severity: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// vim `&{option}` / `getbufvar(buf, "&opt")` — a vim option's value as a
+    /// string, or null when it is not set. Both the long and short spellings
+    /// work (`shiftwidth` and `sw`), as they do on `:set`.
+    pub option: extern "C" fn(host: *const HostApi, name: *const c_char) -> *mut c_char,
+    /// vim `getreg("/")` — the last search pattern, or null when nothing has
+    /// been searched for yet.
+    pub search_pattern: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    /// vim `getwininfo()` — how many windows (splits) are open.
+    pub window_count: extern "C" fn(host: *const HostApi) -> usize,
+    /// vim `winline()`/`wincol()` as a pair: the first visible line and column
+    /// of the current window, which is what a plugin needs to know what the
+    /// user can actually see. `line`/`anchor` are that offset; `head` is the
+    /// last visible line. `valid` is 0 with no editor context.
+    pub window_view: extern "C" fn(host: *const HostApi) -> Span,
+
+    /// vim `getfsize({fname})` — a file's size in bytes, or -1 when it cannot
+    /// be read. Takes a path so a plugin can ask about any file, not just the
+    /// open one.
+    pub file_size: extern "C" fn(host: *const HostApi, path: *const c_char) -> i64,
+    /// vim `getftype({fname})` — `file`, `dir`, `link`, or null when the path
+    /// does not exist. Release with `free_cstring`.
+    pub file_type: extern "C" fn(host: *const HostApi, path: *const c_char) -> *mut c_char,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -362,6 +429,113 @@ impl Host {
         (self.t().selection_count)(self.api)
     }
 
+    /// One selection by index, vim's `getpos("'<")`/`getpos("'>")` for it.
+    /// `None` past the last selection.
+    pub fn selection(&self, index: usize) -> Option<Span> {
+        let span = (self.t().selection)(self.api, index);
+        (span.valid != 0).then_some(span)
+    }
+
+    /// Every selection, in the editor's order.
+    pub fn selections(&self) -> Vec<Span> {
+        (0..self.selection_count())
+            .filter_map(|i| self.selection(i))
+            .collect()
+    }
+
+    /// The text between two char offsets, clamped to the buffer -- the span a
+    /// [`Span`] addresses.
+    pub fn text_range(&self, from: usize, to: usize) -> Option<String> {
+        self.take_string((self.t().text_range)(self.api, from, to))
+    }
+
+    /// vim `getbufinfo()` — how many buffers are open.
+    pub fn buffer_count(&self) -> usize {
+        (self.t().buffer_count)(self.api)
+    }
+
+    /// The display name of one open buffer, or `None` past the last.
+    pub fn buffer_name(&self, index: usize) -> Option<String> {
+        self.take_string((self.t().buffer_name)(self.api, index))
+    }
+
+    /// Every open buffer's display name, in the editor's order.
+    pub fn buffer_names(&self) -> Vec<String> {
+        (0..self.buffer_count())
+            .filter_map(|i| self.buffer_name(i))
+            .collect()
+    }
+
+    /// vim `getqflist()` — how many diagnostics the current buffer has.
+    pub fn diagnostic_count(&self) -> usize {
+        (self.t().diagnostic_count)(self.api)
+    }
+
+    /// One diagnostic: where it is, what it says, and how bad it is. `None`
+    /// past the last one.
+    pub fn diagnostic(&self, index: usize) -> Option<DiagnosticInfo> {
+        let span = (self.t().diagnostic)(self.api, index);
+        if span.valid == 0 {
+            return None;
+        }
+        Some(DiagnosticInfo {
+            span,
+            message: self
+                .take_string((self.t().diagnostic_message)(self.api, index))
+                .unwrap_or_default(),
+            severity: self
+                .take_string((self.t().diagnostic_severity)(self.api, index))
+                .unwrap_or_default(),
+        })
+    }
+
+    /// Every diagnostic on the current buffer, vim's `getqflist()`.
+    pub fn diagnostics(&self) -> Vec<DiagnosticInfo> {
+        (0..self.diagnostic_count())
+            .filter_map(|i| self.diagnostic(i))
+            .collect()
+    }
+
+    /// vim `&{option}` — an option's value, by long or short name. `None` when
+    /// it is not set.
+    pub fn option(&self, name: &str) -> Option<String> {
+        let name = CString::new(name).ok()?;
+        self.take_string((self.t().option)(self.api, name.as_ptr()))
+    }
+
+    /// vim `getreg("/")` — the last search pattern.
+    pub fn search_pattern(&self) -> Option<String> {
+        self.take_string((self.t().search_pattern)(self.api))
+    }
+
+    /// vim `getwininfo()` — how many windows (splits) are open.
+    pub fn window_count(&self) -> usize {
+        (self.t().window_count)(self.api)
+    }
+
+    /// The first and last line the current window is showing, so a plugin can
+    /// tell what the user can see. `None` with no editor context.
+    pub fn window_view(&self) -> Option<Span> {
+        let span = (self.t().window_view)(self.api);
+        (span.valid != 0).then_some(span)
+    }
+
+    /// vim `getfsize({fname})` — a file's size, or `None` if it cannot be read.
+    pub fn file_size(&self, path: &str) -> Option<u64> {
+        let path = CString::new(path).ok()?;
+        match (self.t().file_size)(self.api, path.as_ptr()) {
+            size if size < 0 => None,
+            size => Some(size as u64),
+        }
+    }
+
+    /// vim `getftype({fname})` — `file`, `dir` or `link`; `None` when the path
+    /// does not exist.
+    pub fn file_type(&self, path: &str) -> Option<String> {
+        let path = CString::new(path).ok()?;
+        self.take_string((self.t().file_type)(self.api, path.as_ptr()))
+    }
+
     /// Adopt a host-allocated C string and release it through the host's own
     /// allocator, which is the only correct way to free one across the ABI.
     fn take_string(&self, raw: *mut c_char) -> Option<String> {
@@ -375,6 +549,15 @@ impl Host {
         (self.t().free_cstring)(self.api, raw);
         Some(s)
     }
+}
+
+/// One diagnostic, as [`Host::diagnostic`] hands it over: where it is, what it
+/// says, and its severity as `hint`, `info`, `warning` or `error`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosticInfo {
+    pub span: Span,
+    pub message: String,
+    pub severity: String,
 }
 
 /// Safe view over a command's `(argc, argv)`. `argv[0]` is the command name.

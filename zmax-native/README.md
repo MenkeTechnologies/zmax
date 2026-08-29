@@ -95,6 +95,30 @@ with `Cursor::line`:
 | `is_modified()` | `&modified` | unsaved changes |
 | `register(c)` | `getreg({regname})` | values joined with newlines, as vim renders a list register |
 
+What is in the buffer, and what the language servers said about it:
+
+| method | vim | effect |
+|---|---|---|
+| `selection(i)` / `selections()` | `getpos("'<")`, `getpos("'>")` | one selection as a `Span { anchor, head, line }` |
+| `text_range(from, to)` | — | the text a `Span` addresses; clamped and ordered |
+| `buffer_count()` / `buffer_name(i)` / `buffer_names()` | `getbufinfo()` | the open buffers |
+| `diagnostic_count()` / `diagnostic(i)` / `diagnostics()` | `getqflist()` | position, message and severity |
+| `option(name)` | `&{option}` | by long or short name, as on `:set` |
+| `search_pattern()` | `getreg("/")` | the last search |
+| `window_count()` | `getwininfo()` | open splits |
+| `window_view()` | `winline()` | the first and last line the window shows |
+| `file_size(path)` | `getfsize()` | any path, not just the open buffer |
+| `file_type(path)` | `getftype()` | `file`, `dir` or `link` |
+
+Two places where this deliberately differs from vim, both because copying vim
+would lose information zmax has:
+
+- **`Span` carries `anchor`/`head`, not start/end.** vim's `'<`/`'>` are always
+  in document order; a zmax selection has a direction, so `head < anchor` for a
+  backwards one, and that is which end the user is extending from.
+- **`file_type` reports a symlink as `link`**, like `getftype`, because it stats
+  the link rather than its target.
+
 Every one of these reports `None`/`0` when there is no active editor context
 rather than inventing a value, and every string is released through the host's
 own allocator before it reaches you.

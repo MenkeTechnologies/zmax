@@ -45,7 +45,7 @@ use std::ptr;
 use std::sync::{Mutex, OnceLock};
 
 use zmax_core::{Tendril, Transaction};
-use zmax_native::{Cursor, CommandFn, HostApi, InitFn, PluginInfo, ABI_VERSION, INIT_SYMBOL};
+use zmax_native::{CommandFn, Cursor, HostApi, InitFn, PluginInfo, Span, ABI_VERSION, INIT_SYMBOL};
 
 use crate::compositor;
 
@@ -378,6 +378,184 @@ extern "C" fn host_selection_count(_host: *const HostApi) -> usize {
     .unwrap_or(0)
 }
 
+/// The span nothing valid maps to.
+const NO_SPAN: Span = Span {
+    anchor: 0,
+    head: 0,
+    line: 0,
+    valid: 0,
+};
+
+extern "C" fn host_selection(_host: *const HostApi, index: usize) -> Span {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let ranges = doc.selection(view.id);
+        match ranges.ranges().get(index) {
+            Some(range) => Span {
+                anchor: range.anchor,
+                head: range.head,
+                line: text.char_to_line(range.cursor(text)),
+                valid: 1,
+            },
+            None => NO_SPAN,
+        }
+    })
+    .unwrap_or(NO_SPAN)
+}
+
+extern "C" fn host_text_range(_host: *const HostApi, from: usize, to: usize) -> *mut c_char {
+    let text = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let slice = doc.text().slice(..);
+        // Clamped, and ordered, so a caller passing a backwards selection's
+        // head/anchor still gets the text between them.
+        let len = slice.len_chars();
+        let (from, to) = (from.min(to).min(len), to.max(from).min(len));
+        slice.slice(from..to).to_string()
+    });
+    into_raw_cstring(text)
+}
+
+extern "C" fn host_buffer_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| cx.editor.documents().count()).unwrap_or(0)
+}
+
+extern "C" fn host_buffer_name(_host: *const HostApi, index: usize) -> *mut c_char {
+    let name = with_cx(|cx| {
+        cx.editor
+            .documents()
+            .nth(index)
+            .map(|doc| doc.display_name().into_owned())
+    });
+    into_raw_cstring(name.flatten())
+}
+
+extern "C" fn host_diagnostic_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.diagnostics().len()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_diagnostic(_host: *const HostApi, index: usize) -> Span {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        match doc.diagnostics().get(index) {
+            Some(diagnostic) => Span {
+                anchor: diagnostic.range.start,
+                head: diagnostic.range.end,
+                line: diagnostic.line,
+                valid: 1,
+            },
+            None => NO_SPAN,
+        }
+    })
+    .unwrap_or(NO_SPAN)
+}
+
+extern "C" fn host_diagnostic_message(_host: *const HostApi, index: usize) -> *mut c_char {
+    let message = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.diagnostics().get(index).map(|d| d.message.clone())
+    });
+    into_raw_cstring(message.flatten())
+}
+
+extern "C" fn host_diagnostic_severity(_host: *const HostApi, index: usize) -> *mut c_char {
+    let severity = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.diagnostics().get(index).map(|d| {
+            // `Diagnostic::severity` applies the editor's own default for a
+            // server that left it unset, so a plugin sees what the gutter does.
+            match d.severity() {
+                zmax_core::diagnostic::Severity::Hint => "hint",
+                zmax_core::diagnostic::Severity::Info => "info",
+                zmax_core::diagnostic::Severity::Warning => "warning",
+                zmax_core::diagnostic::Severity::Error => "error",
+            }
+            .to_string()
+        })
+    });
+    into_raw_cstring(severity.flatten())
+}
+
+/// Read a `*const c_char` argument as a `String`, or `None` when it is null.
+fn arg_string(raw: *const c_char) -> Option<String> {
+    (!raw.is_null()).then(|| {
+        unsafe { CStr::from_ptr(raw) }
+            .to_string_lossy()
+            .into_owned()
+    })
+}
+
+extern "C" fn host_option(_host: *const HostApi, name: *const c_char) -> *mut c_char {
+    let Some(name) = arg_string(name) else {
+        return ptr::null_mut();
+    };
+    // `vim_opts::get` takes the spellings a name can have; passing the one the
+    // caller used covers both the long and short form it knows.
+    into_raw_cstring(zmax_core::vim_opts::get(&[name.as_str()]))
+}
+
+extern "C" fn host_search_pattern(_host: *const HostApi) -> *mut c_char {
+    let pattern = with_cx(|cx| {
+        cx.editor
+            .registers
+            .read('/', cx.editor)
+            .and_then(|mut values| values.next().map(|v| v.to_string()))
+    });
+    into_raw_cstring(pattern.flatten().filter(|s| !s.is_empty()))
+}
+
+extern "C" fn host_window_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| cx.editor.tree.views().count()).unwrap_or(0)
+}
+
+extern "C" fn host_window_view(_host: *const HostApi) -> Span {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let first = doc.view_offset(view.id).anchor;
+        let first_line = text.char_to_line(first.min(text.len_chars()));
+        // The last line the viewport can show, clamped to the document: a short
+        // buffer does not fill the window.
+        let last_line = (first_line + view.inner_height()).min(text.len_lines().saturating_sub(1));
+        Span {
+            anchor: first,
+            head: text.line_to_char(last_line),
+            line: first_line,
+            valid: 1,
+        }
+    })
+    .unwrap_or(NO_SPAN)
+}
+
+extern "C" fn host_file_size(_host: *const HostApi, path: *const c_char) -> i64 {
+    arg_string(path)
+        .and_then(|p| std::fs::metadata(p).ok())
+        .and_then(|meta| i64::try_from(meta.len()).ok())
+        .unwrap_or(-1)
+}
+
+extern "C" fn host_file_type(_host: *const HostApi, path: *const c_char) -> *mut c_char {
+    let kind = arg_string(path).and_then(|p| {
+        // `symlink_metadata` so a link reports as one rather than as its
+        // target, which is what vim's `getftype` does.
+        let meta = std::fs::symlink_metadata(&p).ok()?;
+        Some(if meta.file_type().is_symlink() {
+            "link"
+        } else if meta.is_dir() {
+            "dir"
+        } else {
+            "file"
+        }
+        .to_string())
+    });
+    into_raw_cstring(kind)
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -412,6 +590,20 @@ fn host_api() -> *const HostApi {
             is_modified: host_is_modified,
             register: host_register,
             selection_count: host_selection_count,
+            selection: host_selection,
+            text_range: host_text_range,
+            buffer_count: host_buffer_count,
+            buffer_name: host_buffer_name,
+            diagnostic_count: host_diagnostic_count,
+            diagnostic: host_diagnostic,
+            diagnostic_message: host_diagnostic_message,
+            diagnostic_severity: host_diagnostic_severity,
+            option: host_option,
+            search_pattern: host_search_pattern,
+            window_count: host_window_count,
+            window_view: host_window_view,
+            file_size: host_file_size,
+            file_type: host_file_type,
         });
         Box::into_raw(boxed) as usize
     });
