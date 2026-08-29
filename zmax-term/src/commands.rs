@@ -2367,6 +2367,7 @@ impl MappableCommand {
         record_macro, "Record macro",
         replay_macro, "Replay macro",
         command_palette, "Open command palette",
+        execute_extended_command_for_buffer, "Run a command declared by this buffer's major mode (emacs execute-extended-command-for-buffer, M-X)",
         search_everywhere, "Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains)",
         recent_files_switcher, "Recent Files switcher: tool windows + recent files (SPC b r)",
         recentf_mode, "Toggle recording of opened files in the recent-files list (emacs recentf-mode)",
@@ -33406,6 +33407,13 @@ pub fn command_palette(cx: &mut Context) {
     command_palette_impl(cx, None);
 }
 
+/// Emacs `execute-extended-command-for-buffer` (`M-X`): "Query user for a
+/// command relevant for the current mode, and then execute it." The same picker
+/// as `M-x`, narrowed to the commands the buffer's major mode declares.
+fn execute_extended_command_for_buffer(cx: &mut Context) {
+    command_palette_filtered(cx, None, true);
+}
+
 /// Emacs `project-any-command`: run one interactively chosen command with the
 /// working directory bound to the project root, then put the old one back —
 /// emacs's `(let ((default-directory root)) (call-interactively command))`.
@@ -33419,6 +33427,62 @@ fn project_any_command(cx: &mut Context) {
 /// The command picker. With `root` set, the chosen command runs with the
 /// working directory bound to it (`project-any-command`).
 fn command_palette_impl(cx: &mut Context, root: Option<std::path::PathBuf>) {
+    command_palette_filtered(cx, root, false)
+}
+
+/// The commands the focused buffer's major mode declares — what `M-X` narrows
+/// to.
+///
+/// Emacs's `execute-extended-command-for-buffer` filters `M-x` by
+/// `read-extended-command-predicate`, which for `M-X` keeps the commands whose
+/// `interactive` form names the buffer's modes. zmax's equivalent of "a command
+/// this major mode declares" is the mode's own keymap overlay
+/// (`keymap::major_mode`, which IS emacs's major-mode map here), so the filter is
+/// the set of commands that overlay binds, in any editor mode.
+fn major_mode_command_names(editor: &Editor) -> std::collections::HashSet<String> {
+    use zmax_view::document::Mode;
+    let mut out = std::collections::HashSet::new();
+    let Some(major_mode) = doc!(editor).major_mode().map(str::to_string) else {
+        return out;
+    };
+    for mode in [Mode::Normal, Mode::Select, Mode::Insert] {
+        let Some(overlay) = crate::keymap::major_mode::overlay(&major_mode, mode) else {
+            continue;
+        };
+        collect_keytrie_commands(&overlay, &mut out);
+    }
+    out
+}
+
+/// Every command name a key trie binds, at any depth.
+fn collect_keytrie_commands(
+    trie: &crate::keymap::KeyTrie,
+    out: &mut std::collections::HashSet<String>,
+) {
+    use crate::keymap::KeyTrie;
+    match trie {
+        KeyTrie::MappableCommand(cmd) => {
+            out.insert(cmd.name().to_string());
+        }
+        KeyTrie::Sequence(cmds) => out.extend(cmds.iter().map(|c| c.name().to_string())),
+        // `KeyTrieNode` derefs to its `IndexMap<KeyEvent, KeyTrie>`.
+        KeyTrie::Node(node) => {
+            for child in node.values() {
+                collect_keytrie_commands(child, out);
+            }
+        }
+    }
+}
+
+/// The command picker. With `root` set, the chosen command runs with the working
+/// directory bound to it (`project-any-command`); with `for_buffer`, the list is
+/// narrowed to the commands the buffer's major mode declares
+/// (`execute-extended-command-for-buffer`, `M-X`).
+fn command_palette_filtered(
+    cx: &mut Context,
+    root: Option<std::path::PathBuf>,
+    for_buffer: bool,
+) {
     let register = cx.register;
     let count = cx.count;
 
@@ -33428,15 +33492,40 @@ fn command_palette_impl(cx: &mut Context, root: Option<std::path::PathBuf>) {
                 [&cx.editor.mode]
                 .reverse_map();
 
-            let commands = MappableCommand::STATIC_COMMAND_LIST.iter().cloned().chain(
-                typed::TYPABLE_COMMAND_LIST
-                    .iter()
-                    .map(|cmd| MappableCommand::Typable {
-                        name: cmd.name.to_owned(),
-                        args: String::new(),
-                        doc: cmd.doc.to_owned(),
-                    }),
-            );
+            // `M-X`'s narrowing. An empty set means the buffer has no major mode
+            // (or its mode declares nothing), and emacs's own predicate falls back
+            // to the full list rather than offering an empty one.
+            let only = for_buffer
+                .then(|| major_mode_command_names(cx.editor))
+                .filter(|names| !names.is_empty());
+            if for_buffer {
+                match &only {
+                    Some(names) => cx.editor.set_status(format!(
+                        "M-X: {} command(s) for this buffer's major mode",
+                        names.len()
+                    )),
+                    None => cx
+                        .editor
+                        .set_status("M-X: this buffer's major mode declares no commands — showing all"),
+                }
+            }
+
+            let commands = MappableCommand::STATIC_COMMAND_LIST
+                .iter()
+                .cloned()
+                .chain(
+                    typed::TYPABLE_COMMAND_LIST
+                        .iter()
+                        .map(|cmd| MappableCommand::Typable {
+                            name: cmd.name.to_owned(),
+                            args: String::new(),
+                            doc: cmd.doc.to_owned(),
+                        }),
+                )
+                .filter(move |cmd| match &only {
+                    Some(names) => names.contains(cmd.name()),
+                    None => true,
+                });
 
             let columns = [
                 ui::PickerColumn::new("name", |item, _| match item {
@@ -76913,6 +77002,39 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod execute_for_buffer_tests {
+    use super::collect_keytrie_commands;
+    use crate::keymap::major_mode;
+    use zmax_view::document::Mode;
+
+    /// `M-X` narrows the palette to the commands the buffer's major mode
+    /// declares. zmax's "commands this major mode declares" is the mode's own
+    /// keymap overlay, which IS emacs's major-mode map here — so the filter must
+    /// see every command that overlay binds, at any depth, not just its leaves.
+    #[test]
+    fn the_filter_collects_every_command_the_mode_map_binds() {
+        let mut names = std::collections::HashSet::new();
+        let overlay = major_mode::overlay("org", Mode::Normal).expect("org has an overlay");
+        collect_keytrie_commands(&overlay, &mut names);
+
+        // A leaf directly under the root.
+        assert!(names.contains("org_cycle"), "{names:?}");
+        // A command reached through a prefix (`C-c C-t`), which a leaves-only
+        // walk would miss.
+        assert!(names.contains("org_todo"), "{names:?}");
+        // Typable commands are named without the `:` sigil, as elsewhere.
+        assert!(names.contains("org-export"), "{names:?}");
+
+        // A mode's map does not leak another mode's commands.
+        let mut rust = std::collections::HashSet::new();
+        if let Some(overlay) = major_mode::overlay("rust", Mode::Normal) {
+            collect_keytrie_commands(&overlay, &mut rust);
+        }
+        assert!(!rust.contains("org_todo"));
     }
 }
 

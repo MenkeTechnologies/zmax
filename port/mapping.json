@@ -24784,11 +24784,12 @@
  },
  {
   "spec_id": "emacs.keybinding.m_s_x",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:emacs:A-X"
+   "key:normal:A-X",
+   "static:execute_extended_command_for_buffer"
   ],
-  "note": "M-S-x is M-X (execute-extended-command-for-buffer) -> command_palette: not filtered to the buffer's commands"
+  "note": "M-S-x is the same chord as M-X (a terminal delivers shifted `x` as `X`). \"Query user for a command relevant for the current mode, and then execute it\" -- emacs filters M-x by read-extended-command-predicate, which for M-X keeps the commands whose interactive form names the buffer's modes. Both chords ran the unfiltered palette. execute_extended_command_for_buffer (zmax-term/src/commands.rs) narrows it: zmax's equivalent of \"a command this major mode declares\" is the mode's own keymap overlay -- keymap::major_mode IS emacs's major-mode map here -- so the filter is every command that overlay binds across Normal, Select and Insert, walked to any depth so a command behind a prefix like `C-c C-t` is included and not just the leaves directly under the root. The palette reports how many commands the mode declares. A buffer whose major mode declares nothing falls back to the full list rather than offering an empty picker, which is what emacs's own predicate does."
  },
  {
   "spec_id": "emacs.keybinding.m_semi",
@@ -24930,11 +24931,12 @@
  },
  {
   "spec_id": "emacs.keybinding.m_x_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:emacs:A-X"
+   "key:normal:A-X",
+   "static:execute_extended_command_for_buffer"
   ],
-  "note": "M-X (execute-extended-command-for-buffer) -> command_palette: the same palette, not filtered to the buffer's commands"
+  "note": "\"Query user for a command relevant for the current mode, and then execute it\" -- emacs filters M-x by read-extended-command-predicate, which for M-X keeps the commands whose interactive form names the buffer's modes. Both chords ran the unfiltered palette. execute_extended_command_for_buffer (zmax-term/src/commands.rs) narrows it: zmax's equivalent of \"a command this major mode declares\" is the mode's own keymap overlay -- keymap::major_mode IS emacs's major-mode map here -- so the filter is every command that overlay binds across Normal, Select and Insert, walked to any depth so a command behind a prefix like `C-c C-t` is included and not just the leaves directly under the root. The palette reports how many commands the mode declares. A buffer whose major mode declares nothing falls back to the full list rather than offering an empty picker, which is what emacs's own predicate does."
  },
  {
   "spec_id": "emacs.keybinding.m_x_list_keyboard_macros_ret",

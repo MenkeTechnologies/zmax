@@ -1658,7 +1658,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-~"     => not_modified,           // M-~ not-modified
         "A-."     => goto_definition,        // M-. xref-find-definitions
         "A-?"     => xref_find_references,   // M-? xref-find-references
-        "A-X"     => command_palette,        // M-X / M-S-x execute-extended-command-for-buffer
+        "A-X"     => execute_extended_command_for_buffer, // M-X / M-S-x
         "A-tab"   => completion,             // M-TAB complete-symbol
         "A-left"  => move_prev_word_start,   // M-<left> left-word
         "A-right" => move_next_word_start,   // M-<right> right-word
@@ -3908,7 +3908,7 @@ mod tests {
             ("A-~", "not_modified"),
             ("A-.", "goto_definition"),
             ("A-?", "xref_find_references"),
-            ("A-X", "command_palette"),
+            ("A-X", "execute_extended_command_for_buffer"),
             ("A-tab", "completion"),
             ("A-left", "move_prev_word_start"),
             ("A-right", "move_next_word_start"),

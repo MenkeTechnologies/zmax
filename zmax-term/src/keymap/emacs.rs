@@ -271,7 +271,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         // commands / search / files / buffers
         "A-x" => command_palette,           // M-x: execute-extended-command
-        "A-X" => command_palette,           // M-X / M-S-x: execute-extended-command-for-buffer
+        "A-X" => execute_extended_command_for_buffer, // M-X / M-S-x
         "C-s" => search,                    // isearch-forward (approx)
         "C-r" => rsearch,                   // isearch-backward (approx)
         "C-A-s" => search,                  // C-M-s: isearch-forward-regexp
