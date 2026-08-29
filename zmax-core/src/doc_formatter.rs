@@ -147,6 +147,16 @@ pub struct TextFormat {
     pub tab_width: u16,
     pub max_wrap: u16,
     pub max_indent_retain: u16,
+    /// vim `'breakindentopt'` `shift:{n}`: "the indent of a wrapped line is
+    /// shifted by this many characters" (options.txt), positive to indent the
+    /// continuation further, negative to pull it back. Applied to the indent
+    /// carried over, never below zero.
+    pub break_indent_shift: i16,
+    /// vim `'breakindentopt'` `min:{n}`: "minimum text width that will be kept
+    /// after applying 'breakindent'" — the carried indent is dropped back so at
+    /// least this many columns of text remain on a continuation line. Zero
+    /// leaves it uncapped beyond `max_indent_retain`.
+    pub break_indent_min: u16,
     pub wrap_indicator: Box<str>,
     pub wrap_indicator_highlight: Option<Highlight>,
     pub viewport_width: u16,
@@ -158,6 +168,59 @@ pub struct TextFormat {
     pub folded: Vec<(usize, usize)>,
 }
 
+/// Apply vim `'breakindentopt'`'s `shift:` and `min:` to the indent a wrapped
+/// line carries over.
+///
+/// `shift` moves the continuation's indent (options.txt: "the indent of a
+/// wrapped line is shifted by this many characters"), and `min` is the "minimum
+/// text width that will be kept after applying 'breakindent'" — so an indent
+/// that would leave less than `min` columns of text is dropped back until it
+/// does. Both clamp inside the viewport, since an indent at or past the right
+/// edge would leave a continuation line with nowhere to put text. Pure — unit
+/// tested.
+pub fn break_indent_adjust(indent: u16, shift: i16, min: u16, viewport_width: u16) -> u16 {
+    let shifted = (indent as i32 + shift as i32).max(0) as u16;
+    // Never let the indent reach the right edge: at least one column of text.
+    let hard_cap = viewport_width.saturating_sub(1);
+    let cap = if min == 0 {
+        hard_cap
+    } else {
+        hard_cap.min(viewport_width.saturating_sub(min))
+    };
+    shifted.min(cap)
+}
+
+#[cfg(test)]
+mod break_indent_tests {
+    use super::break_indent_adjust;
+
+    /// vim `'breakindentopt'`: `shift:{n}` moves the wrapped line's indent and
+    /// `min:{n}` is the "minimum text width that will be kept after applying
+    /// 'breakindent'", so an indent that would leave less than that is dropped
+    /// back until it does.
+    #[test]
+    fn shift_moves_the_indent_and_min_keeps_text_on_the_line() {
+        // No options: the indent is carried as-is.
+        assert_eq!(break_indent_adjust(4, 0, 0, 80), 4);
+        // `shift:2` indents the continuation two further; a negative shift pulls
+        // it back, and never past column 0.
+        assert_eq!(break_indent_adjust(4, 2, 0, 80), 6);
+        assert_eq!(break_indent_adjust(4, -2, 0, 80), 2);
+        assert_eq!(break_indent_adjust(4, -10, 0, 80), 0);
+        // `min:20` on a narrow viewport: the indent gives way so 20 columns of
+        // text remain.
+        assert_eq!(break_indent_adjust(40, 0, 20, 50), 30);
+        // The indent is already small enough to leave more than `min`.
+        assert_eq!(break_indent_adjust(4, 0, 20, 80), 4);
+        // `shift` is applied before `min` clamps it, so the two compose.
+        assert_eq!(break_indent_adjust(28, 8, 20, 50), 30);
+        // Even with no `min`, an indent never reaches the right edge: a
+        // continuation line with nowhere to put text would never terminate.
+        assert_eq!(break_indent_adjust(100, 0, 0, 40), 39);
+        assert_eq!(break_indent_adjust(100, 0, 0, 1), 0);
+    }
+}
+
 // test implementation is basically only used for testing or when softwrap is always disabled
 impl Default for TextFormat {
     fn default() -> Self {
@@ -166,6 +229,8 @@ impl Default for TextFormat {
             tab_width: 4,
             max_wrap: 3,
             max_indent_retain: 4,
+            break_indent_shift: 0,
+            break_indent_min: 0,
             wrap_indicator: Box::from(" "),
             viewport_width: 17,
             wrap_indicator_highlight: None,
@@ -314,6 +379,12 @@ impl<'t> DocumentFormatter<'t> {
             self.indent_level = Some(0);
             0
         };
+        let indent_carry_over = break_indent_adjust(
+            indent_carry_over,
+            self.text_fmt.break_indent_shift,
+            self.text_fmt.break_indent_min,
+            self.text_fmt.viewport_width,
+        );
 
         let virtual_lines =
             self.annotations

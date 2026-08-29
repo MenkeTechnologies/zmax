@@ -98,6 +98,8 @@ impl InlineDiagnosticsConfig {
             tab_width: 4,
             max_wrap: self.max_wrap.min(width / 4),
             max_indent_retain: 0,
+            break_indent_shift: 0,
+            break_indent_min: 0,
             wrap_indicator: "".into(),
             wrap_indicator_highlight: None,
             viewport_width: width,

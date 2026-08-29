@@ -8,6 +8,8 @@ impl TextFormat {
             tab_width: 2,
             max_wrap: 3,
             max_indent_retain: 4,
+            break_indent_shift: 0,
+            break_indent_min: 0,
             wrap_indicator: ".".into(),
             wrap_indicator_highlight: None,
             // use a prime number to allow lining up too often with repeat

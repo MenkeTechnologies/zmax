@@ -3857,6 +3857,12 @@ impl Document {
             tab_width,
             max_wrap: max_wrap.min(viewport_width / 4),
             max_indent_retain: max_indent_retain.min(viewport_width * 2 / 5),
+            // vim `'breakindentopt'` (`briopt`): `shift:{n}` moves a wrapped
+            // line's indent, `min:{n}` keeps at least that many columns of text
+            // on it. Read per format, so `:set briopt=shift:2` takes effect on
+            // the next redraw.
+            break_indent_shift: breakindentopt_num("shift").unwrap_or(0),
+            break_indent_min: breakindentopt_num("min").unwrap_or(0).max(0) as u16,
             // avoid spinning forever when the window manager
             // sets the size to something tiny
             viewport_width,
@@ -5109,4 +5115,18 @@ mod test {
         assert!(toggle_auto_compression_mode());
         assert!(compression_info(gz).is_some());
     }
+}
+
+/// One numeric item of vim `'breakindentopt'` (`shift:2`, `min:20`), or `None`
+/// when the option does not carry it. Pure — unit tested in `doc_formatter`.
+fn breakindentopt_num(item: &str) -> Option<i16> {
+    let value = zmax_core::vim_opts::get(&["breakindentopt", "briopt"])?;
+    value.split(',').find_map(|entry| {
+        entry
+            .trim()
+            .strip_prefix(item)?
+            .strip_prefix(':')?
+            .parse::<i16>()
+            .ok()
+    })
 }

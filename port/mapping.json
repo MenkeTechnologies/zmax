@@ -55782,7 +55782,7 @@
   "evidence": [
    "typable:set"
   ],
-  "note": "vim option -> :set soft-wrap"
+  "note": "The two items that change where a wrapped line's text starts are honored. `shift:{n}` moves the carried indent (\"the indent of a wrapped line is shifted by this many characters\", positive further in, negative back, never past column 0) and `min:{n}` is the \"minimum text width that will be kept after applying 'breakindent'\", so an indent that would leave less than that many columns of text is dropped back until it does. break_indent_adjust (zmax-core/src/doc_formatter.rs) applies both to the indent wrap_word carries over, composing shift before min, and clamps inside the viewport in every case -- an indent at the right edge would leave a continuation line with nowhere to put text. The values are read per format (zmax-view/src/document.rs breakindentopt_num), so `:set briopt=shift:2` takes effect on the next redraw. Still partial for the two items that are about what is DRAWN in the indent rather than its width: `sbr` (put 'showbreak' at the start of the wrapped line) and `list:{n}` / `list:-1` (align a wrapped list item under its text rather than its bullet), neither of which the formatter has a hook for yet."
  },
  {
   "spec_id": "neovim.option.bufhidden",
