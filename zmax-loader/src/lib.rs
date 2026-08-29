@@ -363,3 +363,200 @@ mod merge_toml_tests {
         )
     }
 }
+
+#[cfg(test)]
+mod merge_depth_tests {
+    use super::merge_toml_values;
+    use toml::Value;
+
+    fn merge(base: &str, user: &str, depth: usize) -> Value {
+        merge_toml_values(
+            toml::from_str(base).unwrap(),
+            toml::from_str(user).unwrap(),
+            depth,
+        )
+    }
+
+    /// Arrays of tables merge by the `name` key, not by position: a user entry
+    /// for an existing language updates that language, and one for a new
+    /// language is appended. Merging positionally would rewrite whichever
+    /// language happened to sit at that index.
+    #[test]
+    fn language_arrays_merge_by_name_not_position() {
+        let merged = merge(
+            r##"
+            [[language]]
+            name = "rust"
+            comment-token = "//"
+            [[language]]
+            name = "toml"
+            comment-token = "#"
+            "##,
+            r##"
+            [[language]]
+            name = "toml"
+            comment-token = ";"
+            [[language]]
+            name = "stryke"
+            comment-token = "#"
+            "##,
+            3,
+        );
+
+        let languages = merged.get("language").unwrap().as_array().unwrap();
+        let token = |name: &str| -> Option<String> {
+            languages
+                .iter()
+                .find(|value| value.get("name").unwrap().as_str() == Some(name))?
+                .get("comment-token")?
+                .as_str()
+                .map(str::to_string)
+        };
+
+        assert_eq!(languages.len(), 3, "the new language is appended");
+        assert_eq!(token("toml").as_deref(), Some(";"), "user value wins");
+        assert_eq!(token("rust").as_deref(), Some("//"), "untouched entry kept");
+        assert_eq!(token("stryke").as_deref(), Some("#"));
+    }
+
+    /// At depth 0 the user value replaces the base value outright rather than
+    /// merging into it. This is the bottom of the recursion, and it is what makes
+    /// a user's `language-server = { command = ... }` override the whole table
+    /// instead of inheriting keys from the shipped one.
+    #[test]
+    fn depth_zero_replaces_instead_of_merging() {
+        let merged = merge(
+            r##"
+            [[language]]
+            name = "toml"
+            comment-token = "#"
+            "##,
+            r##"
+            [[language]]
+            name = "stryke"
+            "##,
+            0,
+        );
+
+        let languages = merged.get("language").unwrap().as_array().unwrap();
+        assert_eq!(languages.len(), 1, "the base array is discarded: {languages:?}");
+        assert_eq!(
+            languages[0].get("name").unwrap().as_str(),
+            Some("stryke")
+        );
+    }
+
+    /// A scalar on either side is not merged -- the user's value wins whole.
+    #[test]
+    fn scalars_take_the_user_value() {
+        let merged = merge(
+            r##"theme = "base16""##,
+            r##"theme = "onedark""##,
+            3,
+        );
+
+        assert_eq!(merged.get("theme").unwrap().as_str(), Some("onedark"));
+    }
+}
+
+#[cfg(test)]
+mod runtime_and_workspace_tests {
+    use super::*;
+
+    /// The runtime directory list is what `-g fetch` writes into and what
+    /// `find_runtime_file` searches. `prioritize_runtime_dirs` documents a
+    /// post-condition of at least two paths, and grammar fetch/build takes
+    /// `.first()` -- a fetch that lands in the wrong directory leaves `-g build`
+    /// reading an absent one, which is exactly how a stale `~/.zmax/runtime`
+    /// symlink failed every grammar with no reason printed.
+    #[test]
+    fn runtime_dirs_are_named_runtime_and_meet_the_documented_minimum() {
+        let dirs = prioritize_runtime_dirs();
+
+        assert!(dirs.len() >= 2, "post-condition: {dirs:?}");
+        for dir in &dirs {
+            assert_eq!(
+                dir.file_name().and_then(|name| name.to_str()),
+                Some("runtime"),
+                "every entry is a `runtime` directory: {dir:?}"
+            );
+        }
+        assert!(!runtime_dirs().is_empty(), "post-condition: at least one");
+    }
+
+    /// Under cargo the workspace's own `runtime/` outranks `~/.zmax/runtime`, so
+    /// `cargo run -- -g fetch` populates the checkout rather than the user's
+    /// config directory. The config directory is always in the list behind it.
+    #[test]
+    fn the_cargo_workspace_runtime_outranks_the_config_dir() {
+        let dirs = prioritize_runtime_dirs();
+        let manifest = std::env::var("CARGO_MANIFEST_DIR").expect("set by cargo test");
+        let workspace_runtime = Path::new(&manifest).parent().unwrap().join("runtime");
+
+        assert_eq!(dirs.first(), Some(&workspace_runtime));
+        assert!(
+            dirs.contains(&config_dir().join("runtime")),
+            "the config dir runtime is always included: {dirs:?}"
+        );
+    }
+
+    /// A missing runtime file still yields a path to report, never an empty one --
+    /// callers join and display it in error messages.
+    #[test]
+    fn runtime_file_falls_back_to_a_reportable_path() {
+        let path = runtime_file("grammars/sources/definitely-absent");
+
+        assert!(path.ends_with("grammars/sources/definitely-absent"), "{path:?}");
+    }
+
+    /// `.git`, `.svn`, `.jj` and `.zmax` each mark a workspace root, and the
+    /// search walks up from a nested directory. The workspace root is where
+    /// `.zmax/languages.toml` is read from, which is the file grammar
+    /// fetch/build resolves its sources through.
+    #[test]
+    fn workspace_root_is_the_nearest_marked_ancestor() {
+        for marker in [".git", ".svn", ".jj", ".zmax"] {
+            let root = tempfile::tempdir().unwrap();
+            std::fs::create_dir(root.path().join(marker)).unwrap();
+            let nested = root.path().join("src").join("deep");
+            std::fs::create_dir_all(&nested).unwrap();
+
+            assert_eq!(
+                find_workspace_in(&nested),
+                (root.path().to_path_buf(), false),
+                "{marker} must mark the root"
+            );
+        }
+    }
+
+    /// Nested markers resolve to the closest one, not the outermost -- a repo
+    /// checked out inside another repo keeps its own `.zmax` config.
+    #[test]
+    fn the_nearest_marker_wins_over_an_outer_one() {
+        let outer = tempfile::tempdir().unwrap();
+        std::fs::create_dir(outer.path().join(".git")).unwrap();
+        let inner = outer.path().join("vendor").join("zshrs");
+        std::fs::create_dir_all(inner.join(".git")).unwrap();
+
+        assert_eq!(find_workspace_in(&inner), (inner, false));
+    }
+
+    /// With no marker anywhere the directory itself is the workspace, flagged so
+    /// callers can tell a real root from this fallback.
+    #[test]
+    fn an_unmarked_directory_is_its_own_workspace() {
+        let dir = tempfile::tempdir().unwrap();
+        let nested = dir.path().join("a").join("b");
+        std::fs::create_dir_all(&nested).unwrap();
+
+        let (found, is_fallback) = find_workspace_in(&nested);
+
+        // An ancestor of a temp dir could itself be marked on some machines; the
+        // flag and the returned path must agree either way.
+        if is_fallback {
+            assert_eq!(found, nested);
+        } else {
+            assert!(nested.starts_with(&found), "{found:?} vs {nested:?}");
+        }
+    }
+}

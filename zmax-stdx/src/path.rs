@@ -456,6 +456,64 @@ mod tests {
         ISFNAME_LOCK.lock().unwrap_or_else(|e| e.into_inner())
     }
 
+    /// `normalize` collapses `.` and `..` textually -- it never touches the
+    /// filesystem, so it is safe on paths that do not exist yet. This is what
+    /// `ZMAX_RUNTIME` is run through before it joins the runtime directory list.
+    #[test]
+    fn normalize_collapses_dot_and_parent_components() {
+        let cases = [
+            ("a/./b", "a/b"),
+            ("a/b/../c", "a/c"),
+            ("a/b/../../c", "c"),
+            ("./a/b", "a/b"),
+            ("a/b/.", "a/b"),
+            ("/a/b/../c", "/a/c"),
+            // Already normal paths are returned unchanged.
+            ("a/b/c", "a/b/c"),
+            ("/", "/"),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                path::normalize(input),
+                Path::new(expected),
+                "normalize({input})"
+            );
+        }
+    }
+
+    /// Popping past the root stays at the root rather than producing an empty or
+    /// relative path.
+    #[test]
+    fn normalize_cannot_climb_above_the_root() {
+        assert_eq!(path::normalize("/.."), Path::new("/"));
+        assert_eq!(path::normalize("/../../a"), Path::new("/a"));
+    }
+
+    /// A *leading* `..` on a relative path is dropped, because there is no
+    /// component left to pop and normalize refuses to consult the filesystem to
+    /// find one. Callers that need `../x` resolved against a known base must join
+    /// it to that base first -- which is what grammar sources do with the runtime
+    /// directory.
+    #[test]
+    fn normalize_drops_a_leading_parent_component() {
+        assert_eq!(
+            path::normalize("../runtime/grammars"),
+            Path::new("runtime/grammars")
+        );
+    }
+
+    /// `canonicalize` is the non-verifying kind: it makes a path absolute and
+    /// normalizes it without requiring that it exists.
+    #[test]
+    fn canonicalize_makes_a_path_absolute_without_requiring_it_to_exist() {
+        let absolute = path::canonicalize("definitely/absent/file.rs");
+
+        assert!(absolute.is_absolute(), "{absolute:?}");
+        assert!(absolute.ends_with("definitely/absent/file.rs"), "{absolute:?}");
+        assert!(!absolute.exists(), "the fixture must stay hypothetical");
+    }
+
     #[test]
     fn expand_tilde() {
         for path in ["~", "~/foo"] {

@@ -111,9 +111,8 @@ fn warn_if_workspace_languages_skipped(trust: &crate::workspace_trust::Workspace
 pub fn fetch_grammars(strict: bool) -> Result<()> {
     ensure_git_is_available()?;
 
-    // We do not need to fetch local grammars.
     let mut grammars = get_grammar_configs()?;
-    grammars.retain(|grammar| !matches!(grammar.source, GrammarSource::Local { .. }));
+    grammars.retain(is_fetchable);
 
     let total = grammars.len();
     let counter = Arc::new(AtomicUsize::new(0));
@@ -279,7 +278,20 @@ fn get_grammar_configs() -> Result<Vec<GrammarConfiguration>> {
         .context("Could not parse languages.toml")?
         .try_into()?;
 
-    let grammars = match config.grammar_selection {
+    Ok(select_grammars(config))
+}
+
+/// A local grammar is checked into the tree at a `path`, so there is nothing to
+/// fetch: only git sources are cloned. Fetching one would mean running `git` in a
+/// directory the repo ships.
+fn is_fetchable(grammar: &GrammarConfiguration) -> bool {
+    !matches!(grammar.source, GrammarSource::Local { .. })
+}
+
+/// Applies the `use-grammars` key: `only` keeps just the named grammars, `except`
+/// drops them, and an absent key takes every grammar in the merged config.
+fn select_grammars(config: Configuration) -> Vec<GrammarConfiguration> {
+    match config.grammar_selection {
         Some(GrammarSelection::Only { only: selections }) => config
             .grammar
             .into_iter()
@@ -291,9 +303,7 @@ fn get_grammar_configs() -> Result<Vec<GrammarConfiguration>> {
             .filter(|grammar| !rejections.contains(&grammar.grammar_id))
             .collect(),
         None => config.grammar,
-    };
-
-    Ok(grammars)
+    }
 }
 
 pub fn get_grammar_names() -> Result<Option<HashSet<String>>> {
@@ -514,38 +524,47 @@ where
     }
 }
 
+#[derive(Debug)]
 enum BuildStatus {
     AlreadyBuilt,
     Built,
 }
 
+/// Resolves the directory a `path = ...` grammar source names.
+///
+/// Canonicalized to an absolute path: the compile step `cd`s into the grammar's
+/// `src/` dir, after which a *relative* path (e.g. one starting with `../`) would
+/// resolve against the wrong base and the parser file would not be found. Git
+/// sources sidestep this because `runtime_dirs()` is already absolute.
+///
+/// A relative path in `languages.toml` is anchored to `runtime_dir`, not to whatever
+/// directory zmax was invoked from -- the shipped stryke entry
+/// (`../runtime/grammars/sources/stryke`) otherwise resolves against the CWD and
+/// `zmax -g build` fails from anywhere but a workspace crate directory. A relative
+/// path that misses under `runtime_dir` is left as-is, so a caller who really did
+/// mean a CWD-relative path still gets one.
+fn local_grammar_dir(path: &Path, runtime_dir: &Path) -> PathBuf {
+    let path = if path.is_relative() {
+        let anchored = runtime_dir.join(path);
+        if anchored.exists() {
+            anchored
+        } else {
+            path.to_path_buf()
+        }
+    } else {
+        path.to_path_buf()
+    };
+    std::fs::canonicalize(&path).unwrap_or(path)
+}
+
 fn build_grammar(grammar: GrammarConfiguration, target: Option<&str>) -> Result<BuildStatus> {
     let grammar_dir = if let GrammarSource::Local { path } = &grammar.source {
-        // Canonicalize to an absolute path: the compile step below `cd`s into the
-        // grammar's `src/` dir, after which a *relative* path (e.g. one starting
-        // with `../`) would resolve against the wrong base and the parser file
-        // would not be found. Git sources sidestep this because `runtime_dirs()`
-        // is already absolute.
-        //
-        // A relative path in `languages.toml` is anchored to the runtime directory,
-        // not to whatever directory zmax was invoked from -- the shipped stryke entry
-        // (`../runtime/grammars/sources/stryke`) otherwise resolves against the CWD and
-        // `zmax -g build` fails from anywhere but a workspace crate directory.
-        let p = PathBuf::from(&path);
-        let p = if p.is_relative() {
-            let anchored = crate::runtime_dirs()
+        local_grammar_dir(
+            Path::new(path),
+            crate::runtime_dirs()
                 .first()
-                .expect("No runtime directories provided") // guaranteed by post-condition
-                .join(&p);
-            if anchored.exists() {
-                anchored
-            } else {
-                p
-            }
-        } else {
-            p
-        };
-        std::fs::canonicalize(&p).unwrap_or(p)
+                .expect("No runtime directories provided"), // guaranteed by post-condition
+        )
     } else {
         crate::runtime_dirs()
             .first()
@@ -947,6 +966,311 @@ mod test {
         assert!(src.join("tree_sitter/parser.h").exists());
         assert!(src.join("tree_sitter/array.h").exists());
         assert!(src.join("tree_sitter/alloc.h").exists());
+    }
+
+    /// Lays out a workspace holding a runtime directory with one local grammar
+    /// source, mirroring what `languages.toml` points `stryke` at:
+    /// `<workspace>/runtime/grammars/sources/<id>`. The returned directory is the
+    /// *workspace*; the runtime directory is `.join("runtime")` of it.
+    fn workspace_with_grammar(grammar_id: &str) -> tempfile::TempDir {
+        let workspace = tempfile::tempdir().unwrap();
+        fs::create_dir_all(
+            workspace
+                .path()
+                .join("runtime")
+                .join("grammars")
+                .join("sources")
+                .join(grammar_id),
+        )
+        .unwrap();
+        workspace
+    }
+
+    /// The shipped stryke entry is `path = "../runtime/grammars/sources/stryke"`.
+    /// Resolved against the process CWD it only lands from a workspace crate
+    /// directory, so `zmax -g build` failed on stryke from the repo root and from
+    /// anywhere else. Anchoring to the runtime directory makes it CWD-independent.
+    #[test]
+    fn relative_local_grammar_path_anchors_to_the_runtime_dir() {
+        let workspace = workspace_with_grammar("stryke");
+        let runtime = workspace.path().join("runtime");
+        let expected =
+            std::fs::canonicalize(runtime.join("grammars").join("sources").join("stryke")).unwrap();
+
+        let resolved = local_grammar_dir(
+            Path::new("../runtime/grammars/sources/stryke"),
+            &runtime,
+        );
+
+        assert_eq!(resolved, expected);
+    }
+
+    /// A relative path that names nothing under the runtime directory is handed
+    /// back unchanged rather than rewritten into a runtime path that does not
+    /// exist -- the caller may genuinely have meant a CWD-relative directory, and
+    /// `build_grammar`'s error should name the path the user wrote.
+    #[test]
+    fn relative_local_grammar_path_without_a_runtime_match_is_left_alone() {
+        let runtime = tempfile::tempdir().unwrap();
+        let path = Path::new("../nowhere/grammars/sources/absent");
+
+        assert_eq!(local_grammar_dir(path, runtime.path()), path.to_path_buf());
+    }
+
+    /// An absolute path is never re-based onto the runtime directory.
+    #[test]
+    fn absolute_local_grammar_path_is_not_anchored() {
+        let grammar = tempfile::tempdir().unwrap();
+        let workspace = workspace_with_grammar("stryke");
+
+        assert_eq!(
+            local_grammar_dir(grammar.path(), &workspace.path().join("runtime")),
+            std::fs::canonicalize(grammar.path()).unwrap()
+        );
+    }
+
+    /// Both "did you fetch?" messages name a real zmax command. They said
+    /// `hx --grammar fetch` -- a helix invocation that does not exist here -- and
+    /// the failure listing printed only anyhow's outermost context, so a broken
+    /// runtime directory reported `Failed to read directory ...` with no reason.
+    /// `{:#}` is what the CLI prints, so assert on that rendering.
+    #[test]
+    fn missing_grammar_dir_names_zmax_and_the_io_reason() {
+        let runtime = tempfile::tempdir().unwrap();
+        let absent = runtime.path().join("absent");
+        let err = build_grammar(
+            GrammarConfiguration {
+                grammar_id: "absent".to_string(),
+                source: GrammarSource::Local {
+                    path: absent.to_str().unwrap().to_string(),
+                },
+            },
+            None,
+        )
+        .unwrap_err();
+
+        let rendered = format!("{err:#}");
+        assert!(
+            rendered.contains("zmax -g fetch"),
+            "message must name a zmax command, got: {rendered}"
+        );
+        assert!(
+            !rendered.contains("hx "),
+            "message must not name helix, got: {rendered}"
+        );
+        assert!(
+            rendered.contains("No such file or directory"),
+            "the io reason must survive into the rendered chain, got: {rendered}"
+        );
+    }
+
+    /// A fetched-but-empty source directory is its own message, and it too used to
+    /// name `hx`.
+    #[test]
+    fn empty_grammar_dir_names_zmax() {
+        let empty = tempfile::tempdir().unwrap();
+        let err = build_grammar(
+            GrammarConfiguration {
+                grammar_id: "empty".to_string(),
+                source: GrammarSource::Local {
+                    path: empty.path().to_str().unwrap().to_string(),
+                },
+            },
+            None,
+        )
+        .unwrap_err();
+
+        let rendered = format!("{err:#}");
+        assert!(
+            rendered.contains("is empty") && rendered.contains("zmax -g fetch"),
+            "got: {rendered}"
+        );
+    }
+
+    /// `use-grammars` decides which grammars `zmax -g fetch`/`-g build` touch at
+    /// all. Each arm is exercised over the same three-grammar config so a filter
+    /// inverted in either direction shows up as a concrete id list.
+    #[test]
+    fn use_grammars_selects_only_excepts_or_everything() {
+        let config = |selection: &str| -> Configuration {
+            toml::from_str(&format!(
+                r#"
+                {selection}
+                [[grammar]]
+                name = "rust"
+                source = {{ path = "/tmp/rust" }}
+                [[grammar]]
+                name = "stryke"
+                source = {{ path = "/tmp/stryke" }}
+                [[grammar]]
+                name = "zsh"
+                source = {{ path = "/tmp/zsh" }}
+                "#
+            ))
+            .unwrap()
+        };
+        let ids = |config: Configuration| -> Vec<String> {
+            select_grammars(config)
+                .into_iter()
+                .map(|grammar| grammar.grammar_id)
+                .collect()
+        };
+
+        assert_eq!(
+            ids(config(r#"use-grammars = { only = ["stryke"] }"#)),
+            vec!["stryke"]
+        );
+        assert_eq!(
+            ids(config(r#"use-grammars = { except = ["stryke"] }"#)),
+            vec!["rust", "zsh"]
+        );
+        assert_eq!(ids(config("")), vec!["rust", "stryke", "zsh"]);
+    }
+
+    /// An `only` naming a grammar the config does not define selects nothing
+    /// rather than falling back to every grammar.
+    #[test]
+    fn use_grammars_only_with_an_unknown_name_selects_nothing() {
+        let config: Configuration = toml::from_str(
+            r#"
+            use-grammars = { only = ["absent"] }
+            [[grammar]]
+            name = "rust"
+            source = { path = "/tmp/rust" }
+            "#,
+        )
+        .unwrap();
+
+        assert!(select_grammars(config).is_empty());
+    }
+
+    /// The two `[[grammar]]` source shapes `languages.toml` uses. `GrammarSource`
+    /// is an untagged enum, so a mistyped key does not fall through to the other
+    /// variant -- `deny_unknown_fields` on the entry makes it an error instead of
+    /// a grammar that silently never builds.
+    #[test]
+    fn grammar_sources_parse_as_local_or_git_and_reject_typos() {
+        let local: GrammarConfiguration = toml::from_str(
+            r#"
+            name = "stryke"
+            source = { path = "../runtime/grammars/sources/stryke" }
+            "#,
+        )
+        .unwrap();
+        assert!(matches!(local.source, GrammarSource::Local { path } if path.ends_with("stryke")));
+
+        let git: GrammarConfiguration = toml::from_str(
+            r#"
+            name = "rust"
+            source = { git = "https://example.invalid/tree-sitter-rust", rev = "abc123", subpath = "sub" }
+            "#,
+        )
+        .unwrap();
+        assert!(matches!(
+            git.source,
+            GrammarSource::Git { subpath: Some(subpath), .. } if subpath == "sub"
+        ));
+
+        // `revision` is the struct field name; `rev` is the key. Accepting the
+        // former would deserialize a git source with no revision to check out.
+        assert!(toml::from_str::<GrammarConfiguration>(
+            r#"
+            name = "rust"
+            source = { git = "https://example.invalid/tree-sitter-rust", revision = "abc123" }
+            "#,
+        )
+        .is_err());
+    }
+
+    /// Every grammar the shipped `languages.toml` declares must parse, and no id
+    /// may repeat: `get_grammar_configs` keys `use-grammars` off these ids, and a
+    /// duplicate would fetch and build the same grammar twice under one name.
+    #[test]
+    fn the_shipped_languages_toml_declares_unique_parseable_grammars() {
+        let config: Configuration = toml::from_str(include_str!("../../languages.toml")).unwrap();
+
+        assert!(
+            config.grammar.len() > 300,
+            "expected the full grammar set, got {}",
+            config.grammar.len()
+        );
+
+        let mut seen = HashSet::new();
+        for grammar in &config.grammar {
+            assert!(
+                seen.insert(&grammar.grammar_id),
+                "duplicate grammar id: {}",
+                grammar.grammar_id
+            );
+        }
+    }
+
+    /// The one local grammar the repo ships is stryke, and its path is relative --
+    /// the case `local_grammar_dir` anchors. If it ever becomes absolute or moves
+    /// out of `runtime/grammars/sources`, the anchoring tests above stop covering
+    /// anything real.
+    #[test]
+    fn stryke_is_the_shipped_local_grammar_and_its_path_is_relative() {
+        let config: Configuration = toml::from_str(include_str!("../../languages.toml")).unwrap();
+
+        let local: Vec<_> = config
+            .grammar
+            .iter()
+            .filter_map(|grammar| match &grammar.source {
+                GrammarSource::Local { path } => Some((grammar.grammar_id.as_str(), path.as_str())),
+                GrammarSource::Git { .. } => None,
+            })
+            .collect();
+
+        assert_eq!(local, vec![("stryke", "../runtime/grammars/sources/stryke")]);
+        assert!(Path::new(local[0].1).is_relative());
+    }
+
+    /// `-g fetch` clones git sources and skips local ones -- which is why fetch
+    /// reports one fewer grammar than build. A local source reaching the fetch
+    /// path would run `git` against a directory the repo ships.
+    #[test]
+    fn only_git_grammars_are_fetched() {
+        let config: Configuration = toml::from_str(include_str!("../../languages.toml")).unwrap();
+        let total = config.grammar.len();
+
+        let fetchable: Vec<_> = config.grammar.into_iter().filter(is_fetchable).collect();
+
+        assert_eq!(
+            fetchable.len(),
+            total - 1,
+            "exactly the one local grammar (stryke) is skipped"
+        );
+        assert!(fetchable
+            .iter()
+            .all(|grammar| matches!(grammar.source, GrammarSource::Git { .. })));
+    }
+
+    /// The git branch of `build_grammar` resolves under the runtime directory
+    /// rather than through `local_grammar_dir`, and reports the same fetch hint
+    /// with the io reason attached.
+    #[test]
+    fn a_git_grammar_with_no_fetched_source_reports_the_fetch_hint() {
+        let err = build_grammar(
+            GrammarConfiguration {
+                grammar_id: "zmax-test-never-fetched".to_string(),
+                source: GrammarSource::Git {
+                    remote: "https://example.invalid/tree-sitter-absent".to_string(),
+                    revision: "0000000000000000000000000000000000000000".to_string(),
+                    subpath: None,
+                },
+            },
+            None,
+        )
+        .unwrap_err();
+
+        let rendered = format!("{err:#}");
+        assert!(
+            rendered.contains("zmax-test-never-fetched")
+                && rendered.contains("zmax -g fetch")
+                && rendered.contains("No such file or directory"),
+            "got: {rendered}"
+        );
     }
 
     #[test]
