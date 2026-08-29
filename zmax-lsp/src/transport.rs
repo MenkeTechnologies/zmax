@@ -501,3 +501,104 @@ impl Transport {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Feeds `wire` to the header/body reader exactly as a server would write it.
+    async fn recv(wire: &str) -> (Result<ServerMessage>, Vec<u8>) {
+        let mut reader = BufReader::new(wire.as_bytes());
+        let mut buffer = String::new();
+        let mut content = Vec::new();
+        let message =
+            Transport::recv_server_message(&mut reader, &mut buffer, &mut content, "test").await;
+        (message, content)
+    }
+
+    fn frame(body: &str) -> String {
+        format!("Content-Length: {}\r\n\r\n{body}", body.len())
+    }
+
+    const CALL: &str = r#"{"jsonrpc":"2.0","id":1,"method":"window/showMessage","params":{}}"#;
+
+    /// The body is delimited by `Content-Length`, not by a newline: exactly that
+    /// many bytes are consumed, so a second message packed into the same read
+    /// stays intact for the next call.
+    #[tokio::test]
+    async fn a_framed_message_reads_exactly_its_content_length() {
+        let wire = format!("{}{}", frame(CALL), frame(CALL));
+        let mut reader = BufReader::new(wire.as_bytes());
+        let mut buffer = String::new();
+        let mut content = Vec::new();
+
+        for _ in 0..2 {
+            let message =
+                Transport::recv_server_message(&mut reader, &mut buffer, &mut content, "test")
+                    .await;
+            assert!(message.is_ok(), "both framed messages parse: {message:?}");
+        }
+    }
+
+    /// Other headers are ignored rather than rejected -- `Content-Type` is legal
+    /// and servers send headers we do not model.
+    #[tokio::test]
+    async fn unknown_headers_are_ignored() {
+        let wire = format!(
+            "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\nContent-Length: {}\r\n\r\n{CALL}",
+            CALL.len()
+        );
+
+        assert!(recv(&wire).await.0.is_ok());
+    }
+
+    /// Non-conformant servers and wrapper shell scripts print logging into the
+    /// same stream. A line that is not a header at all is skipped rather than
+    /// failing the message, which is the documented workaround in this function.
+    #[tokio::test]
+    async fn garbage_lines_before_the_headers_are_skipped() {
+        let wire = format!(
+            "starting language server...\r\nContent-Length: {}\r\n\r\n{CALL}",
+            CALL.len()
+        );
+
+        assert!(recv(&wire).await.0.is_ok(), "the garbage line is skipped");
+    }
+
+    /// Without a length there is no way to know where the body ends, so the
+    /// message is an error rather than a guess.
+    #[tokio::test]
+    async fn a_message_without_a_content_length_is_an_error() {
+        let (message, _) = recv("Content-Type: application/json\r\n\r\n{}").await;
+
+        let err = message.expect_err("no content length").to_string();
+        assert!(err.contains("missing content length"), "{err}");
+    }
+
+    /// A closed stream is its own error, distinct from a malformed message: the
+    /// server exited, and the caller stops rather than retries.
+    #[tokio::test]
+    async fn a_closed_stream_reports_itself() {
+        let (message, _) = recv("").await;
+
+        assert!(
+            matches!(message, Err(Error::StreamClosed)),
+            "expected StreamClosed, got {message:?}"
+        );
+    }
+
+    /// The scratch buffer is cleared even when the body fails to parse -- the
+    /// function returns the error without `?` for exactly this reason. Leaving
+    /// the bytes behind would prepend them to the next message.
+    #[tokio::test]
+    async fn the_content_buffer_is_cleared_after_a_bad_body() {
+        let (message, content) = recv(&frame("not json at all")).await;
+
+        assert!(message.is_err(), "invalid json is an error");
+        assert!(
+            content.is_empty(),
+            "the buffer must not carry {} bytes into the next message",
+            content.len()
+        );
+    }
+}
