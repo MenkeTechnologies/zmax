@@ -23,5 +23,6 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`buffer-stats`](buffer-stats) | `:bufstats` | `buffer_text` + analysis → `message` |
 | [`trim-trailing`](trim-trailing) | `:trim-trailing` | `buffer_text` guard + `eval` (`:%s`) |
 | [`banner`](banner) | `:banner <text…>` | `Args` + multi-line `insert_text` |
+| [`zwire-lookup`](zwire-lookup) | `:zwire-lookup [site] [term…]` | `word_at_cursor` + `selection_text`, and an IPC socket |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.

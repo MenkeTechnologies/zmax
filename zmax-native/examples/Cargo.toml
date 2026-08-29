@@ -11,6 +11,7 @@ members = [
   "buffer-stats",
   "trim-trailing",
   "banner",
+  "zwire-lookup",
 ]
 
 [workspace.dependencies]
