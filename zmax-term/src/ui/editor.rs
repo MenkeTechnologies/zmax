@@ -3769,7 +3769,10 @@ impl EditorView {
                             .first()
                             .map(KeyEvent::to_string)
                             .as_deref(),
-                        Some("space" | "C-x" | "C-c" | "C-h")
+                        // `F1` is grafted onto the same node as `C-h` (the emacs
+                        // preset's help map), so a prefix opened with it must
+                        // raise the which-key popup too.
+                        Some("space" | "C-x" | "C-c" | "C-h" | "F1")
                     )
                 };
                 cxt.editor.autoinfo = show.then(|| node.infobox());

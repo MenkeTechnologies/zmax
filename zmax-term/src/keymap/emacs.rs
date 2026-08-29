@@ -336,6 +336,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 // tab-bar.el: "Move the current tab ARG positions to the right",
                 // wrapping — not vim's `:tabmove`, which goes to the last position.
                 "m" => tab_move_right,          // C-x t m: tab-move
+                // dired.el:1219 binds `C-x t d` to dired-other-tab. The spacemacs
+                // preset had it; under `:keymap emacs` the chord fell through the
+                // `C-x t` node and the command was unreachable.
+                "d" => dired_other_tab,         // C-x t d: dired-other-tab
             },
             "}" => resize_view_wider,       // C-x }: enlarge-window-horizontally
             "{" => resize_view_narrower,    // C-x {: shrink-window-horizontally

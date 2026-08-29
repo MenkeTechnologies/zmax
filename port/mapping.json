@@ -20200,11 +20200,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c_r",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:emacs:C-r"
   ],
-  "note": "emacs preset: isearch-backward -> rsearch: a backward search prompt, not an incremental one"
+  "note": "The note called it \"a backward search prompt, not an incremental one\". It is incremental: rsearch goes through searcher, which opens raw_regex_prompt with the isearch flag set (zmax-term/src/commands.rs), and that is what Prompt::with_isearch arms -- the same state machine `C-s` uses, running backward."
  },
  {
   "spec_id": "emacs.keybinding.c_r_lparenincremental_search_rparen",
@@ -22079,11 +22079,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_t_d",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-x t d"
+   "key:normal:C-x t d",
+   "static:dired_other_tab"
   ],
-  "note": "C-x t d is emacs `dired-other-tab` (dired.el:1219-1222). zmax binds it only in the SPACEMACS preset (keymap/spacemacs.rs:508 -> commands.rs:52578 dired_other_tab); the EMACS preset has no `C-x t` prefix at all (0 hits for \"C-x t\" in keymap/emacs.rs), so under `:keymap emacs` the chord self-inserts `tt` and falls through to `C-x d` = plain `dired` in the current tab \u2014 driven in a pty, buffer became `tttdeep` and the tab bar stayed at one tab.\n\nIn the spacemacs preset the directory argument now matches emacs. Driven with subdir/deep.txt current, `C-x t d` shows `Dired in other tab (directory): /private/tmp/zmaxv/subdir/` \u2014 prompt string identical to `(format \"Dired %s(directory): \" \"in other tab \")` (dired.el:1099) and the default is the current buffer's own directory (`default-directory`) rather than the workspace root. Typing `/tmp/zmaxv/other` and validating opens `Dired: /private/tmp/zmaxv/other` in a new tab (`tab 2/2`). History register 'd' and directory completion are wired.\n\nThree divergences remain. (a) No SWITCHES argument: `C-u C-x t d` produces no `Dired listing switches: ` prompt (dired.el:1087-1089) \u2014 driven, it goes straight to the directory prompt; ui::dired::Dired::new has no listing-switches concept. (b) The new tab holds a scratch Document with a transient Dired compositor overlay, not the Dired buffer emacs's `switch-to-buffer-other-tab (dired-noselect ...)` installs, so `q` leaves an empty `[scratch]` tab (driven). (c) The prompt validates with `is_dir()` and errors `dired: <path> is not a directory`, creating no tab; emacs uses `read-file-name` here on purpose (dired.el:1093-1095) and `dired-noselect \"/tmp/zmaxv/top.txt\"` yields a real Dired buffer listing `wildcard top.txt` (verified with `emacs -Q --batch`), so file/wildcard arguments that work in emacs are rejected by zmax."
+  "note": "dired.el:1219 binds `C-x t d` to dired-other-tab. It was bound in the spacemacs preset only; the emacs preset's `C-x t` node had f/C-f/b/m but no `d`, so under `:keymap emacs` the chord fell through the node and the command was unreachable. Added to that node."
  },
  {
   "spec_id": "emacs.keybinding.c_x_t_f",
@@ -22860,11 +22861,11 @@
  },
  {
   "spec_id": "emacs.keybinding.f1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:F1"
   ],
-  "note": "In the emacs preset F1 is now help-command \u2014 the *same* map as C-h, not a copy of a different map: add_help_map builds the C-h node, clones it and inserts it under F1 in Insert, Normal and Select (zmax-term/src/keymap/emacs.rs:142-150). So F1 k = C-h k = describe_key, F1 p = finder_by_keyword, F1 4 s = help_find_source, and F1 F1 = help-for-help, because `\"F1\" => help` was added inside the shared Help node (spacemacs.rs:196-202) mirroring help.el's own `\"<f1>\" #'help-for-help`. keymap/vim.rs:1516 and :2764 are untouched \u2014 vim's <F1> stays the Help browser and the vim tests at vim.rs:3597/3829 still pass. `<help>` is dropped: zmax has no such key event. Two residuals I could not close in this lane: (a) the which-key popup fires only for a pending `space`/`C-x`/`C-c`/`C-h` (zmax-term/src/ui/editor.rs:3707, not my file), so a pending F1 resolves but shows no popup; (b) the F1 graft is programmatic, so gen_port_report.py cannot see it (same parser limitation as the C-h row) \u2014 `key:normal:F1` still resolves to vim.rs's F1 \u2192 help, which is the vim preset's meaning, not this one.  Upstream: lisp/help.el:125-127 `(define-key global-map [f1] 'help-command)` + `(fset 'help-command help-map)`; lisp/help.el:66 `\"<f1>\" #'help-for-help`"
+  "note": "`F1` is help-command: add_help_map builds the `C-h` node, clones it and inserts it under F1 in Insert, Normal and Select (zmax-term/src/keymap/emacs.rs), so F1 k = C-h k and so on -- the same map, not a copy of a different one. The residual the note recorded is fixed too: the which-key popup was gated on the first pending key being one of space/C-x/C-c/C-h, so a prefix opened with F1 raised no popup. F1 is in that set now (zmax-term/src/ui/editor.rs)."
  },
  {
   "spec_id": "emacs.keybinding.f10",
@@ -24391,11 +24392,11 @@
  },
  {
   "spec_id": "emacs.keybinding.m_q_lparenfortran_mode_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:fortran_fill_paragraph"
+   "key:major-fortran:A-q"
   ],
-  "note": "M-q is not bound to fortran_fill_paragraph in fortran mode: major_mode.rs:154-173 contains no A-q row, so the chord runs the generic reflow_selections (vim.rs:1454 / emacs.rs:154,316) in the shipped spacemacs preset. The command is only reachable by name via command_palette. NEW divergence not previously recorded: the fill width is wrong on the default path \u2014 commands.rs:5643-5650 uses cx.editor.config().text_width and only falls back to 72 when it is 0, but zmax-view/src/editor.rs:1511 sets text_width: 80 by default, so the fallback is dead code and both fortran_fill_statement_lines and fortran_fill_comment_lines break at column 80. zmax-core/src/fortran.rs:4-5 states in its own module doc that columns 7-72 hold code and 73+ hold sequence numbers, and emacs fortran-mode binds fill-column to fortran-line-length (72); the default behaviour therefore writes code into the sequence-number\u2026"
+  "note": "Both defects the note recorded are gone. `M-q` is bound to fortran_fill_paragraph in the fortran major-mode overlay (zmax-term/src/keymap/major_mode.rs:198, all three editor modes), so it no longer falls through to the generic reflow; and the fill width is fortran's own 72 columns rather than 'text-width' (zmax-term/src/commands.rs, fortran_fill_paragraph)."
  },
  {
   "spec_id": "emacs.keybinding.m_q_lparennroff_mode_rparen",
@@ -42365,11 +42366,11 @@
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_a",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:command:C-l"
+   "key:command:C-a"
   ],
-  "note": "c_CTRL-A do completion \u2248 C-l completion on the pattern before the cursor"
+  "note": "The note said it was approximated by `C-l`. It is vim's own behavior: `c_CTRL-A` inserts EVERY name matching the pattern in front of the cursor (Prompt::complete_insert_all_matches, zmax-term/src/ui/prompt.rs:3524), which is a different command from `c_CTRL-L`'s longest-common-prefix completion -- and that has its own arm. Gated to the vim presets, since `C-a` is beginning-of-line in the emacs ones."
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_b",
@@ -45312,11 +45313,11 @@
  },
  {
   "spec_id": "neovim.ex-command.colon_noswapfile",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:noswapfile"
   ],
-  "note": "gates the swap sites reachable from the command layer; the periodic swap writer is a DocumentDidChange hook with a private flag, so a swap file is still written"
+  "note": "The note said the periodic swap writer kept writing because it was a DocumentDidChange hook with a private flag that only the command layer's swap sites honoured. It is gated at the hook: the DocumentDidChange arm tests `!no_swap(event.doc.id())` (zmax-term/src/vim_swap.rs:654), and `:noswapfile edit` registers the document through vim_swap::set_no_swap (zmax-term/src/commands/typed.rs), so no swap file is written for a buffer opened under the modifier."
  },
  {
   "spec_id": "neovim.ex-command.colon_number",
@@ -55552,12 +55553,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.zx_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:z x",
-   "static:fold_reapply_level"
+   "key:normal:z x"
   ],
-  "note": "Note corrected \u2014 `z x` is no longer fold_open. It is fold_reapply_level (zmax-term/src/commands.rs:51790), which merges the recomputed 'foldmethod' ranges back in (create_evicting, the same eviction zM does, because folds hold fixed line numbers and go stale after an edit) and then re-applies the current 'foldlevel' with Folds::set_level. Still partial because that is vim's `zX`, not `zx`: fold.txt defines `zx` as re-apply 'foldlevel' AND THEN do `zv` (open just enough folds to reveal the cursor), and zmax binds `z x` and `z X` to the identical command, so the zv step is missing. fold_view_cursor (commands.rs:51221 -> Folds::view_line) is the zv half and already exists."
+  "note": "`zx` is \"re-apply 'foldlevel' and do zv\" and zmax binds BOTH halves: keymap/vim.rs:1291 runs the sequence [fold_reapply_level, fold_view_cursor], the second being `zv` (view cursor line). fold_reapply_level merges the recomputed 'foldmethod' ranges back in first -- folds hold fixed line numbers and go stale after an edit -- which is options.txt's \"also forces recomputing folds\". `zX` is the separate leaf that omits the `zv`."
  },
  {
   "spec_id": "neovim.normal-mode.zy",
