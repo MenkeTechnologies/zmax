@@ -87,8 +87,13 @@ pub struct BufferMenu {
     files_only: bool,
     /// `I` toggle: also show internal (`*…*` / space-prefixed) buffers.
     show_internal: bool,
-    /// The column cursor: an index into [`COLUMNS`] (`tabulated-list-*-column`).
-    column: usize,
+    /// Point's horizontal offset in the row, in characters.
+    ///
+    /// Emacs's `tabulated-list-mode` has no separate column cursor: the "current
+    /// column" is simply the one point is sitting in, which is why
+    /// `tabulated-list-next-column` is a *point motion*. This is that position;
+    /// [`BufferMenu::current_column`] derives the column from it.
+    point_col: usize,
     /// The column the rows are sorted by, and whether that sort is reversed
     /// (`tabulated-list-sort`; `None` = the editor's own buffer order).
     sort: Option<(usize, bool)>,
@@ -102,6 +107,9 @@ pub struct BufferMenu {
     bs: Option<crate::buffer_menus::Config>,
     scroll: usize,
     viewport: usize,
+    /// The row width the last render laid the columns out at. Key handling has
+    /// no `Rect`, and the column boundaries depend on it.
+    last_width: usize,
     status: String,
 }
 
@@ -121,13 +129,14 @@ impl BufferMenu {
             previous: Some(zmax_view::current_ref!(editor).1.id()),
             files_only: false,
             show_internal: false,
-            column: 0,
+            point_col: 0,
             sort: None,
             width_delta: [0; COLUMNS.len()],
             pending_unmark: false,
             bs: None,
             scroll: 0,
             viewport: 1,
+            last_width: 80,
             status: String::new(),
         };
         menu.refresh(editor);
@@ -192,26 +201,67 @@ impl BufferMenu {
         )
     }
 
+    /// The character offset at which each column starts, in the layout
+    /// [`BufferMenu::format_row`] draws: the mark glyph, then the `CRM` flag
+    /// cell when the listing shows it, a space, and then the four columns, each
+    /// of the later three preceded by the two-space gap. Pure — unit tested.
+    fn column_starts(&self, w: &[usize; COLUMNS.len()]) -> [usize; COLUMNS.len()] {
+        let attrs = self.bs.as_ref().map(|bs| bs.attributes).unwrap_or_default();
+        let mut at = 1 + if attrs.flags { 3 } else { 0 } + 1;
+        let mut out = [0usize; COLUMNS.len()];
+        for (i, width) in w.iter().enumerate() {
+            if i > 0 {
+                at += 2; // the two-space gap before every column but the name
+            }
+            out[i] = at;
+            at += width;
+        }
+        out
+    }
+
+    /// The column point is in — the last one whose start is at or before it,
+    /// which is what `tabulated-list-get-column` resolves. Pure — unit tested
+    /// through [`BufferMenu::column_starts`].
+    fn current_column(&self) -> usize {
+        let starts = self.column_starts(&self.widths(self.last_width));
+        starts
+            .iter()
+            .rposition(|&start| start <= self.point_col)
+            .unwrap_or(0)
+    }
+
+    /// Move point to the start of the column `delta` away from the one it is in
+    /// — `tabulated-list-previous-column` / `-next-column`, which are point
+    /// motions rather than a cursor index.
+    fn move_column(&mut self, delta: isize) {
+        let current = self.current_column() as isize;
+        let target = (current + delta).clamp(0, COLUMNS.len() as isize - 1) as usize;
+        self.point_col = self.column_starts(&self.widths(self.last_width))[target];
+    }
+
     /// `tabulated-list-narrow-current-column` (`{`): make the column at point one
     /// character narrower.
     pub fn narrow_current_column(&mut self) {
-        self.width_delta[self.column] -= 1;
-        self.status = format!("buffer-menu: narrowed {}", COLUMNS[self.column]);
+        let column = self.current_column();
+        self.width_delta[column] -= 1;
+        self.status = format!("buffer-menu: narrowed {}", COLUMNS[column]);
     }
 
     /// `tabulated-list-widen-current-column` (`}`): make the column at point one
     /// character wider.
     pub fn widen_current_column(&mut self) {
-        self.width_delta[self.column] += 1;
-        self.status = format!("buffer-menu: widened {}", COLUMNS[self.column]);
+        let column = self.current_column();
+        self.width_delta[column] += 1;
+        self.status = format!("buffer-menu: widened {}", COLUMNS[column]);
     }
 
     /// `tabulated-list-sort` (`S`): order the rows by the column at point. A
     /// second `S` on the same column reverses it.
     pub fn sort_by_column(&mut self, editor: &Editor) {
+        let column = self.current_column();
         self.sort = match self.sort {
-            Some((col, desc)) if col == self.column => Some((col, !desc)),
-            _ => Some((self.column, false)),
+            Some((col, desc)) if col == column => Some((col, !desc)),
+            _ => Some((column, false)),
         };
         self.refresh(editor);
         let (col, desc) = self.sort.unwrap();
@@ -547,9 +597,16 @@ impl Component for BufferMenu {
             key!('g') | key!('R') => self.refresh(cx.editor),
 
             // ---- tabulated-list-mode column commands ----
-            // M-← / M-→ move the column cursor; S sorts by it; { / } resize it.
-            alt!(Left) => self.column = self.column.saturating_sub(1),
-            alt!(Right) => self.column = (self.column + 1).min(COLUMNS.len() - 1),
+            // `tabulated-list-previous-column` / `-next-column`: point motions.
+            alt!(Left) => self.move_column(-1),
+            alt!(Right) => self.move_column(1),
+            // Point moves along the row too, which is what makes the column
+            // commands act on "the column at point" rather than on a cursor the
+            // user has to drive separately.
+            key!(Left) | ctrl!('b') => self.point_col = self.point_col.saturating_sub(1),
+            key!(Right) | ctrl!('f') => {
+                self.point_col = (self.point_col + 1).min(self.last_width.saturating_sub(1))
+            }
             key!('S') => self.sort_by_column(cx.editor),
             key!('{') => self.narrow_current_column(),
             key!('}') => self.widen_current_column(),
@@ -580,9 +637,11 @@ impl Component for BufferMenu {
             return;
         }
 
+        self.last_width = area.width as usize;
         let widths = self.widths(area.width as usize);
-        // Header row: the same columns as the rows, with the column cursor's label
-        // called out (M-← / M-→ move it; S / { / } act on it).
+        let current = self.current_column();
+        // Header row: the same columns as the rows, with the column point is in
+        // called out (←/→ and M-←/M-→ move point; S / { / } act on that column).
         let files_only = if self.files_only { " (files only)" } else { "" };
         let mut title = format!(" Buffer Menu{files_only}  CRM");
         for (i, label) in COLUMNS.iter().enumerate() {
@@ -592,7 +651,7 @@ impl Component for BufferMenu {
                 Some((c, false)) if c == i => "^",
                 _ => "",
             };
-            let cursor = if i == self.column { "[" } else { " " };
+            let cursor = if i == current { "[" } else { " " };
             let cell = format!("{cursor}{label}{arrow}");
             title.push_str(&format!(" {cell:<w$}", w = widths[i]));
         }
@@ -700,15 +759,77 @@ mod tests {
             previous: None,
             files_only: false,
             show_internal: false,
-            column: 0,
+            point_col: 0,
             sort: None,
             width_delta: [0; COLUMNS.len()],
             pending_unmark: false,
             bs: None,
             scroll: 0,
             viewport: 10,
+            last_width: 80,
             status: String::new(),
         }
+    }
+
+    /// The column commands act on the column POINT is in, as
+    /// `tabulated-list-mode` does — there is no separate cursor to drive. The
+    /// boundaries must line up with the layout `format_row` actually draws.
+    #[test]
+    fn the_current_column_is_the_one_point_sits_in() {
+        let mut m = menu(vec![row(1, "alpha", 10, "Rust")]);
+        let w = m.widths(m.last_width);
+        let starts = m.column_starts(&w);
+
+        // The name cell begins after the mark glyph, the `C R M` triple and a
+        // space — the same offset the existing row-format test skips to.
+        assert_eq!(starts[0], 5);
+        // Each later column starts after the two-space gap that precedes it.
+        assert_eq!(starts[1], starts[0] + w[0] + 2);
+        assert_eq!(starts[2], starts[1] + w[1] + 2);
+        assert_eq!(starts[3], starts[2] + w[2] + 2);
+
+        // Point anywhere inside a column names that column, including its first
+        // and last character; before the first column it is still the first.
+        for (col, start) in starts.iter().enumerate() {
+            m.point_col = *start;
+            assert_eq!(m.current_column(), col, "at the start of {}", COLUMNS[col]);
+            m.point_col = start + w[col] - 1;
+            assert_eq!(m.current_column(), col, "at the end of {}", COLUMNS[col]);
+        }
+        m.point_col = 0;
+        assert_eq!(m.current_column(), 0);
+
+        // `tabulated-list-next-column` is a point motion: it leaves point at the
+        // start of the next column, and stops at the last one.
+        m.point_col = 0;
+        m.move_column(1);
+        assert_eq!(m.point_col, starts[1]);
+        assert_eq!(m.current_column(), 1);
+        m.move_column(-1);
+        assert_eq!(m.point_col, starts[0]);
+        for _ in 0..10 {
+            m.move_column(1);
+        }
+        assert_eq!(m.current_column(), COLUMNS.len() - 1);
+        for _ in 0..10 {
+            m.move_column(-1);
+        }
+        assert_eq!(m.current_column(), 0);
+    }
+
+    /// `{` / `}` / `S` read that same column, so moving point into the Size
+    /// column and pressing `{` narrows Size — not whatever a cursor last named.
+    #[test]
+    fn the_column_commands_follow_point() {
+        let mut m = menu(vec![row(1, "alpha", 10, "Rust")]);
+        let starts = m.column_starts(&m.widths(m.last_width));
+        m.point_col = starts[1];
+        m.narrow_current_column();
+        assert_eq!(m.width_delta[1], -1);
+        assert_eq!(m.width_delta[0], 0, "the name column is untouched");
+        m.widen_current_column();
+        m.widen_current_column();
+        assert_eq!(m.width_delta[1], 1);
     }
 
     /// `{` / `}` (tabulated-list-narrow/widen-current-column) resize the column the
@@ -729,8 +850,9 @@ mod tests {
         let name_cell: String = line.chars().skip(5).take(narrowed[0]).collect();
         assert_eq!(name_cell, "alph", "clipped to the narrowed width: {line}");
 
-        // The column cursor moves (M-→), so `}` widens Size, not Buffer.
-        m.column = 1;
+        // Point moves into Size (M-→), so `}` widens Size, not Buffer.
+        m.move_column(1);
+        assert_eq!(m.current_column(), 1);
         m.width_delta[1] += 3;
         let wider = m.widths(total);
         assert_eq!(wider[1], natural[1] + 3);

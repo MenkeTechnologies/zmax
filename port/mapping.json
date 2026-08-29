@@ -23416,11 +23416,11 @@
  },
  {
   "spec_id": "emacs.keybinding.lbrace_lparenbuffer_menu_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:bufmenu:{"
   ],
-  "note": "{ narrows the column the column cursor names by one character (tabulated-list-narrow-current-column); the rows re-render clipped to the new width. Partial: the column is selected with M-left/M-right rather than by where point sits in the row."
+  "note": "`{` is tabulated-list-narrow-current-column: the column at point loses a character and the rows re-render clipped to the new width, never collapsing past one character. There is no separate column cursor any more: `tabulated-list-mode`'s \"current column\" is simply the one POINT is in, which is why `tabulated-list-next-column` is a point motion, and that is the model now. BufferMenu carries point's horizontal offset in the row; column_starts derives each column's character offset from the layout format_row actually draws (the mark glyph, the CRM cell when the listing shows it, a space, then the four columns each behind its two-space gap), and current_column is the last column whose start is at or before point. Left/Right (and C-b/C-f) move point along the row; M-Left/M-Right are tabulated-list-previous/next-column, moving point to the start of the neighbouring column and stopping at the ends. The header underlines the column point is in. Unit tested: the derived boundaries line up with the drawn layout at every column's first and last character, the motions land where they should, and `{` on point-in-Size narrows Size and leaves the name column alone."
  },
  {
   "spec_id": "emacs.keybinding.left",
@@ -25526,11 +25526,12 @@
  },
  {
   "spec_id": "emacs.keybinding.q_lparenview_mode_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:major-view:q"
+   "key:major-view:q",
+   "static:view_quit"
   ],
-  "note": "View-quit -> view_mode: leaves view-mode, but does not bury the buffer"
+  "note": "The note pre-dated the command: `q` in view-mode is view_quit, not the view_mode toggle. \"Quit View mode, trying to restore window and buffer to previous state\" has two halves and both are ported (zmax-term/src/commands.rs): point goes back to where it was when view-mode was entered -- emacs's view-return-to-alist, which View-exit deliberately does NOT restore, and which zmax keeps per buffer in VIEW_ENTRY_POINT -- and then the window is quit the way quit-window does it, closed when it is one of several and otherwise switched back to the previously visited file, which is emacs's \"go to previous buffer\", i.e. the bury. Run outside view-mode it does nothing rather than quitting a window by surprise."
  },
  {
   "spec_id": "emacs.keybinding.r_lparendired_rparen",
@@ -25576,11 +25577,11 @@
  },
  {
   "spec_id": "emacs.keybinding.rbrace_lparenbuffer_menu_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:bufmenu:}"
   ],
-  "note": "} widens that column by one character (tabulated-list-widen-current-column). Same column-cursor caveat as `{`."
+  "note": "`}` is tabulated-list-widen-current-column, the mirror of `{`. There is no separate column cursor any more: `tabulated-list-mode`'s \"current column\" is simply the one POINT is in, which is why `tabulated-list-next-column` is a point motion, and that is the model now. BufferMenu carries point's horizontal offset in the row; column_starts derives each column's character offset from the layout format_row actually draws (the mark glyph, the CRM cell when the listing shows it, a space, then the four columns each behind its two-space gap), and current_column is the last column whose start is at or before point. Left/Right (and C-b/C-f) move point along the row; M-Left/M-Right are tabulated-list-previous/next-column, moving point to the start of the neighbouring column and stopping at the ends. The header underlines the column point is in. Unit tested: the derived boundaries line up with the drawn layout at every column's first and last character, the motions land where they should, and `{` on point-in-Size narrows Size and leaves the name column alone."
  },
  {
   "spec_id": "emacs.keybinding.ret",
@@ -25733,11 +25734,11 @@
  },
  {
   "spec_id": "emacs.keybinding.s_lparenbuffer_menu_rparen_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:bufmenu:S"
   ],
-  "note": "S sorts the rows by the column the column cursor names (tabulated-list-sort) \u2014 Size numerically, the rest lexically \u2014 and a second S on the same column reverses it. Partial: the column cursor is moved with M-left/M-right (Emacs puts point in the header cell, which a list overlay has no notion of)."
+  "note": "`S` is tabulated-list-sort: the rows are ordered by the column at point -- Size numerically, so 9 < 20 < 100 rather than the lexical order of the rendered strings, the rest lexically -- and a second `S` on the same column reverses it. There is no separate column cursor any more: `tabulated-list-mode`'s \"current column\" is simply the one POINT is in, which is why `tabulated-list-next-column` is a point motion, and that is the model now. BufferMenu carries point's horizontal offset in the row; column_starts derives each column's character offset from the layout format_row actually draws (the mark glyph, the CRM cell when the listing shows it, a space, then the four columns each behind its two-space gap), and current_column is the last column whose start is at or before point. Left/Right (and C-b/C-f) move point along the row; M-Left/M-Right are tabulated-list-previous/next-column, moving point to the start of the neighbouring column and stopping at the ends. The header underlines the column point is in. Unit tested: the derived boundaries line up with the drawn layout at every column's first and last character, the motions land where they should, and `{` on point-in-Size narrows Size and leaves the name column alone."
  },
  {
   "spec_id": "emacs.keybinding.s_lparencalendar_mode_rparen",
