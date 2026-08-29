@@ -42359,9 +42359,16 @@ fn windmove_display_default_keybindings(cx: &mut Context) {
             ("M-S-<right>", "windmove_display_right"),
             ("M-S-<up>", "windmove_display_up"),
             ("M-S-<down>", "windmove_display_down"),
-            ("M-S-0", "windmove_display_same_window"),
-            ("M-S-f", "windmove_display_new_frame"),
-            ("M-S-t", "windmove_display_new_tab"),
+            // Emacs's `S-M-0` / `S-M-f` / `S-M-t` are GUI key events that carry a
+            // SHIFT modifier on a character. A terminal never sends that: shift
+            // is applied to the character itself, so what arrives is `M-)`,
+            // `M-F`, `M-T`. Binding the emacs spelling stored a chord no key
+            // press could ever produce — `canonicalize_key` strips SHIFT from
+            // every incoming Char event — so these three were dead. The arrow
+            // chords above are unaffected: SHIFT survives on a non-character key.
+            ("M-)", "windmove_display_same_window"),
+            ("M-F", "windmove_display_new_frame"),
+            ("M-T", "windmove_display_new_tab"),
         ],
     );
 }
@@ -76344,6 +76351,46 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod windmove_binding_tests {
+    /// Every chord `windmove-display-default-keybindings` installs must parse to
+    /// a key a terminal can actually deliver.
+    ///
+    /// Emacs's `S-M-0` / `S-M-f` / `S-M-t` are GUI events carrying SHIFT on a
+    /// character; a terminal applies shift to the character instead, and
+    /// `canonicalize_key` strips SHIFT from every incoming Char event — so a
+    /// binding stored with SHIFT on a Char is unreachable by construction. This
+    /// asserts none of the installed chords is in that shape.
+    #[test]
+    fn no_installed_chord_carries_shift_on_a_character() {
+        use zmax_view::input::KeyEvent;
+        use zmax_view::keyboard::{KeyCode, KeyModifiers};
+
+        for spec in [
+            "M-S-<left>",
+            "M-S-<right>",
+            "M-S-<up>",
+            "M-S-<down>",
+            "M-)",
+            "M-F",
+            "M-T",
+        ] {
+            let tokens = zmax_core::kbd::emacs_kbd_to_zmax(spec)
+                .unwrap_or_else(|e| panic!("`{spec}` is not kbd notation: {e}"));
+            for token in tokens {
+                let key: KeyEvent = token
+                    .parse()
+                    .unwrap_or_else(|e| panic!("`{spec}` -> `{token}` is not a key: {e}"));
+                assert!(
+                    !(matches!(key.code, KeyCode::Char(_))
+                        && key.modifiers.contains(KeyModifiers::SHIFT)),
+                    "`{spec}` stores SHIFT on a character, which no key press can match"
+                );
+            }
+        }
     }
 }
 

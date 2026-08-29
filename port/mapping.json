@@ -16948,11 +16948,11 @@
  },
  {
   "spec_id": "emacs.command.windmove_display_default_keybindings",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:windmove_display_default_keybindings"
   ],
-  "note": "Of the 7 chords it installs, `M-S-0` -> windmove_display_same_window is permanently dead: it is stored as Char('0')|SHIFT|ALT while canonicalize_key (zmax-term/src/ui/editor.rs:5128-5136) strips SHIFT from every incoming Char event before keymap lookup, so no keypress can ever match it -- yet windmove_bind reports \"7 keys bound\". `M-S-f`/`M-S-t` are stored as Char('F')|ALT / Char('T')|ALT and only match on terminals using the legacy encoding; under the kitty enhancement zmax itself pushes, the event arrives as Char('f')|ALT after canonicalisation and misses. Plus: windmove_display (:38140) ignores cx.count, so emacs's prefix-ARG reselect-old-window variant has no path; the four directional commands focus/split immediately rather than arming a deferred display, and a find_split_in_direction miss always splits right/below so left/up land on the wrong side; windmove_display_same_window\u2026"
+  "note": "All seven chords it installs are reachable now. Emacs's `S-M-0` / `S-M-f` / `S-M-t` are GUI key events carrying a SHIFT modifier on a character; a terminal never sends that -- shift is applied to the character itself, so what arrives is `M-)`, `M-F`, `M-T` -- and canonicalize_key (zmax-term/src/ui/editor.rs) strips SHIFT from every incoming Char event, so the emacs spelling stored a chord no key press could ever produce. The three are bound under their terminal spellings; the four `M-S-<arrow>` chords were always fine, because SHIFT survives on a non-character key. A test asserts no installed chord is in the unreachable shape."
  },
  {
   "spec_id": "emacs.command.windmove_right",
