@@ -1648,6 +1648,12 @@ pub struct FrameState {
     pub name: String,
     pub tabs: Vec<TabPage>,
     pub current_tab: usize,
+    /// The frame's `vertical-scroll-bars` parameter — the side its scroll bar
+    /// sits on, or `None` for off. Emacs's `toggle-scroll-bar` acts on the
+    /// SELECTED frame (where `scroll-bar-mode` sets every frame and the
+    /// default), so the value is parked with the frame and applied when the
+    /// frame is displayed again.
+    pub scroll_bar: Option<crate::view::ScrollBarSide>,
 }
 
 /// A client connected to the zmax server (emacs `server-start` /
@@ -4319,6 +4325,7 @@ impl Editor {
                 .unwrap_or_else(|| "F1".to_string()),
             tabs: self.tabs.clone(),
             current_tab: self.current_tab,
+            scroll_bar: crate::view::scroll_bar_side(),
         }
     }
 
@@ -4326,6 +4333,8 @@ impl Editor {
     /// current tab is rebuilt into the tree.
     fn restore_frame(&mut self, frame: FrameState) {
         self.drop_live_view_state();
+        // The frame's own display parameters come back with it.
+        crate::view::set_scroll_bar(frame.scroll_bar);
         self.tabs = frame.tabs;
         self.current_tab = frame.current_tab.min(self.tabs.len().saturating_sub(1));
         // Tab history is per-frame; a frame switch is not a tab switch.
@@ -4333,6 +4342,16 @@ impl Editor {
         self.tab_forward.clear();
         let tab = self.tabs[self.current_tab].clone();
         self.restore_tab(&tab);
+    }
+
+    /// Record the displayed frame's `vertical-scroll-bars` parameter, so a
+    /// switch away and back brings this frame's own setting rather than
+    /// whichever frame was displayed last. Backs `toggle-scroll-bar`.
+    pub fn set_frame_scroll_bar(&mut self, side: Option<crate::view::ScrollBarSide>) {
+        self.ensure_frames_initialized();
+        if let Some(frame) = self.frames.get_mut(self.current_frame) {
+            frame.scroll_bar = side;
+        }
     }
 
     /// How many frames exist (at least one: the live layout).
@@ -4403,6 +4422,10 @@ impl Editor {
             name: name.unwrap_or_else(|| format!("F{}", idx + 1)),
             tabs: vec![tab],
             current_tab: 0,
+            // A new frame inherits the current scroll-bar setting, which is what
+            // emacs's `default-frame-alist` does for a frame parameter nobody
+            // overrode.
+            scroll_bar: crate::view::scroll_bar_side(),
         };
         self.frames.push(frame.clone());
         self.restore_frame(frame);

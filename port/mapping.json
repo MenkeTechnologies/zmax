@@ -16082,12 +16082,12 @@
  },
  {
   "spec_id": "emacs.command.toggle_scroll_bar",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:toggle_scroll_bar",
    "static:scroll_bar_mode"
   ],
-  "note": "toggles the same vertical scroll bar. Emacs scopes toggle-scroll-bar to the selected frame; zmax has one scroll-bar setting shared by every frame and window, so it cannot be turned on for one frame and off for another"
+  "note": "Emacs keeps two commands apart here: scroll-bar-mode sets every frame and the default for new ones, while toggle-scroll-bar acts on the SELECTED frame -- and zmax's toggle-scroll-bar just called scroll-bar-mode, so it could not be on for one frame and off for another. The side is a frame parameter now (`vertical-scroll-bars`): FrameState carries it, snapshot_current_frame captures the live value when a frame is parked and restore_frame applies the target frame's when it is displayed again, a new frame inherits the current setting the way default-frame-alist supplies an un-overridden parameter, and toggle_scroll_bar records the flip against the displayed frame (Editor::set_frame_scroll_bar) so it sticks without needing a switch. scroll-bar-mode is unchanged and still global."
  },
  {
   "spec_id": "emacs.command.toggle_truncate_lines",

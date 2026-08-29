@@ -50582,7 +50582,22 @@ fn scroll_bar_mode(cx: &mut Context) {
 /// per-window toggle. zmax has one scroll-bar setting for every window, so the
 /// two commands do the same thing.
 fn toggle_scroll_bar(cx: &mut Context) {
-    scroll_bar_mode(cx);
+    // Emacs keeps these two apart: `scroll-bar-mode` sets every frame and the
+    // default for new ones, while `toggle-scroll-bar` acts on the SELECTED frame
+    // only. The side is a frame parameter (`vertical-scroll-bars`) parked in
+    // FrameState, so flipping it here and recording it against this frame leaves
+    // the other frames as they were — and a frame switch brings each one's own
+    // setting back.
+    let side = match zmax_view::view::scroll_bar_side() {
+        Some(_) => None,
+        None => Some(zmax_view::view::ScrollBarSide::Left),
+    };
+    zmax_view::view::set_scroll_bar(side);
+    cx.editor.set_frame_scroll_bar(side);
+    cx.editor.set_status(match side {
+        Some(_) => "Scroll bar on (this frame)",
+        None => "Scroll bar off (this frame)",
+    });
 }
 
 /// emacs `horizontal-scroll-bar-mode`: a scroll-bar row on each window's bottom
