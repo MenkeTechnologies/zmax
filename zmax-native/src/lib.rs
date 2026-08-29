@@ -247,6 +247,38 @@ pub struct HostApi {
     /// vim `getftype({fname})` — `file`, `dir`, `link`, or null when the path
     /// does not exist. Release with `free_cstring`.
     pub file_type: extern "C" fn(host: *const HostApi, path: *const c_char) -> *mut c_char,
+    /// vim `getftime({fname})` — last modification time in seconds since the
+    /// epoch, or -1 when the file cannot be read.
+    pub file_time: extern "C" fn(host: *const HostApi, path: *const c_char) -> i64,
+    /// vim `getfperm({fname})` — permissions as the nine characters
+    /// `rwxrwxrwx`, with `-` where a bit is clear. Null when the path cannot be
+    /// read. Release with `free_cstring`.
+    pub file_perm: extern "C" fn(host: *const HostApi, path: *const c_char) -> *mut c_char,
+
+    /// vim `getbufline({buf}, {lnum})` — one line of ANY open buffer, not just
+    /// the current one, by the same index `buffer_name` uses. Zero-based, and
+    /// null past either end. Release with `free_cstring`.
+    pub buffer_line:
+        extern "C" fn(host: *const HostApi, buffer: usize, line: usize) -> *mut c_char,
+
+    /// The byte offset of a char offset in the current buffer. vim's `col()` is
+    /// byte-based while `charcol()` is char-based; everything else in this API
+    /// is char-based, and a language server wants bytes, so this is the bridge.
+    /// Clamped to the buffer.
+    pub byte_offset: extern "C" fn(host: *const HostApi, char_offset: usize) -> usize,
+    /// The char offset of a byte offset -- the inverse of `byte_offset`, for
+    /// turning a language server's position back into one this API accepts.
+    /// Clamped, and rounded down to a char boundary.
+    pub char_offset: extern "C" fn(host: *const HostApi, byte_offset: usize) -> usize,
+
+    /// vim `exists(":{name}")` — whether a `:`-command of that name resolves,
+    /// built-in or plugin-registered. 1 when it does.
+    pub command_exists: extern "C" fn(host: *const HostApi, name: *const c_char) -> c_int,
+    /// vim `getscriptinfo()` — how many native plugins are loaded.
+    pub plugin_count: extern "C" fn(host: *const HostApi) -> usize,
+    /// The `index`th loaded plugin as `name version`, or null past the last.
+    /// Release with `free_cstring`.
+    pub plugin_name: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -534,6 +566,65 @@ impl Host {
     pub fn file_type(&self, path: &str) -> Option<String> {
         let path = CString::new(path).ok()?;
         self.take_string((self.t().file_type)(self.api, path.as_ptr()))
+    }
+
+    /// vim `getftime({fname})` — modification time in seconds since the epoch,
+    /// or `None` when the file cannot be read.
+    pub fn file_time(&self, path: &str) -> Option<i64> {
+        let path = CString::new(path).ok()?;
+        match (self.t().file_time)(self.api, path.as_ptr()) {
+            time if time < 0 => None,
+            time => Some(time),
+        }
+    }
+
+    /// vim `getfperm({fname})` — permissions as `rwxrwxrwx`.
+    pub fn file_perm(&self, path: &str) -> Option<String> {
+        let path = CString::new(path).ok()?;
+        self.take_string((self.t().file_perm)(self.api, path.as_ptr()))
+    }
+
+    /// vim `getbufline({buf}, {lnum})` — one line of any open buffer, by the
+    /// index `buffer_name` uses. `None` past either end.
+    pub fn buffer_line(&self, buffer: usize, line: usize) -> Option<String> {
+        self.take_string((self.t().buffer_line)(self.api, buffer, line))
+    }
+
+    /// The byte offset of a char offset -- what a language server means by a
+    /// column. Everything else here is char-based.
+    pub fn byte_offset(&self, char_offset: usize) -> usize {
+        (self.t().byte_offset)(self.api, char_offset)
+    }
+
+    /// The char offset of a byte offset, for turning a language server's
+    /// position back into one this API accepts.
+    pub fn char_offset(&self, byte_offset: usize) -> usize {
+        (self.t().char_offset)(self.api, byte_offset)
+    }
+
+    /// vim `exists(":{name}")` — whether a `:`-command of that name resolves.
+    pub fn command_exists(&self, name: &str) -> bool {
+        match CString::new(name) {
+            Ok(name) => (self.t().command_exists)(self.api, name.as_ptr()) != 0,
+            Err(_) => false,
+        }
+    }
+
+    /// vim `getscriptinfo()` — how many native plugins are loaded.
+    pub fn plugin_count(&self) -> usize {
+        (self.t().plugin_count)(self.api)
+    }
+
+    /// One loaded plugin as `name version`, or `None` past the last.
+    pub fn plugin_name(&self, index: usize) -> Option<String> {
+        self.take_string((self.t().plugin_name)(self.api, index))
+    }
+
+    /// Every loaded plugin, as `name version`.
+    pub fn plugin_names(&self) -> Vec<String> {
+        (0..self.plugin_count())
+            .filter_map(|i| self.plugin_name(i))
+            .collect()
     }
 
     /// Adopt a host-allocated C string and release it through the host's own
@@ -826,6 +917,46 @@ mod tests {
     extern "C" fn fake_file_type(_h: *const HostApi, _path: *const c_char) -> *mut c_char {
         reply("file")
     }
+    extern "C" fn fake_file_time(_h: *const HostApi, path: *const c_char) -> i64 {
+        if unsafe { CStr::from_ptr(path) }.to_string_lossy() == "/absent" {
+            -1
+        } else {
+            1_700_000_000
+        }
+    }
+    extern "C" fn fake_file_perm(_h: *const HostApi, _path: *const c_char) -> *mut c_char {
+        reply("rw-r--r--")
+    }
+    extern "C" fn fake_buffer_line(
+        _h: *const HostApi,
+        buffer: usize,
+        line: usize,
+    ) -> *mut c_char {
+        if buffer < 2 && line < 2 {
+            reply(&format!("buf{buffer} line{line}"))
+        } else {
+            ptr::null_mut()
+        }
+    }
+    extern "C" fn fake_byte_offset(_h: *const HostApi, char_offset: usize) -> usize {
+        // A buffer of two-byte characters, so the two offsets cannot be
+        // confused for one another.
+        char_offset * 2
+    }
+    extern "C" fn fake_char_offset(_h: *const HostApi, byte_offset: usize) -> usize {
+        byte_offset / 2
+    }
+    extern "C" fn fake_command_exists(_h: *const HostApi, name: *const c_char) -> c_int {
+        let name = unsafe { CStr::from_ptr(name) }.to_string_lossy().into_owned();
+        record(format!("exists:{name}"));
+        c_int::from(name == "write")
+    }
+    extern "C" fn fake_plugin_count(_h: *const HostApi) -> usize {
+        1
+    }
+    extern "C" fn fake_plugin_name(_h: *const HostApi, index: usize) -> *mut c_char {
+        if index == 0 { reply("hello 0.1.0") } else { ptr::null_mut() }
+    }
 
     fn table() -> HostApi {
         HostApi {
@@ -864,6 +995,14 @@ mod tests {
             window_view: fake_window_view,
             file_size: fake_file_size,
             file_type: fake_file_type,
+            file_time: fake_file_time,
+            file_perm: fake_file_perm,
+            buffer_line: fake_buffer_line,
+            byte_offset: fake_byte_offset,
+            char_offset: fake_char_offset,
+            command_exists: fake_command_exists,
+            plugin_count: fake_plugin_count,
+            plugin_name: fake_plugin_name,
         }
     }
 
@@ -890,6 +1029,10 @@ mod tests {
         assert_eq!(host.language().as_deref(), Some("rust"));
         assert_eq!(host.search_pattern().as_deref(), Some("needle"));
         assert_eq!(host.file_type("/x").as_deref(), Some("file"));
+        assert_eq!(host.file_perm("/x").as_deref(), Some("rw-r--r--"));
+        assert_eq!(host.buffer_line(1, 0).as_deref(), Some("buf1 line0"));
+        assert_eq!(host.plugin_name(0).as_deref(), Some("hello 0.1.0"));
+        assert_eq!(host.plugin_count(), 1);
 
         assert_eq!(host.line_count(), 2);
         assert_eq!(host.selection_count(), 2);
@@ -1014,6 +1157,47 @@ mod tests {
 
         assert_eq!(host.file_size("/present"), Some(1234));
         assert_eq!(host.file_size("/absent"), None);
+    }
+
+    /// The byte and char offsets are inverses, and are not the same number --
+    /// the whole reason both exist is that a language server counts bytes while
+    /// this API counts characters.
+    #[test]
+    fn byte_and_char_offsets_convert_both_ways() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.byte_offset(10), 20);
+        assert_eq!(host.char_offset(20), 10);
+        assert_eq!(host.char_offset(host.byte_offset(7)), 7, "round trip");
+    }
+
+    /// `exists(":cmd")` answers for the name as typed, and the leading colon is
+    /// the caller's to include or not.
+    #[test]
+    fn command_existence_is_reported_for_the_name_given() {
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        assert!(host.command_exists("write"));
+        assert!(!host.command_exists("nosuchcommand"));
+        assert_eq!(
+            calls(),
+            vec!["exists:write", "exists:nosuchcommand"],
+            "the name reaches the host unchanged"
+        );
+    }
+
+    /// A missing file has no time, and -1 must not come back as a date in the
+    /// distant future.
+    #[test]
+    fn a_missing_files_time_is_none() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.file_time("/present"), Some(1_700_000_000));
+        assert_eq!(host.file_time("/absent"), None);
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

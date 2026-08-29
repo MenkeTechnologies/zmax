@@ -109,6 +109,19 @@ What is in the buffer, and what the language servers said about it:
 | `window_view()` | `winline()` | the first and last line the window shows |
 | `file_size(path)` | `getfsize()` | any path, not just the open buffer |
 | `file_type(path)` | `getftype()` | `file`, `dir` or `link` |
+| `file_time(path)` | `getftime()` | seconds since the epoch |
+| `file_perm(path)` | `getfperm()` | the nine `rwxrwxrwx` characters |
+| `buffer_line(buf, n)` | `getbufline()` | a line of any open buffer |
+| `command_exists(name)` | `exists(":cmd")` | built-ins and plugin commands alike |
+| `plugin_count()` / `plugin_name(i)` / `plugin_names()` | `getscriptinfo()` | the loaded native plugins |
+
+Positions here are **char** offsets. A language server counts bytes, which is
+the same split vim has between `col()` and `charcol()`, so there is a bridge:
+
+| method | effect |
+|---|---|
+| `byte_offset(char)` | the byte offset of a char offset |
+| `char_offset(byte)` | the inverse, rounded down to a char boundary |
 
 Two places where this deliberately differs from vim, both because copying vim
 would lose information zmax has:

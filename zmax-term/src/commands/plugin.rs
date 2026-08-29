@@ -556,6 +556,114 @@ extern "C" fn host_file_type(_host: *const HostApi, path: *const c_char) -> *mut
     into_raw_cstring(kind)
 }
 
+extern "C" fn host_file_time(_host: *const HostApi, path: *const c_char) -> i64 {
+    arg_string(path)
+        .and_then(|p| std::fs::metadata(p).ok())
+        .and_then(|meta| meta.modified().ok())
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .and_then(|since| i64::try_from(since.as_secs()).ok())
+        .unwrap_or(-1)
+}
+
+extern "C" fn host_file_perm(_host: *const HostApi, path: *const c_char) -> *mut c_char {
+    let perm = arg_string(path).and_then(|p| {
+        let meta = std::fs::metadata(p).ok()?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = meta.permissions().mode();
+            // `rwxrwxrwx`, high bit first, exactly as getfperm renders it.
+            let bits = [
+                (0o400, 'r'), (0o200, 'w'), (0o100, 'x'),
+                (0o040, 'r'), (0o020, 'w'), (0o010, 'x'),
+                (0o004, 'r'), (0o002, 'w'), (0o001, 'x'),
+            ];
+            Some(
+                bits.iter()
+                    .map(|(bit, ch)| if mode & bit != 0 { *ch } else { '-' })
+                    .collect::<String>(),
+            )
+        }
+        #[cfg(not(unix))]
+        {
+            // Windows has no mode bits; report what it does know.
+            Some(if meta.permissions().readonly() {
+                "r--r--r--".to_string()
+            } else {
+                "rw-rw-rw-".to_string()
+            })
+        }
+    });
+    into_raw_cstring(perm)
+}
+
+extern "C" fn host_buffer_line(
+    _host: *const HostApi,
+    buffer: usize,
+    line: usize,
+) -> *mut c_char {
+    let text = with_cx(|cx| {
+        let doc = cx.editor.documents().nth(buffer)?;
+        let rope = doc.text();
+        if line >= rope.len_lines() {
+            return None;
+        }
+        let mut s = rope.line(line).to_string();
+        while s.ends_with('\n') || s.ends_with('\r') {
+            s.pop();
+        }
+        Some(s)
+    });
+    into_raw_cstring(text.flatten())
+}
+
+extern "C" fn host_byte_offset(_host: *const HostApi, char_offset: usize) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        text.char_to_byte(char_offset.min(text.len_chars()))
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_char_offset(_host: *const HostApi, byte_offset: usize) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        // `byte_to_char` rounds down to the char containing the byte, so a
+        // position landing mid-codepoint resolves to that character.
+        text.byte_to_char(byte_offset.min(text.len_bytes()))
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_command_exists(_host: *const HostApi, name: *const c_char) -> c_int {
+    let Some(name) = arg_string(name) else {
+        return 0;
+    };
+    let name = name.trim_start_matches(':');
+    let builtin = crate::commands::typed::TYPABLE_COMMAND_MAP.contains_key(name);
+    // Plugin-registered commands resolve too, so `exists` agrees with what
+    // typing the name would actually do.
+    let from_plugin = registry()
+        .lock()
+        .map(|reg| reg.contains_key(name))
+        .unwrap_or(false);
+    c_int::from(builtin || from_plugin)
+}
+
+extern "C" fn host_plugin_count(_host: *const HostApi) -> usize {
+    plugins().lock().map(|p| p.len()).unwrap_or(0)
+}
+
+extern "C" fn host_plugin_name(_host: *const HostApi, index: usize) -> *mut c_char {
+    let name = plugins()
+        .lock()
+        .ok()
+        .and_then(|p| p.get(index).map(|p| format!("{} {}", p.name, p.version)));
+    into_raw_cstring(name)
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -604,6 +712,14 @@ fn host_api() -> *const HostApi {
             window_view: host_window_view,
             file_size: host_file_size,
             file_type: host_file_type,
+            file_time: host_file_time,
+            file_perm: host_file_perm,
+            buffer_line: host_buffer_line,
+            byte_offset: host_byte_offset,
+            char_offset: host_char_offset,
+            command_exists: host_command_exists,
+            plugin_count: host_plugin_count,
+            plugin_name: host_plugin_name,
         });
         Box::into_raw(boxed) as usize
     });
