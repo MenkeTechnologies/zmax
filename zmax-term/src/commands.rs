@@ -1860,6 +1860,9 @@ impl MappableCommand {
         fold_open_all, "Open all folds (zR)",
         fold_close_all, "Close all folds (zM)",
         fold_reapply_level, "Undo hand-opened and hand-closed folds: re-apply foldlevel (zX)",
+        fold_enable_toggle, "Toggle 'foldenable': open or close every fold at once (vim zi)",
+        fold_enable_off, "Reset 'foldenable': all folds open (vim zn)",
+        fold_enable_on, "Set 'foldenable': folds back to 'foldlevel' (vim zN)",
         fold_more, "Fold more: close one more level of nested folds (zm)",
         fold_less, "Fold less: open one more level of nested folds (zr)",
         fold_delete, "Delete fold under cursor (zd)",
@@ -53966,6 +53969,50 @@ fn fold_close_all(cx: &mut Context) {
 /// that was closed by hand with `zc` opens again, and one deeper than it that
 /// was opened by hand with `zo` closes again. `zM` is only the special case of
 /// level 0, which is why binding `zX` to it threw away the level.
+/// vim `'foldenable'` (`fen`): whether folds are in force. "When off, all folds
+/// are open" (fold.txt); it defaults on, which is why an unset option reads as
+/// enabled here.
+fn foldenable() -> bool {
+    typed::vim_opt_bool_alias("foldenable", "fen")
+}
+
+/// Set `'foldenable'` and apply it: switching it off opens every fold, switching
+/// it on restores them to `'foldlevel'`. Shared by `zi`, `zn` and `zN`, which are
+/// the three keys fold.txt gives the option.
+fn set_foldenable(cx: &mut Context, on: bool) {
+    typed::vim_opt_store(
+        "foldenable",
+        if on { "on".to_string() } else { "off".to_string() },
+    );
+    if on {
+        fold_reapply_level(cx);
+    } else {
+        fold_open_all(cx);
+    }
+    cx.editor
+        .set_status(if on { "foldenable" } else { "nofoldenable" });
+}
+
+/// vim `zi`: "Toggle 'foldenable'. When off, all folds are open" (fold.txt).
+/// Every fold in the buffer opens or closes at once — as against `za`, which
+/// toggles the single fold at the cursor.
+fn fold_enable_toggle(cx: &mut Context) {
+    let on = !foldenable();
+    set_foldenable(cx, on);
+}
+
+/// vim `zn`: "Fold none: reset 'foldenable'. All folds will be open."
+fn fold_enable_off(cx: &mut Context) {
+    set_foldenable(cx, false);
+}
+
+/// vim `zN`: "Fold normal: set 'foldenable'. All folds will be as they were
+/// before" — i.e. back to `'foldlevel'`, not closed outright, which is what `zM`
+/// does.
+fn fold_enable_on(cx: &mut Context) {
+    set_foldenable(cx, true);
+}
+
 fn fold_reapply_level(cx: &mut Context) {
     // "Also forces recomputing folds": merge the current 'foldmethod' ranges in
     // first, the same way `zM` does and for the same reason — folds hold fixed
@@ -76212,6 +76259,34 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod foldenable_tests {
+    use super::foldenable;
+    use crate::commands::typed::{vim_opt_reset, vim_opt_store};
+
+    /// vim `'foldenable'` defaults ON (options.txt / vim_options_data), so an
+    /// option the user never set must read as enabled — `zi`'s first press has to
+    /// turn folding OFF, not on.
+    #[test]
+    fn foldenable_defaults_on_and_follows_both_spellings() {
+        vim_opt_reset("foldenable");
+        vim_opt_reset("fen");
+        assert!(foldenable(), "unset 'foldenable' is vim's default, which is on");
+
+        vim_opt_store("foldenable", "off".to_string());
+        assert!(!foldenable());
+        vim_opt_store("foldenable", "on".to_string());
+        assert!(foldenable());
+
+        // `:set nofen` stores under the abbreviation; the read must see it.
+        vim_opt_reset("foldenable");
+        vim_opt_store("fen", "off".to_string());
+        assert!(!foldenable());
+        vim_opt_reset("fen");
+        assert!(foldenable());
     }
 }
 

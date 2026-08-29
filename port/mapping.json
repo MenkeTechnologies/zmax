@@ -55325,11 +55325,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.zi",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:z i"
+   "key:normal:z i",
+   "static:fold_enable_toggle"
   ],
-  "note": "vim `zi` toggles the 'foldenable' option, opening or closing every fold in the buffer at once; zmax binds it to fold_toggle, the same command as `za`, which toggles the single fold at the cursor (vim.rs:1095). Different command, not a weaker one."
+  "note": "vim `zi`: \"Toggle 'foldenable'. When off, all folds are open\" (fold.txt) -- every fold in the buffer at once. It was bound to fold_toggle, which is `za`: the single fold at the cursor. It runs fold_enable_toggle now. 'foldenable' is real state now, not an approximation. foldenable() reads the option with vim's default-on semantics under both spellings, and set_foldenable (zmax-term/src/commands.rs) writes it and applies it: off opens every fold, on restores them to 'foldlevel' through fold_reapply_level (which is also `zX`, and which recomputes the 'foldmethod' ranges first because folds hold fixed line numbers and go stale after an edit). The default-on read is what makes the first `zi` press turn folding OFF, as vim's does; unit tested."
  },
  {
   "spec_id": "neovim.normal-mode.zj",
@@ -55381,19 +55382,21 @@
  },
  {
   "spec_id": "neovim.normal-mode.zn",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:z N"
+   "key:normal:z N",
+   "static:fold_enable_on"
   ],
-  "note": "vim `zN` sets 'foldenable' (restoring folds to 'foldlevel'); zmax binds it to fold_close_all, the same command as `zM` (vim.rs:1090 / :1099), which closes everything regardless of foldlevel."
+  "note": "vim `zN`: \"Fold normal: set 'foldenable'. All folds will be as they were before\" -- back to 'foldlevel', not closed outright, which is what `zM` does and what `zN` was bound to (fold_close_all). It runs fold_enable_on now. 'foldenable' is real state now, not an approximation. foldenable() reads the option with vim's default-on semantics under both spellings, and set_foldenable (zmax-term/src/commands.rs) writes it and applies it: off opens every fold, on restores them to 'foldlevel' through fold_reapply_level (which is also `zX`, and which recomputes the 'foldmethod' ranges first because folds hold fixed line numbers and go stale after an edit)."
  },
  {
   "spec_id": "neovim.normal-mode.zn_1",
   "status": "ported",
   "evidence": [
-   "key:normal:z n"
+   "key:normal:z n",
+   "static:fold_enable_off"
   ],
-  "note": "zn: foldenable off (open all approx)"
+  "note": "vim `zn`: \"Fold none: reset 'foldenable'. All folds will be open.\" It opened every fold without recording the option, so a following `zi` toggled from the wrong state; it runs fold_enable_off now, which does both. 'foldenable' is real state now, not an approximation. foldenable() reads the option with vim's default-on semantics under both spellings, and set_foldenable (zmax-term/src/commands.rs) writes it and applies it: off opens every fold, on restores them to 'foldlevel' through fold_reapply_level (which is also `zX`, and which recomputes the 'foldmethod' ranges first because folds hold fixed line numbers and go stale after an edit)."
  },
  {
   "spec_id": "neovim.normal-mode.zo",

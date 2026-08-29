@@ -1329,11 +1329,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // recursively. When on an open fold: close it recursively"
             // (fold.txt). It was bound to za, which touches one fold.
             "A" => fold_toggle_recursive, // zA toggle fold recursively
-            "i" => fold_toggle,       // zi toggle foldenable (approx: fold at cursor)
+            "i" => fold_enable_toggle, // zi toggle 'foldenable' (every fold at once)
             "m" => fold_more,         // zm fold more (decrease foldlevel by one)
             "r" => fold_less,         // zr fold reduce (increase foldlevel by one)
-            "n" => fold_open_all,     // zn foldenable off (show all text)
-            "N" => fold_close_all,    // zN set foldenable (close to foldlevel, approx)
+            "n" => fold_enable_off,   // zn reset 'foldenable': all folds open
+            "N" => fold_enable_on,    // zN set 'foldenable': back to 'foldlevel'
             // zX undoes manual opens/closes by re-applying 'foldlevel'; at the
             // default foldlevel=0 that CLOSES the folds again. It was bound to
             // fold_open_all, which is the opposite and duplicated zR.

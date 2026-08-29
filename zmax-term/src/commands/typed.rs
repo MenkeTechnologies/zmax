@@ -25188,7 +25188,7 @@ fn vim_opts_swap_store(local: &std::collections::HashMap<String, String>) -> Vec
     applied
 }
 
-fn vim_opt_reset(name: &str) {
+pub(crate) fn vim_opt_reset(name: &str) {
     zmax_core::vim_opts::reset(name);
     if name == "all" {
         VIM_OPTION_STORE.with(|s| s.borrow_mut().clear());
