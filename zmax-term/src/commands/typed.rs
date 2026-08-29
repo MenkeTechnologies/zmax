@@ -2449,7 +2449,7 @@ pub(crate) fn run_compile_command(cx: &mut compositor::Context, command: &str) -
     Ok(())
 }
 
-/// As [`run_compile`], returning the captured output so the caller can also route
+/// As [`run_compile_command`], returning the captured output so the caller can also route
 /// it elsewhere (vim `makeef`).
 fn run_compile_capture(cx: &mut compositor::Context, command: &str) -> anyhow::Result<String> {
     sandbox_check("shell command")?;

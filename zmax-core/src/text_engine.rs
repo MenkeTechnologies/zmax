@@ -274,7 +274,7 @@ fn unjustify_block(body: &str, width: usize) -> String {
 /// For [`Justification::Full`] the last non-blank line of each paragraph (and any
 /// single-word line) is left flush-left, matching Emacs, which never stretches a
 /// paragraph's last line. [`Justification::None`] is the odd one out: it works a
-/// paragraph at a time via [`unjustify_block`], because turning justification off
+/// paragraph at a time via `unjustify_block`, because turning justification off
 /// unjustifies and refills rather than reshaping each line in place.
 pub fn justify_block(text: &str, width: usize, mode: Justification) -> String {
     let had_trailing = text.ends_with('\n');

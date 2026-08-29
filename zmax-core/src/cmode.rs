@@ -385,7 +385,7 @@ const CWARN_KEYWORDS: [&str; 3] = ["if", "while", "for"];
 /// an assignment inside a condition, and a semicolon straight after a condition
 /// (which silently empties the body). `cwarn.el`'s third check, the
 /// pass-by-reference `&`, needs the enclosing list and brace nesting and so lives
-/// in [`cwarn_reference_scan`], which walks the whole buffer.
+/// in `cwarn_reference_scan`, which walks the whole buffer.
 pub fn cwarn_line(line: usize, src: &str) -> Vec<CWarning> {
     let mut out = Vec::new();
     let bytes = src.as_bytes();
