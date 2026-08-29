@@ -95,6 +95,7 @@ pub mod time_stamp;
 pub mod timeclock;
 mod transaction;
 pub mod two_column;
+pub mod unicode_names;
 pub mod uri;
 pub mod vc;
 pub mod vim_opts;

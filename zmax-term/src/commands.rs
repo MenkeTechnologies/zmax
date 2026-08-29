@@ -14199,17 +14199,22 @@ fn isearch_char_by_name(cx: &mut Context) {
         cx.editor.set_error("No current search");
         return;
     }
-    prompt_then(cx, "Char by digraph mnemonic: ", |cx, input| {
-        let mut chars = input.chars();
-        let (Some(a), Some(b)) = (chars.next(), chars.next()) else {
-            cx.editor
-                .set_error("Enter a two-character digraph mnemonic");
+    prompt_then(cx, "Add char to search string (Unicode name or hex): ", |cx, input| {
+        if let Some(ch) = char_by_name_or_code(input) {
+            isearch_append(cx.editor, &ch.to_string());
             return;
-        };
-        match digraph_lookup(a, b) {
-            Some(ch) => isearch_append(cx.editor, &ch.to_string()),
-            None => cx.editor.set_error(format!("No digraph for '{a}{b}'")),
         }
+        // zmax's digraph mnemonics still resolve, so `a:` keeps working for
+        // anyone who reaches for vim's two-key form rather than the full name.
+        let mut chars = input.trim().chars();
+        if let (Some(a), Some(b), None) = (chars.next(), chars.next(), chars.next()) {
+            if let Some(ch) = digraph_lookup(a, b) {
+                isearch_append(cx.editor, &ch.to_string());
+                return;
+            }
+        }
+        cx.editor
+            .set_error(format!("No character named '{}'", input.trim()));
     });
 }
 
@@ -18085,24 +18090,58 @@ fn not_modified(cx: &mut Context) {
     cx.editor.set_status("(No changes need to be saved)");
 }
 
-/// Emacs `insert-char` (C-x 8 RET): prompt for a Unicode code point (hex, e.g.
-/// `3b1`, `U+3B1` or `0x3b1`) and insert that character at each cursor.
+/// Completion over the listed Unicode names — emacs's `ucs-names`. The
+/// rule-derived CJK and Hangul ranges are deliberately not enumerated: 110,720
+/// entries would swamp the list, and emacs's own `ucs-names` leaves them out too
+/// (they are still accepted when typed in full).
+fn unicode_name_completer(_editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
+    let input = input.trim();
+    if input.len() < 2 {
+        return Vec::new();
+    }
+    let needle = input.to_ascii_uppercase();
+    zmax_core::unicode_names::listed_names()
+        .filter(|(_, name)| name.contains(&needle))
+        .take(200)
+        .map(|(c, name)| ((0..), format!("{name}\t{c}").into()))
+        .collect()
+}
+
+/// Resolve what `insert-char` accepts: "a Unicode name or hexadecimal code
+/// point" (mule-cmds.el). A name wins over a code point, since a bare hex string
+/// is also a legal prefix of nothing else. Pure — unit tested.
+pub(crate) fn char_by_name_or_code(input: &str) -> Option<char> {
+    let input = input.trim();
+    if input.is_empty() {
+        return None;
+    }
+    if let Some(c) = zmax_core::unicode_names::character(input) {
+        return Some(c);
+    }
+    let hex = input
+        .trim_start_matches(['U', 'u'])
+        .trim_start_matches('+')
+        .trim_start_matches("0x")
+        .trim_start_matches("0X");
+    u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
+}
+
+/// Emacs `insert-char` (C-x 8 RET): "Read a character by its Unicode name or hex
+/// code point and insert it" (mule-cmds.el). Completion is over the Unicode
+/// names, as emacs's is over `ucs-names`; the hex forms `3b1`, `U+3B1` and
+/// `0x3b1` are accepted too.
 fn insert_char_by_code(cx: &mut Context) {
     let prompt = crate::ui::prompt::Prompt::new(
-        "Insert char (hex code point):".into(),
+        "Insert char (Unicode name or hex code point): ".into(),
         None,
-        ui::completers::none,
+        unicode_name_completer,
         move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
             if event != PromptEvent::Validate {
                 return;
             }
-            let s = input
-                .trim()
-                .trim_start_matches(['U', 'u'])
-                .trim_start_matches('+')
-                .trim_start_matches("0x");
-            let Some(ch) = u32::from_str_radix(s, 16).ok().and_then(char::from_u32) else {
-                cx.editor.set_error(format!("invalid code point: {input}"));
+            let Some(ch) = char_by_name_or_code(input) else {
+                cx.editor
+                    .set_error(format!("invalid character name or code point: {input}"));
                 return;
             };
             let (view, doc) = current!(cx.editor);
@@ -47274,7 +47313,16 @@ fn emoji_describe(cx: &mut Context) {
         let end = next_grapheme_boundary(text, cursor);
         text.slice(cursor..end).to_string()
     };
-    match emoji_name(&glyph) {
+    // emoji.el's `emoji--name` falls back to the character's Unicode name, which
+    // is why emacs on `a` says LATIN SMALL LETTER A rather than reporting none.
+    let name: Option<String> = emoji_name(&glyph).map(str::to_string).or_else(|| {
+        let mut chars = glyph.chars();
+        match (chars.next(), chars.next()) {
+            (Some(c), None) => zmax_core::unicode_names::name(c),
+            _ => None,
+        }
+    });
+    match name {
         Some(name) => cx
             .editor
             .set_status(format!("The name of \"{glyph}\" is \"{name}\"")),
@@ -76865,6 +76913,41 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod insert_char_tests {
+    use super::char_by_name_or_code;
+
+    /// emacs `insert-char` reads "a Unicode name or hexadecimal code point"
+    /// (mule-cmds.el), so both must resolve — and the name is what zmax could not
+    /// do before: its table was the two-key digraph mnemonics, not the UCD.
+    #[test]
+    fn a_character_resolves_by_name_or_by_code_point() {
+        assert_eq!(char_by_name_or_code("LATIN CAPITAL LETTER A"), Some('A'));
+        assert_eq!(
+            char_by_name_or_code("latin small letter a with diaeresis"),
+            Some('ä')
+        );
+        assert_eq!(char_by_name_or_code("EURO SIGN"), Some('€'));
+        // The rule-derived ranges are accepted when typed in full.
+        assert_eq!(
+            char_by_name_or_code("CJK UNIFIED IDEOGRAPH-4E00"),
+            Some('\u{4E00}')
+        );
+        assert_eq!(char_by_name_or_code("HANGUL SYLLABLE GA"), Some('\u{AC00}'));
+
+        // Every hex spelling emacs's prompt takes.
+        for spelling in ["3b1", "U+3B1", "u+3b1", "0x3b1", " 3B1 "] {
+            assert_eq!(char_by_name_or_code(spelling), Some('α'), "{spelling}");
+        }
+
+        assert_eq!(char_by_name_or_code(""), None);
+        assert_eq!(char_by_name_or_code("   "), None);
+        assert_eq!(char_by_name_or_code("NOT A CHARACTER"), None);
+        // Past the last codepoint.
+        assert_eq!(char_by_name_or_code("110000"), None);
     }
 }
 
