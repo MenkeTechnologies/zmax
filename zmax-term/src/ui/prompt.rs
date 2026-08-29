@@ -137,12 +137,6 @@ pub struct Prompt {
     /// `C-x 8 e RET` adds an emoji by name. `Some(false)` is `C-x 8`,
     /// `Some(true)` is `C-x 8 e`.
     pending_ctrl_x_8: Option<bool>,
-    /// Emacs `previous-matching-history-element` / `next-matching-history-element`:
-    /// the regexp being searched for and the history entry it last put on the
-    /// line. While the line still holds that entry the same regexp keeps
-    /// searching (so the commands repeat); once the line is something else, that
-    /// something else is taken as a new regexp.
-    history_search: Option<(String, String)>,
     /// vim `c_CTRL-\_e {expr}`: the command line set aside while the nested `=`
     /// prompt asks for the expression. `Some` for as long as what is typed is
     /// the expression rather than the command line — `Enter` evaluates it and
@@ -994,7 +988,6 @@ impl Prompt {
             depth: PROMPT_DEPTH.fetch_add(1, Ordering::Relaxed) + 1,
             pending_ctrl_x: false,
             pending_ctrl_x_8: None,
-            history_search: None,
             cmdline_eval: None,
             history_search_read: None,
             isearch_yank_len: None,

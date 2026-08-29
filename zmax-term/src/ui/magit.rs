@@ -2333,7 +2333,7 @@ impl MagitCommit {
 
     /// Leave insert state for normal state, the way `ESC` does under evil: point
     /// steps back one character unless it is already at the start of the line.
-    fn to_normal(&mut self, cx: &mut Context) {
+    fn enter_normal(&mut self, cx: &mut Context) {
         self.normal = true;
         self.col = self.col.saturating_sub(1);
         cx.editor
@@ -2536,7 +2536,7 @@ impl Component for MagitCommit {
         }
 
         match key {
-            key!(Esc) => self.to_normal(cx),
+            key!(Esc) => self.enter_normal(cx),
             key!(Enter) => self.newline(),
             key!(Backspace) => self.backspace(),
             key!(Left) | ctrl!('b') => self.move_left(),

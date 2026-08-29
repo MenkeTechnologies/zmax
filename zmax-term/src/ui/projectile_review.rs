@@ -16,7 +16,7 @@ use crate::compositor::{Component, Context, Event, EventResult};
 
 use tui::buffer::Buffer as Surface;
 use zmax_view::graphics::Rect;
-use zmax_view::input::{KeyCode, KeyEvent, KeyModifiers};
+use zmax_view::input::{KeyCode, KeyModifiers};
 
 /// One match: where it is and the line it sits on.
 pub struct Match {
@@ -402,6 +402,9 @@ impl Component for Review {
                     self.asking = Some((Asking::Replacement, String::new()));
                 }
             }
+            // Before the unguarded `c` below, which would otherwise take
+            // ctrl-c too and toggle case sensitivity on it.
+            KeyCode::Char('c') if ctrl => {}
             KeyCode::Char('c') => {
                 self.case_sensitive = !self.case_sensitive;
                 self.rescan();
@@ -459,7 +462,6 @@ impl Component for Review {
                 }
             }
             KeyCode::Char('!') => return self.apply_and_report(cx, pop),
-            KeyCode::Char('c') if ctrl => {}
             _ => {}
         }
         EventResult::Consumed(None)

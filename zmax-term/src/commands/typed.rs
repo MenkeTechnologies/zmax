@@ -2729,6 +2729,9 @@ fn make_impl(cx: &mut compositor::Context, args: &Args, loclist: bool) -> anyhow
 /// debian, emacs-cask, clojure-cli) are absent, as projectile has nothing to
 /// run for them either; predicate-based types whose markers are an OR (make,
 /// go, mill, dotnet, haskell-cabal) get one row per alternative.
+// Nothing reads this yet: the table is ported ahead of the command that runs it
+// (projectile `test-project`), so it is kept rather than re-derived later.
+#[allow(dead_code)]
 const PROJECTILE_TEST_TYPES: &[(&str, &[&str], &str, &str)] = &[
     ("swift-spm", &["Package.swift"], "", "swift test"),
     ("zig", &["build.zig.zon"], "", "zig build test"),
@@ -8278,7 +8281,7 @@ fn diff(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     if output.status.code().is_none_or(|c| c > 1) {
         bail!(
             "diff: {}",
-            String::from_utf8_lossy(&output.stderr).trim().to_string()
+            String::from_utf8_lossy(&output.stderr).trim()
         );
     }
     let text = String::from_utf8_lossy(&output.stdout).into_owned();

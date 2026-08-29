@@ -50,7 +50,7 @@ pub(crate) fn is_project_root(dir: &Path) -> bool {
 fn remember(root: &Path) -> bool {
     let root = root.to_string_lossy().into_owned();
     let mut list = known_projects();
-    let known = list.iter().any(|p| *p == root);
+    let known = list.contains(&root);
     zmax_core::project::record_project(&mut list, &root);
     let _ = write_known_projects(&list);
     !known

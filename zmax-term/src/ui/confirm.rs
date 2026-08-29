@@ -13,10 +13,13 @@ use zmax_view::input::{KeyCode, KeyModifiers};
 
 use tui::buffer::Buffer as Surface;
 
+/// What a `Confirm` runs when the answer is yes.
+type OnYes = Box<dyn FnOnce(&mut Context)>;
+
 /// The question, and what to run when it is answered yes.
 pub struct Confirm {
     question: String,
-    on_yes: Option<Box<dyn FnOnce(&mut Context)>>,
+    on_yes: Option<OnYes>,
     /// Status to report when the answer is no (emacs echoes nothing, but the
     /// caller usually has something to say about what it did *not* do).
     on_no: String,

@@ -22697,7 +22697,7 @@ fn sexp_elements(src: &str) -> Option<Vec<String>> {
                     i += 1;
                 }
             }
-            '?' if depth == 0 || depth > 0 => {
+            '?' => {
                 // A character literal takes the next character — and the one
                 // after it when that is a backslash escape.
                 current.push(c);
@@ -55464,7 +55464,7 @@ fn edit_macro_buffer(editor: &mut Editor, title: &str, keys: &str) {
 /// the same way round: headers first, then the rest as the macro.
 fn edmacro_macro_text(buffer: &str) -> Option<String> {
     let (_, after) = buffer.split_once("\nMacro:")?;
-    let text = after.trim_start_matches(|c| c == '\r' || c == '\n');
+    let text = after.trim_start_matches(['\r', '\n']);
     let joined: String = text
         .lines()
         .map(str::trim_end)

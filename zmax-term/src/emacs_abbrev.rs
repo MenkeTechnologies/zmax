@@ -101,10 +101,13 @@ fn format_mode_line(mode: &str, name: &str, expansion: &str) -> String {
     format!("{}\t{}\t{}", mode, name, escape(expansion))
 }
 
+/// The global table's rows, and the mode-local tables keyed by mode name.
+type AbbrevTables = (Vec<(String, String)>, HashMap<String, HashMap<String, String>>);
+
 /// Everything in the store: the global table's rows and the mode-local tables.
 /// Emacs keeps both in one abbrev file (`write-abbrev-file` writes a
 /// `define-abbrev-table` form per table), which is why one file holds both here.
-fn load_all() -> (Vec<(String, String)>, HashMap<String, HashMap<String, String>>) {
+fn load_all() -> AbbrevTables {
     let text = match std::fs::read_to_string(store_path()) {
         Ok(text) => text,
         Err(_) => return (Vec::new(), HashMap::new()),
