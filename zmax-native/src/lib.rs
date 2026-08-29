@@ -671,3 +671,373 @@ macro_rules! declare_plugin {
 // hard-codes so users need only `use zmax_native::*` or the two names above.
 #[doc(hidden)]
 pub const ABIVERSION_FOR_MACRO: u32 = ABI_VERSION;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    use std::ptr;
+
+    // What the fake host was asked for, and what it hands back. A thread-local
+    // rather than a field on the table, because the callbacks are plain
+    // `extern "C"` fns with no closure environment -- the same constraint a real
+    // host works under.
+    thread_local! {
+        static CALLS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+    }
+
+    fn record(call: impl Into<String>) {
+        CALLS.with(|calls| calls.borrow_mut().push(call.into()));
+    }
+
+    fn calls() -> Vec<String> {
+        CALLS.with(|calls| calls.borrow().clone())
+    }
+
+    /// Hand back an owned C string the way the host does, so `free_cstring` has
+    /// something real to release.
+    fn reply(text: &str) -> *mut c_char {
+        CString::new(text).unwrap().into_raw()
+    }
+
+    extern "C" fn fake_register_command(
+        _h: *const HostApi,
+        _name: *const c_char,
+        _f: CommandFn,
+    ) -> c_int {
+        0
+    }
+    extern "C" fn fake_message(_h: *const HostApi, text: *const c_char) {
+        record(format!("message:{}", unsafe { CStr::from_ptr(text) }.to_string_lossy()));
+    }
+    extern "C" fn fake_error(_h: *const HostApi, text: *const c_char) {
+        record(format!("error:{}", unsafe { CStr::from_ptr(text) }.to_string_lossy()));
+    }
+    extern "C" fn fake_eval(_h: *const HostApi, line: *const c_char) -> c_int {
+        record(format!("eval:{}", unsafe { CStr::from_ptr(line) }.to_string_lossy()));
+        0
+    }
+    extern "C" fn fake_buffer_text(_h: *const HostApi) -> *mut c_char {
+        reply("buffer")
+    }
+    extern "C" fn fake_insert_text(_h: *const HostApi, text: *const c_char) -> c_int {
+        record(format!("insert:{}", unsafe { CStr::from_ptr(text) }.to_string_lossy()));
+        0
+    }
+    extern "C" fn fake_free_cstring(_h: *const HostApi, s: *mut c_char) {
+        record("free");
+        if !s.is_null() {
+            drop(unsafe { CString::from_raw(s) });
+        }
+    }
+    extern "C" fn fake_cursor(_h: *const HostApi) -> Cursor {
+        Cursor { line: 3, column: 7, offset: 42, valid: 1 }
+    }
+    extern "C" fn fake_word_at_cursor(_h: *const HostApi) -> *mut c_char {
+        reply("UnixStream")
+    }
+    extern "C" fn fake_selection_text(_h: *const HostApi) -> *mut c_char {
+        reply("selected")
+    }
+    extern "C" fn fake_line(_h: *const HostApi, line: usize) -> *mut c_char {
+        // Two lines only, so the past-the-end case is reachable.
+        if line < 2 { reply(&format!("line {line}")) } else { ptr::null_mut() }
+    }
+    extern "C" fn fake_line_count(_h: *const HostApi) -> usize {
+        2
+    }
+    extern "C" fn fake_mode(_h: *const HostApi) -> *mut c_char {
+        reply("normal")
+    }
+    extern "C" fn fake_cwd(_h: *const HostApi) -> *mut c_char {
+        reply("/tmp/project")
+    }
+    extern "C" fn fake_buffer_path(_h: *const HostApi) -> *mut c_char {
+        reply("/tmp/project/main.rs")
+    }
+    extern "C" fn fake_language(_h: *const HostApi) -> *mut c_char {
+        reply("rust")
+    }
+    extern "C" fn fake_is_modified(_h: *const HostApi) -> c_int {
+        1
+    }
+    extern "C" fn fake_register(_h: *const HostApi, name: c_char) -> *mut c_char {
+        record(format!("register:{}", name as u8 as char));
+        reply("yanked")
+    }
+    extern "C" fn fake_selection_count(_h: *const HostApi) -> usize {
+        2
+    }
+    extern "C" fn fake_selection(_h: *const HostApi, index: usize) -> Span {
+        match index {
+            // A backwards selection: head before anchor.
+            0 => Span { anchor: 10, head: 4, line: 1, valid: 1 },
+            1 => Span { anchor: 20, head: 25, line: 2, valid: 1 },
+            _ => Span { anchor: 0, head: 0, line: 0, valid: 0 },
+        }
+    }
+    extern "C" fn fake_text_range(_h: *const HostApi, from: usize, to: usize) -> *mut c_char {
+        reply(&format!("text[{from}..{to}]"))
+    }
+    extern "C" fn fake_buffer_count(_h: *const HostApi) -> usize {
+        2
+    }
+    extern "C" fn fake_buffer_name(_h: *const HostApi, index: usize) -> *mut c_char {
+        if index < 2 { reply(&format!("buf{index}")) } else { ptr::null_mut() }
+    }
+    extern "C" fn fake_diagnostic_count(_h: *const HostApi) -> usize {
+        1
+    }
+    extern "C" fn fake_diagnostic(_h: *const HostApi, index: usize) -> Span {
+        if index == 0 {
+            Span { anchor: 5, head: 9, line: 2, valid: 1 }
+        } else {
+            Span { anchor: 0, head: 0, line: 0, valid: 0 }
+        }
+    }
+    extern "C" fn fake_diagnostic_message(_h: *const HostApi, _index: usize) -> *mut c_char {
+        reply("unused variable")
+    }
+    extern "C" fn fake_diagnostic_severity(_h: *const HostApi, _index: usize) -> *mut c_char {
+        reply("warning")
+    }
+    extern "C" fn fake_option(_h: *const HostApi, name: *const c_char) -> *mut c_char {
+        record(format!("option:{}", unsafe { CStr::from_ptr(name) }.to_string_lossy()));
+        reply("4")
+    }
+    extern "C" fn fake_search_pattern(_h: *const HostApi) -> *mut c_char {
+        reply("needle")
+    }
+    extern "C" fn fake_window_count(_h: *const HostApi) -> usize {
+        3
+    }
+    extern "C" fn fake_window_view(_h: *const HostApi) -> Span {
+        Span { anchor: 100, head: 400, line: 12, valid: 1 }
+    }
+    extern "C" fn fake_file_size(_h: *const HostApi, path: *const c_char) -> i64 {
+        // A missing file is -1, which the wrapper must turn into `None` rather
+        // than a colossal u64.
+        if unsafe { CStr::from_ptr(path) }.to_string_lossy() == "/absent" {
+            -1
+        } else {
+            1234
+        }
+    }
+    extern "C" fn fake_file_type(_h: *const HostApi, _path: *const c_char) -> *mut c_char {
+        reply("file")
+    }
+
+    fn table() -> HostApi {
+        HostApi {
+            abi_version: ABI_VERSION,
+            ctx: ptr::null_mut(),
+            register_command: fake_register_command,
+            message: fake_message,
+            error: fake_error,
+            eval: fake_eval,
+            buffer_text: fake_buffer_text,
+            insert_text: fake_insert_text,
+            free_cstring: fake_free_cstring,
+            cursor: fake_cursor,
+            word_at_cursor: fake_word_at_cursor,
+            selection_text: fake_selection_text,
+            line: fake_line,
+            line_count: fake_line_count,
+            mode: fake_mode,
+            cwd: fake_cwd,
+            buffer_path: fake_buffer_path,
+            language: fake_language,
+            is_modified: fake_is_modified,
+            register: fake_register,
+            selection_count: fake_selection_count,
+            selection: fake_selection,
+            text_range: fake_text_range,
+            buffer_count: fake_buffer_count,
+            buffer_name: fake_buffer_name,
+            diagnostic_count: fake_diagnostic_count,
+            diagnostic: fake_diagnostic,
+            diagnostic_message: fake_diagnostic_message,
+            diagnostic_severity: fake_diagnostic_severity,
+            option: fake_option,
+            search_pattern: fake_search_pattern,
+            window_count: fake_window_count,
+            window_view: fake_window_view,
+            file_size: fake_file_size,
+            file_type: fake_file_type,
+        }
+    }
+
+    fn host(api: &HostApi) -> Host {
+        // Safe: `api` outlives the `Host` for the body of each test.
+        unsafe { Host::from_raw(api as *const HostApi) }
+    }
+
+    /// Every accessor must read its OWN slot. The table is hand-wired, so a
+    /// field pointed at the neighbouring function compiles perfectly and calls
+    /// the wrong thing -- each fake returns a distinct value precisely so a
+    /// swap shows up here rather than in someone's editor.
+    #[test]
+    fn every_wrapper_reads_its_own_slot() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.buffer_text().as_deref(), Some("buffer"));
+        assert_eq!(host.word_at_cursor().as_deref(), Some("UnixStream"));
+        assert_eq!(host.selection_text().as_deref(), Some("selected"));
+        assert_eq!(host.mode().as_deref(), Some("normal"));
+        assert_eq!(host.cwd().as_deref(), Some("/tmp/project"));
+        assert_eq!(host.buffer_path().as_deref(), Some("/tmp/project/main.rs"));
+        assert_eq!(host.language().as_deref(), Some("rust"));
+        assert_eq!(host.search_pattern().as_deref(), Some("needle"));
+        assert_eq!(host.file_type("/x").as_deref(), Some("file"));
+
+        assert_eq!(host.line_count(), 2);
+        assert_eq!(host.selection_count(), 2);
+        assert_eq!(host.buffer_count(), 2);
+        assert_eq!(host.diagnostic_count(), 1);
+        assert_eq!(host.window_count(), 3);
+        assert!(host.is_modified());
+    }
+
+    /// `Cursor` and `Span` cross the ABI by value, so their fields have to
+    /// arrive in the order they were sent -- a reordered struct would silently
+    /// swap line for column.
+    #[test]
+    fn positions_survive_the_boundary_field_for_field() {
+        let api = table();
+        let host = host(&api);
+
+        let cursor = host.cursor().expect("valid");
+        assert_eq!((cursor.line, cursor.column, cursor.offset), (3, 7, 42));
+
+        let window = host.window_view().expect("valid");
+        assert_eq!((window.anchor, window.head, window.line), (100, 400, 12));
+    }
+
+    /// A backwards selection keeps its direction: `head` before `anchor` is how
+    /// the editor says which end the user is extending from, and flattening it
+    /// into document order would throw that away.
+    #[test]
+    fn a_backwards_selection_keeps_its_direction() {
+        let api = table();
+        let host = host(&api);
+
+        let selections = host.selections();
+        assert_eq!(selections.len(), 2);
+        assert!(selections[0].head < selections[0].anchor, "backwards");
+        assert!(selections[1].head > selections[1].anchor, "forwards");
+    }
+
+    /// `valid == 0` is how "no editor context" crosses an ABI that cannot carry
+    /// `Option`, so it must become `None` rather than a zeroed position that
+    /// reads as the top of the buffer.
+    #[test]
+    fn an_invalid_span_becomes_none() {
+        let api = table();
+        let host = host(&api);
+
+        assert!(host.selection(2).is_none(), "past the last selection");
+        assert!(host.diagnostic(1).is_none(), "past the last diagnostic");
+        assert!(host.line(5).is_none(), "past the end of the buffer");
+        assert!(host.buffer_name(9).is_none());
+    }
+
+    /// The wrappers own what the host allocates: every string read must be
+    /// handed back through `free_cstring`, or a plugin leaks on every call.
+    #[test]
+    fn every_string_read_is_freed() {
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        host.buffer_text();
+        host.word_at_cursor();
+        host.mode();
+        host.line(0);
+
+        assert_eq!(
+            calls().iter().filter(|c| *c == "free").count(),
+            4,
+            "one free per string read: {:?}",
+            calls()
+        );
+    }
+
+    /// A null return means "nothing", and nothing must not be freed.
+    #[test]
+    fn a_null_reply_is_none_and_is_not_freed() {
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        assert!(host.line(99).is_none());
+
+        assert!(!calls().contains(&"free".to_string()), "{:?}", calls());
+    }
+
+    /// The arguments a wrapper takes reach the host unchanged.
+    #[test]
+    fn arguments_reach_the_host_intact() {
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        host.message("hello");
+        host.error("bad");
+        host.eval("write");
+        host.insert_text("text");
+        host.option("shiftwidth");
+        host.register('a');
+
+        assert_eq!(
+            calls()
+                .into_iter()
+                .filter(|c| c != "free")
+                .collect::<Vec<_>>(),
+            vec![
+                "message:hello",
+                "error:bad",
+                "eval:write",
+                "insert:text",
+                "option:shiftwidth",
+                "register:a",
+            ]
+        );
+    }
+
+    /// `file_size` reports a missing file as -1 across the ABI, which must not
+    /// come back as a `u64` near its maximum.
+    #[test]
+    fn a_missing_files_size_is_none_not_a_huge_number() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.file_size("/present"), Some(1234));
+        assert_eq!(host.file_size("/absent"), None);
+    }
+
+    /// A diagnostic arrives as one value: where, what, and how bad.
+    #[test]
+    fn a_diagnostic_arrives_whole() {
+        let api = table();
+        let host = host(&api);
+
+        let diagnostics = host.diagnostics();
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].message, "unused variable");
+        assert_eq!(diagnostics[0].severity, "warning");
+        assert_eq!((diagnostics[0].span.anchor, diagnostics[0].span.head), (5, 9));
+    }
+
+    /// `lines` stops at the buffer's end rather than running to the requested
+    /// bound, so asking for more than exists is not an error.
+    #[test]
+    fn lines_are_clamped_to_the_buffer() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.lines(0, 99), vec!["line 0", "line 1"]);
+        assert_eq!(host.lines(1, 2), vec!["line 1"]);
+        assert!(host.lines(5, 9).is_empty());
+    }
+}
