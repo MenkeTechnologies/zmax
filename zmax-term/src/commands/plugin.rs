@@ -664,6 +664,74 @@ extern "C" fn host_plugin_name(_host: *const HostApi, index: usize) -> *mut c_ch
     into_raw_cstring(name)
 }
 
+extern "C" fn host_mark(_host: *const HostApi, name: c_char) -> Span {
+    let Some(name) = char::from_u32(name as u8 as u32) else {
+        return NO_SPAN;
+    };
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        match doc.mark(name) {
+            Some(pos) => {
+                let text = doc.text().slice(..);
+                let pos = pos.min(text.len_chars());
+                Span {
+                    // A mark is a point, so both ends are the same offset.
+                    anchor: pos,
+                    head: pos,
+                    line: text.char_to_line(pos),
+                    valid: 1,
+                }
+            }
+            None => NO_SPAN,
+        }
+    })
+    .unwrap_or(NO_SPAN)
+}
+
+extern "C" fn host_window_width(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        // The text area, so a plugin laying something out is not told about
+        // columns the gutters have already taken.
+        view.inner_area(doc).width as usize
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_window_height(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        view.inner_area(doc).height as usize
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_completions(_host: *const HostApi, prefix: *const c_char) -> *mut c_char {
+    let Some(prefix) = arg_string(prefix) else {
+        return ptr::null_mut();
+    };
+    let prefix = prefix.trim_start_matches(':');
+
+    let mut names: Vec<String> = crate::commands::typed::TYPABLE_COMMAND_LIST
+        .iter()
+        .map(|cmd| cmd.name.to_string())
+        .filter(|name| name.starts_with(prefix))
+        .collect();
+    // Plugin commands complete too, so the list matches what the `:` prompt
+    // would actually accept.
+    if let Ok(reg) = registry().lock() {
+        names.extend(
+            reg.keys()
+                .filter(|name| name.starts_with(prefix))
+                .map(|name| name.to_string()),
+        );
+    }
+    names.sort_unstable();
+    names.dedup();
+
+    into_raw_cstring((!names.is_empty()).then(|| names.join("\n")))
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -720,6 +788,10 @@ fn host_api() -> *const HostApi {
             command_exists: host_command_exists,
             plugin_count: host_plugin_count,
             plugin_name: host_plugin_name,
+            mark: host_mark,
+            window_width: host_window_width,
+            window_height: host_window_height,
+            completions: host_completions,
         });
         Box::into_raw(boxed) as usize
     });

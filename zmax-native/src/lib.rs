@@ -279,6 +279,24 @@ pub struct HostApi {
     /// The `index`th loaded plugin as `name version`, or null past the last.
     /// Release with `free_cstring`.
     pub plugin_name: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// vim `getpos("'{mark}")` — where a named mark is. `anchor` and `head` are
+    /// both its char offset, since a mark is a point rather than a span, and
+    /// `line` is the line it sits on. `valid` is 0 for a mark that has never
+    /// been set. Marks are remapped through edits, so this follows the text it
+    /// was placed on.
+    pub mark: extern "C" fn(host: *const HostApi, name: c_char) -> Span,
+
+    /// vim `getwininfo()[0].width` / `.height` — the current window's text area
+    /// in cells, excluding gutters. What a plugin needs to lay anything out.
+    pub window_width: extern "C" fn(host: *const HostApi) -> usize,
+    pub window_height: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `getcompletion({prefix}, "command")` — the `:`-command names that
+    /// start with `prefix`, newline-separated and sorted, covering built-ins and
+    /// plugin-registered commands alike. Null when nothing matches. Release with
+    /// `free_cstring`.
+    pub completions: extern "C" fn(host: *const HostApi, prefix: *const c_char) -> *mut c_char,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -627,6 +645,35 @@ impl Host {
             .collect()
     }
 
+    /// vim `getpos("'{mark}")` — where a named mark is, or `None` when it has
+    /// never been set.
+    pub fn mark(&self, name: char) -> Option<Span> {
+        if !name.is_ascii() {
+            return None;
+        }
+        let span = (self.t().mark)(self.api, name as c_char);
+        (span.valid != 0).then_some(span)
+    }
+
+    /// The current window's text area in cells, gutters excluded.
+    pub fn window_size(&self) -> (usize, usize) {
+        (
+            (self.t().window_width)(self.api),
+            (self.t().window_height)(self.api),
+        )
+    }
+
+    /// vim `getcompletion({prefix}, "command")` — the `:`-command names
+    /// starting with `prefix`, sorted, built-in and plugin alike.
+    pub fn completions(&self, prefix: &str) -> Vec<String> {
+        let Ok(prefix) = CString::new(prefix) else {
+            return Vec::new();
+        };
+        self.take_string((self.t().completions)(self.api, prefix.as_ptr()))
+            .map(|joined| joined.lines().map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
     /// Adopt a host-allocated C string and release it through the host's own
     /// allocator, which is the only correct way to free one across the ABI.
     fn take_string(&self, raw: *mut c_char) -> Option<String> {
@@ -957,6 +1004,26 @@ mod tests {
     extern "C" fn fake_plugin_name(_h: *const HostApi, index: usize) -> *mut c_char {
         if index == 0 { reply("hello 0.1.0") } else { ptr::null_mut() }
     }
+    extern "C" fn fake_mark(_h: *const HostApi, name: c_char) -> Span {
+        if name as u8 as char == 'a' {
+            Span { anchor: 15, head: 15, line: 4, valid: 1 }
+        } else {
+            Span { anchor: 0, head: 0, line: 0, valid: 0 }
+        }
+    }
+    extern "C" fn fake_window_width(_h: *const HostApi) -> usize {
+        // Deliberately different from the height, so a wrapper reading the
+        // wrong slot cannot pass.
+        80
+    }
+    extern "C" fn fake_window_height(_h: *const HostApi) -> usize {
+        24
+    }
+    extern "C" fn fake_completions(_h: *const HostApi, prefix: *const c_char) -> *mut c_char {
+        let prefix = unsafe { CStr::from_ptr(prefix) }.to_string_lossy().into_owned();
+        record(format!("completions:{prefix}"));
+        if prefix == "wr" { reply("write\nwrite-all\nwrite-quit") } else { ptr::null_mut() }
+    }
 
     fn table() -> HostApi {
         HostApi {
@@ -1003,6 +1070,10 @@ mod tests {
             command_exists: fake_command_exists,
             plugin_count: fake_plugin_count,
             plugin_name: fake_plugin_name,
+            mark: fake_mark,
+            window_width: fake_window_width,
+            window_height: fake_window_height,
+            completions: fake_completions,
         }
     }
 
@@ -1198,6 +1269,43 @@ mod tests {
 
         assert_eq!(host.file_time("/present"), Some(1_700_000_000));
         assert_eq!(host.file_time("/absent"), None);
+    }
+
+    /// A mark is a point, so both ends of its span are the same offset -- and an
+    /// unset mark is `None`, not position zero, which would silently mean the
+    /// top of the buffer.
+    #[test]
+    fn a_mark_is_a_point_and_an_unset_one_is_none() {
+        let api = table();
+        let host = host(&api);
+
+        let mark = host.mark('a').expect("set");
+        assert_eq!((mark.anchor, mark.head, mark.line), (15, 15, 4));
+        assert!(host.mark('z').is_none(), "never set");
+    }
+
+    /// Width and height come from their own slots. The fake returns 80x24
+    /// precisely so a wrapper reading one for the other fails here.
+    #[test]
+    fn window_width_and_height_are_not_interchangeable() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.window_size(), (80, 24));
+    }
+
+    /// Completions arrive newline-separated and come back as a list; nothing
+    /// matching is an empty list rather than one empty string.
+    #[test]
+    fn completions_split_into_a_list() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(
+            host.completions("wr"),
+            vec!["write", "write-all", "write-quit"]
+        );
+        assert!(host.completions("zzz").is_empty(), "nothing matches");
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

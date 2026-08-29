@@ -114,6 +114,9 @@ What is in the buffer, and what the language servers said about it:
 | `buffer_line(buf, n)` | `getbufline()` | a line of any open buffer |
 | `command_exists(name)` | `exists(":cmd")` | built-ins and plugin commands alike |
 | `plugin_count()` / `plugin_name(i)` / `plugin_names()` | `getscriptinfo()` | the loaded native plugins |
+| `mark(name)` | `getpos("'a")` | a named mark, `None` when never set |
+| `window_size()` | `getwininfo()` width/height | the text area in cells, gutters excluded |
+| `completions(prefix)` | `getcompletion(p, "command")` | matching `:`-command names |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:
