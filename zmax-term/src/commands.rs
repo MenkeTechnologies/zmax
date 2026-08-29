@@ -2347,6 +2347,8 @@ impl MappableCommand {
         shell_pipe, "Pipe selections through shell command",
         shell_pipe_to, "Pipe selections into shell command ignoring output",
         shell_insert_output, "Insert shell command output before selections",
+        shell_command, "Run a shell command and show its output; a count inserts it at point instead (emacs shell-command, M-!)",
+        shell_command_on_region, "Pipe the selection through a shell command and show the output; a count replaces the selection instead (emacs shell-command-on-region, M-|)",
         shell_append_output, "Append shell command output after selections",
         shell_keep_pipe, "Filter selections with shell predicate",
         suspend, "Suspend and return to shell",
@@ -57546,6 +57548,13 @@ enum ShellBehavior {
     Ignore,
     Insert,
     Append,
+    /// Emacs `shell-command` / `shell-command-on-region` without a prefix
+    /// argument: "Execute string COMMAND in inferior shell; display output, if
+    /// any. With prefix argument, insert the COMMAND's output at point"
+    /// (simple.el:4583-4585). The output is *displayed* — it does not touch the
+    /// buffer. `pipe` says whether the selection is fed to the command
+    /// (`shell-command-on-region`, `M-|`) or not (`shell-command`, `M-!`).
+    Show { pipe: bool },
 }
 
 /// The pandoc reader name for a buffer, from its language. pandoc's own name for
@@ -57780,6 +57789,31 @@ fn shell_pipe_to(cx: &mut Context) {
 
 fn shell_insert_output(cx: &mut Context) {
     shell_prompt_for_behavior(cx, "insert-output:".into(), ShellBehavior::Insert);
+}
+
+/// Emacs `shell-command` (`M-!`): "Execute string COMMAND in inferior shell;
+/// display output, if any. With prefix argument, insert the COMMAND's output at
+/// point" (simple.el:4583-4585). The buffer is not the command's input, so
+/// nothing is piped in.
+fn shell_command(cx: &mut Context) {
+    let behavior = if cx.count.is_some() {
+        ShellBehavior::Insert
+    } else {
+        ShellBehavior::Show { pipe: false }
+    };
+    shell_prompt_for_behavior(cx, "Shell command: ".into(), behavior);
+}
+
+/// Emacs `shell-command-on-region` (`M-|`): the region is the command's input
+/// and the output is displayed; with a prefix argument the output replaces the
+/// region instead (simple.el's REPLACE argument).
+fn shell_command_on_region(cx: &mut Context) {
+    let behavior = if cx.count.is_some() {
+        ShellBehavior::Replace
+    } else {
+        ShellBehavior::Show { pipe: true }
+    };
+    shell_prompt_for_behavior(cx, "Shell command on region: ".into(), behavior);
 }
 
 fn shell_append_output(cx: &mut Context) {
@@ -58031,6 +58065,7 @@ fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
     let pipe = match behavior {
         ShellBehavior::Replace | ShellBehavior::Ignore => true,
         ShellBehavior::Insert | ShellBehavior::Append => false,
+        ShellBehavior::Show { pipe } => *pipe,
     };
 
     let shell = cx.editor.config().shell.clone();
@@ -58089,7 +58124,39 @@ fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
         }
     }
 
+    // Emacs shows the output in its own buffer rather than putting it in the one
+    // the command was run from; only the prefix-arg forms edit the buffer.
+    if matches!(behavior, ShellBehavior::Show { .. }) {
+        return show_shell_command_output(cx, outputs);
+    }
+
     apply_filter_outputs(cx, outputs, behavior);
+}
+
+/// Emacs's `*Shell Command Output*`: the output of a `shell-command` /
+/// `shell-command-on-region` run that is displayed rather than inserted.
+///
+/// "The output appears in the buffer named by `shell-command-buffer-name`. If
+/// the output is short enough to display in the echo area […] it is shown there"
+/// (simple.el:4597-4601) — so a one-line result goes to the status line and
+/// anything longer opens the buffer, and an empty result says so, as emacs's
+/// "(Shell command succeeded with no output)" does.
+fn show_shell_command_output(cx: &mut compositor::Context, outputs: Vec<Tendril>) {
+    let mut text = String::new();
+    for output in &outputs {
+        text.push_str(output);
+    }
+    let trimmed = text.trim_end_matches('\n');
+    if trimmed.is_empty() {
+        cx.editor
+            .set_status("(Shell command succeeded with no output)");
+        return;
+    }
+    if !trimmed.contains('\n') {
+        cx.editor.set_status(trimmed.to_string());
+        return;
+    }
+    show_text_in_scratch(cx.editor, &text);
 }
 
 /// Run `pipeline` once per selection, on worker threads when that is both safe
@@ -58231,6 +58298,7 @@ fn xpipe(cx: &mut compositor::Context, spec: &str, behavior: &ShellBehavior) {
     let pipe = match behavior {
         ShellBehavior::Replace | ShellBehavior::Ignore => true,
         ShellBehavior::Insert | ShellBehavior::Append => false,
+        ShellBehavior::Show { pipe } => *pipe,
     };
 
     // Snapshot the inputs before the run: a stage can reach the editor through

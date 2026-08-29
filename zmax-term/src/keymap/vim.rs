@@ -1662,8 +1662,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-tab"   => completion,             // M-TAB complete-symbol
         "A-left"  => move_prev_word_start,   // M-<left> left-word
         "A-right" => move_next_word_start,   // M-<right> right-word
-        "A-!"     => shell_insert_output,    // M-! shell-command (output is inserted here)
-        "A-|"     => shell_pipe,             // M-| shell-command-on-region
+        // emacs `M-!` shows the output and only inserts it under a prefix arg;
+        // `M-|` shows it and only replaces the region under one (simple.el).
+        "A-!"     => shell_command,          // M-! shell-command
+        "A-|"     => shell_command_on_region, // M-| shell-command-on-region
         // M-r move-to-window-line-top-bottom: centre, then top, then bottom on
         // successive presses. `goto_window_center` (the old binding) only ever
         // centred — the cycling port exists now, so the chord runs it.
@@ -3910,8 +3912,8 @@ mod tests {
             ("A-tab", "completion"),
             ("A-left", "move_prev_word_start"),
             ("A-right", "move_next_word_start"),
-            ("A-!", "shell_insert_output"),
-            ("A-|", "shell_pipe"),
+            ("A-!", "shell_command"),
+            ("A-|", "shell_command_on_region"),
             ("C-@", "set_mark_command"),
             ("C-S-tab", "goto_previous_tabpage"),
             ("F3", "kmacro_start_macro_or_insert_counter"),

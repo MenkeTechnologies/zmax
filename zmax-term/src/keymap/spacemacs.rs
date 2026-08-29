@@ -233,8 +233,12 @@ pub(super) fn ch_prefix() -> KeyTrie {
             "S" => man_page_search,               // info-lookup-symbol
             // Manual / info / tutorial navigation → the zmax help browser.
             "r" => help,                          // info-emacs-manual
-            "F" => help,                          // Info-goto-emacs-command-node
-            "K" => help,                          // Info-goto-emacs-key-command-node
+            // These two go to the *manual node* for a command / for the command a
+            // key runs, which is what emacs's names say and what the two commands
+            // do (`info --index-search=<command> emacs`); they were pointed at the
+            // help browser, which is `C-h r`'s job just above.
+            "F" => info_goto_emacs_command_node,     // Info-goto-emacs-command-node
+            "K" => info_goto_emacs_key_command_node, // Info-goto-emacs-key-command-node
             // C-h t (help-with-tutorial) is the `:tutor` typable, which this macro
             // cannot express — it is bound in CXCH_FULL above.
             "n" => browse_news,                   // view-emacs-news

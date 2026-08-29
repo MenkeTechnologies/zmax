@@ -19275,11 +19275,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_h_f_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-h F"
+   "key:normal:C-h F",
+   "static:info_goto_emacs_command_node"
   ],
-  "note": "Info-goto-emacs-command-node: opens the Help browser, not the manual node for a command"
+  "note": "Info-goto-emacs-command-node: the manual node documenting a command. `C-h F` was bound to the help browser, which is `C-h r`'s job; it is bound to info_goto_emacs_command_node now (keymap/spacemacs.rs). The command is a picker over every command whose report is help_report_manual_node (zmax-term/src/commands.rs), which searches the emacs manual's command index the way Info-goto-emacs-command-node does -- `info -o - --index-search=<command> emacs`, with zmax's `_` spelling translated back to emacs's `-` -- and reports emacs's own \"Couldn't find documentation for X\" when the command has no node."
  },
  {
   "spec_id": "emacs.keybinding.c_h_g",
@@ -19325,11 +19326,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_h_k_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-h K"
+   "key:normal:C-h K",
+   "static:info_goto_emacs_key_command_node"
   ],
-  "note": "Info-goto-emacs-key-command-node: opens the Help browser, not the manual node for a key"
+  "note": "Info-goto-emacs-key-command-node: emacs reads a key, resolves its binding and hands the command to Info-goto-emacs-command-node. `C-h K` was bound to the help browser; it now runs info_goto_emacs_key_command_node (zmax-term/src/commands.rs), the same picker searched by key sequence instead of by name, with the manual-node lookup as its report."
  },
  {
   "spec_id": "emacs.keybinding.c_h_l",
@@ -21265,11 +21267,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_c_r",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-x C-r"
+   "key:normal:C-x C-r",
+   "static:find_file_read_only"
   ],
-  "note": "find-file-read-only: opens the file picker; the file opens writable"
+  "note": "The note pre-dated the command. `C-x C-r` is find_file_read_only in both the spacemacs and emacs presets, and the file really opens read-only: emacs_mouse::find_file_read_only prompts emacs's \"Find file read-only: \", opens the path and sets Document::readonly, reporting \"<path> (read-only)\"."
  },
  {
   "spec_id": "emacs.keybinding.c_x_c_r_lparenffap_rparen",
@@ -21577,11 +21580,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_lparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x ("
   ],
-  "note": "kmacro-start-macro / kmacro-end-macro: record_macro is one toggle serving both"
+  "note": "The note pre-dated the split. `C-x (` is kmacro_start_macro and `C-x )` is kmacro_end_macro in the shipped preset (keymap/spacemacs.rs, which replaced the single record_macro toggle that used to serve both), and `C-u C-x (` appends to the last macro as emacs's prefix arg does."
  },
  {
   "spec_id": "emacs.keybinding.c_x_lt",
@@ -23592,11 +23595,12 @@
  },
  {
   "spec_id": "emacs.keybinding.m_bang",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:A-!"
+   "key:normal:A-!",
+   "static:shell_command"
   ],
-  "note": "shell-command: shell_insert_output inserts the output into the buffer; Emacs shows it in another window"
+  "note": "\"Execute string COMMAND in inferior shell; display output, if any. With prefix argument, insert the COMMAND's output at point\" (simple.el:4583-4585). M-! inserted unconditionally; it runs shell_command now, which displays the output and only inserts it under a count -- zmax's prefix arg. The new ShellBehavior::Show routes the run's output to show_shell_command_output instead of into the buffer, reproducing simple.el:4597-4601: a result short enough for the echo area goes to the status line, anything longer opens the buffer emacs calls *Shell Command Output*, and an empty result reports \"(Shell command succeeded with no output)\". The buffer is not the command's input, so nothing is piped in."
  },
  {
   "spec_id": "emacs.keybinding.m_bslash",
@@ -23913,11 +23917,12 @@
  },
  {
   "spec_id": "emacs.keybinding.m_i",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:emacs:A-i"
+   "key:emacs:A-i",
+   "static:tab_to_tab_stop"
   ],
-  "note": "M-i tab-to-tab-stop -> insert_tab: an indent unit, not padding to a tab-stop list"
+  "note": "The note pre-dated the command. `M-i` is bound to tab_to_tab_stop in the emacs preset (keymap/emacs.rs), and that is a port of indent.el:778-788, not an indent unit: it pads to the next entry of the tab-stop list (Editor::picture_tab_stops, the list `M-x edit-tab-stops` edits through emacs's own colon-line + tens/units ruler UI, commands.rs edit_tab_stops), falling back to \"a tab stop every tab-width columns\" when the list is empty, which is exactly what a nil tab-stop-list means (indent.el:680-686). It first deletes the whitespace before point, as emacs's `(delete-horizontal-space t)` does, and fills with tabs or spaces according to the document's indent style, which is `indent-tabs-mode`."
  },
  {
   "spec_id": "emacs.keybinding.m_j",
@@ -24347,11 +24352,12 @@
  },
  {
   "spec_id": "emacs.keybinding.m_pipe",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:A-|"
+   "key:normal:A-|",
+   "static:shell_command_on_region"
   ],
-  "note": "shell-command-on-region: shell_pipe replaces the selection with the output; Emacs shows it in another window"
+  "note": "shell-command-on-region: the region is the command's input and the output is DISPLAYED; only simple.el's REPLACE argument -- the prefix arg -- makes it replace the region. M-| replaced unconditionally; it runs shell_command_on_region now, which shows the output through the same ShellBehavior::Show path as M-! (status line for one line, a buffer for more, emacs's no-output message for none) and replaces the selection only under a count."
  },
  {
   "spec_id": "emacs.keybinding.m_q",
@@ -24436,11 +24442,11 @@
  },
  {
   "spec_id": "emacs.keybinding.m_r_lparenminibuffer_history_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:command:A-r"
   ],
-  "note": "previous-matching-history-element: the regexp is the text already typed"
+  "note": "The note pre-dated the recursive read. `M-r` in a prompt is previous-matching-history-element and does what emacs's interactive spec does: it opens a RECURSIVE minibuffer for the regexp (Prompt::begin_history_search, zmax-term/src/ui/prompt.rs) with the \"Previous element matching regexp\" prompt format-prompt builds and the ` (default REGEXP)` an empty answer reuses, then walks the history to the newest older entry matching it, leaving point inside the match; Esc/C-g abandons the read and brings the answer underneath back untouched."
  },
  {
   "spec_id": "emacs.keybinding.m_r_lparenshell_mode_rparen",
@@ -24661,11 +24667,11 @@
  },
  {
   "spec_id": "emacs.keybinding.m_s_lparenminibuffer_history_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:command:A-s"
   ],
-  "note": "next-matching-history-element (same caveat)"
+  "note": "As `M-r`, walking to newer entries: the same recursive regexp read with the \"Next element matching regexp\" prompt."
  },
  {
   "spec_id": "emacs.keybinding.m_s_lparenrmail_rparen",
