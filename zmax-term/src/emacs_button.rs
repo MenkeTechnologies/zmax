@@ -26,6 +26,21 @@ pub enum ButtonKind {
     Command(String),
 }
 
+/// What following a button asks the editor to do — button.el's `action`
+/// property, which `button-activate` calls: "The action can either be a marker
+/// or a function." An emacs button carries that closure in its text properties;
+/// zmax recognises its buttons from the text instead, so the action is data the
+/// caller dispatches on rather than something this module can run itself.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ButtonAction {
+    /// Open the URL in a browser (`browse-url`).
+    BrowseUrl(String),
+    /// Visit the file or directory (`find-file`).
+    FindFile(String),
+    /// Run the named command.
+    RunCommand(String),
+}
+
 /// One button: the region it covers plus what it does.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Button {
@@ -35,6 +50,18 @@ pub struct Button {
 }
 
 impl Button {
+    /// The button's `action` property — what `button-activate` invokes. The kind
+    /// already says what the region is, so the action is a direct translation;
+    /// keeping the two types apart lets the kind stay a description of the text
+    /// while the action stays a description of the effect.
+    pub fn action(&self) -> ButtonAction {
+        match &self.kind {
+            ButtonKind::Url(u) => ButtonAction::BrowseUrl(u.clone()),
+            ButtonKind::File(p) => ButtonAction::FindFile(p.clone()),
+            ButtonKind::Command(c) => ButtonAction::RunCommand(c.clone()),
+        }
+    }
+
     /// button.el's `help-echo`: the one-line description `display-local-help`
     /// shows in the echo area and `button-describe` reports as the action.
     pub fn help_echo(&self) -> String {
@@ -143,6 +170,34 @@ pub fn button_at(buttons: &[Button], pos: usize) -> Option<&Button> {
     buttons.iter().find(|b| pos >= b.start && pos < b.end)
 }
 
+/// button.el `push-button` (`RET` and `mouse-2` in `button-map`): "Perform the
+/// action specified by a button at location POS. […] If there's no button at
+/// POS, do nothing and return nil, otherwise return t." The action itself is
+/// returned rather than performed, because browsing a URL, visiting a file and
+/// running a command all need the editor, which this module does not hold.
+///
+/// `push-button` resolves the button with a plain `button-at`, so a position one
+/// past the end of a button is *not* on it — only `previous-button` scans
+/// backwards — and a click in the whitespace between two links does nothing.
+pub fn push_button(buttons: &[Button], pos: usize) -> Option<ButtonAction> {
+    button_at(buttons, pos).map(Button::action)
+}
+
+/// The whole of `push-button` for a caller that has the buffer's text but not a
+/// button list: scan, resolve, and hand back the button under `pos` together
+/// with its action, so the caller can also echo the `help-echo` or move point to
+/// the button's start. `is_command` is the same predicate [`buttons`] takes.
+pub fn activate(
+    text: &str,
+    pos: usize,
+    is_command: &dyn Fn(&str) -> bool,
+) -> Option<(Button, ButtonAction)> {
+    let all = buttons(text, is_command);
+    let button = button_at(&all, pos)?.clone();
+    let action = button.action();
+    Some((button, action))
+}
+
 /// `forward-button` (`TAB` in Help mode): the start of the `n`th next button from
 /// `pos`, or the `n`th previous when `n` is negative. With `wrap`, moving past
 /// either end continues from the other, which is what the interactive call does.
@@ -246,6 +301,45 @@ mod tests {
         // n = 0 moves to the start of the button at point.
         assert_eq!(forward(&bs, first + 3, 0, true), Some(first));
         assert_eq!(forward(&bs, first + 3, 0, false), Some(first));
+    }
+
+    #[test]
+    fn push_button_returns_the_action_of_the_button_under_point() {
+        let file = concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml");
+        let is_cmd = |w: &str| w == "goto_line";
+        let text = format!("https://example.com  {file}  goto_line  plain");
+        let bs = buttons(&text, &is_cmd);
+        assert_eq!(bs.len(), 3);
+        assert_eq!(
+            push_button(&bs, bs[0].start),
+            Some(ButtonAction::BrowseUrl("https://example.com".into()))
+        );
+        assert_eq!(
+            push_button(&bs, bs[1].start + 1),
+            Some(ButtonAction::FindFile(file.to_string()))
+        );
+        assert_eq!(
+            push_button(&bs, bs[2].end - 1),
+            Some(ButtonAction::RunCommand("goto_line".into()))
+        );
+        // `push-button' uses a plain `button-at': the position one past the end
+        // of a button is not on it, and the gap between two buttons has none.
+        assert_eq!(push_button(&bs, bs[0].end), None);
+        assert_eq!(push_button(&bs, text.chars().count() - 1), None);
+    }
+
+    #[test]
+    fn activate_scans_and_resolves_in_one_call() {
+        let text = "read https://example.com/x now";
+        let (button, action) = activate(text, 8, &no_commands).expect("a button under point");
+        assert_eq!(&text[button.start..button.end], "https://example.com/x");
+        assert_eq!(
+            action,
+            ButtonAction::BrowseUrl("https://example.com/x".into())
+        );
+        assert!(button.help_echo().contains("browse-url"));
+        // Point on the leading word: no button, so `push-button' does nothing.
+        assert!(activate(text, 0, &no_commands).is_none());
     }
 
     #[test]

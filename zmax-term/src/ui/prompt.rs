@@ -62,6 +62,12 @@ pub struct Prompt {
     /// vim `c_<Insert>`: overstrike (replace) instead of insert. Toggled by
     /// `<Insert>`, and reset for every new prompt.
     overstrike: bool,
+    /// vim `'digraph'`: a `<BS>` armed `{char1}<BS>{char2}` entry, and this is
+    /// char1, waiting for char2. Held on the prompt rather than on the editor
+    /// (where the Insert-mode half keeps it) because a prompt is modal — an
+    /// abandoned command line must not leave a half-entered digraph armed for
+    /// whatever the user types next.
+    digraph_pending: Option<char>,
     /// vim `c_CTRL-\`: `CTRL-\` was typed and the next key decides what it means
     /// (`CTRL-N`/`CTRL-G` abandon the command line).
     pending_ctrl_backslash: bool,
@@ -968,6 +974,7 @@ impl Prompt {
             kill: String::new(),
             incsearch_cycle: None,
             overstrike: false,
+            digraph_pending: None,
             pending_ctrl_backslash: false,
             pending_register: false,
             pending_literal: false,
@@ -1263,6 +1270,39 @@ impl Prompt {
             Movement::EndOfLine => self.line.len(),
             Movement::None => self.cursor,
         }
+    }
+
+    /// vim `'digraph'`, the `<BS>` half: remember the character before the cursor
+    /// as char1 of a `{char1}<BS>{char2}` digraph and swallow the `<BS>`.
+    /// `true` when that happened, so the caller must not also delete.
+    ///
+    /// A `<BS>` that arrives with a digraph already armed cancels it and deletes
+    /// normally — `take()` clears the arming and the `is_none()` fails — which is
+    /// how `:h digraphs-use` says to recover from an unwanted one ("you will have
+    /// to type <BS> e again").
+    fn arm_digraph(&mut self) -> bool {
+        if self.digraph_pending.take().is_some()
+            || !crate::commands::typed::vim_opt_bool("digraph")
+            || self.cursor == 0
+        {
+            return false;
+        }
+        match self.line[..self.cursor].chars().next_back() {
+            Some(char1) => {
+                self.digraph_pending = Some(char1);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// vim `'digraph'`, the char2 half: the character `c` combines into, when a
+    /// `<BS>` armed char1 and the pair is a digraph. The arming is consumed
+    /// either way — a pair that is not a digraph just inserts `c` after char1,
+    /// which is what keeps a stray `<BS>` from swallowing the next keystroke.
+    fn take_digraph(&mut self, c: char) -> Option<char> {
+        let char1 = self.digraph_pending.take()?;
+        crate::commands::digraph_lookup(char1, c)
     }
 
     pub fn insert_char(&mut self, c: char, cx: &Context) {
@@ -3556,6 +3596,15 @@ impl Component for Prompt {
             // Emacs `isearch-delete-char` (`DEL`): drop the last character of the
             // search string, which puts the search back where it was before it.
             ctrl!('h') | key!(Backspace) | shift!(Backspace) => {
+                // vim `'digraph'`: `{char1}<BS>{char2}` enters a digraph on the
+                // command line too — digraph.txt:93-95 has <Esc> ending "Insert
+                // mode or Command-line mode" out of digraph entry, so both modes
+                // have it. A `<BS>` with nothing armed remembers the character
+                // before the cursor and does *not* delete; a second `<BS>`
+                // cancels that and deletes normally, as in Insert mode.
+                if self.arm_digraph() {
+                    return EventResult::Consumed(None);
+                }
                 self.delete_char_backwards(cx.editor);
                 self.fire_update(cx);
             }
@@ -3701,6 +3750,16 @@ impl Component for Prompt {
                 code: KeyCode::Char(c),
                 modifiers: _,
             } => {
+                // vim `'digraph'`: char2 of an armed `{char1}<BS>{char2}`
+                // combines with char1, replacing it. A pair that is not a
+                // digraph is not an error — char1 stays and `c` is inserted
+                // after it, which is what makes a stray `<BS>` harmless.
+                if let Some(dg) = self.take_digraph(c) {
+                    self.delete_char_backwards(cx.editor);
+                    self.insert_char(dg, cx);
+                    self.fire_update(cx);
+                    return EventResult::Consumed(None);
+                }
                 self.insert_char(c, cx);
                 self.fire_update(cx);
             }
@@ -3757,6 +3816,57 @@ mod tests {
         p.line_area = Rect::new(area_x, 0, 40, 1);
         p.anchor = anchor;
         p
+    }
+
+    /// vim `'digraph'` on the command line (`:h digraphs-use`, and digraph.txt:94
+    /// which has <Esc> leaving digraph entry in "Insert mode or Command-line
+    /// mode"). The prompt had no digraph entry at all: `<BS>` always deleted, so
+    /// `a<BS>:` left `:` where vim gives `ä`.
+    #[test]
+    fn backspace_arms_a_digraph_only_when_the_option_is_on() {
+        crate::commands::typed::vim_opt_store("digraph", "off".to_string());
+        let mut p = prompt_at("a", 0, 0);
+        p.cursor = 1;
+        assert!(!p.arm_digraph(), "with 'nodigraph' <BS> is an ordinary delete");
+        assert_eq!(p.digraph_pending, None);
+
+        crate::commands::typed::vim_opt_store("digraph", "on".to_string());
+        let mut p = prompt_at("a", 0, 0);
+        p.cursor = 1;
+        assert!(p.arm_digraph(), "<BS> is swallowed and char1 remembered");
+        assert_eq!(p.digraph_pending, Some('a'));
+
+        // "To correct this, you will have to type <BS> e again": a second <BS>
+        // cancels the arming and deletes.
+        assert!(!p.arm_digraph());
+        assert_eq!(p.digraph_pending, None);
+
+        // Nothing before the cursor is nothing to combine with.
+        let mut p = prompt_at("", 0, 0);
+        assert!(!p.arm_digraph());
+    }
+
+    /// char2 combines, and a pair that is not a digraph leaves char1 alone
+    /// rather than eating the keystroke.
+    #[test]
+    fn the_second_char_combines_or_is_inserted_plainly() {
+        crate::commands::typed::vim_opt_store("digraph", "on".to_string());
+        let mut p = prompt_at("a", 0, 0);
+        p.cursor = 1;
+        assert!(p.arm_digraph());
+        assert_eq!(p.take_digraph(':'), Some('ä'));
+        assert_eq!(p.digraph_pending, None, "the arming is spent");
+
+        // `a` and `q` are not a digraph: no replacement, and the arming is still
+        // consumed so the next key is not swallowed too.
+        let mut p = prompt_at("a", 0, 0);
+        p.cursor = 1;
+        assert!(p.arm_digraph());
+        assert_eq!(p.take_digraph('q'), None);
+        assert_eq!(p.digraph_pending, None);
+
+        // Nothing armed: an ordinary character is an ordinary character.
+        assert_eq!(p.take_digraph(':'), None);
     }
 
     /// Emacs `previous-matching-history-element` puts point *in* the match, and

@@ -13,6 +13,12 @@
 //! copy · `C-x C-t` (`t`) transpose with the line above · `RET` edit the column
 //! at point · `e` edit the keys · `c` edit counter · `f` edit format · `#` (`P`)
 //! edit position · `q`/`Esc` close.
+//!
+//! The counter, format and position are edited in place, on the row. The keys
+//! are not: `e` (and `RET` on the Keys column) opens the `*Edit Macro*` buffer,
+//! because that is what `kmacro-menu-edit-keys` does — it calls `edit-kbd-macro`
+//! rather than reading a value from the minibuffer. `C-c C-c` there puts the
+//! edited keys back in the ring slot they came from, counter and format intact.
 
 use std::collections::BTreeSet;
 
@@ -297,9 +303,15 @@ impl KmacroMenu {
         true
     }
 
-    /// Begin editing `column` of the macro at point (`kmacro-menu-edit-keys` /
-    /// `-edit-counter` / `-edit-format` / `-edit-position`, and `-edit-column`
-    /// for whichever column is under the cursor). `false` when the list is empty.
+    /// Begin editing `column` of the macro at point (`-edit-counter` /
+    /// `-edit-format` / `-edit-position`, and `-edit-column` for whichever column
+    /// is under the cursor). `false` when the list is empty.
+    ///
+    /// `Column::Keys` is accepted but is not how the keys are edited any more —
+    /// [`Self::edit_keys`] opens the `*Edit Macro*` buffer, which is what
+    /// `kmacro-menu-edit-keys` does. The arm stays because [`Self::commit_edit`]
+    /// validates a keys edit by parsing it, and that check is worth keeping
+    /// exercised.
     pub fn begin_edit(&mut self, column: Column) -> bool {
         if self.entries.is_empty() {
             return false;
@@ -423,6 +435,39 @@ impl KmacroMenu {
         self.message = Some(msg.into());
     }
 
+    /// The macro at point: its position in the ring, and its keys. The position
+    /// is what `C-c C-c` needs to put the edited keys back in the slot they came
+    /// from instead of pushing a new ring head.
+    pub fn selected_keys(&self) -> Option<(usize, String)> {
+        self.entries
+            .get(self.selected)
+            .map(|e| (self.selected, e.keys.clone()))
+    }
+
+    /// `kmacro-menu-edit-keys` (kmacro.el:1994-2014): edit the keys of the macro
+    /// at point "via `edmacro-mode'", not in place. Emacs calls `edit-kbd-macro`,
+    /// which visits the `*Edit Macro*` buffer — the same buffer `C-x C-k e`
+    /// opens, where `C-c C-c` installs and `C-c C-q` inserts a literal key.
+    ///
+    /// The menu is a compositor layer over the editor, so it pops first and the
+    /// buffer takes its place, the way emacs's window stops showing the menu.
+    /// Editing the Keys column in the minibuffer instead — which is what this
+    /// used to do — meant the macro had to be typed as one line with no way to
+    /// see the key names being edited, and none of the three edmacro commands
+    /// had a buffer to run in.
+    fn edit_keys(&mut self) -> EventResult {
+        let Some((index, keys)) = self.selected_keys() else {
+            self.message = Some("no macro to edit".to_string());
+            return EventResult::Consumed(None);
+        };
+        EventResult::Consumed(Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                crate::commands::kmacro_menu_open_edmacro(cx.editor, index, &keys);
+            },
+        )))
+    }
+
     /// Refresh from the ring — a macro recorded while the menu is open shows up.
     pub fn refresh(&mut self) {
         self.entries = macro_ring_entries();
@@ -495,15 +540,18 @@ impl Component for KmacroMenu {
                 }
             }
             // `kmacro-menu-edit-column`: edit whichever column point is in.
+            // On Keys it dispatches to `kmacro-menu-edit-keys` like `e` does
+            // (kmacro.el:2036), so both land in the *Edit Macro* buffer.
             key!(Enter) => {
                 let col = self.column_at_point();
+                if col == Column::Keys {
+                    return self.edit_keys();
+                }
                 self.begin_edit(col);
             }
             // `e` edits the keys, `c` the counter, `f` the format, `#` the ring
             // position, wherever point happens to be (`P` is a zmax alias).
-            key!('e') => {
-                self.begin_edit(Column::Keys);
-            }
+            key!('e') => return self.edit_keys(),
             key!('c') => {
                 self.begin_edit(Column::Counter);
             }

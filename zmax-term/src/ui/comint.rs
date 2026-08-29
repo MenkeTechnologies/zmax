@@ -150,7 +150,7 @@ const DIRSTACK_QUERY: &str = "dirs";
 /// The three `pushd` options are `defcustom`s in `shell.el`, so they are set
 /// once and apply to every shell buffer opened afterwards — not per buffer.
 /// These hold that global value; a live [`Comint`] is updated in place as well
-/// by the commands that set them, and [`DirTrack::new`] seeds a new shell from
+/// by the commands that set them, and [`DirTrack::new_in`] seeds a new shell from
 /// them. All three default to nil, as in Emacs.
 static PUSHD_TOHOME: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static PUSHD_DEXTRACT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -180,9 +180,15 @@ fn set_flag(flag: &std::sync::atomic::AtomicBool, on: Option<bool>) -> bool {
 }
 
 impl DirTrack {
-    fn new() -> Self {
+    /// A tracker seeded with the directory the shell is started in — the
+    /// buffer's `default-directory`. `None` is zmax's own cwd, which is what an
+    /// unbound `default-directory` amounts to.
+    fn new_in(dir: Option<&Path>) -> Self {
         use std::sync::atomic::Ordering;
-        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/"));
+        let cwd = dir
+            .map(Path::to_path_buf)
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("/"));
         Self {
             last_dir: cwd.clone(),
             cwd,
@@ -665,8 +671,17 @@ struct HistIsearch {
 impl Comint {
     /// Open a comint on `$SHELL` (Emacs `M-x shell`).
     pub fn shell() -> std::io::Result<Self> {
+        Self::shell_in(None)
+    }
+
+    /// `M-x shell` started under a bound `default-directory`, which is how the
+    /// project commands put a shell in the project root: `project-shell` and
+    /// `project-eshell` are both `(let* ((default-directory (project-root
+    /// (project-current t)))) …)` around the shell call — project.el:1637 and
+    /// :1664. Without it the child simply inherits zmax's own cwd.
+    pub fn shell_in(dir: Option<&Path>) -> std::io::Result<Self> {
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-        Self::with_program(&shell, &[] as &[&str])
+        Self::with_program_in(&shell, &[] as &[&str], dir)
     }
 
     /// Open a comint running `program` with `args` (Emacs `comint-run`).
@@ -674,16 +689,32 @@ impl Comint {
         program: &str,
         args: &[impl AsRef<std::ffi::OsStr>],
     ) -> std::io::Result<Self> {
-        let mut child = Command::new(program)
+        Self::with_program_in(program, args, None)
+    }
+
+    /// [`Comint::with_program`] with the directory the child is started in — the
+    /// buffer's `default-directory`. It seeds the directory tracker as well, so
+    /// `cd -`, `dirs` and file-name completion all resolve from the same place
+    /// the process does. `None` keeps zmax's own cwd.
+    pub fn with_program_in(
+        program: &str,
+        args: &[impl AsRef<std::ffi::OsStr>],
+        dir: Option<&Path>,
+    ) -> std::io::Result<Self> {
+        let mut command = Command::new(program);
+        command
             .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
+            .stderr(Stdio::piped());
+        if let Some(dir) = dir {
+            command.current_dir(dir);
+        }
+        let mut child = command.spawn()?;
 
         let scrollback = Arc::new(Mutex::new(Scrollback::default()));
         let dead = Arc::new(AtomicBool::new(false));
-        let dirstack = Arc::new(Mutex::new(DirTrack::new()));
+        let dirstack = Arc::new(Mutex::new(DirTrack::new_in(dir)));
         let stdin = child.stdin.take();
 
         // One reader thread each for stdout and stderr; both append lines to the
@@ -2412,6 +2443,49 @@ mod tests {
         Comint::with_program("cat", &[] as &[&str]).expect("spawn cat")
     }
 
+    /// `project-shell`/`project-eshell` bind `default-directory` to the project
+    /// root before starting the shell (project.el:1637, :1664), so the child has
+    /// to be spawned THERE — not in zmax's own cwd — and the directory tracker
+    /// has to agree with it. `/bin/pwd` reports the physical directory, so the
+    /// temp dir is canonicalised before comparing (macOS `/var` → `/private/var`).
+    #[test]
+    fn a_shell_starts_in_the_directory_it_was_given() {
+        use std::time::{Duration, Instant};
+
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let c = Comint::with_program_in("/bin/pwd", &[] as &[&str], Some(root.as_path()))
+            .expect("spawn pwd");
+
+        // `default-directory`: the tracker starts where the process does.
+        assert_eq!(c.dirstack.lock().unwrap().cwd, root);
+
+        // And the process really did: its own idea of cwd comes back on stdout.
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let want = root.display().to_string();
+        loop {
+            let seen = c
+                .scrollback
+                .lock()
+                .unwrap()
+                .lines
+                .iter()
+                .any(|l| l.trim() == want);
+            if seen {
+                break;
+            }
+            assert!(Instant::now() < deadline, "pwd never reported {want}");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        // No directory given is the old behaviour: zmax's own cwd.
+        let c = comint();
+        assert_eq!(
+            c.dirstack.lock().unwrap().cwd,
+            std::env::current_dir().unwrap()
+        );
+    }
+
     /// TAB (`completion-at-point`) completes a unique file name whole, and stops
     /// at the longest common prefix when several match — it must not pick one.
     #[test]
@@ -2538,7 +2612,7 @@ mod tests {
                 p
             })
             .collect();
-        let mut dt = DirTrack::new();
+        let mut dt = DirTrack::new_in(None);
         dt.verbose = false;
         dt.cwd = root.to_path_buf();
         (dt, dirs)
@@ -2672,7 +2746,7 @@ mod tests {
         );
 
         // And it lands as current directory + stack.
-        let mut dt = DirTrack::new();
+        let mut dt = DirTrack::new_in(None);
         dt.verbose = false;
         dt.apply_dirs_reply(&reply);
         assert_eq!(dt.cwd, plain);

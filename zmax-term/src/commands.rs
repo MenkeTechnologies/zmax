@@ -2219,6 +2219,8 @@ impl MappableCommand {
         facemenu_remove_all, "Remove every text property from the region (emacs facemenu-remove-all)",
         format_decode_buffer, "Decode this buffer's format annotations into text properties (emacs format-decode-buffer)",
         hide_ifdef_mode, "Hide the code the C preprocessor skips (emacs hide-ifdef-mode)",
+        hide_ifdef_define, "Define a macro for hide-ifdef-mode (emacs hide-ifdef-define)",
+        hide_ifdef_undef, "Undefine a macro for hide-ifdef-mode (emacs hide-ifdef-undef)",
         cpp_highlight_buffer, "Shade the preprocessor branches that are compiled out (emacs cpp-highlight-buffer)",
         cwarn_mode, "Highlight suspicious C constructs in this buffer (emacs cwarn-mode)",
         global_cwarn_mode, "Highlight suspicious C constructs everywhere (emacs global-cwarn-mode)",
@@ -19042,13 +19044,30 @@ fn info_follow_nearest_node(cx: &mut Context) {
 /// existing window before it pops up a new one, so a new split is created only
 /// when this is the sole window. Leaves the chosen window focused, ready for a
 /// `Action::Replace` open.
+/// The window emacs's `-other-window` commands mean: `(next-window)`, the window
+/// *after* this one in cyclic window order — the same one `C-x o` moves to.
+/// `None` when this is the only window, which is the case those commands answer
+/// by splitting.
+///
+/// `Tree::next` walks that cyclic order and wraps back to the focused view when
+/// there is nowhere else to go, which is what the equality check filters out.
+/// Scanning `tree.views()` for "the first id that is not the focus" instead
+/// picks by slotmap arena order — insertion order, not an order the user can
+/// see on screen — so with three windows open `C-x 4 f` would land in whichever
+/// split happened to be created first rather than the next one over.
+///
+/// Pure — unit tested.
+fn other_window_in(tree: &tree::Tree) -> Option<ViewId> {
+    let next = tree.next();
+    (next != tree.focus).then_some(next)
+}
+
+fn other_window_id(editor: &Editor) -> Option<ViewId> {
+    other_window_in(&editor.tree)
+}
+
 fn display_other_window(editor: &mut Editor) {
-    let other = editor
-        .tree
-        .views()
-        .map(|(view, _)| view.id)
-        .find(|id| *id != editor.tree.focus);
-    match other {
+    match other_window_id(editor) {
         Some(id) => editor.tree.focus = id,
         None => split(editor, Action::HorizontalSplit),
     }
@@ -31217,38 +31236,40 @@ fn line_char_starts(doc: &Document) -> Vec<usize> {
         .collect()
 }
 
-/// Emacs `hide-ifdef-mode` (C-c @): hide the code the C preprocessor will skip.
+/// `hide-ifdef-env` (hideif.el:196): the symbols `hide-ifdef-define` has set and
+/// `hide-ifdef-undef` has removed, which every scan evaluates on top of the
+/// file's own `#define`s.
 ///
-/// Turning it on hides the body of every conditional branch that provably is not
-/// compiled — `#if 0`, the `#else` of an `#if 1`, an `#ifdef` of a macro the file
-/// never defines — as an `invisible` text property, so the lines disappear from
-/// the display without touching the text. Turning it off reveals them.
+/// Emacs keeps this buffer-local; zmax keeps it process-wide, like the other
+/// registries in this file. The visible difference is that a macro defined while
+/// visiting one C file is still defined in the next one — which is closer to how
+/// it is used in practice (the same `-D` set applies to a whole tree) than
+/// re-answering "Define what?" per buffer.
+static HIDE_IFDEF_ENV: Lazy<std::sync::Mutex<zmax_core::cmode::HideIfdefEnv>> =
+    Lazy::new(|| std::sync::Mutex::new(zmax_core::cmode::HideIfdefEnv::default()));
+
+/// A snapshot of [`HIDE_IFDEF_ENV`], so the scan does not run under the lock.
+fn hide_ifdef_env() -> zmax_core::cmode::HideIfdefEnv {
+    HIDE_IFDEF_ENV.lock().unwrap().clone()
+}
+
+/// `hide-ifdefs` (hideif.el:2685): mark every provably-dead branch of the current
+/// buffer invisible, and return how many lines that hid.
 ///
-/// Divergence, stated plainly: GNU Emacs evaluates the conditions against
-/// `hide-ifdef-env`, which `hide-ifdef-define` populates, and hides every branch
-/// that is not *true* — so with the default empty env it hides the body of every
-/// `#ifdef`. zmax has no `hide-ifdef-define`, so it evaluates against the
-/// file's own `#define`s and leaves a branch it cannot decide visible
-/// (`zmax_core::cmode::dead_branches`); hiding on "cannot tell" with no way to
-/// define a macro would blank out most of a real source file.
-fn hide_ifdef_mode(cx: &mut Context) {
-    let doc = doc_mut!(cx.editor);
-    if doc.text_props().has_invisible() {
-        doc.update_text_props(|props| props.clear_invisible());
-        cx.editor.set_status("hide-ifdef-mode disabled");
-        return;
-    }
+/// The clear comes first because hideif.el:2712-2713 does the same —
+/// `(if hide-ifdef-hiding (show-ifdefs))`, "otherwise, deep confusion" — so a
+/// re-hide after `hide-ifdef-define` does not leave the previous verdict's
+/// overlays behind.
+fn hide_ifdef_hide(editor: &mut Editor) -> usize {
+    let env = hide_ifdef_env();
+    let doc = doc_mut!(editor);
     let lines = buffer_lines(doc);
     let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
-    let dead = zmax_core::cmode::dead_branches(&refs);
-    if dead.is_empty() {
-        cx.editor
-            .set_status("hide-ifdef-mode: no dead preprocessor branches");
-        return;
-    }
+    let dead = zmax_core::cmode::dead_branches_with_env(&refs, &env);
     let starts = line_char_starts(doc);
     let hidden: usize = dead.iter().map(|r| r.end - r.start).sum();
     doc.update_text_props(|props| {
+        props.clear_invisible();
         for range in &dead {
             let from = starts[range.start.min(starts.len() - 1)];
             let to = starts
@@ -31258,8 +31279,142 @@ fn hide_ifdef_mode(cx: &mut Context) {
             props.set_invisible(from..to, true);
         }
     });
+    hidden
+}
+
+/// `(if hide-ifdef-hiding (hide-ifdefs))` (hideif.el:2654, 2682): a define or
+/// undef only re-scans when the buffer is currently hiding.
+///
+/// `has_invisible` is the stand-in for `hide-ifdef-hiding`, the same proxy
+/// [`hide_ifdef_mode`]'s own toggle uses.
+fn hide_ifdef_rehide_if_hiding(editor: &mut Editor) {
+    if doc!(editor).text_props().has_invisible() {
+        hide_ifdef_hide(editor);
+    }
+}
+
+/// Emacs `hide-ifdef-mode` (C-c @): hide the code the C preprocessor will skip.
+///
+/// Turning it on hides the body of every conditional branch that provably is not
+/// compiled — `#if 0`, the `#else` of an `#if 1`, an `#ifdef` of a macro neither
+/// the file nor `hide-ifdef-env` defines — as an `invisible` text property, so
+/// the lines disappear from the display without touching the text. Turning it
+/// off reveals them.
+///
+/// Divergence, stated plainly: GNU Emacs takes its whole definition environment
+/// from `hide-ifdef-env` and hides every branch that is not *true* — so with the
+/// default empty env it hides the body of every `#ifdef`. zmax consults the
+/// file's own `#define`s as well and leaves a branch it cannot decide visible
+/// (`zmax_core::cmode::dead_branches_with_env`); hiding on "cannot tell" would
+/// blank out most of a real source file before you had answered a single
+/// `hide-ifdef-define` prompt.
+fn hide_ifdef_mode(cx: &mut Context) {
+    if doc!(cx.editor).text_props().has_invisible() {
+        doc_mut!(cx.editor).update_text_props(|props| props.clear_invisible());
+        cx.editor.set_status("hide-ifdef-mode disabled");
+        return;
+    }
+    let hidden = hide_ifdef_hide(cx.editor);
+    if hidden == 0 {
+        cx.editor
+            .set_status("hide-ifdef-mode: no dead preprocessor branches");
+        return;
+    }
     cx.editor
         .set_status(format!("hide-ifdef-mode: {hidden} line(s) hidden"));
+}
+
+/// The value emacs's second `hide-ifdef-define` prompt yields: its
+/// `read-from-minibuffer` supplies `"1"` as the default (hideif.el:2650-2652)
+/// and `hif-set-var` takes `(or val 1)`, so an empty answer means 1, not cancel.
+/// Pure — unit tested.
+fn hide_ifdef_define_value(input: &str) -> String {
+    let input = input.trim();
+    if input.is_empty() {
+        "1".to_string()
+    } else {
+        input.to_string()
+    }
+}
+
+/// Emacs `hide-ifdef-define` (C-c @ d, hideif.el:2638-2655): "Define a VAR to VAL
+/// (default 1) in `hide-ifdef-env'. This allows #ifndef VAR to be hidden."
+///
+/// Two minibuffer reads, as in emacs — "Define what? " then the value — and a
+/// re-hide afterwards if the buffer is already hiding.
+fn hide_ifdef_define(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Define what? ".into(),
+        None,
+        |_, _| Vec::new(),
+        |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim().to_string();
+            if name.is_empty() {
+                return;
+            }
+            hide_ifdef_prompt_value(cx, name);
+        },
+    );
+}
+
+/// The value half of [`hide_ifdef_define`]. Chained through a job because the
+/// first prompt's callback only has a `compositor::Context`; unlike
+/// [`prompt_then_cx`] an empty answer is accepted, since that is emacs's `"1"`
+/// default rather than a cancel.
+fn hide_ifdef_prompt_value(cx: &mut crate::compositor::Context, name: String) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                format!("Set {name} to? (default 1): ").into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let value = hide_ifdef_define_value(input);
+                    HIDE_IFDEF_ENV.lock().unwrap().define(&name, Some(&value));
+                    hide_ifdef_rehide_if_hiding(cx.editor);
+                    // emacs: (message "%s set to %s" var (or val 1))
+                    cx.editor.set_status(format!("{name} set to {value}"));
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Emacs `hide-ifdef-undef` (C-c @ u, hideif.el:2666-2683): "Undefine a VAR so
+/// that #ifdef VAR would not be included."
+///
+/// The undef is remembered rather than merely dropped, because this port also
+/// consults the file's own `#define`s: without a recorded undef, `C-c @ u` on a
+/// macro the file defines would be a no-op.
+fn hide_ifdef_undef(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Undefine what? ".into(),
+        None,
+        |_, _| Vec::new(),
+        |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            if name.is_empty() {
+                return;
+            }
+            HIDE_IFDEF_ENV.lock().unwrap().undef(name);
+            hide_ifdef_rehide_if_hiding(cx.editor);
+            // emacs: (message "`%S' undefined" sym)
+            cx.editor.set_status(format!("`{name}' undefined"));
+        },
+    );
 }
 
 /// Emacs `cpp-highlight-buffer`: show which preprocessor conditionals are live
@@ -31273,10 +31428,13 @@ fn hide_ifdef_mode(cx: &mut Context) {
 /// buffer); this shades all dead branches with one face and does not offer the
 /// per-condition colour prompt.
 fn cpp_highlight_buffer(cx: &mut Context) {
+    let env = hide_ifdef_env();
     let doc = doc_mut!(cx.editor);
     let lines = buffer_lines(doc);
     let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
-    let dead = zmax_core::cmode::dead_branches(&refs);
+    // Same env as hide-ifdef: cpp.el and hideif.el disagree about a lot, but a
+    // branch `hide-ifdef-define` has made live must not still be shaded dead.
+    let dead = zmax_core::cmode::dead_branches_with_env(&refs, &env);
     if dead.is_empty() {
         cx.editor
             .set_status("cpp-highlight-buffer: no dead preprocessor branches");
@@ -31836,13 +31994,21 @@ fn dissociated_press(cx: &mut Context) {
     });
 }
 
-/// Emacs `dired-jump` (C-x C-j): open Dired on the current buffer's directory,
-/// falling back to the working directory.
-fn dired_jump(cx: &mut Context) {
-    let dir = doc!(cx.editor)
+/// The directory `dired-jump` lists: the current buffer's own directory
+/// (`default-directory`), falling back to the working directory.
+///
+/// Split out from [`dired_jump`] because [`dired_jump_other_window`] has to read
+/// it *before* moving focus — `C-x 4 C-j` lists the directory of the buffer you
+/// invoked it from, not of whatever happens to be in the other window.
+fn dired_jump_dir(editor: &Editor) -> std::path::PathBuf {
+    doc!(editor)
         .path()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(zmax_stdx::env::current_working_dir);
+        .unwrap_or_else(zmax_stdx::env::current_working_dir)
+}
+
+/// Push the Dired overlay for `dir`.
+fn dired_open(cx: &mut Context, dir: std::path::PathBuf) {
     open_overlay(cx, move |_editor| {
         crate::ui::dired::Dired::new(dir)
             .map(|d| Box::new(d) as Box<dyn Component>)
@@ -31850,18 +32016,34 @@ fn dired_jump(cx: &mut Context) {
     });
 }
 
-/// Emacs `dired-other-window` (C-x 4 d): open Dired on the workspace root. In
-/// zmax Dired is a full-screen modal overlay, so "other window" cannot show the
-/// listing beside the current buffer; it opens the same overlay (marked partial).
+/// Emacs `dired-jump` (C-x C-j): open Dired on the current buffer's directory,
+/// falling back to the working directory.
+fn dired_jump(cx: &mut Context) {
+    let dir = dired_jump_dir(cx.editor);
+    dired_open(cx, dir);
+}
+
+/// Emacs `dired-other-window` (C-x 4 d): list a directory in *another* window.
+///
+/// The window has to exist before the listing does, the same way
+/// [`dired_other_frame`] calls `new_frame` and `dired_other_tab` makes the tab
+/// first. [`display_other_window`] moves focus to the cyclic next window, or
+/// splits when this is the only one — so the buffer Dired selects replaces that
+/// window's, leaving the one you started in alone. That the listing itself is
+/// drawn as a full-screen overlay while you choose is a display difference; the
+/// window the choice lands in is now the emacs one.
 fn dired_other_window(cx: &mut Context) {
+    display_other_window(cx.editor);
     dired(cx);
 }
 
-/// Emacs `dired-jump-other-window` (C-x 4 C-j): like `dired-jump` but nominally
-/// in another window. zmax Dired is a modal overlay, so this is the same as
-/// `dired-jump` (marked partial for the missing split semantics).
+/// Emacs `dired-jump-other-window` (C-x 4 C-j): like `dired-jump`, in another
+/// window. The directory is read from the current buffer *first*, then focus
+/// moves — see [`dired_jump_dir`].
 fn dired_jump_other_window(cx: &mut Context) {
-    dired_jump(cx);
+    let dir = dired_jump_dir(cx.editor);
+    display_other_window(cx.editor);
+    dired_open(cx, dir);
 }
 
 /// Emacs `dired-at-point` (ffap): read the file name around point in the current
@@ -43904,9 +44086,13 @@ const DIGRAPHS: &[(char, char, char)] = &[
     ('C','o','©'),('R','g','®'),('T','M','™'),('D','G','°'),('+','-','±'),('M','y','µ'),
     ('S','E','§'),('P','I','¶'),('P','d','£'),('Y','e','¥'),('C','t','¢'),('E','u','€'),
     ('*','X','×'),('-',':','÷'),('1','4','¼'),('1','2','½'),('3','4','¾'),
-    ('<','<','«'),('>','>','»'),('?','I','¿'),('!','I','¡'),('o','o','°'),
+    ('<','<','«'),('>','>','»'),('?','I','¿'),('!','I','¡'),('o','o','•'),('D','G','°'),
     ('\'','6','‘'),('\'','9','’'),('"','6','“'),('"','9','”'),('-','N','–'),('-','M','—'),
-    ('R','T','√'),('0','0','∞'),('!','=','≠'),('=','<','≤'),('=','>','≥'),
+    ('R','T','√'),('0','0','∞'),('!','=','≠'),('=','<','≤'),('>','=','≥'),
+    // `=>` and `>=` are different characters in vim's table (⇒ vs ≥), as are
+    // `<=` and `=<` (⇐ vs ≤). Only an exact-before-reversed lookup can tell a
+    // pair from its mirror, which is what `digraph_lookup` does.
+    ('=','>','⇒'),('<','=','⇐'),
     // arrows
     ('-','>','→'),('<','-','←'),('-','!','↑'),('-','v','↓'),('=','>','⇒'),
     // greek (lower)
@@ -47836,11 +48022,22 @@ fn emoji_recent(cx: &mut Context) {
     emoji_picker(cx, recent);
 }
 
-fn digraph_lookup(a: char, b: char) -> Option<char> {
-    DIGRAPHS
-        .iter()
-        .find(|(x, y, _)| (*x == a && *y == b) || (*x == b && *y == a))
-        .map(|(_, _, c)| *c)
+/// The character `{char1}{char2}` stands for, by vim's rule: "If a digraph with
+/// {char1}{char2} does not exist, Vim searches for a digraph {char2}{char1}"
+/// (`:h digraphs-use`). The order matters — the reversed search is a *fallback*,
+/// so it may only run after the exact pair has been ruled out across the whole
+/// table. Testing both orders in one pass instead returns whichever entry comes
+/// first in the table, which is wrong whenever a pair and its mirror are both
+/// digraphs: `!I` is ¡ but `I!` is Ì, and `I!` is listed first, so a single pass
+/// turned `!I` into Ì.
+pub(crate) fn digraph_lookup(a: char, b: char) -> Option<char> {
+    let find = |a: char, b: char| {
+        DIGRAPHS
+            .iter()
+            .find(|(x, y, _)| *x == a && *y == b)
+            .map(|(_, _, c)| *c)
+    };
+    find(a, b).or_else(|| find(b, a))
 }
 
 // vim i_CTRL-E / i_CTRL-Y: insert the character that is directly below / above
@@ -50893,7 +51090,11 @@ fn imenu_add_menubar_index(cx: &mut Context) {
 
 /// Run a static command from a menu entry: build a [`Context`], execute it, then
 /// dispatch the compositor callbacks it queued (a picker's `push_layer`, say).
-fn menu_run(compositor: &mut Compositor, cx: &mut compositor::Context, cmd: fn(&mut Context)) {
+fn menu_run(
+    compositor: &mut Compositor,
+    cx: &mut compositor::Context,
+    cmd: &dyn Fn(&mut Context),
+) {
     let callbacks = {
         let mut c = Context {
             editor: cx.editor,
@@ -50911,63 +51112,141 @@ fn menu_run(compositor: &mut Compositor, cx: &mut compositor::Context, cmd: fn(&
     }
 }
 
-/// One menu of the menu bar: its title and its items, each a label and the
-/// command it runs.
-type MenuBarMenu = (&'static str, Vec<(&'static str, fn(&mut Context))>);
+/// One item of a menu-bar menu: its label and the command it runs. Boxed rather
+/// than a plain `fn` because the Buffers menu's items are per-buffer closures.
+type MenuBarItem = (String, Box<dyn Fn(&mut Context)>);
+
+/// One menu of the menu bar: its title and its items.
+type MenuBarMenu = (&'static str, Vec<MenuBarItem>);
+
+/// A menu item that runs one static command.
+fn menu_item(label: &str, cmd: fn(&mut Context)) -> MenuBarItem {
+    (label.to_string(), Box::new(cmd))
+}
+
+/// `buffers-menu-max-size` (menu-bar.el:2353): "Maximum number of entries which
+/// may appear on the Buffers menu … only that many most-recently-selected
+/// buffers are shown." Default 15.
+const BUFFERS_MENU_MAX_SIZE: usize = 15;
+
+/// `buffers-menu-buffer-name-length` (menu-bar.el:2363, default 30): a longer
+/// buffer name is shown with its middle elided, `(concat (substring name 0 15)
+/// "..." (substring name -15))` (menu-bar.el:2517-2525). "A large number or nil
+/// makes the menu too wide." Pure — unit tested.
+fn menu_bar_buffer_name(name: &str) -> String {
+    const LEN: usize = 30;
+    let chars: Vec<char> = name.chars().collect();
+    if chars.len() <= LEN {
+        return name.to_string();
+    }
+    let half = LEN / 2;
+    let head: String = chars[..half].iter().collect();
+    let tail: String = chars[chars.len() - half..].iter().collect();
+    format!("{head}...{tail}")
+}
+
+/// The Buffers menu's items: the open buffers, then the standing commands.
+///
+/// `menu-bar-update-buffers` (menu-bar.el:2490) rebuilds this menu from
+/// `buffer-list` on every menu-bar update — the buffers *are* the menu, with
+/// `menu-bar-buffers-menu-command-entries` (menu-bar.el:2440-2469: "List All
+/// Buffers" and friends) appended after them. A fixed pair of entries was
+/// therefore the one menu on the bar that never showed what it is named for.
+///
+/// `msb-mode` (msb.el:1126-1133) swaps `menu-bar-update-hook`'s
+/// `menu-bar-update-buffers` for `msb-menu-bar-update-buffers`, which lists the
+/// same buffers grouped by major mode instead of in most-recently-used order.
+/// The grouping is [`msb_buffer_entries`]' sort — the same one the MSB picker
+/// uses — with the mode named in each label, since this menu is one level deep
+/// where msb's has a submenu per mode.
+///
+/// `editor` is `None` for [`menu_bar_titles`], which only reads the titles.
+fn menu_bar_buffer_items(editor: Option<&Editor>) -> Vec<MenuBarItem> {
+    let mut items: Vec<MenuBarItem> = Vec::new();
+    if let Some(editor) = editor {
+        let msb = crate::buffer_menus::msb_mode();
+        let listed: Vec<(DocumentId, String)> = if msb {
+            msb_buffer_entries(editor)
+                .into_iter()
+                .map(|e| (e.id, format!("{} ▸ {}", e.mode, menu_bar_buffer_name(&e.name))))
+                .collect()
+        } else {
+            let current = view!(editor).doc;
+            let mut docs: Vec<&Document> = editor
+                .documents
+                .values()
+                .filter(|doc| doc.id() == current || typed::buf_is_listed(doc.id()))
+                .collect();
+            // "only that many most-recently-selected buffers are shown" — the
+            // menu is in `buffer-list` order, which is most-recently-used.
+            docs.sort_unstable_by_key(|doc| std::cmp::Reverse(doc.focused_at));
+            docs.into_iter()
+                .map(|doc| (doc.id(), menu_bar_buffer_name(&doc.display_name())))
+                .collect()
+        };
+        for (id, label) in listed.into_iter().take(BUFFERS_MENU_MAX_SIZE) {
+            items.push((
+                label,
+                Box::new(move |cx: &mut Context| cx.editor.switch(id, Action::Replace)),
+            ));
+        }
+    }
+    // `menu-bar-buffers-menu-command-entries`, which follow the buffers.
+    items.push(menu_item("Select Named Buffer…", buffer_picker));
+    items.push(menu_item("List All Buffers", list_buffers));
+    items
+}
 
 /// The menu bar: Emacs's File / Edit / Search / Buffers / Tools / Help menus,
 /// each item a real command. Kept as data so both `menu-bar-open` (a nested
 /// menu) and `tmm-menubar` (a flat text list) render the same tree.
-fn menu_bar_tree() -> Vec<MenuBarMenu> {
+///
+/// `editor` is what the Buffers menu is built from; `None` yields the same menus
+/// with no buffers listed, which is all [`menu_bar_titles`] needs.
+fn menu_bar_tree(editor: Option<&Editor>) -> Vec<MenuBarMenu> {
     vec![
         (
             "File",
             vec![
-                ("Open File…", file_picker as fn(&mut Context)),
-                ("Open Recent…", frecent_file_picker),
-                ("Open Directory (Dired)", dired),
-                ("Version Control (VC Dir)", vc_dir),
-                ("Quit Window", quit_window),
+                menu_item("Open File…", file_picker),
+                menu_item("Open Recent…", frecent_file_picker),
+                menu_item("Open Directory (Dired)", dired),
+                menu_item("Version Control (VC Dir)", vc_dir),
+                menu_item("Quit Window", quit_window),
             ],
         ),
         (
             "Edit",
             vec![
-                ("Undo", undo as fn(&mut Context)),
-                ("Redo", redo),
-                ("Copy", copy_region_as_kill),
-                ("Paste (Yank)", yank),
-                ("Query Replace…", query_replace),
+                menu_item("Undo", undo),
+                menu_item("Redo", redo),
+                menu_item("Copy", copy_region_as_kill),
+                menu_item("Paste (Yank)", yank),
+                menu_item("Query Replace…", query_replace),
             ],
         ),
         (
             "Search",
             vec![
-                ("Find in Files…", global_search as fn(&mut Context)),
-                ("Go to Line…", goto_line),
-                ("Find Symbol…", workspace_symbol_picker),
+                menu_item("Find in Files…", global_search),
+                menu_item("Go to Line…", goto_line),
+                menu_item("Find Symbol…", workspace_symbol_picker),
             ],
         ),
-        (
-            "Buffers",
-            vec![
-                ("List Buffers", list_buffers as fn(&mut Context)),
-                ("Switch Buffer…", buffer_picker),
-            ],
-        ),
+        ("Buffers", menu_bar_buffer_items(editor)),
         (
             "Tools",
             vec![
-                ("Calendar", calendar as fn(&mut Context)),
-                ("Commands (M-x)…", command_palette),
+                menu_item("Calendar", calendar),
+                menu_item("Commands (M-x)…", command_palette),
             ],
         ),
         (
             "Help",
             vec![
-                ("Describe Key…", describe_key as fn(&mut Context)),
-                ("Describe Function…", describe_function),
-                ("List Key Bindings", describe_bindings),
+                menu_item("Describe Key…", describe_key),
+                menu_item("Describe Function…", describe_function),
+                menu_item("List Key Bindings", describe_bindings),
             ],
         ),
     ]
@@ -50999,7 +51278,7 @@ fn imenu_menu_entries(editor: &Editor) -> Vec<crate::ui::context_menu::Entry> {
 fn menu_bar_open(cx: &mut Context) {
     use crate::ui::context_menu::{ContextMenu, Entry};
     let index = imenu_menu_entries(cx.editor);
-    let mut entries: Vec<Entry> = menu_bar_tree()
+    let mut entries: Vec<Entry> = menu_bar_tree(Some(&*cx.editor))
         .into_iter()
         .map(|(menu, items)| {
             Entry::sub(
@@ -51007,7 +51286,7 @@ fn menu_bar_open(cx: &mut Context) {
                 items
                     .into_iter()
                     .map(|(label, cmd)| {
-                        Entry::item(label, move |compositor, cx| menu_run(compositor, cx, cmd))
+                        Entry::item(label, move |compositor, cx| menu_run(compositor, cx, &*cmd))
                     })
                     .collect(),
             )
@@ -51174,7 +51453,9 @@ fn set_fontset_font(cx: &mut Context) {
 /// The menu-bar titles in order, for the menu-bar row the frame draws when
 /// `menu-bar-mode` is on. The index of a title is what a click resolves to.
 pub(crate) fn menu_bar_titles() -> Vec<&'static str> {
-    menu_bar_tree()
+    // The titles are fixed; only the Buffers menu's *items* depend on the
+    // editor, so the row can be drawn without one.
+    menu_bar_tree(None)
         .into_iter()
         .map(|(title, _)| title)
         .collect()
@@ -51184,12 +51465,14 @@ pub(crate) fn menu_bar_titles() -> Vec<&'static str> {
 /// row does. `x`/`y` place the popup under the title that was clicked.
 pub(crate) fn open_menu_bar_menu(cx: &mut Context, index: usize, x: u16, y: u16) {
     use crate::ui::context_menu::{ContextMenu, Entry};
-    let Some((_, items)) = menu_bar_tree().into_iter().nth(index) else {
+    let Some((_, items)) = menu_bar_tree(Some(&*cx.editor)).into_iter().nth(index) else {
         return;
     };
     let entries: Vec<Entry> = items
         .into_iter()
-        .map(|(label, cmd)| Entry::item(label, move |compositor, cx| menu_run(compositor, cx, cmd)))
+        .map(|(label, cmd)| {
+            Entry::item(label, move |compositor, cx| menu_run(compositor, cx, &*cmd))
+        })
         .collect();
     cx.callback.push(Box::new(
         move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
@@ -51686,12 +51969,12 @@ fn minibuffer_inactive_mode(cx: &mut Context) {
 fn tmm_menubar(cx: &mut Context) {
     use crate::ui::context_menu::{ContextMenu, Entry};
     let index = imenu_menu_entries(cx.editor);
-    let mut entries: Vec<Entry> = menu_bar_tree()
+    let mut entries: Vec<Entry> = menu_bar_tree(Some(&*cx.editor))
         .into_iter()
         .flat_map(|(menu, items)| {
             items.into_iter().map(move |(label, cmd)| {
                 Entry::item(format!("{menu} ▸ {label}"), move |compositor, cx| {
-                    menu_run(compositor, cx, cmd)
+                    menu_run(compositor, cx, &*cmd)
                 })
             })
         })
@@ -52097,11 +52380,28 @@ fn project_async_shell_command(cx: &mut Context) {
     });
 }
 
-/// `project-eshell`: open an interactive shell buffer. (Partial: maps to the
-/// `M-x shell`-style comint buffer on `$SHELL`, not Emacs's own eshell; runs in
-/// the editor's working directory.)
+/// `project-eshell`: open an interactive shell buffer rooted at the project.
+///
+/// The root is the whole point of the command — project.el:1664 is
+/// `(let* ((default-directory (project-root (project-current t)))) …)` around
+/// the shell call, and `project-shell` (:1637) is the same shape. This used to
+/// call [`comint_shell`] unchanged, so it was `M-x shell` under another name:
+/// the child inherited zmax's own cwd and the buffer came up wherever the editor
+/// happened to be started, which for a long-running editor is rarely the project.
+///
+/// (Partial: a comint buffer on `$SHELL`, not emacs's own eshell.)
 fn project_eshell(cx: &mut Context) {
-    comint_shell(cx);
+    // The document's root, not the process-wide one: emacs resolves
+    // `project-current` from the buffer's `default-directory`, so with two
+    // projects open the shell belongs to the file being looked at.
+    let root = doc!(cx.editor).workspace_root().to_path_buf();
+    let call: job::Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
+        match crate::ui::comint::Comint::shell_in(Some(&root)) {
+            Ok(panel) => compositor.push(Box::new(panel)),
+            Err(e) => editor.set_error(format!("project-eshell: {e}")),
+        }
+    }));
+    cx.jobs.callback(async move { Ok(call) });
 }
 
 // ---- Emacs `xref` command ports -------------------------------------------
@@ -55587,7 +55887,30 @@ fn edit_macro_prompt(cx: &mut Context, title: std::borrow::Cow<'static, str>, in
 /// (`edmacro-set-macro-to-region-lines`) live — see keymap/major_mode.rs. It used
 /// to be a one-line minibuffer prompt, which left those three commands with no
 /// buffer to run in.
-fn edit_macro_buffer(editor: &mut Editor, title: &str, keys: &str) {
+/// Where the next `edmacro-finish-edit` installs what the buffer says.
+///
+/// `None` is emacs's ordinary `edit-kbd-macro` behaviour: the edited keys become
+/// the last keyboard macro. `Some(i)` is the kmacro menu's, which is not the
+/// same thing — `kmacro-menu-edit-keys` hands `edit-kbd-macro` a finish-hook
+/// that calls `kmacro-menu--replace-at` (kmacro.el:2008-2013), putting the macro
+/// back in the ring slot it came from *with its counter and format kept*.
+/// Pushing a new head there would both lose the counter and leave the row the
+/// user was editing untouched.
+static EDMACRO_TARGET: std::sync::Mutex<Option<usize>> = std::sync::Mutex::new(None);
+
+/// Open the `*Edit Macro*` buffer on the keys of ring entry `index`, and arrange
+/// for `C-c C-c` to install them back into that slot — emacs's
+/// `kmacro-menu-edit-keys` (kmacro.el:1994-2014), which `e` and `RET`-on-Keys
+/// both run from the kmacro menu.
+pub(crate) fn kmacro_menu_open_edmacro(editor: &mut Editor, index: usize, keys: &str) {
+    // After, not before: opening the buffer clears the target, so that an
+    // ordinary `edit-kbd-macro` can never inherit a slot left behind by a menu
+    // edit the user walked away from.
+    edit_macro_buffer(editor, "Edit macro: ", keys);
+    *EDMACRO_TARGET.lock().unwrap() = Some(index);
+}
+
+pub(crate) fn edit_macro_buffer(editor: &mut Editor, title: &str, keys: &str) {
     let body = format!(
         ";; Keyboard Macro Editor.  Press C-c C-c to finish; press C-x k RET to cancel.\n\
          ;; Original keys: {keys}\n\
@@ -55599,6 +55922,8 @@ fn edit_macro_buffer(editor: &mut Editor, title: &str, keys: &str) {
          \n\
          {keys}\n"
     );
+    // A fresh buffer installs to the last macro unless a caller says otherwise.
+    *EDMACRO_TARGET.lock().unwrap() = None;
     show_text_in_scratch(editor, &body);
     // The scratch buffer opens holding one empty line, which the insert leaves
     // above the template; emacs's *Edit Macro* starts at the header.
@@ -55653,9 +55978,33 @@ fn edmacro_finish_edit(cx: &mut Context) {
         cx.editor.set_error(format!("Invalid macro: {err}"));
         return;
     }
-    macro_ring_push(macro_str.clone());
-    let _ = cx.editor.registers.write('@', vec![macro_str]);
-    cx.editor.set_status("Keyboard macro updated");
+    // A menu edit goes back into its own ring slot; anything else becomes the
+    // last macro. `kmacro-menu--replace-at` keeps the counter and the format —
+    // only the keys were being edited.
+    match EDMACRO_TARGET.lock().unwrap().take() {
+        Some(index) => {
+            let mut entries = macro_ring_entries();
+            let Some(entry) = entries.get_mut(index) else {
+                cx.editor
+                    .set_error("edmacro-finish-edit: that macro is no longer in the ring");
+                return;
+            };
+            entry.keys = macro_str.clone();
+            macro_ring_set(entries);
+            // The head *is* the last kbd macro, so editing it has to move the
+            // `@` register with it or `@@` would replay the keys as they were
+            // before the edit. Editing any other slot leaves the head alone.
+            if index == 0 {
+                let _ = cx.editor.registers.write('@', vec![macro_str]);
+            }
+            cx.editor.set_status("Keyboard macro updated");
+        }
+        None => {
+            macro_ring_push(macro_str.clone());
+            let _ = cx.editor.registers.write('@', vec![macro_str]);
+            cx.editor.set_status("Keyboard macro updated");
+        }
+    }
 }
 
 /// The same buffer opened from inside a prompt's callback, which has only a
@@ -55674,8 +56023,8 @@ fn edit_macro_prompt_cx(cx: &mut crate::compositor::Context, title: String, init
 
 /// Emacs `edit-kbd-macro` / `kmacro-edit-macro` (C-x C-k C-e): edit the last
 /// keyboard macro's keys as text; on accept the edited keys become the last
-/// macro. (zmax edits the whole key-string in the minibuffer rather than in a
-/// dedicated *Edit Macro* buffer.)
+/// macro. Opens the `*Edit Macro*` buffer — the minibuffer prompt this used to
+/// put up left `C-c C-c`, `C-c C-q` and `C-c C-r` with no buffer to run in.
 fn kmacro_edit_macro(cx: &mut Context) {
     let Some(macro_str) = macro_ring_head() else {
         cx.editor.set_status("no keyboard macro defined yet");
@@ -63590,27 +63939,52 @@ fn kmacro_menu_edit(cx: &mut Context, column: crate::ui::kmacro_menu::Column) {
 /// `kmacro-menu-edit-column` (`RET`): edit the column point is in (`TAB`/`S-TAB`
 /// move point between the Position, Keys, Counter and Format columns).
 fn kmacro_menu_edit_column(cx: &mut Context) {
-    cx.callback.push(Box::new(|compositor, cx| match compositor
-        .find::<crate::ui::kmacro_menu::KmacroMenu>()
-    {
-        Some(menu) => {
-            let column = menu.column_at_point();
-            if menu.begin_edit(column) {
-                cx.editor
-                    .set_status("Edit the value, then RET to accept (Esc cancels)");
-            } else {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let Some(menu) = compositor.find::<crate::ui::kmacro_menu::KmacroMenu>() else {
+            cx.editor
+                .set_error("No keyboard-macro list (open it with `kmacro-menu`)");
+            return;
+        };
+        let column = menu.column_at_point();
+        // "Keys" dispatches to `kmacro-menu-edit-keys` (kmacro.el:2036), which
+        // is the *Edit Macro* buffer rather than an in-place edit. Read what it
+        // needs before popping, so the menu's borrow ends with this statement.
+        if column == crate::ui::kmacro_menu::Column::Keys {
+            let selected = menu.selected_keys();
+            let Some((index, keys)) = selected else {
                 cx.editor.set_error("No keyboard macro at point");
-            }
+                return;
+            };
+            compositor.pop();
+            kmacro_menu_open_edmacro(cx.editor, index, &keys);
+        } else if menu.begin_edit(column) {
+            cx.editor
+                .set_status("Edit the value, then RET to accept (Esc cancels)");
+        } else {
+            cx.editor.set_error("No keyboard macro at point");
         }
-        None => cx
-            .editor
-            .set_error("No keyboard-macro list (open it with `kmacro-menu`)"),
     }));
 }
 
-/// `kmacro-menu-edit-keys`: edit the keys of the macro at point.
+/// `kmacro-menu-edit-keys`: edit the keys of the macro at point "via
+/// `edmacro-mode'" (kmacro.el:1995) — that is, in the `*Edit Macro*` buffer, not
+/// in place. It is the one column of the four that is not a minibuffer edit,
+/// because a macro is a key sequence rather than a value.
 fn kmacro_menu_edit_keys(cx: &mut Context) {
-    kmacro_menu_edit(cx, crate::ui::kmacro_menu::Column::Keys);
+    cx.callback.push(Box::new(|compositor, cx| {
+        let Some(menu) = compositor.find::<crate::ui::kmacro_menu::KmacroMenu>() else {
+            cx.editor
+                .set_error("No keyboard-macro list (open it with `kmacro-menu`)");
+            return;
+        };
+        let Some((index, keys)) = menu.selected_keys() else {
+            cx.editor.set_error("No keyboard macro at point");
+            return;
+        };
+        // The buffer replaces the menu, as it does in emacs's window.
+        compositor.pop();
+        kmacro_menu_open_edmacro(cx.editor, index, &keys);
+    }));
 }
 
 /// `kmacro-menu-edit-counter`: edit the counter of the macro at point.
@@ -69891,16 +70265,45 @@ const ETAGS_REGEN_FILE_EXTENSIONS: &[&str] = &[
     "scheme", "scm", "sm", "ss", "y", "y++", "ym", "yxx", "yy",
 ];
 
+/// `etags-regen-tags-file` (etags-regen.el:65), whose default is `"TAGS"`:
+/// "Name of the tags file to create inside the project". `etags-regen--choose-tags-file`
+/// (etags-regen.el:181-184) expands it against the project root, so the table is
+/// a normal file in the tree — a later session, a `visit-tags-table`, or any
+/// other etags reader picks up the same one.
+const ETAGS_REGEN_TAGS_FILE: &str = "TAGS";
+
+/// `etags-regen--all-files`'s backup filter (etags-regen.el:269, the
+/// `(string-match-p "/\\.#" f)` clause): drop anything with a path component
+/// starting with `.#`.
+///
+/// The extension match alone accepts them — emacs's lock file for `foo.c` is
+/// `.#foo.c`, which still ends in `.c` — and handing etags a dangling symlink
+/// puts a bogus file entry in the table. Pure — unit tested.
+fn etags_regen_is_backup(path: &std::path::Path) -> bool {
+    path.components().any(|c| {
+        c.as_os_str()
+            .to_str()
+            .is_some_and(|s| s.starts_with(".#"))
+    })
+}
+
 /// Whether `etags-regen-mode` is on (the mode is `:global t` in emacs too).
 static ETAGS_REGEN_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
-/// The TAGS file the mode generated, so `etags-regen--tags-cleanup` can delete it.
+/// `etags-regen--tags-file`: the TAGS file the mode generated. Kept so
+/// `etags-regen--tags-cleanup` knows there is a generated table to drop — the
+/// file itself outlives the mode (see [`etags_regen_cleanup`]).
 static ETAGS_REGEN_FILE: std::sync::Mutex<Option<std::path::PathBuf>> = std::sync::Mutex::new(None);
 
 /// `etags-regen--tags-generate`: run the etags program over the project's code
 /// files and visit the table it writes. Emacs builds
 /// `"%s %s %s - -o %s"` and feeds the file names in on stdin; `-` is what tells
 /// etags to read the list from there.
+///
+/// The output goes to `<project root>/TAGS` ([`ETAGS_REGEN_TAGS_FILE`]) rather
+/// than a per-pid scratch file, which is also what makes the `root` recorded
+/// alongside the parsed table correct: etags writes each source path relative to
+/// the directory holding the TAGS file.
 fn etags_regen_generate(editor: &mut Editor) -> bool {
     use std::io::Write;
 
@@ -69916,6 +70319,7 @@ fn etags_regen_generate(editor: &mut Editor) -> bool {
                 .and_then(|x| x.to_str())
                 .is_some_and(|x| ETAGS_REGEN_FILE_EXTENSIONS.contains(&x))
         })
+        .filter(|e| !etags_regen_is_backup(e.path()))
         .map(|e| e.path().to_path_buf())
         .collect();
     if files.is_empty() {
@@ -69925,7 +70329,7 @@ fn etags_regen_generate(editor: &mut Editor) -> bool {
         ));
         return false;
     }
-    let tags_file = std::env::temp_dir().join(format!("zmax-etags-{}.TAGS", std::process::id()));
+    let tags_file = root.join(ETAGS_REGEN_TAGS_FILE);
     let mut child = match std::process::Command::new(ETAGS_REGEN_PROGRAM)
         .arg("-")
         .arg("-o")
@@ -69981,10 +70385,16 @@ fn etags_regen_generate(editor: &mut Editor) -> bool {
     true
 }
 
-/// `etags-regen--tags-cleanup`: drop the generated table and delete its file.
+/// `etags-regen--tags-cleanup` (etags-regen.el:457-469): drop the generated
+/// table.
+///
+/// The file stays. Emacs kills the TAGS *buffer* and calls
+/// `tags-reset-tags-tables`; it never deletes the file, because
+/// `etags-regen-tags-file` names a real file in the project that
+/// `etags-regen--refresh` (etags-regen.el:186) reuses on the next enable and
+/// that a plain `visit-tags-table` can read.
 fn etags_regen_cleanup() {
-    if let Some(path) = ETAGS_REGEN_FILE.lock().unwrap().take() {
-        let _ = std::fs::remove_file(path);
+    if ETAGS_REGEN_FILE.lock().unwrap().take().is_some() {
         *tags_table().write().unwrap() = None;
     }
 }
@@ -75164,13 +75574,7 @@ fn find_file_other_window(cx: &mut Context) {
         cx.editor.set_error("Workspace directory does not exist");
         return;
     }
-    let other = cx
-        .editor
-        .tree
-        .views()
-        .map(|(view, _)| view.id)
-        .find(|id| *id != cx.editor.tree.focus);
-    let picker = match other {
+    let picker = match other_window_id(cx.editor) {
         Some(id) => {
             let previous = cx.editor.tree.focus;
             cx.editor.tree.focus = id;
@@ -76952,19 +77356,23 @@ fn menuitems_from(value: Option<&str>) -> usize {
         .unwrap_or(usize::MAX)
 }
 
-/// The MSB (`msb-mode`) buffer menu: the buffer picker with the buffers grouped
-/// by major mode. msb.el's default `msb-menu-cond` splits the buffer list into
-/// per-mode submenus with the file-visiting buffers first; a terminal picker has
-/// no submenus, so the grouping is the sort order plus a `mode` column to group
-/// on, which is what makes the list scan the way msb's menu does.
-fn build_msb_buffer_picker(editor: &mut Editor) -> Box<dyn Component> {
-    struct MsbEntry {
-        id: DocumentId,
-        mode: String,
-        name: String,
-        path: Option<PathBuf>,
-    }
+/// One buffer as MSB lists it. Shared by the MSB picker and the MSB Buffers
+/// menu, which have to agree about what is listed and in what order.
+struct MsbEntry {
+    id: DocumentId,
+    mode: String,
+    name: String,
+    path: Option<PathBuf>,
+}
 
+/// The listed buffers in msb.el's order: the file-visiting ones first, then
+/// grouped by major mode, then by name.
+///
+/// msb.el's default `msb-menu-cond` (`msb--very-many-menus`, msb.el:207) splits
+/// the buffer list into per-mode submenus with the file buffers ahead of the
+/// rest; this is that split expressed as a sort, so a flat list scans the way
+/// msb's menu reads.
+fn msb_buffer_entries(editor: &Editor) -> Vec<MsbEntry> {
     let current = view!(editor).doc;
     let mut items: Vec<MsbEntry> = editor
         .documents
@@ -76977,7 +77385,6 @@ fn build_msb_buffer_picker(editor: &mut Editor) -> Box<dyn Component> {
             path: doc.path().map(ToOwned::to_owned),
         })
         .collect();
-    // msb lists the file-visiting buffers before the rest, then groups by mode.
     items.sort_by(|a, b| {
         a.path
             .is_none()
@@ -76985,11 +77392,19 @@ fn build_msb_buffer_picker(editor: &mut Editor) -> Box<dyn Component> {
             .then_with(|| a.mode.cmp(&b.mode))
             .then_with(|| a.name.cmp(&b.name))
     });
+    items
+}
+
+/// The MSB (`msb-mode`) buffer menu: the buffer picker with the buffers grouped
+/// by major mode ([`msb_buffer_entries`]). A terminal picker has no submenus, so
+/// the grouping is the sort order plus a `mode` column to group on.
+fn build_msb_buffer_picker(editor: &mut Editor) -> Box<dyn Component> {
+    let mut items = msb_buffer_entries(editor);
     // vim `'menuitems'`: "Maximum number of items to use in a menu. Used for
     // menus that are generated from a list of items, e.g., the Buffers menu"
     // (options.txt). This IS the Buffers menu, generated from the buffer list, so
-    // the option caps it — the buffers that survive the cap are the ones the sort
-    // above put first, which is the ordering msb menus by.
+    // the option caps it — the buffers that survive the cap are the ones
+    // `msb_buffer_entries` put first, which is the ordering msb menus by.
     let limit = menuitems_limit();
     if items.len() > limit {
         items.truncate(limit);
@@ -81651,5 +82066,222 @@ mod mode_gating_tests {
         assert_eq!(tail_loop_pos(entry(8), 7), None);
         // And the new loop is the one that keeps it.
         assert_eq!(tail_loop_pos(entry(8), 8), Some(4096));
+    }
+}
+
+#[cfg(test)]
+mod hide_ifdef_tests {
+    use super::*;
+
+    /// hideif.el:2650-2652 reads the value with `"1"` as the minibuffer default
+    /// and `hif-set-var` takes `(or val 1)` — so RET on an empty value prompt
+    /// defines the macro to 1. Treating empty as "cancel" would make the common
+    /// `C-c @ d FOO RET RET` do nothing at all.
+    #[test]
+    fn empty_value_prompt_is_emacs_default_of_one() {
+        assert_eq!(hide_ifdef_define_value(""), "1");
+        assert_eq!(hide_ifdef_define_value("   "), "1");
+        assert_eq!(hide_ifdef_define_value("0"), "0");
+        assert_eq!(hide_ifdef_define_value(" 42 "), "42");
+    }
+
+    /// What the two new commands are for: the env is what decides an `#ifdef` of
+    /// a macro the file itself never mentions, and `C-c @ d FOO RET RET` — the
+    /// bare define, whose value comes from [`hide_ifdef_define_value`] — is
+    /// enough to un-hide it.
+    #[test]
+    fn a_bare_define_unhides_the_branch_it_names() {
+        let lines = ["#ifdef FOO", "body", "#endif"];
+        let mut env = zmax_core::cmode::HideIfdefEnv::default();
+        // Nothing defines FOO, so the body is compiled out and hidden.
+        assert_eq!(
+            zmax_core::cmode::dead_branches_with_env(&lines, &env),
+            vec![1..2]
+        );
+        env.define("FOO", Some(&hide_ifdef_define_value("")));
+        assert!(zmax_core::cmode::dead_branches_with_env(&lines, &env).is_empty());
+        // And `hide-ifdef-undef` takes it back.
+        env.undef("FOO");
+        assert_eq!(
+            zmax_core::cmode::dead_branches_with_env(&lines, &env),
+            vec![1..2]
+        );
+    }
+
+    /// An undef has to be *recorded*, not merely dropped from the defines,
+    /// because this port also consults the file's own `#define`s — otherwise
+    /// `C-c @ u` on a macro the file defines would do nothing at all.
+    #[test]
+    fn undef_masks_a_define_the_file_makes() {
+        let lines = ["#define BAR 1", "#ifdef BAR", "body", "#endif"];
+        let empty = zmax_core::cmode::HideIfdefEnv::default();
+        assert!(zmax_core::cmode::dead_branches_with_env(&lines, &empty).is_empty());
+        let mut env = zmax_core::cmode::HideIfdefEnv::default();
+        env.undef("BAR");
+        assert_eq!(
+            zmax_core::cmode::dead_branches_with_env(&lines, &env),
+            vec![2..3]
+        );
+    }
+}
+
+#[cfg(test)]
+mod other_window_tests {
+    use super::*;
+    use zmax_view::editor::GutterConfig;
+    use zmax_view::graphics::Rect;
+
+    fn view() -> View {
+        View::new(DocumentId::default(), GutterConfig::default())
+    }
+
+    /// `C-x 4 f` and friends mean `(next-window)` — the window after this one in
+    /// cyclic order, the one `C-x o` moves to. `Tree::views()` iterates the
+    /// slotmap arena instead, i.e. creation order, and the two disagree as soon
+    /// as a split is made anywhere but at the end.
+    #[test]
+    fn other_window_is_the_cyclic_next_not_the_oldest() {
+        let mut tree = tree::Tree::new(Rect::new(0, 0, 80, 24));
+        let a = tree.insert(view());
+        let b = tree.insert(view());
+        // Split off `a` again: `Tree::insert` places the new view immediately
+        // after the focused one, so on screen the order is a | c | b while the
+        // arena still holds a, b, c.
+        tree.focus = a;
+        let c = tree.insert(view());
+
+        tree.focus = a;
+        assert_eq!(other_window_in(&tree), Some(c));
+        // What the arena scan used to answer, and why it was wrong.
+        let arena_first = tree
+            .views()
+            .map(|(view, _)| view.id)
+            .find(|id| *id != tree.focus);
+        assert_eq!(arena_first, Some(b));
+
+        // And it keeps cycling rather than always naming the same window.
+        tree.focus = c;
+        assert_eq!(other_window_in(&tree), Some(b));
+        tree.focus = b;
+        assert_eq!(other_window_in(&tree), Some(a));
+    }
+
+    /// One window is emacs's "there is no other window" case, which the callers
+    /// answer by splitting. `Tree::next` wraps to the focused view there, so the
+    /// equality check is what turns it into `None`.
+    #[test]
+    fn a_lone_window_has_no_other_window() {
+        let mut tree = tree::Tree::new(Rect::new(0, 0, 80, 24));
+        tree.insert(view());
+        assert_eq!(other_window_in(&tree), None);
+    }
+}
+
+#[cfg(test)]
+mod etags_regen_tests {
+    use super::*;
+
+    /// etags-regen.el:253-254 drops `"/\\.#"` paths from `etags-regen--all-files`.
+    /// The extension test alone cannot: emacs's lock file for `foo.c` is
+    /// `.#foo.c`, a dangling symlink that still ends in `.c`.
+    #[test]
+    fn lock_files_are_not_handed_to_etags() {
+        let backup = |p: &str| etags_regen_is_backup(std::path::Path::new(p));
+        assert!(backup("/proj/src/.#foo.c"));
+        assert!(backup(".#foo.c"));
+        // The regexp is anchored on a path separator, so a directory of them
+        // goes too.
+        assert!(backup("/proj/.#stale/foo.c"));
+        // Ordinary sources, and the names that merely look similar, stay.
+        assert!(!backup("/proj/src/foo.c"));
+        assert!(!backup("/proj/src/.hidden.c"));
+        assert!(!backup("/proj/src/foo.#c"));
+        assert!(!backup("/proj/#foo.c#"));
+    }
+}
+
+#[cfg(test)]
+mod menu_bar_buffers_tests {
+    use super::*;
+
+    /// menu-bar.el:2517-2525 elides the *middle* of a name longer than
+    /// `buffers-menu-buffer-name-length` (30): `(substring name 0 15)`, "...",
+    /// `(substring name -15)`. Truncating the tail instead would collapse the
+    /// deep paths that are exactly what makes two buffers tell apart.
+    #[test]
+    fn long_buffer_names_are_elided_in_the_middle() {
+        assert_eq!(menu_bar_buffer_name("short.rs"), "short.rs");
+        // Exactly the limit is left alone.
+        let exact = "a".repeat(30);
+        assert_eq!(menu_bar_buffer_name(&exact), exact);
+        // One over, and the middle goes.
+        let over = "a".repeat(31);
+        let elided = menu_bar_buffer_name(&over);
+        assert_eq!(elided, format!("{}...{}", "a".repeat(15), "a".repeat(15)));
+
+        let path = "zmax-term/src/ui/context_menu.rs";
+        assert_eq!(path.chars().count(), 32);
+        assert_eq!(menu_bar_buffer_name(path), "zmax-term/src/u...context_menu.rs");
+    }
+
+    /// The Buffers menu is `menu-bar-buffers-menu-command-entries` *after* the
+    /// buffers (menu-bar.el:2440-2469, 2490). With no editor to read a buffer
+    /// list from — the `menu-bar-titles` caller — only those standing entries
+    /// are left, which is what the menu used to be in every case.
+    #[test]
+    fn buffers_menu_keeps_the_standing_commands_last() {
+        let items = menu_bar_buffer_items(None);
+        let labels: Vec<&str> = items.iter().map(|(l, _)| l.as_str()).collect();
+        assert_eq!(labels, ["Select Named Buffer…", "List All Buffers"]);
+    }
+
+    /// The menu-bar row is drawn from the titles alone, so it must not need an
+    /// editor — and the Buffers menu has to still be there when there is none.
+    #[test]
+    fn titles_do_not_depend_on_the_buffer_list() {
+        assert_eq!(
+            menu_bar_titles(),
+            ["File", "Edit", "Search", "Buffers", "Tools", "Help"]
+        );
+    }
+}
+
+#[cfg(test)]
+mod digraph_lookup_tests {
+    use super::*;
+
+    /// `:h digraphs-use` makes the reversed search a fallback, not an
+    /// alternative: {char2}{char1} is consulted only when {char1}{char2} is not
+    /// a digraph. Pairs that are digraphs in both orders are where that matters,
+    /// and vim gives them different characters — verified against
+    /// `nvim --clean -c digraphs` (0.12.5).
+    #[test]
+    fn an_exact_pair_beats_its_mirror() {
+        // `I!` is listed before `!I` in DIGRAPHS, so a single pass that tested
+        // both orders at once answered Ì for both.
+        assert_eq!(digraph_lookup('!', 'I'), Some('¡')); // nvim: !I ¡ 161
+        assert_eq!(digraph_lookup('I', '!'), Some('Ì')); // nvim: I! Ì 204
+
+        assert_eq!(digraph_lookup('=', '>'), Some('⇒')); // nvim: => ⇒ 8658
+        assert_eq!(digraph_lookup('>', '='), Some('≥')); // nvim: >= ≥ 8805
+        assert_eq!(digraph_lookup('<', '='), Some('⇐')); // nvim: <= ⇐ 8656
+        assert_eq!(digraph_lookup('=', '<'), Some('≤')); // nvim: =< ≤ 8804
+    }
+
+    /// The bullet/degree pair vim keeps apart, which zmax had collapsed onto
+    /// `oo` — leaving no way to type a bullet and the wrong glyph for `oo`.
+    #[test]
+    fn oo_is_a_bullet_and_degree_is_dg() {
+        assert_eq!(digraph_lookup('o', 'o'), Some('•')); // nvim: oo • 8226
+        assert_eq!(digraph_lookup('D', 'G'), Some('°')); // nvim: DG ° 176
+    }
+
+    /// The fallback still has to fire for the ordinary case it exists for: the
+    /// accented letters are listed one way round only, and vim takes either.
+    #[test]
+    fn the_mirror_still_answers_when_the_exact_pair_is_absent() {
+        assert_eq!(digraph_lookup('a', ':'), Some('ä'));
+        assert_eq!(digraph_lookup(':', 'a'), Some('ä'));
+        assert_eq!(digraph_lookup('z', 'q'), None);
     }
 }
