@@ -3936,18 +3936,6 @@ mod tests {
         }
     }
 
-    /// The operator a motion sequence ends on — the last static command of the
-    /// leaf, which for an operator-pending chord is the operator itself.
-    fn seq_last(trie: &KeyTrie) -> Option<&str> {
-        match trie {
-            KeyTrie::Sequence(cmds) => match cmds.last() {
-                Some(MappableCommand::Static { name, .. }) => Some(name),
-                _ => None,
-            },
-            _ => cmd_name(trie),
-        }
-    }
-
     /// Whether a chord's command sequence runs `name` anywhere in it.
     ///
     /// The operator is what an operator+motion chord is asserted on, and it is
