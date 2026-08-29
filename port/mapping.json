@@ -13679,11 +13679,11 @@
  },
  {
   "spec_id": "emacs.command.recover_session",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:recover_session"
   ],
-  "note": "picker over the auto-save files found on disk; zmax keeps no auto-save-list file"
+  "note": "emacs's recover-session does not scan the disk for auto-save files: it reads the SESSION files written under auto-save-list-file-prefix, one per running emacs, each listing what that session auto-saved -- \"This command first displays a Dired buffer showing you the previous sessions that you could recover from. To choose one [...] you'll be asked about a number of files to recover\" (files.el:7522). zmax kept no such file, so it could only offer a flat scan of the directories it happened to be looking at. It writes them now: vim_swap records every (file, swap) pair it auto-saves into <cache>/auto-save-list/.saves-<pid>-<host>, in emacs's own format -- a pair of lines per buffer, the visited file then the auto-save file, an empty first line for a buffer visiting none (files.el recover-session-finish) -- rewriting it on each swap write so it stays correct when a clean save removes one. recover_session is the two-step command: sessions newest first with how long ago each was written (emacs sorts its listing with `-t` for the same reason), then that session's files, skipping any whose auto-save file is gone -- emacs's \"Ignore a file if its auto-save file does not exist now.\" The old disk scan remains as the fallback for an editor that died before its first auto-save, or a swap directory written by something else. The session format's parse is unit tested, including the empty-first-line case, a truncated trailing pair and a missing auto-save name."
  },
  {
   "spec_id": "emacs.command.rectangle",

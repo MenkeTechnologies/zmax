@@ -90,13 +90,143 @@ fn swap_path(file: &std::path::Path, dir: &str) -> Option<PathBuf> {
 /// Write the buffer to its swap file (best-effort).
 fn write_swap(doc: &Document) {
     let dir = swap_dir();
-    let Some(path) = doc.path().and_then(|p| swap_path(p, &dir)) else {
+    let Some(file) = doc.path() else {
+        return;
+    };
+    let Some(path) = swap_path(file, &dir) else {
         return;
     };
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let _ = std::fs::write(path, doc.text().to_string());
+    if std::fs::write(&path, doc.text().to_string()).is_ok() {
+        record_in_session(file, &path);
+    }
+}
+
+// ── emacs's auto-save list ───────────────────────────────────────────────────
+//
+// `recover-session` does not scan the disk for auto-save files: it reads the
+// SESSION files emacs writes under `auto-save-list-file-prefix`, one per running
+// emacs, each listing the buffers that session auto-saved. That is what lets it
+// offer "the session that died on Tuesday" rather than a flat list of whatever
+// stray files happen to be lying about — and what lets it recover a file whose
+// directory you are no longer anywhere near.
+//
+// The format is emacs's own (files.el `recover-session-finish`): a pair of lines
+// per buffer, the visited file name then the auto-save file name, with an empty
+// first line for a buffer visiting no file. A pair whose auto-save file no longer
+// exists is skipped when the session is read.
+
+/// The directory the session files live in — emacs's
+/// `auto-save-list-file-prefix` directory, under zmax's cache dir.
+fn session_dir() -> PathBuf {
+    zmax_loader::cache_dir().join("auto-save-list")
+}
+
+/// This process's session file: `.saves-<pid>-<host>`, as emacs names it.
+fn session_path() -> PathBuf {
+    let host = std::env::var("HOSTNAME")
+        .ok()
+        .or_else(|| {
+            std::process::Command::new("hostname")
+                .output()
+                .ok()
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        })
+        .filter(|h| !h.is_empty())
+        .unwrap_or_else(|| "localhost".to_string());
+    session_dir().join(format!(".saves-{}-{host}", std::process::id()))
+}
+
+/// The `(file, swap)` pairs this session has recorded, in insertion order.
+static SESSION: Mutex<Vec<(PathBuf, PathBuf)>> = Mutex::new(Vec::new());
+
+/// Note that `file` is being auto-saved to `swap`, and rewrite this session's
+/// list file. Called on every successful swap write; the list is small (one pair
+/// per modified buffer) and rewriting it keeps it correct when a swap file is
+/// removed on a clean save.
+fn record_in_session(file: &std::path::Path, swap: &std::path::Path) {
+    let Ok(mut session) = SESSION.lock() else {
+        return;
+    };
+    if !session.iter().any(|(f, _)| f == file) {
+        session.push((file.to_path_buf(), swap.to_path_buf()));
+    }
+    let mut out = String::new();
+    for (file, swap) in session.iter() {
+        // A pair of lines: the visited file, then its auto-save file.
+        out.push_str(&file.to_string_lossy());
+        out.push('\n');
+        out.push_str(&swap.to_string_lossy());
+        out.push('\n');
+    }
+    let path = session_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = std::fs::write(path, out);
+}
+
+/// Every recorded session, newest first: `(session file, its modification
+/// time)`. This process's own is included — emacs lists it too, and recovering
+/// from it is meaningful after a buffer was abandoned.
+pub fn sessions() -> Vec<(PathBuf, std::time::SystemTime)> {
+    let Ok(entries) = std::fs::read_dir(session_dir()) else {
+        return Vec::new();
+    };
+    let mut out: Vec<(PathBuf, std::time::SystemTime)> = entries
+        .flatten()
+        .filter(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .starts_with(".saves-")
+        })
+        .filter_map(|e| {
+            let modified = e.metadata().ok()?.modified().ok()?;
+            Some((e.path(), modified))
+        })
+        .collect();
+    out.sort_by(|a, b| b.1.cmp(&a.1));
+    out
+}
+
+/// Parse a session file into its `(visited file, auto-save file)` pairs.
+///
+/// "The file contains a pair of lines for each auto-saved buffer. The first line
+/// of the pair contains the visited file name or is empty if the buffer was not
+/// visiting a file. The second line is the auto-save file name" (files.el). A
+/// buffer that visited no file gets its name manufactured from the auto-save
+/// file's, as emacs does. Pure — unit tested.
+pub fn parse_session(text: &str) -> Vec<(PathBuf, PathBuf)> {
+    let mut out = Vec::new();
+    let mut lines = text.lines();
+    while let Some(file) = lines.next() {
+        let Some(swap) = lines.next() else {
+            break; // a truncated pair: the list file is corrupt
+        };
+        if swap.is_empty() {
+            continue;
+        }
+        let swap = PathBuf::from(swap);
+        let file = if file.is_empty() {
+            // emacs strips the auto-save file's surrounding markers to
+            // manufacture a visited name; zmax's swap files are `.NAME.swp`.
+            let Some(name) = swap.file_name().map(|n| n.to_string_lossy().into_owned()) else {
+                continue;
+            };
+            let inner = name
+                .strip_prefix('.')
+                .and_then(|n| n.strip_suffix(".swp"))
+                .unwrap_or(&name)
+                .to_string();
+            swap.parent().unwrap_or(std::path::Path::new(".")).join(inner)
+        } else {
+            PathBuf::from(file)
+        };
+        out.push((file, swap));
+    }
+    out
 }
 
 /// The swap-file path for a document (vim `:swapname`), if it has a file name.
@@ -572,6 +702,36 @@ pub fn register_hooks(config: &zmax_view::editor::Config) {
 
 #[cfg(test)]
 mod tests {
+    /// files.el `recover-session-finish`: "The file contains a pair of lines for
+    /// each auto-saved buffer. The first line of the pair contains the visited
+    /// file name or is empty if the buffer was not visiting a file. The second
+    /// line is the auto-save file name."
+    #[test]
+    fn a_session_file_is_pairs_of_lines() {
+        let pairs = super::parse_session("/w/a.rs\n/w/.a.rs.swp\n/w/b.rs\n/w/.b.rs.swp\n");
+        assert_eq!(
+            pairs,
+            vec![
+                (PathBuf::from("/w/a.rs"), PathBuf::from("/w/.a.rs.swp")),
+                (PathBuf::from("/w/b.rs"), PathBuf::from("/w/.b.rs.swp")),
+            ]
+        );
+
+        // An empty first line is a buffer that visited no file; emacs
+        // manufactures the visited name from the auto-save file's.
+        let pairs = super::parse_session("\n/w/.scratch.swp\n");
+        assert_eq!(
+            pairs,
+            vec![(PathBuf::from("/w/scratch"), PathBuf::from("/w/.scratch.swp"))]
+        );
+
+        // A truncated trailing pair is a corrupt list file, not an entry.
+        assert_eq!(super::parse_session("/w/a.rs\n").len(), 0);
+        // A pair with no auto-save file name is skipped rather than recorded.
+        assert_eq!(super::parse_session("/w/a.rs\n\n").len(), 0);
+        assert_eq!(super::parse_session("").len(), 0);
+    }
+
     use super::*;
 
     /// vim `updatecount`: the swap file is rewritten every N changes, and

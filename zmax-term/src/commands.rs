@@ -74920,12 +74920,84 @@ fn recoverable_files(cx: &Context) -> Vec<(std::path::PathBuf, std::path::PathBu
 /// replaced by the auto-saved text (the recovered buffer is modified, so it is
 /// saved only if you save it).
 fn recover_session(cx: &mut Context) {
+    // emacs's `recover-session` reads the SESSION files written under
+    // `auto-save-list-file-prefix`, one per emacs, each listing what that session
+    // auto-saved: "This command first displays a Dired buffer showing you the
+    // previous sessions that you could recover from. To choose one […] you'll be
+    // asked about a number of files to recover" (files.el:7522). That two-step —
+    // pick a session, then its files — is what lets you recover the session that
+    // died rather than whatever stray files are lying about, and reach a file
+    // whose directory you are nowhere near.
+    let sessions = crate::vim_swap::sessions();
+    if !sessions.is_empty() {
+        let columns = [
+            PickerColumn::new(
+                "session",
+                |(p, _): &(std::path::PathBuf, std::time::SystemTime), _: &()| {
+                    p.file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default()
+                        .into()
+                },
+            ),
+            PickerColumn::new(
+                "last written",
+                |(_, t): &(std::path::PathBuf, std::time::SystemTime), _: &()| {
+                    humanize_system_time(*t).into()
+                },
+            ),
+        ];
+        let picker = Picker::new(columns, 0, sessions, (), move |cx, (path, _), _action| {
+            let text = std::fs::read_to_string(path).unwrap_or_default();
+            // "Ignore a file if its auto-save file does not exist now."
+            let files: Vec<(std::path::PathBuf, std::path::PathBuf)> =
+                crate::vim_swap::parse_session(&text)
+                    .into_iter()
+                    .filter(|(_, swap)| swap.is_file())
+                    .collect();
+            if files.is_empty() {
+                cx.editor.set_status(
+                    "recover-session: that session's auto-save files are all gone",
+                );
+                return;
+            }
+            recover_files_picker(cx, files);
+        });
+        cx.push_layer(Box::new(overlaid(picker)));
+        return;
+    }
+
+    // No session was ever recorded — an editor that died before its first
+    // auto-save, or a swap directory written by something else. Fall back to the
+    // disk scan, which is better than telling the user there is nothing.
     let files = recoverable_files(cx);
     if files.is_empty() {
         cx.editor
             .set_status("recover-session: no auto-save files to recover from");
         return;
     }
+    cx.push_layer(Box::new(overlaid(recover_files_picker_build(files))));
+}
+
+/// Offer `files` — `(visited file, auto-save file)` pairs — for recovery, which
+/// is emacs's second step ("you'll be asked about a number of files to recover").
+fn recover_files_picker(
+    cx: &mut crate::compositor::Context,
+    files: Vec<(std::path::PathBuf, std::path::PathBuf)>,
+) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(overlaid(recover_files_picker_build(files))));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// The picker itself, split out so both the session path and the disk-scan
+/// fallback build the same one.
+fn recover_files_picker_build(
+    files: Vec<(std::path::PathBuf, std::path::PathBuf)>,
+) -> Picker<(std::path::PathBuf, std::path::PathBuf), ()> {
     let columns = [
         PickerColumn::new(
             "file",
@@ -74940,7 +75012,7 @@ fn recover_session(cx: &mut Context) {
             },
         ),
     ];
-    let picker = Picker::new(columns, 0, files, (), move |cx, (file, swap), _action| {
+    Picker::new(columns, 0, files, (), move |cx, (file, swap), _action| {
         let Ok(text) = std::fs::read_to_string(swap) else {
             cx.editor
                 .set_error(format!("recover-session: cannot read {}", swap.display()));
@@ -74955,8 +75027,23 @@ fn recover_session(cx: &mut Context) {
             "Recovered {} from its auto-save file — save it to keep the recovery",
             file.display()
         ));
-    });
-    cx.push_layer(Box::new(overlaid(picker)));
+    })
+}
+
+/// How long ago a session file was last written, for the session listing —
+/// emacs sorts its Dired listing by time (`-t`) for the same reason: the newest
+/// session is the one you almost always want. Pure — unit tested.
+fn humanize_system_time(t: std::time::SystemTime) -> String {
+    let Ok(age) = std::time::SystemTime::now().duration_since(t) else {
+        return "just now".to_string();
+    };
+    let secs = age.as_secs();
+    match secs {
+        0..=59 => format!("{secs}s ago"),
+        60..=3599 => format!("{}m ago", secs / 60),
+        3600..=86_399 => format!("{}h ago", secs / 3600),
+        _ => format!("{}d ago", secs / 86_400),
+    }
 }
 
 /// Replace the whole of the current buffer with `text`, as one undoable change.
