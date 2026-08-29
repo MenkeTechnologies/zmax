@@ -132,6 +132,11 @@ pub struct Prompt {
     /// Emacs minibuffer `C-x`: the prefix of `C-x UP` (complete from the history)
     /// and `C-x DOWN` (complete from the prompt's default).
     pending_ctrl_x: bool,
+    /// `C-x 8` inside a search: emacs's insert-char prefix, which
+    /// `isearch-mode-map` keeps live so `C-x 8 RET` adds a character by name and
+    /// `C-x 8 e RET` adds an emoji by name. `Some(false)` is `C-x 8`,
+    /// `Some(true)` is `C-x 8 e`.
+    pending_ctrl_x_8: Option<bool>,
     /// Emacs `previous-matching-history-element` / `next-matching-history-element`:
     /// the regexp being searched for and the history entry it last put on the
     /// line. While the line still holds that entry the same regexp keeps
@@ -548,6 +553,8 @@ const ISEARCH_BINDINGS: &[(&str, &str)] = &[
     ("C-M-d", "isearch-del-char"),
     ("C-M-z", "isearch-yank-until-char"),
     ("C-x \\", "isearch-transient-input-method"),
+    ("C-x 8 RET", "isearch-char-by-name"),
+    ("C-x 8 e RET", "isearch-emoji-by-name"),
     ("DEL", "isearch-delete-char"),
     ("RET", "isearch-exit"),
     ("M-c", "isearch-toggle-case-fold"),
@@ -595,7 +602,7 @@ what leaves one.
 
 /// The keys the `M-s` map is entered by — a key sequence `isearch-describe-key`
 /// is asked about can carry on after one of these.
-const ISEARCH_PREFIXES: &[&str] = &["M-s", "C-x"];
+const ISEARCH_PREFIXES: &[&str] = &["M-s", "C-x", "C-x 8", "C-x 8 e"];
 
 /// A key in the spelling Emacs writes it in (`C-s`, `M-s`, `DEL`, `SPC`, `RET`),
 /// which is how [`ISEARCH_BINDINGS`] names them. zmax's own `Display` spells
@@ -860,6 +867,28 @@ fn cedit_pressed(event: KeyEvent) -> bool {
     ctrl == needs_ctrl && c.to_ascii_lowercase() == key
 }
 
+/// Run a static command from inside the prompt — the shape the `C-x 8` legs
+/// need, since the commands they reach (`isearch-char-by-name`,
+/// `isearch-emoji-by-name`) live in the command table and open prompts of their
+/// own on top of this one.
+fn run_isearch_command(_compositor: &mut Compositor, cx: &mut Context, name: &str) {
+    let mut ccx = crate::commands::Context {
+        register: None,
+        count: None,
+        editor: cx.editor,
+        callback: Vec::new(),
+        on_next_key_callback: None,
+        jobs: cx.jobs,
+    };
+    match name.parse::<crate::commands::MappableCommand>() {
+        Ok(command) => command.execute(&mut ccx),
+        Err(err) => return cx.editor.set_error(err.to_string()),
+    }
+    for callback in std::mem::take(&mut ccx.callback) {
+        callback(_compositor, cx);
+    }
+}
+
 /// vim 'cedit': open the command-line window `name` (`q:`, `q/` or `q?`) and put
 /// `line` — the command line as it was typed — on its last line, which is where
 /// vim leaves it: "the command line is used to fill the last line of the window"
@@ -964,6 +993,7 @@ impl Prompt {
             isearch_edit: false,
             depth: PROMPT_DEPTH.fetch_add(1, Ordering::Relaxed) + 1,
             pending_ctrl_x: false,
+            pending_ctrl_x_8: None,
             history_search: None,
             cmdline_eval: None,
             history_search_read: None,
@@ -3068,6 +3098,7 @@ impl Component for Prompt {
         // that follows says what they do.
         let isearch_s = std::mem::take(&mut self.pending_isearch_s);
         let ctrl_x = std::mem::take(&mut self.pending_ctrl_x);
+        let ctrl_x_8 = std::mem::take(&mut self.pending_ctrl_x_8);
         // Emacs isearch `C-h`: the help key is a prefix inside a search — the key
         // after it picks which help `isearch-help-map` shows.
         let ctrl_h = std::mem::take(&mut self.pending_ctrl_h);
@@ -3304,6 +3335,35 @@ impl Component for Prompt {
                     let quoted = prompt.isearch_quote(&text);
                     prompt.insert_str(&quoted, cx.editor);
                 }));
+            }
+            // ── emacs isearch: `C-x 8`, the insert-char prefix ───────────────
+            // isearch-mode-map keeps `C-x 8` live inside a search, so a character
+            // can be added to the search string by NAME: `C-x 8 RET` reads a
+            // Unicode name (isearch-char-by-name) and `C-x 8 e RET` an emoji name
+            // (isearch-emoji-by-name). zmax's prompt uses `C-x` as the minibuffer
+            // completion prefix, so the `8` leg is opened only while a search is
+            // running and everything else under `C-x` is untouched.
+            KeyEvent {
+                code: KeyCode::Char('8'),
+                ..
+            } if ctrl_x && isearch => {
+                self.pending_ctrl_x_8 = Some(false);
+            }
+            KeyEvent {
+                code: KeyCode::Char('e'),
+                ..
+            } if ctrl_x_8 == Some(false) => {
+                self.pending_ctrl_x_8 = Some(true);
+            }
+            key!(Enter) if ctrl_x_8 == Some(false) => {
+                return EventResult::Consumed(Some(Box::new(|compositor, cx| {
+                    run_isearch_command(compositor, cx, "isearch_char_by_name");
+                })));
+            }
+            key!(Enter) if ctrl_x_8 == Some(true) => {
+                return EventResult::Consumed(Some(Box::new(|compositor, cx| {
+                    run_isearch_command(compositor, cx, "isearch_emoji_by_name");
+                })));
             }
             ctrl!('x') => {
                 self.pending_ctrl_x = true;
