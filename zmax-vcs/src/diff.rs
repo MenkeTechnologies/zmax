@@ -314,3 +314,147 @@ impl<'a, I: Iterator<Item = (usize, usize)>> Iterator for HunksInLineRangesIter<
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn hunk(before: std::ops::Range<u32>, after: std::ops::Range<u32>) -> Hunk {
+        Hunk { before, after }
+    }
+
+    /// Holds the lock the `Diff` borrows from, so a test can build one without
+    /// running the async differ.
+    struct Fixture(RwLock<DiffInner>);
+
+    impl Fixture {
+        fn new(hunks: Vec<Hunk>) -> Self {
+            Fixture(RwLock::new(DiffInner {
+                diff_base: Rope::new(),
+                doc: Rope::new(),
+                hunks,
+            }))
+        }
+
+        fn diff(&self, inverted: bool) -> Diff<'_> {
+            Diff {
+                diff: self.0.read(),
+                inverted,
+            }
+        }
+    }
+
+    /// Three edits: lines 10-12 changed, a pure removal at 20, and 30-31
+    /// changed. The removal is the interesting one -- it is an empty `after`
+    /// range that still shows as a one-line hunk in the gutter.
+    fn fixture() -> Fixture {
+        Fixture::new(vec![
+            hunk(10..13, 10..13),
+            hunk(20..21, 20..20),
+            hunk(30..32, 29..31),
+        ])
+    }
+
+    /// `next_hunk` answers "where does `]c` go from here". A line that is itself
+    /// a hunk start must move on rather than returning that same hunk, or the
+    /// motion sticks.
+    #[test]
+    fn next_hunk_skips_the_hunk_starting_on_the_given_line() {
+        let fixture = fixture();
+        let diff = fixture.diff(false);
+
+        assert_eq!(diff.next_hunk(0), Some(0), "before everything");
+        assert_eq!(diff.next_hunk(10), Some(1), "on hunk 0's start, move on");
+        assert_eq!(diff.next_hunk(11), Some(1), "inside hunk 0");
+        assert_eq!(diff.next_hunk(20), Some(2), "on the removal, move on");
+        // The last hunk's *after* range starts at 29, and this diff is upright,
+        // so 29 is a hunk start and there is nothing beyond it.
+        assert_eq!(diff.next_hunk(28), Some(2), "just before the last");
+        assert_eq!(diff.next_hunk(29), None, "on the last hunk's start");
+        assert_eq!(diff.next_hunk(99), None, "past everything");
+    }
+
+    /// `prev_hunk` is not the mirror of `next_hunk`: it keys off hunk *ends*, and
+    /// a pure removal is empty, so being "inside" one has to jump further back
+    /// rather thanreturn the removal itself.
+    #[test]
+    fn prev_hunk_steps_over_an_empty_removal() {
+        let fixture = fixture();
+        let diff = fixture.diff(false);
+
+        assert_eq!(diff.prev_hunk(0), None, "nothing before the first");
+        assert_eq!(diff.prev_hunk(10), None, "on hunk 0's start");
+        assert_eq!(diff.prev_hunk(13), Some(0), "just after hunk 0 ends");
+        assert_eq!(diff.prev_hunk(20), Some(0), "at the empty removal");
+        assert_eq!(diff.prev_hunk(99), Some(2), "after everything");
+    }
+
+    /// `hunk_at` is what the gutter and the change textobject ask per line.
+    #[test]
+    fn hunk_at_finds_the_hunk_covering_a_line() {
+        let fixture = fixture();
+        let diff = fixture.diff(false);
+
+        assert_eq!(diff.hunk_at(10, false), Some(0), "on the start");
+        assert_eq!(diff.hunk_at(12, false), Some(0), "inside");
+        assert_eq!(diff.hunk_at(13, false), None, "one past the end");
+        assert_eq!(diff.hunk_at(5, false), None, "between hunks");
+        assert_eq!(diff.hunk_at(0, false), None, "before the first");
+    }
+
+    /// `include_removal` currently changes nothing, which this pins rather than
+    /// endorses. A pure removal starts at a line, so `binary_search_by_key` on
+    /// hunk starts returns `Ok` and the first match arm hands the hunk back
+    /// without consulting the flag. The only arm that reads it is `Err(pos)`,
+    /// whose guard needs `hunks[pos - 1].start == line` -- and a hunk starting
+    /// exactly at `line` would have produced `Ok`, so that guard cannot fire.
+    ///
+    /// The one caller (the change textobject) passes `false` and then takes the
+    /// hunk's `after` range, which for a removal is empty.
+    #[test]
+    fn include_removal_does_not_change_the_answer_today() {
+        let fixture = fixture();
+        let diff = fixture.diff(false);
+
+        assert_eq!(diff.hunk_at(20, true), Some(1), "the empty removal at 20");
+        assert_eq!(
+            diff.hunk_at(20, false),
+            Some(1),
+            "and the flag does not exclude it"
+        );
+        assert!(diff.nth_hunk(1).after.is_empty(), "a removal covers no lines");
+    }
+
+    /// Inverting swaps which side of each hunk the line numbers refer to, so the
+    /// same query lands on different lines. The third hunk is deliberately
+    /// asymmetric (30..32 before, 29..31 after) to catch a lookup that reads the
+    /// wrong side.
+    #[test]
+    fn inverting_reads_the_other_side_of_each_hunk() {
+        let fixture = fixture();
+        let inverted = fixture.diff(true);
+
+        // `after` is 29..31, `before` is 30..32: line 29 is inside the hunk only
+        // when reading `after`, and line 31 only when reading `before`.
+        assert_eq!(inverted.hunk_at(31, false), Some(2), "before-side line");
+        assert_eq!(inverted.hunk_at(29, false), None, "that is the after side");
+
+        let upright = fixture.diff(false);
+        assert_eq!(upright.hunk_at(29, false), Some(2));
+        assert_eq!(upright.hunk_at(31, false), None);
+    }
+
+    /// `nth_hunk` past the end is `Hunk::NONE` rather than a panic, and an
+    /// inverted diff hands back the hunk with its sides swapped.
+    #[test]
+    fn nth_hunk_inverts_and_saturates() {
+        let fixture = fixture();
+
+        assert_eq!(fixture.diff(false).nth_hunk(1), hunk(20..21, 20..20));
+        assert_eq!(fixture.diff(true).nth_hunk(1), hunk(20..20, 20..21));
+        assert_eq!(fixture.diff(false).nth_hunk(99), Hunk::NONE);
+        assert_eq!(fixture.diff(false).len(), 3);
+        assert!(!fixture.diff(false).is_empty());
+        assert!(Fixture::new(Vec::new()).diff(false).is_empty());
+    }
+}
