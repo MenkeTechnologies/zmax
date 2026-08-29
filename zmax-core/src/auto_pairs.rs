@@ -415,3 +415,126 @@ fn handle_insert_same(doc: &Rope, range: &Range, pair: &Pair) -> Option<(Change,
 
     Some(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A document and a cursor at `#`, which is removed before the rope is built.
+    /// Reads far better than counting characters by hand in every case.
+    fn doc_and_cursor(marked: &str) -> (Rope, Range) {
+        let cursor = marked.find('#').expect("mark the cursor with #");
+        let text: String = marked.chars().filter(|c| *c != '#').collect();
+        (Rope::from(text.as_str()), Range::point(cursor))
+    }
+
+    fn insert(marked: &str, ch: char) -> Option<(Change, Range)> {
+        let (doc, range) = doc_and_cursor(marked);
+        hook_insert(&doc, &range, ch, &AutoPairs::default())
+    }
+
+    fn delete(marked: &str) -> Option<(Deletion, Range)> {
+        let (doc, range) = doc_and_cursor(marked);
+        hook_delete(&doc, &range, &AutoPairs::default())
+    }
+
+    /// Typing an opener inserts both halves and leaves the cursor between them.
+    #[test]
+    fn an_opener_inserts_the_whole_pair() {
+        for (open, close) in [('(', ')'), ('{', '}'), ('[', ']')] {
+            let (change, range) = insert("#", open).unwrap_or_else(|| panic!("{open}"));
+
+            let (from, to, text) = change;
+            assert_eq!((from, to), (0, 0), "{open} inserts, deletes nothing");
+            assert_eq!(
+                text.as_deref(),
+                Some(format!("{open}{close}").as_str()),
+                "{open} inserts both halves"
+            );
+            // Between the two: typing again would nest.
+            assert_eq!(range.head, 1, "{open} leaves the cursor inside");
+        }
+    }
+
+    /// An opener typed directly before a word is left alone -- `(` before `foo`
+    /// means the user is wrapping what is already there, and a closer would land
+    /// in the middle of the word.
+    #[test]
+    fn an_opener_before_a_word_does_not_close() {
+        assert!(insert("#foo", '(').is_none());
+        assert!(insert("#foo", '{').is_none());
+        // But before a delimiter or at end of line it closes as usual.
+        assert!(insert("#)", '(').is_some());
+        assert!(insert("# foo", '(').is_some());
+        assert!(insert("foo#", '(').is_some());
+    }
+
+    /// Typing the closer where one already sits moves over it instead of
+    /// inserting a second one.
+    #[test]
+    fn typing_a_closer_moves_over_the_existing_one() {
+        let (change, range) = insert("(#)", ')').unwrap();
+
+        let (from, to, text) = change;
+        assert_eq!((from, to), (1, 1), "nothing is replaced");
+        assert_eq!(text.as_deref(), None, "and nothing is inserted");
+        assert_eq!(range.head, 2, "the cursor steps past the closer");
+    }
+
+    /// A quote is its own closer, so it needs the character *before* the cursor
+    /// to be a non-word too -- otherwise `don't` would gain a second quote.
+    #[test]
+    fn a_quote_needs_both_sides_clear_to_close() {
+        let pair = Pair { open: '\'', close: '\'' };
+
+        let (doc, range) = doc_and_cursor("don#t");
+        assert!(!pair.should_close(&doc, &range), "inside a word");
+        assert!(!Pair::prev_is_not_alpha(&doc, &range));
+
+        let (doc, range) = doc_and_cursor("say #");
+        assert!(pair.should_close(&doc, &range), "after a space at end of line");
+
+        // A bracket only looks forward, so it closes even mid-word-boundary.
+        let bracket = Pair { open: '(', close: ')' };
+        let (doc, range) = doc_and_cursor("foo#");
+        assert!(bracket.should_close(&doc, &range));
+        let (doc, range) = doc_and_cursor("don#t");
+        assert!(!bracket.should_close(&doc, &range), "next char is alphanumeric");
+    }
+
+    /// Backspacing between the two halves takes both.
+    #[test]
+    fn deleting_between_a_pair_removes_both_halves() {
+        let ((from, to), range) = delete("(#)").unwrap();
+
+        assert_eq!((from, to), (0, 2), "both characters go");
+        assert_eq!(range.head, 0);
+
+        let ((from, to), _) = delete("say \"#\"").unwrap();
+        assert_eq!((from, to), (4, 6), "quotes too");
+    }
+
+    /// Only a real pair is taken: unmatched or mismatched neighbours are left to
+    /// the ordinary delete.
+    #[test]
+    fn deleting_leaves_anything_that_is_not_a_pair() {
+        assert!(delete("(#]").is_none(), "mismatched");
+        assert!(delete("a#b").is_none(), "not a pair at all");
+        assert!(delete("#)").is_none(), "nothing before the cursor");
+        assert!(delete("(#").is_none(), "nothing after it");
+        assert!(delete(")#(").is_none(), "closer before opener");
+    }
+
+    /// The space added inside a pair is itself paired, so backspacing takes both
+    /// spaces and leaves `( | )` back at `(|)`.
+    #[test]
+    fn a_space_inside_a_pair_is_paired_and_deleted_together() {
+        let (change, range) = insert("(#)", ' ').unwrap();
+        let (_, _, text) = change;
+        assert_eq!(text.as_deref(), Some("  "), "both spaces are inserted");
+        assert_eq!(range.head, 2, "the cursor sits between them");
+
+        let ((from, to), _) = delete("( # )").unwrap();
+        assert_eq!((from, to), (1, 3), "and both come back out");
+    }
+}
