@@ -481,3 +481,103 @@ mod external {
         }
     }
 }
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::*;
+
+    /// Every provider a user can name in their config, paired with the name
+    /// serde reads and writes for it.
+    fn configurable_providers() -> Vec<(&'static str, ClipboardProvider)> {
+        vec![
+            ("pasteboard", ClipboardProvider::Pasteboard),
+            ("wayland", ClipboardProvider::Wayland),
+            ("x-clip", ClipboardProvider::XClip),
+            ("x-sel", ClipboardProvider::XSel),
+            ("win32-yank", ClipboardProvider::Win32Yank),
+            ("tmux", ClipboardProvider::Tmux),
+            ("termux", ClipboardProvider::Termux),
+            ("none", ClipboardProvider::None),
+        ]
+    }
+
+    /// `name()` is what `:clipboard-provider` reports, and its comment says the
+    /// names must match the serde config names -- otherwise the editor tells a
+    /// user their provider is `x-clip` while their config has to say something
+    /// else. Nothing enforced that until now.
+    #[test]
+    fn the_reported_name_starts_with_the_serde_config_name() {
+        for (config_name, provider) in configurable_providers() {
+            let serialized = serde_json::to_string(&provider).unwrap();
+            assert_eq!(
+                serialized,
+                format!("\"{config_name}\""),
+                "serde name for {provider:?}"
+            );
+
+            let reported = provider.name();
+            assert!(
+                reported.starts_with(config_name),
+                "{provider:?} reports {reported:?}, which does not start with {config_name:?}"
+            );
+        }
+    }
+
+    /// Every one of those names round-trips back to the same provider, so a
+    /// config that zmax wrote is a config zmax can read.
+    #[test]
+    fn config_names_round_trip() {
+        for (config_name, provider) in configurable_providers() {
+            let parsed: ClipboardProvider =
+                serde_json::from_str(&format!("\"{config_name}\"")).unwrap();
+            assert_eq!(parsed, provider, "{config_name}");
+        }
+
+        assert!(serde_json::from_str::<ClipboardProvider>("\"xclip\"").is_err());
+        assert!(serde_json::from_str::<ClipboardProvider>("\"X-Clip\"").is_err());
+    }
+
+    /// A provider whose yank and paste are different programs names both, since
+    /// knowing only one of them makes a "command not found" hard to place. When
+    /// they are the same program it is named once.
+    #[test]
+    fn the_name_lists_both_programs_only_when_they_differ() {
+        // pbpaste reads, pbcopy writes.
+        assert_eq!(ClipboardProvider::Pasteboard.name(), "pasteboard (pbpaste+pbcopy)");
+        assert_eq!(
+            ClipboardProvider::Termux.name(),
+            "termux (termux-clipboard-get+termux-clipboard-set)"
+        );
+        // tmux does both.
+        assert_eq!(ClipboardProvider::Tmux.name(), "tmux (tmux)");
+        assert_eq!(ClipboardProvider::XClip.name(), "x-clip (xclip)");
+    }
+
+    /// A custom provider is the escape hatch for a clipboard tool zmax does not
+    /// ship support for, so the config shape users write has to keep working:
+    /// the primary-selection commands are optional, and the name reports both
+    /// programs.
+    #[test]
+    fn a_custom_provider_parses_its_documented_config_shape() {
+        let provider: ClipboardProvider = serde_json::from_str(
+            r#"{"custom": {
+                "yank": {"command": "myget", "args": ["--read"]},
+                "paste": {"command": "myset"}
+            }}"#,
+        )
+        .expect("custom providers take yank and paste, with args optional");
+
+        assert_eq!(provider.name(), "custom (myget+myset)");
+        assert!(matches!(provider, ClipboardProvider::Custom(_)));
+
+        // Read back through serde rather than the private fields: the optional
+        // primary-selection commands stay unset, and `args` defaults to empty.
+        let round_tripped = serde_json::to_value(&provider).unwrap();
+        let custom = &round_tripped["custom"];
+        assert!(
+            custom["yank-primary"].is_null() && custom["paste-primary"].is_null(),
+            "the primary-selection commands are optional: {custom}"
+        );
+        assert_eq!(custom["paste"]["args"].as_array().map(Vec::len), Some(0));
+    }
+}
