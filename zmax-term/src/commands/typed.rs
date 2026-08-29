@@ -39187,7 +39187,13 @@ fn compose_mail(
     Ok(())
 }
 
-/// Emacs `compose-mail-other-window`: split first, then compose in the new view.
+/// Emacs `compose-mail-other-window`: compose the draft in ANOTHER window.
+///
+/// "Other window" is emacs's `display-buffer-use-some-window`, not "a new
+/// window": an existing other window is reused and one is split off only when
+/// this is the sole window — the same rule `find-file-other-window`'s docstring
+/// states ("creates a new window or reuses an existing one"). It used to split
+/// unconditionally, so composing from a two-window layout left three.
 fn compose_mail_other_window(
     cx: &mut compositor::Context,
     args: Args,
@@ -39196,7 +39202,7 @@ fn compose_mail_other_window(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    run_command_line(cx, "hsplit-new");
+    super::display_other_window(cx.editor);
     compose_mail(cx, args, event)
 }
 

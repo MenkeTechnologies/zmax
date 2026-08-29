@@ -20599,11 +20599,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_x_4_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-x 4 m"
+   "key:normal:C-x 4 m",
+   "typable:compose-mail-other-window"
   ],
-  "note": "compose-mail-other-window: opens the draft in the current window"
+  "note": "compose-mail-other-window opens the draft in ANOTHER window. The note said it used the current one; it did split, but unconditionally (`hsplit-new`), so composing from a two-window layout left three. \"Other window\" is emacs's display-buffer-use-some-window, not \"a new window\": an existing other window is reused and one is split off only when this is the sole window, which is the rule find-file-other-window's own docstring states (\"creates a new window or reuses an existing one\"). It goes through display_other_window now, the same helper the other `C-x 4` commands use."
  },
  {
   "spec_id": "emacs.keybinding.c_x_5",
@@ -24648,11 +24649,11 @@
  },
  {
   "spec_id": "emacs.keybinding.m_s_i_lparenincremental_search_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:command:A-s i"
   ],
-  "note": "isearch-toggle-invisible: opens the closed folds hiding the match; hidden matches are not skipped when off"
+  "note": "The note pre-dated the skip. Both halves of emacs's `isearch-invisible` are implemented, on both search paths. ON (emacs's `open`, the default): the closed folds hiding the match are opened, innermost first, until the line shows -- isearch_settle_folds (zmax-term/src/commands.rs). OFF (`isearch-invisible` nil): a hidden match is SKIPPED and the search carries on to the next visible one, in the command path by re-running the search until the landed-on line is visible (with a seen-set so a buffer whose every match is folded terminates and says so rather than looping), and in the incremental path by Prompt::isearch_skip_invisible, which restores the pre-search fold state before each step so skipping does not leave folds opened behind it."
  },
  {
   "spec_id": "emacs.keybinding.m_s_lparenenriched_mode_rparen",
