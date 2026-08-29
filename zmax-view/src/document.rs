@@ -4166,6 +4166,20 @@ impl Display for FormatterError {
     }
 }
 
+/// One numeric item of vim `'breakindentopt'` (`shift:2`, `min:20`), or `None`
+/// when the option does not carry it. Pure — unit tested in `doc_formatter`.
+fn breakindentopt_num(item: &str) -> Option<i16> {
+    let value = zmax_core::vim_opts::get(&["breakindentopt", "briopt"])?;
+    value.split(',').find_map(|entry| {
+        entry
+            .trim()
+            .strip_prefix(item)?
+            .strip_prefix(':')?
+            .parse::<i16>()
+            .ok()
+    })
+}
+
 #[cfg(test)]
 mod test {
     use arc_swap::ArcSwap;
@@ -5115,18 +5129,4 @@ mod test {
         assert!(toggle_auto_compression_mode());
         assert!(compression_info(gz).is_some());
     }
-}
-
-/// One numeric item of vim `'breakindentopt'` (`shift:2`, `min:20`), or `None`
-/// when the option does not carry it. Pure — unit tested in `doc_formatter`.
-fn breakindentopt_num(item: &str) -> Option<i16> {
-    let value = zmax_core::vim_opts::get(&["breakindentopt", "briopt"])?;
-    value.split(',').find_map(|entry| {
-        entry
-            .trim()
-            .strip_prefix(item)?
-            .strip_prefix(':')?
-            .parse::<i16>()
-            .ok()
-    })
 }
