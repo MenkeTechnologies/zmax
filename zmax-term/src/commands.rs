@@ -76227,6 +76227,22 @@ fn mouse_buffer_menu(cx: &mut Context) {
     buffer_picker(cx);
 }
 
+/// vim `'menuitems'` (options.txt, default 25): the most entries a menu built
+/// from a list may hold. Zero or a value that does not parse leaves the menu
+/// uncapped rather than empty — an empty Buffers menu is never what the option
+/// is asking for. Pure — unit tested through [`menuitems_from`].
+fn menuitems_limit() -> usize {
+    menuitems_from(typed::vim_opt_str_alias("menuitems", "mis").as_deref())
+}
+
+/// [`menuitems_limit`] over an explicit option value. Pure — unit tested.
+fn menuitems_from(value: Option<&str>) -> usize {
+    value
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(usize::MAX)
+}
+
 /// The MSB (`msb-mode`) buffer menu: the buffer picker with the buffers grouped
 /// by major mode. msb.el's default `msb-menu-cond` splits the buffer list into
 /// per-mode submenus with the file-visiting buffers first; a terminal picker has
@@ -76260,6 +76276,15 @@ fn build_msb_buffer_picker(editor: &mut Editor) -> Box<dyn Component> {
             .then_with(|| a.mode.cmp(&b.mode))
             .then_with(|| a.name.cmp(&b.name))
     });
+    // vim `'menuitems'`: "Maximum number of items to use in a menu. Used for
+    // menus that are generated from a list of items, e.g., the Buffers menu"
+    // (options.txt). This IS the Buffers menu, generated from the buffer list, so
+    // the option caps it — the buffers that survive the cap are the ones the sort
+    // above put first, which is the ordering msb menus by.
+    let limit = menuitems_limit();
+    if items.len() > limit {
+        items.truncate(limit);
+    }
 
     let columns = [
         PickerColumn::new("mode", |e: &MsbEntry, _| e.mode.clone().into()),
@@ -76840,6 +76865,25 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod menuitems_tests {
+    use super::menuitems_from;
+
+    /// vim `'menuitems'` bounds a menu generated from a list. An unset option, or
+    /// one that does not parse, must leave the menu UNCAPPED — capping to zero
+    /// would empty the Buffers menu, which is never what the option asks for.
+    #[test]
+    fn menuitems_caps_the_menu_and_never_empties_it() {
+        assert_eq!(menuitems_from(Some("25")), 25);
+        assert_eq!(menuitems_from(Some("  8 ")), 8);
+        assert_eq!(menuitems_from(Some("1")), 1);
+        assert_eq!(menuitems_from(None), usize::MAX);
+        assert_eq!(menuitems_from(Some("0")), usize::MAX);
+        assert_eq!(menuitems_from(Some("")), usize::MAX);
+        assert_eq!(menuitems_from(Some("lots")), usize::MAX);
     }
 }
 

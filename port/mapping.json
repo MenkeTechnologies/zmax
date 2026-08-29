@@ -56957,11 +56957,11 @@
  },
  {
   "spec_id": "neovim.option.menuitems",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": ":set menuitems is accepted, stored and queryable (:set menuitems?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "\"Maximum number of items to use in a menu. Used for menus that are generated from a list of items, e.g., the Buffers menu\" (options.txt). zmax has that menu: mouse-buffer-menu (C-F10) builds its entries from the buffer list, and under msb-mode groups them by major mode with the file-visiting buffers first. build_msb_buffer_picker (zmax-term/src/commands.rs) truncates to 'menuitems' after that sort, so the entries that survive the cap are the ones the ordering put first rather than an arbitrary slice. menuitems_from reads the option under both spellings and leaves the menu UNCAPPED for an unset, zero or unparseable value -- capping to zero would empty the Buffers menu, which is never what the option asks for -- and that is what the unit test pins. options.txt's \"Changing this option has no direct effect, the menu must be refreshed first\" holds here too: the cap applies when the menu is next built."
  },
  {
   "spec_id": "neovim.option.messagesopt",
