@@ -694,7 +694,9 @@ impl MappableCommand {
         locate_file, "Locate a file via system locate/mdfind and open it (SPC f L)",
         edit_project_config, "Edit the project-local .zmax/config.toml (SPC p e)",
         man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
-        info_search, "Search GNU info manuals (apropos) and view the selected node (SPC h i)",
+        info_search, "Search GNU info manuals (apropos) and view the selected node (emacs info-apropos)",
+        info, "Open the Info directory node; a prefix reads a file or node name (emacs info, C-h i)",
+        info_lookup_symbol, "Look a symbol up in the Info manual for this buffer's language (emacs info-lookup-symbol, C-h S)",
         info_next, "Info: the next node at this level (emacs Info-next, n)",
         info_prev, "Info: the previous node at this level (emacs Info-prev, p)",
         info_up, "Info: the node this one is a subnode of (emacs Info-up, u)",
@@ -18460,6 +18462,115 @@ fn locate_file(cx: &mut Context) {
 /// SPC h m : search system man pages. A dynamic picker runs `apropos <query>` and, on selection,
 /// renders the chosen page (`man <section> <name>`, de-formatted with `col -bx`) into a scratch
 /// buffer — Spacemacs `helm-man-woman`.
+/// Emacs's `info-lookup-alist` for the `symbol` topic, as `(major mode, Info
+/// manuals in order)`.
+///
+/// Read out of `lisp/info-look.el`'s `info-lookup-maybe-add-help` calls: each
+/// registers a mode with the index nodes to search, and the manual is the
+/// `(manual)Index` part of each. zmax's major mode is the buffer's language, so
+/// the key is a `languages.toml` language id.
+const INFO_LOOKUP_MANUALS: &[(&str, &[&str])] = &[
+    // `:mode 'c-mode` — the C library and terminal-capability indexes.
+    ("c", &["libc", "termcap"]),
+    ("cpp", &["libc"]),
+    ("bison", &["bison"]),
+    ("make", &["make"]),
+    ("texinfo", &["texinfo"]),
+    ("m4", &["m4"]),
+    ("awk", &["gawk"]),
+    ("perl", &["perl5"]),
+    // `:mode 'emacs-lisp-mode` searches the emacs manual before elisp's.
+    ("elisp", &["emacs", "elisp", "cl"]),
+    ("scheme", &["r5rs"]),
+    ("octave", &["octave"]),
+    // `:mode 'sh-mode` — bash plus the manuals of the tools a script calls.
+    ("bash", &["bash", "coreutils", "diff", "sed", "gawk"]),
+    ("sh", &["bash", "coreutils", "diff", "sed", "gawk"]),
+    ("zsh", &["zsh", "coreutils", "diff", "sed", "gawk"]),
+    ("autoconf", &["autoconf", "automake"]),
+    ("cfengine", &["cfengine-Reference"]),
+    ("python", &["python"]),
+    ("gdbscript", &["gdb"]),
+];
+
+/// The Info manuals `info-lookup-symbol` searches for a buffer in `language`.
+/// Pure — unit tested.
+fn info_lookup_manuals(language: Option<&str>) -> &'static [&'static str] {
+    let Some(language) = language else {
+        return &[];
+    };
+    INFO_LOOKUP_MANUALS
+        .iter()
+        .find(|(mode, _)| *mode == language)
+        .map(|(_, manuals)| *manuals)
+        .unwrap_or(&[])
+}
+
+/// Emacs `info-lookup-symbol` (`C-h S`): "Display the definition of SYMBOL, as
+/// found in the relevant manual" — the Info manual registered for the buffer's
+/// major mode, not the man pages.
+///
+/// The manuals come from [`INFO_LOOKUP_MANUALS`], emacs's own `info-lookup-alist`
+/// table, and are searched in the order it lists them; the first index that has
+/// the symbol wins, which is how emacs's `:doc-spec` list behaves. A mode with no
+/// registered manual reports emacs's "Don't know where to look" rather than
+/// silently searching something else.
+fn info_lookup_symbol(cx: &mut Context) {
+    let language = doc!(cx.editor).language_name().map(str::to_string);
+    let manuals = info_lookup_manuals(language.as_deref());
+    if manuals.is_empty() {
+        cx.editor.set_error(format!(
+            "info-lookup-symbol: don't know where to look for {} symbols",
+            language.as_deref().unwrap_or("this buffer's")
+        ));
+        return;
+    }
+    let seed = thing_at_point_symbol(cx).unwrap_or_default();
+    let label: std::borrow::Cow<'static, str> = if seed.is_empty() {
+        "Describe symbol: ".into()
+    } else {
+        format!("Describe symbol (default {seed}): ").into()
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        label,
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            // An empty answer takes the default, as emacs's prompt does.
+            let symbol = if input.trim().is_empty() {
+                seed.clone()
+            } else {
+                input.trim().to_string()
+            };
+            if symbol.is_empty() {
+                return;
+            }
+            for manual in manuals {
+                let out = std::process::Command::new("info")
+                    .args(["-o", "-", &format!("--index-search={symbol}"), manual])
+                    .output();
+                let Ok(out) = out else { continue };
+                if !out.status.success() || out.stdout.is_empty() {
+                    continue;
+                }
+                let text = String::from_utf8_lossy(&out.stdout).into_owned();
+                show_text_in_scratch(cx.editor, &text);
+                cx.editor
+                    .set_status(format!("info-lookup-symbol: {symbol} in ({manual})"));
+                return;
+            }
+            cx.editor.set_error(format!(
+                "info-lookup-symbol: no documentation found for {symbol} in {}",
+                manuals.join(", ")
+            ));
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
 fn man_page_search(cx: &mut Context) {
     #[derive(Debug)]
     struct ManPage {
@@ -18798,6 +18909,25 @@ fn display_other_window(editor: &mut Editor) {
 
 /// SPC h i / C-h i : search GNU info manuals via `info --apropos`, seeded with the symbol under
 /// the cursor, and render the chosen node into a scratch buffer. Spacemacs `helm-info-at-point`.
+/// Emacs `info` (`C-h i`): "Enter Info, the documentation browser." Its
+/// interactive spec reads a file name only under a prefix argument
+/// (`(interactive (list (if current-prefix-arg (read-file-name "Info file name: "
+/// nil nil t)) …))`), so a bare `C-h i` goes straight to the Info *directory*
+/// node — the menu of every installed manual — rather than asking anything.
+///
+/// It used to run the apropos picker, which is `info-apropos`: a different
+/// command, and one that cannot reach a manual whose text does not happen to
+/// mention what you typed. That picker is still here under its own name.
+fn info(cx: &mut Context) {
+    if cx.prefix_arg().is_none() {
+        info_open_node(cx.editor, "(dir)Top");
+        return;
+    }
+    prompt_then(cx, "Info file name: ", |cx, input| {
+        info_open_node(cx.editor, input);
+    });
+}
+
 fn info_search(cx: &mut Context) {
     // Seed the picker query with the word/symbol under the cursor.
     let seed = {
@@ -76519,6 +76649,43 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod info_lookup_tests {
+    use super::{info_lookup_manuals, INFO_LOOKUP_MANUALS};
+
+    /// The table is emacs's own `info-lookup-alist` for the `symbol` topic, read
+    /// out of info-look.el's `info-lookup-maybe-add-help` calls. The ORDER
+    /// matters: emacs searches a mode's `:doc-spec` indexes in the order it lists
+    /// them, so the first index holding the symbol is the one that answers.
+    #[test]
+    fn the_manuals_match_emacs_info_lookup_alist() {
+        // `:mode 'c-mode` registers the C library index and the termcap one.
+        assert_eq!(info_lookup_manuals(Some("c")), ["libc", "termcap"]);
+        // `:mode 'emacs-lisp-mode` searches the emacs manual BEFORE elisp's.
+        assert_eq!(info_lookup_manuals(Some("elisp")), ["emacs", "elisp", "cl"]);
+        // `:mode 'sh-mode` adds the manuals of the tools a script calls.
+        assert_eq!(
+            info_lookup_manuals(Some("bash")),
+            ["bash", "coreutils", "diff", "sed", "gawk"]
+        );
+        assert_eq!(info_lookup_manuals(Some("awk")), ["gawk"]);
+        assert_eq!(info_lookup_manuals(Some("perl")), ["perl5"]);
+
+        // A mode emacs registers nothing for gets nothing, so the command can
+        // say "don't know where to look" instead of searching something else.
+        assert!(info_lookup_manuals(Some("rust")).is_empty());
+        assert!(info_lookup_manuals(None).is_empty());
+
+        // No language may be listed twice: the lookup takes the first match, so a
+        // duplicate would silently shadow the later entry.
+        let mut seen = std::collections::HashSet::new();
+        for (mode, manuals) in INFO_LOOKUP_MANUALS {
+            assert!(seen.insert(*mode), "`{mode}` is registered twice");
+            assert!(!manuals.is_empty(), "`{mode}` registers no manual");
+        }
     }
 }
 

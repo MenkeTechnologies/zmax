@@ -9819,11 +9819,11 @@
  },
  {
   "spec_id": "emacs.command.info",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:info_search"
+   "static:info"
   ],
-  "note": "emacs info -> zmax info_search apropos-searches the GNU info manuals and opens the selected node for reading (SPC h i); partial vs full Info reader navigation"
+  "note": "As the C-h i keybinding: the Info directory node with no prefix, a file/node prompt with one, in an Info-mode buffer."
  },
  {
   "spec_id": "emacs.command.info_goto_emacs_command_node",
@@ -9851,11 +9851,11 @@
  },
  {
   "spec_id": "emacs.command.info_lookup_symbol",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:info_search"
+   "static:info_lookup_symbol"
   ],
-  "note": "Searches GNU info manuals seeded with the symbol under cursor and renders the node = info-lookup-symbol."
+  "note": "As the C-h S keybinding: the buffer's registered Info manuals, searched in emacs's order, seeded with the symbol at point."
  },
  {
   "spec_id": "emacs.command.info_other_window",
@@ -19301,11 +19301,12 @@
  },
  {
   "spec_id": "emacs.keybinding.c_h_i",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:C-h i"
+   "key:normal:C-h i",
+   "static:info"
   ],
-  "note": "info: opens an apropos search over the info manuals rather than the Info directory node"
+  "note": "emacs's `info` reads a file name only under a prefix argument (`(interactive (list (if current-prefix-arg (read-file-name \"Info file name: \" nil nil t)) ...))`), so a bare `C-h i` goes straight to the Info DIRECTORY node -- the menu of every installed manual. `C-h i` ran the apropos picker, which is a different command (info-apropos) and one that cannot reach a manual whose text does not happen to mention what you typed. It runs `info` now: `(dir)Top` with no prefix, the file/node prompt with one, rendered in the Info-mode buffer where n/p/u walk the node pointers and RET follows a menu item. The apropos picker keeps its own name and spacemacs's own `SPC h i`."
  },
  {
   "spec_id": "emacs.keybinding.c_h_i_1",
@@ -19399,10 +19400,10 @@
   "spec_id": "emacs.keybinding.c_h_s_1",
   "status": "ported",
   "evidence": [
-   "key:normal:C-h s",
-   "static:describe_syntax"
+   "key:normal:C-h S",
+   "static:info_lookup_symbol"
   ],
-  "note": "emacs C-h s (Misc Help) -> describe_syntax"
+  "note": "info-lookup-symbol: \"Display the definition of SYMBOL, as found in the relevant manual\" -- the Info manual registered for the buffer's MAJOR MODE. `C-h S` ran the man-page apropos picker, which is a different corpus entirely. INFO_LOOKUP_MANUALS (zmax-term/src/commands.rs) is emacs's own info-lookup-alist for the `symbol` topic, read out of info-look.el's info-lookup-maybe-add-help calls -- c to (libc, termcap), emacs-lisp to (emacs, elisp, cl), sh to (bash, coreutils, diff, sed, gawk), awk to gawk, perl to perl5, and the rest -- keyed by zmax's major mode, which is the buffer's language. The manuals are searched in the order emacs lists them, so the first index holding the symbol answers, as its :doc-spec list does; the symbol at point is the prompt's default; and a mode emacs registers nothing for reports \"don't know where to look\" rather than quietly searching something else. The table's order and its freedom from duplicates are unit tested."
  },
  {
   "spec_id": "emacs.keybinding.c_h_t",

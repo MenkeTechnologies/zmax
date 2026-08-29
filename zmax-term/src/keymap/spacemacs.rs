@@ -229,8 +229,8 @@ pub(super) fn ch_prefix() -> KeyTrie {
             "p" => finder_by_keyword,             // finder-by-keyword
             "P" => describe_package,              // describe-package
             "." => hover,                         // display-local-help (LSP hover)
-            "i" => info_search,                   // info
-            "S" => man_page_search,               // info-lookup-symbol
+            "i" => info,                          // info: the Info directory node
+            "S" => info_lookup_symbol,            // info-lookup-symbol
             // Manual / info / tutorial navigation → the zmax help browser.
             "r" => help,                          // info-emacs-manual
             // These two go to the *manual node* for a command / for the command a
