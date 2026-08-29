@@ -64,3 +64,76 @@ pub fn user_lang_loader(trust: &WorkspaceTrust) -> Result<Loader, LanguageLoader
     })?;
     Loader::new(config).map_err(LanguageLoaderError::LoaderError)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    /// Both of the `default_*` functions `expect`, so a malformed shipped
+    /// `languages.toml` is a panic on every user's next launch rather than an
+    /// error anyone can act on. Building both here turns that into a test
+    /// failure: deserializing catches a bad field, and the loader additionally
+    /// compiles every file-type glob and shebang table.
+    #[test]
+    fn the_shipped_language_config_loads_and_compiles() {
+        let config = default_lang_config();
+        assert!(
+            config.language.len() > 100,
+            "expected the full language set, got {}",
+            config.language.len()
+        );
+
+        let loader = default_lang_loader();
+        assert_eq!(loader.language_configs().len(), config.language.len());
+    }
+
+    /// A language is reachable by the three keys the editor looks it up with:
+    /// its name (`:set-language rust`), its scope (injections and themes), and
+    /// its file extension (opening a file).
+    #[test]
+    fn languages_are_reachable_by_name_scope_and_filename() {
+        let loader = default_lang_loader();
+
+        let rust = loader
+            .language_for_name("rust")
+            .expect("rust is a shipped language");
+        assert_eq!(
+            loader.language_for_scope("source.rust"),
+            Some(rust),
+            "scope and name must resolve to the same language"
+        );
+        assert_eq!(
+            loader.language_for_filename(Path::new("main.rs")),
+            Some(rust),
+            "a .rs file is rust"
+        );
+
+        assert!(loader.language_for_name("not-a-language").is_none());
+        assert!(loader.language_for_scope("source.nothing").is_none());
+        assert!(
+            loader
+                .language_for_filename(Path::new("file.unknown-extension"))
+                .is_none()
+        );
+    }
+
+    /// Errors name the language whose entry failed. Without the context a user
+    /// with 300 languages configured is told only that "a" language is wrong.
+    #[test]
+    fn config_errors_name_the_language_they_came_from() {
+        let err = toml::from_str::<LanguageConfiguration>("name = 1")
+            .expect_err("a numeric name is not a language config");
+
+        let with_context =
+            LanguageLoaderError::ConfigError(err.clone(), "for language \"rust\"".to_string());
+        let rendered = with_context.to_string();
+        assert!(
+            rendered.contains("for language \"rust\""),
+            "the language must be named: {rendered}"
+        );
+
+        let without = LanguageLoaderError::DeserializeError(err);
+        assert!(without.to_string().starts_with("Failed to parse"));
+    }
+}

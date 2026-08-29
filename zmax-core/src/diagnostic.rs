@@ -96,3 +96,99 @@ impl Diagnostic {
         self.severity.unwrap_or(Severity::Warning)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn diagnostic(severity: Option<Severity>) -> Diagnostic {
+        Diagnostic {
+            range: Range { start: 0, end: 1 },
+            ends_at_word: false,
+            starts_at_word: false,
+            zero_width: false,
+            line: 0,
+            message: String::new(),
+            severity,
+            code: None,
+            provider: DiagnosticProvider::Lsp {
+                server_id: LanguageServerId::default(),
+                identifier: None,
+            },
+            tags: Vec::new(),
+            source: None,
+            data: None,
+        }
+    }
+
+    /// `Severity` derives `Ord` from its declaration order, and callers take the
+    /// `max` to decide what a line's gutter and the statusline show. Reordering
+    /// the variants -- alphabetically, say -- would compile cleanly and quietly
+    /// rank an error below a hint.
+    #[test]
+    fn severity_orders_hint_below_error() {
+        assert!(Severity::Hint < Severity::Info);
+        assert!(Severity::Info < Severity::Warning);
+        assert!(Severity::Warning < Severity::Error);
+
+        let worst = [Severity::Info, Severity::Error, Severity::Hint]
+            .into_iter()
+            .max();
+        assert_eq!(worst, Some(Severity::Error));
+    }
+
+    /// The two defaults in this file deliberately disagree, which reads as a bug
+    /// until you know it is not: an absent `severity` field deserializes to
+    /// `Hint`, but a `Diagnostic` whose severity the server left unset is treated
+    /// as a `Warning`, so unlabelled diagnostics stay visible.
+    #[test]
+    fn an_unset_severity_reads_as_a_warning_though_the_type_defaults_to_hint() {
+        assert_eq!(Severity::default(), Severity::Hint);
+        assert_eq!(diagnostic(None).severity(), Severity::Warning);
+        assert_eq!(diagnostic(Some(Severity::Hint)).severity(), Severity::Hint);
+    }
+
+    /// The serialized names are lowercase and reach user config and session
+    /// files; renaming a variant without its serde name would silently stop
+    /// matching what users have written.
+    #[test]
+    fn severities_serialize_under_their_lowercase_names() {
+        for (severity, name) in [
+            (Severity::Hint, "\"hint\""),
+            (Severity::Info, "\"info\""),
+            (Severity::Warning, "\"warning\""),
+            (Severity::Error, "\"error\""),
+        ] {
+            assert_eq!(serde_json::to_string(&severity).unwrap(), name);
+            assert_eq!(
+                serde_json::from_str::<Severity>(name).unwrap(),
+                severity,
+                "{name} does not come back"
+            );
+        }
+
+        assert!(serde_json::from_str::<Severity>("\"Error\"").is_err());
+    }
+
+    /// Every provider today is a language server, but the accessor exists so
+    /// future non-LSP sources return `None` rather than a bogus id -- and the
+    /// pull-diagnostics `identifier` is not part of the id.
+    #[test]
+    fn the_provider_reports_its_language_server_id() {
+        let server_id = LanguageServerId::default();
+        let pull = DiagnosticProvider::Lsp {
+            server_id,
+            identifier: Some("cargo".into()),
+        };
+        let push = DiagnosticProvider::Lsp {
+            server_id,
+            identifier: None,
+        };
+
+        assert_eq!(pull.language_server_id(), Some(server_id));
+        assert_eq!(push.language_server_id(), Some(server_id));
+        // Same server, different namespaces: they must not compare equal, or
+        // push diagnostics would clear pull diagnostics.
+        assert_ne!(pull, push);
+    }
+}
