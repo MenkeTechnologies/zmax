@@ -706,7 +706,7 @@ pub fn ex_thumbs_mode(cx: &mut Context, args: Args, event: PromptEvent) -> anyho
     let picker = ThumbsPicker::new(&dir).map_err(|e| anyhow!("{e}"))?;
     crate::commands::display_images_in_terminal(
         cx.editor,
-        &[picker.sheet.clone()],
+        std::slice::from_ref(&picker.sheet),
         0,
         false,
         false,
