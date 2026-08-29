@@ -6007,11 +6007,11 @@
  },
  {
   "spec_id": "emacs.command.diff_refine_hunk",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:diffmode:r"
   ],
-  "note": "Bound to `r` rather than emacs's C-c C-b (C-c quits the overlay); refinement painted as REVERSED+BOLD over diff.plus/diff.minus instead of diff-refine-added/diff-refine-removed faces; only on explicit command, never automatic via the `diff-refine` defcustom; context-diff and default `!`-block arms of diff--refine-hunk unported; a `\\ No newline at end of file` line between the `-` and `+` runs (parsed as LineKind::Context, zmax-core/src/diffmode.rs:96-101) breaks the pairing where emacs skips it with diff--forward-while-leading-char ?\\\\. NEW, previously unrecorded: emacs calls (diff-beginning-of-hunk t), whose fallback chain re-search-backward then re-search-forward means point above the first hunk still refines the first hunk; zmax's hunk_bounds (diffmode.rs:173-189) is rposition-only, returns None, and refine_hunk reports \"diff: no hunk at point\". This fires at the overlay's own\u2026"
+  "note": "Two defects fixed. (1) With point ABOVE the first hunk -- on the banner, the `---` or the `+++` -- the search was rposition-only and reported \"no hunk at point\"; emacs's (diff-beginning-of-hunk t) has a fallback chain of re-search-backward THEN re-search-forward, so it refines the FIRST hunk. hunk_bounds_at (zmax-core/src/diffmode.rs) implements that chain and ui/diffmode.rs calls it. (2) A `\\\\ No newline at end of file` marker between the `-` and `+` runs parses as context and ended the `-` run early, leaving the pair unrefined; refine_runs steps over it, as emacs does with diff--forward-while-leading-char. Both are pure and unit tested, including that a bare `+` run and an unpaired `-` run refine nothing (diff-refine-nonmodified is nil)."
  },
  {
   "spec_id": "emacs.command.diff_refresh_hunk",
@@ -6167,11 +6167,11 @@
  },
  {
   "spec_id": "emacs.command.dired_do_byte_compile",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:dired:b"
+   "key:dired:B"
   ],
-  "note": "dired-do-byte-compile -> zmax b; elisprs is an interpreter (no .elc), so it validates by evaluating"
+  "note": "`B` byte-compiles the marked files. It called eval_elisp, so \"byte-compiling\" a marked .el file EXECUTED it, with every side effect emacs's byte-compile-file does not have -- emacs never evaluates the file's top level. byte_compile_elisp (zmax-term/src/ui/dired.rs) uses elisprs::compile_str, which reads, macro-expands and lowers to a fusevm chunk without running a form; the note's premise that elisprs is an interpreter with nothing to compile was wrong, the compiler was simply never called. Without the `scripting` feature the compiler is not linked in and `B` says so rather than pretending the file compiled."
  },
  {
   "spec_id": "emacs.command.dired_do_chgrp",
@@ -6279,11 +6279,11 @@
  },
  {
   "spec_id": "emacs.command.dired_do_info",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:dired:I"
   ],
-  "note": "`I` in Dired runs `info --file <file> --output -` on the file at point and shows the rendered Info text in a scratch buffer, so an Info-format file (including a gzipped .info.gz) is readable from Dired. Not done: there is no Info major mode, so node-to-node navigation (n/p/u/l, following a cross-reference) is unavailable, and the command needs the system info(1) binary"
+  "note": "`I` runs info(1) on the file at point and shows the rendered text -- but in a plain scratch buffer, so Info's own navigation never armed. It goes through the real Info major mode now (Dired::show_as_info sets major_mode `info`, the same way commands::info_display_node does), which is where n (Info-next), p, u, l, d, t and RET live (keymap/major_mode.rs). The two entry points leave an identical buffer behind."
  },
  {
   "spec_id": "emacs.command.dired_do_isearch",
@@ -7745,12 +7745,11 @@
  },
  {
   "spec_id": "emacs.command.ffap",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_file",
-   "key:normal:g f"
+   "static:find_file_at_point"
   ],
-  "note": "emacs ffap (find-file-at-point) -> zmax goto_file opens the file path / URL under the cursor (gf, gx opens URLs externally); lacks full ffap filename/heuristic guessing"
+  "note": "ffap.el:1711-1727 always goes through ffap-prompter: the guess is offered in a minibuffer, PRE-FILLED and editable, so a wrong guess is corrected rather than opened. zmax called goto_file directly and opened the guess silently. It prompts now, with the guess filled in; the guess itself and its numeric `:line` suffix are unit tested."
  },
  {
   "spec_id": "emacs.command.ffap_menu",
@@ -8203,11 +8202,11 @@
  },
  {
   "spec_id": "emacs.command.fortran_window_create",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:fortran_window_create"
   ],
-  "note": "emacs narrows the window to column 72; a TUI cannot, so zmax marks column 72 with a ruler \u2014 the same warning, a different mechanism"
+  "note": "The old note said emacs narrows the window to column 72 and a TUI cannot, so zmax drew a ruler instead. That premise was wrong: fortran.el:1010-1025 does NOT narrow -- it split-window-right at fortran-line-length and parks a buffer in the right window, so the left one is exactly 72 columns. zmax does that now, with a vertical split resized to 72, and keeps the ruler for the case emacs reports as \"No room for Fortran window\" (a frame too narrow to split). Unit tested for both the resize and the too-narrow fallback."
  },
  {
   "spec_id": "emacs.command.fortran_window_create_momentarily",
@@ -11672,11 +11671,11 @@
  },
  {
   "spec_id": "emacs.command.minibuffer_inactive_mode",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:minibuffer_inactive_mode"
   ],
-  "note": "runs the major-mode command in the current buffer -- sets its major mode to minibuffer-inactive, which the mode line shows and the major-mode keymap overlay keys off. What is NOT ported: zmax's minibuffer is an ephemeral compositor prompt layer, not a persistent buffer, so there is no inactive-minibuffer buffer for the mode to be the default major mode of"
+  "note": "\"This major mode essentially IS its keymap\": minibuffer-inactive-mode's body only sets the mode-line string, and everything a user meets is minibuffer-inactive-mode-map (minibuffer.el:3423-3437). zmax set the major mode but had no rows for it at all, so the mode was a label. The map is bound now in keymap/major_mode.rs -- e/f find-file-other-frame, b switch-to-buffer-other-frame, i info, m mail, n make-frame -- against commands that already existed. The mouse-1 -> view-echo-area-messages binding is not a keymap-table entry and is not included."
  },
  {
   "spec_id": "emacs.command.minibuffer_next_completion",
@@ -14209,12 +14208,12 @@
  },
  {
   "spec_id": "emacs.command.rmail_resend",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:rmail_resend",
    "key:rmail:R"
   ],
-  "note": "Evidence extended to the command itself (static:rmail_resend), which the old key-only mapping did not cite. Rmail `R` opens a message-mode resend/bounce draft containing the verbatim original (resend_fields). Still partial: it does not synthesise the Resent-From/Resent-To headers rmail-resend adds, and zmax has no SMTP transport \u2014 message-send only queues to ~/.zmax/mail/outbox."
+  "note": "rmail-resend now synthesises the headers that make it a RESEND rather than a forward: resend_fields_to (zmax-core/src/rmail.rs) emits Resent-From, Resent-Date (RFC 5322 format), Resent-To and Resent-Message-ID ahead of the original headers and body, and strips Sender: -- \"Delete any Sender field, since that's not specifiable\" (rmail.el:4161-4172). The original message goes out unaltered and the Resent-* set records the new hop (RFC 5322 3.6.6). The address is read BEFORE the draft is built, because Resent-To: carries it: emacs's spec is `(interactive \"sResend to: \")`, and both the `R` key in the reader and the command run by name prompt for it. Tested for the four headers in order, the surviving original Message-ID, the stripped Sender, and that two messages resent in the same second get different ids."
  },
  {
   "spec_id": "emacs.command.rmail_retry_failure",
@@ -53154,12 +53153,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_at_lbrace_motion_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:g @",
-   "static:operator_func"
+   "key:normal:g @ w"
   ],
-  "note": "g@: call 'operatorfunc'. vim applies it to the region the following motion covers; zmax applies it to the current selection (the engine already has that region), so the {motion} argument is not read"
+  "note": "map.txt:870 -- g@{motion} calls 'operatorfunc' over the region the MOTION covers. It was bound as a leaf, so the motion argument was never read and the function ran on whatever was selected. `g @` is a motion submap now, mirroring gq's, with operator_func as the operator; `g@@` keeps the bare line-wise form."
  },
  {
   "spec_id": "neovim.normal-mode.g_backtick_lbrace_mark_rbrace",
@@ -53536,11 +53534,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.gq_lbrace_motion_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:format_selections"
+   "key:normal:g q w"
   ],
-  "note": "vim gq{motion} = reformat; zmax reformats the motion range via LSP formatter."
+  "note": "change.txt:1418 -- \"gq{motion}: Format the LINES that {motion} moves over\" -- so gq takes ANY motion, where the submap listed a handful (q j k i a G } { gg). The word, line, character, bracket, search and mark motions the `d` and `y` submaps spell out are now in `g q` too, unchanged (exclusive trims included, since vim adjusts the motion first and only then widens it to whole lines), with extend_to_line_bounds as that widening and the reflow operator in place of delete/yank. Tested that each chord runs the reflow operator and that gqw snaps to whole lines first -- gq is linewise, so it formats the LINE the word motion moved over, not the word."
  },
  {
   "spec_id": "neovim.normal-mode.gr",
@@ -53639,11 +53637,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.gw_lbrace_motion_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:format_selections"
+   "key:normal:g w w"
   ],
-  "note": "gw{motion} reflows to 'text-width' with the built-in wrapper and, per change.txt:1447, ignores 'formatprg'/'formatexpr' \u2014 both driven against nvim: with formatprg=rev and with formatexpr=setline(v:lnum,'XX'), zmax gw produces the same buffer as nvim gw while gq is filtered. The cursor is now restored to the same character in the reflowed text (the old 1:1 collapse is gone): 2G10|gwap, 1G1|/4G20|/3G39|gwap, gw}, gwj, gww, gwgw, gwip and gwG all reproduce nvim's cursor and buffer exactly. Still divergent when the cursor starts on a BLANK: the restore indexes the cursor among the region's non-blank characters, which cannot name a space, so it rounds forward \u2014 1G6|gwap gives 1:7 where nvim gives 1:6 (same for 2G5|, 3G9|, 3G20|, 1G6|gw}), and 4G14|gwap lands 6:1 against nvim's 5:26. {Visual}gw is unchanged and still differs (2G10|Vjgw 4:19 vs nvim 3:20; backwards-linewise and charwise visual also reflow a different region)."
+  "note": "As gq{motion}, through the cursor-restoring operator: change.txt:1445 gives gw the same motion surface, and it now has the same set."
  },
  {
   "spec_id": "neovim.normal-mode.gx",
@@ -57126,7 +57124,7 @@
   "status": "ported",
   "evidence": [
    "typable:set",
-   "key:normal:g @"
+   "key:normal:g @ w"
   ],
   "note": "g@ now exists: it sets the '[ and '] marks to the selection and calls {Func}('char'|'line'). vim applies it to the region a following motion covers; zmax already has that region as the selection"
  },
