@@ -502,3 +502,105 @@ impl<'a> Extend<Spans<'a>> for Text<'a> {
         self.lines.extend(iter);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zmax_view::graphics::{Color, Modifier};
+
+    /// Width is display columns, not characters: a CJK glyph occupies two cells
+    /// and a combining mark none. Every layout decision -- centring, truncation,
+    /// the statusline -- is made from this number, so counting characters here
+    /// would misalign the whole frame.
+    #[test]
+    fn width_counts_display_columns_not_characters() {
+        assert_eq!(Span::raw("hello").width(), 5);
+        assert_eq!(Span::raw("日本語").width(), 6, "three double-width glyphs");
+        // `e` plus a combining acute: one column, two chars.
+        assert_eq!(Span::raw("e\u{0301}").width(), 1);
+        assert_eq!(Span::raw("").width(), 0);
+
+        // A line's width is the sum of its spans...
+        let spans = Spans::from(vec![Span::raw("日本"), Span::raw("ab")]);
+        assert_eq!(spans.width(), 6);
+        // ...and a block's is its widest line, with height the line count.
+        let text = Text::from("ab\n日本語\nc");
+        assert_eq!(text.width(), 6);
+        assert_eq!(text.height(), 3);
+    }
+
+    /// `Text::raw` splits on `str::lines`, so a trailing newline does not add an
+    /// empty last line and `\r\n` is one break rather than two. Getting this
+    /// wrong shows a spurious blank row under popups and hover text.
+    #[test]
+    fn lines_split_without_a_trailing_empty_row() {
+        assert_eq!(Text::from("a\nb").height(), 2);
+        assert_eq!(Text::from("a\nb\n").height(), 2, "no empty last line");
+        assert_eq!(Text::from("a\r\nb").height(), 2, "CRLF is one break");
+        assert_eq!(Text::from("a\n\nb").height(), 3, "a real blank line stays");
+        assert_eq!(Text::from("").height(), 0);
+        assert_eq!(Text::from("").width(), 0);
+    }
+
+    /// The grapheme iterator yields clusters, not chars, and silently drops line
+    /// endings -- a renderer that emitted them would move the cursor mid-row.
+    #[test]
+    fn styled_graphemes_yields_clusters_and_drops_line_endings() {
+        // The iterator borrows the span it came from, so the clusters are copied
+        // out before the span goes out of scope.
+        let symbols = |content: &str| -> Vec<String> {
+            let span = Span::raw(content.to_string());
+            span.styled_graphemes(Style::default())
+                .map(|g| g.symbol.to_string())
+                .collect()
+        };
+
+        // A combining mark stays attached to its base character.
+        assert_eq!(symbols("e\u{0301}x"), vec!["e\u{0301}", "x"]);
+        assert_eq!(symbols("日本"), vec!["日", "本"]);
+        // Line endings are filtered out, including CRLF as a single cluster.
+        assert_eq!(symbols("a\nb"), vec!["a", "b"]);
+        assert_eq!(symbols("a\r\nb"), vec!["a", "b"]);
+        assert_eq!(symbols("\n"), Vec::<String>::new());
+    }
+
+    /// A grapheme's style is the base patched with the span's, so the span only
+    /// overrides what it actually sets and inherits the rest.
+    #[test]
+    fn a_graphemes_style_is_the_base_patched_with_the_spans() {
+        let base = Style::default().fg(Color::Green).bg(Color::Black);
+        let span = Span::styled("x", Style::default().fg(Color::Yellow));
+
+        let grapheme = span.styled_graphemes(base).next().unwrap();
+
+        assert_eq!(grapheme.style.fg, Some(Color::Yellow), "the span wins");
+        assert_eq!(grapheme.style.bg, Some(Color::Black), "the base shows through");
+    }
+
+    /// `patch_style` merges into what a span already carries; `set_style`
+    /// replaces it. Confusing the two either loses syntax highlighting or fails
+    /// to apply a selection.
+    #[test]
+    fn patch_style_merges_where_set_style_replaces() {
+        let italic = Style::default().add_modifier(Modifier::ITALIC);
+        let yellow = Style::default().fg(Color::Yellow);
+
+        let mut patched = Text::styled("a\nb", yellow);
+        patched.patch_style(italic);
+        for line in &patched.lines {
+            for span in &line.0 {
+                assert_eq!(span.style.fg, Some(Color::Yellow), "kept");
+                assert!(span.style.add_modifier.contains(Modifier::ITALIC), "added");
+            }
+        }
+
+        let mut replaced = Text::styled("a\nb", yellow);
+        replaced.set_style(italic);
+        for line in &replaced.lines {
+            for span in &line.0 {
+                assert_eq!(span.style.fg, None, "the colour is gone");
+                assert!(span.style.add_modifier.contains(Modifier::ITALIC));
+            }
+        }
+    }
+}
