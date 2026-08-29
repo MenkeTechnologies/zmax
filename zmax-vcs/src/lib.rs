@@ -199,6 +199,10 @@ enum DiffProvider {
     None,
 }
 
+// Every method here dispatches to `git::` behind `#[cfg(feature = "git")]`; without
+// that feature only the `Self::None => bail!` arm remains and the parameters go
+// unused. They are used in the configuration that ships, so the names stay.
+#[cfg_attr(not(feature = "git"), allow(unused_variables))]
 impl DiffProvider {
     fn get_diff_base(&self, file: &Path, trust_full: bool) -> Result<Vec<u8>> {
         match self {
