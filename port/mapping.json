@@ -12210,11 +12210,12 @@
  },
  {
   "spec_id": "emacs.command.org_agenda_file_to_front",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:org-agenda-file-to-front"
+   "typable:org-agenda-file-to-front",
+   "key:major-org:C-c ["
   ],
-  "note": "Reachable only by typing `:org-agenda-file-to-front`; emacs's `C-c [` (org-keys.el:574) is unbound in every zmax preset \u2014 the org major-mode table (keymap/major_mode.rs:71-83) has no `[` entry and the tree's only `C-c [` is enriched-mode `:set-left-margin` (major_mode.rs:294). Status message drops emacs's `moved`/`added` word (org.el:15817-15818) and substitutes the canonicalized path in its place, so re-adding an already-listed file is indistinguishable from a first add. TO-END is a positional literal `end` instead of a prefix argument. `ORG_AGENDA_FILES` (typed.rs:8007) is session-local and seeded empty; emacs seeds from persisted `(org-agenda-files t)` and writes back via `org-store-new-agenda-file-list`."
+  "note": "The note said the chord was unbound in every preset; the org major-mode table has it. `C-c [` is :org-agenda-file-to-front and `C-c ]` is :org-remove-file in an org buffer (keymap/major_mode.rs), bound as the pair org-keys.el:574-575 binds them -- without the second, a file added by mistake could not be taken off. The command itself moves or adds the visited file to the front of the agenda file list, with an `end` argument for emacs's append form."
  },
  {
   "spec_id": "emacs.command.org_cycle",
@@ -14842,11 +14843,11 @@
  },
  {
   "spec_id": "emacs.command.set_variable",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:set-option"
+   "static:set_variable"
   ],
-  "note": "emacs set-variable -> zmax :set-option sets a config option at runtime"
+  "note": "\"Set VARIABLE to VALUE. [...] When called interactively, the user is prompted for VARIABLE and then VALUE\" (simple.el:9980-10010). set_variable (zmax-term/src/commands.rs) is those two prompts -- \"Set variable: \" with completion over the settings, then emacs's \"Set <var> to value: \", which names the variable it is setting -- over zmax's user options, which are its config settings: the same universe describe-variable reports on. The type check emacs gets from the defcustom declaration is the config's own deserialization, reached by routing the write through the :set-option implementation so the parse, the check and the live config update stay one code path; a value that will not parse into the setting's type is rejected by field name and the setting is left alone."
  },
  {
   "spec_id": "emacs.command.set_visited_file_name",
@@ -14866,11 +14867,11 @@
  },
  {
   "spec_id": "emacs.command.setopt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set-option"
   ],
-  "note": "emacs setopt -> zmax :set-option sets a config option value at runtime"
+  "note": "setopt is a MACRO, not a command (custom.el:1073 `(defmacro setopt (&rest pairs) ...)`), so it has no interactive form and `M-x setopt` finds nothing in emacs either; what the manual's Examining node indexes is the Lisp form. What separates it from setq is that it runs the option's custom-set function and warns when the value does not match the declared type. `:set-option NAME VALUE` is that: the value is parsed into the setting's own type through the config's deserialization and rejected by field name when it does not fit, then installed through the live ConfigEvent::Update path rather than written straight into the struct."
  },
  {
   "spec_id": "emacs.command.setq_default",

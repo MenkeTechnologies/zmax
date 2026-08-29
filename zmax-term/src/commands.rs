@@ -804,6 +804,7 @@ impl MappableCommand {
         config_variable_search, "Search editor config variables, copy path on select (SPC h .)",
         apropos_local_value, "Search buffer-local variables by value (emacs apropos-local-value, SPC h v)",
         apropos_local_variable, "Search buffer-local variables by name (emacs apropos-local-variable)",
+        set_variable, "Set a config variable at runtime, prompting for name and value (emacs set-variable)",
         clone_indirect_buffer, "Clone the current buffer into a shared-document split (SPC b N i)",
         clone_indirect_from_buffer, "Open an existing buffer in a shared-document split (SPC b N C-i)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
@@ -49493,6 +49494,90 @@ fn git_acp(cx: &mut Context) {
 /// Prompt for one line of input, then run `f` with it (trimmed, non-empty) on
 /// Validate. The callback receives a `compositor::Context` so it can shell out,
 /// reload buffers, or push overlays. Shared by the `vc-*` / `project-*` ports.
+/// Emacs `set-variable` (`M-x set-variable`, the Examining node): "Set VARIABLE
+/// to VALUE. […] When called interactively, the user is prompted for VARIABLE and
+/// then VALUE" (simple.el:9980-10010), with completion over the user options and
+/// the value checked against the variable's declared type.
+///
+/// zmax's user options are its config settings — the same universe
+/// `describe-variable` reports on and `:set-option` writes — so this is those two
+/// prompts over that universe, and the type check is the config's own
+/// deserialization: a value that will not parse into the setting's type is
+/// rejected with the name of the field, and the setting is left alone.
+fn set_variable(cx: &mut Context) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            let mut prompt = crate::ui::prompt::Prompt::new(
+                "Set variable: ".into(),
+                None,
+                ui::completers::setting,
+                move |cx: &mut crate::compositor::Context, name: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let name = name.trim().to_string();
+                    if name.is_empty() {
+                        return;
+                    }
+                    // Emacs's second prompt names the variable it is setting.
+                    let label: Cow<'static, str> = format!("Set {name} to value: ").into();
+                    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+                        move |_editor: &mut Editor, compositor: &mut Compositor| {
+                            let name = name.clone();
+                            let prompt = crate::ui::prompt::Prompt::new(
+                                label.clone(),
+                                None,
+                                ui::completers::none,
+                                move |cx: &mut crate::compositor::Context,
+                                      value: &str,
+                                      event: PromptEvent| {
+                                    if event != PromptEvent::Validate {
+                                        return;
+                                    }
+                                    set_variable_apply(cx, &name, value.trim());
+                                },
+                            );
+                            compositor.push(Box::new(prompt));
+                        },
+                    ));
+                    cx.jobs.callback(async move { Ok(call) });
+                },
+            );
+            prompt.recalculate_completion(editor);
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Write one config setting, reporting the outcome the way `set-variable` does.
+/// Routed through the `:set-option` implementation so the parse, the type check
+/// and the live config update are the one code path.
+fn set_variable_apply(cx: &mut crate::compositor::Context, name: &str, value: &str) {
+    let command = MappableCommand::Typable {
+        name: "set-option".to_string(),
+        args: format!("{name} {value}"),
+        doc: String::new(),
+    };
+    let mut ctx = Context {
+        register: None,
+        count: None,
+        editor: cx.editor,
+        callback: Vec::new(),
+        on_next_key_callback: None,
+        jobs: cx.jobs,
+    };
+    // Clear first, or a status left over from before the prompt would be
+    // mistaken for `set-option`'s own report below.
+    ctx.editor.clear_status();
+    command.execute(&mut ctx);
+    // `set-option` reports its own failures on the status line; say what was set
+    // when it did not.
+    if ctx.editor.get_status().is_none() {
+        ctx.editor.set_status(format!("{name} set to {value}"));
+    }
+}
+
 fn prompt_then<F>(cx: &mut Context, label: &'static str, f: F)
 where
     F: Fn(&mut crate::compositor::Context, &str) + 'static,
