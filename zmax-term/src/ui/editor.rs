@@ -6255,11 +6255,17 @@ impl Component for EditorView {
 
         // check if bufferline should be rendered
         use zmax_view::editor::BufferLine;
-        let use_bufferline = match config.bufferline {
-            BufferLine::Always => true,
-            BufferLine::Multiple if cx.editor.documents.len() > 1 => true,
-            // Always show the top tab bar while the IDE workbench is open.
-            _ => self.ide.as_ref().is_some_and(Ide::visible),
+        let use_bufferline = match cx.editor.frame_tab_bar() {
+            // emacs `tab-bar-lines`: this frame has its own answer
+            // (`toggle-frame-tab-bar`), which wins over the global mode. The IDE
+            // workbench still forces the row it reserves for its own tabs.
+            Some(on) => on || self.ide.as_ref().is_some_and(Ide::visible),
+            None => match config.bufferline {
+                BufferLine::Always => true,
+                BufferLine::Multiple if cx.editor.documents.len() > 1 => true,
+                // Always show the top tab bar while the IDE workbench is open.
+                _ => self.ide.as_ref().is_some_and(Ide::visible),
+            },
         };
 
         // The IDE workbench reserves a dedicated row for the open-file tabs above

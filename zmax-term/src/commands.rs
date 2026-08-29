@@ -32594,6 +32594,9 @@ fn tab_bar_mode(cx: &mut Context) {
     } else {
         BufferLine::Always
     };
+    // The global mode sets `tab-bar-lines` on EVERY frame, so a frame that
+    // `toggle-frame-tab-bar` had given its own answer follows the mode again.
+    cx.editor.clear_frame_tab_bars();
     edit_live_config(cx, move |c| c.bufferline = new);
     cx.editor.set_status(format!(
         "tab-bar-mode {}",
@@ -50629,7 +50632,23 @@ fn window_divider_mode(cx: &mut Context) {
 /// frame only (`tab-bar-mode` does it to every frame). zmax draws one tab bar,
 /// so this toggles the strip for the frame that is on screen.
 fn toggle_frame_tab_bar(cx: &mut Context) {
-    tab_bar_mode(cx);
+    // Emacs scopes this to the SELECTED frame -- it sets that frame's
+    // `tab-bar-lines` -- where `tab-bar-mode` sets the parameter on every frame.
+    // zmax's used to be the global mode, so the bar could not be up on one frame
+    // and down on another. The override is a frame parameter now; the effective
+    // value it flips is this frame's own when it has one, else whatever the
+    // global mode currently says.
+    use zmax_view::editor::BufferLine;
+    let effective = match cx.editor.frame_tab_bar() {
+        Some(on) => on,
+        None => !matches!(cx.editor.config().bufferline, BufferLine::Never),
+    };
+    cx.editor.set_frame_tab_bar(Some(!effective));
+    cx.editor.set_status(if effective {
+        "Tab bar off (this frame)"
+    } else {
+        "Tab bar on (this frame)"
+    });
 }
 
 /// emacs `mouse-wheel-text-scale` (`C-wheel-up` / `C-wheel-down`): the wheel

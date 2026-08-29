@@ -16065,11 +16065,11 @@
  },
  {
   "spec_id": "emacs.command.toggle_frame_tab_bar",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:toggle_frame_tab_bar"
   ],
-  "note": "turns the top tab strip on and off (the same strip tab-bar-mode drives). Emacs scopes this to the selected frame while other frames keep their own setting; zmax has one tab-bar switch shared by every frame, so switching frames does not restore a per-frame value"
+  "note": "Emacs scopes toggle-frame-tab-bar to the SELECTED frame -- it sets that frame's `tab-bar-lines` -- where tab-bar-mode sets the parameter on every frame. zmax's was the global mode, so the bar could not be up on one frame and down on another. FrameState carries a `tab_bar: Option<bool>` override now: Some wins over the global mode for that frame, None follows it, and the renderer reads it through Editor::frame_tab_bar at the one place the bufferline's visibility is decided (zmax-term/src/ui/editor.rs). The override is carried forward when a frame is parked, a new frame starts with None so it follows the mode, and tab-bar-mode calls clear_frame_tab_bars so the global mode really governs every frame again -- which is what setting the parameter on all of them amounts to. The IDE workbench still forces the row it reserves for its own tabs. Tested in zmax-view: the override sticks to one frame, survives being parked and displayed again, does not leak to a frame made later, and is cleared wholesale by the global mode."
  },
  {
   "spec_id": "emacs.command.toggle_input_method",

@@ -1654,6 +1654,11 @@ pub struct FrameState {
     /// default), so the value is parked with the frame and applied when the
     /// frame is displayed again.
     pub scroll_bar: Option<crate::view::ScrollBarSide>,
+    /// The frame's `tab-bar-lines` parameter, when it has one of its own:
+    /// `Some(true)`/`Some(false)` override the global `tab-bar-mode` for this
+    /// frame, `None` follows it. Emacs's `toggle-frame-tab-bar` sets exactly this
+    /// on the selected frame, where `tab-bar-mode` sets it on every frame.
+    pub tab_bar: Option<bool>,
 }
 
 /// A client connected to the zmax server (emacs `server-start` /
@@ -4326,6 +4331,12 @@ impl Editor {
             tabs: self.tabs.clone(),
             current_tab: self.current_tab,
             scroll_bar: crate::view::scroll_bar_side(),
+            // Carried forward, like the name: the override belongs to the frame,
+            // not to whatever was live when it was parked.
+            tab_bar: self
+                .frames
+                .get(self.current_frame)
+                .and_then(|f| f.tab_bar),
         }
     }
 
@@ -4351,6 +4362,31 @@ impl Editor {
         self.ensure_frames_initialized();
         if let Some(frame) = self.frames.get_mut(self.current_frame) {
             frame.scroll_bar = side;
+        }
+    }
+
+    /// The displayed frame's `tab-bar-lines` override, or `None` when it follows
+    /// the global `tab-bar-mode`. Read by the renderer, which lets a frame show
+    /// the tab bar while another hides it.
+    pub fn frame_tab_bar(&self) -> Option<bool> {
+        self.frames.get(self.current_frame).and_then(|f| f.tab_bar)
+    }
+
+    /// Set (or clear, with `None`) the displayed frame's `tab-bar-lines`
+    /// override. Backs `toggle-frame-tab-bar`.
+    pub fn set_frame_tab_bar(&mut self, on: Option<bool>) {
+        self.ensure_frames_initialized();
+        if let Some(frame) = self.frames.get_mut(self.current_frame) {
+            frame.tab_bar = on;
+        }
+    }
+
+    /// Drop every frame's `tab-bar-lines` override, so the global
+    /// `tab-bar-mode` really governs all of them again — which is what emacs's
+    /// global mode does when it sets the parameter on every frame.
+    pub fn clear_frame_tab_bars(&mut self) {
+        for frame in &mut self.frames {
+            frame.tab_bar = None;
         }
     }
 
@@ -4426,6 +4462,8 @@ impl Editor {
             // emacs's `default-frame-alist` does for a frame parameter nobody
             // overrode.
             scroll_bar: crate::view::scroll_bar_side(),
+            // No override: a new frame follows the global `tab-bar-mode`.
+            tab_bar: None,
         };
         self.frames.push(frame.clone());
         self.restore_frame(frame);
@@ -5486,6 +5524,43 @@ mod buffer_order_tests {
             handlers,
             WorkspaceTrust::fully_trusted(),
         )
+    }
+
+    /// emacs `toggle-frame-tab-bar` sets `tab-bar-lines` on the SELECTED frame,
+    /// where `tab-bar-mode` sets it on every frame. The override must therefore
+    /// stick to one frame, survive being parked and displayed again, not leak to
+    /// a frame made later, and be cleared wholesale by the global mode.
+    #[tokio::test]
+    async fn the_tab_bar_override_belongs_to_one_frame() {
+        let mut editor = test_editor();
+        // Frames are parked window trees, so the live tree needs a window first.
+        let first = open_scratch(&mut editor);
+        editor.switch(first, Action::Load);
+
+        // No override to begin with: every frame follows the global mode.
+        assert_eq!(editor.frame_tab_bar(), None);
+
+        editor.set_frame_tab_bar(Some(false));
+        assert_eq!(editor.frame_tab_bar(), Some(false));
+
+        // A second frame starts with no answer of its own.
+        let doc = open_scratch(&mut editor);
+        editor.new_frame(doc, None);
+        assert_eq!(editor.frame_tab_bar(), None);
+        editor.set_frame_tab_bar(Some(true));
+        assert_eq!(editor.frame_tab_bar(), Some(true));
+
+        // Going back brings the first frame's own answer, not the last one set.
+        editor.switch_frame(0);
+        assert_eq!(editor.frame_tab_bar(), Some(false));
+        editor.switch_frame(1);
+        assert_eq!(editor.frame_tab_bar(), Some(true));
+
+        // The global mode takes every frame back under its own control.
+        editor.clear_frame_tab_bars();
+        assert_eq!(editor.frame_tab_bar(), None);
+        editor.switch_frame(0);
+        assert_eq!(editor.frame_tab_bar(), None);
     }
 
     /// Open a buffer visiting `path`, through the one site that inserts into
