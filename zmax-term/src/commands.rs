@@ -51692,7 +51692,28 @@ fn info_node_in_other_window(editor: &mut Editor, node: &str) {
 /// (Partial: replaces across the whole project via ripgrep rather than only the
 /// current xref result set.)
 fn xref_query_replace_in_results(cx: &mut Context) {
-    project_query_replace_regexp(cx);
+    // The xref result set: zmax lands multi-candidate xref results in the
+    // quickfix list, so those entries ARE "all displayed xref entries".
+    let entries = qf_snapshot(cx.editor, QfKind::Quickfix);
+    if entries.is_empty() {
+        cx.editor
+            .set_error("xref-query-replace-in-results: no xref results to replace in");
+        return;
+    }
+    prompt_then(cx, "Query replace in results (regexp): ", move |cx, from| {
+        let from = from.to_string();
+        let entries = entries.clone();
+        prompt_then_cx(cx, "Replace with: ", move |cx, to| {
+            if let Err(e) = crate::commands::typed::run_replace_in_entries(
+                cx,
+                entries.clone(),
+                from.clone(),
+                to.to_string(),
+            ) {
+                cx.editor.set_error(e.to_string());
+            }
+        });
+    });
 }
 
 /// `xref-find-references-and-replace`: find references to a symbol and replace

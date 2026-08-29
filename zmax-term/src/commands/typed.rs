@@ -6525,6 +6525,104 @@ fn project_replace(
 /// every regex match of `pattern` with `replacement` across the project's
 /// tracked files (found via `rg -l`), off-thread, then reload affected buffers.
 /// Shared by the typable command and the static `project_query_replace_regexp`.
+/// Rewrite only the 0-based `lines` of `content`, replacing every match of `re`
+/// on them. Returns the new text, how many replacements were made, and how many
+/// lines were rewritten.
+///
+/// Built line by line rather than with one `replace_all` over the whole file so
+/// that (a) a match on a line no result points at is left alone, which is what
+/// makes this "in results" rather than project-wide, and (b) each line's ending
+/// — and the last line's absence of one — survives untouched. Pure — unit tested.
+fn replace_on_lines(
+    content: &str,
+    lines: &std::collections::BTreeSet<usize>,
+    re: &regex::Regex,
+    replacement: &str,
+) -> (String, usize, usize) {
+    let mut out = String::with_capacity(content.len());
+    let mut total = 0usize;
+    let mut hit = 0usize;
+    for (i, line) in content.split_inclusive('\n').enumerate() {
+        if !lines.contains(&i) {
+            out.push_str(line);
+            continue;
+        }
+        let count = re.find_iter(line).count();
+        if count == 0 {
+            out.push_str(line);
+            continue;
+        }
+        total += count;
+        hit += 1;
+        out.push_str(&re.replace_all(line, replacement));
+    }
+    (out, total, hit)
+}
+
+/// Replace `pattern` with `replacement` on exactly the `(file, line)` pairs
+/// `entries` names, and nowhere else.
+///
+/// Emacs's `xref-query-replace-in-results` is scoped to the hits currently
+/// displayed, which is what separates it from a project-wide replace: a match on
+/// a line no xref hit points at is left alone even in a file that has hits.
+/// Returns the lines it rewrote, the replacements made, and the files touched.
+pub(crate) fn run_replace_in_entries(
+    cx: &mut compositor::Context,
+    entries: Vec<zmax_view::editor::QfEntry>,
+    pattern: String,
+    replacement: String,
+) -> anyhow::Result<()> {
+    let re = regex::Regex::new(&pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    if entries.is_empty() {
+        bail!("no results to replace in");
+    }
+    cx.editor.set_status("xref-replace: rewriting the result lines…");
+    cx.jobs.callback(async move {
+        let res = tokio::task::spawn_blocking(
+            move || -> (usize, usize, Vec<std::path::PathBuf>) {
+                // The hit lines of each file, so every file is read and written
+                // once however many hits it holds.
+                let mut by_file: std::collections::BTreeMap<
+                    std::path::PathBuf,
+                    std::collections::BTreeSet<usize>,
+                > = std::collections::BTreeMap::new();
+                for e in entries {
+                    by_file.entry(e.path).or_default().insert(e.line);
+                }
+                let mut changed = Vec::new();
+                let mut total = 0usize;
+                let mut lines_hit = 0usize;
+                for (path, lines) in by_file {
+                    let Ok(content) = std::fs::read_to_string(&path) else {
+                        continue;
+                    };
+                    let (out, file_total, hit) =
+                        replace_on_lines(&content, &lines, &re, &replacement);
+                    lines_hit += hit;
+                    if file_total > 0 && std::fs::write(&path, out.as_bytes()).is_ok() {
+                        total += file_total;
+                        changed.push(path);
+                    }
+                }
+                (lines_hit, total, changed)
+            },
+        )
+        .await
+        .map_err(|e| anyhow!("xref-replace task: {e}"))?;
+        let (lines_hit, total, paths) = res;
+        Ok(job::Callback::Editor(Box::new(
+            move |editor: &mut Editor| {
+                crate::commands::reload_docs_for_paths(editor, &paths);
+                editor.set_status(format!(
+                    "xref-replace: {total} replacement(s) on {lines_hit} result line(s) in {} file(s)",
+                    paths.len()
+                ));
+            },
+        )))
+    });
+    Ok(())
+}
+
 pub(crate) fn run_project_replace(
     cx: &mut compositor::Context,
     pattern: String,
@@ -74632,6 +74730,48 @@ mod vim_set_tests {
                 ("select", "block")
             ]
         );
+    }
+
+    /// `xref-query-replace-in-results` is scoped to the hits currently displayed:
+    /// a match on a line no result points at must survive, even in a file that
+    /// has hits. Line endings — including the last line's absence of one — must
+    /// survive too, or the replace rewrites the whole file's shape.
+    #[test]
+    fn replace_in_results_touches_only_the_result_lines() {
+        use std::collections::BTreeSet;
+        let re = regex::Regex::new("foo").unwrap();
+        let content = "foo one\nfoo two\nfoo three\nfoo four";
+
+        // Only lines 0 and 2 are results.
+        let lines: BTreeSet<usize> = [0usize, 2].into_iter().collect();
+        let (out, total, hit) = super::replace_on_lines(content, &lines, &re, "bar");
+        assert_eq!(out, "bar one\nfoo two\nbar three\nfoo four");
+        assert_eq!((total, hit), (2, 2));
+        // The final line had no newline and must not have gained one.
+        assert!(!out.ends_with('\n'));
+
+        // A result line with several matches counts them all.
+        let lines: BTreeSet<usize> = [0usize].into_iter().collect();
+        let (out, total, hit) = super::replace_on_lines("foo foo x\ny\n", &lines, &re, "b");
+        assert_eq!(out, "b b x\ny\n");
+        assert_eq!((total, hit), (2, 1));
+
+        // A result line with no match is not counted as rewritten.
+        let lines: BTreeSet<usize> = [1usize].into_iter().collect();
+        let (out, total, hit) = super::replace_on_lines("foo\nbaz\n", &lines, &re, "b");
+        assert_eq!(out, "foo\nbaz\n");
+        assert_eq!((total, hit), (0, 0));
+
+        // A line index past the end is simply never reached.
+        let lines: BTreeSet<usize> = [99usize].into_iter().collect();
+        let (out, total, _) = super::replace_on_lines("foo\n", &lines, &re, "b");
+        assert_eq!(out, "foo\n");
+        assert_eq!(total, 0);
+
+        // CRLF survives: the `\r` belongs to the line, not to the match.
+        let lines: BTreeSet<usize> = [0usize].into_iter().collect();
+        let (out, _, _) = super::replace_on_lines("foo\r\nfoo\r\n", &lines, &re, "bar");
+        assert_eq!(out, "bar\r\nfoo\r\n");
     }
 
     /// vim `'helpfile'`: "Environment variables are expanded |:set_env|. For

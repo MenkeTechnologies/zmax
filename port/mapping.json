@@ -17165,11 +17165,11 @@
  },
  {
   "spec_id": "emacs.command.xref_query_replace_in_results",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:xref_query_replace_in_results"
   ],
-  "note": "whole-project ripgrep regex replace, not limited to the current xref result set."
+  "note": "\"Perform interactive replacement of FROM with TO in all displayed xref entries\" -- the scope is what separates it from a project-wide replace, and it used to BE a project-wide replace (project_query_replace_regexp). It is scoped now: zmax lands multi-candidate xref results in the quickfix list, so those entries are the displayed set, and run_replace_in_entries (zmax-term/src/commands/typed.rs) rewrites exactly their (file, line) pairs -- grouping by file so each is read and written once however many hits it holds, and reporting the replacements, the result lines rewritten and the files touched. replace_on_lines does the edit line by line rather than with one replace_all over the file, so a match on a line no result points at survives even in a file that has hits, and every line ending -- including the last line's absence of one, and CRLF -- survives untouched. Unit tested on all five of those cases."
  },
  {
   "spec_id": "emacs.command.xref_quit",
