@@ -1479,6 +1479,7 @@ impl MappableCommand {
         select_all_children, "Select all children of the current node",
         jump_forward, "Jump forward on jumplist",
         jump_backward, "Jump backward on jumplist",
+        xref_pop_marker_stack, "Go back to where the last xref lookup was invoked from (emacs xref-pop-marker-stack / xref-go-back, M-,)",
         save_selection, "Save current selection to jumplist",
         jump_view_right, "Jump to right split",
         jump_view_left, "Jump to left split",
@@ -42000,6 +42001,69 @@ fn jump_forward(cx: &mut Context) {
     foldopen_at(view, doc, "jump");
 }
 
+/// Emacs's `xref--marker-ring`: where each `xref-find-definitions` (and its
+/// siblings) was invoked from, so `xref-pop-marker-stack` (`M-,`) can go back.
+///
+/// This is deliberately NOT the jumplist. vim's jumplist records every jump —
+/// searches, `G`, `%`, a window change — so popping it after a definition lookup
+/// lands wherever the last unrelated jump happened to be. Emacs keeps a ring
+/// only xref pushes to, which is what makes `M-,` mean "back to where I asked
+/// this question".
+static XREF_MARKERS: std::sync::Mutex<Vec<(zmax_view::DocumentId, usize)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// How many markers the ring keeps (emacs's `xref-marker-ring-length`, 16).
+const XREF_MARKER_RING_LENGTH: usize = 16;
+
+/// Record the current position on the xref marker ring. Called by every xref
+/// lookup immediately before it jumps — not when the picker opens, so a
+/// cancelled pick pushes nothing.
+pub(crate) fn xref_push_marker(editor: &Editor) {
+    let (view, doc) = current_ref!(editor);
+    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let Ok(mut ring) = XREF_MARKERS.lock() else {
+        return;
+    };
+    xref_ring_push(&mut ring, (doc.id(), pos));
+}
+
+/// Push one marker onto the ring, dropping the oldest once it is full. A ring,
+/// not an unbounded stack — emacs's `xref-marker-ring-length` bounds it the same
+/// way. Pure — unit tested.
+fn xref_ring_push(ring: &mut Vec<(zmax_view::DocumentId, usize)>, entry: (zmax_view::DocumentId, usize)) {
+    ring.push(entry);
+    if ring.len() > XREF_MARKER_RING_LENGTH {
+        ring.remove(0);
+    }
+}
+
+/// Emacs `xref-pop-marker-stack` / `xref-go-back` (`M-,`): return to where the
+/// last xref lookup was invoked from.
+///
+/// A marker into a buffer that has since been closed is dead — emacs's markers
+/// into a killed buffer are too — so those are dropped and the next live one is
+/// used, and an empty ring reports emacs's own message.
+fn xref_pop_marker_stack(cx: &mut Context) {
+    loop {
+        let Some((id, pos)) = XREF_MARKERS.lock().ok().and_then(|mut r| r.pop()) else {
+            cx.editor.set_error("At start of xref history");
+            return;
+        };
+        if !cx.editor.documents.contains_key(&id) {
+            continue; // the buffer is gone; that marker points nowhere
+        }
+        cx.editor.switch(id, Action::Replace);
+        let (view, doc) = current!(cx.editor);
+        let pos = pos.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(pos));
+        let scrolloff = cx.editor.config().scrolloff;
+        let (view, doc) = current!(cx.editor);
+        view.ensure_cursor_in_view(doc, scrolloff);
+        foldopen_at(view, doc, "jump");
+        return;
+    }
+}
+
 fn jump_backward(cx: &mut Context) {
     cx.editor.jump_backward(cx.editor.tree.focus, cx.count());
     let (view, doc) = current!(cx.editor);
@@ -69269,6 +69333,9 @@ pub(crate) fn etags_goto_definition(cx: &mut Context, cmd: &'static str, action:
             return;
         };
         let path = tags_file_path(dir, &file.path);
+        // The tags path is an xref lookup too (it is what `xref-etags-mode` and
+        // `ggtags-mode` make `M-.` resolve through), so `M-,` goes back from it.
+        xref_push_marker(cx.editor);
         match cx.editor.open(&path, action) {
             Ok(_) => {
                 goto_line_impl_at(cx.editor, tag.line.saturating_sub(1));
@@ -74374,7 +74441,7 @@ fn xref_quit_and_pop_marker_stack(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, _cx| {
         compositor.pop();
     }));
-    jump_backward(cx);
+    xref_pop_marker_stack(cx);
 }
 
 /// Emacs `display-fill-column-indicator-mode`: draw a rule at the fill column, so
@@ -76406,6 +76473,37 @@ mod ediff_group_tests {
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod xref_marker_tests {
+    use super::{xref_ring_push, XREF_MARKER_RING_LENGTH};
+    use zmax_view::DocumentId;
+
+    /// The ring is bounded and LIFO: `M-,` goes back to the most recent lookup,
+    /// and the oldest marker falls off once `xref-marker-ring-length` is reached
+    /// rather than the ring growing without limit.
+    #[test]
+    fn the_marker_ring_is_bounded_and_pops_most_recent_first() {
+        let id = DocumentId::default();
+        let mut ring: Vec<(DocumentId, usize)> = Vec::new();
+
+        for pos in 0..XREF_MARKER_RING_LENGTH {
+            xref_ring_push(&mut ring, (id, pos));
+        }
+        assert_eq!(ring.len(), XREF_MARKER_RING_LENGTH);
+        assert_eq!(ring.first().unwrap().1, 0);
+
+        // One more than it holds: the oldest goes, the newest is on top.
+        xref_ring_push(&mut ring, (id, 999));
+        assert_eq!(ring.len(), XREF_MARKER_RING_LENGTH);
+        assert_eq!(ring.first().unwrap().1, 1, "the oldest marker fell off");
+        assert_eq!(ring.last().unwrap().1, 999);
+
+        // Popping is most-recent-first.
+        assert_eq!(ring.pop().unwrap().1, 999);
+        assert_eq!(ring.pop().unwrap().1, XREF_MARKER_RING_LENGTH - 1);
     }
 }
 

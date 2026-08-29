@@ -1141,6 +1141,9 @@ fn goto_impl(editor: &mut Editor, compositor: &mut Compositor, locations: Vec<Lo
 
     match locations.as_slice() {
         [location] => {
+            // emacs pushes the invocation point on `xref--marker-ring` as the
+            // jump is made, which is what `M-,` goes back to.
+            crate::commands::xref_push_marker(editor);
             jump_to_location(editor, location, Action::Replace);
         }
         [] => unreachable!("`locations` should be non-empty for `goto_impl`"),
@@ -1159,6 +1162,9 @@ fn goto_impl(editor: &mut Editor, compositor: &mut Compositor, locations: Vec<Lo
             )];
 
             let picker = Picker::new(columns, 0, locations, cwdir, |cx, location, action| {
+                // Pushed here rather than when the picker opened, so a cancelled
+                // pick leaves the ring alone.
+                crate::commands::xref_push_marker(cx.editor);
                 jump_to_location(cx.editor, location, action)
             })
             .with_preview(|_editor, location| location_to_file_location(location));

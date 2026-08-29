@@ -190,7 +190,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         },
         // Xref: find-definition / find-references / pop-marker.
         "A-." => goto_definition,           // M-.: xref-find-definitions
-        "A-," => jump_backward,             // M-,: xref-pop-marker-stack
+        "A-," => xref_pop_marker_stack,     // M-,: xref-pop-marker-stack
         "A-?" => goto_reference,            // M-?: xref-find-references
         // <left>/<right> are left-char/right-char, not backward-char/forward-char:
         // they move by *screen* direction, so in a right-to-left paragraph they
@@ -446,7 +446,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-A-a" => goto_prev_function,      // C-M-a: beginning-of-defun
         "C-A-e" => goto_next_function,      // C-M-e: end-of-defun
         "A-." => goto_definition,           // M-.: xref-find-definitions
-        "A-," => jump_backward,             // M-,: xref-pop-marker-stack
+        "A-," => xref_pop_marker_stack,     // M-,: xref-pop-marker-stack
         "A-?" => goto_reference,            // M-?: xref-find-references
         "A-c" => capitalize_word,           // M-c: capitalize-word
         "A-u" => upcase_word,               // M-u: upcase-word

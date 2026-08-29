@@ -17119,9 +17119,9 @@
   "spec_id": "emacs.command.xref_go_back",
   "status": "ported",
   "evidence": [
-   "static:jump_backward"
+   "static:xref_pop_marker_stack"
   ],
-  "note": "jump_backward pops the jumplist to return to the pre-jump location, like xref-go-back."
+  "note": "xref-go-back is the current name for xref-pop-marker-stack, and it now pops the xref ring rather than the jumplist. There is a real xref marker ring now, and it is deliberately NOT the jumplist: vim's jumplist records every jump -- searches, `G`, `%`, a window change -- so popping it after a definition lookup lands wherever the last unrelated jump happened to be, which is the divergence the old note recorded. XREF_MARKERS (zmax-term/src/commands.rs) is a ring only xref pushes to, bounded at emacs's xref-marker-ring-length of 16 with the oldest falling off, and every xref entry point pushes the invocation point as it jumps: goto_impl's single-location arm, its picker's selection callback -- pushed there rather than when the picker opens, so a cancelled pick leaves the ring alone -- and the etags/ggtags path, which is what xref-etags-mode makes `M-.` resolve through. Popping skips markers into buffers that have since been closed, as emacs's markers into a killed buffer are dead, and an empty ring reports \"At start of xref history\". Unit tested for the bound and the LIFO order."
  },
  {
   "spec_id": "emacs.command.xref_go_forward",
@@ -17185,7 +17185,7 @@
   "evidence": [
    "static:xref_quit_and_pop_marker_stack"
   ],
-  "note": "emacs xref-quit-and-pop-marker-stack"
+  "note": "Closes the xref results overlay and then goes back, which is the command's two halves; the second half is the real ring now rather than the jumplist. There is a real xref marker ring now, and it is deliberately NOT the jumplist: vim's jumplist records every jump -- searches, `G`, `%`, a window change -- so popping it after a definition lookup lands wherever the last unrelated jump happened to be, which is the divergence the old note recorded. XREF_MARKERS (zmax-term/src/commands.rs) is a ring only xref pushes to, bounded at emacs's xref-marker-ring-length of 16 with the oldest falling off, and every xref entry point pushes the invocation point as it jumps: goto_impl's single-location arm, its picker's selection callback -- pushed there rather than when the picker opens, so a cancelled pick leaves the ring alone -- and the etags/ggtags path, which is what xref-etags-mode makes `M-.` resolve through. Popping skips markers into buffers that have since been closed, as emacs's markers into a killed buffer are dead, and an empty ring reports \"At start of xref history\". Unit tested for the bound and the LIFO order."
  },
  {
   "spec_id": "emacs.command.xref_select_and_show_xref",
@@ -23653,11 +23653,12 @@
  },
  {
   "spec_id": "emacs.keybinding.m_comma",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:emacs:A-,"
+   "key:emacs:A-,",
+   "static:xref_pop_marker_stack"
   ],
-  "note": "emacs preset: xref-pop-marker-stack -> jump_backward: pops the jumplist, not a separate xref stack"
+  "note": "`M-,` in the emacs preset is xref_pop_marker_stack now, not jump_backward. There is a real xref marker ring now, and it is deliberately NOT the jumplist: vim's jumplist records every jump -- searches, `G`, `%`, a window change -- so popping it after a definition lookup lands wherever the last unrelated jump happened to be, which is the divergence the old note recorded. XREF_MARKERS (zmax-term/src/commands.rs) is a ring only xref pushes to, bounded at emacs's xref-marker-ring-length of 16 with the oldest falling off, and every xref entry point pushes the invocation point as it jumps: goto_impl's single-location arm, its picker's selection callback -- pushed there rather than when the picker opens, so a cancelled pick leaves the ring alone -- and the etags/ggtags path, which is what xref-etags-mode makes `M-.` resolve through. Popping skips markers into buffers that have since been closed, as emacs's markers into a killed buffer are dead, and an empty ring reports \"At start of xref history\". Unit tested for the bound and the LIFO order."
  },
  {
   "spec_id": "emacs.keybinding.m_d",
