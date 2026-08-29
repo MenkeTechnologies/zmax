@@ -305,3 +305,90 @@ fn expand_variable(editor: &Editor, variable: Variable) -> Result<Cow<'static, s
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The variable table in the book, as `name` -> description. Adding a
+    /// variable means touching five places in this file plus that table (see the
+    /// checklist at the top), and nothing but this test notices when one is
+    /// missed.
+    fn documented_variables() -> Vec<String> {
+        include_str!("../../book/src/command-line.md")
+            .lines()
+            // Rows of the variable table: `| `name` | description |`.
+            .filter_map(|line| line.strip_prefix("| `")?.split_once('`'))
+            .map(|(name, _)| name.to_string())
+            // The table of expansion kinds uses the same row shape; variables are
+            // plain snake_case names, so anything else is a different table.
+            .filter(|name| {
+                !name.is_empty()
+                    && name
+                        .chars()
+                        .all(|c| c.is_ascii_lowercase() || c == '_')
+            })
+            .collect()
+    }
+
+    /// `as_str` and `from_name` are hand-written inverses of each other. A name
+    /// that does not survive the round trip is a variable the user can see in
+    /// completion but cannot actually expand.
+    #[test]
+    fn every_variant_round_trips_through_its_name() {
+        for variable in Variable::VARIANTS {
+            let name = variable.as_str();
+            assert_eq!(
+                Variable::from_name(name),
+                Some(*variable),
+                "{name} does not come back"
+            );
+        }
+
+        assert_eq!(Variable::from_name("not_a_variable"), None);
+        assert_eq!(Variable::from_name(""), None);
+        // Names are matched exactly, not case-insensitively or by prefix.
+        assert_eq!(Variable::from_name("Cursor_Line"), None);
+        assert_eq!(Variable::from_name("cursor_lin"), None);
+    }
+
+    /// Two variants sharing a name would make one of them unreachable through
+    /// `from_name`, and a duplicate in `VARIANTS` would show twice in completion.
+    #[test]
+    fn variant_names_are_unique() {
+        let mut names: Vec<_> = Variable::VARIANTS.iter().map(|v| v.as_str()).collect();
+        let count = names.len();
+        names.sort_unstable();
+        names.dedup();
+
+        assert_eq!(names.len(), count, "duplicate name in VARIANTS");
+    }
+
+    /// The book documents exactly the variables that exist. A variable missing
+    /// from the table is undiscoverable; one listed but not implemented expands
+    /// to an error when a reader copies it.
+    #[test]
+    fn the_book_documents_exactly_the_supported_variables() {
+        let documented = documented_variables();
+        assert!(
+            documented.len() >= Variable::VARIANTS.len(),
+            "the variable table did not parse: found {documented:?}"
+        );
+
+        for variable in Variable::VARIANTS {
+            let name = variable.as_str();
+            assert!(
+                documented.iter().any(|doc| doc == name),
+                "{name} is not in book/src/command-line.md"
+            );
+        }
+
+        for name in &documented {
+            // Only rows naming a real variable belong in that table.
+            assert!(
+                Variable::from_name(name).is_some(),
+                "the book documents `{name}`, which no longer exists"
+            );
+        }
+    }
+}
