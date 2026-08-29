@@ -863,6 +863,7 @@ impl MappableCommand {
         file_explorer_in_current_directory, "Open file explorer at current working directory",
         buffer_menu, "Open the Buffer Menu (emacs buffer-menu / C-x C-b)",
         list_buffers, "List open buffers in the Buffer Menu (emacs list-buffers)",
+        ibuffer, "List buffers to mark and operate on in the Buffer Menu (emacs ibuffer)",
         calendar, "Open the Calendar month grid (emacs calendar)",
         diary, "Show today's diary entries (emacs diary)",
         diary_view_entries, "Show diary entries for the current date (emacs diary-view-entries)",
@@ -1750,6 +1751,8 @@ impl MappableCommand {
         search_in_files, "Open the project-wide Find in Files panel",
         terminal, "Open an integrated terminal (PTY shell)",
         comint_shell, "Open a comint line-oriented shell buffer (emacs M-x shell)",
+        ielm, "Open the Emacs-Lisp REPL (emacs ielm)",
+        gdb, "Run gdb -i=mi and open the multi-pane debugger layout (emacs M-x gdb)",
         gud_gdb, "Run gdb in a comint buffer (emacs gud-gdb)",
         gud_up, "Select the stack frame one level up (emacs gud-up)",
         gud_down, "Select the stack frame one level down (emacs gud-down)",
@@ -16732,11 +16735,42 @@ fn toggle_auto_revert(cx: &mut Context) {
         .set_status(format!("auto-revert: {}", if on { "on" } else { "off" }));
 }
 
-/// `auto-revert-tail-pos` per followed file: the size the file had when its tail
-/// was last read. Presence in the map is the buffer-local mode flag itself, and
-/// removing an entry is what stops that buffer's tail timer.
-static AUTO_REVERT_TAIL: Lazy<std::sync::Mutex<HashMap<std::path::PathBuf, u64>>> =
+/// One followed file's tail state: `auto-revert-tail-pos` — the size the file had
+/// when its tail was last read — and which run of the mode owns it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct TailState {
+    pos: u64,
+    /// The generation the timer that owns this entry was started with. A timer
+    /// only sees its own key going missing once per `auto-revert-interval`, so
+    /// toggling the mode off and on inside one tick would otherwise leave the old
+    /// timer running beside the new one, both appending to the same buffer. The
+    /// counter makes the old one's key stop being its key.
+    generation: u64,
+}
+
+/// `auto-revert-tail-pos` per followed file. Presence in the map is the
+/// buffer-local mode flag itself, and removing an entry is what stops that
+/// buffer's tail timer.
+static AUTO_REVERT_TAIL: Lazy<std::sync::Mutex<HashMap<std::path::PathBuf, TailState>>> =
     Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
+/// Handed out once per enable, so each timer can tell its own entry from the one
+/// a later toggle put in its place.
+static AUTO_REVERT_TAIL_GENERATION: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(0);
+
+/// Where a tail timer of `generation` should read from, given whatever the map
+/// holds for its file: `Some(pos)` when the entry is still its own — the mode is
+/// on and no later toggle has replaced it — and `None` when the timer is to
+/// retire, either because the mode was turned off or because it was turned off
+/// and on again inside one interval and this is the older of the two loops.
+///
+/// Pure — unit tested.
+fn tail_loop_pos(entry: Option<TailState>, generation: u64) -> Option<u64> {
+    entry
+        .filter(|state| state.generation == generation)
+        .map(|state| state.pos)
+}
 
 /// Emacs `auto-revert-interval`'s default: how often the tail timer looks.
 const AUTO_REVERT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
@@ -16758,21 +16792,32 @@ fn auto_revert_tail_mode(cx: &mut Context) {
         return;
     }
     let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
-    AUTO_REVERT_TAIL.lock().unwrap().insert(path.clone(), size);
+    let generation =
+        AUTO_REVERT_TAIL_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    AUTO_REVERT_TAIL.lock().unwrap().insert(
+        path.clone(),
+        TailState {
+            pos: size,
+            generation,
+        },
+    );
     cx.editor.set_status("Auto-Revert Tail mode enabled");
-    cx.jobs.spawn(auto_revert_tail_loop(path));
+    cx.jobs.spawn(auto_revert_tail_loop(path, generation));
 }
 
 /// One buffer's tail timer. Every `auto-revert-interval` it compares the file's
 /// size with `auto-revert-tail-pos` and, when they differ (autorevert.el:833-838),
 /// reads the bytes to append: from `auto-revert-tail-pos` when the file grew, and
 /// from the start when it shrank — autorevert.el:898-899 passes a nil start in
-/// that case, which re-appends the whole file. Ends when the mode is turned off.
-async fn auto_revert_tail_loop(path: std::path::PathBuf) -> anyhow::Result<()> {
+/// that case, which re-appends the whole file. Ends when the mode is turned off,
+/// or when a later toggle has started a timer of its own for this file: the
+/// generation the loop was spawned with has to still be the one in the map, or
+/// two loops would append the same bytes to the same buffer.
+async fn auto_revert_tail_loop(path: std::path::PathBuf, generation: u64) -> anyhow::Result<()> {
     loop {
         tokio::time::sleep(AUTO_REVERT_INTERVAL).await;
-        let pos = { AUTO_REVERT_TAIL.lock().unwrap().get(&path).copied() };
-        let Some(pos) = pos else {
+        let entry = { AUTO_REVERT_TAIL.lock().unwrap().get(&path).copied() };
+        let Some(pos) = tail_loop_pos(entry, generation) else {
             return Ok(());
         };
         let Ok(size) = std::fs::metadata(&path).map(|m| m.len()) else {
@@ -16785,7 +16830,16 @@ async fn auto_revert_tail_loop(path: std::path::PathBuf) -> anyhow::Result<()> {
         let Ok(appended) = read_file_range(&path, from, size) else {
             continue;
         };
-        AUTO_REVERT_TAIL.lock().unwrap().insert(path.clone(), size);
+        {
+            // The read took time; only advance `auto-revert-tail-pos` if the
+            // entry is still this loop's, so a toggle that happened meanwhile is
+            // not overwritten with an older run's position.
+            let mut tails = AUTO_REVERT_TAIL.lock().unwrap();
+            match tails.get_mut(&path) {
+                Some(state) if state.generation == generation => state.pos = size,
+                _ => return Ok(()),
+            }
+        }
         let target = path.clone();
         job::dispatch(move |editor, _compositor| {
             auto_revert_tail_append(editor, &target, &appended);
@@ -26794,6 +26848,18 @@ fn list_buffers(cx: &mut Context) {
     });
 }
 
+/// Emacs `M-x ibuffer` (ibuffer.el): the buffer list you *operate* on — buffers
+/// are marked (`m`), marked for deletion (`d`/`C-d`) or saving (`s`), unmarked
+/// (`u`/`U`/`M-DEL`) and the marks executed (`x`). That is what the Buffer Menu
+/// is here, so ibuffer opens it rather than the fuzzy buffer picker, which can
+/// only switch to one buffer and has no marks at all. ibuffer's filter groups
+/// (`/`) and sort (`,`) are still its own.
+fn ibuffer(cx: &mut Context) {
+    open_overlay(cx, |editor| {
+        Ok(Box::new(crate::ui::bufmenu::BufferMenu::new(editor)) as Box<dyn Component>)
+    });
+}
+
 /// Run `f` on the live Buffer Menu — zmax's `tabulated-list-mode` buffer.
 fn buffer_menu_action<F>(cx: &mut Context, f: F)
 where
@@ -28892,6 +28958,39 @@ fn rmail_draft(
     }));
 }
 
+/// [`rmail_draft`] reached from a `compositor::Context` (the tail of a prompt),
+/// with a closure rather than a fn pointer so it can carry the address the
+/// prompt just read.
+fn rmail_draft_cx<F>(cx: &mut crate::compositor::Context, what: &'static str, pick: F)
+where
+    F: Fn(&crate::ui::rmail::Rmail) -> Option<(String, String, String)> + Send + 'static,
+{
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            let fields = match compositor.find::<crate::ui::rmail::Rmail>() {
+                Some(reader) => pick(reader),
+                None => {
+                    editor.set_error("No Rmail reader (open it with `rmail`)");
+                    return;
+                }
+            };
+            match fields {
+                Some((to, subject, body)) => {
+                    compositor.pop();
+                    let mut cx = crate::compositor::Context {
+                        editor,
+                        jobs: &mut crate::job::Jobs::new(),
+                        scroll: None,
+                    };
+                    typed::open_mail_draft(&mut cx, &to, &subject, &body);
+                }
+                None => editor.set_error(format!("{what}: nothing to send")),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
 /// Emacs `rmail-continue` (`c`): go back to the outgoing message that was being
 /// composed, leaving the reader.
 fn rmail_continue(cx: &mut Context) {
@@ -28913,9 +29012,18 @@ fn rmail_continue(cx: &mut Context) {
     }));
 }
 
-/// Emacs `rmail-resend` (`R`): open a resend/bounce draft of the current message.
+/// Emacs `rmail-resend` (`R`): open a resend draft of the current message.
+///
+/// `(interactive "sResend to: ")` — the address is read first, because it is
+/// what the `Resent-To:` header carries. Resending is not forwarding: the
+/// original message and its headers go out unaltered and the `Resent-*` set
+/// records the new hop (RFC 5322 §3.6.6). The `R` key inside the Rmail overlay
+/// does its own read; run by name, the address is read here.
 fn rmail_resend(cx: &mut Context) {
-    rmail_draft(cx, "rmail-resend", |r| r.resend_draft());
+    prompt_then(cx, "Resend to: ", |cx, address| {
+        let address = address.to_string();
+        rmail_draft_cx(cx, "rmail-resend", move |r| r.resend_draft_to(&address));
+    });
 }
 
 /// Emacs `rmail-retry-failure` (`M-m`): re-compose the original message that a
@@ -48628,6 +48736,21 @@ fn repl(cx: &mut Context) {
     });
 }
 
+/// Emacs `M-x ielm` (ielm.el): the Inferior Emacs-Lisp Mode read-eval-print
+/// loop — a buffer where a form typed at the prompt is read, evaluated in the
+/// running editor and its value printed. zmax's REPL panel fronts the same
+/// embedded elisp interpreter, so ielm is that panel opened on Elisp rather
+/// than a second implementation; it is its own command (not an alias for the
+/// generic `repl`) because ielm names one language, where the panel's `Tab`
+/// cycles all of them.
+fn ielm(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::repl::ReplPanel::new(
+            crate::ui::repl::ReplLang::Elisp,
+        )) as Box<dyn Component>)
+    });
+}
+
 /// Open Preferences on the Run/Debug Configurations tab.
 fn run_config_manager(cx: &mut Context) {
     open_overlay(cx, |_editor| {
@@ -48745,6 +48868,18 @@ fn gud_gdb(cx: &mut Context) {
 /// Read a command line — Emacs's "Run PROG (like this): " prompt, pre-filled with
 /// `PROG` and the file being visited — and run it in a comint buffer.
 fn comint_run_prompt(cx: &mut Context, prog: &'static str, extra: &'static str) {
+    comint_run_prompt_then(cx, prog, extra, false)
+}
+
+/// [`comint_run_prompt`], plus `gdb-many-windows`: when `many_windows` is set the
+/// multi-pane debugger layout comes up once the program has been started, which
+/// is what gdb-mi.el's `gdb` does and `gud-gdb` does not.
+fn comint_run_prompt_then(
+    cx: &mut Context,
+    prog: &'static str,
+    extra: &'static str,
+    many_windows: bool,
+) {
     let file = doc!(cx.editor)
         .path()
         .map(|p| p.to_string_lossy().into_owned())
@@ -48781,6 +48916,14 @@ fn comint_run_prompt(cx: &mut Context, prog: &'static str, extra: &'static str) 
                                 Ok(panel) => compositor.push(Box::new(panel)),
                                 Err(e) => editor.set_error(format!("{program}: {e}")),
                             }
+                            // gdb-mi.el:1050 `gdb-setup-windows`: with
+                            // `gdb-many-windows' on, starting gdb also puts up
+                            // the locals / stack / breakpoints layout.
+                            if many_windows {
+                                if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                                    view.focus_ide_panel("debug");
+                                }
+                            }
                         },
                     ));
                     cx.jobs.callback(async move { Ok(call) });
@@ -48791,6 +48934,19 @@ fn comint_run_prompt(cx: &mut Context, prog: &'static str, extra: &'static str) 
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Emacs `M-x gdb` (gdb-mi.el:871): read the command line to start gdb with —
+/// `gud-query-cmdline`'s "Run gdb (like this): " prompt, pre-filled with
+/// `gud-gdb-command-name` ("gdb -i=mi", gdb-mi.el:2128) and the file being
+/// visited — run it in a comint buffer, and bring up the multi-pane layout.
+/// The layout is the whole difference between this and [`gud_gdb`]: the
+/// docstring's "If option `gdb-many-windows' is t … the layout below will
+/// appear" is what makes `M-x gdb` the graphical interface rather than a bare
+/// GUD buffer. `-i=mi` is not cosmetic either — it is the machine interface the
+/// separate locals/stack/breakpoint views are fed from.
+fn gdb(cx: &mut Context) {
+    comint_run_prompt_then(cx, "gdb", "-i=mi", true);
 }
 
 /// Emacs `M-x dbx`: run the dbx debugger in a comint buffer.
@@ -66238,12 +66394,18 @@ fn ffap_existing_refs(cx: &Context) -> Vec<(usize, zmax_core::ffap::FileRef, std
 
 /// Open `path` (jumping to `line` when the guess carried one, as `file.rs:42`).
 pub(crate) fn ffap_open(cx: &mut Context, path: &std::path::Path, line: Option<usize>) {
-    if let Err(e) = cx.editor.open(path, Action::Replace) {
-        cx.editor.set_error(format!("ffap: {e}"));
+    ffap_open_in_editor(cx.editor, path, line);
+}
+
+/// The body of [`ffap_open`], over the editor alone — the `ffap-prompter`
+/// minibuffer's callback has an editor but no command [`Context`].
+fn ffap_open_in_editor(editor: &mut Editor, path: &std::path::Path, line: Option<usize>) {
+    if let Err(e) = editor.open(path, Action::Replace) {
+        editor.set_error(format!("ffap: {e}"));
         return;
     }
     if let Some(line) = line {
-        let (view, doc) = current!(cx.editor);
+        let (view, doc) = current!(editor);
         let text = doc.text();
         let line = line
             .saturating_sub(1)
@@ -66252,7 +66414,7 @@ pub(crate) fn ffap_open(cx: &mut Context, path: &std::path::Path, line: Option<u
         doc.set_selection(view.id, Selection::point(pos));
         align_view(doc, view, Align::Center);
     }
-    cx.editor.set_status(format!("ffap: {}", path.display()));
+    editor.set_status(format!("ffap: {}", path.display()));
 }
 
 /// Emacs `ffap-next`: search forward from point for the next file name in the
@@ -66351,9 +66513,105 @@ fn ffap_menu(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
-/// Emacs `find-file-at-point` (ffap): open the file name or URL under the cursor.
+/// Emacs `ffap-guesser`, as `ffap-prompter` calls it (ffap.el:1700-1705): the
+/// file name around point, which is the string the minibuffer is pre-filled
+/// with. `line` is the text of the line point is on and `col` point's char
+/// offset within it. The guess is the file-name run covering point, or — since
+/// `ffap-string-at-point` scans forward when point sits on whitespace or on a
+/// word that is not a name — the next one on the line; `""` when the line holds
+/// none, which is `ffap-guesser` returning nil and leaving the minibuffer empty.
+/// The `:LINE` suffix stays in the offered string so it can be edited too.
+///
+/// Pure — unit tested.
+pub(crate) fn ffap_guess_in_line(line: &str, col: usize) -> String {
+    let refs = zmax_core::ffap::file_refs(line);
+    refs.iter()
+        .find(|r| col >= r.start && col <= r.end)
+        .or_else(|| refs.iter().find(|r| r.start >= col))
+        .map(|r| match r.line {
+            Some(n) => format!("{}:{n}", r.path),
+            None => r.path.clone(),
+        })
+        .unwrap_or_default()
+}
+
+/// Split what came back from the `ffap-prompter` minibuffer into the file name
+/// and the `:LINE` suffix a compiler-error guess carries (`src/main.rs:42`), the
+/// same split `zmax_core::ffap` makes when it scans the buffer. Only a trailing
+/// run of digits is a line number — a name that merely contains a colon is left
+/// whole.
+///
+/// Pure — unit tested.
+pub(crate) fn ffap_split_line(input: &str) -> (&str, Option<usize>) {
+    match input.rsplit_once(':') {
+        Some((head, tail)) if !head.is_empty() && !tail.is_empty() => match tail.parse::<usize>() {
+            Ok(n) => (head, Some(n)),
+            Err(_) => (input, None),
+        },
+        _ => (input, None),
+    }
+}
+
+/// Emacs `find-file-at-point` (ffap.el:1711-1727): the guess under point is
+/// *offered*, not opened — `ffap-prompter` reads it back in a "Find file or
+/// URL: " minibuffer that is pre-filled with the guess and editable, so a wrong
+/// guess is corrected instead of visiting the wrong file. Whatever the
+/// minibuffer returns then goes to the URL fetcher or the file finder.
 fn find_file_at_point(cx: &mut Context) {
-    goto_file(cx);
+    // ffap.el:1721-1726: called with a prefix argument the command "behaves
+    // exactly like `ffap-file-finder'" — plain `find-file`, no guessing.
+    if cx.prefix_arg().is_some() {
+        file_picker(cx);
+        return;
+    }
+    let (guess, rel_path) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let row = text.char_to_line(cursor);
+        let col = cursor - text.line_to_char(row);
+        let line = text.line(row).to_string();
+        let rel_path = doc
+            .relative_path()
+            .and_then(|p| p.parent().map(std::path::Path::to_path_buf))
+            .unwrap_or_default();
+        (ffap_guess_in_line(&line, col), rel_path)
+    };
+    ui::prompt_with_input(
+        cx,
+        "Find file or URL: ".into(),
+        guess,
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            if input.is_empty() {
+                return;
+            }
+            // ffap.el:1730-1733: an answer that is a URL goes to
+            // `ffap-url-fetcher' (browse-url) rather than to `find-file'.
+            if let Ok(url) = Url::parse(input) {
+                let rel_path = rel_path.clone();
+                let call: job::Callback = Callback::EditorCompositor(Box::new(
+                    move |editor: &mut Editor, compositor: &mut Compositor| {
+                        open_url_in_callback(editor, compositor, url, Action::Replace, &rel_path);
+                    },
+                ));
+                cx.jobs.callback(async move { Ok(call) });
+                return;
+            }
+            let (name, line) = ffap_split_line(input);
+            // `ffap-newfile-prompt' is nil by default (ffap.el:1745-1747), so a
+            // name that does not exist is still visited — it just makes a new
+            // buffer, as `find-file' does.
+            let path = ffap_resolve(cx.editor, name)
+                .unwrap_or_else(|| rel_path.join(path::expand(name)));
+            ffap_open_in_editor(cx.editor, &path, line);
+        },
+    );
 }
 
 /// Emacs `find-file-other-tab` (`C-x t f`): open a file in a new tab.
@@ -72049,25 +72307,89 @@ fn edit_tab_stops_prompt(cx: &mut Context) {
     cx.push_layer(Box::new(prompt));
 }
 
-/// Emacs `fortran-window-create`: show where column 72 falls, the limit past which
-/// fixed-form Fortran ignores a line. Emacs narrows the window to 72 columns;
-/// zmax draws a ruler there, which is the same warning in a TUI, and leaves it
-/// up until you take it down.
-fn fortran_window_create(cx: &mut Context) {
-    edit_live_config(cx, |c| {
-        if !c.rulers.contains(&72) {
-            c.rulers.push(72);
-            c.rulers.sort_unstable();
-        }
-    });
-    cx.editor
-        .set_status("column 72 marked — the fixed-form Fortran line limit");
+/// `fortran-line-length`: the column past which fixed-form Fortran ignores a
+/// line, and the width `fortran-window-create` makes the window.
+const FORTRAN_LINE_LENGTH: u16 = 72;
+
+/// The narrowest frame `fortran-window-create` can split. fortran.el:1015 binds
+/// `window-min-width' to 2 for the split, so the frame has to hold the 72-column
+/// code window plus a 2-column parked one; under that `split-window-right`
+/// signals rather than making a window, which is emacs's "No room" case.
+const FORTRAN_WINDOW_MIN_FRAME: u16 = FORTRAN_LINE_LENGTH + 2;
+
+/// How wide the code window has to become: `Some(delta)` is the columns to add
+/// (or, negative, to give back) to make a window `current` wide exactly
+/// `fortran-line-length`; `None` means the frame is too narrow to split at all
+/// and only the ruler is left. Whether there is room depends on the frame alone,
+/// so the command asks this once before splitting (the answer to the `None` half
+/// is the same either way) and again afterwards for the delta, when the split has
+/// changed how wide the code window is.
+///
+/// Pure — unit tested.
+pub(crate) fn fortran_window_delta(frame_width: u16, current: u16) -> Option<i16> {
+    (frame_width >= FORTRAN_WINDOW_MIN_FRAME)
+        .then(|| FORTRAN_LINE_LENGTH as i16 - current as i16)
 }
 
-/// Emacs `fortran-window-create-momentarily` (`C-c C-w`): the same marker, shown
-/// until the next key. With a prefix argument (`C-u C-c C-w`) it is
-/// `fortran-window-create` instead — the marker stays up and you carry on
-/// editing with it, which is the difference the manual draws between the two.
+/// Emacs `fortran-window-create` (fortran.el:1010-1025): make the window
+/// `fortran-line-length` (72) columns wide, so a line that runs past the limit
+/// runs out of the window and is visibly too long. It does that by
+/// `split-window-right` at column 72 and parking the ` fortran-window-extra`
+/// buffer in the right-hand window, leaving point in the left one — it does not
+/// narrow the buffer. So: a vertical split with a scratch buffer in it, the code
+/// window resized to exactly 72 columns, focus back where it was.
+///
+/// A frame too narrow to split is emacs's error case; there a column-72 ruler is
+/// the only warning a TUI can give, so it stays as the fallback.
+fn fortran_window_create(cx: &mut Context) {
+    fortran_window_create_impl(cx);
+}
+
+/// The body of [`fortran_window_create`], handing back the window it parked the
+/// extra buffer in so `fortran-window-create-momentarily`'s
+/// `save-window-excursion` can put the layout back. `None` when the frame had no
+/// room and the ruler was drawn instead — there is nothing to close then.
+fn fortran_window_create_impl(cx: &mut Context) -> Option<ViewId> {
+    let previous = cx.editor.tree.focus;
+    let frame = cx.editor.tree.area().width;
+    if fortran_window_delta(frame, cx.editor.tree.get(previous).area.width).is_none() {
+        edit_live_config(cx, |c| {
+            if !c.rulers.contains(&FORTRAN_LINE_LENGTH) {
+                c.rulers.push(FORTRAN_LINE_LENGTH);
+                c.rulers.sort_unstable();
+            }
+        });
+        cx.editor
+            .set_status("No room for Fortran window — column 72 marked instead");
+        return None;
+    }
+    // `(split-window-right ...)` then `(switch-to-buffer " fortran-window-extra")`:
+    // the right-hand window holds a throwaway buffer, only there to take the
+    // columns the code window is giving up.
+    cx.editor.new_file(Action::VerticalSplit);
+    let extra = cx.editor.tree.focus;
+    // `(select-window (previous-window))` — editing carries on in the code window.
+    cx.editor.focus(previous);
+    // The split halved the window; take it to exactly 72. `resize_horizontal`
+    // borrows from the next sibling, which is the window just made — and from
+    // the other side when the code window is the right-most one.
+    let delta = fortran_window_delta(frame, cx.editor.tree.get(previous).area.width).unwrap_or(0);
+    if delta != 0 && !cx.editor.tree.resize_horizontal(previous, delta) {
+        cx.editor.tree.resize_horizontal(extra, -delta);
+    }
+    cx.editor.set_status(format!(
+        "Fortran window: {FORTRAN_LINE_LENGTH} columns, the fixed-form line limit"
+    ));
+    Some(extra)
+}
+
+/// Emacs `fortran-window-create-momentarily` (`C-c C-w`, fortran.el:1027-1040):
+/// the same 72-column window, up until the next key — the body is
+/// `fortran-window-create` inside `save-window-excursion`, so the layout comes
+/// back as soon as the `read-event` returns. With a prefix argument (`C-u C-c
+/// C-w`) it is `fortran-window-create` instead — the window stays up and you
+/// carry on editing in it, which is the difference the manual draws between the
+/// two.
 fn fortran_window_create_momentarily(cx: &mut Context) {
     // `(interactive "p")` makes a missing argument 1, and the docstring says
     // "Optional ARG non-nil and non-unity disables the momentary feature" — so
@@ -72076,20 +72398,26 @@ fn fortran_window_create_momentarily(cx: &mut Context) {
         fortran_window_create(cx);
         return;
     }
-    fortran_window_create(cx);
-    // `(message "Type SPC to continue editing.")` — the marker is up only while
+    let extra = fortran_window_create_impl(cx);
+    // `(message "Type SPC to continue editing.")` — the window is up only while
     // this prompt is, so say how to take it down.
     cx.editor.set_status("Type SPC to continue editing.");
     cx.on_next_key(move |cx, event| {
         // `save-window-excursion` restores the layout as soon as the read
-        // returns, before the pushed-back event is acted on.
-        edit_live_config(cx, |c| c.rulers.retain(|r| *r != 72));
+        // returns, before the pushed-back event is acted on: the parked window
+        // goes away again, or — when the frame had no room for it — the ruler.
+        match extra {
+            Some(view) => cx.editor.close(view),
+            None => edit_live_config(cx, |c| {
+                c.rulers.retain(|r| *r != FORTRAN_LINE_LENGTH)
+            }),
+        }
         // `(or (equal char ?\s) (push char unread-command-events))`: SPC is
         // consumed by the prompt, and any other key is put back so it runs as
         // the command it would have been. Re-dispatching through the compositor
         // is zmax's `unread-command-events`.
         if event.code == KeyCode::Char(' ') && event.modifiers.is_empty() {
-            cx.editor.set_status("column 72 marker removed");
+            cx.editor.set_status("Fortran window closed");
             return;
         }
         cx.callback.push(Box::new(move |compositor, cx| {
@@ -81245,5 +81573,83 @@ mod mode_gating_tests {
         // An entry the list no longer holds (rebuilt under the picker) is not
         // silently turned into index 0 and jumped to.
         assert_eq!(qf_follow_target(true, &entries, Some(&entry(42))), None);
+    }
+
+    /// `ffap-prompter` (ffap.el:1700-1707) pre-fills its minibuffer with
+    /// `ffap-guesser`'s answer, so the guess has to be the name around point —
+    /// and, when point is not on a name, the next one on the line, which is what
+    /// `ffap-string-at-point`'s forward scan gives.
+    #[test]
+    fn ffap_guess_is_the_name_around_point() {
+        let line = "  see src/main.rs:42 for the parser\n";
+        let at = line.find("main").unwrap();
+        assert_eq!(ffap_guess_in_line(line, at), "src/main.rs:42");
+        // Point on the word before it is not on a name: the scan goes forward.
+        assert_eq!(ffap_guess_in_line(line, 2), "src/main.rs:42");
+        // Point past the only name on the line — nothing further to offer.
+        assert_eq!(ffap_guess_in_line(line, line.len() - 1), "");
+        // No name at all is `ffap-guesser' returning nil: an empty minibuffer,
+        // not a guess made up out of the surrounding words.
+        assert_eq!(ffap_guess_in_line("nothing to open here\n", 4), "");
+    }
+
+    /// What comes back from the minibuffer is split the way the buffer scan
+    /// splits a guess: a trailing `:LINE` is a line number to jump to, and a
+    /// colon that is not followed by digits belongs to the name.
+    #[test]
+    fn ffap_answer_splits_off_only_a_numeric_line_suffix() {
+        assert_eq!(
+            ffap_split_line("src/main.rs:42"),
+            ("src/main.rs", Some(42))
+        );
+        assert_eq!(ffap_split_line("src/main.rs"), ("src/main.rs", None));
+        // A name that merely contains a colon is left whole — the suffix has to
+        // parse as a number.
+        assert_eq!(ffap_split_line("odd:name.txt"), ("odd:name.txt", None));
+        assert_eq!(ffap_split_line("trailing:"), ("trailing:", None));
+    }
+
+    /// `fortran-window-create` (fortran.el:1010-1025) splits the frame and makes
+    /// the code window exactly `fortran-line-length` columns — so the delta is
+    /// whatever takes the window to 72, in either direction. Under
+    /// `fortran-line-length` + `window-min-width` (2) there is no room to split
+    /// and only the ruler is left.
+    #[test]
+    fn fortran_window_resizes_to_seventy_two_when_the_frame_has_room() {
+        // A half-frame window on a wide terminal grows to exactly 72.
+        assert_eq!(fortran_window_delta(200, 100), Some(-28));
+        assert_eq!(fortran_window_delta(200, 60), Some(12));
+        assert_eq!(fortran_window_delta(200, 72), Some(0));
+        // The narrowest frame that can still hold a 72-column window plus the
+        // 2-column parked one.
+        assert_eq!(fortran_window_delta(74, 74), Some(-2));
+        // Narrower than that is emacs's "no room" case: ruler only, no split.
+        assert_eq!(fortran_window_delta(73, 73), None);
+        assert_eq!(fortran_window_delta(40, 40), None);
+    }
+
+    /// autorevert.el's tail timer stops when the mode is turned off — but the
+    /// loop only looks once per `auto-revert-interval`, so an off/on inside one
+    /// tick used to leave the old loop running beside the new one, both
+    /// appending the same bytes to the same buffer. The generation is what
+    /// retires the older loop.
+    #[test]
+    fn tail_loop_retires_when_a_later_toggle_took_over() {
+        let entry = |generation| {
+            Some(TailState {
+                pos: 4096,
+                generation,
+            })
+        };
+        // Mode on, this loop's own entry: keep going from `auto-revert-tail-pos`.
+        assert_eq!(tail_loop_pos(entry(7), 7), Some(4096));
+        // Mode turned off: the entry is gone.
+        assert_eq!(tail_loop_pos(None, 7), None);
+        // Turned off and on again within the interval — the key is back, but it
+        // belongs to the new loop, so the old one retires instead of appending
+        // every line twice.
+        assert_eq!(tail_loop_pos(entry(8), 7), None);
+        // And the new loop is the one that keeps it.
+        assert_eq!(tail_loop_pos(entry(8), 8), Some(4096));
     }
 }

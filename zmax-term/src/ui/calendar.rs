@@ -220,6 +220,11 @@ pub struct Calendar {
     output: Vec<String>,
     /// First visible line of `output`.
     out_scroll: usize,
+    /// Set when a command has put its result in a real buffer and the overlay
+    /// has to get out of the way for it to be visible — `cal-tex-end-document`
+    /// ends with `pop-to-buffer`, and this full-screen overlay is the window it
+    /// would be popping out of.
+    close_requested: bool,
 }
 
 impl Calendar {
@@ -240,6 +245,7 @@ impl Calendar {
             mark: None,
             output: Vec::new(),
             out_scroll: 0,
+            close_requested: false,
         }
     }
 
@@ -747,61 +753,97 @@ impl Calendar {
         self.write_calendar_file(&name, &html, cx);
     }
 
-    /// `cal-tex-cursor-day` / `-month` / `-year` (`t d` / `t m` / `t y`): write the
-    /// LaTeX source of a printable calendar. Emacs then runs LaTeX on it; zmax
-    /// writes the `.tex` and reports where, leaving the typesetting to the user's
-    /// own toolchain.
+    /// `cal-tex-cursor-day` / `-month` / `-year` (`t d` / `t m` / `t y`): build the
+    /// LaTeX source of a printable calendar and *show* it. Emacs does not run
+    /// LaTeX — `cal-tex-end-document` (cal-tex.el:1617) finishes with
+    /// `(latex-mode)` then `(pop-to-buffer (current-buffer))`, so what you get is
+    /// the generated `.tex` source in a latex-mode buffer, headed by the
+    /// `cal-tex-comment` banner that tells you to run `M-x tex-buffer` yourself.
+    /// zmax does the same, and additionally drops the source in `~` so an
+    /// external `pdflatex` has a file to chew on.
     fn write_tex(&mut self, span: char, cx: &mut Context) {
         let p = self.point;
-        let mut tex = String::from(
-            "\\documentclass[11pt]{article}\n\
-             \\usepackage[margin=1in]{geometry}\n\
-             \\pagestyle{empty}\n\\begin{document}\n",
-        );
-        let months: Vec<(i32, u32)> = match span {
-            'y' => (1..=12).map(|m| (p.year, m)).collect(),
-            'd' => Vec::new(),
-            _ => vec![(p.year, p.month)],
-        };
-        if span == 'd' {
-            tex.push_str(&format!(
-                "\\section*{{{} {}, {}}}\n\\vspace{{2in}}\n",
-                MONTH_NAMES[(p.month - 1) as usize],
-                p.day,
-                p.year
-            ));
-        }
-        for (year, month) in months {
-            tex.push_str(&format!(
-                "\\section*{{{} {year}}}\n\\begin{{tabular}}{{|r|r|r|r|r|r|r|}}\n\\hline\n",
-                MONTH_NAMES[(month - 1) as usize]
-            ));
-            tex.push_str(&WEEKDAY_ABBR.join(" & "));
-            tex.push_str(" \\\\\n\\hline\n");
-            let lead = weekday(Date::new(year, month, 1));
-            let dim = zmax_core::calendar::days_in_month(year, month);
-            let mut cells: Vec<String> = vec![String::new(); lead as usize];
-            for day in 1..=dim {
-                cells.push(day.to_string());
-            }
-            for row in cells.chunks(7) {
-                let mut row: Vec<String> = row.to_vec();
-                row.resize(7, String::new());
-                tex.push_str(&row.join(" & "));
-                tex.push_str(" \\\\\n\\hline\n");
-            }
-            tex.push_str("\\end{tabular}\n\\newpage\n");
-        }
-        tex.push_str("\\end{document}\n");
-
+        let tex = tex_document(p, span);
         let name = match span {
             'y' => format!("calendar-{}.tex", p.year),
             'd' => format!("calendar-{}-{:02}-{:02}.tex", p.year, p.month, p.day),
             _ => format!("calendar-{}-{:02}.tex", p.year, p.month),
         };
         self.write_calendar_file(&name, &tex, cx);
+        self.show_tex_source(cx, &tex);
     }
 
+    /// Show generated LaTeX in a buffer in latex-mode, the way
+    /// `cal-tex-end-document` does (`(latex-mode)` + `(pop-to-buffer …)`). The
+    /// overlay is asked to close because it is the whole window this pops out of.
+    fn show_tex_source(&mut self, cx: &mut Context, tex: &str) {
+        crate::commands::show_text_in_scratch(cx.editor, tex);
+        let loader = cx.editor.syn_loader.load();
+        let doc = doc_mut!(cx.editor);
+        if let Err(e) = doc.set_language_by_language_id("latex", &loader) {
+            // No latex grammar built into this binary: the source still shows,
+            // it just shows unhighlighted.
+            log::warn!("cal-tex: {e}");
+        }
+        self.close_requested = true;
+    }
+}
+
+/// The LaTeX source `cal-tex-cursor-day` / `-month` / `-year` generates for the
+/// date under point, headed by the banner `cal-tex-end-document` inserts at
+/// `point-min` (`cal-tex-comment`, cal-tex.el:1635). The command names are
+/// zmax's spelling of `M-x tex-buffer` / `M-x tex-print`.
+fn tex_document(p: Date, span: char) -> String {
+    let mut tex = String::from(
+        "% \tThis buffer was produced by cal-tex.el.\n\
+         % \tTo print a calendar, type\n\
+         % \t\t:tex-buffer\n\
+         % \t\t:tex-print\n",
+    );
+    tex.push_str(
+        "\\documentclass[11pt]{article}\n\
+         \\usepackage[margin=1in]{geometry}\n\
+         \\pagestyle{empty}\n\\begin{document}\n",
+    );
+    let months: Vec<(i32, u32)> = match span {
+        'y' => (1..=12).map(|m| (p.year, m)).collect(),
+        'd' => Vec::new(),
+        _ => vec![(p.year, p.month)],
+    };
+    if span == 'd' {
+        tex.push_str(&format!(
+            "\\section*{{{} {}, {}}}\n\\vspace{{2in}}\n",
+            MONTH_NAMES[(p.month - 1) as usize],
+            p.day,
+            p.year
+        ));
+    }
+    for (year, month) in months {
+        tex.push_str(&format!(
+            "\\section*{{{} {year}}}\n\\begin{{tabular}}{{|r|r|r|r|r|r|r|}}\n\\hline\n",
+            MONTH_NAMES[(month - 1) as usize]
+        ));
+        tex.push_str(&WEEKDAY_ABBR.join(" & "));
+        tex.push_str(" \\\\\n\\hline\n");
+        let lead = weekday(Date::new(year, month, 1));
+        let dim = zmax_core::calendar::days_in_month(year, month);
+        let mut cells: Vec<String> = vec![String::new(); lead as usize];
+        for day in 1..=dim {
+            cells.push(day.to_string());
+        }
+        for row in cells.chunks(7) {
+            let mut row: Vec<String> = row.to_vec();
+            row.resize(7, String::new());
+            tex.push_str(&row.join(" & "));
+            tex.push_str(" \\\\\n\\hline\n");
+        }
+        tex.push_str("\\end{tabular}\n\\newpage\n");
+    }
+    tex.push_str("\\end{document}\n");
+    tex
+}
+
+impl Calendar {
     /// Write a generated calendar file into the user's home directory (Emacs's
     /// `cal-html-directory` / cal-tex both write a file and tell you where).
     fn write_calendar_file(&mut self, name: &str, body: &str, cx: &mut Context) {
@@ -1171,6 +1213,11 @@ impl Component for Calendar {
         // A prefix chord (`g`, `i`, `p`, `t`, `H`, `C-x`, `C-c`) owns the next key.
         if let Some(prefix) = self.prefix.take() {
             self.handle_prefix(prefix, key, cx);
+            // `t d`/`t m`/`t y` pop to the generated LaTeX buffer; this overlay
+            // covers the whole frame, so popping to it means leaving.
+            if std::mem::take(&mut self.close_requested) {
+                return EventResult::Consumed(Some(close));
+            }
             return EventResult::Consumed(None);
         }
 
@@ -1770,5 +1817,55 @@ mod tests {
         assert_eq!(zmax_core::calendar::count_days(b, a), 8);
         // A one-day region is one day, not zero.
         assert_eq!(zmax_core::calendar::count_days(a, a), 1);
+    }
+}
+
+#[cfg(test)]
+mod cal_tex_tests {
+    use super::*;
+
+    /// `cal-tex-end-document` (cal-tex.el:1617) does NOT run LaTeX: it ends with
+    /// `(latex-mode)` + `(pop-to-buffer (current-buffer))`, having headed the
+    /// buffer with the `cal-tex-comment` banner that names the commands the user
+    /// runs by hand. So the generated source is the deliverable, and it carries
+    /// that banner in front of the preamble.
+    #[test]
+    fn the_tex_source_is_headed_by_the_cal_tex_banner() {
+        let tex = tex_document(Date::new(2026, 7, 13), 'm');
+        let mut lines = tex.lines();
+        assert_eq!(
+            lines.next(),
+            Some("% \tThis buffer was produced by cal-tex.el.")
+        );
+        assert_eq!(lines.next(), Some("% \tTo print a calendar, type"));
+        assert_eq!(lines.next(), Some("% \t\t:tex-buffer"));
+        assert_eq!(lines.next(), Some("% \t\t:tex-print"));
+        assert_eq!(
+            lines.next(),
+            Some("\\documentclass[11pt]{article}"),
+            "the banner precedes the preamble, as `goto-char (point-min)` puts it"
+        );
+        assert!(tex.trim_end().ends_with("\\end{document}"));
+    }
+
+    /// `t m` typesets the month under point; `t y` all twelve of its year.
+    #[test]
+    fn the_span_selects_which_months_are_typeset() {
+        let month = tex_document(Date::new(2026, 7, 13), 'm');
+        assert!(month.contains("\\section*{July 2026}"));
+        assert!(!month.contains("\\section*{August 2026}"));
+
+        let year = tex_document(Date::new(2026, 7, 13), 'y');
+        for name in MONTH_NAMES {
+            assert!(
+                year.contains(&format!("\\section*{{{name} 2026}}")),
+                "the year calendar is missing {name}"
+            );
+        }
+
+        // `t d` is a single day on its own page — no month grid at all.
+        let day = tex_document(Date::new(2026, 7, 13), 'd');
+        assert!(day.contains("\\section*{July 13, 2026}"));
+        assert!(!day.contains("\\begin{tabular}"));
     }
 }

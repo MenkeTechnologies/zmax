@@ -1061,9 +1061,47 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // undo-tree time-travel: g- older text state, g+ newer (chronological).
             "-" => earlier,
             "+" => later,
-            // g@: call 'operatorfunc' on the selection. vim applies it to the
-            // region a following motion covers; zmax already has that region.
-            "@" => operator_func,
+            // g@{motion}: call 'operatorfunc' on the region {motion} covers
+            // (map.txt:870). It is an operator, so it takes a motion like every
+            // other one — the motions are the `d` submap's, unchanged, with
+            // `operator_func` in place of `delete_selection`. `operator_func`
+            // reads the region off the selection and reports `"line"` or
+            // `"char"` from its shape (typed.rs:1547), so the linewise motions
+            // need no extra snapping beyond what they already do.
+            "@" => { "Operatorfunc"
+                // The doubled form. vim's own doubling for a `g@` operator is
+                // `g@_` (map.txt:885, `CountSpaces() .. '_'`) — `_` is the
+                // linewise "count-1 lines down" motion, i.e. the current line.
+                // `g@@` keeps what the bare `g@` leaf did before it grew a
+                // motion: run 'operatorfunc' on the selection as it stands.
+                "@" => operator_func,
+                "_" => [extend_to_line_bounds, operator_func],
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, operator_func],
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, operator_func],
+                "w" => [collapse_selection, subword_extend_w, operator_func],
+                "W" => [collapse_selection, extend_next_long_word_start, operator_func],
+                "e" => [collapse_selection, subword_extend_e, operator_func],
+                "E" => [collapse_selection, extend_next_long_word_end, operator_func],
+                "b" => [collapse_selection, subword_extend_b, extend_backward_exclusive_vim, operator_func],
+                "B" => [collapse_selection, extend_prev_long_word_start, extend_backward_exclusive_vim, operator_func],
+                "h" | "left" => [extend_chars_left_vim, operator_func],   // g@h
+                "l" | "right" => [extend_chars_right_vim, operator_func], // g@l
+                "space" => [extend_chars_right_vim, operator_func],       // g@<space>
+                "$" | "end" => [collapse_selection, extend_to_line_end, operator_func],
+                "0" | "home" => [collapse_selection, extend_to_line_start, extend_backward_exclusive_vim, operator_func],
+                "^" => [collapse_selection, extend_to_first_nonwhitespace, extend_backward_exclusive_vim, operator_func],
+                "}" => [collapse_selection, select_paragraph_forward_vim, operator_func], // g@}
+                "{" => [collapse_selection, select_paragraph_backward_vim, operator_func], // g@{
+                // g@G / g@gg: linewise to the last / first line, snapped to whole
+                // lines so 'operatorfunc' is called with `"line"` (mirrors dG/dgg).
+                "G" => [collapse_selection, extend_to_last_line, extend_to_line_bounds, operator_func],
+                "g" => { "Operatorfunc to top"
+                    "g" => [collapse_selection, extend_to_file_start, extend_to_line_bounds, operator_func],
+                },
+                "%" => [match_brackets_extend, operator_func],
+                "n" => [collapse_selection, extend_search_next_vim, extend_forward_exclusive_vim, operator_func],
+                "N" => [collapse_selection, extend_search_prev_vim, extend_backward_exclusive_vim, operator_func],
+            },
             // case-change operators (gU / gu / g~ + motion)
             "U" => { "Uppercase"
                 "U" => [extend_to_line_bounds, switch_to_uppercase, collapse_selection],
@@ -1165,6 +1203,30 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections, collapse_selection],
                 "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections, collapse_selection],
                 "{" => [extend_to_line_bounds, extend_prev_paragraph, reflow_selections, collapse_selection],
+                // change.txt:1418 — "gq{motion}: Format the LINES that {motion}
+                // moves over", so `gq` takes any motion, not the handful above.
+                // Each of these is the motion the `d`/`y` submaps spell out,
+                // unchanged (exclusive trims included — vim adjusts the motion
+                // first and only then widens it to whole lines), with
+                // `extend_to_line_bounds` as that widening and the reflow
+                // operator in place of `delete_selection`/`yank`.
+                "w" => [collapse_selection, subword_extend_w, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "W" => [collapse_selection, extend_next_long_word_start, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "e" => [collapse_selection, subword_extend_e, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "E" => [collapse_selection, extend_next_long_word_end, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "b" => [collapse_selection, subword_extend_b, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "B" => [collapse_selection, extend_prev_long_word_start, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "h" | "left" => [extend_chars_left_vim, extend_to_line_bounds, reflow_selections, collapse_selection],   // gqh
+                "l" | "right" => [extend_chars_right_vim, extend_to_line_bounds, reflow_selections, collapse_selection], // gql
+                "space" => [extend_chars_right_vim, extend_to_line_bounds, reflow_selections, collapse_selection],       // gq<space>
+                "$" | "end" => [collapse_selection, extend_to_line_end, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "0" | "home" => [collapse_selection, extend_to_line_start, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "^" => [collapse_selection, extend_to_first_nonwhitespace, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "%" => [match_brackets_extend, extend_to_line_bounds, reflow_selections, collapse_selection],  // gq% to the matching bracket
+                // gqn / gqN: the repeated search as the motion, exclusive like
+                // `dn`/`yn` — the lines it spans are then formatted whole.
+                "n" => [collapse_selection, extend_search_next_vim, extend_forward_exclusive_vim, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "N" => [collapse_selection, extend_search_prev_vim, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections, collapse_selection],
                 "g" => { "Reflow to top"
                     "q" => [extend_to_line_bounds, reflow_selections, collapse_selection], // gqgq = gqq
                     "g" => [extend_to_file_start, extend_to_line_bounds, reflow_selections, collapse_selection],
@@ -1179,6 +1241,27 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "G" => [reflow_mark_cursor, extend_to_last_line, extend_to_line_bounds, reflow_selections_keep_cursor],
                 "}" => [reflow_mark_cursor, extend_to_line_bounds, extend_next_paragraph, reflow_selections_keep_cursor],
                 "{" => [reflow_mark_cursor, extend_to_line_bounds, extend_prev_paragraph, reflow_selections_keep_cursor],
+                // change.txt:1445 — "gw{motion}: Format the lines that {motion}
+                // moves over. Similar to gq" — so it takes the same motions,
+                // with `reflow_mark_cursor` first (the mark it puts the cursor
+                // back on) and the keep-cursor operator at the end. `w` itself is
+                // not among them: `gww` is the doubled form (change.txt:1450,
+                // *gwgw* *gww*, "format the current line"), which is bound above
+                // and which vim resolves before the `w` motion.
+                "W" => [reflow_mark_cursor, collapse_selection, extend_next_long_word_start, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "e" => [reflow_mark_cursor, collapse_selection, subword_extend_e, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "E" => [reflow_mark_cursor, collapse_selection, extend_next_long_word_end, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "b" => [reflow_mark_cursor, collapse_selection, subword_extend_b, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "B" => [reflow_mark_cursor, collapse_selection, extend_prev_long_word_start, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "h" | "left" => [reflow_mark_cursor, extend_chars_left_vim, extend_to_line_bounds, reflow_selections_keep_cursor],   // gwh
+                "l" | "right" => [reflow_mark_cursor, extend_chars_right_vim, extend_to_line_bounds, reflow_selections_keep_cursor], // gwl
+                "space" => [reflow_mark_cursor, extend_chars_right_vim, extend_to_line_bounds, reflow_selections_keep_cursor],       // gw<space>
+                "$" | "end" => [reflow_mark_cursor, collapse_selection, extend_to_line_end, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "0" | "home" => [reflow_mark_cursor, collapse_selection, extend_to_line_start, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "^" => [reflow_mark_cursor, collapse_selection, extend_to_first_nonwhitespace, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "%" => [reflow_mark_cursor, match_brackets_extend, extend_to_line_bounds, reflow_selections_keep_cursor],  // gw%
+                "n" => [reflow_mark_cursor, collapse_selection, extend_search_next_vim, extend_forward_exclusive_vim, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "N" => [reflow_mark_cursor, collapse_selection, extend_search_prev_vim, extend_backward_exclusive_vim, extend_to_line_bounds, reflow_selections_keep_cursor],
                 "g" => { "Reflow to top"
                     "w" => [reflow_mark_cursor, extend_to_line_bounds, reflow_selections_keep_cursor], // gwgw = gww
                     "g" => [reflow_mark_cursor, extend_to_file_start, extend_to_line_bounds, reflow_selections_keep_cursor],
@@ -3849,6 +3932,79 @@ mod tests {
             assert!(
                 matches!(resolve(n, chord), Some(KeyTrie::Sequence(_))),
                 "{chord} should reflow"
+            );
+        }
+    }
+
+    /// The operator a motion sequence ends on — the last static command of the
+    /// leaf, which for an operator-pending chord is the operator itself.
+    fn seq_last(trie: &KeyTrie) -> Option<&str> {
+        match trie {
+            KeyTrie::Sequence(cmds) => match cmds.last() {
+                Some(MappableCommand::Static { name, .. }) => Some(name),
+                _ => None,
+            },
+            _ => cmd_name(trie),
+        }
+    }
+
+    /// Whether a chord's command sequence runs `name` anywhere in it.
+    ///
+    /// The operator is what an operator+motion chord is asserted on, and it is
+    /// NOT the last command: every one of these submaps ends with
+    /// `collapse_selection`, which puts the cursor back after the operator has
+    /// run over the span the motion selected. Asserting on the tail would pin
+    /// that trailing cursor fix-up rather than the operator it protects.
+    fn seq_runs(trie: &KeyTrie, name: &str) -> bool {
+        match trie {
+            KeyTrie::Sequence(cmds) => cmds.iter().any(|c| c.name() == name),
+            _ => cmd_name(trie) == Some(name),
+        }
+    }
+
+    /// `gq`/`gw` take ANY motion (change.txt:1418, 1445), and so does `g@`
+    /// (map.txt:870) — all three used to stop at a handful of keys. The motions
+    /// are the `d`/`y` submaps' own, so the whole word/line/search/bracket set
+    /// must now land on the reflow (resp. 'operatorfunc') operator.
+    #[test]
+    fn reflow_and_operatorfunc_take_any_motion() {
+        let km = default();
+        let n = &km[&Mode::Normal];
+        // gq is linewise, so each motion ends on the reflow after the span has
+        // been widened to whole lines.
+        for chord in [
+            "g q w", "g q W", "g q e", "g q E", "g q b", "g q B", "g q $", "g q 0", "g q ^",
+            "g q %", "g q n", "g q N", "g q h", "g q l",
+        ] {
+            assert!(
+                resolve(n, chord).is_some_and(|t| seq_runs(t, "reflow_selections")),
+                "{chord} must reflow"
+            );
+        }
+        // gw is the same set through the cursor-restoring operator.
+        for chord in ["g w w", "g w e", "g w b", "g w $", "g w %", "g w n"] {
+            assert!(
+                resolve(n, chord).is_some_and(|t| seq_runs(t, "reflow_selections_keep_cursor")),
+                "{chord} must reflow and keep the cursor"
+            );
+        }
+        // The widening is what makes gq linewise: `gqw` formats the LINE the
+        // word motion moved over, not the word.
+        assert!(
+            matches!(
+                resolve(n, "g q w"),
+                Some(KeyTrie::Sequence(cmds))
+                    if cmds.contains(&MappableCommand::extend_to_line_bounds)
+            ),
+            "gqw must snap to whole lines before reflowing"
+        );
+        // g@ is a motion submap now, not a leaf; `g@@` keeps the old bare form.
+        for chord in [
+            "g @ w", "g @ b", "g @ j", "g @ }", "g @ G", "g @ g g", "g @ %", "g @ _", "g @ @",
+        ] {
+            assert!(
+                resolve(n, chord).is_some_and(|t| seq_runs(t, "operator_func")),
+                "{chord} must call 'operatorfunc'"
             );
         }
     }

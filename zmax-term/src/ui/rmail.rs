@@ -33,7 +33,8 @@
 use std::path::PathBuf;
 
 use tui::buffer::Buffer as Surface;
-use zmax_core::rmail::{forward_fields, reply_fields, resend_fields, Mailbox};
+use crate::ui::PromptEvent;
+use zmax_core::rmail::{forward_fields, reply_fields, resend_fields_to, Mailbox};
 use zmax_view::graphics::Rect;
 
 use crate::{
@@ -277,9 +278,22 @@ impl Rmail {
         Ok(())
     }
 
-    /// The `(to, subject, body)` of a `rmail-resend` draft for the current message.
-    pub fn resend_draft(&self) -> Option<(String, String, String)> {
-        self.mailbox.current().map(resend_fields)
+    /// The `(to, subject, body)` of a `rmail-resend` draft for the current
+    /// message, resent to `address`.
+    ///
+    /// `rmail-resend` is `(interactive "sResend to: ")` — the address is read
+    /// BEFORE the draft is made, because it is what the `Resent-To:` header
+    /// carries. Passing it through is what separates resending from forwarding:
+    /// the original message and its headers go out unaltered and the Resent-*
+    /// set records the new hop (RFC 5322 §3.6.6).
+    pub fn resend_draft_to(&self, address: &str) -> Option<(String, String, String)> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        self.mailbox
+            .current()
+            .map(|msg| resend_fields_to(msg, address, "", now))
     }
 
     /// The `(to, subject, body)` of a `rmail-retry-failure` draft: the original
@@ -1043,11 +1057,45 @@ impl Component for Rmail {
                     return EventResult::Consumed(Some(self.compose(to, subject, body)));
                 }
             }
-            // rmail-resend: open a bounce/resend draft of the current message.
+            // rmail-resend: read the address, then open the resend draft. The
+            // read comes first because `Resent-To:` carries it.
             key!('R') => {
-                if let Some((to, subject, body)) = self.mailbox.current().map(resend_fields) {
-                    return EventResult::Consumed(Some(self.compose(to, subject, body)));
-                }
+                let draft = self.resend_draft_to("");
+                return EventResult::Consumed(Some(Box::new(
+                    move |compositor: &mut Compositor, cx: &mut Context| {
+                        let Some((_, subject, body)) = draft.clone() else {
+                            return;
+                        };
+                        compositor.pop();
+                        let prompt = crate::ui::prompt::Prompt::new(
+                            "Resend to: ".into(),
+                            None,
+                            crate::ui::completers::none,
+                            move |cx: &mut Context, address: &str, event: PromptEvent| {
+                                if event != PromptEvent::Validate {
+                                    return;
+                                }
+                                let address = address.trim();
+                                if address.is_empty() {
+                                    return;
+                                }
+                                // The Resent-To: line in the body carries the
+                                // address too, so it is stamped in rather than
+                                // only filling the draft's own To: field.
+                                let body = body.replacen(
+                                    "Resent-To: \n",
+                                    &format!("Resent-To: {address}\n"),
+                                    1,
+                                );
+                                crate::commands::typed::open_mail_draft(
+                                    cx, address, &subject, &body,
+                                );
+                            },
+                        );
+                        let _ = cx;
+                        compositor.push(Box::new(prompt));
+                    },
+                )));
             }
             key!('m') => {
                 return EventResult::Consumed(Some(self.compose(

@@ -41,6 +41,10 @@ enum Cat {
     Keys,
     Topics,
 }
+/// Emacs's `page-delimiter` is `"^\f"`; the `\f` (form feed, `^L`) is what
+/// divides a `*Help*` buffer into pages for `help-goto-next-page` / `-previous-`.
+const PAGE_DELIMITER: &str = "\u{000C}";
+
 const CATS: [(Cat, &str); 4] = [
     (Cat::All, "All"),
     (Cat::Commands, "Commands"),
@@ -3014,15 +3018,96 @@ impl HelpPanel {
         true
     }
 
-    /// Emacs `help-goto-next-page`: scroll the displayed help text down one
-    /// screenful.
-    pub fn goto_next_page(&mut self) {
-        self.detail_scroll = self.detail_scroll.saturating_add(self.page.max(1));
+    /// The detail pane's text as lines — the `*Help*` buffer the page commands
+    /// walk. Built exactly the way the detail pane is rendered: the title,
+    /// then the `keys:` and `aliases:` headers when the entry has them, then a
+    /// blank line, then the doc body.
+    fn detail_lines(&self) -> Vec<String> {
+        let Some(&ei) = self.matches().get(self.sel) else {
+            return Vec::new();
+        };
+        let e = &self.entries[ei];
+        let mut lines = vec![e.title.clone()];
+        if !e.keys.is_empty() {
+            lines.push(format!("keys: {}", e.keys.join("   ")));
+        }
+        if !e.aliases.is_empty() {
+            lines.push(format!("aliases: {}", e.aliases.join(", ")));
+        }
+        lines.push(String::new());
+        lines.extend(e.doc.split('\n').map(str::to_string));
+        lines
     }
 
-    /// Emacs `help-goto-previous-page`: scroll it up one screenful.
+    /// The page boundaries of `lines`, as line indices. Emacs's `page-delimiter`
+    /// defaults to `"^\f"` — a form feed at the beginning of a line — and
+    /// help-mode.el:838 says outright that "the help buffers are divided into
+    /// pages by the ^L character".
+    fn page_boundaries(lines: &[String]) -> Vec<usize> {
+        lines
+            .iter()
+            .enumerate()
+            .filter(|(_, line)| line.starts_with(PAGE_DELIMITER))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// Emacs `help-goto-next-page` (`n`, help-mode.el:836): `(forward-page)` and
+    /// then, unless that hit the end of the buffer, `(forward-line 1)` — so point
+    /// lands on the first line *after* the next `^L`. With no `^L` left in the
+    /// buffer `forward-page` runs to `point-max`, which is why a page-less help
+    /// topic bottoms out at its last line instead of scrolling into blank space.
+    /// The detail pane has no point of its own, so `detail_scroll` — the top
+    /// visible line — is what moves.
+    pub fn goto_next_page(&mut self) {
+        let lines = self.detail_lines();
+        let last = lines.len().saturating_sub(1);
+        let cur = self.detail_scroll as usize;
+        // `re-search-forward` from the beginning of the current line matches a
+        // `^L` on that very line, hence `>= cur` rather than `> cur`.
+        let target = Self::page_boundaries(&lines)
+            .into_iter()
+            .find(|&d| d >= cur)
+            .map_or(last, |d| d + 1);
+        self.detail_scroll = target.min(last) as u16;
+    }
+
+    /// Emacs `help-goto-previous-page` (`p`, help-mode.el:845): `backward-page`
+    /// then `(forward-line 1)` unless that reached the beginning of the buffer,
+    /// so point again lands just after a `^L`. The count is 2 when point is
+    /// already sitting one line past a delimiter (`(looking-back "\f\n" …)`),
+    /// which is what stops a second `p` from landing on the same line twice.
     pub fn goto_previous_page(&mut self) {
-        self.detail_scroll = self.detail_scroll.saturating_sub(self.page.max(1));
+        let lines = self.detail_lines();
+        let last = lines.len().saturating_sub(1);
+        let cur = self.detail_scroll as usize;
+        let after_delimiter = cur
+            .checked_sub(1)
+            .and_then(|i| lines.get(i))
+            .is_some_and(|line| line.as_str() == PAGE_DELIMITER);
+        let count = usize::from(after_delimiter) + 1;
+        let before: Vec<usize> = Self::page_boundaries(&lines)
+            .into_iter()
+            .filter(|&d| d < cur)
+            .collect();
+        // Fewer delimiters behind than the count asks for: `forward-page` gives
+        // up at `point-min`, and `(unless (bobp) …)` then skips the forward-line.
+        let target = before
+            .len()
+            .checked_sub(count)
+            .map_or(0, |i| (before[i] + 1).min(last));
+        self.detail_scroll = target as u16;
+    }
+
+    /// `scroll-up-command` / `scroll-down-command`, which is what PgDn / PgUp do
+    /// in a `*Help*` buffer — a screenful of the detail pane, not a `^L` page.
+    pub fn scroll_detail(&mut self, down: bool) {
+        let step = self.page.max(1);
+        self.detail_scroll = if down {
+            self.detail_scroll.saturating_add(step)
+        } else {
+            self.detail_scroll.saturating_sub(step)
+        };
     }
 
     /// Emacs `forward-button` (`TAB` in Help mode, inherited from
@@ -3391,8 +3476,10 @@ impl HelpPanel {
                 self.sel = self.sel.saturating_sub(1);
                 self.detail_scroll = 0;
             }
-            key!(PageDown) => self.goto_next_page(),
-            key!(PageUp) => self.goto_previous_page(),
+            // PgDn / PgUp are `scroll-up-command` / `scroll-down-command` — a
+            // screenful. `n` / `p` below are the `^L`-page commands.
+            key!(PageDown) => self.scroll_detail(true),
+            key!(PageUp) => self.scroll_detail(false),
             key!(Enter) => {
                 // `help-follow`: follow the cross-reference at point — visit the
                 // selected entry, showing it on its own and recording it in the
@@ -3679,17 +3766,76 @@ mod tests {
     }
 
     #[test]
-    fn help_paging_moves_by_a_screenful() {
+    fn help_pgdn_scrolls_by_a_screenful() {
         let mut p = HelpPanel::new();
         p.page = 20;
-        p.goto_next_page();
-        p.goto_next_page();
+        p.scroll_detail(true);
+        p.scroll_detail(true);
         assert_eq!(p.detail_scroll, 40);
-        p.goto_previous_page();
+        p.scroll_detail(false);
         assert_eq!(p.detail_scroll, 20);
-        p.goto_previous_page();
-        p.goto_previous_page();
+        p.scroll_detail(false);
+        p.scroll_detail(false);
         assert_eq!(p.detail_scroll, 0, "scroll saturates at the top");
+    }
+
+    /// A one-entry panel whose doc body is `doc`, visited on its own so
+    /// `matches()` is exactly that entry — the `*Help*` state `n` / `p` act in.
+    fn help_panel_showing(doc: &str) -> HelpPanel {
+        let mut p = HelpPanel::new();
+        p.entries = vec![Entry {
+            cat: Cat::Topics,
+            title: "Topic".to_string(),
+            keys: Vec::new(),
+            aliases: Vec::new(),
+            doc: doc.to_string(),
+        }];
+        p.visiting = Some(0);
+        p.sel = 0;
+        p.detail_scroll = 0;
+        p
+    }
+
+    /// `help-goto-next-page` is `forward-page` over the `^L` separator, not a
+    /// screenful: each `n` lands on the first line after the next form feed,
+    /// whatever the pane's height is (help-mode.el:836).
+    #[test]
+    fn help_n_walks_the_form_feed_pages() {
+        // Rendered lines: 0 "Topic", 1 "", 2 "a", 3 "^L", 4 "b", 5 "^L", 6 "c".
+        let mut p = help_panel_showing("a\n\u{000C}\nb\n\u{000C}\nc");
+        p.page = 100; // A screenful is irrelevant to the page commands.
+        assert_eq!(HelpPanel::page_boundaries(&p.detail_lines()), vec![3, 5]);
+
+        p.goto_next_page();
+        assert_eq!(p.detail_scroll, 4, "first page break");
+        p.goto_next_page();
+        assert_eq!(p.detail_scroll, 6, "second page break");
+        p.goto_next_page();
+        assert_eq!(
+            p.detail_scroll, 6,
+            "no page left: forward-page hits point-max"
+        );
+
+        p.goto_previous_page();
+        assert_eq!(p.detail_scroll, 4, "back over the second break");
+        p.goto_previous_page();
+        assert_eq!(
+            p.detail_scroll, 0,
+            "no page left: backward-page hits point-min"
+        );
+    }
+
+    /// With no `^L` anywhere, `forward-page` runs to `point-max` and
+    /// `backward-page` to `point-min` — the ends of the buffer, not a screenful.
+    #[test]
+    fn help_pages_bottom_out_when_the_buffer_has_no_form_feed() {
+        let mut p = help_panel_showing("one\ntwo\nthree");
+        p.page = 2;
+        let last = p.detail_lines().len() - 1;
+        p.goto_next_page();
+        assert_eq!(p.detail_scroll as usize, last, "straight to the last line");
+        p.goto_previous_page();
+        assert_eq!(p.detail_scroll, 0, "straight back to the first");
     }
 
     #[test]

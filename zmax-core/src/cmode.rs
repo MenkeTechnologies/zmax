@@ -147,9 +147,75 @@ pub struct Branch {
     pub taken: Option<bool>,
 }
 
-/// Where each macro in `lines` is `#define`d. This is the only definition
-/// environment this port has (Emacs takes one from `hide-ifdef-env`, populated by
-/// `hide-ifdef-define`, which zmax does not have).
+/// The `hide-ifdef-env` a scan evaluates against, on top of the file's own
+/// `#define`s: the symbols `hide-ifdef-define` has set (hideif.el:2638-2655 —
+/// `(hif-set-var var (or val 1))`, so an omitted value is `1`) and the ones
+/// `hide-ifdef-undef` has removed (hideif.el:2666-2683).
+///
+/// `hide-ifdef-undef` needs the `undefined` list because this port also consults
+/// the file's own `#define`s, which hideif.el does not: without it `C-c @ u` on a
+/// macro the file defines would be a no-op, and its docstring is "Undefine a VAR
+/// so that #ifdef VAR would not be included".
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HideIfdefEnv {
+    /// `(VAR, VALUE)` pairs. `hif-set-var` *prepends*, so a later `define` of the
+    /// same name shadows the earlier one (hideif.el:500-502); this replaces in
+    /// place, which is the same lookup result with no dead entries kept.
+    defined: Vec<(String, String)>,
+    /// Names `hide-ifdef-undef` removed, which shadow a file `#define`.
+    undefined: Vec<String>,
+}
+
+impl HideIfdefEnv {
+    /// `hide-ifdef-define VAR [VAL]`: define `name`, defaulting the value to `1`.
+    pub fn define(&mut self, name: &str, value: Option<&str>) {
+        let value = value.unwrap_or("1").to_string();
+        self.undefined.retain(|u| u != name);
+        match self.defined.iter_mut().find(|(n, _)| n == name) {
+            Some(slot) => slot.1 = value,
+            None => self.defined.push((name.to_string(), value)),
+        }
+    }
+
+    /// `hide-ifdef-undef VAR`: drop `name` from the env and mask any `#define` of
+    /// it in the file.
+    pub fn undef(&mut self, name: &str) {
+        self.defined.retain(|(n, _)| n != name);
+        if !self.undefined.iter().any(|u| u == name) {
+            self.undefined.push(name.to_string());
+        }
+    }
+
+    /// Whether the env decides `name`'s definedness at all. `None` leaves the
+    /// verdict to the file's own `#define`s, which is why an empty env keeps the
+    /// pre-env behaviour exactly.
+    pub fn defined(&self, name: &str) -> Option<bool> {
+        if self.defined.iter().any(|(n, _)| n == name) {
+            Some(true)
+        } else if self.undefined.iter().any(|u| u == name) {
+            Some(false)
+        } else {
+            None
+        }
+    }
+
+    /// `hif-lookup`: the value `hide-ifdef-define` set, for a bare `#if VAR`.
+    pub fn value(&self, name: &str) -> Option<&str> {
+        self.defined
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, v)| v.as_str())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.defined.is_empty() && self.undefined.is_empty()
+    }
+}
+
+/// Where each macro in `lines` is `#define`d. Emacs takes its whole definition
+/// environment from `hide-ifdef-env` instead; this port consults the file's own
+/// `#define`s as well, so that a scan with no env at all still decides the
+/// common cases (see [`HideIfdefEnv`]).
 ///
 /// The *line* matters: a macro counts as defined only for the directives that
 /// follow its `#define`, exactly as the preprocessor sees it. Ignoring the order
@@ -178,8 +244,18 @@ fn defined_macros(lines: &[&str]) -> Vec<(usize, String)> {
     out
 }
 
-/// Whether `name` is `#define`d somewhere above line `before`.
-fn is_defined(defines: &[(usize, String)], before: usize, name: &str) -> bool {
+/// Whether `name` is defined for a directive on line `before`: the `hide-ifdef-env`
+/// wins (that is the environment the user typed, and `hide-ifdef-undef` must be
+/// able to mask a file `#define`), otherwise the file's own `#define`s decide.
+fn is_defined(
+    defines: &[(usize, String)],
+    env: &HideIfdefEnv,
+    before: usize,
+    name: &str,
+) -> bool {
+    if let Some(verdict) = env.defined(name) {
+        return verdict;
+    }
     defines
         .iter()
         .any(|(line, macro_name)| *line < before && macro_name == name)
@@ -202,25 +278,31 @@ fn condition_of(line: &str) -> String {
 /// or an unknown macro's *value* is `None` ("cannot tell"), and a `None` branch is
 /// never hidden.
 ///
-/// GNU Emacs' `hide-ifdef-mode` instead evaluates against `hide-ifdef-env` and
-/// hides every branch that is not true, so with the default (empty) env it hides
-/// the body of every `#ifdef`. zmax has no `hide-ifdef-define` to populate such
-/// an env, so hiding on "cannot tell" would blank out most of a real C file. The
-/// file's own `#define`s are used instead, and undecidable branches stay visible.
+/// GNU Emacs' `hide-ifdef-mode` instead evaluates against `hide-ifdef-env` alone
+/// and hides every branch that is not true, so with the default (empty) env it
+/// hides the body of every `#ifdef`. Hiding on "cannot tell" would blank out most
+/// of a real C file, so `env` is consulted *in addition to* the file's own
+/// `#define`s and undecidable branches stay visible.
 fn eval_condition(
     keyword: &str,
     condition: &str,
     at: usize,
     defines: &[(usize, String)],
+    env: &HideIfdefEnv,
 ) -> Option<bool> {
     let cond = condition.trim();
     match keyword {
-        "ifdef" | "elifdef" => return Some(is_defined(defines, at, cond)),
-        "ifndef" | "elifndef" => return Some(!is_defined(defines, at, cond)),
+        "ifdef" | "elifdef" => return Some(is_defined(defines, env, at, cond)),
+        "ifndef" | "elifndef" => return Some(!is_defined(defines, env, at, cond)),
         _ => {}
     }
     // `#if 0` / `#if 1` — the idiomatic "comment this out".
     if let Ok(n) = cond.parse::<i64>() {
+        return Some(n != 0);
+    }
+    // A bare `#if VAR` whose value the env carries: `hif-lookup` substitutes it
+    // and the expression is then the literal above (hideif.el:519-527).
+    if let Some(n) = env.value(cond).and_then(|v| v.trim().parse::<i64>().ok()) {
         return Some(n != 0);
     }
     // `defined(X)` / `defined X`, optionally negated once.
@@ -235,7 +317,7 @@ fn eval_condition(
     if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
         return None;
     }
-    let value = is_defined(defines, at, name);
+    let value = is_defined(defines, env, at, name);
     Some(value != negated)
 }
 
@@ -245,8 +327,18 @@ fn eval_condition(
 /// own verdict, so callers that hide dead code hide the outer body anyway.
 ///
 /// This is the engine behind `hide-ifdef-mode` (hide the dead ones) and
-/// `cpp-highlight-buffer` (shade them).
+/// `cpp-highlight-buffer` (shade them). Evaluated against the file's own
+/// `#define`s only; see [`conditional_branches_with_env`] for the
+/// `hide-ifdef-define` environment.
 pub fn conditional_branches(lines: &[&str]) -> Vec<Branch> {
+    conditional_branches_with_env(lines, &HideIfdefEnv::default())
+}
+
+/// [`conditional_branches`] evaluated against `env` as well as the file's own
+/// `#define`s — the `hide-ifdef-env` that `hide-ifdef-define` and
+/// `hide-ifdef-undef` populate (hideif.el:272). An empty `env` decides nothing,
+/// so it reproduces [`conditional_branches`] exactly.
+pub fn conditional_branches_with_env(lines: &[&str], env: &HideIfdefEnv) -> Vec<Branch> {
     let defines = defined_macros(lines);
     let mut out = Vec::new();
     // The open conditionals: (line of the directive that opened the branch,
@@ -269,7 +361,7 @@ pub fn conditional_branches(lines: &[&str]) -> Vec<Branch> {
         if matches!(directive, Directive::Else | Directive::Endif) {
             if let Some((open_line, open_kw, open_cond, earlier_taken)) = stack.pop() {
                 let taken =
-                    branch_verdict(&open_kw, &open_cond, open_line, earlier_taken, &defines);
+                    branch_verdict(&open_kw, &open_cond, open_line, earlier_taken, &defines, env);
                 out.push(Branch {
                     start: open_line + 1,
                     end: i,
@@ -293,7 +385,7 @@ pub fn conditional_branches(lines: &[&str]) -> Vec<Branch> {
     }
     // Unterminated conditionals run to the end of the file.
     while let Some((open_line, open_kw, open_cond, earlier_taken)) = stack.pop() {
-        let taken = branch_verdict(&open_kw, &open_cond, open_line, earlier_taken, &defines);
+        let taken = branch_verdict(&open_kw, &open_cond, open_line, earlier_taken, &defines, env);
         out.push(Branch {
             start: open_line + 1,
             end: lines.len(),
@@ -313,6 +405,7 @@ fn branch_verdict(
     at: usize,
     earlier_taken: bool,
     defines: &[(usize, String)],
+    env: &HideIfdefEnv,
 ) -> Option<bool> {
     if earlier_taken {
         // A preceding branch of the group already ran: this one cannot.
@@ -324,13 +417,25 @@ fn branch_verdict(
         // an undecidable branch is never hidden.
         return None;
     }
-    eval_condition(keyword, condition, at, defines)
+    eval_condition(keyword, condition, at, defines, env)
 }
 
 /// The line ranges `hide-ifdef-mode` hides and `cpp-highlight-buffer` shades:
 /// the bodies of the branches the preprocessor provably skips.
 pub fn dead_branches(lines: &[&str]) -> Vec<std::ops::Range<usize>> {
-    conditional_branches(lines)
+    dead_branches_with_env(lines, &HideIfdefEnv::default())
+}
+
+/// [`dead_branches`] resolved against a `hide-ifdef-env` as well: the symbols
+/// `hide-ifdef-define` / `hide-ifdef-undef` set are what emacs's `hide-ifdefs`
+/// evaluates against ("Assume that defined symbols have been added to
+/// `hide-ifdef-env'", hideif.el:2685-2688). An empty `env` decides nothing, so
+/// this reproduces [`dead_branches`] exactly.
+pub fn dead_branches_with_env(
+    lines: &[&str],
+    env: &HideIfdefEnv,
+) -> Vec<std::ops::Range<usize>> {
+    conditional_branches_with_env(lines, env)
         .into_iter()
         .filter(|b| b.taken == Some(false) && b.start < b.end)
         .map(|b| b.start..b.end)
@@ -959,6 +1064,83 @@ mod tests {
         let lines = ["#if 0", "  #if 1", "  a();", "  #endif", "#endif", "b();"];
         let dead = dead_branches(&lines);
         assert!(dead.contains(&(1..4)), "{dead:?}");
+    }
+
+    /// hideif.el:2638-2655 `(defun hide-ifdef-define (var &optional val)` —
+    /// "Define a VAR to VAL (default 1) in `hide-ifdef-env'. This allows #ifndef
+    /// VAR to be hidden." — with `(hif-set-var var (or val 1))` as the body.
+    #[test]
+    fn hide_ifdef_define_decides_a_macro_the_file_never_defines() {
+        let lines = ["#ifdef HAVE_X", "yes();", "#else", "no();", "#endif"];
+        // Without an env the file's own defines rule: HAVE_X is nowhere, so the
+        // `#ifdef` body is dead and the `#else` lives.
+        assert_eq!(dead_branches(&lines), vec![1..2]);
+
+        let mut env = HideIfdefEnv::default();
+        env.define("HAVE_X", None);
+        // With HAVE_X in `hide-ifdef-env` the verdict flips to the `#else`, and
+        // `#ifndef HAVE_X` would now be hidden, which is what the docstring
+        // promises.
+        assert_eq!(dead_branches_with_env(&lines, &env), vec![3..4]);
+    }
+
+    /// hideif.el:2666-2683 `(defun hide-ifdef-undef ...)` — "Undefine a VAR so
+    /// that #ifdef VAR would not be included." The file `#define`s HAVE_X, which
+    /// hideif.el would not even look at, so the undef has to mask it or the
+    /// command does nothing here.
+    #[test]
+    fn hide_ifdef_undef_masks_the_files_own_define() {
+        let lines = [
+            "#define HAVE_X",
+            "#ifdef HAVE_X",
+            "yes();",
+            "#else",
+            "no();",
+            "#endif",
+        ];
+        assert_eq!(dead_branches(&lines), vec![4..5]);
+
+        let mut env = HideIfdefEnv::default();
+        env.undef("HAVE_X");
+        assert_eq!(dead_branches_with_env(&lines, &env), vec![2..3]);
+    }
+
+    /// hideif.el:519-527 `hif-lookup` returns the value stored in
+    /// `hide-ifdef-env`, which `hif-expand-token`/`hif-mathify` then evaluate —
+    /// so a bare `#if VERSION` is decidable once VERSION has a value.
+    #[test]
+    fn a_defined_value_decides_a_bare_if() {
+        let lines = ["#if VERSION", "x();", "#endif"];
+        assert!(
+            dead_branches(&lines).is_empty(),
+            "with no env the value is unknown, so nothing may be hidden"
+        );
+
+        let mut env = HideIfdefEnv::default();
+        env.define("VERSION", Some("0"));
+        assert_eq!(dead_branches_with_env(&lines, &env), vec![1..2]);
+
+        env.define("VERSION", Some("3"));
+        assert!(dead_branches_with_env(&lines, &env).is_empty());
+    }
+
+    /// `hide-ifdef-env` is nil by default (hideif.el:272), and this port must
+    /// keep deciding branches from the file when it is — otherwise every existing
+    /// `dead_branches` caller changes behaviour.
+    #[test]
+    fn an_empty_env_reproduces_the_file_only_verdicts() {
+        let lines = [
+            "#define A",
+            "#if defined(A)",
+            "one();",
+            "#endif",
+            "#if !defined(A)",
+            "two();",
+            "#endif",
+        ];
+        let env = HideIfdefEnv::default();
+        assert!(env.is_empty());
+        assert_eq!(dead_branches_with_env(&lines, &env), dead_branches(&lines));
     }
 
     #[test]

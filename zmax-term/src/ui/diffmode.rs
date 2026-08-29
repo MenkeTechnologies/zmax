@@ -171,22 +171,12 @@ impl DiffMode {
     /// or file banner. `None` when point is not inside a hunk, which is emacs's
     /// `diff--some-hunks-p` guard failing.
     fn hunk_bounds(&self) -> Option<(usize, usize)> {
-        if self.flat.is_empty() {
-            return None;
-        }
-        let beg = self.kinds[..=self.cursor.min(self.max_line())]
-            .iter()
-            .rposition(|k| *k == LineKind::HunkHeader)?;
-        let end = self.kinds[beg + 1..]
-            .iter()
-            .position(|k| {
-                matches!(
-                    k,
-                    LineKind::HunkHeader | LineKind::FileHeader | LineKind::Header
-                )
-            })
-            .map_or(self.flat.len(), |off| beg + 1 + off);
-        Some((beg, end))
+        // emacs calls `(diff-beginning-of-hunk t)`, whose fallback chain is
+        // `re-search-backward` THEN `re-search-forward` — so point ABOVE the
+        // first hunk (on the banner, the `---` or the `+++`) still resolves to
+        // that first hunk. The search here used to be `rposition`-only, so from
+        // there it found nothing and the caller reported "no hunk at point".
+        zmax_core::diffmode::hunk_bounds_at(&self.kinds, self.cursor.min(self.max_line()))
     }
 
     /// Collect a refinement region: the bodies of `range`'s lines (the leading
@@ -239,25 +229,14 @@ impl DiffMode {
         for i in beg..end {
             self.refine.remove(&i);
         }
-        let mut i = beg;
-        while i < end {
-            if self.kinds[i] != LineKind::Removed {
-                i += 1;
-                continue;
-            }
-            let del = i;
-            while i < end && self.kinds[i] == LineKind::Removed {
-                i += 1;
-            }
-            let del_end = i;
-            while i < end && self.kinds[i] == LineKind::Added {
-                i += 1;
-            }
-            if i == del_end {
-                continue;
-            }
-            let (old, old_spans) = self.refine_region(del..del_end);
-            let (new, new_spans) = self.refine_region(del_end..i);
+        // The `-`/`+` run pairing lives in core so it can be tested against the
+        // shapes that broke it. The one this walk got wrong: a
+        // `\ No newline at end of file` marker between the two runs parses as
+        // context and ended the `-` run early, leaving the pair unrefined —
+        // emacs steps over it with `diff--forward-while-leading-char ?\\`.
+        for (del, add) in zmax_core::diffmode::refine_runs(&self.flat, beg..end) {
+            let (old, old_spans) = self.refine_region(del);
+            let (new, new_spans) = self.refine_region(add);
             let (old_changed, new_changed) = refine_regions(&old, &new);
             self.store_refinement(&old_spans, &old_changed);
             self.store_refinement(&new_spans, &new_changed);

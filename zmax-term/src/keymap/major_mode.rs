@@ -385,6 +385,31 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("view", "n", "e",         "View", "view_mode"), // e:   View-exit
     ("view", "n", "q",         "View", "view_quit"), // q:   View-quit
 
+    // -- Inactive minibuffer (minibuffer-inactive-mode) ----------------------
+    // This major mode essentially *is* its keymap: `minibuffer-inactive-mode`'s
+    // body only sets the mode line string, and `minibuffer-inactive-mode-map`
+    // (minibuffer.el:3423-3439) carries the whole of it — a `:suppress t` map
+    // whose six letters open a file, a buffer, Info, a mail draft or a frame,
+    // because "the non-mouse bindings in this keymap can only be used in
+    // minibuffer-only frames, since the minibuffer can normally not be selected
+    // when it is not active". `minibuffer_inactive_mode` (commands.rs:51521) is
+    // what puts a buffer in this mode, so these are reachable the same way
+    // `view`'s are.
+    //
+    // Normal-only, like View mode's letters: every one of these is a bare typing
+    // key that must keep its meaning in Insert, and emacs's own map suppresses
+    // self-insert rather than layering on it.
+    ("minibuffer-inactive", "n", "e", "Minibuffer", "find_file_other_frame"),      // e: find-file-other-frame
+    ("minibuffer-inactive", "n", "f", "Minibuffer", "find_file_other_frame"),      // f: find-file-other-frame
+    ("minibuffer-inactive", "n", "b", "Minibuffer", "switch_to_buffer_other_frame"),// b: switch-to-buffer-other-frame
+    ("minibuffer-inactive", "n", "i", "Minibuffer", "info"),                       // i: info
+    // `m` is emacs's `mail`, which is `compose-mail` under whichever mail user
+    // agent is configured; zmax's is the typable `:compose-mail`.
+    ("minibuffer-inactive", "n", "m", "Minibuffer", ":compose-mail"),              // m: mail
+    // `n` is emacs's `make-frame`; `make-frame-command` is its interactive form
+    // and the one zmax ports (commands.rs:2801).
+    ("minibuffer-inactive", "n", "n", "Minibuffer", "make_frame_command"),         // n: make-frame
+
     // -- Tests (`SPC m t …`, the major-mode leader) --------------------------
     // Spacemacs binds the test runners under each *language* layer's `SPC m`
     // map, which is why they can share the chord with org-mode's `SPC m t`
@@ -848,6 +873,39 @@ mod tests {
                 KeymapResult::Pending(_)
             ),
             "SPC must stay the leader in an ordinary buffer"
+        );
+    }
+
+    /// `minibuffer-inactive-mode` is its keymap (minibuffer.el:3423-3439): the
+    /// six letters must reach the frame/Info/mail commands in that mode, and
+    /// nowhere else — `n` in an ordinary buffer is still vim's search-repeat.
+    #[test]
+    fn inactive_minibuffer_letters_open_frames() {
+        let _guard = USER_BINDING_TEST_GUARD.lock();
+        let trie = overlay("minibuffer-inactive", Mode::Normal)
+            .expect("no `minibuffer-inactive` overlay in Normal");
+        for (key, name) in [
+            ("e", "find_file_other_frame"),
+            ("f", "find_file_other_frame"),
+            ("b", "switch_to_buffer_other_frame"),
+            ("i", "info"),
+            ("m", "compose-mail"),
+            ("n", "make_frame_command"),
+        ] {
+            assert_eq!(cmd_at(&trie, key).as_deref(), Some(name));
+        }
+        // Scoped to the mode: a rust buffer keeps the base `n`.
+        let mut keymaps = Keymaps::new(Box::new(arc_swap::access::Constant(
+            preset("vim").unwrap(),
+        )));
+        let n = "n".parse::<KeyEvent>().unwrap();
+        assert_eq!(
+            keymaps.get_with_language(Mode::Normal, n, Some("minibuffer-inactive")),
+            KeymapResult::Matched(MappableCommand::make_frame_command)
+        );
+        assert_ne!(
+            keymaps.get_with_language(Mode::Normal, n, Some("rust")),
+            KeymapResult::Matched(MappableCommand::make_frame_command)
         );
     }
 

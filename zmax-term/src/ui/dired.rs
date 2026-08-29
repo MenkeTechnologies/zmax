@@ -615,6 +615,40 @@ fn mark_prompt(names: &[String]) -> String {
     }
 }
 
+/// Byte-compile one elisp source string: read it, macro-expand it and lower it
+/// to a fusevm chunk, without running a single form of it. This is the
+/// `elisprs::compile_str` pipeline that backs `elisp --dump-bytecode`, and it is
+/// what `dired-byte-compile` (dired-aux.el:1947) means by "compile" — Emacs's
+/// `byte-compile-file` never evaluates the file's top level either.
+#[cfg(feature = "scripting")]
+fn byte_compile_elisp(src: &str) -> Result<(), String> {
+    elisprs::compile_str(src).map(|_chunk| ())
+}
+
+/// Without the `scripting` feature the elisp compiler is not linked in, so `B`
+/// reports that instead of pretending the file compiled.
+#[cfg(not(feature = "scripting"))]
+fn byte_compile_elisp(_src: &str) -> Result<(), String> {
+    Err("embedded scripting was not compiled into this build".to_string())
+}
+
+/// The summary line `dired-map-over-marks-check` prints for a whole
+/// byte-compile run (dired.el:7535): `Byte-compile: N files.` when every file
+/// compiled, else `Failed to byte-compile M of N files` with the offending
+/// names appended the way `dired-log-summary` (dired.el:5089) appends them.
+fn byte_compile_summary(total: usize, failures: &[String]) -> String {
+    // `ngettext` picks the singular on a one-file run, in both branches.
+    let files = if total == 1 { "file" } else { "files" };
+    if failures.is_empty() {
+        return format!("Byte-compile: {total} {files}.");
+    }
+    format!(
+        "Failed to byte-compile {} of {total} {files} ({})",
+        failures.len(),
+        failures.join(" ")
+    )
+}
+
 /// Active `wdired` (writable Dired) edit session: the directory being edited and
 /// the original top-level file names, in listing order. Set when Dired switches
 /// to wdired (dumping the names into an editable buffer) and consumed by
@@ -2266,12 +2300,14 @@ impl Dired {
         }
     }
 
-    /// `dired-do-info` (`I`): run info on the file at point, the same way Emacs
-    /// hands it to Info mode. The rendering is done by the system `info(1)` —
-    /// the binary already behind `info_search` — so the file opens at its `Top`
-    /// node and the usual gzipped `.info.gz` form decompresses transparently.
-    /// The node text lands in a scratch buffer; node-to-node navigation
-    /// (`n`/`p`/`u`/`l`) still needs an Info mode zmax does not have.
+    /// `dired-do-info` (`I`, dired.el:5537) is `(info (dired-get-file-for-visit))`
+    /// — it opens the file *in Info mode*, not in a plain buffer. The rendering
+    /// is done by the system `info(1)` — the binary already behind `info_search`
+    /// — so the file opens at its `Top` node and the usual gzipped `.info.gz`
+    /// form decompresses transparently.
+    ///
+    /// The buffer is put into zmax's `info` major mode by [`Self::show_as_info`],
+    /// which is what arms `n`/`p`/`u`/`l`/`d`/`t`/`RET` (keymap/major_mode.rs).
     fn dired_do_info(&mut self, cx: &mut Context) {
         let Some(name) = self.current_name() else {
             return;
@@ -2286,8 +2322,7 @@ impl Dired {
         {
             Ok(out) if out.status.success() && !out.stdout.is_empty() => {
                 let text = String::from_utf8_lossy(&out.stdout);
-                crate::commands::show_text_in_scratch(cx.editor, &text);
-                self.close_requested = true;
+                self.show_as_info(cx, &text);
             }
             // `info` rendered nothing: the file has no `Top` node, which is what
             // Emacs reports as "No such node or anchor".
@@ -2304,12 +2339,22 @@ impl Dired {
                         .map(|l| l.replace('\u{1f}', "────────").replace('\u{c}', ""))
                         .collect::<Vec<_>>()
                         .join("\n");
-                    crate::commands::show_text_in_scratch(cx.editor, &shown);
-                    self.close_requested = true;
+                    self.show_as_info(cx, &shown);
                 }
                 Err(e) => cx.editor.set_error(format!("info {name}: {e}")),
             },
         }
+    }
+
+    /// Put `text` in a buffer in the `info` major mode and leave Dired, which is
+    /// what `(info FILE)` does: `Info-mode` is where `n` (`Info-next`), `p`, `u`,
+    /// `l`, `d`, `t` and `RET` live. `commands::info_display_node` sets the mode
+    /// the same way (`doc.set_major_mode(Some("info"))`) after filling the
+    /// buffer, so the two entry points leave an identical buffer behind.
+    fn show_as_info(&mut self, cx: &mut Context, text: &str) {
+        crate::commands::show_text_in_scratch(cx.editor, text);
+        doc_mut!(cx.editor).set_major_mode(Some("info"));
+        self.close_requested = true;
     }
 
     /// `dired-unmark-all-files` (`M-DEL`, `* ?`): remove one mark character from
@@ -2505,33 +2550,39 @@ impl Dired {
             .set_status(format!("dired: loaded {loaded} elisp file(s)"));
     }
 
-    /// Emacs `dired-do-byte-compile` (`B`): zmax's elisp (`elisprs`) is an
-    /// interpreter with no `.elc` output, so "byte-compiling" here evaluates each
-    /// marked file to *validate* it compiles/loads cleanly, reporting the first
-    /// error. Tracked as a partial port (no bytecode file is produced).
+    /// Emacs `dired-do-byte-compile` (`B`, dired-aux.el:1968): byte-compile every
+    /// marked elisp file. Each file goes through `dired-byte-compile`, which
+    /// calls `byte-compile-file` — it *compiles*, it never evaluates the file's
+    /// top level, so a marked file's `(delete-file …)` or `(shell-command …)`
+    /// does not run. zmax compiles with [`byte_compile_elisp`] (the vendored
+    /// `elisprs` compiler) for the same reason.
+    ///
+    /// One file's failure does not abort the run: `dired-map-over-marks-check`
+    /// collects every failure and reports them together (see
+    /// [`byte_compile_summary`]). No `.elc` is written — zmax's compiled elisp
+    /// lives in elisprs's own bytecode cache, not in a sibling file, so the
+    /// `dired-add-file` half of `dired-byte-compile` has nothing to insert.
     fn dired_byte_compile(&mut self, cx: &mut Context) {
         let targets = self.targets();
-        let mut ok = 0;
+        let mut failures: Vec<String> = Vec::new();
         for name in &targets {
             let path = self.dir.join(name);
-            let src = match std::fs::read_to_string(&path) {
-                Ok(s) => s,
-                Err(e) => {
-                    cx.editor.set_error(format!("{name}: {e}"));
-                    break;
-                }
-            };
-            match crate::commands::scripting::eval_elisp(cx, &src) {
-                Ok(_) => ok += 1,
-                Err(e) => {
-                    cx.editor.set_error(format!("compile {name}: {e}"));
-                    break;
-                }
+            let compiled = std::fs::read_to_string(&path)
+                .map_err(|e| e.to_string())
+                .and_then(|src| byte_compile_elisp(&src));
+            if let Err(e) = compiled {
+                // `dired-byte-compile` logs the detail ("Byte compile error for
+                // %s:\n%s\n") and hands the caller only the file name.
+                log::warn!("dired: byte compile error for {}:\n{e}", path.display());
+                failures.push(name.clone());
             }
         }
-        cx.editor.set_status(format!(
-            "dired: checked {ok} elisp file(s) (interpreted, no .elc)"
-        ));
+        let summary = byte_compile_summary(targets.len(), &failures);
+        if failures.is_empty() {
+            cx.editor.set_status(summary);
+        } else {
+            cx.editor.set_error(summary);
+        }
     }
 
     /// Emacs `dired-next-subdir`/`dired-prev-subdir`: move point to the first
@@ -4458,6 +4509,52 @@ mod shell_command_tests {
         assert_eq!(
             mark_prompt(&["a".to_string(), "b".to_string(), "c".to_string()]),
             "* [3 files]"
+        );
+    }
+}
+
+#[cfg(test)]
+mod byte_compile_tests {
+    use super::*;
+
+    /// `dired-byte-compile` (dired-aux.el:1947) calls `byte-compile-file`, which
+    /// compiles the file — it does not evaluate its top level. `B` used to run
+    /// `eval_elisp`, so a marked file's side effects fired; this pins that they
+    /// no longer can.
+    #[cfg(feature = "scripting")]
+    #[test]
+    fn byte_compiling_a_file_never_runs_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let victim = tmp.path().join("victim.txt");
+        std::fs::write(&victim, b"still here\n").unwrap();
+
+        let src = format!("(delete-file \"{}\")", victim.display());
+        assert!(byte_compile_elisp(&src).is_ok(), "the form compiles");
+        assert!(
+            victim.exists(),
+            "compiling must not evaluate the form: {} was deleted",
+            victim.display()
+        );
+    }
+
+    /// A file that does not read is a compile failure, not a silent success —
+    /// that is the `failure` branch `dired-byte-compile` logs and reports.
+    #[cfg(feature = "scripting")]
+    #[test]
+    fn unbalanced_source_fails_to_compile() {
+        assert!(byte_compile_elisp("(defun broken (").is_err());
+    }
+
+    /// `dired-map-over-marks-check` (dired.el:7535) reports the whole run in one
+    /// line: the `ngettext` count on success, the failure count plus the names
+    /// `dired-log-summary` appends otherwise.
+    #[test]
+    fn the_summary_line_matches_dired_map_over_marks_check() {
+        assert_eq!(byte_compile_summary(1, &[]), "Byte-compile: 1 file.");
+        assert_eq!(byte_compile_summary(3, &[]), "Byte-compile: 3 files.");
+        assert_eq!(
+            byte_compile_summary(3, &["a.el".to_string(), "b.el".to_string()]),
+            "Failed to byte-compile 2 of 3 files (a.el b.el)"
         );
     }
 }

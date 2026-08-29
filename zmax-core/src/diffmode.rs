@@ -274,6 +274,91 @@ pub fn prev_hunk_line(lines_flat: &[LineKind], from: usize) -> Option<usize> {
         .map(|(i, _)| i)
 }
 
+/// The `[start, end)` flat range of the hunk at `at`: from the `@@` header at or
+/// above `at` up to the next header or file banner.
+///
+/// The search is emacs's `(diff-beginning-of-hunk t)` (diff-mode.el:802-819),
+/// whose cond falls through `re-search-backward` to `re-search-forward` — so a
+/// point sitting in the file header *above* the first hunk finds that first
+/// hunk instead of erroring, which is exactly the case `diff-refine-hunk` and
+/// friends pass `try-harder` for.
+pub fn hunk_bounds_at(lines_flat: &[LineKind], at: usize) -> Option<(usize, usize)> {
+    if lines_flat.is_empty() {
+        return None;
+    }
+    let at = at.min(lines_flat.len() - 1);
+    let beg = if lines_flat[at] == LineKind::HunkHeader {
+        at
+    } else {
+        prev_hunk_line(lines_flat, at).or_else(|| next_hunk_line(lines_flat, at))?
+    };
+    let end = lines_flat[beg + 1..]
+        .iter()
+        .position(|k| {
+            matches!(
+                k,
+                LineKind::HunkHeader | LineKind::FileHeader | LineKind::Header
+            )
+        })
+        .map_or(lines_flat.len(), |off| beg + 1 + off);
+    Some((beg, end))
+}
+
+/// Whether `line` is the `\ No newline at end of file` marker rather than a line
+/// of either file. Emacs steps over it with `(diff--forward-while-leading-char
+/// ?\\ end)` (diff-mode.el:2715-2722, called either side of the `+` run at
+/// diff-mode.el:2789/2792).
+pub fn is_no_newline_marker(line: &str) -> bool {
+    line.starts_with('\\')
+}
+
+/// The `(removed, added)` flat-line run pairs `diff--refine-hunk` refines
+/// (diff-mode.el:2780-2795): every maximal run of `-` lines immediately followed
+/// by a run of `+` lines. A `-` run with no `+` after it and a bare `+` run get
+/// nothing, since `diff-refine-nonmodified` defaults to nil.
+///
+/// A `\ No newline at end of file` between the two runs is skipped: the parser
+/// classifies it [`LineKind::Context`] (it is neither added nor removed), which
+/// would otherwise end the `-` run short of the `+` run and lose the pairing —
+/// the "Allow for \"\\ No newline at end of file\"" comment at diff-mode.el:2788.
+pub fn refine_runs(
+    lines: &[DiffLine],
+    range: std::ops::Range<usize>,
+) -> Vec<(std::ops::Range<usize>, std::ops::Range<usize>)> {
+    let end = range.end.min(lines.len());
+    let mut out = Vec::new();
+    let mut i = range.start.min(end);
+    while i < end {
+        if lines[i].kind != LineKind::Removed {
+            i += 1;
+            continue;
+        }
+        let del = i;
+        while i < end && lines[i].kind == LineKind::Removed {
+            i += 1;
+        }
+        let del_end = i;
+        while i < end && is_no_newline_marker(&lines[i].text) {
+            i += 1;
+        }
+        let add = i;
+        while i < end && lines[i].kind == LineKind::Added {
+            i += 1;
+        }
+        if i == add {
+            // No `+` run followed: a pure deletion, which emacs leaves alone.
+            i = del_end;
+            continue;
+        }
+        let add_end = i;
+        while i < end && is_no_newline_marker(&lines[i].text) {
+            i += 1;
+        }
+        out.push((del..del_end, add..add_end));
+    }
+    out
+}
+
 // ===========================================================================
 // diff-mode text transforms (the pure logic behind the interactive commands).
 //
@@ -908,7 +993,7 @@ pub fn diff_refresh_hunk(text: &str, at_line: usize) -> Option<String> {
     let mut new_side: Vec<&str> = Vec::new();
     for line in body {
         // "\ No newline at end of file" is a marker, not a line of either file.
-        if line.starts_with('\\') {
+        if is_no_newline_marker(line) {
             continue;
         }
         let (tag, rest) = line.split_at(line.char_indices().nth(1).map_or(line.len(), |(i, _)| i));
@@ -995,7 +1080,7 @@ pub fn apply_hunk(target: &str, hunk: &Hunk) -> Result<String, String> {
     let mut old_img: Vec<String> = Vec::new();
     let mut new_img: Vec<String> = Vec::new();
     for dl in &hunk.lines {
-        if dl.text.starts_with('\\') {
+        if is_no_newline_marker(&dl.text) {
             continue; // "\ No newline at end of file"
         }
         let content = dl.text.get(1..).unwrap_or("").to_string();
@@ -1137,6 +1222,101 @@ diff --git a/README.md b/README.md
         // prev walks back.
         assert_eq!(prev_hunk_line(&kinds, third), Some(second));
         assert_eq!(prev_hunk_line(&kinds, first), None);
+    }
+
+    /// diff-mode.el:802-819 `(defun diff-beginning-of-hunk (&optional try-harder)`
+    /// — "If point is in a file header rather than a hunk, advance to the next
+    /// hunk if TRY-HARDER is non-nil" — whose cond is
+    /// `((re-search-backward regexp nil t)) ((re-search-forward regexp nil t) …)`.
+    /// A backward-only search leaves the first hunk unreachable from the banner
+    /// lines above it, so `diff-refine-hunk` there wrongly reports no hunk.
+    #[test]
+    fn hunk_bounds_reach_the_first_hunk_from_above_it() {
+        let d = parse(TWO_FILE);
+        let flat = flatten(&d);
+        let kinds: Vec<LineKind> = flat.iter().map(|l| l.kind).collect();
+        let first = next_hunk_line(&kinds, 0).expect("a first hunk");
+
+        // Point on the `diff …` banner and on the `---`/`+++` lines — all above
+        // the first `@@` — still resolves to the first hunk.
+        for at in 0..first {
+            assert_eq!(
+                hunk_bounds_at(&kinds, at).map(|(b, _)| b),
+                Some(first),
+                "flat line {at} is above the first hunk"
+            );
+        }
+        // Point on the header itself and inside the body keep the same hunk.
+        assert_eq!(hunk_bounds_at(&kinds, first).map(|(b, _)| b), Some(first));
+        assert_eq!(
+            hunk_bounds_at(&kinds, first + 1).map(|(b, _)| b),
+            Some(first)
+        );
+        // The hunk ends at the next `@@`.
+        let second = next_hunk_line(&kinds, first).expect("a second hunk");
+        assert_eq!(hunk_bounds_at(&kinds, first), Some((first, second)));
+        // A diff with no hunk at all still has nothing to refine.
+        assert_eq!(hunk_bounds_at(&[], 0), None);
+        assert_eq!(hunk_bounds_at(&[LineKind::FileHeader], 0), None);
+    }
+
+    /// diff-mode.el:2787-2793 pairs each `-` run with the `+` run after it and
+    /// steps over a `\ No newline at end of file` on either side of the `+` run
+    /// via `(diff--forward-while-leading-char ?\\ end)` — "Allow for \"\\ No
+    /// newline at end of file\"" (diff-mode.el:2788). The parser classifies that
+    /// marker as [`LineKind::Context`], so without the skip the `-` run would end
+    /// before the `+` run and the pair would be lost.
+    #[test]
+    fn refine_runs_pair_across_a_no_newline_marker() {
+        let d = parse(
+            "\
+--- a/f
++++ b/f
+@@ -1,3 +1,3 @@
+ keep
+-old
+\\ No newline at end of file
++new
+\\ No newline at end of file
+",
+        );
+        let flat = flatten(&d);
+        let kinds: Vec<LineKind> = flat.iter().map(|l| l.kind).collect();
+        let (beg, end) = hunk_bounds_at(&kinds, 0).expect("a hunk");
+        let runs = refine_runs(&flat, beg..end);
+
+        assert_eq!(runs.len(), 1, "{runs:?}");
+        let (del, add) = &runs[0];
+        assert_eq!(
+            flat[del.clone()].iter().map(|l| &l.text).collect::<Vec<_>>(),
+            vec!["-old"]
+        );
+        assert_eq!(
+            flat[add.clone()].iter().map(|l| &l.text).collect::<Vec<_>>(),
+            vec!["+new"]
+        );
+    }
+
+    /// diff-mode.el:2782-2800: a `+` run with no `-` before it and a `-` run with
+    /// no `+` after it are only propertized `when diff-refine-nonmodified`, which
+    /// defaults to nil — so neither yields a refinement pair.
+    #[test]
+    fn refine_runs_skip_pure_insertions_and_deletions() {
+        let d = parse(
+            "\
+--- a/f
++++ b/f
+@@ -1,4 +1,4 @@
++added
+ keep
+-gone
+ tail
+",
+        );
+        let flat = flatten(&d);
+        let kinds: Vec<LineKind> = flat.iter().map(|l| l.kind).collect();
+        let (beg, end) = hunk_bounds_at(&kinds, 0).expect("a hunk");
+        assert!(refine_runs(&flat, beg..end).is_empty());
     }
 
     #[test]

@@ -652,16 +652,50 @@ pub fn reply_fields(msg: &Msg) -> (String, String, String) {
 
 /// `rmail-resend` fields: a bounce/resend draft. No recipient yet (the user
 /// types the resend-to addresses), the original subject unchanged, and the
-/// **verbatim** original message (its headers and body) as the draft body so
-/// the recipient receives the message as-is.
+/// original message headers and body preserved verbatim under a fresh block of
+/// `Resent-*` fields.
 ///
-/// This is a partial port: it hands message-mode an editable resend draft but
-/// does not synthesise the `Resent-From`/`Resent-To` headers real Emacs adds,
-/// because zmax has no send transport beyond queuing to a local outbox.
+/// That block is what makes this a *resend* rather than a forward: RFC 5322
+/// §3.6.6 says resent fields "are used to identify a message as having been
+/// reintroduced into the transport system by a user", leaving the original
+/// fields — including `From:` and `Message-ID:` — untouched. `rmail-resend`
+/// (rmail.el:4176-4186) inserts `Resent-From:` then `Resent-Date:` then
+/// `Resent-To:` at the top of a copy of the message, having first deleted every
+/// `Sender:` field "since that's not specifiable" (rmail.el:4161-4172).
+///
+/// The address is empty because Rmail's caller prompts for it on the draft's own
+/// `To:` line; use [`resend_fields_to`] when it is already known.
 pub fn resend_fields(msg: &Msg) -> (String, String, String) {
+    resend_fields_to(msg, "", &user_mail_address(), now_unix())
+}
+
+/// [`resend_fields`] with the resend-to address, the `user-mail-address` the hop
+/// is recorded under and the epoch second it is stamped with all supplied, so
+/// the draft is reproducible.
+pub fn resend_fields_to(
+    msg: &Msg,
+    address: &str,
+    from: &str,
+    now: i64,
+) -> (String, String, String) {
     let subject = msg.subject().to_string();
     let mut body = String::new();
+    body.push_str("Resent-From: ");
+    body.push_str(from);
+    body.push_str("\nResent-Date: ");
+    body.push_str(&rfc822_date(now));
+    body.push_str("\nResent-To: ");
+    body.push_str(address);
+    // rmail.el leaves the Resent-Message-ID: to the MTA, which zmax does not
+    // have — the outbox is the transport — so the new hop is identified here.
+    body.push_str("\nResent-Message-ID: ");
+    body.push_str(&message_id(msg, now));
+    body.push('\n');
     for (k, v) in &msg.headers {
+        // "Delete any Sender field, since that's not specifiable" (rmail.el:4161).
+        if k.eq_ignore_ascii_case("Sender") {
+            continue;
+        }
         body.push_str(k);
         body.push_str(": ");
         body.push_str(v);
@@ -670,6 +704,54 @@ pub fn resend_fields(msg: &Msg) -> (String, String, String) {
     body.push('\n');
     body.push_str(&msg.body);
     (String::new(), subject, body)
+}
+
+/// Emacs `user-mail-address`, whose default is `(concat (user-login-name) "@"
+/// (system-name))`. zmax has no mail configuration, so `EMAIL` wins if set and
+/// the login/host pair is read from the environment.
+fn user_mail_address() -> String {
+    if let Some(email) = std::env::var("EMAIL").ok().filter(|s| !s.trim().is_empty()) {
+        return email;
+    }
+    let login = std::env::var("USER")
+        .or_else(|_| std::env::var("LOGNAME"))
+        .unwrap_or_else(|_| "user".to_string());
+    let host = std::env::var("HOSTNAME")
+        .or_else(|_| std::env::var("HOST"))
+        .unwrap_or_else(|_| "localhost".to_string());
+    format!("{login}@{host}")
+}
+
+fn now_unix() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// Emacs `mail-rfc822-date`: the `Date:`/`Resent-Date:` form of RFC 5322 §3.3,
+/// `"Thu, 28 Aug 2026 15:04:05 +0000"`. Stamped in UTC because zmax carries no
+/// timezone database.
+fn rfc822_date(epoch_secs: i64) -> String {
+    chrono::DateTime::from_timestamp(epoch_secs, 0)
+        .map(|dt| dt.format("%a, %d %b %Y %H:%M:%S +0000").to_string())
+        .unwrap_or_default()
+}
+
+/// A `Resent-Message-ID:` for this hop, shaped like message-mode's
+/// `message-make-message-id`: `<date.unique@host>`. The unique part hashes the
+/// message being resent, standing in for message-mode's pid-plus-random, so two
+/// resends in the same second of two different messages still differ.
+fn message_id(msg: &Msg, now: i64) -> String {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    msg.headers.hash(&mut hasher);
+    msg.body.hash(&mut hasher);
+    let host = user_mail_address()
+        .rsplit_once('@')
+        .map(|(_, h)| h.to_string())
+        .unwrap_or_else(|| "localhost".to_string());
+    format!("<{now}.{:016x}.zmax@{host}>", hasher.finish())
 }
 
 /// `f` (`rmail-forward`) fields: no recipient yet, `Fwd:` subject, quoted body.
@@ -1256,6 +1338,71 @@ Third.
         let (fto, fsubj, _) = forward_fields(mb.current().unwrap());
         assert_eq!(fto, "");
         assert_eq!(fsubj, "Fwd: Hello");
+    }
+
+    /// rmail.el:4176-4186 inserts, at the top of a copy of the message,
+    /// `"Resent-From: " from "\n"`, `"Resent-Date: " (mail-rfc822-date) "\n"`
+    /// and `"Resent-To: " address "\n"`, after deleting every `Sender:` field
+    /// "since that's not specifiable" (rmail.el:4161-4172). The original headers
+    /// stay — that is what separates a resend from a forward (RFC 5322 §3.6.6).
+    #[test]
+    fn resend_stamps_the_new_hop_and_keeps_the_original_message() {
+        let mb = Mailbox::from_mbox(
+            "\
+From alice@example.com Mon Jan  1 00:00:00 2026
+From: Alice <alice@example.com>
+Sender: list-bounce@example.com
+Message-ID: <original@example.com>
+Subject: Hello
+
+Hi there.
+",
+        );
+        let (to, subj, body) =
+            resend_fields_to(mb.current().unwrap(), "bob@example.com", "me@here", 1_767_225_600);
+
+        // No recipient on the draft's own To: line — Rmail prompts for it.
+        assert_eq!(to, "");
+        // A resend does not rewrite the subject the way Re:/Fwd: do.
+        assert_eq!(subj, "Hello");
+
+        let lines: Vec<&str> = body.lines().collect();
+        assert_eq!(lines[0], "Resent-From: me@here");
+        assert_eq!(lines[1], "Resent-Date: Thu, 01 Jan 2026 00:00:00 +0000");
+        assert_eq!(lines[2], "Resent-To: bob@example.com");
+        assert!(
+            lines[3].starts_with("Resent-Message-ID: <1767225600.")
+                && lines[3].ends_with('>'),
+            "{}",
+            lines[3]
+        );
+
+        // The original identity survives untouched: resending records a new hop,
+        // it does not re-author the message.
+        assert!(body.contains("\nFrom: Alice <alice@example.com>\n"));
+        assert!(body.contains("\nMessage-ID: <original@example.com>\n"));
+        assert!(body.ends_with("\n\nHi there."));
+        assert!(
+            !body.contains("Sender: list-bounce@example.com"),
+            "the Sender: field is not specifiable by the resender"
+        );
+    }
+
+    /// message-mode's `message-make-message-id` pairs the date with a
+    /// pid-and-random component; the two must not collide for two different
+    /// messages resent in the same second.
+    #[test]
+    fn resent_message_ids_differ_per_message() {
+        let mb = Mailbox::from_mbox(MBOX);
+        let a = resend_fields_to(&mb.msgs[0], "x@y", "me@here", 42).2;
+        let b = resend_fields_to(&mb.msgs[1], "x@y", "me@here", 42).2;
+        let id = |body: &str| {
+            body.lines()
+                .find(|l| l.starts_with("Resent-Message-ID:"))
+                .unwrap()
+                .to_string()
+        };
+        assert_ne!(id(&a), id(&b));
     }
 
     // A mailbox whose messages are deliberately out of every natural order, so
