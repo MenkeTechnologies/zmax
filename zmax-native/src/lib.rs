@@ -50,7 +50,7 @@ use std::os::raw::{c_char, c_int, c_void};
 /// [`CommandFn`], or [`InitFn`] layout/semantics. The host refuses to load a
 /// plugin whose `abi_version` does not match its own — a mismatched struct
 /// layout is undefined behaviour, so this is a hard gate, not a warning.
-pub const ABI_VERSION: u32 = 1;
+pub const ABI_VERSION: u32 = 2;
 
 /// The one symbol every plugin `cdylib` must export. The host resolves it with
 /// `dlsym` after `dlopen`. Signature is [`InitFn`].
@@ -85,6 +85,25 @@ pub type InitFn = extern "C" fn(host: *const HostApi) -> *const PluginInfo;
 /// host publishes the active editor context for the duration of that call. They
 /// are inert (return empty/failure) if invoked outside that window, e.g. from a
 /// background thread the plugin spawned.
+/// Where the primary cursor sits, as reported by [`HostApi::cursor`].
+///
+/// All three are zero-based. `line` and `column` are what a plugin shows a
+/// human; `offset` is the char index into the buffer, which is what indexing
+/// the text with [`HostApi::buffer_text`] needs. `column` counts characters
+/// from the line start, matching how the editor reports a position.
+///
+/// A [`Self::valid`] of 0 means there was no active editor context and the
+/// other fields are meaningless -- a return value cannot be `Option` across the
+/// C ABI, so the flag carries that instead.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Cursor {
+    pub line: usize,
+    pub column: usize,
+    pub offset: usize,
+    pub valid: u8,
+}
+
 #[repr(C)]
 pub struct HostApi {
     /// Must equal [`ABI_VERSION`]. Checked by the plugin's own `declare_plugin!`
@@ -115,6 +134,52 @@ pub struct HostApi {
     pub insert_text: extern "C" fn(host: *const HostApi, text: *const c_char) -> c_int,
     /// Release a string previously returned by `buffer_text`.
     pub free_cstring: extern "C" fn(host: *const HostApi, s: *mut c_char),
+    /// Where the primary cursor is. See [`Cursor`]; `valid` is 0 when there is
+    /// no active editor context.
+    pub cursor: extern "C" fn(host: *const HostApi) -> Cursor,
+    /// The word under the primary cursor, as `miw` would select it. Returns a
+    /// freshly allocated C string the caller MUST release with `free_cstring`,
+    /// or null when there is no editor context or the cursor is not on a word.
+    pub word_at_cursor: extern "C" fn(host: *const HostApi) -> *mut c_char,
+    /// The text of the primary selection, or null when there is no editor
+    /// context. An empty (cursor-width) selection yields the single character
+    /// under the cursor, matching what the editor would yank. Release with
+    /// `free_cstring`.
+    pub selection_text: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    // --- vim-style getters -------------------------------------------------
+    // Named after the `get*` family a vimscript author reaches for, so the
+    // mapping is obvious: `line` is `getline()`, `line_count` is `line("$")`,
+    // `cwd` is `getcwd()`, `register` is `getreg()`, and so on. All strings are
+    // released with `free_cstring`; all return null / 0 when there is no
+    // active editor context rather than inventing a value.
+    /// vim `getline({lnum})`. One line of the current buffer WITHOUT its line
+    /// ending, or null if `line` is past the end. Zero-based, unlike vim's
+    /// one-based `lnum`, to match [`Cursor::line`].
+    pub line: extern "C" fn(host: *const HostApi, line: usize) -> *mut c_char,
+    /// vim `line("$")` — the number of lines in the current buffer.
+    pub line_count: extern "C" fn(host: *const HostApi) -> usize,
+    /// vim `mode()` — `normal`, `insert` or `select`.
+    pub mode: extern "C" fn(host: *const HostApi) -> *mut c_char,
+    /// vim `getcwd()` — the editor's working directory.
+    pub cwd: extern "C" fn(host: *const HostApi) -> *mut c_char,
+    /// vim `expand("%:p")` — the current buffer's absolute path, or null for a
+    /// scratch buffer that has never been written.
+    pub buffer_path: extern "C" fn(host: *const HostApi) -> *mut c_char,
+    /// vim `&filetype` — the language name from `languages.toml`, or null when
+    /// the buffer has no language configured.
+    pub language: extern "C" fn(host: *const HostApi) -> *mut c_char,
+    /// vim `&modified` — 1 when the buffer has unsaved changes, 0 otherwise (or
+    /// when there is no editor context).
+    pub is_modified: extern "C" fn(host: *const HostApi) -> c_int,
+    /// vim `getreg({regname})` — a register's contents. Multiple values are
+    /// joined with newlines, as vim does for a list register. Null when the
+    /// register is empty or unset.
+    pub register: extern "C" fn(host: *const HostApi, name: c_char) -> *mut c_char,
+    /// The number of selections (cursors). zmax is multi-selection, so a plugin
+    /// that assumes one would silently act on part of the user's intent; this
+    /// is what tells it there are more.
+    pub selection_count: extern "C" fn(host: *const HostApi) -> usize,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -215,6 +280,100 @@ impl Host {
             Ok(c) => (self.t().insert_text)(self.api, c.as_ptr()) == 0,
             Err(_) => false,
         }
+    }
+
+    /// Where the primary cursor sits, or `None` if there is no active editor
+    /// context.
+    pub fn cursor(&self) -> Option<Cursor> {
+        let cursor = (self.t().cursor)(self.api);
+        (cursor.valid != 0).then_some(cursor)
+    }
+
+    /// The word under the primary cursor, selected the way `miw` selects one.
+    /// `None` when there is no editor context, or when the cursor is on
+    /// whitespace rather than a word.
+    pub fn word_at_cursor(&self) -> Option<String> {
+        self.take_string((self.t().word_at_cursor)(self.api))
+    }
+
+    /// The text of the primary selection, or `None` if there is no active
+    /// editor context.
+    pub fn selection_text(&self) -> Option<String> {
+        self.take_string((self.t().selection_text)(self.api))
+    }
+
+    /// vim `getline({lnum})`, zero-based: one line without its line ending, or
+    /// `None` past the end of the buffer.
+    pub fn line(&self, line: usize) -> Option<String> {
+        self.take_string((self.t().line)(self.api, line))
+    }
+
+    /// vim `line("$")` — how many lines the current buffer has.
+    pub fn line_count(&self) -> usize {
+        (self.t().line_count)(self.api)
+    }
+
+    /// Every line from `start` up to but not including `end`, clamped to the
+    /// buffer. vim `getline({start}, {end})`, zero-based and end-exclusive.
+    pub fn lines(&self, start: usize, end: usize) -> Vec<String> {
+        (start..end.min(self.line_count()))
+            .filter_map(|n| self.line(n))
+            .collect()
+    }
+
+    /// vim `mode()` — `normal`, `insert` or `select`.
+    pub fn mode(&self) -> Option<String> {
+        self.take_string((self.t().mode)(self.api))
+    }
+
+    /// vim `getcwd()`.
+    pub fn cwd(&self) -> Option<String> {
+        self.take_string((self.t().cwd)(self.api))
+    }
+
+    /// vim `expand("%:p")` — `None` for a scratch buffer with no path.
+    pub fn buffer_path(&self) -> Option<String> {
+        self.take_string((self.t().buffer_path)(self.api))
+    }
+
+    /// vim `&filetype` — `None` when no language is configured.
+    pub fn language(&self) -> Option<String> {
+        self.take_string((self.t().language)(self.api))
+    }
+
+    /// vim `&modified`.
+    pub fn is_modified(&self) -> bool {
+        (self.t().is_modified)(self.api) != 0
+    }
+
+    /// vim `getreg({regname})` — `None` when the register is empty.
+    pub fn register(&self, name: char) -> Option<String> {
+        // A register name is a single ASCII character; anything else cannot
+        // name one, so there is nothing to read.
+        if !name.is_ascii() {
+            return None;
+        }
+        self.take_string((self.t().register)(self.api, name as c_char))
+    }
+
+    /// How many selections (cursors) there are. zmax is multi-selection, so a
+    /// plugin that assumes one would act on only part of what the user meant.
+    pub fn selection_count(&self) -> usize {
+        (self.t().selection_count)(self.api)
+    }
+
+    /// Adopt a host-allocated C string and release it through the host's own
+    /// allocator, which is the only correct way to free one across the ABI.
+    fn take_string(&self, raw: *mut c_char) -> Option<String> {
+        if raw.is_null() {
+            return None;
+        }
+        // Safe: host contract says this is a valid C string owned by us.
+        let s = unsafe { CStr::from_ptr(raw) }
+            .to_string_lossy()
+            .into_owned();
+        (self.t().free_cstring)(self.api, raw);
+        Some(s)
     }
 }
 

@@ -70,6 +70,35 @@ Each command handler receives a [`Host`] (the editor callback table) and [`Args`
 | `buffer_text()` | read the current buffer's full text |
 | `insert_text(text)` | insert at the primary cursor (one undoable transaction) |
 
+Where the cursor is and what is around it:
+
+| method | effect |
+|---|---|
+| `cursor()` | `Cursor { line, column, offset }`, zero-based; `None` with no editor context |
+| `word_at_cursor()` | the word under the cursor, as `miw` selects it; `None` on whitespace |
+| `selection_text()` | the primary selection's text |
+| `selection_count()` | how many selections there are — zmax is multi-selection |
+
+Named after the vim `get*` functions they correspond to, so the mapping is
+obvious. Note that line numbers here are **zero-based**, unlike vim's, to agree
+with `Cursor::line`:
+
+| method | vim | effect |
+|---|---|---|
+| `line(n)` | `getline({lnum})` | one line, without its line ending |
+| `lines(start, end)` | `getline({start}, {end})` | a range, end-exclusive, clamped |
+| `line_count()` | `line("$")` | lines in the buffer |
+| `mode()` | `mode()` | `normal`, `insert` or `select` |
+| `cwd()` | `getcwd()` | the editor's working directory |
+| `buffer_path()` | `expand("%:p")` | `None` for an unwritten scratch buffer |
+| `language()` | `&filetype` | the `languages.toml` language name |
+| `is_modified()` | `&modified` | unsaved changes |
+| `register(c)` | `getreg({regname})` | values joined with newlines, as vim renders a list register |
+
+Every one of these reports `None`/`0` when there is no active editor context
+rather than inventing a value, and every string is released through the host's
+own allocator before it reaches you.
+
 Editor-touching callbacks are valid only **while a command is executing** — the
 host publishes the active editor context for the duration of that call. They are
 inert if invoked from a background thread the plugin spawned.

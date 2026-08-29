@@ -45,7 +45,7 @@ use std::ptr;
 use std::sync::{Mutex, OnceLock};
 
 use zmax_core::{Tendril, Transaction};
-use zmax_native::{CommandFn, HostApi, InitFn, PluginInfo, ABI_VERSION, INIT_SYMBOL};
+use zmax_native::{Cursor, CommandFn, HostApi, InitFn, PluginInfo, ABI_VERSION, INIT_SYMBOL};
 
 use crate::compositor;
 
@@ -230,6 +230,154 @@ extern "C" fn host_insert_text(_host: *const HostApi, text: *const c_char) -> c_
     }
 }
 
+/// Hand a `String` back to the plugin as an owned C string, or null when there
+/// was nothing to give. Released by `host_free_cstring`.
+fn into_raw_cstring(text: Option<String>) -> *mut c_char {
+    match text.and_then(|s| CString::new(s).ok()) {
+        Some(c) => c.into_raw(),
+        None => ptr::null_mut(),
+    }
+}
+
+extern "C" fn host_cursor(_host: *const HostApi) -> Cursor {
+    let found = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let offset = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(offset);
+        Cursor {
+            line,
+            column: offset - text.line_to_char(line),
+            offset,
+            valid: 1,
+        }
+    });
+    found.unwrap_or(Cursor {
+        line: 0,
+        column: 0,
+        offset: 0,
+        valid: 0,
+    })
+}
+
+extern "C" fn host_word_at_cursor(_host: *const HostApi) -> *mut c_char {
+    let word = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        // The same object `miw` selects, so a plugin agrees with the editor
+        // about where a word starts and ends.
+        let word = zmax_core::textobject::textobject_word(
+            text,
+            range,
+            zmax_core::textobject::TextObject::Inside,
+            1,
+            false,
+        );
+        let selected = text.slice(word.from()..word.to()).to_string();
+        // On whitespace the object collapses to nothing useful; report no word
+        // rather than a blank one.
+        (!selected.trim().is_empty()).then_some(selected)
+    });
+    into_raw_cstring(word.flatten())
+}
+
+extern "C" fn host_selection_text(_host: *const HostApi) -> *mut c_char {
+    let selected = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        doc.selection(view.id).primary().fragment(text).to_string()
+    });
+    into_raw_cstring(selected)
+}
+
+/* ---- vim-style getters ---- */
+
+extern "C" fn host_line(_host: *const HostApi, line: usize) -> *mut c_char {
+    let text = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        // `len_lines` counts a trailing empty line, so a request for it is past
+        // the end as far as a caller asking for content is concerned.
+        (line < text.len_lines()).then(|| {
+            // Without its line ending: `getline()` never includes one.
+            let slice = text.line(line);
+            let mut s = slice.to_string();
+            while s.ends_with('\n') || s.ends_with('\r') {
+                s.pop();
+            }
+            s
+        })
+    });
+    into_raw_cstring(text.flatten())
+}
+
+extern "C" fn host_line_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.text().len_lines()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_mode(_host: *const HostApi) -> *mut c_char {
+    into_raw_cstring(with_cx(|cx| cx.editor.mode().to_string()))
+}
+
+extern "C" fn host_cwd(_host: *const HostApi) -> *mut c_char {
+    into_raw_cstring(Some(
+        zmax_stdx::env::current_working_dir()
+            .to_string_lossy()
+            .into_owned(),
+    ))
+}
+
+extern "C" fn host_buffer_path(_host: *const HostApi) -> *mut c_char {
+    let path = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.path().map(|p| p.to_string_lossy().into_owned())
+    });
+    into_raw_cstring(path.flatten())
+}
+
+extern "C" fn host_language(_host: *const HostApi) -> *mut c_char {
+    let language = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.language_name().map(str::to_string)
+    });
+    into_raw_cstring(language.flatten())
+}
+
+extern "C" fn host_is_modified(_host: *const HostApi) -> c_int {
+    let modified = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.is_modified()
+    });
+    c_int::from(modified.unwrap_or(false))
+}
+
+extern "C" fn host_register(_host: *const HostApi, name: c_char) -> *mut c_char {
+    let Some(name) = char::from_u32(name as u8 as u32) else {
+        return ptr::null_mut();
+    };
+    let values = with_cx(|cx| {
+        // Joined with newlines, the way vim renders a list register.
+        cx.editor
+            .registers
+            .read(name, cx.editor)
+            .map(|values| values.map(|v| v.to_string()).collect::<Vec<_>>().join("\n"))
+    });
+    into_raw_cstring(values.flatten().filter(|s| !s.is_empty()))
+}
+
+extern "C" fn host_selection_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        doc.selection(view.id).len()
+    })
+    .unwrap_or(0)
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -252,6 +400,18 @@ fn host_api() -> *const HostApi {
             buffer_text: host_buffer_text,
             insert_text: host_insert_text,
             free_cstring: host_free_cstring,
+            cursor: host_cursor,
+            word_at_cursor: host_word_at_cursor,
+            selection_text: host_selection_text,
+            line: host_line,
+            line_count: host_line_count,
+            mode: host_mode,
+            cwd: host_cwd,
+            buffer_path: host_buffer_path,
+            language: host_language,
+            is_modified: host_is_modified,
+            register: host_register,
+            selection_count: host_selection_count,
         });
         Box::into_raw(boxed) as usize
     });
