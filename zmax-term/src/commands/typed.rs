@@ -39318,7 +39318,13 @@ fn send_current_draft(cx: &mut compositor::Context) -> anyhow::Result<Option<Str
     ))
 }
 
-/// Emacs `message-send` (C-c C-s): assemble + queue the draft, keeping the buffer.
+/// Emacs `message-send` (`C-c C-s`): "Send the message in the current buffer"
+/// (message.el) — and, unlike `message-send-and-exit`, keep the buffer.
+///
+/// The send goes through `sendmail` like its sibling's ([`send_current_draft`]);
+/// only a machine with no MTA falls back to the outbox queue. This used to queue
+/// unconditionally and report "no SMTP configured" even where `message-send-and-exit`
+/// on the same draft would have delivered it.
 fn message_send(
     cx: &mut compositor::Context,
     _args: Args,
@@ -39327,11 +39333,18 @@ fn message_send(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let path = queue_current_draft(cx)?;
-    cx.editor.set_status(format!(
-        "message queued to {} (no SMTP configured)",
-        path.display()
-    ));
+    match send_current_draft(cx)? {
+        Some(to) => {
+            cx.editor.set_status(format!("Sending message to {to}...done"));
+        }
+        None => {
+            let path = queue_current_draft(cx)?;
+            cx.editor.set_status(format!(
+                "message queued to {} (no sendmail on this machine)",
+                path.display()
+            ));
+        }
+    }
     Ok(())
 }
 

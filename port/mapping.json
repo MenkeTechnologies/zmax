@@ -11567,11 +11567,11 @@
  },
  {
   "spec_id": "emacs.command.message_send",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:message-send"
   ],
-  "note": "emacs message-send (C-c C-s) -> zmax :message-send assembles+validates the RFC 5322 message and queues it to ~/.zmax/mail/outbox; SMTP transmission deferred (no transport substrate yet)"
+  "note": "\"Send the message in the current buffer\" (message.el) -- and, unlike message-send-and-exit, keep the buffer. It queued unconditionally and reported \"no SMTP configured\", even though a real transport exists and its own sibling used it: send_current_draft (zmax-term/src/commands/typed.rs:39307) assembles and validates the draft and hands it to sendmail(1) through send_via_sendmail (:39256), which is emacs's message-send-mail-with-sendmail. message_send now takes that path and falls back to the outbox queue only on a machine with no MTA, which is the same rule message-send-and-exit follows."
  },
  {
   "spec_id": "emacs.command.message_send_and_exit",
@@ -11785,11 +11785,11 @@
  },
  {
   "spec_id": "emacs.command.mouse_start_secondary",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:mouse_start_secondary"
   ],
-  "note": "anchors the secondary selection at the last click. Divergence: not bound to M-mouse-1, which is zmax's add-cursor click; the command takes the click position (or point)"
+  "note": "The note said it was not bound to M-mouse-1 because that chord is zmax's add-cursor click. Both are bound, and the order is what separates them: zmax-term/src/ui/editor.rs:5079 takes ALT + `!editor.vim_semantics` and runs mouse_start_secondary, and the add-a-cursor arm is the LATER bare-ALT branch at :5094, reached only under the vim presets. So under the emacs presets M-mouse-1 anchors the secondary selection, as emacs binds it, and under the vim presets it keeps adding a cursor."
  },
  {
   "spec_id": "emacs.command.mouse_wheel_mode",
@@ -16043,7 +16043,7 @@
   "evidence": [
    "typable:toggle-debug-on-error"
   ],
-  "note": "Three gaps. (1) Backtrace is captured post-return (typed.rs:56800 runs after the call at 56794 has unwound), so the *Backtrace* scratch always shows execute_command -> execute_command_line_inner -> ... -> main, never the frame that raised the error; emacs' debugger is entered inside the signalling frame with live locals. (2) Scope: the hook exists only on the typable dispatcher's Err path, while 743 set_error sites in commands.rs (all key-bound static commands, async/LSP callbacks) and 100 in typed.rs report failures while returning Ok(()), so the flag has no effect on most errors a user can produce. (3) The result is a static, non-interactive scratch buffer (no frame stepping, no eval, no continue) and the state is a private thread_local Cell with no user-visible or settable debug-on-error variable (no :set option, no describe-variable surface)."
+  "note": "Two of the three gaps the old note recorded are closed, and its line cites were stale by ~13k lines. The backtrace is captured INSIDE the signalling frame now: Editor::set_error (zmax-view/src/editor.rs:2859) calls debug_on_error::capture, which is the one place every reported error passes through -- so the capture covers the hundreds of set_error sites in key-bound static commands and async callbacks, not just the typable dispatcher's Err path, and it is drained per input event in Application::handle_terminal_events. Still partial for the third: emacs ENTERS a debugger -- a *Backtrace* you can step, and evaluate locals in -- where zmax shows a captured trace. That is an elisp debugger, not a hook."
  },
  {
   "spec_id": "emacs.command.toggle_frame_fullscreen",
@@ -55875,11 +55875,11 @@
  },
  {
   "spec_id": "neovim.option.cindent",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": "C indenter for new lines (brace + unbraced-header rules); cinoptions/cinkeys/cinscopedecls not modeled"
+  "note": "The note said cinoptions/cinkeys/cinscopedecls were not modelled; all three are. 'cinscopedecls' is read at zmax-core/src/indent.rs:910 and 'cinoptions' parsed at :919, both inside vim_indent_for_newline (:868); 'cinkeys' drives reindent-on-type at zmax-term/src/commands/typed.rs:1801 (reindent_on_type, :1788). What remains absent is the long tail of individual cinoptions flags beyond the ones CinOptions::parse handles, which indent.rs:294 records -- a narrower gap than the note claimed, and one the C indenter notes against itself."
  },
  {
   "spec_id": "neovim.option.cinkeys",
@@ -56179,7 +56179,7 @@
   "evidence": [
    "typable:set"
   ],
-  "note": "lastline/uhex honored in the doc formatter; truncate is not"
+  "note": "CORRECTED, and in the pessimistic direction: the previous note claimed `lastline` was honored in the doc formatter. It is not. Only `uhex` has a consumer -- zmax-term/src/commands/typed.rs:26624 feeds zmax_core::graphemes::set_display_uhex (graphemes.rs:211), which renders unprintables as `<xx>` instead of `^C`/`~C`. Neither `lastline` nor `truncate` is implemented: zmax's renderer always fills the last screen line and paints no `@@@` marker, so the three states options.txt distinguishes (fill with `@@@` at the end, `@@@` in the first column, or `@` lines) are indistinguishable here. `msgsep` is obsolete and takes no effect in nvim either."
  },
  {
   "spec_id": "neovim.option.eadirection",
@@ -56736,11 +56736,11 @@
  },
  {
   "spec_id": "neovim.option.jumpoptions",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set"
   ],
-  "note": "stack: a new jump truncates the forward entries; view: is not modelled"
+  "note": "Both words are honored; the note's \"view: is not modelled\" was wrong. `stack` truncates the forward entries on a new jump. `view` is parsed by set_jumpoptions (zmax-view/src/view.rs:213), read by jumpoptions_view (:231) and consumed in Editor::jump_to (zmax-view/src/editor.rs:5150): vim stores the mark's offset from the window's topline and puts the topline back (mark_view_restore), and zmax's equivalent of a topline is the view's anchor plus its two scroll offsets, which is what the jumplist entry records and what the jump restores -- with the anchor mapped through the changeset so an edited buffer still lands right."
  },
  {
   "spec_id": "neovim.option.keymap",
