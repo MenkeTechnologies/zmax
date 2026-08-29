@@ -15863,11 +15863,11 @@
  },
  {
   "spec_id": "emacs.command.tex_region",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:tex_region"
   ],
-  "note": "emacs tex-region -> compiles the whole file (no temp-file region extraction)"
+  "note": "\"Run TeX on the current region, via a temporary file. [...] If the buffer has a header, the header is given to TeX before the region itself. The buffer's header is all lines between the strings defined by tex-start-of-header and tex-end-of-header inclusive. The header must start in the first 100 lines of the buffer. The value of tex-trailer is given to TeX as input after the region\" (tex-mode.el:2567-2579). It used to compile the whole file, which is tex-buffer. tex_region_source (zmax-term/src/commands.rs) builds the source emacs builds: the header -- latex-mode's tex-start-of-header `\\\\document(style|class)` through its tex-end-of-header `\\\\begin\\\\s-*{document}`, inclusive, and only when it starts within the first 100 lines -- then the region, then the `\\\\end{document}` trailer. A buffer with no header contributes none, which is emacs's already-output 0 case, and the trailer is still supplied so TeX sees a complete document. The temp file is written beside the buffer's own, which is what tex-directory defaulting to \".\" gets you and what makes a relative \\\\input in the region resolve, and tex_run_file runs the tool on it through the same one-job-at-a-time plumbing tex-buffer uses. Five unit tests: both header spellings, a spaced `\\\\begin {document}`, the 100-line limit, the headerless case, and that the trailer lands on its own line whether or not the region ended in a newline."
  },
  {
   "spec_id": "emacs.command.tex_terminate_paragraph",

@@ -52817,6 +52817,18 @@ static TEX_JOB_PID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32:
 /// The tool runs as a tracked child process (its pid in [`TEX_JOB_PID`]) so a
 /// long compile can be interrupted with [`tex_kill_job`], the way Emacs runs TeX
 /// asynchronously in `*tex-shell*`.
+/// [`tex_run_tool`] on a file that is not the buffer's own — the temp file
+/// `tex-region` writes. Same job plumbing: one live job at a time, output to a
+/// scratch buffer.
+fn tex_run_file(cx: &mut Context, program: &str, args: &[&str], file: &std::path::Path) {
+    let dir = file.parent().map(|p| p.to_path_buf());
+    let Some(arg) = file.file_name().map(std::ffi::OsString::from) else {
+        cx.editor.set_error(format!("{program}: bad file name"));
+        return;
+    };
+    tex_spawn(cx, program, args, arg, dir);
+}
+
 fn tex_run_tool(cx: &mut Context, program: &str, args: &[&str], want_stem: bool) {
     let path = {
         let doc = doc!(cx.editor);
@@ -52837,6 +52849,18 @@ fn tex_run_tool(cx: &mut Context, program: &str, args: &[&str], want_stem: bool)
         cx.editor.set_error(format!("{program}: bad file name"));
         return;
     };
+    tex_spawn(cx, program, args, arg, dir);
+}
+
+/// Spawn `program args arg` in `dir` as the one live TeX job, reporting its
+/// output in a scratch buffer. Shared by [`tex_run_tool`] and [`tex_run_file`].
+fn tex_spawn(
+    cx: &mut Context,
+    program: &str,
+    args: &[&str],
+    arg: std::ffi::OsString,
+    dir: Option<std::path::PathBuf>,
+) {
     if TEX_JOB_PID.load(std::sync::atomic::Ordering::SeqCst) != 0 {
         // tex-mode.el refuses to start a second job while one is live.
         cx.editor
@@ -52915,10 +52939,90 @@ fn tex_buffer(cx: &mut Context) {
     tex_run_tool(cx, "pdflatex", &["-interaction=nonstopmode"], false);
 }
 
-/// Emacs `tex-region` (partial): LaTeX only compiles whole files here, so this
-/// compiles the current file (no temp-file region extraction).
+/// How far into the buffer emacs looks for the header: "The header must start in
+/// the first 100 lines of the buffer" (tex-mode.el, `tex-region`).
+const TEX_HEADER_SEARCH_LINES: usize = 100;
+
+/// Build the source `tex-region` hands to TeX: the buffer's header, then the
+/// region, then the trailer.
+///
+/// "If the buffer has a header, the header is given to TeX before the region
+/// itself. The buffer's header is all lines between the strings defined by
+/// `tex-start-of-header` and `tex-end-of-header` inclusive" — for latex-mode
+/// those are `\document(style|class)` and `\begin{document}` (tex-mode.el:1161-1163),
+/// and the trailer is `\end{document}`. A buffer with no header contributes
+/// none, which is emacs's `already-output` 0 case. Pure — unit tested.
+fn tex_region_source(buffer: &str, region: &str) -> String {
+    let lines: Vec<&str> = buffer.lines().collect();
+    let start = lines
+        .iter()
+        .take(TEX_HEADER_SEARCH_LINES)
+        .position(|l| l.contains("\\documentclass") || l.contains("\\documentstyle"));
+    let header = start.and_then(|start| {
+        // `tex-end-of-header` is `\begin\s-*{document}`; the header runs through
+        // that line inclusive.
+        let end = lines[start..]
+            .iter()
+            .position(|l| l.replace(char::is_whitespace, "").contains("\\begin{document}"))?;
+        Some(lines[start..=start + end].join("\n"))
+    });
+
+    let mut out = String::new();
+    if let Some(header) = header {
+        out.push_str(&header);
+        out.push('\n');
+    }
+    out.push_str(region);
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+    // `tex-trailer` for latex-mode.
+    out.push_str("\\end{document}\n");
+    out
+}
+
+/// Emacs `tex-region` (tex-mode.el:2567): "Run TeX on the current region, via a
+/// temporary file. […] If the buffer has a header, the header is given to TeX
+/// before the region itself. […] The value of `tex-trailer' is given to TeX as
+/// input after the region."
+///
+/// It used to compile the whole file, which is `tex-buffer`. The temp file is
+/// written beside the buffer's own, which is what `tex-directory` defaulting to
+/// `"."` gets you and what makes a relative `\input` in the region resolve.
 fn tex_region(cx: &mut Context) {
-    tex_run_tool(cx, "pdflatex", &["-interaction=nonstopmode"], false);
+    let (path, buffer, region) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        (
+            doc.path().map(|p| p.to_path_buf()),
+            doc.text().to_string(),
+            text.slice(range.from()..range.to()).to_string(),
+        )
+    };
+    let Some(path) = path else {
+        cx.editor
+            .set_error("tex-region: buffer is not visiting a file");
+        return;
+    };
+    if region.trim().is_empty() {
+        cx.editor.set_error("tex-region: the region is empty");
+        return;
+    }
+    // emacs's `tex-zap-file`: a temp file name in `tex-directory`, which defaults
+    // to the buffer's own directory.
+    let zap = path.with_file_name(format!(
+        "_zmax_tex_{}.tex",
+        path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+    ));
+    if let Err(e) = std::fs::write(&zap, tex_region_source(&buffer, &region)) {
+        cx.editor
+            .set_error(format!("tex-region: {}: {e}", zap.display()));
+        return;
+    }
+    cx.editor
+        .set_status(format!("tex-region: wrote {}", zap.display()));
+    tex_run_file(cx, "pdflatex", &["-interaction=nonstopmode"], &zap);
 }
 
 /// Emacs `tex-compile` (partial): run LaTeX on the current file.
@@ -76648,6 +76752,86 @@ mod ediff_group_tests {
                 ("keep.rs".to_string(), MergeGroupRow::TwoWay),
                 ("only_a.rs".to_string(), MergeGroupRow::OnlyIn("A")),
             ]
+        );
+    }
+}
+
+#[cfg(test)]
+mod tex_region_tests {
+    use super::{tex_region_source, TEX_HEADER_SEARCH_LINES};
+
+    /// tex-mode.el: "If the buffer has a header, the header is given to TeX
+    /// before the region itself. The buffer's header is all lines between the
+    /// strings defined by `tex-start-of-header' and `tex-end-of-header'
+    /// inclusive" — for latex-mode `\document(style|class)` through
+    /// `\begin{document}` — "The value of `tex-trailer' is given to TeX as input
+    /// after the region."
+    #[test]
+    fn the_header_and_trailer_wrap_the_region() {
+        let buffer = concat!(
+            "% a comment\n",
+            "\\documentclass{article}\n",
+            "\\usepackage{amsmath}\n",
+            "\\begin{document}\n",
+            "first paragraph\n",
+            "second paragraph\n",
+            "\\end{document}\n",
+        );
+        let out = tex_region_source(buffer, "second paragraph");
+        assert_eq!(
+            out,
+            concat!(
+                "\\documentclass{article}\n",
+                "\\usepackage{amsmath}\n",
+                "\\begin{document}\n",
+                "second paragraph\n",
+                "\\end{document}\n",
+            )
+        );
+        // The comment before the header is NOT part of it, and the buffer's own
+        // \end{document} is not carried in — the trailer supplies it once.
+        assert!(!out.contains("% a comment"));
+        assert_eq!(out.matches("\\end{document}").count(), 1);
+    }
+
+    /// `\documentstyle` is the other spelling `tex-start-of-header` accepts, and
+    /// `tex-end-of-header` is `\begin\s-*{document}` — whitespace between the
+    /// macro and its brace is allowed.
+    #[test]
+    fn both_header_spellings_and_a_spaced_begin_are_recognised() {
+        let buffer = "\\documentstyle{book}\n\\begin {document}\nbody\n";
+        let out = tex_region_source(buffer, "body");
+        assert!(out.starts_with("\\documentstyle{book}\n\\begin {document}\n"));
+    }
+
+    /// A buffer with no header contributes none (emacs's `already-output` 0), and
+    /// the region still gets the trailer so TeX sees a complete document.
+    #[test]
+    fn a_buffer_with_no_header_contributes_none() {
+        let out = tex_region_source("just some text\nmore text\n", "just some text");
+        assert_eq!(out, "just some text\n\\end{document}\n");
+    }
+
+    /// "The header must start in the first 100 lines of the buffer": a
+    /// \documentclass further down is not a header.
+    #[test]
+    fn a_header_past_the_search_limit_is_not_one() {
+        let mut buffer = "\n".repeat(TEX_HEADER_SEARCH_LINES);
+        buffer.push_str("\\documentclass{article}\n\\begin{document}\nbody\n");
+        let out = tex_region_source(&buffer, "body");
+        assert_eq!(out, "body\n\\end{document}\n");
+    }
+
+    /// A region that already ends in a newline must not gain a second one.
+    #[test]
+    fn the_trailer_follows_the_region_on_its_own_line() {
+        assert_eq!(
+            tex_region_source("", "one\ntwo\n"),
+            "one\ntwo\n\\end{document}\n"
+        );
+        assert_eq!(
+            tex_region_source("", "one\ntwo"),
+            "one\ntwo\n\\end{document}\n"
         );
     }
 }
