@@ -160,7 +160,7 @@ fn hangul_character(name: &str) -> Option<char> {
             .filter(|(_, j)| from.starts_with(*j))
             .map(|(i, j)| (i, j.len()))
             .collect();
-        found.sort_by(|a, b| b.1.cmp(&a.1));
+        found.sort_by_key(|(_, len)| std::cmp::Reverse(*len));
         found
     };
 
