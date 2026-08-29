@@ -17060,11 +17060,11 @@
  },
  {
   "spec_id": "emacs.command.xref_etags_mode",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:xref_etags_mode"
   ],
-  "note": "Wider than the first skeptic recorded, and the miss is on the edge-case axis. (1) The mode does not affect the primary emacs binding it exists for: `M-.` maps to `goto_definition` (emacs.rs:112 and emacs.rs:307, vim.rs:1476), which resolves to commands/lsp.rs:1244 \u2014 a bare `goto_single_impl(cx, LanguageServerFeature::GotoDefinition, ...)` with no reference to `xref_etags_enabled` anywhere in the file. Enabling the mode and pressing `M-.` still queries the LSP. Only the secondary `C-x 4 .` / `SPC m g G` path honours it. (2) Multiple-match edge case, missed entirely: `zmax_core::etags::find` (zmax-core/src/etags.rs:123) returns every `(file, tag)` whose name matches exactly, but `etags_goto_definition` (commands.rs:60582) does `hits.first()` and silently discards the rest, jumping to whichever tag the table happened to list first. Emacs's etags backend returns all candidates and\u2026"
+  "note": "Both gaps the note recorded are closed. (1) The mode now affects the binding it exists for: goto_definition (zmax-term/src/commands/lsp.rs) consults xref_etags_enabled for the focused buffer and routes `M-.` through the tags table, beside the ggtags check that was already there -- it used to be a bare goto_single_impl, so enabling the mode and pressing `M-.` still queried the LSP and only the secondary `C-x 4 .` / `C-x 5 .` paths honoured it. (2) Multiple matches are no longer discarded: zmax_core::etags::find returns every (file, tag) whose name matches and etags_goto_definition took hits.first(), jumping to whichever the table listed first. It now builds every candidate and, when there is more than one, offers them in a picker with the tag name and its file:line -- which is what emacs's etags backend does by returning all candidates for xref to list -- jumping straight there only when the match is unique. Both paths go through etags_jump, so the xref marker ring is pushed either way and `M-,` goes back from a tags jump."
  },
  {
   "spec_id": "emacs.command.xref_find_apropos",

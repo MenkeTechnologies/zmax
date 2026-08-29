@@ -69283,7 +69283,7 @@ fn xref_etags_docs() -> &'static std::sync::Mutex<std::collections::HashSet<Docu
 }
 
 /// Whether definition lookups in this buffer go through the visited tags table.
-fn xref_etags_enabled(doc: DocumentId) -> bool {
+pub(crate) fn xref_etags_enabled(doc: DocumentId) -> bool {
     xref_etags_docs()
         .lock()
         .map(|d| d.contains(&doc))
@@ -69320,6 +69320,32 @@ fn xref_etags_mode(cx: &mut Context) {
 /// The etags xref backend (`etags--xref-backend`): look the identifier at point
 /// up in the visited tags table and open its definition with `action`. This is
 /// what `xref-etags-mode` routes the xref definition commands to.
+/// One candidate from the tags table, resolved to the file it lives in.
+#[derive(Clone)]
+struct EtagsHit {
+    path: std::path::PathBuf,
+    /// The path as the table spells it, which is what the listing shows.
+    display: String,
+    name: String,
+    line: usize,
+}
+
+/// Open a tags candidate and put the cursor on its line, recording the
+/// invocation point on the xref marker ring first so `M-,` goes back from it.
+fn etags_jump(cx: &mut Context, cmd: &'static str, hit: &EtagsHit, action: Action) {
+    xref_push_marker(cx.editor);
+    match cx.editor.open(&hit.path, action) {
+        Ok(_) => {
+            goto_line_impl_at(cx.editor, hit.line.saturating_sub(1));
+            cx.editor
+                .set_status(format!("{} at {}:{}", hit.name, hit.display, hit.line));
+        }
+        Err(e) => cx
+            .editor
+            .set_error(format!("{cmd}: {}: {e}", hit.path.display())),
+    }
+}
+
 pub(crate) fn etags_goto_definition(cx: &mut Context, cmd: &'static str, action: Action) {
     let Some(symbol) = thing_at_point_symbol(cx) else {
         cx.editor
@@ -69328,24 +69354,44 @@ pub(crate) fn etags_goto_definition(cx: &mut Context, cmd: &'static str, action:
     };
     with_tags_table(cx, cmd, move |cx, dir, table| {
         let hits = zmax_core::etags::find(table, &symbol);
-        let Some((file, tag)) = hits.first() else {
+        if hits.is_empty() {
             cx.editor.set_error(format!("{cmd}: no tag named {symbol}"));
             return;
-        };
-        let path = tags_file_path(dir, &file.path);
-        // The tags path is an xref lookup too (it is what `xref-etags-mode` and
-        // `ggtags-mode` make `M-.` resolve through), so `M-,` goes back from it.
-        xref_push_marker(cx.editor);
-        match cx.editor.open(&path, action) {
-            Ok(_) => {
-                goto_line_impl_at(cx.editor, tag.line.saturating_sub(1));
-                cx.editor
-                    .set_status(format!("{} at {}:{}", tag.name, file.path, tag.line));
-            }
-            Err(e) => cx
-                .editor
-                .set_error(format!("{cmd}: {}: {e}", path.display())),
         }
+        // Emacs's etags backend returns EVERY candidate, and xref shows the list
+        // when there is more than one; taking `hits.first()` jumped to whichever
+        // tag the table happened to list first and silently dropped the rest.
+        let candidates: Vec<EtagsHit> = hits
+            .iter()
+            .map(|(file, tag)| EtagsHit {
+                path: tags_file_path(dir, &file.path),
+                display: file.path.clone(),
+                name: tag.name.clone(),
+                line: tag.line,
+            })
+            .collect();
+        if let [only] = candidates.as_slice() {
+            etags_jump(cx, cmd, only, action);
+            return;
+        }
+        let columns = [
+            ui::PickerColumn::new("tag", |h: &EtagsHit, _: &()| h.name.clone().into()),
+            ui::PickerColumn::new("location", |h: &EtagsHit, _: &()| {
+                format!("{}:{}", h.display, h.line).into()
+            }),
+        ];
+        let picker = Picker::new(columns, 1, candidates, (), move |cx, hit, action| {
+            let mut ctx = Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            etags_jump(&mut ctx, cmd, hit, action);
+        });
+        cx.push_layer(Box::new(overlaid(picker)));
     });
 }
 

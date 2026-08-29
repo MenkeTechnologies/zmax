@@ -1259,6 +1259,17 @@ pub fn goto_definition(cx: &mut Context) {
         );
         return;
     }
+    // `xref-etags-mode` makes the tags table the xref backend FOR THIS BUFFER, so
+    // the binding the mode exists for -- `M-.` -- has to honour it too, not only
+    // the `C-x 4 .` / `C-x 5 .` variants.
+    if crate::commands::xref_etags_enabled(doc!(cx.editor).id()) {
+        crate::commands::etags_goto_definition(
+            cx,
+            "xref-find-definitions",
+            zmax_view::editor::Action::Replace,
+        );
+        return;
+    }
     goto_single_impl(
         cx,
         LanguageServerFeature::GotoDefinition,
