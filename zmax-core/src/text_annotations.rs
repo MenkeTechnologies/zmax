@@ -422,3 +422,133 @@ impl<'a> TextAnnotations<'a> {
         virt_off.row
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn inline(char_idx: usize, text: &str) -> InlineAnnotation {
+        InlineAnnotation::new(char_idx, text)
+    }
+
+    fn overlay(char_idx: usize, grapheme: &str) -> Overlay {
+        Overlay::new(char_idx, grapheme)
+    }
+
+    /// A layer is a cursor into its sorted slice: `consume` hands back the
+    /// annotation only when the position matches exactly, and advances past it so
+    /// the next call sees the following one. Everything that renders annotations
+    /// walks positions forward and relies on this.
+    #[test]
+    fn a_layer_consumes_one_annotation_per_position_in_order() {
+        let annotations = [inline(0, "a"), inline(2, "b"), inline(2, "c")];
+        let layer: Layer<'_, InlineAnnotation, ()> = (&annotations[..], ()).into();
+        let at = |idx| layer.consume(idx, |a| a.char_idx).map(|a| a.text.to_string());
+
+        assert_eq!(at(0).as_deref(), Some("a"));
+        assert_eq!(at(0), None, "consumed: the cursor moved past it");
+        // Nothing sits at 1, and asking does not advance the cursor.
+        assert_eq!(at(1), None);
+        // Both annotations at the same position come out, in slice order.
+        assert_eq!(at(2).as_deref(), Some("b"));
+        assert_eq!(at(2).as_deref(), Some("c"));
+        assert_eq!(at(2), None);
+    }
+
+    /// `reset_pos` puts the cursor on the first annotation at or after a
+    /// position, which is what lets rendering jump to the top of a viewport
+    /// rather than walking the whole document to reach it.
+    #[test]
+    fn reset_pos_seeks_to_the_first_annotation_at_or_after_a_position() {
+        let annotations = [inline(1, "a"), inline(5, "b"), inline(9, "c")];
+        let layer: Layer<'_, InlineAnnotation, ()> = (&annotations[..], ()).into();
+        let seek_then_take = |seek, at| {
+            layer.reset_pos(seek, |a: &InlineAnnotation| a.char_idx);
+            layer.consume(at, |a: &InlineAnnotation| a.char_idx)
+                .map(|a| a.text.to_string())
+        };
+
+        assert_eq!(seek_then_take(5, 5).as_deref(), Some("b"), "lands on 5");
+        assert_eq!(seek_then_take(2, 5).as_deref(), Some("b"), "next after 2 is 5");
+        assert_eq!(seek_then_take(0, 1).as_deref(), Some("a"), "seeking back works");
+        // Past the end: nothing left to consume.
+        assert_eq!(seek_then_take(10, 10), None);
+    }
+
+    /// The two layer kinds resolve a collision in opposite directions, as their
+    /// docs promise: the *first* inline layer added wins, and the *last* overlay
+    /// layer added wins. Getting either backwards would silently show the wrong
+    /// virtual text.
+    #[test]
+    fn colliding_layers_resolve_first_for_inline_and_last_for_overlays() {
+        let first = [inline(0, "first")];
+        let second = [inline(0, "second")];
+        let mut annotations = TextAnnotations::default();
+        annotations
+            .add_inline_annotations(&first, Some(Highlight::new(1)))
+            .add_inline_annotations(&second, Some(Highlight::new(2)));
+
+        let (annotation, highlight) = annotations.next_inline_annotation_at(0).unwrap();
+        assert_eq!(annotation.text.to_string(), "first");
+        assert_eq!(highlight, Some(Highlight::new(1)), "and its own highlight");
+
+        let bottom = [overlay(0, "b")];
+        let top = [overlay(0, "t")];
+        let mut annotations = TextAnnotations::default();
+        annotations
+            .add_overlay(&bottom, Some(Highlight::new(1)))
+            .add_overlay(&top, Some(Highlight::new(2)));
+
+        let (over, highlight) = annotations.overlay_at(0).unwrap();
+        assert_eq!(over.grapheme.to_string(), "t");
+        assert_eq!(highlight, Some(Highlight::new(2)));
+    }
+
+    /// An empty layer is dropped rather than stored: it can never produce an
+    /// annotation, and keeping it would cost a lookup at every position.
+    #[test]
+    fn empty_layers_are_not_stored() {
+        let empty: [InlineAnnotation; 0] = [];
+        let no_overlays: [Overlay; 0] = [];
+        let mut annotations = TextAnnotations::default();
+        annotations
+            .add_inline_annotations(&empty, None)
+            .add_overlay(&no_overlays, None);
+
+        assert!(annotations.inline_annotations.is_empty());
+        assert!(annotations.overlays.is_empty());
+        assert!(annotations.next_inline_annotation_at(0).is_none());
+    }
+
+    /// Only overlays carrying a highlight are collected, one entry per character,
+    /// and the range bounds it.
+    #[test]
+    fn overlay_highlights_are_collected_per_char_within_the_range() {
+        let highlighted = [overlay(1, "x"), overlay(3, "y")];
+        let plain = [overlay(2, "z")];
+        let mut annotations = TextAnnotations::default();
+        annotations
+            .add_overlay(&highlighted, Some(Highlight::new(7)))
+            .add_overlay(&plain, None);
+
+        let OverlayHighlights::Heterogenous { highlights } =
+            annotations.collect_overlay_highlights(0..4)
+        else {
+            panic!("collect_overlay_highlights builds a heterogenous set");
+        };
+
+        assert_eq!(
+            highlights,
+            vec![(Highlight::new(7), 1..2), (Highlight::new(7), 3..4)],
+            "the un-highlighted overlay at 2 contributes nothing"
+        );
+
+        // A range that stops short of the second overlay excludes it.
+        let OverlayHighlights::Heterogenous { highlights } =
+            annotations.collect_overlay_highlights(0..3)
+        else {
+            panic!("heterogenous");
+        };
+        assert_eq!(highlights, vec![(Highlight::new(7), 1..2)]);
+    }
+}
