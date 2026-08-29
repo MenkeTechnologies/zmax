@@ -1336,31 +1336,80 @@ pub fn hebrew_omer_string(omer: i64, week: i64, day: i64) -> String {
     )
 }
 
-/// `diary-hebrew-rosh-hodesh`: is `on` a day of Rosh Hodesh (the New Moon
-/// festival)? Rosh Hodesh is the 1st of a Hebrew month, and also the 30th of the
-/// preceding month when that month is 30 days long. Returns the name of the new
-/// month, or `None`. (Emacs additionally reports Shabbat Mevarchim and Erev
-/// Rosh Hodesh; those are not included.)
+/// `diary-hebrew-rosh-hodesh` (cal-hebrew.el:860-920): the diary entry for `on`
+/// when it is Rosh Hodesh (the New Moon festival), the day before, or the Saturday
+/// before. Returns the whole entry text, `"Rosh Hodesh …"` / `"Erev Rosh Hodesh …"`
+/// / `"Mevarchim Rosh Hodesh …"`, or `None`.
+///
+/// Rosh Hodesh is the 1st of a Hebrew month, and also the 30th of the preceding
+/// month when that month runs to 30 days — those two make a two-day Rosh Hodesh,
+/// hence the `(first day)`/`(second day)` suffixes. 1 Tishri is excluded
+/// (`(/= h-month 7)`): it is Rosh Hashanah, which the holiday list already
+/// reports. Elul, month 6, is likewise excluded from the Erev and Mevarchim arms,
+/// because the new moon it announces is Rosh Hashanah.
 pub fn hebrew_rosh_hodesh(on: Date) -> Option<String> {
     let abs = crate::calendar::rd(on);
     let (hy, hm, hd) = crate::calendar::hebrew_from_fixed(abs);
-    let month_name = |year: i64, m: u32| -> &'static str {
-        let idx = (m - 1) as usize;
-        if crate::calendar::hebrew_last_month_of_year(year) == 12 {
-            crate::calendar::HEBREW_MONTH_NAMES_COMMON[idx]
-        } else {
-            crate::calendar::HEBREW_MONTH_NAMES_LEAP[idx]
-        }
-    };
-    if hd == 1 {
-        Some(month_name(hy, hm).to_string())
-    } else if hd == 30 {
-        // 30th of a month → also Rosh Hodesh for the following month.
-        let (ny, nm, _) = crate::calendar::hebrew_from_fixed(abs + 1);
-        Some(month_name(ny, nm).to_string())
+    let last_day = crate::calendar::hebrew_last_day_of_month(hm, hy);
+    let last_month = crate::calendar::hebrew_last_month_of_year(hy);
+    // `h-month-names`, indexed as Emacs indexes it: month `m` sits at `m - 1`, so
+    // `names[hm]` is the month *after* `hm`.
+    let names: &[&str] = if last_month == 12 {
+        &crate::calendar::HEBREW_MONTH_NAMES_COMMON
     } else {
-        None
+        &crate::calendar::HEBREW_MONTH_NAMES_LEAP
+    };
+    let this_month = names[(hm - 1) as usize];
+    // `(aref h-month-names (if (= h-month (calendar-hebrew-last-month-of-year …))
+    // 0 h-month))`: past the year's last month the count wraps round to Nisan.
+    let next_month = if hm == last_month {
+        names[0]
+    } else {
+        names[hm as usize]
+    };
+    if hd == 30 {
+        // The following month is in the same year, since a month of 30 days is
+        // never the last month of a year — so no wrap is needed here.
+        return Some(format!("Rosh Hodesh {} (first day)", names[hm as usize]));
     }
+    if hd == 1 && hm != 7 {
+        let yesterday = crate::calendar::hebrew_from_fixed(abs - 1).2;
+        return Some(if yesterday == 30 {
+            format!("Rosh Hodesh {this_month} (second day)")
+        } else {
+            format!("Rosh Hodesh {this_month}")
+        });
+    }
+    if weekday(on) == 6 {
+        // Saturday: Shabbat Mevarchim, when the coming new moon is announced. The
+        // announcement names the weekday(s) Rosh Hodesh will fall on, which is
+        // `29 - hd` days from this Saturday for the 1st of the next month.
+        if hd > 22 && hm != 6 && last_day == 29 {
+            return Some(format!(
+                "Mevarchim Rosh Hodesh {next_month} ({})",
+                WEEKDAYS[(29 - hd) as usize]
+            ));
+        }
+        if hd > 22 && hd < 30 && last_day == 30 {
+            // A 30-day month gives a two-day Rosh Hodesh, so two weekdays are
+            // announced; no wrap here either, a 30-day month never ends a year.
+            return Some(format!(
+                "Mevarchim Rosh Hodesh {} ({}-{})",
+                names[hm as usize],
+                if hd == 29 {
+                    "tomorrow"
+                } else {
+                    WEEKDAYS[(29 - hd) as usize]
+                },
+                WEEKDAYS[((30 - hd) % 7) as usize]
+            ));
+        }
+        return None;
+    }
+    if hd == 29 && hm != 6 {
+        return Some(format!("Erev Rosh Hodesh {next_month}"));
+    }
+    None
 }
 
 // --- Parashat ha-shavua (cal-hebrew.el:937-1121) ---------------------------
@@ -2469,14 +2518,75 @@ mod tests {
         );
     }
 
+    /// Every value below is GNU Emacs 31.1 `diary-hebrew-rosh-hodesh` output,
+    /// obtained by evaluating `(cdr (diary-hebrew-rosh-hodesh))` over a date
+    /// range with `cal-hebrew.el` loaded. cal-hebrew.el:880 is the guard the
+    /// port was missing: `(if (or (= h-day 30) (and (= h-day 1) (/= h-month 7)))`
+    /// — 1 Tishri is Rosh Hashanah and gets no Rosh Hodesh entry.
     #[test]
     fn hebrew_rosh_hodesh_days() {
-        // 1 Tishri (Rosh Hashanah) is Rosh Hodesh Tishri.
-        let d = crate::calendar::from_rd(crate::calendar::fixed_from_hebrew(5785, 7, 1));
-        assert_eq!(hebrew_rosh_hodesh(d), Some("Tishri".to_string()));
-        // A mid-month day is not Rosh Hodesh.
-        let mid = crate::calendar::from_rd(crate::calendar::fixed_from_hebrew(5785, 7, 15));
-        assert_eq!(hebrew_rosh_hodesh(mid), None);
+        let rh = |y, m, d| hebrew_rosh_hodesh(Date::new(y, m, d));
+        // 1 Tishri 5786 (Rosh Hashanah): excluded by `(/= h-month 7)`.
+        assert_eq!(rh(2025, 9, 23), None);
+        // A mid-month day is not Rosh Hodesh either.
+        assert_eq!(rh(2025, 9, 24), None);
+        // 30 Tishri / 1 Heshvan 5786: a two-day Rosh Hodesh, both days named.
+        assert_eq!(
+            rh(2025, 10, 22),
+            Some("Rosh Hodesh Heshvan (first day)".into())
+        );
+        assert_eq!(
+            rh(2025, 10, 23),
+            Some("Rosh Hodesh Heshvan (second day)".into())
+        );
+        // 1 Kislev 5786 follows a 29-day Heshvan, so it is a one-day Rosh Hodesh.
+        assert_eq!(rh(2025, 11, 21), Some("Rosh Hodesh Kislev".into()));
+    }
+
+    /// `(if (and (= h-day 29) (/= h-month 6)) … "Erev Rosh Hodesh %s")`
+    /// (cal-hebrew.el:916-920), with the month wrapped to Nisan past the year's
+    /// last month. Elul (month 6) is excluded — the new moon it precedes is Rosh
+    /// Hashanah. Expected strings are GNU Emacs 31.1 output.
+    #[test]
+    fn hebrew_erev_rosh_hodesh() {
+        let rh = |y, m, d| hebrew_rosh_hodesh(Date::new(y, m, d));
+        // 29 Tishri 5786.
+        assert_eq!(rh(2025, 10, 21), Some("Erev Rosh Hodesh Heshvan".into()));
+        // 29 Adar II 5784 (a leap year): the last month wraps round to Nisan.
+        assert_eq!(rh(2024, 4, 8), Some("Erev Rosh Hodesh Nisan".into()));
+        // 29 Elul 5785: excluded by `(/= h-month 6)`.
+        assert_eq!(rh(2025, 9, 22), None);
+    }
+
+    /// The two Shabbat Mevarchim arms of cal-hebrew.el:895-915. A 29-day month
+    /// announces one weekday, `(aref calendar-day-name-array (- 29 h-day))`; a
+    /// 30-day month announces two, the first printed as "tomorrow" when Rosh
+    /// Hodesh starts the next day. Expected strings are GNU Emacs 31.1 output.
+    #[test]
+    fn hebrew_mevarchim_rosh_hodesh() {
+        let rh = |y, m, d| hebrew_rosh_hodesh(Date::new(y, m, d));
+        // 24 Heshvan 5786, a 29-day month: one weekday.
+        assert_eq!(
+            rh(2025, 11, 15),
+            Some("Mevarchim Rosh Hodesh Kislev (Friday)".into())
+        );
+        // 26 Tishri 5786, a 30-day month: two weekdays.
+        assert_eq!(
+            rh(2025, 10, 18),
+            Some("Mevarchim Rosh Hodesh Heshvan (Wednesday-Thursday)".into())
+        );
+        // 29 Adar I 5784: `(if (= h-day 29) "tomorrow" …)`.
+        assert_eq!(
+            rh(2024, 3, 9),
+            Some("Mevarchim Rosh Hodesh Adar II (tomorrow-Monday)".into())
+        );
+        // 27 Adar II 5784: the year's last month wraps round to Nisan.
+        assert_eq!(
+            rh(2024, 4, 6),
+            Some("Mevarchim Rosh Hodesh Nisan (Tuesday)".into())
+        );
+        // 27 Elul 5785, a Saturday: excluded by `(/= h-month 6)`.
+        assert_eq!(rh(2025, 9, 20), None);
     }
 
     #[test]

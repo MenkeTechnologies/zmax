@@ -176,7 +176,8 @@ pub enum Justification {
     Center,
     /// Both margins: stretch inter-word gaps to reach `width` (`set-justification-full`).
     Full,
-    /// Justification off: strip only trailing whitespace (`set-justification-none`).
+    /// Justification off: undo any existing justification, then refill
+    /// (`set-justification-none`).
     None,
 }
 
@@ -232,6 +233,38 @@ fn full_justify_line(s: &str, width: usize) -> String {
     out
 }
 
+/// Undo justification across `body` and refill it to `width`.
+///
+/// `set-justification` (fill.el:1258-1276) runs `unjustify-region` and *then*
+/// `fill-region`, so `set-justification-none` (fill.el:1279) has to take the
+/// previous justification back out rather than leave its whitespace in place:
+/// `unjustify-current-line` (fill.el:1469) drops the indentation past the left
+/// margin on a centred or right-justified line and, on a full-justified one,
+/// runs `canonically-space-region` to collapse the stretched inter-word gaps.
+/// Both are subsumed by refilling the paragraph with [`fill_paragraph`], which
+/// splits on whitespace and so discards the leading pad and the wide gaps alike;
+/// the refill to `width` is the `fill-region` half. Paragraphs are the fill unit,
+/// so blank lines break the block and are emitted verbatim.
+fn unjustify_block(body: &str, width: usize) -> String {
+    let mut out: Vec<String> = Vec::new();
+    let mut para: Vec<&str> = Vec::new();
+    for line in body.split('\n') {
+        if line.trim().is_empty() {
+            if !para.is_empty() {
+                out.push(fill_paragraph(&para.join(" "), width, ""));
+                para.clear();
+            }
+            out.push(line.to_string());
+        } else {
+            para.push(line);
+        }
+    }
+    if !para.is_empty() {
+        out.push(fill_paragraph(&para.join(" "), width, ""));
+    }
+    out.join("\n")
+}
+
 /// Emacs `set-justification-left/right/center/full/none`: re-justify each content
 /// line of `text` to `width` columns. Blank (whitespace-only) lines pass through
 /// unchanged and a trailing newline is preserved. This applies the justification
@@ -240,10 +273,21 @@ fn full_justify_line(s: &str, width: usize) -> String {
 ///
 /// For [`Justification::Full`] the last non-blank line of each paragraph (and any
 /// single-word line) is left flush-left, matching Emacs, which never stretches a
-/// paragraph's last line.
+/// paragraph's last line. [`Justification::None`] is the odd one out: it works a
+/// paragraph at a time via [`unjustify_block`], because turning justification off
+/// unjustifies and refills rather than reshaping each line in place.
 pub fn justify_block(text: &str, width: usize, mode: Justification) -> String {
     let had_trailing = text.ends_with('\n');
     let body = text.strip_suffix('\n').unwrap_or(text);
+    // `none` is not a per-line transform: it unjustifies and refills whole
+    // paragraphs, so it may re-wrap and cannot run inside the line loop below.
+    if mode == Justification::None {
+        let mut result = unjustify_block(body, width);
+        if had_trailing {
+            result.push('\n');
+        }
+        return result;
+    }
     let lines: Vec<&str> = body.split('\n').collect();
     let n = lines.len();
     let mut out: Vec<String> = Vec::with_capacity(n);
@@ -253,7 +297,7 @@ pub fn justify_block(text: &str, width: usize, mode: Justification) -> String {
             continue;
         }
         let justified = match mode {
-            Justification::None => line.trim_end().to_string(),
+            Justification::None => unreachable!("handled by the early return above"),
             Justification::Left => line.trim().to_string(),
             Justification::Right => pad_left(line.trim(), width),
             Justification::Center => pad_center(line.trim(), width),
@@ -1252,14 +1296,55 @@ mod tests {
 
     #[test]
     fn justify_left_and_none_flush_left() {
-        // left trims both ends; none trims only the trailing whitespace
+        // left trims both ends; none unjustifies, which also drops the leading pad
         assert_eq!(
             justify_block("   hi there   ", 20, Justification::Left),
             "hi there"
         );
         assert_eq!(
             justify_block("   hi there   ", 20, Justification::None),
-            "   hi there"
+            "hi there"
+        );
+    }
+
+    /// `set-justification-none` calls `(set-justification b e 'none t)`
+    /// (fill.el:1284), and `set-justification` ends with
+    /// `(unjustify-region begin (point-max)) … (fill-region begin (point-max) nil t)`
+    /// (fill.el:1274-1276). `unjustify-current-line` (fill.el:1469) documents both
+    /// halves: "If the line is centered or right-justified, this function removes
+    /// any indentation past the left margin.  If the line is full-justified, it
+    /// removes extra spaces between words." So `none` must undo the previous
+    /// justification, not merely trim the line ends.
+    #[test]
+    fn justify_none_undoes_justification_and_refills() {
+        // full-justified input: the stretched inter-word gaps collapse to one space
+        let full = justify_block("the quick brown\nfox", 15, Justification::Full);
+        assert_eq!(full, "the quick brown\nfox");
+        let stretched = justify_block("a b c\nx y", 11, Justification::Full);
+        assert_eq!(stretched, "a    b    c\nx y");
+        assert_eq!(
+            justify_block(&stretched, 11, Justification::None),
+            "a b c x y"
+        );
+        // right-justified input: the leading pad goes away and the paragraph refills
+        let right = justify_block("foo\nbarbar", 8, Justification::Right);
+        assert_eq!(right, "     foo\n  barbar");
+        assert_eq!(justify_block(&right, 8, Justification::None), "foo\nbarbar");
+        // centred input: same, and the refill re-wraps to `width`
+        let centered = justify_block("one two three", 20, Justification::Center);
+        assert_eq!(centered, "   one two three");
+        assert_eq!(
+            justify_block(&centered, 7, Justification::None),
+            "one two\nthree"
+        );
+    }
+
+    #[test]
+    fn justify_none_fills_paragraph_at_a_time() {
+        // Blank lines break the fill unit and survive; so does a trailing newline.
+        assert_eq!(
+            justify_block("aa   bb\ncc\n\n  dd  ee\n", 6, Justification::None),
+            "aa bb\ncc\n\ndd ee\n"
         );
     }
 

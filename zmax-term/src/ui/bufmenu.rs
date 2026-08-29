@@ -120,6 +120,25 @@ fn doc_key(id: DocumentId) -> u64 {
     id.to_string().parse().unwrap_or(0)
 }
 
+/// The `focused_at` stamp that sinks a buried buffer under every other one.
+///
+/// `bury-buffer` puts the buffer at the END of the buffer list, so every other
+/// buffer counts as more recently used than it. zmax spells that order as
+/// `Document::focused_at` — the key `Editor::sort_buffers` reads for
+/// `BufferSortKey::LastUsed` and the buffer switcher walks — so burying means
+/// stamping the document older than the oldest of the others. `None` when there
+/// are no other buffers: nothing to sink below.
+fn buried_focus_stamp(
+    others: impl Iterator<Item = std::time::Instant>,
+) -> Option<std::time::Instant> {
+    let oldest = others.min()?;
+    // `Instant` is monotonic-clock-relative and has no fixed zero, so a
+    // subtraction can in principle underflow; back off only as far as it allows.
+    oldest
+        .checked_sub(std::time::Duration::from_millis(1))
+        .or(Some(oldest))
+}
+
 impl BufferMenu {
     /// Open the Buffer Menu, snapshotting the editor's current buffers.
     pub fn new(editor: &Editor) -> Self {
@@ -534,11 +553,28 @@ impl Component for BufferMenu {
                     return EventResult::Consumed(Some(cb));
                 }
             }
-            // b (`Buffer-menu-bury`): sink the buffer at point to the bottom of the
-            // list. zmax has no separate global buffer-list order, so this buries
-            // it within the menu ordering.
+            // b (`Buffer-menu-bury`): sink the buffer at point to the bottom of
+            // the list AND call `bury-buffer` on it, which moves it to the end
+            // of the global buffer list (buf-menu.el). zmax's most-recently-used
+            // order is `Document::focused_at` (`BufferSortKey::LastUsed`,
+            // zmax-view/src/editor.rs), so the global half is a demotion of that
+            // stamp; without it the buffer switcher still offered the buried
+            // buffer first. Emacs echoes "Buffer buried." for the live buffer.
             key!('b') => {
-                self.menu.bury_current();
+                if let Some(key) = self.menu.bury_current() {
+                    if let Some(id) = self.doc_for(key) {
+                        let stamp = buried_focus_stamp(
+                            cx.editor
+                                .documents()
+                                .filter(|doc| doc.id() != id)
+                                .map(|doc| doc.focused_at),
+                        );
+                        if let (Some(stamp), Some(doc)) = (stamp, cx.editor.document_mut(id)) {
+                            doc.focused_at = stamp;
+                        }
+                    }
+                    self.status = "Buffer buried.".to_string();
+                }
             }
 
             // Marks.
@@ -928,5 +964,32 @@ mod tests {
         // RET (None) drops whatever is left.
         assert_eq!(m.unmark_all_buffers(None), 1);
         assert_eq!(m.menu.mark_of(2), Mark::None);
+    }
+
+    /// `Buffer-menu-bury` does not only reorder the menu: it calls `bury-buffer`,
+    /// which sends the buffer to the end of the GLOBAL buffer list. zmax's
+    /// most-recently-used order is `Document::focused_at`, so the buried buffer's
+    /// stamp has to land under every other buffer's — a buried buffer the
+    /// switcher still offers first is the bug this covers.
+    #[test]
+    fn burying_demotes_the_buffer_in_the_most_recently_used_order() {
+        let base = std::time::Instant::now();
+        let older = base + std::time::Duration::from_secs(1);
+        let newer = base + std::time::Duration::from_secs(2);
+
+        // Burying the most recently used buffer stamps it under both others.
+        let buried = buried_focus_stamp([newer, older].into_iter()).expect("two other buffers");
+        assert!(buried < older, "under the oldest of the others");
+        assert!(buried < newer);
+
+        // Which is exactly what `Editor::sort_buffers` (BufferSortKey::LastUsed,
+        // `Reverse(focused_at)`) needs to place it last.
+        let mut order = [("a", newer), ("b", older), ("buried", buried)];
+        order.sort_by_key(|&(_, at)| std::cmp::Reverse(at));
+        let names: Vec<&str> = order.iter().map(|&(n, _)| n).collect();
+        assert_eq!(names, ["a", "b", "buried"]);
+
+        // The only buffer has nothing to sink below, so its stamp is left alone.
+        assert_eq!(buried_focus_stamp(std::iter::empty()), None);
     }
 }

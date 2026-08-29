@@ -149,8 +149,10 @@ enum Pending {
     /// in directory: " …)`, find-dired.el:189), so the read is two-legged; the
     /// answer is carried into [`Pending::FindArgs`].
     FindDir,
-    /// `dired-do-find-regexp`: grep the targets for a regexp, show the hits.
-    FindRegexp(Vec<String>),
+    /// `dired-do-find-regexp` / `dired-do-isearch`: search the targets' contents
+    /// and show the hits. `regexp` is false for the LITERAL read (`M-s a C-s`,
+    /// `dired-do-isearch`), which passes `multi-isearch-files` a plain string.
+    FindRegexp { targets: Vec<String>, regexp: bool },
     /// First leg of a `% R`/`% C`/`% H`/`% S`/`% Y` regexp file op: read the
     /// match regexp; the second leg reads the replacement.
     RegexpOpPattern(RegexpKind, Vec<String>),
@@ -343,7 +345,13 @@ struct Isearch {
 /// `\<`, `\>`, `\_<`, `\_>` become `\b`, and the buffer anchors `` \` `` and
 /// `\'` become `\A` and `\z`. Inside `[...]` Emacs has no escape character at
 /// all, so a backslash there is a literal set member. `None` for a trailing
-/// backslash, which Emacs rejects as an incomplete regexp.
+/// backslash, which Emacs rejects as an incomplete regexp, and for the
+/// constructs the `regex` crate has no way to express — backreferences
+/// (`\1`..`\9`), character categories (`\cC`) and the syntax classes beyond
+/// whitespace and word (see the `\s` arm). The caller turns that `None` into
+/// Emacs's `invalid-regexp`; emitting an untranslatable pattern instead would
+/// either fail to compile or, worse, compile to something that matches other
+/// text.
 fn emacs_regexp_to_rust(pat: &str) -> Option<String> {
     let mut out = String::with_capacity(pat.len() + 8);
     let mut chars = pat.chars().peekable();
@@ -390,6 +398,30 @@ fn emacs_regexp_to_rust(pat: &str) -> Option<String> {
                 Some('\'') => out.push_str("\\z"),
                 // `\=` anchors at point; there is no point to anchor to here.
                 Some('=') => {}
+                // `\sC` / `\SC` — syntax classes, read off the buffer's syntax
+                // table. Only the two with an exact `regex`-crate analogue can
+                // be translated: whitespace (`\s-`, also spelled `\s `) and word
+                // constituent (`\sw`). Every other class (`\s_` symbol, `\s.`
+                // punctuation, `\s(`/`\s)` parens, `\s"` string quote, …) is a
+                // per-mode table lookup with no counterpart, so refuse the whole
+                // pattern rather than emit `\s` + a stray character, which
+                // compiles to whitespace-then-that-character and silently
+                // matches the wrong text.
+                Some(k @ ('s' | 'S')) => {
+                    let complement = k == 'S';
+                    match chars.next()? {
+                        '-' | ' ' => out.push_str(if complement { "\\S" } else { "\\s" }),
+                        'w' => out.push_str(if complement { "\\W" } else { "\\w" }),
+                        _ => return None,
+                    }
+                }
+                // `\cC` / `\CC` — character categories (`\cg` greek, `\cl`
+                // latin, …). Emacs's category table has no `regex` equivalent.
+                Some('c' | 'C') => return None,
+                // `\1`..`\9` — backreferences. The `regex` crate is a finite
+                // automaton and cannot support them at all, so there is nothing
+                // to translate them into.
+                Some('1'..='9') => return None,
                 Some(e) => {
                     out.push('\\');
                     out.push(e);
@@ -400,6 +432,20 @@ fn emacs_regexp_to_rust(pat: &str) -> Option<String> {
         }
     }
     Some(out)
+}
+
+/// The `grep` flags a contents search runs with (`dired-do-find-regexp` and
+/// `dired-do-isearch` both grep the targets here). A LITERAL search asks grep
+/// for `-F` instead of backslash-quoting the pattern: grep's default dialect is
+/// POSIX BRE with the GNU extensions, where `\+`, `\?`, `\|` and `\{` are
+/// OPERATORS, so quoting a literal `a+` would hand grep the regexp "one or more
+/// `a`" — the very misreading the quoting was meant to prevent.
+fn find_grep_flags(regexp: bool) -> &'static [&'static str] {
+    if regexp {
+        &["-rnH"]
+    } else {
+        &["-rnH", "-F"]
+    }
 }
 
 /// Emacs `isearch-no-upper-case-p`: with `case-fold-search` t and
@@ -1945,11 +1991,11 @@ impl Dired {
                         .set_error(format!("compare-directories {}: {e}", other.display())),
                 }
             }
-            Pending::FindRegexp(targets) => {
+            Pending::FindRegexp { targets, regexp } => {
                 if text.is_empty() {
                     return;
                 }
-                self.run_find_regexp(text, &targets, cx);
+                self.run_find_regexp(text, regexp, &targets, cx);
             }
             Pending::RegexpOpPattern(kind, targets) => {
                 if text.is_empty() {
@@ -2329,21 +2375,44 @@ impl Dired {
         }
     }
 
-    /// `dired-do-find-regexp`: grep the targets for `pattern`, show the hits in a
-    /// scratch buffer (overlay closes to reveal it).
-    fn run_find_regexp(&mut self, pattern: &str, names: &[String], cx: &mut Context) {
+    /// Open the read behind `M-s a C-s` / `M-s a C-M-s`. The two differ only in
+    /// how the answer is matched, and Emacs says so in the prompt: plain
+    /// "Search marked files: " for the literal `dired-do-isearch`, the "(regexp)"
+    /// suffix for `dired-do-isearch-regexp`.
+    fn begin_contents_search(&mut self, regexp: bool) {
+        let targets = self.targets();
+        let prompt = if regexp {
+            "Search marked files (regexp): "
+        } else {
+            "Search marked files: "
+        };
+        self.begin_input(prompt, Pending::FindRegexp { targets, regexp });
+    }
+
+    /// `dired-do-find-regexp` / `dired-do-isearch`: grep the targets for
+    /// `pattern`, show the hits in a scratch buffer (overlay closes to reveal
+    /// it). `regexp` false searches for the pattern LITERALLY.
+    fn run_find_regexp(&mut self, pattern: &str, regexp: bool, names: &[String], cx: &mut Context) {
         let mut cmd = std::process::Command::new("grep");
-        cmd.current_dir(&self.dir).args(["-rnH", "-e", pattern]);
+        cmd.current_dir(&self.dir).args(find_grep_flags(regexp));
+        cmd.args(["-e", pattern]);
         for n in names {
             cmd.arg(n);
         }
         match cmd.output() {
             Ok(out) => {
                 let body = String::from_utf8_lossy(&out.stdout);
-                let content = if body.trim().is_empty() {
-                    format!("find-regexp /{pattern}/\n(no matches)\n")
+                // Emacs shows the literal search quoted and the regexp one in
+                // slashes, the way `isearch` and `re-search-forward` echo them.
+                let shown = if regexp {
+                    format!("find-regexp /{pattern}/")
                 } else {
-                    format!("find-regexp /{pattern}/\n{body}")
+                    format!("find-literal \"{pattern}\"")
+                };
+                let content = if body.trim().is_empty() {
+                    format!("{shown}\n(no matches)\n")
+                } else {
+                    format!("{shown}\n{body}")
                 };
                 crate::commands::show_text_in_scratch(cx.editor, &content);
                 self.close_requested = true;
@@ -3087,11 +3156,17 @@ impl Dired {
                 }
             }
             // M-s a C-s / C-M-s — dired-do-isearch[-regexp]: search the marked
-            // files' contents.
+            // files' contents. `dired-do-isearch` (C-s) hands
+            // `multi-isearch-files` a LITERAL string; only
+            // `dired-do-isearch-regexp` (C-M-s) goes through
+            // `multi-isearch-files-regexp` (dired-aux.el). Sharing one regexp
+            // read made a `.` or `*` typed at the C-s prompt match something
+            // other than itself.
             Prefix::SearchContents => {
-                if key == ctrl!('s') || ctrl_alt(key, 's') {
-                    let t = self.targets();
-                    self.begin_input("Search marked files (regexp): ", Pending::FindRegexp(t));
+                if key == ctrl!('s') {
+                    self.begin_contents_search(false);
+                } else if ctrl_alt(key, 's') {
+                    self.begin_contents_search(true);
                 }
             }
             // M-DEL / `* ?` — the mark character to remove everywhere.
@@ -3492,8 +3567,14 @@ impl Component for Dired {
             }
             // A — dired-do-find-regexp: grep the targets.
             key!('A') => {
-                let t = self.targets();
-                self.begin_input("Find regexp: ", Pending::FindRegexp(t));
+                let targets = self.targets();
+                self.begin_input(
+                    "Find regexp: ",
+                    Pending::FindRegexp {
+                        targets,
+                        regexp: true,
+                    },
+                );
             }
             // Z — dired-do-compress (gzip / gunzip each target).
             key!('Z') => self.compress_targets(cx),
@@ -4118,6 +4199,86 @@ mod isearch_tests {
             (row, 3),
             "back to the first match"
         );
+    }
+
+    /// The Emacs→`regex` translation may only ever hand the caller a pattern the
+    /// `regex` crate can COMPILE, or `None`. The syntax-class and backreference
+    /// escapes used to fall through as backslash-plus-character, which either
+    /// failed to compile (`\1`) or compiled to something else entirely (`\sw`
+    /// became whitespace followed by a literal `w`) — and `isearch_search` turns
+    /// both into a search that silently holds point.
+    #[test]
+    fn every_translated_pattern_compiles_and_the_rest_are_refused() {
+        for pat in [
+            r"\(foo\|bar\)+",
+            r"\<word\>",
+            r"\_<sym\_>",
+            r"\`anchored\'",
+            r"a\{2,3\}",
+            r"[]\.]",
+            r"[^]a]",
+            r"\s-+\sw",
+            r"\S-\Sw",
+            r"point\=here",
+        ] {
+            let out = emacs_regexp_to_rust(pat).unwrap_or_else(|| panic!("{pat} was refused"));
+            regex::Regex::new(&out)
+                .unwrap_or_else(|e| panic!("{pat} -> {out} does not compile: {e}"));
+        }
+
+        // The two syntax classes with an exact analogue translate to it, rather
+        // than to `\s` plus a stray class character.
+        assert_eq!(emacs_regexp_to_rust(r"\s-").as_deref(), Some(r"\s"));
+        assert_eq!(emacs_regexp_to_rust(r"\sw").as_deref(), Some(r"\w"));
+        assert_eq!(emacs_regexp_to_rust(r"\S-").as_deref(), Some(r"\S"));
+        assert_eq!(emacs_regexp_to_rust(r"\Sw").as_deref(), Some(r"\W"));
+
+        // Everything the `regex` crate cannot express is refused outright — a
+        // backreference above all, which a finite automaton cannot support.
+        for pat in [
+            r"\(a\)\1",
+            r"\s_",
+            r"\s(",
+            r"\.\s.",
+            r"\cg",
+            r"\Cg",
+            r"\s",
+            r"foo\",
+        ] {
+            assert_eq!(emacs_regexp_to_rust(pat), None, "{pat} must be refused");
+        }
+
+        // And the refusal is what the caller sees: no matcher, so the search
+        // reports a bad pattern instead of matching the wrong text.
+        assert!(Dired::isearch_matcher(r"\(a\)\1", true).is_none());
+        assert!(Dired::isearch_matcher(r"\(a\)\1", false).is_some(), "literal");
+    }
+
+    /// `M-s a C-s` is `dired-do-isearch`, a LITERAL search over the marked files;
+    /// only `M-s a C-M-s` (`dired-do-isearch-regexp`) reads a regexp. Both keys
+    /// used to arm the same regexp read under the same "(regexp)" prompt, so a
+    /// `.` or `*` typed at the literal prompt matched something other than itself.
+    #[test]
+    fn the_contents_isearch_is_literal_and_only_c_m_s_is_a_regexp() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("a.txt"), b"x").unwrap();
+        let mut d = Dired::new(tmp.path().to_path_buf()).unwrap();
+
+        d.begin_contents_search(false);
+        let inp = d.input.take().unwrap();
+        assert_eq!(inp.prompt, "Search marked files: ");
+        assert!(matches!(inp.action, Pending::FindRegexp { regexp: false, .. }));
+
+        d.begin_contents_search(true);
+        let inp = d.input.take().unwrap();
+        assert_eq!(inp.prompt, "Search marked files (regexp): ");
+        assert!(matches!(inp.action, Pending::FindRegexp { regexp: true, .. }));
+
+        // The literal read reaches grep as FIXED STRINGS. Backslash-quoting the
+        // pattern would not do: grep's default BRE reads `\+`/`\?`/`\|` as
+        // operators, so the quoting would introduce the metacharacter it removed.
+        assert!(find_grep_flags(false).contains(&"-F"));
+        assert!(!find_grep_flags(true).contains(&"-F"));
     }
 }
 

@@ -359,6 +359,11 @@ impl MappableCommand {
                 }));
             }
         }
+        // `cwarn-is-enabled major-mode` needs the buffer's language, and the two
+        // readers of `cwarn_enabled` (the renderer and the status line) hold only
+        // a `DocumentId`; this is the last point before the next frame where an
+        // `Editor` is in reach. A no-op unless cwarn-mode is on somewhere.
+        cwarn_note_languages(cx.editor);
     }
 
     pub fn name(&self) -> &str {
@@ -13394,6 +13399,46 @@ fn isearch_with<R>(f: impl FnOnce(&mut IsearchSession) -> R) -> R {
     ISEARCH.with(|s| f(&mut s.borrow_mut()))
 }
 
+thread_local! {
+    /// Emacs `regexp-search-ring` (isearch.el:255): the history of *regexp*
+    /// searches, kept apart from `search-ring` because every reader picks between
+    /// the two on `isearch-regexp` — `isearch-complete1` (isearch.el:3418),
+    /// `isearch-ring-adjust1` (isearch.el:3372), `isearch-yank-x-selection`
+    /// (isearch.el:1955). zmax's `search-ring` is the `/` register (it doubles as
+    /// vim's search history and is what drives the highlight), so the regexp ring
+    /// lives here.
+    static ISEARCH_REGEXP_RING: std::cell::RefCell<Vec<String>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// `regexp-search-ring-max` (isearch.el:261).
+const REGEXP_SEARCH_RING_MAX: usize = 16;
+
+/// `isearch-update-ring` (isearch.el:1558-1566): `add-to-history` with
+/// `history-delete-duplicates` bound to t — the string goes on the front, any
+/// earlier copy of it is dropped, and the ring is capped at `…-ring-max`.
+///
+/// Pure — unit tested.
+fn isearch_ring_update(ring: &mut Vec<String>, entry: &str, max: usize) {
+    ring.retain(|e| e != entry);
+    ring.insert(0, entry.to_string());
+    ring.truncate(max);
+}
+
+/// The ring the isearch string is read back from: `(if isearch-regexp
+/// regexp-search-ring search-ring)` (isearch.el:3418).
+fn isearch_ring_entries(editor: &Editor) -> Vec<String> {
+    if isearch_with(|s| s.flags.regexp) {
+        ISEARCH_REGEXP_RING.with(|ring| ring.borrow().clone())
+    } else {
+        editor
+            .registers
+            .read('/', editor)
+            .map(|it| it.map(|c| c.to_string()).collect())
+            .unwrap_or_default()
+    }
+}
+
 /// Compile the session's raw string + flags into the regex to push to `/`, then
 /// run one forward/backward search. When `anchor_at_match_start` is set the
 /// primary cursor is first collapsed to the current match's start, so an
@@ -14080,6 +14125,17 @@ fn isearch_edit_string(cx: &mut Context) {
 /// previous-context marks, so this stores the origin in all three; the search
 /// string stays on the `/` ring for `n`/`N`.
 fn isearch_exit(cx: &mut Context) {
+    // `isearch-done` files the finished string with `isearch-update-ring`, which
+    // picks the ring by `isearch-regexp` (isearch.el:1558-1566). The literal ring
+    // is the `/` register, which `isearch_apply` has already pushed to; a regexp
+    // search instead belongs on `regexp-search-ring`, where `isearch-complete`
+    // will look for it.
+    let (regexp, raw) = isearch_with(|s| (s.flags.regexp, s.raw.clone()));
+    if regexp && !raw.is_empty() {
+        ISEARCH_REGEXP_RING.with(|ring| {
+            isearch_ring_update(&mut ring.borrow_mut(), &raw, REGEXP_SEARCH_RING_MAX)
+        });
+    }
     let origin = isearch_with(|s| {
         s.ring_index = 0;
         s.origin
@@ -14122,18 +14178,15 @@ fn isearch_quote_char(cx: &mut Context) {
 /// Emacs `isearch-complete` (`M-TAB`): grow the search string as far as the
 /// entries on the search ring that start with it agree.
 ///
-/// `isearch-complete1` (isearch.el:3375) is `try-completion` over the ring with
+/// `isearch-complete1` (isearch.el:3375) is `try-completion` over the ring the
+/// `isearch-regexp` flag selects — `(if isearch-regexp regexp-search-ring
+/// search-ring)` (isearch.el:3418) — with
 /// `completion-ignore-case` bound to `case-fold-search`, and it has three
 /// outcomes: extend the string, report the candidates when there is nothing
 /// further to extend by (emacs pops up `*Isearch completions*`), or say there
 /// is no completion and carry on searching.
 fn isearch_complete(cx: &mut Context) {
-    let entries: Vec<String> = cx
-        .editor
-        .registers
-        .read('/', cx.editor)
-        .map(|it| it.map(|c| c.to_string()).collect())
-        .unwrap_or_default();
+    let entries = isearch_ring_entries(cx.editor);
     if entries.is_empty() {
         cx.editor.set_error("Search ring is empty");
         return;
@@ -27503,11 +27556,23 @@ fn diary_hebrew_omer(cx: &mut Context) {
     }
 }
 
-/// Emacs `diary-hebrew-rosh-hodesh`: if today is Rosh Hodesh, report the month.
+/// Emacs `diary-hebrew-rosh-hodesh`: "Rosh Hodesh diary entry. Entry applies if
+/// date is Rosh Hodesh, the day before, or the Saturday before" (cal-hebrew.el).
+///
+/// The entry is reported verbatim: `hebrew_rosh_hodesh` returns the whole line
+/// emacs would put in the diary — `Rosh Hodesh Heshvan (first day)`, `Erev Rosh
+/// Hodesh Kislev`, `Mevarchim Rosh Hodesh Adar II (tomorrow-Monday)` — so the
+/// caller must not prefix it. It used to wrap the return in `Rosh Hodesh {…}`,
+/// which doubled the words on the plain entries and mislabelled the Erev and
+/// Mevarchim ones outright.
 fn diary_hebrew_rosh_hodesh(cx: &mut Context) {
     match zmax_core::diary::hebrew_rosh_hodesh(diary_today()) {
-        Some(month) => cx.editor.set_status(format!("Rosh Hodesh {month}")),
-        None => cx.editor.set_status("Today is not Rosh Hodesh".to_string()),
+        Some(entry) => cx.editor.set_status(entry),
+        // The command answers for three different days, so "not Rosh Hodesh"
+        // would be wrong on the two that carry no entry for other reasons.
+        None => cx
+            .editor
+            .set_status("No Rosh Hodesh diary entry for today".to_string()),
     }
 }
 
@@ -31185,14 +31250,81 @@ fn cwarn_global_flag() -> &'static std::sync::atomic::AtomicBool {
     &F
 }
 
-/// Whether `cwarn-mode` paints warnings in this document — either it was turned
-/// on for the buffer, or `global-cwarn-mode` turned it on everywhere.
+/// The languages `cwarn-configuration` covers: `'((c-mode (not reference))
+/// (c++-mode t))` (cwarn.el:117-119) — "By default C and C++ modes are
+/// included". Nothing else is covered: `global-cwarn-mode` only turns the mode
+/// on through `turn-on-cwarn-mode-if-enabled`, which asks `(cwarn-is-enabled
+/// major-mode)` first (cwarn.el:319-323), and even a buffer-local `cwarn-mode`
+/// installs no keywords in another mode because `cwarn-font-lock-keywords` runs
+/// the same check per feature (cwarn.el:212-222). So `if (a = b)` in a Rust or
+/// Python buffer is never flagged.
+///
+/// Pure — unit tested.
+fn cwarn_language_is_c(language: Option<&str>) -> bool {
+    matches!(language, Some("c" | "cpp"))
+}
+
+/// The open documents whose language `cwarn-is-enabled` accepts, as last seen by
+/// [`cwarn_note_languages`]. Both readers of [`cwarn_enabled`] — the renderer and
+/// the status line — hold only a `DocumentId`, so the language test has to be
+/// recorded here while an `Editor` is still in reach.
+fn cwarn_c_docs() -> &'static std::sync::Mutex<std::collections::HashSet<DocumentId>> {
+    static DOCS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<DocumentId>>> =
+        std::sync::OnceLock::new();
+    DOCS.get_or_init(Default::default)
+}
+
+/// Record which open buffers are C-family so [`cwarn_enabled`] can apply
+/// `cwarn-is-enabled` from a `DocumentId` alone. Called from the command
+/// dispatch, after it runs, so a file opened (or its language re-set) by the
+/// command is registered before the next frame paints. Costs one relaxed load
+/// and one uncontended lock while the mode is off everywhere, which is the
+/// normal case.
+/// Whether cwarn-mode is on anywhere — the global flag, or at least one buffer.
+///
+/// This exists so [`cwarn_note_languages`], which runs after EVERY command, can
+/// bail on a single relaxed load. Deriving the same answer from `cwarn_docs`
+/// would take a mutex on the editor's hottest path for the overwhelmingly common
+/// case where cwarn-mode is off everywhere.
+static CWARN_ANYWHERE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Recompute [`CWARN_ANYWHERE`]. Called wherever cwarn's on-ness changes.
+fn cwarn_refresh_anywhere() {
+    let on = cwarn_global_flag().load(std::sync::atomic::Ordering::Relaxed)
+        || cwarn_docs().lock().map(|d| !d.is_empty()).unwrap_or(false);
+    CWARN_ANYWHERE.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub(crate) fn cwarn_note_languages(editor: &Editor) {
+    if !CWARN_ANYWHERE.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    let c_docs: std::collections::HashSet<DocumentId> = editor
+        .documents()
+        .filter(|doc| cwarn_language_is_c(doc.language_name()))
+        .map(|doc| doc.id())
+        .collect();
+    if let Ok(mut docs) = cwarn_c_docs().lock() {
+        *docs = c_docs;
+    }
+}
+
+/// Whether `cwarn-mode` paints warnings in this document — it was turned on for
+/// the buffer or `global-cwarn-mode` turned it on everywhere, *and* the buffer
+/// is one `cwarn-configuration` covers. The status line reads this too, so the
+/// ` CWarn` lighter follows the warnings rather than a mode that has nothing to
+/// say in a non-C buffer.
 pub(crate) fn cwarn_enabled(doc: DocumentId) -> bool {
-    cwarn_global_flag().load(std::sync::atomic::Ordering::Relaxed)
+    let on = cwarn_global_flag().load(std::sync::atomic::Ordering::Relaxed)
         || cwarn_docs()
             .lock()
             .map(|d| d.contains(&doc))
-            .unwrap_or(false)
+            .unwrap_or(false);
+    on && cwarn_c_docs()
+        .lock()
+        .map(|d| d.contains(&doc))
+        .unwrap_or(false)
 }
 
 /// Emacs `cwarn-mode`: highlight C constructs that are legal but almost always a
@@ -31209,11 +31341,13 @@ fn cwarn_mode(cx: &mut Context) {
     };
     if docs.remove(&id) {
         drop(docs);
+        cwarn_refresh_anywhere();
         cx.editor.set_status("cwarn-mode disabled");
         return;
     }
     docs.insert(id);
     drop(docs);
+    cwarn_refresh_anywhere();
     let lines = buffer_lines(doc!(cx.editor));
     let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
     let found = zmax_core::cmode::cwarn_scan(&refs).len();
@@ -31226,6 +31360,7 @@ fn global_cwarn_mode(cx: &mut Context) {
     let flag = cwarn_global_flag();
     let on = !flag.load(std::sync::atomic::Ordering::Relaxed);
     flag.store(on, std::sync::atomic::Ordering::Relaxed);
+    cwarn_refresh_anywhere();
     cx.editor.set_status(if on {
         "global-cwarn-mode enabled"
     } else {
@@ -32378,6 +32513,14 @@ pub(crate) fn qf_set_entries(
 /// pushing the prior position onto the jumplist. Mirrors the inline jump used
 /// by the global-search picker.
 fn qf_jump_to(editor: &mut Editor, kind: QfKind, idx: usize, action: Action) {
+    qf_visit(editor, kind, idx, action, true);
+}
+
+/// The body of [`qf_jump_to`], with the jumplist push made optional: a
+/// `next-error-follow-minor-mode` visit happens on every cursor move through the
+/// list, so it must not bury the position the list was opened from under one
+/// jumplist entry per row.
+fn qf_visit(editor: &mut Editor, kind: QfKind, idx: usize, action: Action, push_jumplist: bool) {
     let entries = qf_entries(editor, kind);
     let Some(entry) = entries.get(idx).cloned() else {
         editor.set_error("quickfix list is empty");
@@ -32402,7 +32545,9 @@ fn qf_jump_to(editor: &mut Editor, kind: QfKind, idx: usize, action: Action) {
     let line_start = text.line_to_char(entry.line);
     let line_len = text.line(entry.line).len_chars().saturating_sub(1);
     let pos = line_start + entry.col.min(line_len);
-    push_jump(view, doc);
+    if push_jumplist {
+        push_jump(view, doc);
+    }
     doc.set_selection(view.id, Selection::point(pos));
     // vim quickfix jumps (`:cnext`/`:cc`/…) scroll minimally, not centered.
     view.ensure_cursor_in_view(doc, scrolloff);
@@ -32555,6 +32700,20 @@ pub(crate) fn qf_move_dir(editor: &mut Editor, kind: QfKind, dir: QfDir, count: 
     }
 }
 
+/// The list index the picker should visit when the highlighted entry changes:
+/// `next-error-follow-minor-mode` on (so merely moving over an entry displays
+/// it, as `ui::occur::Occur::follow` does for the Occur buffer) and the entry
+/// still present in the list.
+///
+/// Pure — unit tested.
+fn qf_follow_target(follow: bool, entries: &[QfEntry], entry: Option<&QfEntry>) -> Option<usize> {
+    if !follow {
+        return None;
+    }
+    let entry = entry?;
+    entries.iter().position(|e| e == entry)
+}
+
 /// Build the quickfix/location-list picker (the `:copen`/`:lopen` window).
 pub(crate) fn build_qf_picker(editor: &mut Editor, kind: QfKind) -> Box<dyn Component> {
     let entries = qf_entries(editor, kind);
@@ -32581,6 +32740,18 @@ pub(crate) fn build_qf_picker(editor: &mut Editor, kind: QfKind) -> Box<dyn Comp
     })
     .with_preview(|_editor, entry: &QfEntry| {
         Some((entry.path.as_path().into(), Some((entry.line, entry.line))))
+    })
+    // `next-error-follow-minor-mode`: this list is a `next-error` buffer just
+    // like Occur's (Compilation is an `ErrorSource` in its own right), so while
+    // the flag is on, moving the cursor over an entry displays it in the source
+    // window and the list stays up — `ui::occur::Occur::follow`, but driven by
+    // the picker's highlight callback instead of its own key handler.
+    .with_on_highlight(move |cx, entry: Option<&QfEntry>| {
+        let entries = qf_entries(cx.editor, kind);
+        let Some(idx) = qf_follow_target(crate::gud::next_error_follow(), &entries, entry) else {
+            return;
+        };
+        qf_visit(cx.editor, kind, idx, Action::Replace, false);
     });
     Box::new(overlaid(picker))
 }
@@ -38119,6 +38290,17 @@ fn reindent_block(block: &str, target: &str) -> String {
     out
 }
 
+/// The indent of the line the primary cursor sits on — the depth `]p`/`[p` and
+/// `i_CTRL-R_CTRL-P` shift the pasted block to.
+fn cursor_line_indent(editor: &Editor) -> String {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    let line = doc.selection(view.id).primary().cursor_line(text);
+    let l = text.line(line);
+    let n = l.first_non_whitespace_char().unwrap_or(0);
+    l.slice(..n).to_string()
+}
+
 /// vim `]p` / `[p`: put linewise with the block's indent shifted to the current
 /// line's, so pasted code lands at the depth it is going into rather than the
 /// depth it came from. Plain `p`/`P` paste the register verbatim.
@@ -38132,14 +38314,7 @@ fn paste_reindent(cx: &mut Context, pos: Paste) {
     };
     let values: Vec<String> = values.map(|v| v.to_string()).collect();
 
-    let target_indent = {
-        let (view, doc) = current_ref!(cx.editor);
-        let text = doc.text().slice(..);
-        let line = doc.selection(view.id).primary().cursor_line(text);
-        let l = text.line(line);
-        let n = l.first_non_whitespace_char().unwrap_or(0);
-        l.slice(..n).to_string()
-    };
+    let target_indent = cursor_line_indent(cx.editor);
 
     let values: Vec<String> = values
         .iter()
@@ -42958,7 +43133,24 @@ fn select_register(cx: &mut Context) {
     })
 }
 
+/// vim `i_CTRL-R_CTRL-P` is the only one of the three insert-register modifiers
+/// that changes the text: it inserts the register "literally and fix the indent,
+/// like `[<MiddleMouse>`" (insert.txt:175-177), i.e. the `[p` adjustment.
+/// `i_CTRL-R_CTRL-R` (literally) and `i_CTRL-R_CTRL-O` (no auto-indent) both
+/// describe what zmax's register paste already does.
+///
+/// Pure — unit tested.
+fn insert_register_fixes_indent(code: KeyCode) -> bool {
+    matches!(code, KeyCode::Char('p'))
+}
+
 fn insert_register(cx: &mut Context) {
+    insert_register_impl(cx, false);
+}
+
+/// `fix_indent` is vim's `i_CTRL-R_CTRL-P`: the register's block is shifted to
+/// the indent of the line it lands on before it is inserted.
+fn insert_register_impl(cx: &mut Context, fix_indent: bool) {
     // TODO: count is reset to 1 before next key so we move it into the closure here.
     // Would be nice to carry over.
     let count = cx.count();
@@ -42969,8 +43161,9 @@ fn insert_register(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         // vim `i_CTRL-R {CTRL-R,CTRL-O,CTRL-P} {reg}`: literal / no-autoindent /
-        // fix-indent register insert. zmax already pastes register contents
-        // literally, so consume the modifier key and read the register next.
+        // fix-indent register insert. The first two paste exactly what zmax's
+        // register paste already does, so they only consume the modifier key and
+        // read the register next; `CTRL-P` carries the indent fix through to it.
         if event
             .modifiers
             .contains(zmax_view::input::KeyModifiers::CONTROL)
@@ -42979,7 +43172,7 @@ fn insert_register(cx: &mut Context) {
                 KeyCode::Char('r') | KeyCode::Char('o') | KeyCode::Char('p')
             )
         {
-            insert_register(cx);
+            insert_register_impl(cx, fix_indent || insert_register_fixes_indent(event.code));
             return;
         }
         if let Some(ch) = event.char() {
@@ -43001,6 +43194,32 @@ fn insert_register(cx: &mut Context) {
                 return;
             }
             cx.register = Some(ch);
+            if fix_indent {
+                // `i_CTRL-R_CTRL-P`: same reindent `]p`/`[p` do — the block's own
+                // base indent is replaced by the indent of the line it is going
+                // into, relative depth kept.
+                let Some(values) = cx.editor.registers.read(ch, cx.editor) else {
+                    return;
+                };
+                let values: Vec<String> = values.map(|v| v.to_string()).collect();
+                let target_indent = cursor_line_indent(cx.editor);
+                let values: Vec<String> = values
+                    .iter()
+                    .map(|v| reindent_block(v, &target_indent))
+                    .collect();
+                let mode = cx.editor.mode;
+                let (view, doc) = current!(cx.editor);
+                paste_impl(
+                    &values,
+                    doc,
+                    view,
+                    Paste::Cursor,
+                    count,
+                    mode,
+                    CursorRest::OnText,
+                );
+                return;
+            }
             paste(
                 cx.editor,
                 cx.register
@@ -58270,6 +58489,30 @@ fn pandoc_is_binary_format(format: &str) -> bool {
     matches!(format, "odt" | "docx" | "pptx" | "epub" | "epub2" | "epub3")
 }
 
+/// The file name extension the output of a pandoc writer should carry. pandoc
+/// names its writers after the *format*, not the file type, so `-t`'s argument
+/// doubles as an extension only where the two happen to agree: `epub2` and
+/// `epub3` both write an `.epub`, `latex`/`beamer` write `.tex`, `html4`/`html5`
+/// write `.html`, the markdown dialects write `.md` and `plain` writes `.txt`.
+/// pandoc-mode names the output file the same way (its `pandoc--extension`
+/// lookup), and naming it after the writer instead yields files — `book.epub3` —
+/// that no reader will open.
+///
+/// Pure — unit tested.
+fn pandoc_output_extension(format: &str) -> &str {
+    match format {
+        "epub2" | "epub3" => "epub",
+        "latex" | "beamer" => "tex",
+        "html4" | "html5" => "html",
+        "markdown" | "markdown_strict" | "markdown_phpextra" | "markdown_mmd"
+        | "markdown_github" | "commonmark" | "commonmark_x" | "gfm" => "md",
+        "plain" => "txt",
+        // Every other writer's name already is the extension it wants: odt, docx,
+        // pptx, epub, html, org, rst, json, typst, man, rtf, texinfo, …
+        other => other,
+    }
+}
+
 /// `pandoc --list-{input,output}-formats`, or the static fallback list when the
 /// binary cannot be run.
 fn pandoc_formats(list_flag: &str, fallback: &[&str]) -> Vec<String> {
@@ -58309,13 +58552,14 @@ fn pandoc_run(cx: &mut compositor::Context, input: &str, format: &str) {
     let mut command = std::process::Command::new("pandoc");
     command.arg("-f").arg(input).arg("-t").arg(format);
     // The binary writers cannot write to stdout at all, so they get an `-o` path:
-    // the source's name with the format as its extension, or a temporary file for
-    // an unsaved buffer.
+    // the source's name with the writer's *file* extension (which is not always
+    // the writer's name — `epub3` writes an `.epub`), or a temporary file for an
+    // unsaved buffer.
     let out_path = pandoc_is_binary_format(format).then(|| {
         source
             .clone()
             .unwrap_or_else(|| std::env::temp_dir().join("pandoc-output"))
-            .with_extension(format)
+            .with_extension(pandoc_output_extension(format))
     });
     if let Some(path) = &out_path {
         command.arg("-o").arg(path);
@@ -80889,4 +81133,117 @@ fn close_sticky_popup(cx: &mut Context) {
             cx.editor.set_error("no popup window is open");
         }
     }));
+}
+
+#[cfg(test)]
+mod mode_gating_tests {
+    use super::*;
+
+    /// `cwarn-configuration` is `'((c-mode (not reference)) (c++-mode t))`
+    /// (cwarn.el:117-119), and both `turn-on-cwarn-mode-if-enabled`
+    /// (cwarn.el:319-323) and `cwarn-font-lock-keywords` (cwarn.el:212-222) gate
+    /// on it — so `global-cwarn-mode` must not flag `if (a = b)` in a buffer that
+    /// is not C or C++.
+    #[test]
+    fn cwarn_only_applies_to_c_family_buffers() {
+        assert!(cwarn_language_is_c(Some("c")));
+        assert!(cwarn_language_is_c(Some("cpp")));
+        // Assignment-in-condition is idiomatic or impossible elsewhere; these
+        // buffers were being flagged before the language check existed.
+        assert!(!cwarn_language_is_c(Some("rust")));
+        assert!(!cwarn_language_is_c(Some("python")));
+        assert!(!cwarn_language_is_c(Some("go")));
+        // A buffer with no language at all (scratch, plain text) is not C either.
+        assert!(!cwarn_language_is_c(None));
+    }
+
+    /// pandoc's writer names are not file extensions: `-t epub3` still writes an
+    /// `.epub`, which is the only file the format's readers will open.
+    #[test]
+    fn pandoc_output_extension_is_the_file_type_not_the_writer() {
+        assert_eq!(pandoc_output_extension("epub2"), "epub");
+        assert_eq!(pandoc_output_extension("epub3"), "epub");
+        assert_eq!(pandoc_output_extension("latex"), "tex");
+        assert_eq!(pandoc_output_extension("beamer"), "tex");
+        assert_eq!(pandoc_output_extension("html5"), "html");
+        assert_eq!(pandoc_output_extension("html4"), "html");
+        assert_eq!(pandoc_output_extension("markdown"), "md");
+        assert_eq!(pandoc_output_extension("gfm"), "md");
+        assert_eq!(pandoc_output_extension("commonmark_x"), "md");
+        assert_eq!(pandoc_output_extension("plain"), "txt");
+        // The writers whose name already is the extension pass through, which is
+        // every binary writer but the epub dialects.
+        assert_eq!(pandoc_output_extension("odt"), "odt");
+        assert_eq!(pandoc_output_extension("docx"), "docx");
+        assert_eq!(pandoc_output_extension("pptx"), "pptx");
+        assert_eq!(pandoc_output_extension("epub"), "epub");
+        assert_eq!(pandoc_output_extension("typst"), "typst");
+    }
+
+    /// vim `i_CTRL-R_CTRL-P` "insert the contents of a register literally and fix
+    /// the indent" (insert.txt:175-177); `i_CTRL-R_CTRL-R` and `i_CTRL-R_CTRL-O`
+    /// insert what is in the register unchanged.
+    #[test]
+    fn only_ctrl_p_fixes_the_indent_of_an_inserted_register() {
+        assert!(insert_register_fixes_indent(KeyCode::Char('p')));
+        assert!(!insert_register_fixes_indent(KeyCode::Char('r')));
+        assert!(!insert_register_fixes_indent(KeyCode::Char('o')));
+
+        // What the `CTRL-P` path then does to the register's contents: the block
+        // is shifted to the target line's indent, relative depth intact — the
+        // same adjustment `[p` makes.
+        let register = "if (x) {\n    y();\n}\n";
+        assert_eq!(
+            reindent_block(register, "        "),
+            "        if (x) {\n            y();\n        }\n"
+        );
+    }
+
+    /// `isearch-update-ring` (isearch.el:1558-1566) is `add-to-history` under
+    /// `history-delete-duplicates`: newest first, no second copy of a string, and
+    /// nothing past `regexp-search-ring-max`.
+    #[test]
+    fn isearch_ring_update_is_add_to_history() {
+        let mut ring: Vec<String> = Vec::new();
+        isearch_ring_update(&mut ring, "foo", REGEXP_SEARCH_RING_MAX);
+        isearch_ring_update(&mut ring, "bar", REGEXP_SEARCH_RING_MAX);
+        assert_eq!(ring, vec!["bar".to_string(), "foo".to_string()]);
+
+        // Re-searching an older string moves it to the front rather than adding a
+        // duplicate entry.
+        isearch_ring_update(&mut ring, "foo", REGEXP_SEARCH_RING_MAX);
+        assert_eq!(ring, vec!["foo".to_string(), "bar".to_string()]);
+
+        // The oldest entry falls off the end at `…-ring-max`.
+        let mut ring: Vec<String> = Vec::new();
+        for i in 0..(REGEXP_SEARCH_RING_MAX + 4) {
+            isearch_ring_update(&mut ring, &format!("re{i}"), REGEXP_SEARCH_RING_MAX);
+        }
+        assert_eq!(ring.len(), REGEXP_SEARCH_RING_MAX);
+        assert_eq!(ring[0], format!("re{}", REGEXP_SEARCH_RING_MAX + 3));
+        assert!(!ring.contains(&"re0".to_string()));
+    }
+
+    /// `next-error-follow-minor-mode` must reach the quickfix/compilation list,
+    /// not just the Occur buffer: with the flag on, moving the highlight to an
+    /// entry visits it; with it off, nothing happens until `RET`.
+    #[test]
+    fn qf_follow_target_only_visits_while_follow_mode_is_on() {
+        let entry = |line: usize| QfEntry {
+            path: std::path::PathBuf::from("src/main.rs"),
+            line,
+            col: 0,
+            text: format!("error at {line}"),
+        };
+        let entries = vec![entry(1), entry(7), entry(9)];
+
+        assert_eq!(qf_follow_target(true, &entries, Some(&entries[1])), Some(1));
+        // Flag off: the picker only previews, exactly as it did before.
+        assert_eq!(qf_follow_target(false, &entries, Some(&entries[1])), None);
+        // Nothing highlighted (empty or fully filtered list): nothing to visit.
+        assert_eq!(qf_follow_target(true, &entries, None), None);
+        // An entry the list no longer holds (rebuilt under the picker) is not
+        // silently turned into index 0 and jumped to.
+        assert_eq!(qf_follow_target(true, &entries, Some(&entry(42))), None);
+    }
 }

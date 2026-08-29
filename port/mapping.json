@@ -4731,11 +4731,11 @@
  },
  {
   "spec_id": "emacs.command.cwarn_mode",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:cwarn_mode"
   ],
-  "note": "highlights the C constructs cwarn.el flags: an assignment in an if/while condition (if (a = b)) and a semicolon that silently empties the body (if (x);). Scans the visible lines each frame, so it tracks edits. Divergence: cwarn.el's third check - a & in a C++ function call, warning of pass-by-reference - is not ported; it needs the callee's declaration, which a line scan does not have"
+  "note": "The third cwarn.el check is in. The old note said it needed the callee's declaration; it does not -- cwarn-font-lock-match-reference (cwarn.el:305) is purely syntactic: the regexp `[^&]\\\\(&\\\\)[^&=]`, backward-up-list landing on `(`, and c-at-toplevel-p. cwarn_reference_scan (zmax-core/src/cmode.rs) implements exactly that, modelling toplevel with a brace stack in which class/struct/union/namespace/extern open a declaration level (cc-engine's \"directly inside a class, namespace or other block that contains another declaration level\"), skipping comments and string/char literals so they neither nest nor fire, and reusing the existing in-macro test. It is C++-only, per cwarn-configuration's `((c-mode (not reference)) (c++-mode t))`, which the new CWarnLang carries. Five tests: the flag itself, `&&`/`&=` non-matches, the paren-and-macro conditions, toplevel vs function body vs class member, and literals."
  },
  {
   "spec_id": "emacs.command.cycle_spacing",
@@ -5566,11 +5566,11 @@
  },
  {
   "spec_id": "emacs.command.diary_hebrew_rosh_hodesh",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:diary_hebrew_rosh_hodesh"
   ],
-  "note": "diary-hebrew-rosh-hodesh: detects Rosh Hodesh (1st/30th of a Hebrew month) and names it; Emacs additionally reports Shabbat Mevarchim / the molad, which need the parashah tables"
+  "note": "Full port of cal-hebrew.el:858-920, whose docstring is \"Entry applies if date is Rosh Hodesh, the day before, or the Saturday before\" -- three different days, where zmax answered only the first and only with the month name. Now: the `(and (= h-day 1) (/= h-month 7))` exclusion, so 1 Tishri is Rosh Hashanah and gets no entry; the `(first day)`/`(second day)` suffixes off the previous day's Hebrew day; `Erev Rosh Hodesh %s` on day 29 when the month is not 6; and both Saturday `Mevarchim Rosh Hodesh` arms, including the wrap to Nisan past the year's last month. Expected strings were generated from GNU Emacs 31.1 itself under `emacs -Q --batch`. The caller was prefixing its own \"Rosh Hodesh \", which would have doubled the words and mislabelled the Erev and Mevarchim entries, so it now reports the entry verbatim. An existing test asserted the missing exclusion (1 Tishri -> Some(\"Tishri\")) and was corrected."
  },
  {
   "spec_id": "emacs.command.diary_hebrew_sabbath_candles",
@@ -6287,19 +6287,19 @@
  },
  {
   "spec_id": "emacs.command.dired_do_isearch",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:dired:A-s"
   ],
-  "note": "re-keyed to the real `M-s a C-s`; still a grep of the marked files' contents rather than an incremental isearch across them"
+  "note": "`M-s a C-s` is dired-do-isearch, a LITERAL search; only `M-s a C-M-s` is the regexp form. Both arms armed the same regexp prompt, so a `.` or `*` in a literal search silently matched the wrong thing. The literal branch now passes `grep -F` -- the search shells out to grep, whose default dialect is POSIX BRE with GNU extensions, so regex-escaping the pattern would have turned `a+` into grep's own one-or-more operator and reintroduced the bug. The two prompts and the result header now name which search ran."
  },
  {
   "spec_id": "emacs.command.dired_do_isearch_regexp",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:dired:A-s"
   ],
-  "note": "re-keyed to the real `M-s a C-M-s`; same grep-vs-isearch caveat"
+  "note": "The regexp form, now distinguishable from the literal one (see dired-do-isearch), and its translator no longer emits patterns that misbehave: emacs_regexp_to_rust (zmax-term/src/ui/dired.rs) mapped `\\\\sw` to `\\\\s` plus a literal `w`, which COMPILED and matched whitespace-then-w -- a silent mismatch rather than an error. It now translates the two syntax classes with an exact analogue (`\\\\s-`/`\\\\s ` and `\\\\sw`, with complements) and returns None for everything it cannot express -- the other syntax classes, `\\\\cC` categories, and backreferences, which a finite automaton cannot support at all -- so the caller reports a bad pattern instead of holding point. Tested by compiling every translated pattern with regex::Regex::new."
  },
  {
   "spec_id": "emacs.command.dired_do_kill_lines",
@@ -8510,11 +8510,11 @@
  },
  {
   "spec_id": "emacs.command.global_cwarn_mode",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:global_cwarn_mode"
   ],
-  "note": "turns cwarn-mode on in every buffer (same checks, same divergence)"
+  "note": "Two defects, both fixed. The mode now carries cwarn's third check (see cwarn-mode). And it no longer flags C constructs in buffers that are not C: the highlight path read a bare global flag, so `if (a = b)` was warned about in Rust and Python buffers. emacs gates on cwarn-is-enabled major-mode (cwarn.el:319-327), and cwarn_enabled (zmax-term/src/commands.rs) now also requires the document's language to be c or cpp. Because both readers hold only a DocumentId, the language set is kept in a small registry refreshed after command execution; that refresh bails on a single relaxed atomic load when cwarn-mode is off everywhere, so the editor's hottest path does not take a mutex for a mode nobody turned on."
  },
  {
   "spec_id": "emacs.command.global_display_fill_column_indicator_mode",
@@ -9353,7 +9353,7 @@
   "evidence": [
    "static:buffer_picker"
   ],
-  "note": "Interactive buffer list/selector; covers ibuffer's list-and-switch role (not its bulk-mark ops)."
+  "note": "Covers ibuffer's list-and-switch role through the buffer picker. Still partial for its bulk-mark operations -- though a full mark-and-execute Buffer Menu does exist beside it (ui/bufmenu.rs: m/d/C-d/s/u/U/M-DEL/x/T/I/b, backed by zmax-core/src/buffer_menu.rs's Mark::Select|Delete|Save), so the gap is that `ibuffer` is pointed at the picker rather than that component, plus ibuffer's own filter groups (`/`) and sort (`,`)."
  },
  {
   "spec_id": "emacs.command.icalendar_export_file",
@@ -14747,11 +14747,11 @@
  },
  {
   "spec_id": "emacs.command.set_justification_none",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:set-justification-none"
   ],
-  "note": "set-justification-none -> :set-justification-none: one-shot region transform trims trailing whitespace to turn justification off; does not restore the persistent enriched-mode justification text property"
+  "note": "set-justification-none is `unjustify-region` THEN `fill-region` (fill.el:1274-1276) -- it UNDOES justification. zmax's Justification::None arm was `line.trim_end()`, so after a full/right/center justify it left the stretched inter-word gaps and the leading pad exactly where they were, i.e. it did nothing. unjustify_block (zmax-core/src/text_engine.rs) refills paragraph-at-a-time through fill_paragraph with an empty prefix, which drops the leading pad (unjustify-current-line's center/right arm) and collapses the stretched runs (its full arm, canonically-space-region) before refilling to width; blank lines break the paragraph and pass through. Tested by round-tripping real Full/Right/Center output back through None. An existing test was asserting the defect (a surviving three-space pad) and now asserts the pad is gone."
  },
  {
   "spec_id": "emacs.command.set_justification_right",

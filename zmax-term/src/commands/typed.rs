@@ -45041,10 +45041,31 @@ struct SlackSession {
 
 static SLACK_SESSION: std::sync::Mutex<Option<SlackSession>> = std::sync::Mutex::new(None);
 
+/// The agent every Slack call goes through, with the timeouts that keep a hung
+/// endpoint from hanging the editor.
+///
+/// These calls block the UI thread, and ureq's defaults do not bound them: "The
+/// default is no timeout. In other words, requests may block forever on reads by
+/// default" (ureq 2.12 `AgentBuilder::timeout_read`). A Slack host that accepts
+/// the connection and then stops answering would leave zmax with nothing to
+/// press. The agent is shared so the connection pool survives between calls.
+fn slack_agent() -> &'static ureq::Agent {
+    static AGENT: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
+    AGENT.get_or_init(|| {
+        let timeout = std::time::Duration::from_secs(5);
+        ureq::builder()
+            .timeout_connect(timeout)
+            .timeout_read(timeout)
+            .timeout_write(timeout)
+            .build()
+    })
+}
+
 /// Call a Slack Web API method with the session token. Blocking, like the IRC
-/// session's socket writes.
+/// session's socket writes — but bounded, see [`slack_agent`].
 fn slack_api(token: &str, method: &str, params: &[(&str, &str)]) -> anyhow::Result<Value> {
-    let resp = ureq::post(&format!("https://slack.com/api/{method}"))
+    let resp = slack_agent()
+        .post(&format!("https://slack.com/api/{method}"))
         .set("Authorization", &format!("Bearer {token}"))
         .send_form(params)
         .map_err(|e| anyhow!("slack: {method}: {e}"))?;
@@ -45668,6 +45689,30 @@ fn syntime_report(language: &str) -> String {
     out
 }
 
+/// Show a `:syntime report` without destroying the buffer it describes.
+///
+/// Not `show_text_in_scratch`: that opens the scratch with `Action::Replace`,
+/// which throws away the very buffer whose highlighting was just measured. Vim
+/// shows "the syntax items used since `:syntime on` in the current window"
+/// (syntax.txt `:synti[me] report`), so that window has to survive the report —
+/// hence a split. A report with no rows is just the header line, which fits the
+/// status line the way vim's message area takes it.
+fn syntime_show(editor: &mut Editor, report: &str) {
+    let report = take_output_filter(report);
+    if report.lines().count() <= 1 {
+        editor.set_status(report.trim_end().to_string());
+        return;
+    }
+    editor.new_file(Action::HorizontalSplit);
+    let (view, doc) = current!(editor);
+    doc.ensure_view_init(view.id);
+    let transaction =
+        Transaction::insert(doc.text(), doc.selection(view.id), report.as_str().into())
+            .with_selection(Selection::point(0));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
 /// Vim `:syntime {on|off|clear|report}` — profile highlighting and report it.
 fn syntime(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -45699,7 +45744,7 @@ fn syntime(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                 String::new()
             };
             let report = syntime_report(&language);
-            super::show_text_in_scratch(cx.editor, &report);
+            syntime_show(cx.editor, &report);
         }
         other => bail!("E475: Invalid argument: syntime {other}"),
     }
@@ -46539,6 +46584,73 @@ thread_local! {
     /// The last debug command typed; vim repeats it when the prompt gets an
     /// empty line.
     static DEBUG_LAST: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+    /// Under `:debuggreedy`, the `:debug {cmd}` that has not run yet. While this
+    /// is set the editor is *in* debug mode with no prompt on screen, so the next
+    /// Ex line typed is read as a debug command instead of being executed.
+    static DEBUG_PENDING: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+}
+
+/// What one debug-mode command does with the command being debugged.
+enum DebugStep {
+    /// The debugged command ran (or was abandoned): debug mode is over.
+    Done,
+    /// Debug mode continues — ask for another debug command.
+    Again,
+}
+
+/// Run one debug-mode command `input` against the pending `cmd`, as vim's debug
+/// mode does: `cont`/`next`/`step`/`finish` run it and leave debug mode, `quit`
+/// abandons it, `interrupt` abandons it but stays in debug mode, `backtrace`
+/// prints the call stack, and anything else is executed as an Ex command in the
+/// debug context with debug mode still on.
+///
+/// Shared by the `>` prompt and `:debuggreedy`, which differ only in where the
+/// line comes from — greedy reads "debug mode commands from the normal input
+/// stream, instead of getting them directly from the user" (repeat.txt
+/// `:debuggreedy`), not in what those commands mean.
+fn debug_step(
+    cx: &mut compositor::Context,
+    input: &str,
+    cmd: &str,
+) -> (DebugStep, anyhow::Result<()>) {
+    // An empty line repeats the previous debug command.
+    let mut answer = input.trim().to_string();
+    if answer.is_empty() {
+        answer = DEBUG_LAST.with(|l| l.borrow().clone());
+    } else {
+        DEBUG_LAST.with(|l| *l.borrow_mut() = answer.clone());
+    }
+    match answer.as_str() {
+        // Everything that resumes execution: with no function or sourced script
+        // to step into, all four run the command.
+        "c" | "co" | "con" | "cont" | "n" | "ne" | "nex" | "next" | "s" | "st" | "ste" | "step"
+        | "f" | "fi" | "fin" | "fini" | "finis" | "finish" | "" => (
+            DebugStep::Done,
+            execute_command_line(cx, cmd, PromptEvent::Validate),
+        ),
+        "q" | "qu" | "qui" | "quit" => {
+            cx.editor.set_status("aborted");
+            (DebugStep::Done, Ok(()))
+        }
+        // Like CTRL-C, but comes back to debug mode.
+        "i" | "in" | "int" | "inte" | "inter" | "interr" | "interru" | "interrup" | "interrupt" => {
+            cx.editor.set_status("Interrupted");
+            (DebugStep::Again, Ok(()))
+        }
+        "bt" | "backtrace" | "where" => {
+            cx.editor.set_status(format!("->0 {cmd}"));
+            (DebugStep::Again, Ok(()))
+        }
+        // One frame deep, so there is nowhere to move to.
+        "up" | "down" | "fr" | "frame" => {
+            cx.editor.set_error("frame is not available");
+            (DebugStep::Again, Ok(()))
+        }
+        other => (
+            DebugStep::Again,
+            execute_command_line(cx, other, PromptEvent::Validate),
+        ),
+    }
 }
 
 /// Open vim's `>` debug prompt for `cmd`, which has not run yet. `cont`, `next`,
@@ -46558,47 +46670,12 @@ fn debug_prompt(cx: &mut compositor::Context, cmd: String) {
                     if event != PromptEvent::Validate {
                         return;
                     }
-                    // An empty line repeats the previous debug command.
-                    let mut answer = input.trim().to_string();
-                    if answer.is_empty() {
-                        answer = DEBUG_LAST.with(|l| l.borrow().clone());
-                    } else {
-                        DEBUG_LAST.with(|l| *l.borrow_mut() = answer.clone());
+                    let (step, result) = debug_step(cx, input, &cmd);
+                    // Still in debug mode: put the `>` prompt back up for the
+                    // next debug command.
+                    if matches!(step, DebugStep::Again) {
+                        debug_prompt(cx, cmd.clone());
                     }
-                    let result = match answer.as_str() {
-                        // Everything that resumes execution: with no function or
-                        // sourced script to step into, all four run the command.
-                        "c" | "co" | "con" | "cont" | "n" | "ne" | "nex" | "next" | "s" | "st"
-                        | "ste" | "step" | "f" | "fi" | "fin" | "fini" | "finis" | "finish"
-                        | "" => execute_command_line(cx, &cmd, PromptEvent::Validate),
-                        "q" | "qu" | "qui" | "quit" => {
-                            cx.editor.set_status("aborted");
-                            Ok(())
-                        }
-                        // Like CTRL-C, but comes back to debug mode.
-                        "i" | "in" | "int" | "inte" | "inter" | "interr" | "interru"
-                        | "interrup" | "interrupt" => {
-                            cx.editor.set_status("Interrupted");
-                            debug_prompt(cx, cmd.clone());
-                            Ok(())
-                        }
-                        "bt" | "backtrace" | "where" => {
-                            cx.editor.set_status(format!("->0 {cmd}"));
-                            debug_prompt(cx, cmd.clone());
-                            Ok(())
-                        }
-                        // One frame deep, so there is nowhere to move to.
-                        "up" | "down" | "fr" | "frame" => {
-                            cx.editor.set_error("frame is not available");
-                            debug_prompt(cx, cmd.clone());
-                            Ok(())
-                        }
-                        other => {
-                            let r = execute_command_line(cx, other, PromptEvent::Validate);
-                            debug_prompt(cx, cmd.clone());
-                            r
-                        }
-                    };
                     if let Err(err) = result {
                         cx.editor.set_error(err.to_string());
                     }
@@ -46623,15 +46700,22 @@ fn ex_debug(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
         bail!("E471: Argument required: :debug {{cmd}}");
     }
     if DEBUG_GREEDY.with(|g| g.get()) {
-        return execute_command_line(cx, cmd, PromptEvent::Validate);
+        // Greedy does not skip the debugger — it only changes where the debug
+        // commands come from: "Read debug mode commands from the normal input
+        // stream, instead of getting them directly from the user" (repeat.txt
+        // `:debuggreedy`). So debug mode goes on with no `>` prompt, and the
+        // next Ex line typed is taken as the debug command (see
+        // `execute_command_line`).
+        cx.editor.set_status(format!("cmd: {cmd}"));
+        DEBUG_PENDING.with(|p| *p.borrow_mut() = Some(cmd.to_string()));
+        return Ok(());
     }
     debug_prompt(cx, cmd.to_string());
     Ok(())
 }
 
 /// vim `:debuggreedy` — read debug mode commands from the normal input stream
-/// rather than typing them at the `>` prompt. `:debuggreedy 0` is the same
-/// switch-off as `:0debuggreedy`.
+/// rather than typing them at the `>` prompt.
 fn ex_debuggreedy(
     cx: &mut compositor::Context,
     args: Args,
@@ -46640,10 +46724,14 @@ fn ex_debuggreedy(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let on = !matches!(args.first().map(|a| a.trim()), Some("0"));
-    DEBUG_GREEDY.with(|g| g.set(on));
-    cx.editor
-        .set_status(if on { "debuggreedy" } else { "0debuggreedy" });
+    // `:debuggreedy` takes no argument (repeat.txt lists it bare); the off
+    // switch is the separate `:0debuggreedy`, with the count written into the
+    // command name. `:debuggreedy 0` is not vim's spelling of it.
+    if let Some(arg) = args.first() {
+        bail!("E488: Trailing characters: debuggreedy {arg}");
+    }
+    DEBUG_GREEDY.with(|g| g.set(true));
+    cx.editor.set_status("debuggreedy");
     Ok(())
 }
 
@@ -53495,8 +53583,13 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Build and run the project with the given arguments (dotnet.el dotnet-run-with-args, spacemacs SPC m p r a).",
         fun: ex_dotnet_run_with_args,
         completer: CommandCompleter::none(),
+        // Take the argument tail verbatim, like `:make` and `:lint` above: the
+        // arguments this command exists to pass on are program flags
+        // (`-c Release`, `--no-build`), and with normal parsing every one of
+        // them is read as a flag of `:dotnet-run-with-args` itself and rejected.
         signature: Signature {
-            positionals: (0, None),
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
             ..Signature::DEFAULT
         },
     },
@@ -68054,7 +68147,9 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "syntime",
-        aliases: &[],
+        // vim spells it `:synti[me]` (syntax.txt `*:synti*`), so everything from
+        // `:synti` up is the same command.
+        aliases: &["synti", "syntim"],
         doc: "Profile syntax highlighting: :syntime on|off|clear|report.",
         fun: syntime,
         completer: CommandCompleter::none(),
@@ -68495,8 +68590,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read debug mode commands from the normal input stream instead of the prompt (vim :debuggreedy).",
         fun: ex_debuggreedy,
         completer: CommandCompleter::none(),
+        // No argument, like `:0debuggreedy` below: vim spells the off switch as
+        // a count on the command name, never as `:debuggreedy 0`.
         signature: Signature {
-            positionals: (0, Some(1)),
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
@@ -69265,6 +69362,19 @@ pub(crate) fn execute_command_line(
     input: &str,
     event: PromptEvent,
 ) -> anyhow::Result<()> {
+    // vim `:debuggreedy` — while a `:debug {cmd}` armed by greedy is waiting, the
+    // normal input stream *is* the debug prompt, so this line is a debug command
+    // and not an Ex command. `debug_step` takes the pending command out first, so
+    // the `cont`/`other` arms re-enter here as ordinary command lines.
+    if event == PromptEvent::Validate {
+        if let Some(cmd) = DEBUG_PENDING.with(|p| p.borrow_mut().take()) {
+            let (step, result) = debug_step(cx, input, &cmd);
+            if matches!(step, DebugStep::Again) {
+                DEBUG_PENDING.with(|p| *p.borrow_mut() = Some(cmd));
+            }
+            return result;
+        }
+    }
     let result = execute_command_line_inner(cx, input, event);
     if event == PromptEvent::Validate {
         bufhidden_close_hidden(cx.editor);
@@ -76347,6 +76457,9 @@ mod vim_ex_command_tests {
             ("che", "checkhealth"),
             ("breaka", "breakadd"),
             ("pyxdo", "py3do"),
+            // vim writes this one `:synti[me]` (syntax.txt `*:synti*`).
+            ("synti", "syntime"),
+            ("syntim", "syntime"),
         ] {
             assert_eq!(
                 TYPABLE_COMMAND_MAP.get(abbrev).map(|c| c.name),
@@ -76354,6 +76467,43 @@ mod vim_ex_command_tests {
                 ":{abbrev} must resolve to :{full}"
             );
         }
+    }
+
+    /// Parse `rest` with the real signature of `:{name}`, the way the dispatcher
+    /// does for a validated command line.
+    #[track_caller]
+    fn parse_with_signature(name: &str, rest: &str) -> Result<Vec<String>, String> {
+        let cmd = TYPABLE_COMMAND_MAP
+            .get(name)
+            .unwrap_or_else(|| panic!("no `:{name}` command"));
+        Args::parse(rest, cmd.signature, true, |token| Ok(token.content))
+            .map(|args| args.into_iter().map(|arg| arg.to_string()).collect())
+            .map_err(|err| err.to_string())
+    }
+
+    /// `:dotnet-run-with-args` exists to forward arguments to the program, and
+    /// those arguments are program flags. Parsed with normal rules every
+    /// `-`-prefixed one is read as a flag of the Ex command itself and the line
+    /// is rejected, so the signature has to take the tail raw.
+    #[test]
+    fn dotnet_run_with_args_takes_the_tail_raw() {
+        assert_eq!(
+            parse_with_signature("dotnet-run-with-args", "-c Release --no-build").unwrap(),
+            ["-c Release --no-build"]
+        );
+        // No arguments is still valid: `:dotnet-run-with-args` alone runs `dotnet run`.
+        assert!(parse_with_signature("dotnet-run-with-args", "")
+            .unwrap()
+            .is_empty());
+    }
+
+    /// vim's `:debuggreedy` takes no argument — the off switch is the separate
+    /// `:0debuggreedy`, with the count written into the command name.
+    #[test]
+    fn debuggreedy_takes_no_argument() {
+        assert!(parse_with_signature("debuggreedy", "").is_ok());
+        assert!(parse_with_signature("debuggreedy", "0").is_err());
+        assert!(parse_with_signature("0debuggreedy", "").is_ok());
     }
 }
 

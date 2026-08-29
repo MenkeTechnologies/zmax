@@ -350,6 +350,21 @@ pub enum CWarn {
     /// `if (x);` — a semicolon that makes the body empty (Emacs
     /// `cwarn-font-lock-semicolon-keywords`).
     EmptyBodySemicolon,
+    /// `void f(int &x)` — a `&` in a top-level parameter list, so the argument is
+    /// silently passed by reference and the callee can write through it (Emacs
+    /// `cwarn-font-lock-reference-keywords`). C++ only.
+    ReferenceParameter,
+}
+
+/// Which entry of `cwarn-configuration` (cwarn.el:117-119) a scan runs under.
+/// The default configuration is `((c-mode (not reference)) (c++-mode t))`, so the
+/// pass-by-reference check is the one feature that depends on the language.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CWarnLang {
+    /// `(c-mode (not reference))`: every check except [`CWarn::ReferenceParameter`].
+    C,
+    /// `(c++-mode t)`: every check.
+    Cpp,
 }
 
 /// A flagged construct: the line, the byte range within it, and what is wrong.
@@ -366,13 +381,11 @@ pub struct CWarning {
 /// The keywords whose parenthesised condition `cwarn-mode` inspects.
 const CWARN_KEYWORDS: [&str; 3] = ["if", "while", "for"];
 
-/// Scan `line` for the constructs `cwarn-mode` highlights.
-///
-/// Ports the two checks of GNU Emacs' `cwarn.el` that are language-neutral: an
-/// assignment inside a condition, and a semicolon straight after a condition
-/// (which silently empties the body). `cwarn.el`'s third check — a `&` in a C++
-/// function call, warning that the argument is passed by reference — is not
-/// ported: it needs the callee's declaration, which a line scan does not have.
+/// Scan `line` for the constructs `cwarn-mode` highlights within a single line:
+/// an assignment inside a condition, and a semicolon straight after a condition
+/// (which silently empties the body). `cwarn.el`'s third check, the
+/// pass-by-reference `&`, needs the enclosing list and brace nesting and so lives
+/// in [`cwarn_reference_scan`], which walks the whole buffer.
 pub fn cwarn_line(line: usize, src: &str) -> Vec<CWarning> {
     let mut out = Vec::new();
     let bytes = src.as_bytes();
@@ -422,13 +435,162 @@ pub fn cwarn_line(line: usize, src: &str) -> Vec<CWarning> {
     out
 }
 
-/// Every construct `cwarn-mode` flags in `lines`.
+/// Every construct `cwarn-mode` flags in `lines` under the C configuration
+/// (`(c-mode (not reference))`) — i.e. every check but pass-by-reference. Use
+/// [`cwarn_scan_lang`] to pick the language.
 pub fn cwarn_scan(lines: &[&str]) -> Vec<CWarning> {
-    lines
+    cwarn_scan_lang(lines, CWarnLang::C)
+}
+
+/// Every construct `cwarn-mode` flags in `lines`, in buffer order, with the
+/// feature set `cwarn-configuration` gives `lang`.
+pub fn cwarn_scan_lang(lines: &[&str], lang: CWarnLang) -> Vec<CWarning> {
+    let mut out: Vec<CWarning> = lines
         .iter()
         .enumerate()
         .flat_map(|(i, line)| cwarn_line(i, line))
-        .collect()
+        .collect();
+    if lang == CWarnLang::Cpp {
+        out.extend(cwarn_reference_scan(lines));
+    }
+    out.sort_by_key(|w| (w.line, w.range.start));
+    out
+}
+
+/// The pass-by-reference `&`s of `cwarn-font-lock-match-reference` (cwarn.el:305):
+///
+/// ```text
+/// (cwarn-font-lock-match
+///  "[^&]\\(&\\)[^&=]"
+///  (backward-up-list 1)
+///  (and (eq (following-char) ?\()
+///       (not (cwarn-inside-macro))
+///       (c-at-toplevel-p)))
+/// ```
+///
+/// Purely syntactic — nothing about the callee is consulted. The regexp picks a
+/// lone `&` (a character on each side, neither of them `&`, and the one after not
+/// `=`), then the innermost enclosing list must be a `(`, the point must not be
+/// inside a macro, and `c-at-toplevel-p` must hold; together that is a `&` in the
+/// parameter list of a declaration written where a function may be written.
+///
+/// `backward-up-list` and `c-at-toplevel-p` read the whole buffer, so this walks
+/// `lines` carrying a delimiter stack, skipping comments and literals so a `(` or
+/// `&` inside one neither nests nor fires. `c-at-toplevel-p` (cc-engine.el:12188)
+/// is "outside any enclosing block … or directly inside a class, namespace or
+/// other block that contains another declaration level"; a `{` is therefore
+/// recorded as a declaration level when the statement that opened it named one of
+/// [`DECL_BLOCK_KEYWORDS`], and top level means every open `{` is one of those.
+fn cwarn_reference_scan(lines: &[&str]) -> Vec<CWarning> {
+    let mut out = Vec::new();
+    let mut delims: Vec<u8> = Vec::new(); // innermost-last stack of `(`, `[`, `{`
+    let mut decl_level: Vec<bool> = Vec::new(); // one entry per open `{`
+    let mut stmt = String::new(); // text since the last `;`, `{` or `}`
+    let mut in_block_comment = false;
+    for (i, line) in lines.iter().enumerate() {
+        let in_macro = in_cpp_macro(lines, i);
+        let b = line.as_bytes();
+        let mut j = 0usize;
+        while j < b.len() {
+            let c = b[j];
+            if in_block_comment {
+                if c == b'*' && b.get(j + 1) == Some(&b'/') {
+                    in_block_comment = false;
+                    j += 1;
+                }
+                j += 1;
+                continue;
+            }
+            match c {
+                b'/' if b.get(j + 1) == Some(&b'/') => break,
+                b'/' if b.get(j + 1) == Some(&b'*') => {
+                    in_block_comment = true;
+                    j += 2;
+                    continue;
+                }
+                b'"' | b'\'' => {
+                    j = skip_literal(b, j);
+                    continue;
+                }
+                b'(' | b'[' => {
+                    delims.push(c);
+                    stmt.push(c as char);
+                }
+                b'{' => {
+                    delims.push(c);
+                    decl_level.push(DECL_BLOCK_KEYWORDS.iter().any(|k| contains_word(&stmt, k)));
+                    stmt.clear();
+                }
+                b')' | b']' => {
+                    delims.pop();
+                }
+                b'}' => {
+                    delims.pop();
+                    decl_level.pop();
+                    stmt.clear();
+                }
+                b';' => stmt.clear(),
+                b'&' => {
+                    let prev = j.checked_sub(1).map(|p| b[p]);
+                    let next = b.get(j + 1).copied();
+                    let lone = prev.is_some_and(|p| p != b'&')
+                        && next.is_some_and(|n| n != b'&' && n != b'=');
+                    if lone
+                        && delims.last() == Some(&b'(')
+                        && !in_macro
+                        && decl_level.iter().all(|top| *top)
+                    {
+                        out.push(CWarning {
+                            line: i,
+                            range: j..j + 1,
+                            kind: CWarn::ReferenceParameter,
+                        });
+                    }
+                    stmt.push('&');
+                }
+                // Non-ASCII bytes become a space so a UTF-8 identifier cannot
+                // glue itself onto one of the keywords looked for above.
+                _ => stmt.push(if c.is_ascii() { c as char } else { ' ' }),
+            }
+            j += 1;
+        }
+    }
+    out
+}
+
+/// The block openers that keep `c-at-toplevel-p` true: a brace that introduces
+/// another declaration level rather than a body of statements.
+const DECL_BLOCK_KEYWORDS: [&str; 5] = ["class", "struct", "union", "namespace", "extern"];
+
+/// Index just past the string or character literal opening at `at`, or the end of
+/// the line when it is unterminated.
+fn skip_literal(b: &[u8], at: usize) -> usize {
+    let quote = b[at];
+    let mut i = at + 1;
+    while i < b.len() {
+        match b[i] {
+            b'\\' => i += 2,
+            c if c == quote => return i + 1,
+            _ => i += 1,
+        }
+    }
+    b.len()
+}
+
+/// True when `hay` contains `word` delimited as a whole identifier.
+fn contains_word(hay: &str, word: &str) -> bool {
+    let hb = hay.as_bytes();
+    let mut from = 0usize;
+    while let Some(rel) = hay[from..].find(word) {
+        let at = from + rel;
+        from = at + word.len();
+        let before = at == 0 || !is_word_byte(hb[at - 1]);
+        let after = hb.get(at + word.len()).is_none_or(|b| !is_word_byte(*b));
+        if before && after {
+            return true;
+        }
+    }
+    false
 }
 
 fn is_word_byte(b: u8) -> bool {
@@ -863,6 +1025,88 @@ mod tests {
         assert_eq!(warns.len(), 3, "{warns:?}");
         assert_eq!(warns[0].line, 0);
         assert!(warns.iter().filter(|w| w.line == 2).count() == 2);
+    }
+
+    /// `cwarn-font-lock-match-reference` (cwarn.el:301-311) is
+    /// `(cwarn-font-lock-match "[^&]\\(&\\)[^&=]" (backward-up-list 1)
+    /// (and (eq (following-char) ?\() (not (cwarn-inside-macro)) (c-at-toplevel-p)))`,
+    /// and `cwarn-configuration` (cwarn.el:117-119) is
+    /// `((c-mode (not reference)) (c++-mode t))` — so the check is C++-only.
+    #[test]
+    fn cwarn_flags_a_reference_parameter_in_cpp_only() {
+        let lines = ["void f(int &x);"];
+        let warns = cwarn_scan_lang(&lines, CWarnLang::Cpp);
+        assert_eq!(warns.len(), 1, "{warns:?}");
+        assert_eq!(warns[0].kind, CWarn::ReferenceParameter);
+        // group 1 of the regexp is the `&` itself
+        assert_eq!(warns[0].range, 11..12);
+        assert_eq!(&lines[0][warns[0].range.clone()], "&");
+        // `(c-mode (not reference))`: the same source is clean in C.
+        assert!(cwarn_scan_lang(&lines, CWarnLang::C).is_empty());
+        assert!(cwarn_scan(&lines).is_empty());
+    }
+
+    /// The regexp `"[^&]\\(&\\)[^&=]"` (cwarn.el:307) excludes `&&` and `&=`, and
+    /// needs a character on each side of the `&`.
+    #[test]
+    fn cwarn_reference_ignores_and_and_compound_assignment() {
+        for src in ["void f(int a && b);", "void f(int a &= b);"] {
+            assert!(
+                cwarn_scan_lang(&[src], CWarnLang::Cpp).is_empty(),
+                "{src}"
+            );
+        }
+    }
+
+    /// `(eq (following-char) ?\()` after `backward-up-list 1`: the innermost
+    /// enclosing list must be a paren, and `(not (cwarn-inside-macro))`
+    /// (cwarn.el:203) drops anything inside a `#define`.
+    #[test]
+    fn cwarn_reference_needs_a_paren_and_no_macro() {
+        // innermost list is a brace, not a paren
+        assert!(cwarn_scan_lang(&["int a[] = {1 & 2};"], CWarnLang::Cpp).is_empty());
+        // inside a macro definition, including its backslash continuation
+        let macro_lines = ["#define F(x) \\", "    g(x & 1)"];
+        assert!(
+            cwarn_scan_lang(&macro_lines, CWarnLang::Cpp).is_empty(),
+            "{:?}",
+            cwarn_scan_lang(&macro_lines, CWarnLang::Cpp)
+        );
+    }
+
+    /// `c-at-toplevel-p` (cc-engine.el:12188) is "outside any enclosing block …
+    /// or directly inside a class, namespace or other block that contains another
+    /// declaration level", so a `&` in a function body is not a parameter.
+    #[test]
+    fn cwarn_reference_respects_toplevel() {
+        // a bitwise `and` in a statement body: not at top level, not flagged
+        let body = ["void f() {", "    g(a & b);", "}"];
+        assert!(cwarn_scan_lang(&body, CWarnLang::Cpp).is_empty());
+        // a member declaration is at top level: the class brace is a declaration level
+        let member = ["class C {", "    void f(int &x);", "};"];
+        let warns = cwarn_scan_lang(&member, CWarnLang::Cpp);
+        assert_eq!(warns.len(), 1, "{warns:?}");
+        assert_eq!(warns[0].line, 1);
+        assert_eq!(warns[0].range, 15..16);
+        // …but a body nested inside that class is not
+        let inline = ["class C {", "    void f() { g(a & b); }", "};"];
+        assert!(cwarn_scan_lang(&inline, CWarnLang::Cpp).is_empty());
+    }
+
+    #[test]
+    fn cwarn_reference_skips_comments_and_literals() {
+        // an unbalanced `(` in a comment or a literal must not open a list, and a
+        // `&` inside one must not fire
+        let lines = [
+            "// void f(int &x);",
+            "const char *s = \"f(int &x)\";",
+            "/* void f(int &x); */",
+            "void g(int &y);",
+        ];
+        let warns = cwarn_scan_lang(&lines, CWarnLang::Cpp);
+        assert_eq!(warns.len(), 1, "{warns:?}");
+        assert_eq!(warns[0].line, 3);
+        assert_eq!(warns[0].range, 11..12);
     }
 
     /// A source file's counterpart is its header (and vice versa), preserving the
