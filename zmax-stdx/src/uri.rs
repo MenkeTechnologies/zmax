@@ -284,6 +284,75 @@ mod tests {
         assert_eq!(url.path(), "/path");
     }
 
+    /// `path()` stops at a query or fragment, and an authority with nothing
+    /// after it has no path at all. These come off the wire from language
+    /// servers, so the accessor has to hold up on shapes zmax never builds.
+    #[test]
+    fn path_stops_at_query_or_fragment_and_tolerates_a_bare_authority() {
+        let path_of = |input: &str| Url::parse(input).unwrap().path().to_string();
+
+        assert_eq!(path_of("file:///a/b.rs?query=1"), "/a/b.rs");
+        assert_eq!(path_of("file:///a/b.rs#frag"), "/a/b.rs");
+        assert_eq!(path_of("file:///a/b.rs?q#frag"), "/a/b.rs");
+        // Authority with no path component.
+        assert_eq!(path_of("file://host"), "");
+        assert_eq!(path_of("https://example.com"), "");
+        // A scheme-only path keeps its query handling too.
+        assert_eq!(path_of("csharp:/metadata/Baz.cs?x=1"), "/metadata/Baz.cs");
+    }
+
+    /// `to_file_path` is the inverse of `from_file_path` and must refuse
+    /// everything that is not a local `file://` URI rather than inventing a path.
+    #[cfg(not(windows))]
+    #[test]
+    fn to_file_path_refuses_anything_but_a_local_file_uri() {
+        let refuses = |input: &str| {
+            assert!(
+                Url::parse(input).unwrap().to_file_path().is_err(),
+                "must refuse {input}"
+            );
+        };
+
+        refuses("https://example.com/a.rs");
+        refuses("csharp:/metadata/Baz.cs");
+        // `file:` with no `//`, and an authority naming another machine.
+        refuses("file:/a/b.rs");
+        refuses("file://otherhost/a/b.rs");
+        // Empty path after the authority.
+        refuses("file://");
+    }
+
+    /// An empty authority and `localhost` both mean this machine, the latter
+    /// case-insensitively.
+    #[cfg(not(windows))]
+    #[test]
+    fn to_file_path_accepts_an_empty_or_localhost_authority() {
+        for input in [
+            "file:///a/b.rs",
+            "file://localhost/a/b.rs",
+            "file://LOCALHOST/a/b.rs",
+        ] {
+            assert_eq!(
+                Url::parse(input).unwrap().to_file_path().unwrap(),
+                PathBuf::from("/a/b.rs"),
+                "{input}"
+            );
+        }
+    }
+
+    /// Percent escapes are decoded on the way back to a path -- servers send
+    /// them encoded, and a path that kept the literal `%20` would name a
+    /// different file.
+    #[cfg(not(windows))]
+    #[test]
+    fn to_file_path_decodes_percent_escapes() {
+        let path_of = |input: &str| Url::parse(input).unwrap().to_file_path().unwrap();
+
+        assert_eq!(path_of("file:///tmp/a%20b.txt"), PathBuf::from("/tmp/a b.txt"));
+        assert_eq!(path_of("file:///tmp/%5Btest%5D/x.ts"), PathBuf::from("/tmp/[test]/x.ts"));
+        assert_eq!(path_of("file:///tmp/%23hash.rs"), PathBuf::from("/tmp/#hash.rs"));
+    }
+
     #[test]
     fn parse_rejects_relative() {
         assert!(Url::parse("src/main.rs").is_err());
