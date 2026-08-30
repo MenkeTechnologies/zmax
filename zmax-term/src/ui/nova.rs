@@ -134,6 +134,16 @@ const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
 /// The score that gets a bounty posted on you, and what his ship is worth.
 const HUNTER_BOUNTY: u32 = 20_000;
+/// Footing each side brings to a duel, how long a guard holds, how wide the
+/// parry window is, how long a riposte stays open and what a lock costs.
+const DUEL_POISE: i32 = 5;
+/// How close a blade has to be before it is a duel.
+const DUEL_RANGE: i16 = 3;
+const GUARD_TICKS: u32 = 5;
+const PARRY_WINDOW: u32 = 4;
+const RIPOSTE_TICKS: u32 = 8;
+const LOCK_TICKS: u32 = 12;
+const STAGGER_TICKS: u32 = 18;
 /// What a Force shove costs, and how far it throws somebody.
 const PUSH_COST: u32 = 25;
 const PUSH_REACH: i16 = 4;
@@ -3049,22 +3059,173 @@ impl DeckSpot {
     }
 }
 
-/// What is in the pilot's hands down on the surface.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Sidearm {
-    /// A blaster: bolts at range.
-    Blaster,
-    /// A sabre: nothing at range, but it cuts what is in front of you and it
-    /// turns bolts back the way they came.
+/// Everything a pilot can carry on his belt: the blasters, and the blades.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SideArm {
+    /// The standard-issue sidearm: nothing special, always works.
+    ServicePistol,
+    /// A heavy pistol: slow, and it drops a trooper in one.
+    HeavyPistol,
+    /// The trooper carbine: quick, and not fussy about where it points.
+    Carbine,
+    /// A hold-out blaster: fast, weak, and it fits anywhere.
+    HoldOut,
+    /// A scattergun: a spread of pellets, useless past a corridor.
+    Scattergun,
+    /// A bowcaster: one heavy quarrel that goes through what it hits.
+    Bowcaster,
+    /// A disruptor: slow, illegal, and nothing survives it.
+    Disruptor,
+    /// A long rifle: the reach of a rifle and the patience to use it.
+    LongRifle,
+    /// A repeater: it hoses, and it is never quite on target.
+    Repeater,
+    /// A single blade.
     Sabre,
+    /// A shorter blade in the off hand as well: two cuts, less reach.
+    DualSabres,
+    /// A staff lit at both ends: it comes round further than you expect.
+    SabreStaff,
+    /// A crossguard blade: heavy, and it holds a bind.
+    CrossguardSabre,
 }
 
-impl Sidearm {
+impl SideArm {
+    pub const ALL: [SideArm; 13] = [
+        SideArm::ServicePistol,
+        SideArm::HeavyPistol,
+        SideArm::Carbine,
+        SideArm::HoldOut,
+        SideArm::Scattergun,
+        SideArm::Bowcaster,
+        SideArm::Disruptor,
+        SideArm::LongRifle,
+        SideArm::Repeater,
+        SideArm::Sabre,
+        SideArm::DualSabres,
+        SideArm::SabreStaff,
+        SideArm::CrossguardSabre,
+    ];
+
     pub fn name(self) -> &'static str {
         match self {
-            Sidearm::Blaster => "blaster",
-            Sidearm::Sabre => "lightsabre",
+            SideArm::ServicePistol => "service pistol",
+            SideArm::HeavyPistol => "heavy pistol",
+            SideArm::Carbine => "carbine",
+            SideArm::HoldOut => "hold-out blaster",
+            SideArm::Scattergun => "scattergun",
+            SideArm::Bowcaster => "bowcaster",
+            SideArm::Disruptor => "disruptor",
+            SideArm::LongRifle => "long rifle",
+            SideArm::Repeater => "repeater",
+            SideArm::Sabre => "lightsabre",
+            SideArm::DualSabres => "dual sabres",
+            SideArm::SabreStaff => "sabre staff",
+            SideArm::CrossguardSabre => "crossguard sabre",
         }
+    }
+
+    /// A blade rather than a barrel.
+    pub fn is_blade(self) -> bool {
+        matches!(
+            self,
+            SideArm::Sabre | SideArm::DualSabres | SideArm::SabreStaff | SideArm::CrossguardSabre
+        )
+    }
+
+    /// What one hit takes off.
+    pub fn damage(self) -> i32 {
+        match self {
+            SideArm::ServicePistol => 2,
+            SideArm::HeavyPistol => 4,
+            SideArm::Carbine => 2,
+            SideArm::HoldOut => 1,
+            SideArm::Scattergun => 2,
+            SideArm::Bowcaster => 5,
+            SideArm::Disruptor => 9,
+            SideArm::LongRifle => 6,
+            SideArm::Repeater => 1,
+            SideArm::Sabre => 6,
+            SideArm::DualSabres => 4,
+            SideArm::SabreStaff => 5,
+            SideArm::CrossguardSabre => 8,
+        }
+    }
+
+    /// Ticks between shots or cuts.
+    pub fn cadence(self) -> u32 {
+        match self {
+            SideArm::ServicePistol => 3,
+            SideArm::HeavyPistol => 7,
+            SideArm::Carbine => 3,
+            SideArm::HoldOut => 2,
+            SideArm::Scattergun => 8,
+            SideArm::Bowcaster => 9,
+            SideArm::Disruptor => 14,
+            SideArm::LongRifle => 11,
+            SideArm::Repeater => 1,
+            SideArm::Sabre => 4,
+            SideArm::DualSabres => 3,
+            SideArm::SabreStaff => 5,
+            SideArm::CrossguardSabre => 6,
+        }
+    }
+
+    /// How far a bolt carries, or how far a blade reaches.
+    pub fn range(self) -> u32 {
+        match self {
+            SideArm::HoldOut => 8,
+            SideArm::Scattergun => 7,
+            SideArm::Carbine | SideArm::ServicePistol | SideArm::Repeater => 18,
+            SideArm::HeavyPistol | SideArm::Bowcaster => 20,
+            SideArm::Disruptor => 22,
+            SideArm::LongRifle => 30,
+            _ => 2,
+        }
+    }
+
+    /// Bolts per shot: a scattergun throws a handful, a repeater one at a time.
+    pub fn pellets(self) -> i16 {
+        match self {
+            SideArm::Scattergun => 3,
+            SideArm::DualSabres => 2,
+            _ => 1,
+        }
+    }
+
+    /// How far to the side a blade comes round.
+    pub fn arc(self) -> i16 {
+        match self {
+            SideArm::SabreStaff => 2,
+            SideArm::DualSabres => 1,
+            SideArm::CrossguardSabre => 1,
+            SideArm::Sabre => 1,
+            _ => 0,
+        }
+    }
+
+    /// What the quartermaster wants for one.
+    pub fn price(self) -> u32 {
+        match self {
+            SideArm::ServicePistol => 150,
+            SideArm::HoldOut => 200,
+            SideArm::Carbine => 400,
+            SideArm::Scattergun => 550,
+            SideArm::HeavyPistol => 700,
+            SideArm::Repeater => 900,
+            SideArm::Bowcaster => 1_100,
+            SideArm::LongRifle => 1_400,
+            SideArm::Disruptor => 2_200,
+            SideArm::Sabre => 3_000,
+            SideArm::DualSabres => 3_600,
+            SideArm::SabreStaff => 4_200,
+            SideArm::CrossguardSabre => 4_800,
+        }
+    }
+
+    /// What he will give you back for one, which is never what you paid.
+    pub fn resale(self) -> u32 {
+        self.price() / 2
     }
 }
 
@@ -3142,6 +3303,104 @@ impl Trooper {
     }
 }
 
+/// How a duellist is fighting you at the moment.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Stance {
+    /// Circling: he is looking for the opening rather than making one.
+    Measured,
+    /// Pressing: shorter wind-ups, harder cuts.
+    Aggressive,
+    /// Guarded: he is waiting for you to come to him, and he will parry it.
+    Defensive,
+}
+
+impl Stance {
+    pub fn name(self) -> &'static str {
+        match self {
+            Stance::Measured => "measured",
+            Stance::Aggressive => "aggressive",
+            Stance::Defensive => "guarded",
+        }
+    }
+
+    /// Ticks he spends winding up, which is your window to do something.
+    fn wind_up(self) -> u32 {
+        match self {
+            Stance::Measured => 14,
+            Stance::Aggressive => 9,
+            Stance::Defensive => 20,
+        }
+    }
+
+    /// What his cut takes off you if it lands clean.
+    fn damage(self) -> i32 {
+        match self {
+            Stance::Aggressive => 4,
+            _ => 3,
+        }
+    }
+}
+
+/// A sabre duel: two blades, two guards, and whoever loses their footing.
+#[derive(Clone, Debug)]
+pub struct Duel {
+    /// Which of the things on the ground you are locked up with.
+    pub foe: usize,
+    pub stance: Stance,
+    /// Ticks until his cut lands. Zero means he is not swinging.
+    pub wind_up: u32,
+    /// Ticks your guard is still up for.
+    pub guard: u32,
+    /// Ticks your riposte window is open for after a clean parry.
+    pub riposte: u32,
+    /// How much footing each side has left; at nothing you are wide open.
+    pub poise: i32,
+    pub foe_poise: i32,
+    /// Ticks of blade lock, and who is winning it.
+    pub lock: u32,
+    pub pressure: i32,
+    /// Ticks either side is staggered and cannot do anything about it.
+    pub stagger: u32,
+    pub foe_stagger: u32,
+}
+
+impl Duel {
+    fn new(foe: usize, stance: Stance) -> Duel {
+        Duel {
+            foe,
+            stance,
+            wind_up: 0,
+            guard: 0,
+            riposte: 0,
+            poise: DUEL_POISE,
+            foe_poise: DUEL_POISE,
+            lock: 0,
+            pressure: 0,
+            stagger: 0,
+            foe_stagger: 0,
+        }
+    }
+
+    /// What the readout should be telling you to do right now.
+    pub fn prompt(&self) -> &'static str {
+        if self.lock > 0 {
+            "BLADE LOCK — hit it again"
+        } else if self.stagger > 0 {
+            "OFF BALANCE"
+        } else if self.foe_stagger > 0 {
+            "HE IS OPEN — cut him"
+        } else if self.riposte > 0 {
+            "RIPOSTE"
+        } else if self.wind_up > 0 && self.wind_up <= PARRY_WINDOW {
+            "HE SWINGS — parry"
+        } else if self.wind_up > 0 {
+            "he winds up"
+        } else {
+            "circling"
+        }
+    }
+}
+
 /// A blaster bolt on foot, from either side.
 #[derive(Clone, Debug)]
 pub struct Bolt {
@@ -3198,8 +3457,10 @@ pub struct Deck {
     pub health: i32,
     pub blaster_cooldown: u32,
     /// What is in his hands, and whether he is on a speeder.
-    pub sidearm: Sidearm,
+    pub sidearm: SideArm,
     pub riding: bool,
+    /// The duel he is in the middle of, if a blade has found him.
+    pub duel: Option<Duel>,
 }
 
 impl Deck {
@@ -3293,8 +3554,9 @@ impl Deck {
             bolts: Vec::new(),
             health: PILOT_HEALTH,
             blaster_cooldown: 0,
-            sidearm: Sidearm::Blaster,
+            sidearm: SideArm::ServicePistol,
             riding: false,
+            duel: None,
         }
     }
 
@@ -3324,8 +3586,9 @@ impl Deck {
             bolts: Vec::new(),
             health: PILOT_HEALTH,
             blaster_cooldown: 0,
-            sidearm: Sidearm::Blaster,
+            sidearm: SideArm::ServicePistol,
             riding: false,
+            duel: None,
         }
     }
 
@@ -3373,21 +3636,67 @@ impl Deck {
             return false;
         }
         let (dr, dc) = self.facing;
-        match self.sidearm {
-            Sidearm::Blaster => {
-                self.blaster_cooldown = BLASTER_CADENCE;
-                self.bolts.push(Bolt {
-                    pos: (self.pilot.0 + dr, self.pilot.1 + dc),
-                    dir: (dr, dc),
-                    friendly: true,
-                    life: BOLT_RANGE,
-                });
+        let arm = self.sidearm;
+        self.blaster_cooldown = arm.cadence();
+        match arm {
+            barrel if !barrel.is_blade() => {
+                // A scattergun throws a handful; everything else one bolt.
+                for pellet in 0..barrel.pellets() {
+                    let spread = pellet - barrel.pellets() / 2;
+                    self.bolts.push(Bolt {
+                        pos: (
+                            self.pilot.0 + dr + (dc != 0) as i16 * spread,
+                            self.pilot.1 + dc + (dr != 0) as i16 * spread,
+                        ),
+                        dir: (dr, dc),
+                        friendly: true,
+                        life: barrel.range(),
+                    });
+                }
             }
-            Sidearm::Sabre => {
-                self.blaster_cooldown = SABRE_CADENCE;
+            blade => {
+                let _ = blade;
+                // In a duel a cut is an exchange, not a swing at a bystander.
+                let cut_damage = arm.damage();
+                let cut_arc = arm.arc();
+                if let Some(mut duel) = self.duel.take() {
+                    if duel.lock > 0 {
+                        duel.pressure += 1;
+                    } else if duel.stagger > 0 {
+                        // Nothing doing while you are off balance.
+                    } else if duel.wind_up > 0 && duel.wind_up <= PARRY_WINDOW {
+                        // Both blades arriving at once: they bind.
+                        duel.lock = LOCK_TICKS;
+                        duel.wind_up = 0;
+                        duel.pressure = 0;
+                    } else {
+                        let opening = duel.foe_stagger > 0 || duel.riposte > 0;
+                        let cut = if opening {
+                            cut_damage * 2
+                        } else if duel.stance == Stance::Defensive {
+                            cut_damage / 2
+                        } else {
+                            cut_damage
+                        };
+                        if let Some(foe) = self.troopers.get_mut(duel.foe) {
+                            foe.hp -= cut;
+                        }
+                        duel.riposte = 0;
+                        if !opening {
+                            duel.foe_poise -= 1;
+                            if duel.foe_poise <= 0 {
+                                duel.foe_stagger = STAGGER_TICKS;
+                                duel.foe_poise = DUEL_POISE;
+                            }
+                        }
+                    }
+                    self.duel = Some(duel);
+                    self.troopers.retain(|t| t.hp > 0);
+                    return true;
+                }
                 // A cut takes the two cells in front and either side of them.
                 for reach in 1..=SABRE_REACH {
-                    for across in -1..=1 {
+                    for across in -cut_arc..=cut_arc {
                         let cell = (
                             self.pilot.0 + dr * reach + (dc != 0) as i16 * across,
                             self.pilot.1 + dc * reach + (dr != 0) as i16 * across,
@@ -3395,7 +3704,7 @@ impl Deck {
                         if let Some(hit) =
                             self.troopers.iter_mut().find(|t| t.hp > 0 && t.pos == cell)
                         {
-                            hit.hp -= SABRE_DAMAGE;
+                            hit.hp -= cut_damage;
                         }
                     }
                 }
@@ -3405,13 +3714,116 @@ impl Deck {
         true
     }
 
-    /// Swap between what is on the belt.
-    pub fn draw_sidearm(&mut self) -> Sidearm {
-        self.sidearm = match self.sidearm {
-            Sidearm::Blaster => Sidearm::Sabre,
-            Sidearm::Sabre => Sidearm::Blaster,
+    /// Put your guard up. Time it against his wind-up and the cut comes back at
+    /// him instead of landing on you.
+    pub fn parry(&mut self) -> bool {
+        if self.riding {
+            return false;
+        }
+        match self.duel.as_mut() {
+            Some(duel) if duel.stagger == 0 => {
+                duel.guard = GUARD_TICKS;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Find somebody to cross blades with, or let one go when he is out of
+    /// reach or down.
+    fn measure_duel(&mut self) {
+        let pilot = self.pilot;
+        let near = self
+            .troopers
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| t.kind == GroundKind::Duellist && t.hp > 0)
+            .map(|(i, t)| (i, (t.pos.0 - pilot.0).abs() + (t.pos.1 - pilot.1).abs()))
+            .filter(|(_, range)| *range <= DUEL_RANGE)
+            .min_by_key(|(_, range)| *range);
+        match (near, self.duel.as_ref()) {
+            (Some((foe, _)), None) => {
+                let stance = match foe % 3 {
+                    0 => Stance::Aggressive,
+                    1 => Stance::Defensive,
+                    _ => Stance::Measured,
+                };
+                self.duel = Some(Duel::new(foe, stance));
+            }
+            (None, Some(_)) => self.duel = None,
+            (Some((foe, _)), Some(duel)) if duel.foe != foe => {
+                self.duel = Some(Duel::new(foe, duel.stance))
+            }
+            _ => {}
+        }
+    }
+
+    /// One tick of the duel: his wind-up, your guard, the lock, and whatever
+    /// lands. Returns what it cost you.
+    fn trade_blows(&mut self) -> i32 {
+        self.measure_duel();
+        let Some(mut duel) = self.duel.take() else {
+            return 0;
         };
-        self.sidearm
+        let Some(foe) = self.troopers.get(duel.foe).filter(|t| t.hp > 0) else {
+            return 0;
+        };
+        let stance = duel.stance;
+        let _ = foe;
+        duel.guard = duel.guard.saturating_sub(1);
+        duel.riposte = duel.riposte.saturating_sub(1);
+        duel.stagger = duel.stagger.saturating_sub(1);
+        duel.foe_stagger = duel.foe_stagger.saturating_sub(1);
+        let mut cost = 0;
+        if duel.lock > 0 {
+            duel.lock -= 1;
+            if duel.lock == 0 {
+                // Whoever leaned into it harder walks away from it.
+                if duel.pressure > 0 {
+                    duel.foe_stagger = STAGGER_TICKS;
+                    duel.foe_poise -= 1;
+                } else {
+                    duel.stagger = STAGGER_TICKS;
+                    duel.poise -= 1;
+                }
+                duel.pressure = 0;
+            }
+            self.duel = Some(duel);
+            return 0;
+        }
+        if duel.foe_stagger == 0 {
+            if duel.wind_up == 0 {
+                duel.wind_up = stance.wind_up();
+            } else {
+                duel.wind_up -= 1;
+                if duel.wind_up == 0 {
+                    // The cut lands, or it is turned.
+                    if duel.guard > 0 {
+                        duel.foe_poise -= 1;
+                        duel.riposte = RIPOSTE_TICKS;
+                        if duel.foe_poise <= 0 {
+                            duel.foe_stagger = STAGGER_TICKS;
+                            duel.foe_poise = DUEL_POISE;
+                        }
+                    } else {
+                        cost = stance.damage();
+                        duel.poise -= 1;
+                        if duel.poise <= 0 {
+                            duel.stagger = STAGGER_TICKS;
+                            duel.poise = DUEL_POISE;
+                        }
+                    }
+                }
+            }
+        }
+        self.duel = Some(duel);
+        cost
+    }
+
+    /// Put a particular thing in the pilot's hands.
+    pub fn hold(&mut self, arm: SideArm) {
+        self.sidearm = arm;
+        self.blaster_cooldown = self.blaster_cooldown.max(arm.cadence());
     }
 
     /// Get on or off the speeder parked beside you.
@@ -3449,7 +3861,7 @@ impl Deck {
                         hit.hp -= 2;
                         continue 'bolt;
                     }
-                } else if self.sidearm == Sidearm::Sabre
+                } else if self.sidearm.is_blade()
                     && !self.riding
                     && (bolt.pos.0 - pilot.0).abs() <= 1
                     && (bolt.pos.1 - pilot.1).abs() <= 1
@@ -3500,9 +3912,9 @@ impl Deck {
             match trooper.kind {
                 // A duellist does not shoot: he closes and cuts.
                 GroundKind::Duellist => {
-                    if range <= trooper.kind.reach() {
+                    // He fights in the duel, not by walking into you.
+                    if range > DUEL_RANGE {
                         trooper.cooldown = DUEL_CADENCE;
-                        melee += trooper.kind.damage();
                     }
                 }
                 kind => {
@@ -3532,7 +3944,9 @@ impl Deck {
             }
         }
         self.bolts.extend(volley);
-        damage + melee
+        // Blades are settled in their own exchange rather than by range alone.
+        let duelled = self.trade_blows();
+        damage + melee + duelled
     }
 
     /// Walk a step, staying on the deck.
@@ -4084,6 +4498,8 @@ pub struct Game {
     pub walkers: Vec<Walker>,
     /// The guns aboard, and the missiles in the launcher.
     pub owned: Vec<Weapon>,
+    /// What is on the pilot's belt, and what he has in his locker.
+    pub armoury: Vec<SideArm>,
     pub missiles: u32,
     pub score: u32,
     /// Salvage banked for the hangar.
@@ -4189,6 +4605,7 @@ impl Game {
             transports: Vec::new(),
             walkers: Vec::new(),
             owned: vec![Weapon::LaserCannon],
+            armoury: vec![SideArm::ServicePistol],
             missiles: MISSILE_START,
             score: 0,
             credits: 0,
@@ -4272,6 +4689,7 @@ impl Game {
         self.squad = vec![Wing::new(HULL_NAMES[0], class)];
         self.active = 0;
         self.owned = vec![Weapon::LaserCannon];
+        self.armoury = vec![SideArm::ServicePistol];
         self.missiles = MISSILE_START;
         self.power = Power::default();
         self.force = FORCE_MAX / 2;
@@ -6641,17 +7059,96 @@ impl Game {
         true
     }
 
-    /// Swap between the blaster and the sabre.
-    pub fn draw_sidearm(&mut self) -> Option<Sidearm> {
-        if !matches!(self.status, Status::Hangar | Status::Surface) {
+    /// Take the next thing off the belt.
+    pub fn draw_sidearm(&mut self) -> Option<SideArm> {
+        if !matches!(self.status, Status::Hangar | Status::Surface) || self.armoury.is_empty() {
             return None;
         }
-        let drawn = self.deck.draw_sidearm();
-        self.say(match drawn {
-            Sidearm::Sabre => "Sabre lit.",
-            Sidearm::Blaster => "Blaster out.",
-        });
-        Some(drawn)
+        let at = self
+            .armoury
+            .iter()
+            .position(|&arm| arm == self.deck.sidearm)
+            .unwrap_or(0);
+        let next = self.armoury[(at + 1) % self.armoury.len()];
+        self.deck.hold(next);
+        self.say(&format!("{} in hand.", next.name()));
+        Some(next)
+    }
+
+    /// Buy something for the belt.
+    pub fn buy_sidearm(&mut self, arm: SideArm) -> bool {
+        if !matches!(self.status, Status::Hangar | Status::Surface)
+            || self.armoury.contains(&arm)
+            || self.credits < arm.price()
+        {
+            return false;
+        }
+        self.credits -= arm.price();
+        self.armoury.push(arm);
+        self.deck.hold(arm);
+        self.say(&format!("{} on the belt.", arm.name()));
+        true
+    }
+
+    /// Sell one back. Not the one in your hands, and never the last one.
+    pub fn sell_sidearm(&mut self, arm: SideArm) -> bool {
+        if !matches!(self.status, Status::Hangar | Status::Surface)
+            || self.armoury.len() <= 1
+            || self.deck.sidearm == arm
+        {
+            return false;
+        }
+        let Some(at) = self.armoury.iter().position(|&owned| owned == arm) else {
+            return false;
+        };
+        self.armoury.remove(at);
+        self.credits += arm.resale();
+        self.say(&format!("Sold the {}.", arm.name()));
+        true
+    }
+
+    /// What the quartermaster has on the rack, and what he will take back.
+    pub fn armoury_lines(&self) -> Vec<(char, SideArm, u32, bool, bool)> {
+        let keys = "qwertyuiopas";
+        let mut lines = Vec::new();
+        for (i, arm) in SideArm::ALL.iter().enumerate() {
+            let Some(key) = keys.chars().nth(i) else {
+                break;
+            };
+            let owned = self.armoury.contains(arm);
+            let price = if owned { arm.resale() } else { arm.price() };
+            let can = if owned {
+                self.armoury.len() > 1 && self.deck.sidearm != *arm
+            } else {
+                self.credits >= arm.price()
+            };
+            lines.push((key, *arm, price, owned, can));
+        }
+        lines
+    }
+
+    /// Trade at the rack: buy what you do not have, sell back what you do.
+    pub fn trade_sidearm(&mut self, key: char) -> bool {
+        let Some(&(_, arm, _, owned, can)) = self.armoury_lines().iter().find(|line| line.0 == key)
+        else {
+            return false;
+        };
+        if !can {
+            return false;
+        }
+        if owned {
+            self.sell_sidearm(arm)
+        } else {
+            self.buy_sidearm(arm)
+        }
+    }
+
+    /// Guard: get the blade up in time and his cut comes back at him.
+    pub fn parry(&mut self) -> bool {
+        if self.status != Status::Surface {
+            return false;
+        }
+        self.deck.parry()
     }
 
     /// Get on or off the speeder.
@@ -8836,7 +9333,7 @@ impl Nova {
                 ox,
                 foot + 1,
                 &format!(
-                    "HEALTH {}{}   {}{}   hostiles {}   SPC strike · 1 swap · 2 speeder · e push",
+                    "HEALTH {}{}   {}{}   hostiles {}   SPC strike · 1 belt · 2 speeder · b parry · e push",
                     "▮".repeat(deck.health.max(0) as usize),
                     "▯".repeat((PILOT_HEALTH - deck.health.max(0)) as usize),
                     deck.sidearm.name(),
@@ -9301,6 +9798,44 @@ impl Nova {
             ),
             text,
         );
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            "THE RACK — press the key to buy, again to sell back",
+            header,
+        );
+        y += 1;
+        for (key, arm, price, owned, can) in g.armoury_lines() {
+            let style = if g.deck.sidearm == arm {
+                header
+            } else if can {
+                text
+            } else {
+                dim
+            };
+            surface.set_string(
+                ox,
+                y,
+                &format!(
+                    "{} [{}] {:<18} {:>5}  dmg {:<2} cadence {:<2} reach {:<3} {}",
+                    if g.deck.sidearm == arm { "▶" } else { " " },
+                    key,
+                    arm.name(),
+                    price,
+                    arm.damage(),
+                    arm.cadence(),
+                    arm.range(),
+                    if owned {
+                        "owned — sells for this"
+                    } else {
+                        ""
+                    }
+                ),
+                style,
+            );
+            y += 1;
+        }
         y += 2;
         for line in g.shop_lines() {
             let style = if line.available { text } else { dim };
@@ -9470,6 +10005,9 @@ impl Component for Nova {
                 key!('1') => {
                     self.game.draw_sidearm();
                 }
+                key!('b') => {
+                    self.game.parry();
+                }
                 key!('2') => {
                     self.game.mount();
                 }
@@ -9484,9 +10022,12 @@ impl Component for Nova {
                 }
                 key!('n') => self.restart(),
                 _ => {
-                    // Everything else is a hangar line key.
+                    // Everything else is a terminal key: the rack first, then
+                    // the yard's own stock.
                     if let Some(c) = key.char() {
-                        self.game.buy(c);
+                        if !self.game.trade_sidearm(c) {
+                            self.game.buy(c);
+                        }
                     }
                 }
             },
@@ -13601,14 +14142,15 @@ mod sabre_tests {
         let mut g = planetside();
         assert_eq!(
             g.deck.sidearm,
-            Sidearm::Blaster,
-            "the blaster is on the belt"
+            SideArm::ServicePistol,
+            "the issued sidearm is on the belt"
         );
-        assert_eq!(
-            g.draw_sidearm(),
-            Some(Sidearm::Sabre),
-            "and the sabre lights"
-        );
+        g.credits = 20_000;
+        g.status = Status::Hangar;
+        assert!(g.buy_sidearm(SideArm::Sabre), "a blade is bought");
+        g.status = Status::Surface;
+        assert_eq!(g.deck.sidearm, SideArm::Sabre, "and it lights in your hand");
+        g.deck.blaster_cooldown = 0;
         g.deck.troopers = vec![
             Trooper::new(GroundKind::Trooper, (20, 41), 99),
             Trooper::new(GroundKind::Trooper, (20, 48), 99),
@@ -13626,7 +14168,7 @@ mod sabre_tests {
     #[test]
     fn a_sabre_turns_a_bolt_back_the_way_it_came() {
         let mut g = planetside();
-        g.deck.sidearm = Sidearm::Sabre;
+        g.deck.sidearm = SideArm::Sabre;
         g.deck.bolts = vec![Bolt {
             pos: (20, 41),
             dir: (0, -1),
@@ -13666,7 +14208,7 @@ mod sabre_tests {
             GroundKind::Scout.hp() > GroundKind::Trooper.hp() * 4,
             "it is armoured"
         );
-        g.deck.sidearm = Sidearm::Sabre;
+        g.deck.sidearm = SideArm::Sabre;
         g.shoot();
         assert!(!g.deck.troopers.is_empty(), "one cut does not fell it");
         g.deck.troopers[0].cooldown = 0;
@@ -13681,7 +14223,11 @@ mod sabre_tests {
     fn a_duellist_closes_and_cuts_rather_than_shooting() {
         let mut g = planetside();
         g.deck.troopers = vec![Trooper::new(GroundKind::Duellist, (20, 41), 0)];
-        let hurt = g.deck.skirmish(1);
+        // Give him the length of a wind-up to get a cut in.
+        let mut hurt = 0;
+        for tick in 0..40 {
+            hurt += g.deck.skirmish(tick);
+        }
         assert!(hurt > 0, "he is inside your guard and cutting");
         assert!(
             g.deck.bolts.iter().all(|b| b.friendly),
@@ -13760,5 +14306,279 @@ mod sabre_tests {
         g.check_end();
         assert!(g.hunter.is_none(), "that is the hunter dealt with");
         assert!(g.credits > credits, "and his ship is worth something");
+    }
+}
+
+#[cfg(test)]
+mod duel_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn crossed_blades() -> Game {
+        let mut g = flying();
+        g.status = Status::Surface;
+        g.planet = Planet::Dagobah;
+        g.deck = Deck::surface(Planet::Dagobah, 41);
+        g.deck.cover.clear();
+        g.deck.bolts.clear();
+        g.deck.pilot = (20, 40);
+        g.deck.facing = (0, 1);
+        g.armoury = vec![SideArm::ServicePistol, SideArm::Sabre];
+        g.deck.hold(SideArm::Sabre);
+        g.deck.blaster_cooldown = 0;
+        g.deck.troopers = vec![Trooper::new(GroundKind::Duellist, (20, 42), 99)];
+        g.deck.skirmish(1);
+        g
+    }
+
+    #[test]
+    fn crossing_blades_starts_a_duel_and_walking_off_ends_it() {
+        let mut g = crossed_blades();
+        let duel = g.deck.duel.as_ref().expect("blades are crossed");
+        assert_eq!(duel.foe, 0);
+        assert_eq!(duel.poise, DUEL_POISE, "both start on their feet");
+        g.deck.pilot = (20, 4);
+        g.deck.skirmish(2);
+        assert!(g.deck.duel.is_none(), "out of reach, out of the duel");
+    }
+
+    #[test]
+    fn he_winds_up_before_he_cuts_and_a_guard_turns_it() {
+        let mut g = crossed_blades();
+        // Let him start a swing, then get the blade up in time.
+        let mut ticks = 0;
+        while g.deck.duel.as_ref().is_some_and(|d| d.wind_up == 0) && ticks < 30 {
+            g.deck.skirmish(ticks);
+            ticks += 1;
+        }
+        assert!(
+            g.deck.duel.as_ref().is_some_and(|d| d.wind_up > 0),
+            "the wind-up is visible"
+        );
+        let health = g.deck.health;
+        while g.deck.duel.as_ref().is_some_and(|d| d.wind_up > 1) {
+            g.deck.skirmish(ticks);
+            ticks += 1;
+        }
+        assert!(g.parry(), "the guard goes up");
+        g.deck.skirmish(ticks);
+        assert_eq!(g.deck.health, health, "and nothing lands");
+        let duel = g.deck.duel.as_ref().unwrap();
+        assert!(duel.riposte > 0, "which opens him up for a moment");
+        assert!(duel.foe_poise < DUEL_POISE, "and costs him his footing");
+    }
+
+    #[test]
+    fn a_cut_that_is_not_parried_lands_and_costs_footing() {
+        let mut g = crossed_blades();
+        let health = g.deck.health;
+        for tick in 0..40 {
+            g.ground_tick();
+            let _ = tick;
+            if g.deck.health < health {
+                break;
+            }
+        }
+        assert!(g.deck.health < health, "standing there gets you cut");
+    }
+
+    #[test]
+    fn a_riposte_cuts_twice_as_deep() {
+        let mut g = crossed_blades();
+        {
+            let duel = g.deck.duel.as_mut().unwrap();
+            duel.riposte = RIPOSTE_TICKS;
+        }
+        let hp = g.deck.troopers[0].hp;
+        g.deck.blaster_cooldown = 0;
+        g.shoot();
+        let after = g.deck.troopers.first().map_or(0, |t| t.hp);
+        assert!(
+            hp - after >= SideArm::Sabre.damage() * 2,
+            "a riposte lands twice as hard: {hp} to {after}"
+        );
+    }
+
+    #[test]
+    fn two_blades_arriving_together_bind_and_the_lock_is_won_by_leaning_on_it() {
+        let mut g = crossed_blades();
+        {
+            let duel = g.deck.duel.as_mut().unwrap();
+            duel.wind_up = PARRY_WINDOW;
+        }
+        g.deck.blaster_cooldown = 0;
+        g.shoot();
+        assert!(
+            g.deck.duel.as_ref().is_some_and(|d| d.lock > 0),
+            "the blades bind"
+        );
+        for _ in 0..3 {
+            g.deck.blaster_cooldown = 0;
+            g.shoot();
+        }
+        while g.deck.duel.as_ref().is_some_and(|d| d.lock > 0) {
+            g.deck.skirmish(1);
+        }
+        let duel = g.deck.duel.as_ref().unwrap();
+        assert!(duel.foe_stagger > 0, "leaning on it puts him off balance");
+        assert_eq!(duel.stagger, 0, "and you keep your feet");
+    }
+
+    #[test]
+    fn a_stance_changes_how_long_he_takes_and_how_hard_he_hits() {
+        assert!(
+            Stance::Aggressive.wind_up() < Stance::Defensive.wind_up(),
+            "pressing is quicker than waiting"
+        );
+        assert!(
+            Stance::Aggressive.damage() > Stance::Measured.damage(),
+            "and it costs more when it lands"
+        );
+        assert_eq!(Stance::Defensive.name(), "guarded");
+    }
+}
+
+#[cfg(test)]
+mod armoury_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn at_the_rack() -> Game {
+        let mut g = flying();
+        g.status = Status::Hangar;
+        g.credits = 30_000;
+        g
+    }
+
+    #[test]
+    fn the_rack_carries_every_blaster_and_every_blade() {
+        assert_eq!(SideArm::ALL.len(), 13, "nine barrels and four blades");
+        let blades = SideArm::ALL.iter().filter(|arm| arm.is_blade()).count();
+        assert_eq!(blades, 4, "sabre, duals, staff and crossguard");
+        assert!(
+            SideArm::Disruptor.damage() > SideArm::HoldOut.damage(),
+            "a disruptor is not a hold-out"
+        );
+        assert!(
+            SideArm::Repeater.cadence() < SideArm::LongRifle.cadence(),
+            "a repeater hoses and a rifle does not"
+        );
+        assert!(
+            SideArm::LongRifle.range() > SideArm::Scattergun.range(),
+            "and reach is what you pay a rifle for"
+        );
+        assert_eq!(
+            SideArm::Scattergun.pellets(),
+            3,
+            "a scattergun throws three"
+        );
+    }
+
+    #[test]
+    fn buying_puts_it_on_the_belt_and_selling_gives_half_back() {
+        let mut g = at_the_rack();
+        assert_eq!(
+            g.armoury,
+            vec![SideArm::ServicePistol],
+            "one issued sidearm"
+        );
+        let credits = g.credits;
+        assert!(g.buy_sidearm(SideArm::Bowcaster), "the bowcaster is bought");
+        assert_eq!(g.credits, credits - SideArm::Bowcaster.price());
+        assert_eq!(
+            g.deck.sidearm,
+            SideArm::Bowcaster,
+            "and it is in your hands"
+        );
+        assert!(!g.buy_sidearm(SideArm::Bowcaster), "you only need the one");
+        assert!(
+            !g.sell_sidearm(SideArm::Bowcaster),
+            "and you cannot sell what you are holding"
+        );
+        g.deck.hold(SideArm::ServicePistol);
+        let before = g.credits;
+        assert!(g.sell_sidearm(SideArm::Bowcaster), "off the belt it goes");
+        assert_eq!(g.credits, before + SideArm::Bowcaster.resale());
+        assert!(
+            !g.sell_sidearm(SideArm::ServicePistol),
+            "nobody walks a world unarmed"
+        );
+    }
+
+    #[test]
+    fn the_rack_keys_buy_and_then_sell_the_same_line() {
+        let mut g = at_the_rack();
+        let (key, arm, _, owned, can) = g
+            .armoury_lines()
+            .into_iter()
+            .find(|line| line.1 == SideArm::Carbine)
+            .expect("the carbine is on the rack");
+        assert!(!owned && can, "not owned, and affordable");
+        assert!(g.trade_sidearm(key), "the key buys it");
+        assert!(g.armoury.contains(&SideArm::Carbine));
+        g.deck.hold(SideArm::ServicePistol);
+        assert!(g.trade_sidearm(key), "and the same key sells it back");
+        assert!(!g.armoury.contains(&SideArm::Carbine));
+        let _ = arm;
+    }
+
+    #[test]
+    fn what_is_in_your_hands_is_what_shoots() {
+        let mut g = flying();
+        g.status = Status::Surface;
+        g.deck = Deck::surface(Planet::Tatooine, 7);
+        g.deck.cover.clear();
+        g.deck.troopers.clear();
+        g.deck.bolts.clear();
+        g.deck.pilot = (20, 20);
+        g.deck.facing = (0, 1);
+        g.deck.hold(SideArm::Scattergun);
+        g.deck.blaster_cooldown = 0;
+        assert!(g.shoot(), "the scattergun fires");
+        assert_eq!(g.deck.bolts.len(), 3, "three pellets");
+        g.deck.bolts.clear();
+        g.deck.hold(SideArm::LongRifle);
+        g.deck.blaster_cooldown = 0;
+        g.shoot();
+        assert_eq!(g.deck.bolts.len(), 1, "a rifle sends one");
+        assert_eq!(
+            g.deck.bolts[0].life,
+            SideArm::LongRifle.range(),
+            "and it carries further"
+        );
+    }
+
+    #[test]
+    fn the_belt_cycles_through_what_you_own() {
+        let mut g = at_the_rack();
+        g.buy_sidearm(SideArm::Sabre);
+        g.buy_sidearm(SideArm::HeavyPistol);
+        let first = g.deck.sidearm;
+        let second = g.draw_sidearm().expect("something else on the belt");
+        assert_ne!(second, first, "the next thing comes to hand");
+        let mut seen = vec![first, second];
+        for _ in 0..3 {
+            seen.push(g.draw_sidearm().unwrap());
+        }
+        assert!(
+            seen.contains(&SideArm::Sabre) && seen.contains(&SideArm::HeavyPistol),
+            "and everything on the belt comes round"
+        );
+    }
+
+    #[test]
+    fn a_blade_reaches_further_round_than_a_single_one() {
+        assert!(
+            SideArm::SabreStaff.arc() > SideArm::Sabre.arc(),
+            "a staff comes round further"
+        );
+        assert!(
+            SideArm::CrossguardSabre.damage() > SideArm::DualSabres.damage(),
+            "and a crossguard hits harder than a pair"
+        );
+        assert!(
+            SideArm::DualSabres.cadence() < SideArm::CrossguardSabre.cadence(),
+            "though the pair are quicker"
+        );
     }
 }
