@@ -378,6 +378,36 @@ pub struct HostApi {
     /// editor's environment, which is what a plugin's own `std::env` would see
     /// too; here for the `get*` family's sake.
     pub env: extern "C" fn(host: *const HostApi, name: *const c_char) -> *mut c_char,
+
+    /// vim `bufnr({name})` — the index of the first buffer whose display name
+    /// contains `name`, or `usize::MAX` when none does. Substring matching, as
+    /// vim's does, so `bufnr("main")` finds `src/main.rs`.
+    pub buffer_index: extern "C" fn(host: *const HostApi, name: *const c_char) -> usize,
+    /// vim `winbufnr({win})` — which buffer the `index`th window is showing, as
+    /// an index into the `buffer_name` order. `usize::MAX` past the last window.
+    pub window_buffer: extern "C" fn(host: *const HostApi, index: usize) -> usize,
+
+    /// vim `foldlevel({lnum})` — how deeply a line is folded, 0 when it is not
+    /// inside any fold.
+    pub fold_level: extern "C" fn(host: *const HostApi, line: usize) -> usize,
+    /// vim `foldclosed({lnum})` — the first line of the closed fold containing
+    /// this line, or `usize::MAX` when the line is not inside a closed one.
+    pub fold_closed: extern "C" fn(host: *const HostApi, line: usize) -> usize,
+
+    /// vim `searchcount()` — how many times `pattern` matches the current
+    /// buffer. The pattern is a Rust regex; an invalid one counts zero rather
+    /// than failing the call, since a plugin building a pattern from user input
+    /// should not have to pre-validate it.
+    pub search_count: extern "C" fn(host: *const HostApi, pattern: *const c_char) -> usize,
+    /// Where `pattern` first matches at or after `from`, as a [`Span`] over the
+    /// match. `valid` is 0 when it does not match again.
+    pub search_next:
+        extern "C" fn(host: *const HostApi, pattern: *const c_char, from: usize) -> Span,
+
+    /// vim `getpid()` — the editor's process id. A plugin shares the process,
+    /// so this is its own pid too; here so a plugin naming a temp file after
+    /// the editor does not have to reach for `std::process`.
+    pub pid: extern "C" fn(host: *const HostApi) -> u32,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -912,6 +942,61 @@ impl Host {
         self.take_string((self.t().env)(self.api, name.as_ptr()))
     }
 
+    /// vim `bufnr({name})` — the first buffer whose display name contains
+    /// `name`. `None` when none does.
+    pub fn buffer_index(&self, name: &str) -> Option<usize> {
+        let name = CString::new(name).ok()?;
+        match (self.t().buffer_index)(self.api, name.as_ptr()) {
+            usize::MAX => None,
+            index => Some(index),
+        }
+    }
+
+    /// vim `winbufnr({win})` — which buffer a window is showing. `None` past
+    /// the last window.
+    pub fn window_buffer(&self, index: usize) -> Option<usize> {
+        match (self.t().window_buffer)(self.api, index) {
+            usize::MAX => None,
+            buffer => Some(buffer),
+        }
+    }
+
+    /// vim `foldlevel({lnum})` — 0 when the line is not inside a fold.
+    pub fn fold_level(&self, line: usize) -> usize {
+        (self.t().fold_level)(self.api, line)
+    }
+
+    /// vim `foldclosed({lnum})` — the first line of the closed fold containing
+    /// this line, or `None` when it is not inside a closed one.
+    pub fn fold_closed(&self, line: usize) -> Option<usize> {
+        match (self.t().fold_closed)(self.api, line) {
+            usize::MAX => None,
+            line => Some(line),
+        }
+    }
+
+    /// vim `searchcount()` — how many times a regex matches the buffer. An
+    /// invalid pattern counts zero rather than erroring.
+    pub fn search_count(&self, pattern: &str) -> usize {
+        match CString::new(pattern) {
+            Ok(pattern) => (self.t().search_count)(self.api, pattern.as_ptr()),
+            Err(_) => 0,
+        }
+    }
+
+    /// Where a regex first matches at or after `from`. `None` when it does not
+    /// match again.
+    pub fn search_next(&self, pattern: &str, from: usize) -> Option<Span> {
+        let pattern = CString::new(pattern).ok()?;
+        let span = (self.t().search_next)(self.api, pattern.as_ptr(), from);
+        (span.valid != 0).then_some(span)
+    }
+
+    /// vim `getpid()` — the editor's process id, which is the plugin's too.
+    pub fn pid(&self) -> u32 {
+        (self.t().pid)(self.api)
+    }
+
     /// Adopt a host-allocated C string and release it through the host's own
     /// allocator, which is the only correct way to free one across the ABI.
     fn take_string(&self, raw: *mut c_char) -> Option<String> {
@@ -1257,6 +1342,54 @@ mod tests {
     extern "C" fn fake_window_height(_h: *const HostApi) -> usize {
         24
     }
+    extern "C" fn fake_buffer_index(_h: *const HostApi, name: *const c_char) -> usize {
+        match unsafe { CStr::from_ptr(name) }.to_string_lossy().as_ref() {
+            "main" => 1,
+            _ => usize::MAX,
+        }
+    }
+    extern "C" fn fake_window_buffer(_h: *const HostApi, index: usize) -> usize {
+        // Window 0 shows buffer 1, so an implementation returning the window
+        // index cannot pass.
+        match index {
+            0 => 1,
+            1 => 0,
+            _ => usize::MAX,
+        }
+    }
+    extern "C" fn fake_fold_level(_h: *const HostApi, line: usize) -> usize {
+        match line {
+            5 => 2,
+            4 => 1,
+            _ => 0,
+        }
+    }
+    extern "C" fn fake_fold_closed(_h: *const HostApi, line: usize) -> usize {
+        if line == 5 { 3 } else { usize::MAX }
+    }
+    extern "C" fn fake_search_count(_h: *const HostApi, pattern: *const c_char) -> usize {
+        match unsafe { CStr::from_ptr(pattern) }.to_string_lossy().as_ref() {
+            "fn " => 7,
+            "((" => 0, // an invalid regex counts zero rather than erroring
+            _ => 0,
+        }
+    }
+    extern "C" fn fake_search_next(
+        _h: *const HostApi,
+        pattern: *const c_char,
+        from: usize,
+    ) -> Span {
+        let pattern = unsafe { CStr::from_ptr(pattern) }.to_string_lossy().into_owned();
+        record(format!("search:{pattern}:{from}"));
+        if pattern == "fn " && from < 100 {
+            Span { anchor: 100, head: 103, line: 12, valid: 1 }
+        } else {
+            Span { anchor: 0, head: 0, line: 0, valid: 0 }
+        }
+    }
+    extern "C" fn fake_pid(_h: *const HostApi) -> u32 {
+        4242
+    }
     extern "C" fn fake_fname_modify(
         _h: *const HostApi,
         path: *const c_char,
@@ -1430,6 +1563,13 @@ mod tests {
             line_to_byte: fake_line_to_byte,
             byte_to_line: fake_byte_to_line,
             env: fake_env,
+            buffer_index: fake_buffer_index,
+            window_buffer: fake_window_buffer,
+            fold_level: fake_fold_level,
+            fold_closed: fake_fold_closed,
+            search_count: fake_search_count,
+            search_next: fake_search_next,
+            pid: fake_pid,
         }
     }
 
@@ -1811,6 +1951,57 @@ mod tests {
 
         assert_eq!(host.env("EDITOR").as_deref(), Some("zmax"));
         assert!(host.env("NOSUCHVAR").is_none());
+    }
+
+    /// A buffer that is not open is `None`, not buffer 0 -- which is a real
+    /// buffer a caller would then act on.
+    #[test]
+    fn a_missing_buffer_is_none_not_buffer_zero() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.buffer_index("main"), Some(1));
+        assert_eq!(host.buffer_index("nosuchfile"), None);
+        // Window 0 shows buffer 1: the two indices are different things.
+        assert_eq!(host.window_buffer(0), Some(1));
+        assert_eq!(host.window_buffer(9), None);
+    }
+
+    /// A line outside every fold has level 0 and no closed fold, which are
+    /// different answers from "folded at depth 0" and "closed at line 0".
+    #[test]
+    fn fold_queries_distinguish_unfolded_from_folded_at_zero() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.fold_level(5), 2, "nested");
+        assert_eq!(host.fold_level(4), 1);
+        assert_eq!(host.fold_level(0), 0, "not folded");
+
+        assert_eq!(host.fold_closed(5), Some(3), "the fold starts at 3");
+        assert!(host.fold_closed(0).is_none(), "not inside a closed fold");
+    }
+
+    /// The pattern and the starting offset both reach the host, and no further
+    /// match is `None` rather than a zeroed span at the top of the buffer.
+    #[test]
+    fn a_search_carries_its_pattern_and_start() {
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        let hit = host.search_next("fn ", 0).expect("matches");
+        assert_eq!((hit.anchor, hit.head, hit.line), (100, 103, 12));
+        assert!(host.search_next("fn ", 500).is_none(), "nothing after 500");
+
+        assert_eq!(
+            calls().into_iter().filter(|c| c != "free").collect::<Vec<_>>(),
+            vec!["search:fn :0", "search:fn :500"]
+        );
+
+        assert_eq!(host.search_count("fn "), 7);
+        assert_eq!(host.search_count("(("), 0, "an invalid pattern counts zero");
+        assert_eq!(host.pid(), 4242);
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

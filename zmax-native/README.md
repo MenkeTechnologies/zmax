@@ -130,6 +130,11 @@ What is in the buffer, and what the language servers said about it:
 | `is_directory(p)` / `file_readable(p)` / `file_writable(p)` | `isdirectory()`, `filereadable()`, `filewritable()` | `file_writable` keeps vim's 0/1/2 answer |
 | `line_to_byte(n)` / `byte_to_line(b)` | `line2byte()`, `byte2line()` | |
 | `env(name)` | `getenv()` | |
+| `buffer_index(name)` | `bufnr()` | substring match, so `main` finds `src/main.rs` |
+| `window_buffer(i)` | `winbufnr()` | which buffer a window shows |
+| `fold_level(n)` / `fold_closed(n)` | `foldlevel()`, `foldclosed()` | depth, and the innermost closed fold |
+| `search_count(pat)` / `search_next(pat, from)` | `searchcount()`, `search()` | a Rust regex; an invalid one counts zero |
+| `pid()` | `getpid()` | |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:

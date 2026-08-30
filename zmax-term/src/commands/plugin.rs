@@ -1006,6 +1006,119 @@ extern "C" fn host_env(_host: *const HostApi, name: *const c_char) -> *mut c_cha
     into_raw_cstring(arg_string(name).and_then(|name| std::env::var(name).ok()))
 }
 
+extern "C" fn host_buffer_index(_host: *const HostApi, name: *const c_char) -> usize {
+    let Some(name) = arg_string(name) else {
+        return usize::MAX;
+    };
+    with_cx(|cx| {
+        cx.editor
+            .documents()
+            // Substring, like vim's `bufnr`, so a leaf name finds a path.
+            .position(|doc| doc.display_name().contains(&name))
+            .unwrap_or(usize::MAX)
+    })
+    .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_window_buffer(_host: *const HostApi, index: usize) -> usize {
+    with_cx(|cx| {
+        let Some((view, _)) = cx.editor.tree.views().nth(index) else {
+            return usize::MAX;
+        };
+        let doc_id = view.doc;
+        cx.editor
+            .documents()
+            .position(|doc| doc.id() == doc_id)
+            .unwrap_or(usize::MAX)
+    })
+    .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_fold_level(_host: *const HostApi, line: usize) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        // Nested folds each add a level, so the count of folds covering the
+        // line is its depth.
+        doc.folds()
+            .iter()
+            .filter(|fold| line >= fold.start && line <= fold.end)
+            .count()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_fold_closed(_host: *const HostApi, line: usize) -> usize {
+    with_cx(|cx| {
+        doc_folds_closed_start(cx, line)
+    })
+    .unwrap_or(usize::MAX)
+}
+
+/// The first line of the innermost closed fold covering `line`.
+fn doc_folds_closed_start(cx: &mut compositor::Context, line: usize) -> usize {
+    let (_view, doc) = current!(cx.editor);
+    doc.folds()
+        .iter()
+        .filter(|fold| fold.closed && line >= fold.start && line <= fold.end)
+        // Innermost: the latest start still covering the line.
+        .map(|fold| fold.start)
+        .max()
+        .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_search_count(_host: *const HostApi, pattern: *const c_char) -> usize {
+    let Some(pattern) = arg_string(pattern) else {
+        return 0;
+    };
+    // An invalid pattern counts zero: a plugin building one from user input
+    // should not have to pre-validate it to avoid an error here.
+    let Ok(regex) = regex::Regex::new(&pattern) else {
+        return 0;
+    };
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        regex.find_iter(&doc.text().slice(..).to_string()).count()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_search_next(
+    _host: *const HostApi,
+    pattern: *const c_char,
+    from: usize,
+) -> Span {
+    let Some(pattern) = arg_string(pattern) else {
+        return NO_SPAN;
+    };
+    let Ok(regex) = regex::Regex::new(&pattern) else {
+        return NO_SPAN;
+    };
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let haystack = text.slice(..).to_string();
+        // `from` is a char offset, but the regex works in bytes.
+        let start = text.char_to_byte(from.min(text.len_chars()));
+        match regex.find_at(&haystack, start) {
+            Some(m) => {
+                let anchor = text.byte_to_char(m.start());
+                Span {
+                    anchor,
+                    head: text.byte_to_char(m.end()),
+                    line: text.char_to_line(anchor),
+                    valid: 1,
+                }
+            }
+            None => NO_SPAN,
+        }
+    })
+    .unwrap_or(NO_SPAN)
+}
+
+extern "C" fn host_pid(_host: *const HostApi) -> u32 {
+    std::process::id()
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -1086,6 +1199,13 @@ fn host_api() -> *const HostApi {
             line_to_byte: host_line_to_byte,
             byte_to_line: host_byte_to_line,
             env: host_env,
+            buffer_index: host_buffer_index,
+            window_buffer: host_window_buffer,
+            fold_level: host_fold_level,
+            fold_closed: host_fold_closed,
+            search_count: host_search_count,
+            search_next: host_search_next,
+            pid: host_pid,
         });
         Box::into_raw(boxed) as usize
     });
