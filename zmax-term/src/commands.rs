@@ -2098,7 +2098,7 @@ impl MappableCommand {
         video_poker, "Play Jacks-or-Better video poker",
         klondike, "Play Klondike solitaire",
         nonogram, "Play nonogram / picross",
-        nova, "Play Nova, the shoot-em-up with hulls, guns, powerups and bosses",
+        nova, "Play Nova, the shoot-em-up with ship building, sectors, powerups and bosses",
         xref_find_references, "Find references to a symbol across the workspace (emacs xref-find-references)",
         project_find_file, "Find a file under the project root (emacs project-find-file)",
         diffmode, "Open the unified-diff viewer (emacs diff-mode)",
@@ -29611,8 +29611,9 @@ fn galaga(cx: &mut Context) {
     });
 }
 
-/// `nova`: advanced shoot-em-up with hull classes, five guns, powerup drops
-/// and phased boss waves (self-animating overlay).
+/// `nova`: campaign shoot-em-up with hull classes, a hangar that builds the
+/// ship out of component tiers and modules, five guns, powerup drops, pilot
+/// levels, six sector types and phased boss waves (self-animating overlay).
 fn nova(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::nova::Nova::new()) as Box<dyn Component>)
