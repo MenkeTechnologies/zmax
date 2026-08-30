@@ -408,6 +408,26 @@ pub struct HostApi {
     /// so this is its own pid too; here so a plugin naming a temp file after
     /// the editor does not have to reach for `std::process`.
     pub pid: extern "C" fn(host: *const HostApi) -> u32,
+
+    /// vim `virtcol(".")` — the cursor's *screen* column, counting a tab as the
+    /// cells it draws and a wide glyph as two. [`Cursor::column`] counts
+    /// characters; these differ on any line with a tab or CJK text, and it is
+    /// the screen column that has to line up with `window_width`.
+    pub virtual_column: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `expand("<cfile>")` — the file name under the cursor, found with the
+    /// same `isfname` rules `gf` uses, so a path with dots or dashes comes back
+    /// whole where `word_at_cursor` would stop at the first separator. Null when
+    /// the cursor is not on one. Release with `free_cstring`.
+    pub file_at_cursor: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    /// vim `changenr()` — the current entry in the undo history. A plugin can
+    /// compare it before and after to tell whether anything actually changed.
+    pub change_number: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `bufwinnr({buf})` — the first window showing a buffer, the inverse of
+    /// `window_buffer`. `usize::MAX` when no window shows it.
+    pub buffer_window: extern "C" fn(host: *const HostApi, buffer: usize) -> usize,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -997,6 +1017,33 @@ impl Host {
         (self.t().pid)(self.api)
     }
 
+    /// vim `virtcol(".")` — the cursor's screen column, which is not
+    /// [`Cursor::column`] on a line containing a tab or a wide glyph.
+    pub fn virtual_column(&self) -> usize {
+        (self.t().virtual_column)(self.api)
+    }
+
+    /// vim `expand("<cfile>")` — the file name under the cursor, by `isfname`
+    /// rules rather than word boundaries. `None` when there is not one.
+    pub fn file_at_cursor(&self) -> Option<String> {
+        self.take_string((self.t().file_at_cursor)(self.api))
+    }
+
+    /// vim `changenr()` — the current undo-history entry. Comparing it across
+    /// an operation says whether the buffer actually changed.
+    pub fn change_number(&self) -> usize {
+        (self.t().change_number)(self.api)
+    }
+
+    /// vim `bufwinnr({buf})` — the first window showing a buffer. `None` when
+    /// none does.
+    pub fn buffer_window(&self, buffer: usize) -> Option<usize> {
+        match (self.t().buffer_window)(self.api, buffer) {
+            usize::MAX => None,
+            window => Some(window),
+        }
+    }
+
     /// Adopt a host-allocated C string and release it through the host's own
     /// allocator, which is the only correct way to free one across the ABI.
     fn take_string(&self, raw: *mut c_char) -> Option<String> {
@@ -1342,6 +1389,27 @@ mod tests {
     extern "C" fn fake_window_height(_h: *const HostApi) -> usize {
         24
     }
+    extern "C" fn fake_virtual_column(_h: *const HostApi) -> usize {
+        // Deliberately unequal to `Cursor::column` (7), because the whole point
+        // of virtcol is that a tab makes the two differ.
+        11
+    }
+    extern "C" fn fake_file_at_cursor(_h: *const HostApi) -> *mut c_char {
+        // A path, not a word: `word_at_cursor` returns "UnixStream" and would
+        // stop at the first separator.
+        reply("src/main.rs")
+    }
+    extern "C" fn fake_change_number(_h: *const HostApi) -> usize {
+        17
+    }
+    extern "C" fn fake_buffer_window(_h: *const HostApi, buffer: usize) -> usize {
+        // Buffer 1 is shown by window 0, mirroring `window_buffer`.
+        match buffer {
+            1 => 0,
+            0 => 1,
+            _ => usize::MAX,
+        }
+    }
     extern "C" fn fake_buffer_index(_h: *const HostApi, name: *const c_char) -> usize {
         match unsafe { CStr::from_ptr(name) }.to_string_lossy().as_ref() {
             "main" => 1,
@@ -1570,6 +1638,10 @@ mod tests {
             search_count: fake_search_count,
             search_next: fake_search_next,
             pid: fake_pid,
+            virtual_column: fake_virtual_column,
+            file_at_cursor: fake_file_at_cursor,
+            change_number: fake_change_number,
+            buffer_window: fake_buffer_window,
         }
     }
 
@@ -2002,6 +2074,42 @@ mod tests {
         assert_eq!(host.search_count("fn "), 7);
         assert_eq!(host.search_count("(("), 0, "an invalid pattern counts zero");
         assert_eq!(host.pid(), 4242);
+    }
+
+    /// The screen column and the character column are different numbers, which
+    /// is the entire reason both exist: a tab occupies one character and
+    /// several cells, and only the cell count lines up with `window_width`.
+    #[test]
+    fn the_screen_column_is_not_the_character_column() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.cursor().unwrap().column, 7, "characters");
+        assert_eq!(host.virtual_column(), 11, "cells");
+    }
+
+    /// `<cfile>` follows isfname rules, so it keeps the separators a word
+    /// object would stop at.
+    #[test]
+    fn the_file_under_the_cursor_is_not_the_word_under_it() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.file_at_cursor().as_deref(), Some("src/main.rs"));
+        assert_eq!(host.word_at_cursor().as_deref(), Some("UnixStream"));
+    }
+
+    /// `bufwinnr` and `winbufnr` are inverses, and neither is the identity --
+    /// buffer 1 is shown by window 0.
+    #[test]
+    fn buffer_and_window_lookups_invert_each_other() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.buffer_window(1), Some(0));
+        assert_eq!(host.window_buffer(0), Some(1));
+        assert!(host.buffer_window(9).is_none(), "not shown anywhere");
+        assert_eq!(host.change_number(), 17);
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

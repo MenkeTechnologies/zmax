@@ -1119,6 +1119,77 @@ extern "C" fn host_pid(_host: *const HostApi) -> u32 {
     std::process::id()
 }
 
+extern "C" fn host_virtual_column(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        let start = text.line_to_char(line);
+        // Screen cells, not characters: a tab draws to the next stop and a wide
+        // glyph takes two, which is what has to line up with `window_width`.
+        let tab_width = doc.tab_width() as u16;
+        let mut column = 0usize;
+        use zmax_stdx::rope::RopeSliceExt;
+        for grapheme in text.slice(start..cursor).graphemes() {
+            let grapheme = std::borrow::Cow::from(grapheme);
+            column += if grapheme == "\t" {
+                zmax_core::graphemes::tab_width_at(column, tab_width)
+            } else {
+                zmax_core::graphemes::grapheme_width(&grapheme)
+            };
+        }
+        column
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_file_at_cursor(_host: *const HostApi) -> *mut c_char {
+    let found = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        let line_text = text.line(line);
+        let column = cursor - text.line_to_char(line);
+
+        // `isfname` rules, the same ones `gf` uses, so a path keeps its dots
+        // and slashes where a word object would stop at the first one.
+        zmax_stdx::path::find_paths(line_text, true)
+            .find(|range| {
+                let (start, end) = (
+                    line_text.byte_to_char(range.start),
+                    line_text.byte_to_char(range.end),
+                );
+                column >= start && column <= end
+            })
+            .map(|range| line_text.byte_slice(range).to_string())
+    });
+    into_raw_cstring(found.flatten().filter(|found| !found.is_empty()))
+}
+
+extern "C" fn host_change_number(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.get_current_revision()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_buffer_window(_host: *const HostApi, buffer: usize) -> usize {
+    with_cx(|cx| {
+        let Some(doc_id) = cx.editor.documents().nth(buffer).map(|doc| doc.id()) else {
+            return usize::MAX;
+        };
+        cx.editor
+            .tree
+            .views()
+            .position(|(view, _)| view.doc == doc_id)
+            .unwrap_or(usize::MAX)
+    })
+    .unwrap_or(usize::MAX)
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -1206,6 +1277,10 @@ fn host_api() -> *const HostApi {
             search_count: host_search_count,
             search_next: host_search_next,
             pid: host_pid,
+            virtual_column: host_virtual_column,
+            file_at_cursor: host_file_at_cursor,
+            change_number: host_change_number,
+            buffer_window: host_buffer_window,
         });
         Box::into_raw(boxed) as usize
     });

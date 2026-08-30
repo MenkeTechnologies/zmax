@@ -135,6 +135,10 @@ What is in the buffer, and what the language servers said about it:
 | `fold_level(n)` / `fold_closed(n)` | `foldlevel()`, `foldclosed()` | depth, and the innermost closed fold |
 | `search_count(pat)` / `search_next(pat, from)` | `searchcount()`, `search()` | a Rust regex; an invalid one counts zero |
 | `pid()` | `getpid()` | |
+| `virtual_column()` | `virtcol(".")` | screen cells, where `Cursor::column` counts characters |
+| `file_at_cursor()` | `expand("<cfile>")` | by `isfname` rules, so a path survives its separators |
+| `change_number()` | `changenr()` | compare across an edit to know if anything changed |
+| `buffer_window(buf)` | `bufwinnr()` | the inverse of `window_buffer` |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:
