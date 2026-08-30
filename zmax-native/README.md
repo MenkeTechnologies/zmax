@@ -126,6 +126,10 @@ What is in the buffer, and what the language servers said about it:
 | `indent(n)` | `indent({lnum})` | columns, a tab counting as `tabstop` |
 | `word_count()` | `wordcount()` | chars, words and lines in one call |
 | `option_num(name)` / `option_bool(name)` | `&opt` | typed, so callers do not parse the string |
+| `fname_modify(path, mods)` | `fnamemodify()` | `:p` `:h` `:t` `:r` `:e`, left to right |
+| `is_directory(p)` / `file_readable(p)` / `file_writable(p)` | `isdirectory()`, `filereadable()`, `filewritable()` | `file_writable` keeps vim's 0/1/2 answer |
+| `line_to_byte(n)` / `byte_to_line(b)` | `line2byte()`, `byte2line()` | |
+| `env(name)` | `getenv()` | |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:

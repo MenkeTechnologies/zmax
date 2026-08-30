@@ -347,6 +347,37 @@ pub struct HostApi {
     pub option_num: extern "C" fn(host: *const HostApi, name: *const c_char) -> usize,
     /// vim `&{option}` read as a boolean, the way `:set` understands one.
     pub option_bool: extern "C" fn(host: *const HostApi, name: *const c_char) -> c_int,
+
+    /// vim `fnamemodify({fname}, {mods})` — apply path modifiers, left to
+    /// right: `:p` absolute, `:h` head (the directory), `:t` tail (the file
+    /// name), `:r` root (the name without its extension), `:e` the extension
+    /// alone. `:p:h` is the containing directory of an absolute path, which is
+    /// the combination most callers actually want. Null on an unknown modifier
+    /// rather than silently ignoring it. Release with `free_cstring`.
+    pub fname_modify: extern "C" fn(
+        host: *const HostApi,
+        path: *const c_char,
+        mods: *const c_char,
+    ) -> *mut c_char,
+    /// vim `isdirectory({path})`.
+    pub is_directory: extern "C" fn(host: *const HostApi, path: *const c_char) -> c_int,
+    /// vim `filereadable({path})` — a readable regular file, so a directory is
+    /// 0 even though it can be opened.
+    pub file_readable: extern "C" fn(host: *const HostApi, path: *const c_char) -> c_int,
+    /// vim `filewritable({path})` — 0 not writable, 1 a writable file, 2 a
+    /// writable directory, exactly as vim's three-way answer.
+    pub file_writable: extern "C" fn(host: *const HostApi, path: *const c_char) -> c_int,
+
+    /// vim `line2byte({lnum})` — the byte offset a line starts at, or
+    /// `usize::MAX` past the end of the buffer.
+    pub line_to_byte: extern "C" fn(host: *const HostApi, line: usize) -> usize,
+    /// vim `byte2line({byte})` — the line a byte offset falls on, clamped.
+    pub byte_to_line: extern "C" fn(host: *const HostApi, byte: usize) -> usize,
+
+    /// vim `getenv({name})` — an environment variable, or null when unset. The
+    /// editor's environment, which is what a plugin's own `std::env` would see
+    /// too; here for the `get*` family's sake.
+    pub env: extern "C" fn(host: *const HostApi, name: *const c_char) -> *mut c_char,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -825,6 +856,62 @@ impl Host {
         }
     }
 
+    /// vim `fnamemodify({fname}, {mods})` — `:p`, `:h`, `:t`, `:r`, `:e`,
+    /// applied left to right. `None` on an unknown modifier.
+    pub fn fname_modify(&self, path: &str, mods: &str) -> Option<String> {
+        let path = CString::new(path).ok()?;
+        let mods = CString::new(mods).ok()?;
+        self.take_string((self.t().fname_modify)(
+            self.api,
+            path.as_ptr(),
+            mods.as_ptr(),
+        ))
+    }
+
+    /// vim `isdirectory({path})`.
+    pub fn is_directory(&self, path: &str) -> bool {
+        match CString::new(path) {
+            Ok(path) => (self.t().is_directory)(self.api, path.as_ptr()) != 0,
+            Err(_) => false,
+        }
+    }
+
+    /// vim `filereadable({path})` — a readable regular file, not a directory.
+    pub fn file_readable(&self, path: &str) -> bool {
+        match CString::new(path) {
+            Ok(path) => (self.t().file_readable)(self.api, path.as_ptr()) != 0,
+            Err(_) => false,
+        }
+    }
+
+    /// vim `filewritable({path})` — 0 not writable, 1 a file, 2 a directory.
+    pub fn file_writable(&self, path: &str) -> i32 {
+        match CString::new(path) {
+            Ok(path) => (self.t().file_writable)(self.api, path.as_ptr()),
+            Err(_) => 0,
+        }
+    }
+
+    /// vim `line2byte({lnum})` — where a line starts in bytes. `None` past the
+    /// end of the buffer.
+    pub fn line_to_byte(&self, line: usize) -> Option<usize> {
+        match (self.t().line_to_byte)(self.api, line) {
+            usize::MAX => None,
+            byte => Some(byte),
+        }
+    }
+
+    /// vim `byte2line({byte})` — the line a byte offset falls on.
+    pub fn byte_to_line(&self, byte: usize) -> usize {
+        (self.t().byte_to_line)(self.api, byte)
+    }
+
+    /// vim `getenv({name})` — the editor's environment.
+    pub fn env(&self, name: &str) -> Option<String> {
+        let name = CString::new(name).ok()?;
+        self.take_string((self.t().env)(self.api, name.as_ptr()))
+    }
+
     /// Adopt a host-allocated C string and release it through the host's own
     /// allocator, which is the only correct way to free one across the ABI.
     fn take_string(&self, raw: *mut c_char) -> Option<String> {
@@ -1170,6 +1257,49 @@ mod tests {
     extern "C" fn fake_window_height(_h: *const HostApi) -> usize {
         24
     }
+    extern "C" fn fake_fname_modify(
+        _h: *const HostApi,
+        path: *const c_char,
+        mods: *const c_char,
+    ) -> *mut c_char {
+        let path = unsafe { CStr::from_ptr(path) }.to_string_lossy().into_owned();
+        let mods = unsafe { CStr::from_ptr(mods) }.to_string_lossy().into_owned();
+        record(format!("fnamemodify:{path}:{mods}"));
+        // An unknown modifier is refused, which the wrapper must surface as
+        // None rather than as the untouched path.
+        if mods.contains('z') {
+            ptr::null_mut()
+        } else {
+            reply(&format!("{path}{mods}"))
+        }
+    }
+    extern "C" fn fake_is_directory(_h: *const HostApi, path: *const c_char) -> c_int {
+        c_int::from(unsafe { CStr::from_ptr(path) }.to_string_lossy() == "/tmp")
+    }
+    extern "C" fn fake_file_readable(_h: *const HostApi, path: *const c_char) -> c_int {
+        c_int::from(unsafe { CStr::from_ptr(path) }.to_string_lossy() == "/tmp/a.rs")
+    }
+    extern "C" fn fake_file_writable(_h: *const HostApi, path: *const c_char) -> c_int {
+        // vim's three-way answer, so a bool wrapper would lose the distinction.
+        match unsafe { CStr::from_ptr(path) }.to_string_lossy().as_ref() {
+            "/tmp" => 2,
+            "/tmp/a.rs" => 1,
+            _ => 0,
+        }
+    }
+    extern "C" fn fake_line_to_byte(_h: *const HostApi, line: usize) -> usize {
+        if line < 2 { line * 12 } else { usize::MAX }
+    }
+    extern "C" fn fake_byte_to_line(_h: *const HostApi, byte: usize) -> usize {
+        byte / 12
+    }
+    extern "C" fn fake_env(_h: *const HostApi, name: *const c_char) -> *mut c_char {
+        if unsafe { CStr::from_ptr(name) }.to_string_lossy() == "EDITOR" {
+            reply("zmax")
+        } else {
+            ptr::null_mut()
+        }
+    }
     extern "C" fn fake_buffer_path_at(_h: *const HostApi, index: usize) -> *mut c_char {
         // The second buffer is a scratch one, so the no-path case is reachable.
         if index == 0 { reply("/tmp/a.rs") } else { ptr::null_mut() }
@@ -1293,6 +1423,13 @@ mod tests {
             word_count: fake_word_count,
             option_num: fake_option_num,
             option_bool: fake_option_bool,
+            fname_modify: fake_fname_modify,
+            is_directory: fake_is_directory,
+            file_readable: fake_file_readable,
+            file_writable: fake_file_writable,
+            line_to_byte: fake_line_to_byte,
+            byte_to_line: fake_byte_to_line,
+            env: fake_env,
         }
     }
 
@@ -1611,6 +1748,69 @@ mod tests {
 
         assert_eq!(host.word_count(), Some((120, 20, 5)));
         assert_eq!(host.indent(3), 8);
+    }
+
+    /// The path and the modifiers both reach the host, and a refused modifier
+    /// comes back as `None` rather than as the path unchanged -- returning the
+    /// input would look like a successful no-op.
+    #[test]
+    fn path_modifiers_reach_the_host_and_a_refusal_is_none() {
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        assert_eq!(
+            host.fname_modify("/tmp/a.rs", ":p:h").as_deref(),
+            Some("/tmp/a.rs:p:h")
+        );
+        assert!(host.fname_modify("/tmp/a.rs", ":z").is_none(), "refused");
+        assert_eq!(
+            calls().into_iter().filter(|c| c != "free").collect::<Vec<_>>(),
+            vec!["fnamemodify:/tmp/a.rs::p:h", "fnamemodify:/tmp/a.rs::z"]
+        );
+    }
+
+    /// `filewritable` is vim's three-way answer, so it stays an integer: 2 for a
+    /// directory and 1 for a file are different facts, and a bool would lose it.
+    #[test]
+    fn file_predicates_keep_vims_distinctions() {
+        let api = table();
+        let host = host(&api);
+
+        assert!(host.is_directory("/tmp"));
+        assert!(!host.is_directory("/tmp/a.rs"));
+        // A directory opens, but `filereadable` is about regular files.
+        assert!(host.file_readable("/tmp/a.rs"));
+        assert!(!host.file_readable("/tmp"));
+
+        assert_eq!(host.file_writable("/tmp"), 2, "a directory");
+        assert_eq!(host.file_writable("/tmp/a.rs"), 1, "a file");
+        assert_eq!(host.file_writable("/nope"), 0);
+    }
+
+    /// Line and byte offsets convert both ways, and a line past the end has no
+    /// byte offset rather than one of zero.
+    #[test]
+    fn lines_and_bytes_convert_both_ways() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.line_to_byte(0), Some(0));
+        assert_eq!(host.line_to_byte(1), Some(12));
+        assert_eq!(host.line_to_byte(7), None, "past the end");
+        assert_eq!(host.byte_to_line(12), 1);
+        assert_eq!(host.byte_to_line(13), 1, "mid-line");
+    }
+
+    /// An unset variable is `None`, not an empty string, which a caller would
+    /// otherwise treat as a set-but-empty value.
+    #[test]
+    fn an_unset_environment_variable_is_none() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.env("EDITOR").as_deref(), Some("zmax"));
+        assert!(host.env("NOSUCHVAR").is_none());
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

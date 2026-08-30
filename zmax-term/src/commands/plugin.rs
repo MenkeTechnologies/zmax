@@ -896,6 +896,116 @@ extern "C" fn host_option_bool(_host: *const HostApi, name: *const c_char) -> c_
     c_int::from(set)
 }
 
+extern "C" fn host_fname_modify(
+    _host: *const HostApi,
+    path: *const c_char,
+    mods: *const c_char,
+) -> *mut c_char {
+    let (Some(path), Some(mods)) = (arg_string(path), arg_string(mods)) else {
+        return ptr::null_mut();
+    };
+
+    let mut current = path;
+    // Modifiers apply left to right, so `:p:h` is the directory of the absolute
+    // path rather than the absolute form of the directory.
+    for modifier in mods.split(':').filter(|m| !m.is_empty()) {
+        let path = std::path::Path::new(&current);
+        current = match modifier {
+            "p" => zmax_stdx::path::canonicalize(path)
+                .to_string_lossy()
+                .into_owned(),
+            "h" => path
+                .parent()
+                .map(|p| p.to_string_lossy().into_owned())
+                // vim gives "." for a bare name, not an empty string.
+                .filter(|p| !p.is_empty())
+                .unwrap_or_else(|| ".".to_string()),
+            "t" => path
+                .file_name()
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            "r" => match (path.parent(), path.file_stem()) {
+                (Some(parent), Some(stem)) if !parent.as_os_str().is_empty() => {
+                    parent.join(stem).to_string_lossy().into_owned()
+                }
+                (_, Some(stem)) => stem.to_string_lossy().into_owned(),
+                _ => current.clone(),
+            },
+            "e" => path
+                .extension()
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            // An unknown modifier is an error rather than a silent no-op: the
+            // caller asked for something this does not do.
+            _ => return ptr::null_mut(),
+        };
+    }
+    into_raw_cstring(Some(current))
+}
+
+extern "C" fn host_is_directory(_host: *const HostApi, path: *const c_char) -> c_int {
+    let is_dir = arg_string(path)
+        .map(|p| std::path::Path::new(&p).is_dir())
+        .unwrap_or(false);
+    c_int::from(is_dir)
+}
+
+extern "C" fn host_file_readable(_host: *const HostApi, path: *const c_char) -> c_int {
+    // A regular file that opens: vim's `filereadable` is 0 for a directory even
+    // though a directory can be opened.
+    let readable = arg_string(path)
+        .map(|p| {
+            let path = std::path::Path::new(&p);
+            path.is_file() && std::fs::File::open(path).is_ok()
+        })
+        .unwrap_or(false);
+    c_int::from(readable)
+}
+
+extern "C" fn host_file_writable(_host: *const HostApi, path: *const c_char) -> c_int {
+    let Some(path) = arg_string(path) else {
+        return 0;
+    };
+    let path = std::path::Path::new(&path);
+    let Ok(meta) = std::fs::metadata(path) else {
+        return 0;
+    };
+    if meta.permissions().readonly() {
+        return 0;
+    }
+    // vim answers 2 for a writable directory and 1 for a writable file.
+    if meta.is_dir() {
+        2
+    } else {
+        1
+    }
+}
+
+extern "C" fn host_line_to_byte(_host: *const HostApi, line: usize) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        if line >= text.len_lines() {
+            return usize::MAX;
+        }
+        text.char_to_byte(text.line_to_char(line))
+    })
+    .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_byte_to_line(_host: *const HostApi, byte: usize) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        text.byte_to_line(byte.min(text.len_bytes()))
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_env(_host: *const HostApi, name: *const c_char) -> *mut c_char {
+    into_raw_cstring(arg_string(name).and_then(|name| std::env::var(name).ok()))
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -969,6 +1079,13 @@ fn host_api() -> *const HostApi {
             word_count: host_word_count,
             option_num: host_option_num,
             option_bool: host_option_bool,
+            fname_modify: host_fname_modify,
+            is_directory: host_is_directory,
+            file_readable: host_file_readable,
+            file_writable: host_file_writable,
+            line_to_byte: host_line_to_byte,
+            byte_to_line: host_byte_to_line,
+            env: host_env,
         });
         Box::into_raw(boxed) as usize
     });
