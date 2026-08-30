@@ -4,8 +4,10 @@
 //! campaign on the same court: you build a ship, fly sectors that each fight
 //! differently, level a pilot up and spend salvage in a hangar between waves.
 //!
-//! * **Hulls** — Interceptor (fast, fragile, blinks), Cruiser (balanced, raises
-//!   a bulwark), Juggernaut (armoured, lays a barrage). Every hull carries a
+//! * **Fighters** — A-wing (fastest thing in the fleet, boosts across the
+//!   court), X-wing (the workhorse, deflectors that eat fire), Y-wing (armoured
+//!   bomber, proton salvo), B-wing (the hardest-hitting cannons) and a Corellian
+//!   freighter (five shield pips and a full bomb bay). Every one carries a
 //!   special paid for out of an energy meter.
 //! * **Ship building** — five components (engine, reactor, plating, cannon,
 //!   magazine) upgrade through four tiers, and five modules (magnet, autoloader,
@@ -120,6 +122,10 @@ const BULWARK_TICKS: u32 = 60;
 const BARRAGE_STEP: i16 = 7;
 /// The most shield pips any hull can ever carry.
 const MAX_SHIELD_PIPS: u32 = 8;
+/// Pips of power the reactor splits between lasers, shields and engines, and
+/// how long a fully-charged shield takes to knit a pip back.
+const POWER_PIPS: u32 = 6;
+const SHIELD_KNIT_TICKS: u32 = 600;
 /// Hulls a squad can hold, where the wingmen ride, how often they fire, and
 /// what a new hull or a rescue costs.
 const MAX_SQUAD: usize = 4;
@@ -249,19 +255,19 @@ impl Difficulty {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Special {
     /// Teleport several columns the way you were flying, landing invulnerable.
-    Blink,
+    Boost,
     /// A bubble that eats every shot that reaches the hull for a while.
-    Bulwark,
+    Deflectors,
     /// A wall of bolts laid across the whole court at once.
-    Barrage,
+    ProtonSalvo,
 }
 
 impl Special {
     pub fn name(self) -> &'static str {
         match self {
-            Special::Blink => "blink",
-            Special::Bulwark => "bulwark",
-            Special::Barrage => "barrage",
+            Special::Boost => "engine boost",
+            Special::Deflectors => "deflectors",
+            Special::ProtonSalvo => "proton salvo",
         }
     }
 }
@@ -269,38 +275,46 @@ impl Special {
 /// The three hulls, trading speed and rate of fire against armour and damage.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ShipClass {
-    Interceptor,
-    Cruiser,
-    Juggernaut,
+    AWing,
+    XWing,
+    YWing,
+    BWing,
+    Freighter,
 }
 
 impl ShipClass {
-    pub const ALL: [ShipClass; 3] = [
-        ShipClass::Interceptor,
-        ShipClass::Cruiser,
-        ShipClass::Juggernaut,
+    pub const ALL: [ShipClass; 5] = [
+        ShipClass::AWing,
+        ShipClass::XWing,
+        ShipClass::YWing,
+        ShipClass::BWing,
+        ShipClass::Freighter,
     ];
 
     pub fn name(self) -> &'static str {
         match self {
-            ShipClass::Interceptor => "Interceptor",
-            ShipClass::Cruiser => "Cruiser",
-            ShipClass::Juggernaut => "Juggernaut",
+            ShipClass::AWing => "A-wing",
+            ShipClass::XWing => "X-wing",
+            ShipClass::YWing => "Y-wing",
+            ShipClass::BWing => "B-wing",
+            ShipClass::Freighter => "Corellian freighter",
         }
     }
 
     pub fn glyph(self) -> &'static str {
         match self {
-            ShipClass::Interceptor => "▴",
-            ShipClass::Cruiser => "▲",
-            ShipClass::Juggernaut => "◭",
+            ShipClass::AWing => "▴",
+            ShipClass::XWing => "✕",
+            ShipClass::YWing => "⋏",
+            ShipClass::BWing => "⌖",
+            ShipClass::Freighter => "◙",
         }
     }
 
     /// Columns the hull slides per keypress before the engine is upgraded.
     pub fn speed(self) -> i16 {
         match self {
-            ShipClass::Interceptor => 2,
+            ShipClass::AWing | ShipClass::Freighter => 2,
             _ => 1,
         }
     }
@@ -308,54 +322,60 @@ impl ShipClass {
     /// Shield pips it soaks before a hit costs a life.
     pub fn max_shield(self) -> u32 {
         match self {
-            ShipClass::Interceptor => 1,
-            ShipClass::Cruiser => 2,
-            ShipClass::Juggernaut => 4,
+            ShipClass::AWing => 1,
+            ShipClass::XWing => 2,
+            ShipClass::BWing => 3,
+            ShipClass::YWing => 4,
+            ShipClass::Freighter => 5,
         }
     }
 
     /// Ticks between shots before the magazine is upgraded.
     pub fn fire_cadence(self) -> u32 {
         match self {
-            ShipClass::Interceptor => 2,
-            ShipClass::Cruiser => 3,
-            ShipClass::Juggernaut => 4,
+            ShipClass::AWing | ShipClass::Freighter => 2,
+            ShipClass::XWing | ShipClass::BWing => 3,
+            ShipClass::YWing => 4,
         }
     }
 
     /// Damage each of its shots carries at gun level one.
     pub fn damage(self) -> i32 {
         match self {
-            ShipClass::Interceptor => 1,
-            ShipClass::Cruiser => 2,
-            ShipClass::Juggernaut => 3,
+            ShipClass::AWing => 1,
+            ShipClass::XWing | ShipClass::Freighter => 2,
+            ShipClass::YWing => 3,
+            ShipClass::BWing => 4,
         }
     }
 
     /// Smart bombs it launches with.
     pub fn bombs(self) -> u32 {
         match self {
-            ShipClass::Interceptor => 2,
-            ShipClass::Cruiser => 3,
-            ShipClass::Juggernaut => 4,
+            ShipClass::AWing => 2,
+            ShipClass::XWing | ShipClass::BWing => 3,
+            ShipClass::YWing => 4,
+            ShipClass::Freighter => 5,
         }
     }
 
     pub fn special(self) -> Special {
         match self {
-            ShipClass::Interceptor => Special::Blink,
-            ShipClass::Cruiser => Special::Bulwark,
-            ShipClass::Juggernaut => Special::Barrage,
+            ShipClass::AWing => Special::Boost,
+            ShipClass::XWing | ShipClass::Freighter => Special::Deflectors,
+            ShipClass::YWing | ShipClass::BWing => Special::ProtonSalvo,
         }
     }
 
     pub fn blurb(self) -> &'static str {
         match self {
-            ShipClass::Interceptor => {
-                "fast, fragile, fires twice as often; blinks across the court"
+            ShipClass::AWing => "fastest thing in the fleet, no armour; boosts across the court",
+            ShipClass::XWing => "the workhorse: S-foils locked, deflectors that eat fire",
+            ShipClass::YWing => "slow armoured bomber, four shield pips; lays a proton salvo",
+            ShipClass::BWing => "heavy assault: the hardest-hitting cannons in the fleet",
+            ShipClass::Freighter => {
+                "a light freighter with a full bomb bay; she has it where it counts"
             }
-            ShipClass::Cruiser => "the balanced hull; raises a bulwark that eats fire",
-            ShipClass::Juggernaut => "slow and heavy, four shield pips; lays a barrage",
         }
     }
 }
@@ -386,11 +406,11 @@ impl Part {
 
     pub fn name(self) -> &'static str {
         match self {
-            Part::Engine => "engine",
-            Part::Reactor => "reactor",
-            Part::Plating => "plating",
-            Part::Cannon => "cannon",
-            Part::Magazine => "magazine",
+            Part::Engine => "sublight engines",
+            Part::Reactor => "power core",
+            Part::Plating => "deflector plating",
+            Part::Cannon => "laser cannons",
+            Part::Magazine => "capacitors",
         }
     }
 
@@ -436,11 +456,11 @@ impl Module {
 
     pub fn name(self) -> &'static str {
         match self {
-            Module::Magnet => "magnet",
-            Module::Autoloader => "autoloader",
-            Module::Salvager => "salvager",
-            Module::RepairBay => "repair bay",
-            Module::Overdrive => "overdrive",
+            Module::Magnet => "magnetic scoop",
+            Module::Autoloader => "servo loader",
+            Module::Salvager => "salvage droid",
+            Module::RepairBay => "R-unit astromech",
+            Module::Overdrive => "power converter",
         }
     }
 
@@ -491,59 +511,59 @@ impl Loadout {
 /// gun you carry, a different one swaps it out.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Weapon {
-    Blaster,
-    Spread,
-    Laser,
-    Homing,
-    Plasma,
+    LaserCannon,
+    QuadLaser,
+    HeavyLaser,
+    ConcussionMissile,
+    ProtonBomb,
     /// A stuttering machine gun: little rounds, almost no gap between them.
-    Vulcan,
+    RepeatingBlaster,
     /// Dumb-fire rockets that blow a hole where they land.
-    Rocket,
+    RocketPod,
     /// Shells that burst into a fan of fragments part way up the court.
-    Flak,
+    Flechette,
     /// One slow, enormous piercing slug.
-    Rail,
+    MassDriver,
     /// A bolt that jumps from hull to hull.
-    Arc,
+    ArcCaster,
     /// Proton torpedoes: slow, few, and they take a battery off a capital hull
     /// in one go.
-    Torpedo,
+    ProtonTorpedo,
     /// An ion cannon: it scrambles emplacements instead of breaking them, and a
     /// scrambled shield dome is a hull that can be shot.
-    Ion,
+    IonCannon,
 }
 
 impl Weapon {
     pub const ALL: [Weapon; 12] = [
-        Weapon::Blaster,
-        Weapon::Spread,
-        Weapon::Laser,
-        Weapon::Homing,
-        Weapon::Plasma,
-        Weapon::Vulcan,
-        Weapon::Rocket,
-        Weapon::Flak,
-        Weapon::Rail,
-        Weapon::Arc,
-        Weapon::Torpedo,
-        Weapon::Ion,
+        Weapon::LaserCannon,
+        Weapon::QuadLaser,
+        Weapon::HeavyLaser,
+        Weapon::ConcussionMissile,
+        Weapon::ProtonBomb,
+        Weapon::RepeatingBlaster,
+        Weapon::RocketPod,
+        Weapon::Flechette,
+        Weapon::MassDriver,
+        Weapon::ArcCaster,
+        Weapon::ProtonTorpedo,
+        Weapon::IonCannon,
     ];
 
     pub fn name(self) -> &'static str {
         match self {
-            Weapon::Blaster => "blaster",
-            Weapon::Spread => "spread",
-            Weapon::Laser => "laser",
-            Weapon::Homing => "homing",
-            Weapon::Plasma => "plasma",
-            Weapon::Vulcan => "vulcan",
-            Weapon::Rocket => "rocket",
-            Weapon::Flak => "flak",
-            Weapon::Rail => "rail",
-            Weapon::Arc => "arc",
-            Weapon::Torpedo => "torpedo",
-            Weapon::Ion => "ion",
+            Weapon::LaserCannon => "laser cannon",
+            Weapon::QuadLaser => "quad laser",
+            Weapon::HeavyLaser => "heavy laser",
+            Weapon::ConcussionMissile => "concussion missile",
+            Weapon::ProtonBomb => "proton bomb",
+            Weapon::RepeatingBlaster => "repeating blaster",
+            Weapon::RocketPod => "rocket pod",
+            Weapon::Flechette => "flechette",
+            Weapon::MassDriver => "mass driver",
+            Weapon::ArcCaster => "arc caster",
+            Weapon::ProtonTorpedo => "proton torpedo",
+            Weapon::IonCannon => "ion cannon",
         }
     }
 
@@ -551,31 +571,31 @@ impl Weapon {
     /// hoses, a rail gun takes its time.
     pub fn cadence_shift(self) -> i32 {
         match self {
-            Weapon::Vulcan => -2,
-            Weapon::Blaster | Weapon::Spread => 0,
-            Weapon::Laser | Weapon::Arc => 1,
-            Weapon::Homing | Weapon::Plasma | Weapon::Flak => 2,
-            Weapon::Rocket | Weapon::Ion => 3,
-            Weapon::Torpedo => 8,
-            Weapon::Rail => 6,
+            Weapon::RepeatingBlaster => -2,
+            Weapon::LaserCannon | Weapon::QuadLaser => 0,
+            Weapon::HeavyLaser | Weapon::ArcCaster => 1,
+            Weapon::ConcussionMissile | Weapon::ProtonBomb | Weapon::Flechette => 2,
+            Weapon::RocketPod | Weapon::IonCannon => 3,
+            Weapon::ProtonTorpedo => 8,
+            Weapon::MassDriver => 6,
         }
     }
 
     /// The single letter its pickup shows on the court.
     pub fn tag(self) -> &'static str {
         match self {
-            Weapon::Blaster => "B",
-            Weapon::Spread => "S",
-            Weapon::Laser => "L",
-            Weapon::Homing => "H",
-            Weapon::Plasma => "P",
-            Weapon::Vulcan => "V",
-            Weapon::Rocket => "R",
-            Weapon::Flak => "F",
-            Weapon::Rail => "X",
-            Weapon::Arc => "A",
-            Weapon::Torpedo => "T",
-            Weapon::Ion => "I",
+            Weapon::LaserCannon => "B",
+            Weapon::QuadLaser => "S",
+            Weapon::HeavyLaser => "L",
+            Weapon::ConcussionMissile => "H",
+            Weapon::ProtonBomb => "P",
+            Weapon::RepeatingBlaster => "V",
+            Weapon::RocketPod => "R",
+            Weapon::Flechette => "F",
+            Weapon::MassDriver => "X",
+            Weapon::ArcCaster => "A",
+            Weapon::ProtonTorpedo => "T",
+            Weapon::IonCannon => "I",
         }
     }
 
@@ -783,75 +803,78 @@ impl Shot {
 /// The hulls that fly against you.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum EnemyKind {
-    Grunt,
-    Weaver,
-    Turret,
-    Bomber,
-    Kamikaze,
-    Tank,
+    TieFighter,
+    TieInterceptor,
+    GunPlatform,
+    TieBomber,
+    BuzzDroid,
+    Gunboat,
     /// Telegraphs, then throws a shot twice as fast as anything else.
-    Sniper,
+    TieDefender,
     /// Leaves mines hanging in the court behind it.
-    Miner,
+    MineLayer,
     /// Breaks into two diving grunts when it dies.
-    Splitter,
+    VultureDroid,
     /// Repairs damaged hulls flying near it.
-    Healer,
+    RepairDroid,
     /// A capital ship's fighter screen: fast, twitchy, fires in pairs.
-    Interceptor,
+    TieAdvanced,
 }
 
 impl EnemyKind {
     pub fn hp(self) -> i32 {
         match self {
-            EnemyKind::Grunt | EnemyKind::Kamikaze => 1,
-            EnemyKind::Weaver | EnemyKind::Sniper | EnemyKind::Interceptor => 2,
-            EnemyKind::Turret | EnemyKind::Miner | EnemyKind::Splitter | EnemyKind::Healer => 3,
-            EnemyKind::Bomber => 4,
-            EnemyKind::Tank => 7,
+            EnemyKind::TieFighter | EnemyKind::BuzzDroid => 1,
+            EnemyKind::TieInterceptor | EnemyKind::TieDefender | EnemyKind::TieAdvanced => 2,
+            EnemyKind::GunPlatform
+            | EnemyKind::MineLayer
+            | EnemyKind::VultureDroid
+            | EnemyKind::RepairDroid => 3,
+            EnemyKind::TieBomber => 4,
+            EnemyKind::Gunboat => 7,
         }
     }
 
     pub fn score(self) -> u32 {
         match self {
-            EnemyKind::Grunt => 10,
-            EnemyKind::Weaver => 20,
-            EnemyKind::Kamikaze => 25,
-            EnemyKind::Interceptor => 30,
-            EnemyKind::Turret => 30,
-            EnemyKind::Miner => 35,
-            EnemyKind::Bomber => 40,
-            EnemyKind::Splitter => 40,
-            EnemyKind::Sniper => 45,
-            EnemyKind::Healer => 50,
-            EnemyKind::Tank => 80,
+            EnemyKind::TieFighter => 10,
+            EnemyKind::TieInterceptor => 20,
+            EnemyKind::BuzzDroid => 25,
+            EnemyKind::TieAdvanced => 30,
+            EnemyKind::GunPlatform => 30,
+            EnemyKind::MineLayer => 35,
+            EnemyKind::TieBomber => 40,
+            EnemyKind::VultureDroid => 40,
+            EnemyKind::TieDefender => 45,
+            EnemyKind::RepairDroid => 50,
+            EnemyKind::Gunboat => 80,
         }
     }
 
     pub fn glyph(self) -> &'static str {
         match self {
-            EnemyKind::Grunt => "ᴥ",
-            EnemyKind::Weaver => "ʬ",
-            EnemyKind::Turret => "⊕",
-            EnemyKind::Bomber => "҂",
-            EnemyKind::Kamikaze => "ѵ",
-            EnemyKind::Tank => "Ѫ",
-            EnemyKind::Sniper => "⌖",
-            EnemyKind::Miner => "Ѳ",
-            EnemyKind::Splitter => "Ж",
-            EnemyKind::Healer => "✚",
-            EnemyKind::Interceptor => "Ж",
+            EnemyKind::TieFighter => "ᴥ",
+            EnemyKind::TieInterceptor => "ʬ",
+            EnemyKind::GunPlatform => "⊕",
+            EnemyKind::TieBomber => "҂",
+            EnemyKind::BuzzDroid => "ѵ",
+            EnemyKind::Gunboat => "Ѫ",
+            EnemyKind::TieDefender => "⌖",
+            EnemyKind::MineLayer => "Ѳ",
+            EnemyKind::VultureDroid => "Ж",
+            EnemyKind::RepairDroid => "✚",
+            EnemyKind::TieAdvanced => "Ѭ",
         }
     }
 
     /// 1-in-N chance per tick of peeling out of formation; `0` never dives.
     fn dive_chance(self) -> u64 {
         match self {
-            EnemyKind::Grunt => 140,
-            EnemyKind::Kamikaze => 70,
-            EnemyKind::Bomber => 220,
-            EnemyKind::Splitter => 160,
-            EnemyKind::Interceptor => 50,
+            EnemyKind::TieFighter => 140,
+            EnemyKind::BuzzDroid => 70,
+            EnemyKind::TieBomber => 220,
+            EnemyKind::VultureDroid => 160,
+            EnemyKind::TieAdvanced => 50,
             _ => 0,
         }
     }
@@ -860,13 +883,13 @@ impl EnemyKind {
     /// mine); `0` never does.
     fn fire_chance(self) -> u64 {
         match self {
-            EnemyKind::Grunt => 180,
-            EnemyKind::Turret => 60,
-            EnemyKind::Bomber => 90,
-            EnemyKind::Tank => 120,
-            EnemyKind::Sniper => 100,
-            EnemyKind::Miner => 150,
-            EnemyKind::Interceptor => 70,
+            EnemyKind::TieFighter => 180,
+            EnemyKind::GunPlatform => 60,
+            EnemyKind::TieBomber => 90,
+            EnemyKind::Gunboat => 120,
+            EnemyKind::TieDefender => 100,
+            EnemyKind::MineLayer => 150,
+            EnemyKind::TieAdvanced => 70,
             _ => 0,
         }
     }
@@ -874,7 +897,7 @@ impl EnemyKind {
     /// Rows a diving hull of this kind covers per tick.
     fn dive_speed(self) -> i16 {
         match self {
-            EnemyKind::Kamikaze | EnemyKind::Interceptor => 2,
+            EnemyKind::BuzzDroid | EnemyKind::TieAdvanced => 2,
             _ => 1,
         }
     }
@@ -1009,16 +1032,16 @@ impl Sector {
 
     pub fn name(self) -> &'static str {
         match self {
-            Sector::OpenSpace => "open space",
-            Sector::AsteroidBelt => "asteroid belt",
-            Sector::Nebula => "nebula",
-            Sector::Minefield => "minefield",
+            Sector::OpenSpace => "deep space",
+            Sector::AsteroidBelt => "Hoth asteroid field",
+            Sector::Nebula => "Kessel nebula",
+            Sector::Minefield => "Imperial minefield",
             Sector::IonStorm => "ion storm",
-            Sector::DebrisRing => "debris ring",
-            Sector::SolarCorona => "solar corona",
-            Sector::Wreckage => "wreckage",
-            Sector::CometTrail => "comet trail",
-            Sector::VoidRift => "void rift",
+            Sector::DebrisRing => "Alderaan debris",
+            Sector::SolarCorona => "Tatooine twin suns",
+            Sector::Wreckage => "Jakku graveyard",
+            Sector::CometTrail => "Bespin gas streams",
+            Sector::VoidRift => "Maw cluster",
         }
     }
 
@@ -1445,9 +1468,9 @@ impl Stock {
             Stock::Bomb => "smart bomb",
             Stock::Rapid => "rapid fire",
             Stock::Life => "spare life",
-            Stock::Hull => "new hull",
-            Stock::Rescue => "rescue the wing",
-            Stock::Missiles => "missile pack",
+            Stock::Hull => "another fighter",
+            Stock::Rescue => "recover the wing",
+            Stock::Missiles => "torpedo pack",
         }
     }
 
@@ -1888,21 +1911,21 @@ impl Galaxy {
 
     pub fn name(self) -> &'static str {
         match self {
-            Galaxy::Orion => "Orion Arm",
-            Galaxy::Hive => "Hive Reach",
-            Galaxy::Forge => "Forge Span",
-            Galaxy::Cinder => "Cinder Belt",
-            Galaxy::Abyss => "The Abyss",
+            Galaxy::Orion => "Outer Rim Territories",
+            Galaxy::Hive => "Kessel Sector",
+            Galaxy::Forge => "Corellian Run",
+            Galaxy::Cinder => "Tatooine Sector",
+            Galaxy::Abyss => "The Maw",
         }
     }
 
     pub fn blurb(self) -> &'static str {
         match self {
-            Galaxy::Orion => "a bit of everything, nothing extreme",
-            Galaxy::Hive => "deeper swarms, thinner hulls, richer drops",
-            Galaxy::Forge => "hulks, mines and turrets — and heavy salvage",
-            Galaxy::Cinder => "fire and rock; the hulls out here are tough",
-            Galaxy::Abyss => "wells, void and long tunnels; everything is armoured",
+            Galaxy::Orion => "the frontier: a bit of everything, nothing extreme",
+            Galaxy::Hive => "spice lanes thick with TIEs, thin hulls, rich salvage",
+            Galaxy::Forge => "shipyards and minefields — and heavy salvage",
+            Galaxy::Cinder => "twin suns and rock; the patrols out here are tough",
+            Galaxy::Abyss => "black holes and long tunnels; everything is armoured",
         }
     }
 
@@ -2036,12 +2059,12 @@ pub enum NodeKind {
 impl NodeKind {
     pub fn name(self) -> &'static str {
         match self {
-            NodeKind::Battle => "battle",
-            NodeKind::Elite => "elite",
-            NodeKind::Boss => "boss",
-            NodeKind::Depot => "depot",
-            NodeKind::Derelict => "derelict",
-            NodeKind::Capital => "capital",
+            NodeKind::Battle => "patrol",
+            NodeKind::Elite => "elite squadron",
+            NodeKind::Boss => "ace pilot",
+            NodeKind::Depot => "Rebel outpost",
+            NodeKind::Derelict => "wrecked freighter",
+            NodeKind::Capital => "capital ship",
         }
     }
 
@@ -2119,11 +2142,11 @@ impl Region {
 
     pub fn name(self) -> &'static str {
         match self {
-            Region::Rim => "the Rim",
-            Region::Verge => "the Verge",
-            Region::Reach => "the Reach",
-            Region::Core => "the Core",
-            Region::Deep => "the Deep",
+            Region::Rim => "the Outer Rim",
+            Region::Verge => "the Mid Rim",
+            Region::Reach => "the Expansion Region",
+            Region::Core => "the Inner Rim",
+            Region::Deep => "the Core Worlds",
         }
     }
 
@@ -2382,30 +2405,34 @@ impl StarMap {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CapitalKind {
     /// A picket: short, lightly gunned, one dome.
-    Frigate,
+    ImperialFrigate,
     /// The wedge: a long arrowhead bristling with batteries, its domes on the
     /// tower and its bays feeding fighters into the court.
-    WedgeDestroyer,
+    StarDestroyer,
     /// A moon-sized plate of armour with a trench cut across it, and a port at
     /// the bottom of the trench that ends it.
-    Battlestation,
+    DeathStar,
+    /// The command ship: a wedge twice the size, and twice the batteries.
+    SuperDestroyer,
 }
 
 impl CapitalKind {
     pub fn name(self) -> &'static str {
         match self {
-            CapitalKind::Frigate => "frigate",
-            CapitalKind::WedgeDestroyer => "wedge destroyer",
-            CapitalKind::Battlestation => "battlestation",
+            CapitalKind::ImperialFrigate => "Imperial frigate",
+            CapitalKind::StarDestroyer => "Star Destroyer",
+            CapitalKind::DeathStar => "Death Star",
+            CapitalKind::SuperDestroyer => "Super Star Destroyer",
         }
     }
 
     /// Rows of hull, counted down from the anchor.
     pub fn depth(self) -> i16 {
         match self {
-            CapitalKind::Frigate => 3,
-            CapitalKind::WedgeDestroyer => 6,
-            CapitalKind::Battlestation => 8,
+            CapitalKind::ImperialFrigate => 3,
+            CapitalKind::StarDestroyer => 6,
+            CapitalKind::DeathStar => 8,
+            CapitalKind::SuperDestroyer => 9,
         }
     }
 
@@ -2413,18 +2440,20 @@ impl CapitalKind {
     /// station is a wall.
     pub fn span(self, row: i16) -> i16 {
         match self {
-            CapitalKind::Frigate => 9,
-            CapitalKind::WedgeDestroyer => 4 + row * 3,
-            CapitalKind::Battlestation => W / 2 - 2,
+            CapitalKind::ImperialFrigate => 9,
+            CapitalKind::StarDestroyer => 4 + row * 3,
+            CapitalKind::DeathStar => W / 2 - 2,
+            CapitalKind::SuperDestroyer => 5 + row * 4,
         }
     }
 
     /// Hull points before the campaign scales it.
     pub fn hull(self) -> i32 {
         match self {
-            CapitalKind::Frigate => 120,
-            CapitalKind::WedgeDestroyer => 260,
-            CapitalKind::Battlestation => 400,
+            CapitalKind::ImperialFrigate => 120,
+            CapitalKind::StarDestroyer => 260,
+            CapitalKind::DeathStar => 400,
+            CapitalKind::SuperDestroyer => 700,
         }
     }
 }
@@ -2452,13 +2481,13 @@ pub enum Emplacement {
 impl Emplacement {
     pub fn name(self) -> &'static str {
         match self {
-            Emplacement::ShieldDome => "shield dome",
-            Emplacement::Turbolaser => "turbolaser",
+            Emplacement::ShieldDome => "shield generator",
+            Emplacement::Turbolaser => "turbolaser battery",
             Emplacement::HangarBay => "hangar bay",
-            Emplacement::CommandTower => "command tower",
-            Emplacement::EngineBank => "engine bank",
+            Emplacement::CommandTower => "bridge tower",
+            Emplacement::EngineBank => "ion engines",
             Emplacement::TractorBeam => "tractor beam",
-            Emplacement::ExhaustPort => "exhaust port",
+            Emplacement::ExhaustPort => "thermal exhaust port",
         }
     }
 
@@ -2551,14 +2580,14 @@ impl Capital {
         let mut parts = Vec::new();
         let mut fit = |kind, offset| parts.push(CapitalPart::new(kind, offset, armour));
         match kind {
-            CapitalKind::Frigate => {
+            CapitalKind::ImperialFrigate => {
                 fit(Emplacement::ShieldDome, (1, 0));
                 fit(Emplacement::Turbolaser, (2, -6));
                 fit(Emplacement::Turbolaser, (2, 6));
                 fit(Emplacement::HangarBay, (2, 0));
                 fit(Emplacement::EngineBank, (0, -8));
             }
-            CapitalKind::WedgeDestroyer => {
+            CapitalKind::StarDestroyer => {
                 fit(Emplacement::CommandTower, (1, 0));
                 fit(Emplacement::ShieldDome, (1, -3));
                 fit(Emplacement::ShieldDome, (1, 3));
@@ -2572,7 +2601,27 @@ impl Capital {
                 fit(Emplacement::EngineBank, (0, -6));
                 fit(Emplacement::EngineBank, (0, 6));
             }
-            CapitalKind::Battlestation => {
+            CapitalKind::SuperDestroyer => {
+                fit(Emplacement::CommandTower, (1, 0));
+                fit(Emplacement::ShieldDome, (1, -4));
+                fit(Emplacement::ShieldDome, (1, 4));
+                fit(Emplacement::ShieldDome, (2, 0));
+                for dx in [-12, -6, 6, 12] {
+                    fit(Emplacement::Turbolaser, (4, dx));
+                }
+                for dx in [-20, -10, 10, 20] {
+                    fit(Emplacement::Turbolaser, (7, dx));
+                }
+                fit(Emplacement::HangarBay, (8, -8));
+                fit(Emplacement::HangarBay, (8, 0));
+                fit(Emplacement::HangarBay, (8, 8));
+                fit(Emplacement::TractorBeam, (6, -4));
+                fit(Emplacement::TractorBeam, (6, 4));
+                for dx in [-8, 0, 8] {
+                    fit(Emplacement::EngineBank, (0, dx));
+                }
+            }
+            CapitalKind::DeathStar => {
                 fit(Emplacement::ShieldDome, (1, -18));
                 fit(Emplacement::ShieldDome, (1, 18));
                 fit(Emplacement::ShieldDome, (2, -8));
@@ -2636,9 +2685,10 @@ impl Capital {
                 .iter()
                 .any(|p| p.kind == Emplacement::CommandTower);
         let base = match self.kind {
-            CapitalKind::Frigate => 20,
-            CapitalKind::WedgeDestroyer => 16,
-            CapitalKind::Battlestation => 12,
+            CapitalKind::ImperialFrigate => 20,
+            CapitalKind::StarDestroyer => 16,
+            CapitalKind::DeathStar => 12,
+            CapitalKind::SuperDestroyer => 10,
         };
         if tower {
             base
@@ -2650,6 +2700,82 @@ impl Capital {
     /// It only holds station while an engine bank is left.
     fn under_way(&self) -> bool {
         self.standing(Emplacement::EngineBank) > 0
+    }
+}
+
+/// Where the reactor's output is going. Six pips, split three ways: cannons hit
+/// harder, deflectors knit themselves back, engines push the hull along and
+/// charge the special faster.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Power {
+    pub lasers: u32,
+    pub shields: u32,
+    pub engines: u32,
+}
+
+impl Default for Power {
+    fn default() -> Self {
+        Power {
+            lasers: 2,
+            shields: 2,
+            engines: 2,
+        }
+    }
+}
+
+/// Which of the three systems power is being sent to.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum System {
+    Lasers,
+    Shields,
+    Engines,
+}
+
+impl System {
+    pub fn name(self) -> &'static str {
+        match self {
+            System::Lasers => "lasers",
+            System::Shields => "shields",
+            System::Engines => "engines",
+        }
+    }
+}
+
+impl Power {
+    fn pips(&self, system: System) -> u32 {
+        match system {
+            System::Lasers => self.lasers,
+            System::Shields => self.shields,
+            System::Engines => self.engines,
+        }
+    }
+
+    fn add(&mut self, system: System, delta: i32) {
+        let slot = match system {
+            System::Lasers => &mut self.lasers,
+            System::Shields => &mut self.shields,
+            System::Engines => &mut self.engines,
+        };
+        *slot = (*slot as i32 + delta).clamp(0, POWER_PIPS as i32) as u32;
+    }
+
+    /// Take a pip off whichever system has most to spare and give it to `to`.
+    pub fn divert(&mut self, to: System) -> bool {
+        if self.pips(to) >= POWER_PIPS {
+            return false;
+        }
+        let donor = [System::Lasers, System::Shields, System::Engines]
+            .into_iter()
+            .filter(|&s| s != to)
+            .max_by_key(|&s| self.pips(s));
+        match donor {
+            Some(from) if self.pips(from) > 0 => {
+                self.add(from, -1);
+                self.add(to, 1);
+                true
+            }
+            _ => false,
+        }
     }
 }
 
@@ -2674,7 +2800,7 @@ impl Wing {
             name,
             class,
             loadout: Loadout::default(),
-            weapon: Weapon::Blaster,
+            weapon: Weapon::LaserCannon,
             weapon_level: 1,
             shield: class.max_shield(),
             max_shield: class.max_shield(),
@@ -2697,7 +2823,7 @@ impl Wing {
 }
 
 /// The names hulls are rolled off the line with.
-const HULL_NAMES: [&str; MAX_SQUAD] = ["Lead", "Two", "Three", "Four"];
+const HULL_NAMES: [&str; MAX_SQUAD] = ["Red Leader", "Red Two", "Red Three", "Red Five"];
 
 /// The pure Nova court. No I/O, no timing — unit-tested.
 #[derive(Clone)]
@@ -2719,6 +2845,8 @@ pub struct Game {
     /// Every hull in the squad, and which one is being flown.
     pub squad: Vec<Wing>,
     pub active: usize,
+    /// Where the reactor's output is going.
+    pub power: Power,
     /// The guns aboard, and the missiles in the launcher.
     pub owned: Vec<Weapon>,
     pub missiles: u32,
@@ -2790,20 +2918,21 @@ pub struct Game {
 impl Game {
     pub fn new(seed: u64) -> Self {
         Game {
-            class: ShipClass::Cruiser,
+            class: ShipClass::XWing,
             difficulty: Difficulty::Normal,
             loadout: Loadout::default(),
             ship: (SHIP_ROW, W / 2),
-            weapon: Weapon::Blaster,
+            weapon: Weapon::LaserCannon,
             weapon_level: 1,
             shield: 0,
             max_shield: 0,
             lives: 3,
             bombs: 0,
             drones: Vec::new(),
-            squad: vec![Wing::new(HULL_NAMES[0], ShipClass::Cruiser)],
+            squad: vec![Wing::new(HULL_NAMES[0], ShipClass::XWing)],
             active: 0,
-            owned: vec![Weapon::Blaster],
+            power: Power::default(),
+            owned: vec![Weapon::LaserCannon],
             missiles: MISSILE_START,
             score: 0,
             credits: 0,
@@ -2872,7 +3001,7 @@ impl Game {
         self.galaxy = galaxy;
         self.loadout = Loadout::default();
         self.ship = (SHIP_ROW, W / 2);
-        self.weapon = Weapon::Blaster;
+        self.weapon = Weapon::LaserCannon;
         self.weapon_level = 1;
         self.bonus_plating = 0;
         self.bonus_damage = 0;
@@ -2883,8 +3012,9 @@ impl Game {
         self.drones.clear();
         self.squad = vec![Wing::new(HULL_NAMES[0], class)];
         self.active = 0;
-        self.owned = vec![Weapon::Blaster];
+        self.owned = vec![Weapon::LaserCannon];
         self.missiles = MISSILE_START;
+        self.power = Power::default();
         self.lives = 3;
         self.score = 0;
         self.credits = 0;
@@ -2944,7 +3074,9 @@ impl Game {
 
     /// Columns the hull covers per keypress, engine included.
     pub fn thrust(&self) -> i16 {
-        self.class.speed() + (self.loadout.tier(Part::Engine) / 2) as i16
+        self.class.speed()
+            + (self.loadout.tier(Part::Engine) / 2) as i16
+            + (self.power.engines / 3) as i16
     }
 
     /// Ticks between shots, magazine and autoloader included.
@@ -2961,12 +3093,22 @@ impl Game {
 
     /// Damage the gun deals before its level bonus, cannon included.
     pub fn gun_damage(&self) -> i32 {
-        self.class.damage() + self.loadout.tier(Part::Cannon) as i32 + self.bonus_damage
+        (self.class.damage()
+            + self.loadout.tier(Part::Cannon) as i32
+            + self.bonus_damage
+            + self.power.lasers as i32
+            - 2)
+        .max(1)
     }
 
     /// Energy recovered per tick, reactor included.
     pub fn regen(&self) -> u32 {
-        ENERGY_REGEN + self.loadout.tier(Part::Reactor) + self.bonus_regen
+        ENERGY_REGEN + self.loadout.tier(Part::Reactor) + self.bonus_regen + self.power.engines / 2
+    }
+
+    /// Send a pip of power to one of the three systems.
+    pub fn divert(&mut self, system: System) -> bool {
+        self.power.divert(system)
     }
 
     /// Energy the meter holds, reactor included.
@@ -3019,17 +3161,17 @@ impl Game {
     fn wave_kind(&self, row: usize, col: usize) -> EnemyKind {
         let w = self.wave;
         match row {
-            0 if w >= 2 && col % 3 == 1 => EnemyKind::Turret,
-            0 if w >= 6 && col % 4 == 3 => EnemyKind::Sniper,
-            0 => EnemyKind::Grunt,
-            1 if w >= 3 && col % 4 == 2 => EnemyKind::Bomber,
-            1 if w >= 7 && col % 5 == 4 => EnemyKind::Miner,
-            1 => EnemyKind::Weaver,
-            2 if w >= 5 && col % 5 == 0 => EnemyKind::Tank,
-            2 if w >= 9 && col % 4 == 2 => EnemyKind::Healer,
-            2 if w >= 6 && col % 3 == 1 => EnemyKind::Splitter,
-            2 => EnemyKind::Grunt,
-            _ => EnemyKind::Kamikaze,
+            0 if w >= 2 && col % 3 == 1 => EnemyKind::GunPlatform,
+            0 if w >= 6 && col % 4 == 3 => EnemyKind::TieDefender,
+            0 => EnemyKind::TieFighter,
+            1 if w >= 3 && col % 4 == 2 => EnemyKind::TieBomber,
+            1 if w >= 7 && col % 5 == 4 => EnemyKind::MineLayer,
+            1 => EnemyKind::TieInterceptor,
+            2 if w >= 5 && col % 5 == 0 => EnemyKind::Gunboat,
+            2 if w >= 9 && col % 4 == 2 => EnemyKind::RepairDroid,
+            2 if w >= 6 && col % 3 == 1 => EnemyKind::VultureDroid,
+            2 => EnemyKind::TieFighter,
+            _ => EnemyKind::BuzzDroid,
         }
     }
 
@@ -3086,11 +3228,13 @@ impl Game {
             // A trench means a battlestation; open plating means a wedge, and
             // the rim only ever fields a picket.
             let kind = if self.node.terrain == TerrainKind::Trench {
-                CapitalKind::Battlestation
+                CapitalKind::DeathStar
+            } else if self.node.region >= Region::Deep {
+                CapitalKind::SuperDestroyer
             } else if self.node.region >= Region::Reach {
-                CapitalKind::WedgeDestroyer
+                CapitalKind::StarDestroyer
             } else {
-                CapitalKind::Frigate
+                CapitalKind::ImperialFrigate
             };
             let armour = self.wave_armour();
             let capital = Capital::new(kind, armour, 40 * self.wave as i32);
@@ -3098,7 +3242,7 @@ impl Game {
             // A screen of fighters comes out with it.
             for col in (0..COLS).step_by(3) {
                 let home = self.place((FORMATION_TOP + 9, BASE_X + col as i16 * ENEMY_GAP));
-                let escort = self.hatch(EnemyKind::Interceptor, home);
+                let escort = self.hatch(EnemyKind::TieAdvanced, home);
                 self.enemies.push(escort);
             }
             return;
@@ -3109,7 +3253,7 @@ impl Game {
             self.boss = Some(Boss::new(kind, hp));
             for col in (0..COLS).step_by(2) {
                 let home = self.place((FORMATION_TOP + 5, BASE_X + col as i16 * ENEMY_GAP));
-                let escort = self.hatch(EnemyKind::Kamikaze, home);
+                let escort = self.hatch(EnemyKind::BuzzDroid, home);
                 self.enemies.push(escort);
             }
             return;
@@ -3245,7 +3389,7 @@ impl Game {
         let dmg = self.gun_damage() + level as i32 - 1;
         let (r, c) = (self.ship.0 - 1, self.ship.1);
         match self.weapon {
-            Weapon::Blaster => {
+            Weapon::LaserCannon => {
                 let lanes: &[i16] = match level {
                     1 => &[0],
                     2 => &[-1, 1],
@@ -3255,7 +3399,7 @@ impl Game {
                     self.launch(Shot::bolt((r, c + dx), 0, dmg + 1));
                 }
             }
-            Weapon::Spread => {
+            Weapon::QuadLaser => {
                 let lanes: &[i16] = if level >= 2 {
                     &[-2, -1, 0, 1, 2]
                 } else {
@@ -3265,7 +3409,7 @@ impl Game {
                     self.launch(Shot::bolt((r, c), drift, dmg));
                 }
             }
-            Weapon::Laser => {
+            Weapon::HeavyLaser => {
                 let lanes: &[i16] = match level {
                     1 => &[0],
                     2 => &[-1, 1],
@@ -3275,7 +3419,7 @@ impl Game {
                     self.launch(Shot::beam((r, c + dx), dmg));
                 }
             }
-            Weapon::Homing => {
+            Weapon::ConcussionMissile => {
                 let lanes: &[i16] = match level {
                     1 => &[0],
                     2 => &[-2, 2],
@@ -3285,11 +3429,11 @@ impl Game {
                     self.launch(Shot::missile((r, c + dx), dmg + 1));
                 }
             }
-            Weapon::Plasma => {
+            Weapon::ProtonBomb => {
                 let half_width = if level >= 3 { 2 } else { 1 };
                 self.launch(Shot::plasma((r, c), dmg + 2, half_width));
             }
-            Weapon::Vulcan => {
+            Weapon::RepeatingBlaster => {
                 // The barrel walks a column either side as it hoses.
                 let jitter = if self.tick.is_multiple_of(2) { 1 } else { -1 };
                 self.launch(Shot::vulcan((r, c), 0, dmg));
@@ -3300,7 +3444,7 @@ impl Game {
                     self.launch(Shot::vulcan((r, c - jitter), 0, dmg));
                 }
             }
-            Weapon::Rocket => {
+            Weapon::RocketPod => {
                 let lanes: &[i16] = match level {
                     1 => &[0],
                     2 => &[-2, 2],
@@ -3310,7 +3454,7 @@ impl Game {
                     self.launch(Shot::rocket((r, c + dx), dmg + 2));
                 }
             }
-            Weapon::Flak => {
+            Weapon::Flechette => {
                 self.launch(Shot::flak((r, c), dmg + 1, FLAK_FUSE));
                 if level >= 2 {
                     self.launch(Shot::flak((r, c - 3), dmg + 1, FLAK_FUSE + 2));
@@ -3319,7 +3463,7 @@ impl Game {
                     self.launch(Shot::flak((r, c + 3), dmg + 1, FLAK_FUSE + 2));
                 }
             }
-            Weapon::Rail => {
+            Weapon::MassDriver => {
                 self.launch(Shot::rail((r, c), dmg * 3 + 2));
                 if level >= 3 {
                     for dx in [-2, 2] {
@@ -3327,17 +3471,17 @@ impl Game {
                     }
                 }
             }
-            Weapon::Arc => {
+            Weapon::ArcCaster => {
                 self.launch(Shot::arc((r, c), dmg + 1, level + 1));
             }
-            Weapon::Torpedo => {
+            Weapon::ProtonTorpedo => {
                 // Two in the tube, three once it is tuned.
                 let lanes: &[i16] = if level >= 3 { &[-3, 0, 3] } else { &[-3, 3] };
                 for &dx in lanes {
                     self.launch(Shot::torpedo((r, c + dx), dmg * 4 + 6));
                 }
             }
-            Weapon::Ion => {
+            Weapon::IonCannon => {
                 let lanes: &[i16] = match level {
                     1 => &[0],
                     2 => &[-2, 2],
@@ -3366,12 +3510,12 @@ impl Game {
         }
         self.energy -= cost;
         match self.class.special() {
-            Special::Blink => {
+            Special::Boost => {
                 self.ship.1 = (self.ship.1 + self.facing * BLINK_DISTANCE).clamp(1, W - 2);
                 self.invuln = self.invuln.max(BLINK_IFRAMES);
             }
-            Special::Bulwark => self.bulwark = BULWARK_TICKS,
-            Special::Barrage => {
+            Special::Deflectors => self.bulwark = BULWARK_TICKS,
+            Special::ProtonSalvo => {
                 let damage = self.gun_damage() + 2;
                 let row = self.ship.0 - 1;
                 let mut col = 2;
@@ -3520,6 +3664,14 @@ impl Game {
                 self.combo = 1;
             }
         }
+        if self.power.shields > 0
+            && self.shield < self.max_shield
+            && self
+                .tick
+                .is_multiple_of((SHIELD_KNIT_TICKS / self.power.shields).max(30))
+        {
+            self.shield += 1;
+        }
         if self.loadout.has(Module::RepairBay) {
             self.repair_timer = self.repair_timer.saturating_sub(1);
             if self.repair_timer == 0 {
@@ -3596,7 +3748,7 @@ impl Game {
         let healers: Vec<(i16, i16)> = self
             .enemies
             .iter()
-            .filter(|e| e.kind == EnemyKind::Healer)
+            .filter(|e| e.kind == EnemyKind::RepairDroid)
             .map(|e| e.pos)
             .collect();
         let mut spawned: Vec<Shot> = Vec::new();
@@ -3610,7 +3762,7 @@ impl Game {
                     let dive = e.kind.dive_chance();
                     if dive > 0 && self.rand().is_multiple_of(self.odds(dive)) {
                         e.state = EnemyState::Diving { target_x: ship.1 };
-                    } else if e.kind == EnemyKind::Weaver
+                    } else if e.kind == EnemyKind::TieInterceptor
                         && self.rand().is_multiple_of(self.odds(WEAVE_CHANCE))
                     {
                         let dir = if self.rand() & 1 == 0 { 1 } else { -1 };
@@ -3637,7 +3789,7 @@ impl Game {
             let (left, right) = self.terrain.channel(e.pos.0);
             e.pos.1 = e.pos.1.clamp(left, right);
             if e.pos.0 >= H {
-                if e.kind == EnemyKind::Kamikaze {
+                if e.kind == EnemyKind::BuzzDroid {
                     continue;
                 }
                 e.pos = (e.home.0, e.home.1 + sway);
@@ -3645,11 +3797,11 @@ impl Game {
             }
             if e.pos == ship {
                 rammed = true;
-                if e.kind == EnemyKind::Kamikaze {
+                if e.kind == EnemyKind::BuzzDroid {
                     continue;
                 }
             }
-            if healing && e.kind != EnemyKind::Healer && e.hp < e.max_hp {
+            if healing && e.kind != EnemyKind::RepairDroid && e.hp < e.max_hp {
                 let mended = healers.iter().any(|h| {
                     (h.0 - e.pos.0).abs() <= HEAL_RANGE && (h.1 - e.pos.1).abs() <= HEAL_RANGE
                 });
@@ -3674,22 +3826,22 @@ impl Game {
                 match e.kind {
                     // Turrets lead the ship, bombers throw a three-way spread,
                     // snipers wind up first and miners leave a mine behind.
-                    EnemyKind::Turret => {
+                    EnemyKind::GunPlatform => {
                         spawned.push(Shot::enemy(muzzle, (ship.1 - e.pos.1).signum(), 1));
                     }
-                    EnemyKind::Bomber => {
+                    EnemyKind::TieBomber => {
                         for drift in [-1, 0, 1] {
                             spawned.push(Shot::enemy(muzzle, drift, 1));
                         }
                     }
                     // A fighter screen fires in pairs, spread a column apart.
-                    EnemyKind::Interceptor => {
+                    EnemyKind::TieAdvanced => {
                         for drift in [-1, 1] {
                             spawned.push(Shot::enemy(muzzle, drift, 1));
                         }
                     }
-                    EnemyKind::Sniper => e.charge = SNIPER_CHARGE,
-                    EnemyKind::Miner => mined.push(muzzle),
+                    EnemyKind::TieDefender => e.charge = SNIPER_CHARGE,
+                    EnemyKind::MineLayer => mined.push(muzzle),
                     _ => spawned.push(Shot::enemy(muzzle, 0, 1)),
                 }
             }
@@ -3821,7 +3973,7 @@ impl Game {
                 };
                 for (r, c) in bays {
                     let home = (r.clamp(0, H - 2), c.clamp(1, W - 2));
-                    let mut minion = self.hatch(EnemyKind::Kamikaze, home);
+                    let mut minion = self.hatch(EnemyKind::BuzzDroid, home);
                     minion.state = EnemyState::Diving { target_x: ship.1 };
                     self.enemies.push(minion);
                 }
@@ -3894,7 +4046,7 @@ impl Game {
         for (row, col) in launches {
             for dx in [-2, 2] {
                 let home = (row.min(H - 2), (col + dx).clamp(1, W - 2));
-                let mut fighter = self.hatch(EnemyKind::Interceptor, home);
+                let mut fighter = self.hatch(EnemyKind::TieAdvanced, home);
                 fighter.state = EnemyState::Diving { target_x: ship.1 };
                 self.enemies.push(fighter);
             }
@@ -4092,11 +4244,11 @@ impl Game {
         for (kind, pos) in kills {
             self.award(kind.score());
             // A splitter breaks into two grunts that dive straight at you.
-            if kind == EnemyKind::Splitter {
+            if kind == EnemyKind::VultureDroid {
                 let target_x = self.ship.1;
                 for dx in [-2, 2] {
                     let home = (pos.0, (pos.1 + dx).clamp(1, W - 2));
-                    let mut half = self.hatch(EnemyKind::Grunt, home);
+                    let mut half = self.hatch(EnemyKind::TieFighter, home);
                     half.state = EnemyState::Diving { target_x };
                     self.enemies.push(half);
                 }
@@ -4849,7 +5001,7 @@ impl Game {
         let class = ShipClass::ALL
             .into_iter()
             .find(|c| !flown.contains(c))
-            .unwrap_or(ShipClass::Cruiser);
+            .unwrap_or(ShipClass::XWing);
         let name = HULL_NAMES[self.squad.len()];
         self.squad.push(Wing::new(name, class));
         true
@@ -5042,6 +5194,8 @@ pub struct Nova {
     interval: Duration,
     /// Rendered frames, used only to blink the hull while it is invulnerable.
     frames: u64,
+    /// True while the squadron roster is up over everything else.
+    roster: bool,
 }
 
 impl Nova {
@@ -5056,6 +5210,7 @@ impl Nova {
             last: None,
             interval: Duration::from_millis(70),
             frames: 0,
+            roster: false,
         }
     }
 
@@ -5082,9 +5237,125 @@ impl Nova {
         self.game.start(class, difficulty, galaxy);
     }
 
-    /// Running = a live round or the cleared-wave pause, and not paused.
+    /// Running = a live round or the cleared-wave pause, not paused, and not
+    /// sitting with the roster up.
     fn running(&self) -> bool {
-        matches!(self.game.status, Status::Playing | Status::WaveClear) && !self.paused
+        matches!(self.game.status, Status::Playing | Status::WaveClear)
+            && !self.paused
+            && !self.roster
+    }
+
+    /// The squadron roster: every fighter, what it is carrying and how it is
+    /// holding up. It opens over whatever is on screen, in flight or not.
+    fn render_roster(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let header = theme.get("ui.text.focus");
+        let text = theme.get("ui.text");
+        let dim = theme.get("ui.linenr");
+        let g = &self.game;
+        let ox = area.x + 2;
+        let mut y = area.y;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "SQUADRON ROSTER — {} · {}   salvage {}   score {}",
+                g.galaxy.name(),
+                g.difficulty.name(),
+                g.credits,
+                g.score
+            ),
+            header,
+        );
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "pilot level {} ({}/{} xp)   lives {}   torpedoes {}   bombs {}",
+                g.level, g.xp, g.xp_next, g.lives, g.missiles, g.bombs
+            ),
+            text,
+        );
+        y += 2;
+        surface.set_string(
+            ox,
+            y,
+            "  callsign     fighter              gun               shield  E R P C M  modules",
+            dim,
+        );
+        y += 1;
+        for (i, wing) in g.squad.iter().enumerate() {
+            let flown = i == g.active;
+            let style = if !wing.alive {
+                dim
+            } else if flown {
+                header
+            } else {
+                text
+            };
+            let modules: Vec<&str> = wing.loadout.modules.iter().map(|m| m.name()).collect();
+            surface.set_string(
+                ox,
+                y,
+                &format!(
+                    "{} {:<12} {:<20} {:<14} L{}  {}/{}    {} {} {} {} {}  {}",
+                    if flown { "▶" } else { " " },
+                    wing.name,
+                    wing.class.name(),
+                    wing.weapon.name(),
+                    wing.weapon_level,
+                    if flown { g.shield } else { wing.shield },
+                    if flown { g.max_shield } else { wing.max_shield },
+                    wing.loadout.tier(Part::Engine),
+                    wing.loadout.tier(Part::Reactor),
+                    wing.loadout.tier(Part::Plating),
+                    wing.loadout.tier(Part::Cannon),
+                    wing.loadout.tier(Part::Magazine),
+                    if modules.is_empty() {
+                        wing.status().to_string()
+                    } else {
+                        modules.join(", ")
+                    }
+                ),
+                style,
+            );
+            y += 1;
+        }
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "RACKS   {}",
+                g.owned
+                    .iter()
+                    .enumerate()
+                    .map(|(i, w)| format!("{}:{}", i + 1, w.name()))
+                    .collect::<Vec<_>>()
+                    .join("   ")
+            ),
+            text,
+        );
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "POWER   lasers {}  shields {}  engines {}   (z / c / v in flight)",
+                "▮".repeat(g.power.lasers as usize),
+                "▮".repeat(g.power.shields as usize),
+                "▮".repeat(g.power.engines as usize)
+            ),
+            text,
+        );
+        y += 2;
+        surface.set_string(
+            ox,
+            y,
+            "t closes the roster · w climbs into the next fighter (in the hangar) · q quits",
+            dim,
+        );
     }
 
     /// The hull picker, shown before the first wave.
@@ -5100,7 +5371,7 @@ impl Nova {
         surface.set_string(
             ox,
             y,
-            "Pick a hull — ←/→ or 1/2/3, d cycles difficulty, Enter launches, q quits.",
+            "Pick a fighter — ←/→ or 1-5 · d difficulty · g sector · t roster · Enter launches",
             text,
         );
         y += 2;
@@ -5296,7 +5567,7 @@ impl Nova {
         surface.set_string(
             ox,
             footer + 3,
-            "←/→/↑/↓ pick a lane · Enter jump · n new run · q quit",
+            "←/→/↑/↓ pick a lane · Enter jump · t roster · n new run · q quit",
             text,
         );
     }
@@ -5424,7 +5695,7 @@ impl Nova {
             ox,
             y,
             &format!(
-                "Parked at {} ({}).  Enter opens the galaxy chart · q quits.",
+                "Parked at {} ({}).  Enter opens the chart · t roster · w next fighter · q quits.",
                 g.node.kind.name(),
                 g.node.sector.name()
             ),
@@ -5451,6 +5722,21 @@ impl Component for Nova {
         if matches!(key, key!('q') | key!(Esc) | ctrl!('c')) {
             return EventResult::Consumed(Some(close));
         }
+        // The roster opens over anything and swallows everything but its own key.
+        if matches!(key, key!('t')) {
+            self.roster = !self.roster;
+            if self.running() {
+                self.last = Some(Instant::now());
+                zmax_event::request_redraw();
+            }
+            return EventResult::Consumed(None);
+        }
+        if self.roster {
+            if matches!(key, key!(Enter) | key!(' ')) {
+                self.roster = false;
+            }
+            return EventResult::Consumed(None);
+        }
         match self.game.status {
             Status::Select => {
                 let hulls = ShipClass::ALL.len();
@@ -5469,6 +5755,14 @@ impl Component for Nova {
                     }
                     key!('3') => {
                         self.pick = 2;
+                        self.launch();
+                    }
+                    key!('4') => {
+                        self.pick = 3;
+                        self.launch();
+                    }
+                    key!('5') => {
+                        self.pick = 4;
                         self.launch();
                     }
                     key!(Enter) | key!(' ') => self.launch(),
@@ -5540,6 +5834,15 @@ impl Component for Nova {
                     self.game.select_weapon(9);
                 }
                 key!('x') => self.game.special(),
+                key!('z') => {
+                    self.game.divert(System::Lasers);
+                }
+                key!('c') => {
+                    self.game.divert(System::Shields);
+                }
+                key!('v') => {
+                    self.game.divert(System::Engines);
+                }
                 key!('b') => self.game.bomb(),
                 key!('p') => self.paused = !self.paused,
                 key!('r') => self.retry(),
@@ -5592,13 +5895,8 @@ impl Component for Nova {
         let rock_style = theme.get("ui.linenr");
 
         surface.clear_with(area, bg);
-        if area.width < W as u16 + 4 || area.height < H as u16 + 7 {
-            surface.set_string(
-                area.x,
-                area.y,
-                &format!("Nova needs a {}×{} window.", W + 4, H + 7),
-                text_style,
-            );
+        if self.roster {
+            self.render_roster(area, surface, ctx);
             return;
         }
         match self.game.status {
@@ -5616,10 +5914,20 @@ impl Component for Nova {
             }
             _ => {}
         }
+        if area.width < 24 || area.height < 16 {
+            surface.set_string(area.x, area.y, "Nova needs a 24×16 window.", text_style);
+            return;
+        }
 
         let g = &self.game;
         let ox = area.x + 2;
         let top = area.y + 4;
+        // The court is bigger than most windows, so the view is a camera that
+        // keeps the hull in the middle of whatever room there is.
+        let view_w = (area.width as i16 - 4).clamp(20, W);
+        let view_h = (area.height as i16 - 7).clamp(10, H);
+        let cam_x = (g.ship.1 - view_w / 2).clamp(0, W - view_w);
+        let cam_y = (g.ship.0 - view_h / 2).clamp(0, H - view_h);
         surface.set_string(
             ox,
             area.y,
@@ -5670,14 +5978,16 @@ impl Component for Nova {
             ox,
             area.y + 2,
             &format!(
-                "ENERGY {}{} {}{}   DRONES {}{}   MEDALS {}   WING {}",
+                "ENERGY {}{} {}{}   PWR L{} S{} E{}   DRONES {}{}   WING {}",
                 "▰".repeat(pips),
                 "▱".repeat(10 - pips),
                 g.class.special().name(),
                 if g.special_ready() { " READY" } else { "" },
+                "▮".repeat(g.power.lasers as usize),
+                "▮".repeat(g.power.shields as usize),
+                "▮".repeat(g.power.engines as usize),
                 "◇".repeat(g.drones.len()),
                 if g.drone_stun > 0 { " STUNNED" } else { "" },
-                g.medals,
                 g.squad.iter().filter(|w| w.alive).count()
             ),
             if g.special_ready() {
@@ -5757,13 +6067,15 @@ impl Component for Nova {
             }
         }
 
-        // Court walls.
-        for c in 0..W {
+        // Court walls, drawn across whatever the camera can see.
+        for c in 0..view_w {
             surface.set_string(ox + c as u16, top, "─", wall_style);
-            surface.set_string(ox + c as u16, top + 1 + H as u16, "─", wall_style);
+            surface.set_string(ox + c as u16, top + 1 + view_h as u16, "─", wall_style);
         }
-        let cell = |r: i16, c: i16| (ox + c as u16, top + 1 + r as u16);
-        let on_board = |r: i16, c: i16| (0..H).contains(&r) && (0..W).contains(&c);
+        let cell = |r: i16, c: i16| (ox + (c - cam_x) as u16, top + 1 + (r - cam_y) as u16);
+        let on_board = |r: i16, c: i16| {
+            (cam_y..cam_y + view_h).contains(&r) && (cam_x..cam_x + view_w).contains(&c)
+        };
 
         // The sector backdrop, drawn first so everything else sits on top.
         for star in &g.stars {
@@ -5775,8 +6087,8 @@ impl Component for Nova {
         }
         // The rock itself: everything outside the flyable channel.
         if g.node.terrain != TerrainKind::Open {
-            for r in 0..H {
-                for c in 0..W {
+            for r in cam_y..cam_y + view_h {
+                for c in cam_x..cam_x + view_w {
                     if g.terrain.solid(r, c) {
                         let (x, y) = cell(r, c);
                         surface.set_string(x, y, "▓", rock_style);
@@ -5928,7 +6240,7 @@ impl Component for Nova {
             if on_board(r, c) {
                 let (x, y) = cell(r, c);
                 let style = match e.kind {
-                    EnemyKind::Tank | EnemyKind::Healer => tank_style,
+                    EnemyKind::Gunboat | EnemyKind::RepairDroid => tank_style,
                     _ if e.charge > 0 => beam_style,
                     _ => enemy_style,
                 };
@@ -5996,12 +6308,12 @@ impl Component for Nova {
                 g.node.terrain.name(),
                 g.node.bonus.label()
             );
-            let x = ox + (W as u16).saturating_sub(banner.chars().count() as u16) / 2;
-            let (_, y) = cell(H / 2, 0);
+            let x = ox + (view_w as u16).saturating_sub(banner.chars().count() as u16) / 2;
+            let (_, y) = cell(cam_y + view_h / 2, cam_x);
             surface.set_string(x, y, &banner, header_style);
         }
 
-        let status_y = top + 2 + H as u16;
+        let status_y = top + 2 + view_h as u16;
         let status = match g.status {
             Status::Lost => format!(
                 "Game over — score {}, wave {}, pilot level {}.  r: same build  n: new  q: quit",
@@ -6015,7 +6327,7 @@ impl Component for Nova {
                 "Paused — p resume · r retry · n new · q quit".to_string()
             }
             Status::Playing => {
-                "←/→/↑/↓ fly · SPC fire · m missiles · 1-0/[ ] guns · x special · b bomb · p pause · q quit"
+                "fly ←/→/↑/↓ · SPC fire · m torpedoes · 1-0 guns · z/c/v power · x special · b bomb · t roster"
                     .to_string()
             }
             Status::Select | Status::Hangar | Status::Chart => String::new(),
@@ -6031,7 +6343,7 @@ mod tests {
     /// A cruiser one keypress into wave one, on an empty stretch of court.
     pub(super) fn flying() -> Game {
         let mut g = Game::new(1);
-        g.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Orion);
+        g.start(ShipClass::XWing, Difficulty::Normal, Galaxy::Orion);
         g.node = MapNode {
             pos: (0, 0),
             region: Region::Rim,
@@ -6065,7 +6377,7 @@ mod tests {
     #[test]
     fn the_spread_gun_fires_one_bolt_per_lane() {
         let mut g = flying();
-        g.weapon = Weapon::Spread;
+        g.weapon = Weapon::QuadLaser;
         g.fire();
         let mut drifts: Vec<i16> = g.shots.iter().map(|s| s.drift).collect();
         drifts.sort_unstable();
@@ -6101,11 +6413,11 @@ mod tests {
     #[test]
     fn a_laser_beam_pierces_the_hull_it_kills() {
         let mut g = flying();
-        g.weapon = Weapon::Laser;
+        g.weapon = Weapon::HeavyLaser;
         let col = g.ship.1;
         g.enemies = vec![
-            Enemy::new(EnemyKind::Grunt, (g.ship.0 - 2, col)),
-            Enemy::new(EnemyKind::Grunt, (g.ship.0 - 3, col)),
+            Enemy::new(EnemyKind::TieFighter, (g.ship.0 - 2, col)),
+            Enemy::new(EnemyKind::TieFighter, (g.ship.0 - 3, col)),
         ];
         g.fire();
         g.advance_shots();
@@ -6121,8 +6433,8 @@ mod tests {
         let mut g = flying();
         let col = g.ship.1;
         g.enemies = vec![
-            Enemy::new(EnemyKind::Grunt, (g.ship.0 - 2, col)),
-            Enemy::new(EnemyKind::Grunt, (g.ship.0 - 3, col)),
+            Enemy::new(EnemyKind::TieFighter, (g.ship.0 - 2, col)),
+            Enemy::new(EnemyKind::TieFighter, (g.ship.0 - 3, col)),
         ];
         g.fire();
         g.advance_shots();
@@ -6133,9 +6445,9 @@ mod tests {
     #[test]
     fn homing_missiles_steer_toward_the_nearest_hull() {
         let mut g = flying();
-        g.weapon = Weapon::Homing;
+        g.weapon = Weapon::ConcussionMissile;
         g.ship.1 = 30;
-        g.enemies = vec![Enemy::new(EnemyKind::Grunt, (4, 10))];
+        g.enemies = vec![Enemy::new(EnemyKind::TieFighter, (4, 10))];
         g.fire();
         g.advance_shots();
         assert_eq!(g.shots[0].drift, -1, "the missile leans toward the target");
@@ -6145,11 +6457,11 @@ mod tests {
     #[test]
     fn plasma_damages_the_whole_footprint() {
         let mut g = flying();
-        g.weapon = Weapon::Plasma;
+        g.weapon = Weapon::ProtonBomb;
         let col = g.ship.1;
         g.enemies = vec![
-            Enemy::new(EnemyKind::Grunt, (g.ship.0 - 2, col - 1)),
-            Enemy::new(EnemyKind::Grunt, (g.ship.0 - 2, col + 1)),
+            Enemy::new(EnemyKind::TieFighter, (g.ship.0 - 2, col - 1)),
+            Enemy::new(EnemyKind::TieFighter, (g.ship.0 - 2, col + 1)),
         ];
         g.fire();
         g.advance_shots();
@@ -6228,7 +6540,7 @@ mod tests {
     #[test]
     fn a_blink_jumps_the_hull_and_costs_energy() {
         let mut g = Game::new(1);
-        g.start(ShipClass::Interceptor, Difficulty::Normal, Galaxy::Orion);
+        g.start(ShipClass::AWing, Difficulty::Normal, Galaxy::Orion);
         g.launch_next_wave();
         let (col, energy) = (g.ship.1, g.energy);
         g.move_ship(1, 0);
@@ -6245,7 +6557,7 @@ mod tests {
     #[test]
     fn a_barrage_lays_bolts_across_the_whole_court() {
         let mut g = Game::new(1);
-        g.start(ShipClass::Juggernaut, Difficulty::Normal, Galaxy::Orion);
+        g.start(ShipClass::YWing, Difficulty::Normal, Galaxy::Orion);
         g.launch_next_wave();
         g.special();
         assert!(g.shots.len() >= 8, "the wall covers the court");
@@ -6264,12 +6576,12 @@ mod tests {
     #[test]
     fn a_matching_gun_pickup_levels_it_up_and_a_different_one_swaps_it() {
         let mut g = flying();
-        g.collect(PowerKind::Gun(Weapon::Blaster));
+        g.collect(PowerKind::Gun(Weapon::LaserCannon));
         assert_eq!(g.weapon_level, 2, "the carried gun levels up");
-        g.collect(PowerKind::Gun(Weapon::Laser));
-        assert_eq!(g.weapon, Weapon::Laser, "a different gun replaces it");
+        g.collect(PowerKind::Gun(Weapon::HeavyLaser));
+        assert_eq!(g.weapon, Weapon::HeavyLaser, "a different gun replaces it");
         for _ in 0..5 {
-            g.collect(PowerKind::Gun(Weapon::Laser));
+            g.collect(PowerKind::Gun(Weapon::HeavyLaser));
         }
         assert_eq!(g.weapon_level, MAX_WEAPON_LEVEL, "levels are capped");
     }
@@ -6318,8 +6630,8 @@ mod tests {
     fn a_smart_bomb_clears_enemy_fire_and_the_lighter_hulls() {
         let mut g = flying();
         g.enemies = vec![
-            Enemy::new(EnemyKind::Grunt, (5, 10)),
-            Enemy::new(EnemyKind::Tank, (5, 20)),
+            Enemy::new(EnemyKind::TieFighter, (5, 10)),
+            Enemy::new(EnemyKind::Gunboat, (5, 20)),
         ];
         g.enemy_shots = vec![Shot::enemy((10, 10), 0, 1)];
         let bombs = g.bombs;
@@ -6329,7 +6641,7 @@ mod tests {
         assert_eq!(g.enemies.len(), 1, "the grunt dies");
         assert_eq!(
             g.enemies[0].hp,
-            EnemyKind::Tank.hp() - BOMB_DAMAGE,
+            EnemyKind::Gunboat.hp() - BOMB_DAMAGE,
             "the tank survives with its armour scarred"
         );
     }
@@ -6398,7 +6710,7 @@ mod tests {
     #[test]
     fn a_sniper_telegraphs_before_its_shot_goes_off() {
         let mut g = flying();
-        let mut sniper = g.hatch(EnemyKind::Sniper, (4, g.ship.1));
+        let mut sniper = g.hatch(EnemyKind::TieDefender, (4, g.ship.1));
         sniper.charge = 1;
         g.enemies = vec![sniper];
         g.advance_enemies();
@@ -6437,7 +6749,7 @@ mod tests {
     fn a_splitter_breaks_into_two_divers() {
         let mut g = flying();
         let pos = (6, 20);
-        let mut splitter = Enemy::new(EnemyKind::Splitter, pos);
+        let mut splitter = Enemy::new(EnemyKind::VultureDroid, pos);
         splitter.hp = 1;
         g.enemies = vec![splitter];
         g.hit_targets(&Shot::bolt(pos, 0, 2));
@@ -6453,15 +6765,15 @@ mod tests {
     #[test]
     fn a_healer_patches_up_the_hull_beside_it() {
         let mut g = flying();
-        let mut hurt = g.hatch(EnemyKind::Tank, (5, 20));
+        let mut hurt = g.hatch(EnemyKind::Gunboat, (5, 20));
         hurt.hp = 2;
-        g.enemies = vec![g.hatch(EnemyKind::Healer, (5, 22)), hurt];
+        g.enemies = vec![g.hatch(EnemyKind::RepairDroid, (5, 22)), hurt];
         g.tick = HEAL_CADENCE;
         g.advance_enemies();
         let tank = g
             .enemies
             .iter()
-            .find(|e| e.kind == EnemyKind::Tank)
+            .find(|e| e.kind == EnemyKind::Gunboat)
             .expect("the tank is still flying");
         assert_eq!(tank.hp, 3, "the healer welds a hit point back on");
     }
@@ -6469,16 +6781,16 @@ mod tests {
     #[test]
     fn a_diver_that_misses_returns_to_formation_but_a_kamikaze_is_gone() {
         let mut g = flying();
-        let mut grunt = Enemy::new(EnemyKind::Grunt, (4, 8));
+        let mut grunt = Enemy::new(EnemyKind::TieFighter, (4, 8));
         grunt.pos = (H - 1, 8);
         grunt.state = EnemyState::Diving { target_x: 8 };
-        let mut kamikaze = Enemy::new(EnemyKind::Kamikaze, (4, 40));
+        let mut kamikaze = Enemy::new(EnemyKind::BuzzDroid, (4, 40));
         kamikaze.pos = (H - 1, 40);
         kamikaze.state = EnemyState::Diving { target_x: 40 };
         g.enemies = vec![grunt, kamikaze];
         g.advance_enemies();
         assert_eq!(g.enemies.len(), 1, "the kamikaze leaves the court");
-        assert_eq!(g.enemies[0].kind, EnemyKind::Grunt);
+        assert_eq!(g.enemies[0].kind, EnemyKind::TieFighter);
         assert_eq!(
             g.enemies[0].state,
             EnemyState::Formation,
@@ -6490,7 +6802,7 @@ mod tests {
     #[test]
     fn ramming_the_ship_costs_the_hull_a_pip() {
         let mut g = flying();
-        let mut kamikaze = Enemy::new(EnemyKind::Kamikaze, (4, g.ship.1));
+        let mut kamikaze = Enemy::new(EnemyKind::BuzzDroid, (4, g.ship.1));
         kamikaze.pos = (g.ship.0 - 2, g.ship.1);
         kamikaze.state = EnemyState::Diving { target_x: g.ship.1 };
         g.enemies = vec![kamikaze];
@@ -6799,14 +7111,18 @@ mod tests {
                 .any(|l| l.entry == ShopEntry::Consumable(Stock::Drone) && !l.available),
             "a full wing cannot take another drone"
         );
-        g.owned = vec![Weapon::Blaster, Weapon::Rail];
+        g.owned = vec![Weapon::LaserCannon, Weapon::MassDriver];
         let swap = g
             .shop_lines()
             .into_iter()
             .find(|l| l.entry == ShopEntry::Consumable(Stock::GunSwap))
             .expect("the swap is on the list");
         assert!(g.buy(swap.key));
-        assert_eq!(g.weapon, Weapon::Rail, "the racks rotate to the next gun");
+        assert_eq!(
+            g.weapon,
+            Weapon::MassDriver,
+            "the racks rotate to the next gun"
+        );
     }
 
     #[test]
@@ -6857,7 +7173,7 @@ mod tests {
     #[test]
     fn a_long_run_through_every_sector_never_panics() {
         let mut g = Game::new(7);
-        g.start(ShipClass::Interceptor, Difficulty::Insane, Galaxy::Orion);
+        g.start(ShipClass::AWing, Difficulty::Insane, Galaxy::Orion);
         g.launch_next_wave();
         for i in 0..2_000 {
             if g.status == Status::Hangar {
@@ -6895,7 +7211,7 @@ mod map_tests {
     /// A court flown through a given kind of rock.
     fn on_map(kind: TerrainKind) -> Game {
         let mut g = Game::new(3);
-        g.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Orion);
+        g.start(ShipClass::XWing, Difficulty::Normal, Galaxy::Orion);
         g.node = MapNode {
             pos: (0, 0),
             region: Region::Rim,
@@ -7122,7 +7438,7 @@ mod map_tests {
     #[test]
     fn an_armoury_stop_hands_over_its_gun() {
         let mut g = flying();
-        g.weapon = Weapon::Blaster;
+        g.weapon = Weapon::LaserCannon;
         g.weapon_level = 1;
         g.node = MapNode {
             pos: (0, 0),
@@ -7130,12 +7446,12 @@ mod map_tests {
             kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
-            bonus: NodeBonus::Armoury(Weapon::Plasma),
+            bonus: NodeBonus::Armoury(Weapon::ProtonBomb),
             cleared: false,
             explored: true,
         };
         g.spawn_wave();
-        assert_eq!(g.weapon, Weapon::Plasma, "the crate is fitted");
+        assert_eq!(g.weapon, Weapon::ProtonBomb, "the crate is fitted");
         assert!(g.weapon_level >= 2, "and comes half tuned");
     }
 
@@ -7186,7 +7502,7 @@ mod map_tests {
     #[test]
     fn a_long_run_through_the_rock_never_panics() {
         let mut g = Game::new(21);
-        g.start(ShipClass::Juggernaut, Difficulty::Hard, Galaxy::Orion);
+        g.start(ShipClass::YWing, Difficulty::Hard, Galaxy::Orion);
         g.launch_next_wave();
         for i in 0..3_000 {
             if matches!(g.status, Status::Hangar | Status::Chart) {
@@ -7218,13 +7534,13 @@ mod gun_tests {
     #[test]
     fn the_vulcan_hoses_faster_than_anything_else() {
         let mut g = flying();
-        g.weapon = Weapon::Blaster;
+        g.weapon = Weapon::LaserCannon;
         let blaster = g.cadence();
-        g.weapon = Weapon::Vulcan;
+        g.weapon = Weapon::RepeatingBlaster;
         assert!(g.cadence() < blaster, "the machine gun barely pauses");
-        g.weapon = Weapon::Rail;
+        g.weapon = Weapon::MassDriver;
         assert!(g.cadence() > blaster, "the rail gun takes its time");
-        g.weapon = Weapon::Vulcan;
+        g.weapon = Weapon::RepeatingBlaster;
         g.weapon_level = 3;
         g.fire();
         assert_eq!(g.shots.len(), 3, "and walks three rounds across at level 3");
@@ -7233,12 +7549,12 @@ mod gun_tests {
     #[test]
     fn a_rocket_takes_the_neighbours_with_it() {
         let mut g = flying();
-        g.weapon = Weapon::Rocket;
+        g.weapon = Weapon::RocketPod;
         let (row, col) = (g.ship.0 - 2, g.ship.1);
         g.enemies = vec![
-            Enemy::new(EnemyKind::Grunt, (row, col)),
-            Enemy::new(EnemyKind::Grunt, (row, col + 1)),
-            Enemy::new(EnemyKind::Grunt, (row - 1, col - 1)),
+            Enemy::new(EnemyKind::TieFighter, (row, col)),
+            Enemy::new(EnemyKind::TieFighter, (row, col + 1)),
+            Enemy::new(EnemyKind::TieFighter, (row - 1, col - 1)),
         ];
         g.fire();
         g.advance_shots();
@@ -7248,7 +7564,7 @@ mod gun_tests {
     #[test]
     fn a_flak_shell_bursts_into_a_fan() {
         let mut g = flying();
-        g.weapon = Weapon::Flak;
+        g.weapon = Weapon::Flechette;
         g.fire();
         assert_eq!(g.shots.len(), 1, "one shell goes up");
         for _ in 0..FLAK_FUSE {
@@ -7264,10 +7580,10 @@ mod gun_tests {
     #[test]
     fn a_rail_slug_runs_the_length_of_the_court() {
         let mut g = flying();
-        g.weapon = Weapon::Rail;
+        g.weapon = Weapon::MassDriver;
         let col = g.ship.1;
         g.enemies = (2..=5)
-            .map(|dr| Enemy::new(EnemyKind::Tank, (g.ship.0 - dr, col)))
+            .map(|dr| Enemy::new(EnemyKind::Gunboat, (g.ship.0 - dr, col)))
             .collect();
         g.fire();
         g.advance_shots();
@@ -7280,13 +7596,13 @@ mod gun_tests {
     #[test]
     fn an_arc_bolt_earths_itself_through_a_crowd() {
         let mut g = flying();
-        g.weapon = Weapon::Arc;
+        g.weapon = Weapon::ArcCaster;
         g.weapon_level = 2;
         let (row, col) = (g.ship.0 - 2, g.ship.1);
         g.enemies = vec![
-            Enemy::new(EnemyKind::Grunt, (row, col)),
-            Enemy::new(EnemyKind::Grunt, (row, col + 3)),
-            Enemy::new(EnemyKind::Grunt, (row - 1, col + 5)),
+            Enemy::new(EnemyKind::TieFighter, (row, col)),
+            Enemy::new(EnemyKind::TieFighter, (row, col + 3)),
+            Enemy::new(EnemyKind::TieFighter, (row - 1, col + 5)),
         ];
         g.fire();
         g.advance_shots();
@@ -7442,7 +7758,7 @@ mod terrain_kind_tests {
         for terrain in TerrainKind::ALL {
             for sector in Sector::ALL {
                 let mut g = Game::new(5);
-                g.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Orion);
+                g.start(ShipClass::XWing, Difficulty::Normal, Galaxy::Orion);
                 g.status = Status::Playing;
                 g.node = MapNode {
                     pos: (0, 0),
@@ -7519,15 +7835,19 @@ mod squad_tests {
         let mut g = docked();
         let hull = line(&g, Stock::Hull);
         g.buy(hull.key);
-        g.weapon = Weapon::Rail;
+        g.weapon = Weapon::MassDriver;
         let flown = g.class;
         assert!(g.cycle_active(), "the pilot climbs across");
         assert_eq!(g.active, 1);
         assert_ne!(g.class, flown, "into a different hull");
-        assert_eq!(g.weapon, Weapon::Blaster, "which carries its own gun");
+        assert_eq!(g.weapon, Weapon::LaserCannon, "which carries its own gun");
         assert!(g.cycle_active(), "and back again");
         assert_eq!(g.active, 0);
-        assert_eq!(g.weapon, Weapon::Rail, "the first hull kept its rail gun");
+        assert_eq!(
+            g.weapon,
+            Weapon::MassDriver,
+            "the first hull kept its rail gun"
+        );
     }
 
     #[test]
@@ -7566,24 +7886,32 @@ mod squad_tests {
     #[test]
     fn guns_go_into_the_racks_and_can_be_swapped_mid_fight() {
         let mut g = flying();
-        assert_eq!(g.owned, vec![Weapon::Blaster], "one gun to start with");
-        g.collect(PowerKind::Gun(Weapon::Rail));
-        g.collect(PowerKind::Gun(Weapon::Vulcan));
+        assert_eq!(g.owned, vec![Weapon::LaserCannon], "one gun to start with");
+        g.collect(PowerKind::Gun(Weapon::MassDriver));
+        g.collect(PowerKind::Gun(Weapon::RepeatingBlaster));
         assert_eq!(g.owned.len(), 3, "picked-up guns are kept");
-        assert_eq!(g.weapon, Weapon::Vulcan, "and the last one is fitted");
+        assert_eq!(
+            g.weapon,
+            Weapon::RepeatingBlaster,
+            "and the last one is fitted"
+        );
         assert!(g.select_weapon(0), "any rack slot can be selected");
-        assert_eq!(g.weapon, Weapon::Blaster);
+        assert_eq!(g.weapon, Weapon::LaserCannon);
         g.cycle_weapon(-1);
-        assert_eq!(g.weapon, Weapon::Vulcan, "and the racks wrap around");
+        assert_eq!(
+            g.weapon,
+            Weapon::RepeatingBlaster,
+            "and the racks wrap around"
+        );
         assert!(!g.select_weapon(9), "empty slots are refused");
     }
 
     #[test]
     fn a_gun_picked_up_twice_levels_up_rather_than_stacking() {
         let mut g = flying();
-        g.collect(PowerKind::Gun(Weapon::Flak));
+        g.collect(PowerKind::Gun(Weapon::Flechette));
         let level = g.weapon_level;
-        g.collect(PowerKind::Gun(Weapon::Flak));
+        g.collect(PowerKind::Gun(Weapon::Flechette));
         assert_eq!(g.owned.len(), 2, "the racks hold one of each");
         assert_eq!(g.weapon_level, level + 1, "the second one is an upgrade");
     }
@@ -7591,7 +7919,7 @@ mod squad_tests {
     #[test]
     fn the_launcher_fires_seeking_rounds_off_its_own_ammunition() {
         let mut g = flying();
-        g.enemies = vec![Enemy::new(EnemyKind::Grunt, (4, g.ship.1 - 10))];
+        g.enemies = vec![Enemy::new(EnemyKind::TieFighter, (4, g.ship.1 - 10))];
         let ammo = g.missiles;
         g.fire_missiles();
         assert_eq!(g.missiles, ammo - 1, "a round leaves the launcher");
@@ -7684,7 +8012,7 @@ mod galaxy_tests {
         let mut g = flying();
         g.status = Status::Chart;
         g.shield = 0;
-        g.squad.push(Wing::new("Two", ShipClass::Interceptor));
+        g.squad.push(Wing::new("Two", ShipClass::AWing));
         g.squad[1].alive = false;
         let depot = MapNode {
             pos: (1, 0),
@@ -7716,7 +8044,7 @@ mod galaxy_tests {
             kind: NodeKind::Derelict,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
-            bonus: NodeBonus::Armoury(Weapon::Rail),
+            bonus: NodeBonus::Armoury(Weapon::MassDriver),
             cleared: false,
             explored: true,
         };
@@ -7725,8 +8053,8 @@ mod galaxy_tests {
         g.map.cursor = at;
         assert!(g.jump());
         assert!(g.credits > 0, "the hulk is worth stripping");
-        assert_eq!(g.weapon, Weapon::Rail, "and the gun aboard is fitted");
-        assert!(g.owned.contains(&Weapon::Rail), "into the racks");
+        assert_eq!(g.weapon, Weapon::MassDriver, "and the gun aboard is fitted");
+        assert!(g.owned.contains(&Weapon::MassDriver), "into the racks");
     }
 
     #[test]
@@ -7747,9 +8075,9 @@ mod galaxy_tests {
     #[test]
     fn galaxies_bias_the_run_they_are_flown_in() {
         let mut hive = Game::new(2);
-        hive.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Hive);
+        hive.start(ShipClass::XWing, Difficulty::Normal, Galaxy::Hive);
         let mut abyss = Game::new(2);
-        abyss.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Abyss);
+        abyss.start(ShipClass::XWing, Difficulty::Normal, Galaxy::Abyss);
         assert!(
             hive.wave_armour() < abyss.wave_armour(),
             "the abyss armours everything the hive does not"
@@ -7765,7 +8093,7 @@ mod galaxy_tests {
     fn a_run_across_a_galaxy_never_panics() {
         for galaxy in Galaxy::ALL {
             let mut g = Game::new(13);
-            g.start(ShipClass::Cruiser, Difficulty::Normal, galaxy);
+            g.start(ShipClass::XWing, Difficulty::Normal, galaxy);
             for i in 0..4_000 {
                 match g.status {
                     Status::Lost => break,
@@ -7830,13 +8158,9 @@ mod capital_tests {
             .capital
             .as_ref()
             .expect("the station is holding the system");
-        assert_eq!(
-            cap.kind,
-            CapitalKind::Battlestation,
-            "a trench means a station"
-        );
+        assert_eq!(cap.kind, CapitalKind::DeathStar, "a trench means a station");
         assert!(
-            g.enemies.iter().all(|e| e.kind == EnemyKind::Interceptor),
+            g.enemies.iter().all(|e| e.kind == EnemyKind::TieAdvanced),
             "with a screen of fighters out in front of it"
         );
         g.node.terrain = TerrainKind::Open;
@@ -7844,14 +8168,14 @@ mod capital_tests {
         g.spawn_wave();
         assert_eq!(
             g.capital.as_ref().unwrap().kind,
-            CapitalKind::WedgeDestroyer,
+            CapitalKind::StarDestroyer,
             "the core fields wedges"
         );
     }
 
     #[test]
     fn the_hull_cannot_be_touched_while_a_dome_stands() {
-        let mut g = against(CapitalKind::WedgeDestroyer);
+        let mut g = against(CapitalKind::StarDestroyer);
         let hull = {
             let cap = g.capital.as_ref().unwrap();
             (cap.pos.0 + cap.kind.depth() - 1, cap.pos.1 + 12)
@@ -7884,7 +8208,7 @@ mod capital_tests {
 
     #[test]
     fn an_ion_bolt_scrambles_a_dome_instead_of_breaking_it() {
-        let mut g = against(CapitalKind::WedgeDestroyer);
+        let mut g = against(CapitalKind::StarDestroyer);
         let dome = cell_of(&g, Emplacement::ShieldDome);
         let hp = g.capital.as_ref().unwrap().parts[1].hp;
         g.hit_capital(&Shot::ion(dome, 3));
@@ -7901,7 +8225,7 @@ mod capital_tests {
 
     #[test]
     fn a_run_down_the_trench_ends_the_station() {
-        let mut g = against(CapitalKind::Battlestation);
+        let mut g = against(CapitalKind::DeathStar);
         let port = cell_of(&g, Emplacement::ExhaustPort);
         let full = g.capital.as_ref().unwrap().hp;
         g.hit_capital(&Shot::torpedo(port, 30));
@@ -7932,7 +8256,7 @@ mod capital_tests {
 
     #[test]
     fn the_batteries_fire_heavy_and_the_bays_launch_fighters() {
-        let mut g = against(CapitalKind::WedgeDestroyer);
+        let mut g = against(CapitalKind::StarDestroyer);
         for part in g.capital.as_mut().unwrap().parts.iter_mut() {
             part.cooldown = 0;
         }
@@ -7943,14 +8267,14 @@ mod capital_tests {
             "and they hit for two pips"
         );
         assert!(
-            g.enemies.iter().any(|e| e.kind == EnemyKind::Interceptor),
+            g.enemies.iter().any(|e| e.kind == EnemyKind::TieAdvanced),
             "the bays put fighters in the air"
         );
     }
 
     #[test]
     fn a_tractor_beam_drags_the_hull_in() {
-        let mut g = against(CapitalKind::WedgeDestroyer);
+        let mut g = against(CapitalKind::StarDestroyer);
         {
             let cap = g.capital.as_mut().unwrap();
             cap.pos.1 = W - 12;
@@ -7969,7 +8293,7 @@ mod capital_tests {
 
     #[test]
     fn losing_the_engines_pins_the_ship_and_losing_the_tower_slows_its_guns() {
-        let mut g = against(CapitalKind::WedgeDestroyer);
+        let mut g = against(CapitalKind::StarDestroyer);
         {
             let cap = g.capital.as_mut().unwrap();
             cap.tick = 5;
@@ -8005,7 +8329,7 @@ mod capital_tests {
     #[test]
     fn torpedoes_and_ion_bolts_are_in_the_racks() {
         let mut g = flying();
-        for weapon in [Weapon::Torpedo, Weapon::Ion] {
+        for weapon in [Weapon::ProtonTorpedo, Weapon::IonCannon] {
             g.weapon = weapon;
             g.weapon_level = 1;
             g.fire_cooldown = 0;
@@ -8013,11 +8337,11 @@ mod capital_tests {
             g.fire();
             assert!(!g.shots.is_empty(), "{} fires", weapon.name());
         }
-        g.weapon = Weapon::Torpedo;
+        g.weapon = Weapon::ProtonTorpedo;
         let slow = g.cadence();
-        g.weapon = Weapon::Vulcan;
+        g.weapon = Weapon::RepeatingBlaster;
         assert!(slow > g.cadence(), "a torpedo tube is slow to reload");
-        g.weapon = Weapon::Torpedo;
+        g.weapon = Weapon::ProtonTorpedo;
         g.fire_cooldown = 0;
         g.shots.clear();
         g.fire();
@@ -8071,12 +8395,12 @@ mod capital_tests {
     #[test]
     fn a_capital_fight_plays_out_without_panicking() {
         for kind in [
-            CapitalKind::Frigate,
-            CapitalKind::WedgeDestroyer,
-            CapitalKind::Battlestation,
+            CapitalKind::ImperialFrigate,
+            CapitalKind::StarDestroyer,
+            CapitalKind::DeathStar,
         ] {
             let mut g = against(kind);
-            g.weapon = Weapon::Torpedo;
+            g.weapon = Weapon::ProtonTorpedo;
             for i in 0..2_000 {
                 if g.status != Status::Playing {
                     break;
@@ -8095,5 +8419,155 @@ mod capital_tests {
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod fleet_tests {
+    use super::tests::flying;
+    use super::*;
+
+    #[test]
+    fn five_fighters_are_on_the_flight_line() {
+        assert_eq!(ShipClass::ALL.len(), 5, "A-wing through freighter");
+        let names: Vec<&str> = ShipClass::ALL.iter().map(|c| c.name()).collect();
+        assert!(names.contains(&"X-wing"));
+        assert!(names.contains(&"Y-wing"));
+        assert!(names.contains(&"B-wing"));
+        assert!(
+            ShipClass::AWing.speed() > ShipClass::YWing.speed(),
+            "the A-wing is the quick one"
+        );
+        assert!(
+            ShipClass::BWing.damage() > ShipClass::XWing.damage(),
+            "the B-wing hits hardest"
+        );
+        assert!(
+            ShipClass::Freighter.max_shield() > ShipClass::XWing.max_shield(),
+            "and the freighter carries the most plating"
+        );
+    }
+
+    #[test]
+    fn every_fighter_can_be_launched() {
+        for class in ShipClass::ALL {
+            let mut g = Game::new(4);
+            g.start(class, Difficulty::Normal, Galaxy::Orion);
+            assert_eq!(g.class, class, "{} launches", class.name());
+            assert_eq!(g.squad[0].class, class, "as the flight leader");
+            g.launch_next_wave();
+            g.fire();
+            assert!(!g.shots.is_empty(), "{} has guns", class.name());
+        }
+    }
+
+    #[test]
+    fn power_is_split_three_ways_and_can_be_diverted() {
+        let mut g = flying();
+        assert_eq!(
+            g.power.lasers + g.power.shields + g.power.engines,
+            POWER_PIPS
+        );
+        let damage = g.gun_damage();
+        assert!(g.divert(System::Lasers), "a pip goes to the cannons");
+        assert_eq!(g.gun_damage(), damage + 1, "and they hit harder for it");
+        assert_eq!(
+            g.power.lasers + g.power.shields + g.power.engines,
+            POWER_PIPS,
+            "the reactor puts out no more than it has"
+        );
+        let thrust = g.thrust();
+        for _ in 0..POWER_PIPS {
+            g.divert(System::Engines);
+        }
+        assert!(g.thrust() > thrust, "everything to the engines is faster");
+        assert!(!g.divert(System::Engines), "and there is no more to give");
+    }
+
+    #[test]
+    fn deflectors_knit_themselves_back_while_they_have_the_power() {
+        let mut g = flying();
+        g.shield = 0;
+        g.power = Power {
+            lasers: 0,
+            shields: POWER_PIPS,
+            engines: 0,
+        };
+        let cadence = (SHIELD_KNIT_TICKS / POWER_PIPS).max(30);
+        g.tick = cadence - 1;
+        g.tick_timers();
+        assert_eq!(g.shield, 1, "a pip knits itself back");
+        g.shield = 0;
+        g.power = Power {
+            lasers: POWER_PIPS,
+            shields: 0,
+            engines: 0,
+        };
+        for _ in 0..cadence * 2 {
+            g.tick_timers();
+        }
+        assert_eq!(g.shield, 0, "with no power to them, nothing comes back");
+    }
+
+    #[test]
+    fn the_imperial_line_runs_from_frigate_to_command_ship() {
+        let frigate = Capital::new(CapitalKind::ImperialFrigate, 0, 0);
+        let destroyer = Capital::new(CapitalKind::StarDestroyer, 0, 0);
+        let command = Capital::new(CapitalKind::SuperDestroyer, 0, 0);
+        assert!(destroyer.max_hp > frigate.max_hp, "a destroyer is heavier");
+        assert!(
+            command.max_hp > destroyer.max_hp,
+            "the command ship heavier still"
+        );
+        assert!(
+            command.standing(Emplacement::Turbolaser) > destroyer.standing(Emplacement::Turbolaser),
+            "and carries more batteries"
+        );
+        assert!(
+            command.kind.span(command.kind.depth() - 1)
+                > destroyer.kind.span(destroyer.kind.depth() - 1),
+            "across a wider hull"
+        );
+        assert_eq!(
+            CapitalKind::DeathStar.name(),
+            "Death Star",
+            "and the station is what it is"
+        );
+    }
+
+    #[test]
+    fn the_core_worlds_field_the_command_ship() {
+        let mut g = flying();
+        g.node.kind = NodeKind::Capital;
+        g.node.terrain = TerrainKind::Open;
+        g.node.region = Region::Deep;
+        g.spawn_wave();
+        assert_eq!(
+            g.capital.as_ref().unwrap().kind,
+            CapitalKind::SuperDestroyer,
+            "the deepest systems are held by the command ship"
+        );
+        g.node.region = Region::Rim;
+        g.spawn_wave();
+        assert_eq!(
+            g.capital.as_ref().unwrap().kind,
+            CapitalKind::ImperialFrigate,
+            "the rim only ever fields a picket"
+        );
+    }
+
+    #[test]
+    fn the_squadron_flies_under_its_own_callsigns() {
+        let mut g = flying();
+        g.status = Status::Hangar;
+        g.credits = 20_000;
+        assert_eq!(g.squad[0].name, "Red Leader");
+        let hull = g
+            .shop_lines()
+            .into_iter()
+            .find(|l| l.entry == ShopEntry::Consumable(Stock::Hull))
+            .expect("the yard has another fighter");
+        assert!(g.buy(hull.key));
+        assert_eq!(g.squad[1].name, "Red Two", "the wing fills out in order");
     }
 }
