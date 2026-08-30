@@ -143,8 +143,8 @@ const POWER_PIPS: u32 = 6;
 const SHIELD_KNIT_TICKS: u32 = 600;
 /// Hulls a squad can hold, where the wingmen ride, how often they fire, and
 /// what a new hull or a rescue costs.
-const MAX_SQUAD: usize = 4;
-const WING_OFFSETS: [i16; 3] = [-6, 6, -11];
+const MAX_SQUAD: usize = 6;
+const WING_SLOTS: usize = MAX_SQUAD - 1;
 const WING_CADENCE: u32 = 9;
 /// Missiles the launcher fires per salvo, and what it holds to start with.
 const MISSILE_SALVO: u32 = 2;
@@ -2874,6 +2874,133 @@ pub struct Chatter {
     pub ticks: u32,
 }
 
+/// A place to stand in the hangar: a bay with a fighter in it, or a station
+/// somebody works at.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DeckSpot {
+    /// A parked fighter, by its place in the squadron.
+    Bay(usize),
+    /// The quartermaster's terminal: everything the yard sells.
+    Quartermaster,
+    /// The navicomputer: the galaxy chart, and the way out.
+    Navicomputer,
+    /// The astromech pit: droids patch the squadron up here.
+    AstromechPit,
+    /// The briefing table: what the next mission wants.
+    BriefingTable,
+    /// The launch pad: walk onto it to fly.
+    LaunchPad,
+}
+
+impl DeckSpot {
+    pub fn name(self) -> &'static str {
+        match self {
+            DeckSpot::Bay(_) => "fighter bay",
+            DeckSpot::Quartermaster => "quartermaster",
+            DeckSpot::Navicomputer => "navicomputer",
+            DeckSpot::AstromechPit => "astromech pit",
+            DeckSpot::BriefingTable => "briefing table",
+            DeckSpot::LaunchPad => "launch pad",
+        }
+    }
+
+    pub fn glyph(self) -> &'static str {
+        match self {
+            DeckSpot::Bay(_) => "▣",
+            DeckSpot::Quartermaster => "⌸",
+            DeckSpot::Navicomputer => "⌺",
+            DeckSpot::AstromechPit => "◍",
+            DeckSpot::BriefingTable => "⌹",
+            DeckSpot::LaunchPad => "◎",
+        }
+    }
+}
+
+/// What walking into something on the deck did.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DeckAction {
+    Boarded(usize),
+    OpenedShop,
+    OpenedChart,
+    Repaired,
+    ReadBriefing,
+    Launched,
+}
+
+/// The hangar deck itself: a floor to walk about on, fighters parked along the
+/// back wall and the stations the squadron uses down the front.
+#[derive(Clone, Debug)]
+pub struct Deck {
+    pub width: i16,
+    pub height: i16,
+    /// Where the pilot is standing, as `(row, column)`.
+    pub pilot: (i16, i16),
+    /// Which way they are facing, for the first-person view.
+    pub facing: (i16, i16),
+    /// Everything worth walking up to.
+    pub spots: Vec<(DeckSpot, (i16, i16))>,
+}
+
+impl Deck {
+    pub const WIDTH: i16 = 62;
+    pub const HEIGHT: i16 = 16;
+    /// How close counts as standing at something.
+    pub const REACH: i16 = 2;
+
+    /// Lay the deck out for a squadron of `hulls` fighters.
+    pub fn new(hulls: usize) -> Deck {
+        let mut spots = Vec::new();
+        for i in 0..hulls.max(1) {
+            // Two ranks of bays along the back wall, so a full squadron fits.
+            let rank = i / 3;
+            let col = 8 + (i % 3) as i16 * 18;
+            let row = 2 + rank as i16 * 4;
+            spots.push((DeckSpot::Bay(i), (row, col.min(Deck::WIDTH - 6))));
+        }
+        spots.push((DeckSpot::Quartermaster, (10, 8)));
+        spots.push((DeckSpot::AstromechPit, (10, 20)));
+        spots.push((DeckSpot::BriefingTable, (10, 33)));
+        spots.push((DeckSpot::Navicomputer, (10, 46)));
+        spots.push((DeckSpot::LaunchPad, (13, Deck::WIDTH / 2)));
+        Deck {
+            width: Deck::WIDTH,
+            height: Deck::HEIGHT,
+            pilot: (12, Deck::WIDTH / 2),
+            facing: (-1, 0),
+            spots,
+        }
+    }
+
+    /// Walk a step, staying on the deck.
+    pub fn walk(&mut self, dc: i16, dr: i16) {
+        if dc != 0 || dr != 0 {
+            self.facing = (dr.signum(), dc.signum());
+        }
+        self.pilot.1 = (self.pilot.1 + dc).clamp(1, self.width - 2);
+        self.pilot.0 = (self.pilot.0 + dr).clamp(1, self.height - 2);
+    }
+
+    /// Whatever the pilot is standing at, if anything.
+    pub fn at_hand(&self) -> Option<DeckSpot> {
+        self.spots
+            .iter()
+            .filter(|(_, pos)| {
+                (pos.0 - self.pilot.0).abs() <= Deck::REACH
+                    && (pos.1 - self.pilot.1).abs() <= Deck::REACH + 1
+            })
+            .min_by_key(|(_, pos)| (pos.0 - self.pilot.0).abs() + (pos.1 - self.pilot.1).abs())
+            .map(|(spot, _)| *spot)
+    }
+
+    /// Where a spot stands, for drawing it.
+    pub fn spot_at(&self, spot: DeckSpot) -> Option<(i16, i16)> {
+        self.spots
+            .iter()
+            .find(|(kind, _)| *kind == spot)
+            .map(|(_, pos)| *pos)
+    }
+}
+
 /// A world the fighting happens over. Most systems have one hanging in the
 /// court; a surface mission is flown down on the deck of one.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -3224,6 +3351,65 @@ impl Power {
     }
 }
 
+/// How the wing flies on you: the shapes a squadron actually uses.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum WingFormation {
+    /// Everybody level with the leader, spread wide.
+    LineAbreast,
+    /// The vic: two back and out, then two further back and wider.
+    Vic,
+    /// All of them stacked back off one wing.
+    Echelon,
+    /// Line astern, one behind the other.
+    Trail,
+    /// Four corners around the leader.
+    Box,
+}
+
+impl WingFormation {
+    pub const ALL: [WingFormation; 5] = [
+        WingFormation::LineAbreast,
+        WingFormation::Vic,
+        WingFormation::Echelon,
+        WingFormation::Trail,
+        WingFormation::Box,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            WingFormation::LineAbreast => "line abreast",
+            WingFormation::Vic => "vic",
+            WingFormation::Echelon => "echelon",
+            WingFormation::Trail => "trail",
+            WingFormation::Box => "box",
+        }
+    }
+
+    pub fn blurb(self) -> &'static str {
+        match self {
+            WingFormation::LineAbreast => "wide and level — most guns forward",
+            WingFormation::Vic => "back and out, the classic three",
+            WingFormation::Echelon => "stacked off one wing for a firing pass",
+            WingFormation::Trail => "line astern, narrow through a trench",
+            WingFormation::Box => "four corners, covering each other",
+        }
+    }
+
+    /// Where the wingman in `slot` rides, as `(rows back, columns out)`.
+    pub fn offset(self, slot: usize) -> (i16, i16) {
+        let n = slot as i16;
+        let side = if slot % 2 == 0 { -1 } else { 1 };
+        let rank = n / 2 + 1;
+        match self {
+            WingFormation::LineAbreast => (0, side * 6 * rank),
+            WingFormation::Vic => (rank, side * 6 * rank),
+            WingFormation::Echelon => (rank, -6 * rank),
+            WingFormation::Trail => ((n + 1) * 2, 0),
+            WingFormation::Box => (if rank > 1 { 2 } else { 0 }, side * 8),
+        }
+    }
+}
+
 /// One hull in the squad: the one being flown, or a wingman riding alongside.
 #[derive(Clone, Debug)]
 pub struct Wing {
@@ -3268,7 +3454,14 @@ impl Wing {
 }
 
 /// The names hulls are rolled off the line with.
-const HULL_NAMES: [&str; MAX_SQUAD] = ["Red Leader", "Red Two", "Red Three", "Red Five"];
+const HULL_NAMES: [&str; MAX_SQUAD] = [
+    "Red Leader",
+    "Red Two",
+    "Red Three",
+    "Red Five",
+    "Gold Leader",
+    "Gold Two",
+];
 
 /// The pure Nova court. No I/O, no timing — unit-tested.
 #[derive(Clone)]
@@ -3290,6 +3483,8 @@ pub struct Game {
     /// Every hull in the squad, and which one is being flown.
     pub squad: Vec<Wing>,
     pub active: usize,
+    /// The shape the wing flies in.
+    pub wing_formation: WingFormation,
     /// Where the reactor's output is going.
     pub power: Power,
     /// How much of the Force is to hand, and what it is doing right now.
@@ -3300,6 +3495,10 @@ pub struct Game {
     pub guided: bool,
     /// Squadron radio traffic, newest first.
     pub chatter: Vec<Chatter>,
+    /// The hangar deck the pilot walks about on between missions, and whether
+    /// the quartermaster's terminal is up.
+    pub deck: Deck,
+    pub shop_open: bool,
     /// The campaign mission being flown, and where the squadron is up to.
     pub mission: Option<Mission>,
     pub campaign_at: usize,
@@ -3395,11 +3594,14 @@ impl Game {
             drones: Vec::new(),
             squad: vec![Wing::new(HULL_NAMES[0], ShipClass::XWing)],
             active: 0,
+            wing_formation: WingFormation::Vic,
             power: Power::default(),
             force: FORCE_MAX / 2,
             sense: 0,
             guided: false,
             chatter: Vec::new(),
+            deck: Deck::new(1),
+            shop_open: false,
             mission: None,
             campaign_at: 0,
             planet: Planet::DeepSpace,
@@ -3494,6 +3696,8 @@ impl Game {
         self.sense = 0;
         self.guided = false;
         self.chatter.clear();
+        self.deck = Deck::new(1);
+        self.shop_open = false;
         self.mission = None;
         self.campaign_at = 0;
         self.objective = Objective::Destroy;
@@ -5159,6 +5363,8 @@ impl Game {
             self.status = Status::WaveClear;
             self.intermission = INTERMISSION_TICKS;
             self.map.clear_here();
+            self.deck = Deck::new(self.squad.len());
+            self.shop_open = false;
             let bonus = 100 * self.wave;
             self.add_score(bonus);
             self.credits += bonus;
@@ -5512,16 +5718,36 @@ impl Game {
             if i == self.active || !wing.alive {
                 continue;
             }
-            let Some(&offset) = WING_OFFSETS.get(slot) else {
+            if slot >= WING_SLOTS {
                 break;
-            };
+            }
+            let (back, out) = self.wing_formation.offset(slot);
             slot += 1;
-            let row = (self.ship.0 + 1).min(SHIP_ROW);
+            // Behind the leader if there is room astern, mirrored ahead if the
+            // leader is already on the deck line.
+            let back = back.max(1);
+            let row = if self.ship.0 + back <= SHIP_ROW {
+                self.ship.0 + back
+            } else {
+                (self.ship.0 - back).max(1)
+            };
             let (left, right) = self.terrain.channel(row);
-            let col = (self.ship.1 + offset).clamp(left.max(1), right.min(W - 2));
+            let col = (self.ship.1 + out).clamp(left.max(1), right.min(W - 2));
             cells.push((i, (row, col)));
         }
         cells
+    }
+
+    /// Order the wing into the next shape.
+    pub fn cycle_formation(&mut self) -> WingFormation {
+        let at = WingFormation::ALL
+            .iter()
+            .position(|&f| f == self.wing_formation)
+            .unwrap_or(0);
+        self.wing_formation = WingFormation::ALL[(at + 1) % WingFormation::ALL.len()];
+        let shape = self.wing_formation;
+        self.say(&format!("Form up — {}.", shape.name()));
+        shape
     }
 
     /// The wingmen keep firing on their own, a little slower than the hull.
@@ -5623,10 +5849,12 @@ impl Game {
             return false;
         }
         let flown: Vec<ShipClass> = self.squad.iter().map(|w| w.class).collect();
+        // A new type while the line has one spare, otherwise another of
+        // whatever the squadron already flies.
         let class = ShipClass::ALL
             .into_iter()
             .find(|c| !flown.contains(c))
-            .unwrap_or(ShipClass::XWing);
+            .unwrap_or(ShipClass::ALL[self.squad.len() % ShipClass::ALL.len()]);
         let name = HULL_NAMES[self.squad.len()];
         self.squad.push(Wing::new(name, class));
         true
@@ -5691,6 +5919,81 @@ impl Game {
         if self.guided {
             self.guided = false;
         }
+    }
+
+    /// Walk about the hangar. Only on the deck, and only with the terminal shut.
+    pub fn walk(&mut self, dc: i16, dr: i16) {
+        if self.status == Status::Hangar && !self.shop_open {
+            self.deck.walk(dc, dr);
+        }
+    }
+
+    /// Whatever the pilot is standing at right now.
+    pub fn at_hand(&self) -> Option<DeckSpot> {
+        (self.status == Status::Hangar)
+            .then(|| self.deck.at_hand())
+            .flatten()
+    }
+
+    /// Use whatever is under the pilot's hand.
+    pub fn interact(&mut self) -> Option<DeckAction> {
+        if self.status != Status::Hangar {
+            return None;
+        }
+        if self.shop_open {
+            self.shop_open = false;
+            return None;
+        }
+        let action = match self.deck.at_hand()? {
+            DeckSpot::Bay(index) => {
+                if index == self.active {
+                    self.say("She is fuelled and ready.");
+                    DeckAction::Boarded(index)
+                } else if self.switch_active(index) {
+                    let name = self.squad[index].name;
+                    self.say(&format!("{name} is yours. Climb in."));
+                    DeckAction::Boarded(index)
+                } else {
+                    self.say("That one is not going anywhere. Get the droids on it.");
+                    return None;
+                }
+            }
+            DeckSpot::Quartermaster => {
+                self.shop_open = true;
+                DeckAction::OpenedShop
+            }
+            DeckSpot::Navicomputer => {
+                self.open_chart();
+                DeckAction::OpenedChart
+            }
+            DeckSpot::AstromechPit => {
+                self.rescue_wings();
+                self.shield = self.max_shield;
+                self.say("Droids have the wing back together.");
+                DeckAction::Repaired
+            }
+            DeckSpot::BriefingTable => {
+                let line = match self.mission {
+                    Some(mission) => mission.briefing.to_string(),
+                    None => format!(
+                        "Chart says {} next. {}",
+                        self.map.nodes[self.map.cursor].kind.name(),
+                        self.map.nodes[self.map.cursor].sector.blurb()
+                    ),
+                };
+                self.say(&line);
+                DeckAction::ReadBriefing
+            }
+            DeckSpot::LaunchPad => {
+                if self.mission.is_some() {
+                    self.fly_mission(self.campaign_at + 1);
+                } else {
+                    self.open_chart();
+                }
+                DeckAction::Launched
+            }
+        };
+        Some(action)
     }
 
     /// Fly the campaign instead of the open galaxy: the missions from the war,
@@ -5902,6 +6205,8 @@ impl Game {
                 self.rescue_wings();
                 self.map.clear_here();
                 self.status = Status::Hangar;
+                self.deck = Deck::new(self.squad.len());
+                self.shop_open = false;
                 self.say("Docking at the outpost. Get her patched up.");
             }
             NodeKind::Derelict => {
@@ -5915,6 +6220,8 @@ impl Game {
                 }
                 self.map.clear_here();
                 self.status = Status::Hangar;
+                self.deck = Deck::new(self.squad.len());
+                self.shop_open = false;
             }
             _ => {
                 self.wave += 1;
@@ -6171,6 +6478,51 @@ impl Nova {
                 put(surface, x, y, "|", shot_style);
             }
         }
+        // The wing, off the glass either side: they fly beside the hull, not
+        // ahead of it, so they are drawn low and wide where a pilot would
+        // actually see them.
+        for (index, (r, c)) in g.wing_cells() {
+            let wing = &g.squad[index];
+            let dx = c - g.ship.1;
+            let x = centre_x + dx * 2;
+            let y = (glass_h - 5 + (r - g.ship.0).clamp(0, 2)).min(glass_h - 2);
+            for (i, glyph) in wing.class.sprite()[1].chars().enumerate() {
+                if glyph != ' ' {
+                    put(
+                        surface,
+                        x + i as i16 - 1,
+                        y,
+                        &glyph.to_string(),
+                        header_style,
+                    );
+                }
+            }
+            let label = format!("{} {}", wing.name, "▮".repeat(wing.shield as usize));
+            let lx = (x - 2).clamp(1, glass_w - label.chars().count() as i16 - 2);
+            surface.set_string(
+                ox + lx as u16,
+                oy + (y + 1).min(glass_h - 1) as u16,
+                &label,
+                frame_style,
+            );
+        }
+        // The drones ride the wingtips.
+        for &side in &g.drones {
+            let x = centre_x + side * 8;
+            put(surface, x, glass_h - 3, "◇", header_style);
+        }
+        // The nose of your own fighter, filling the bottom of the glass.
+        for (i, glyph) in g.class.sprite()[1].chars().enumerate() {
+            if glyph != ' ' {
+                put(
+                    surface,
+                    centre_x + i as i16 - 1,
+                    glass_h - 2,
+                    &glyph.to_string(),
+                    theme.get("function"),
+                );
+            }
+        }
         // Cannon tracers converging on the reticle from the wing roots.
         for i in 1..4 {
             let y = glass_h - 1 - i;
@@ -6322,11 +6674,24 @@ impl Nova {
             ),
             text,
         );
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "WING    {} of {} flying · {} — {}   [g] changes it",
+                g.squad.iter().filter(|w| w.alive).count(),
+                g.squad.len(),
+                g.wing_formation.name(),
+                g.wing_formation.blurb()
+            ),
+            text,
+        );
         y += 2;
         surface.set_string(
             ox,
             y,
-            "p resumes · o swaps view · t roster · [ ] cycles guns · r retry · n new · q quit",
+            "p resumes · o swaps view · g formation · t roster · [ ] guns · r retry · n new",
             dim,
         );
     }
@@ -6420,6 +6785,17 @@ impl Nova {
                     .map(|(i, w)| format!("{}:{}", i + 1, w.name()))
                     .collect::<Vec<_>>()
                     .join("   ")
+            ),
+            text,
+        );
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "WING    {} — {}",
+                g.wing_formation.name(),
+                g.wing_formation.blurb()
             ),
             text,
         );
@@ -6538,6 +6914,256 @@ impl Nova {
             "m flies the campaign: Tatooine, the Kessel Run, Yavin, Hoth, Cloud City, Endor.",
             dim,
         );
+    }
+
+    /// The hangar deck from above: fighters in their bays along the back wall,
+    /// the stations down the front, and the pilot walking between them.
+    fn render_deck(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let header = theme.get("ui.text.focus");
+        let text = theme.get("ui.text");
+        let dim = theme.get("ui.linenr");
+        let ship_style = theme.get("function");
+        let g = &self.game;
+        let deck = &g.deck;
+        let ox = area.x + 2;
+        let oy = area.y + 3;
+        surface.set_string(
+            ox,
+            area.y,
+            &format!(
+                "HANGAR DECK — {} · {}   salvage {}   {}",
+                g.galaxy.name(),
+                g.rank().name(),
+                g.credits,
+                g.mission.map_or("free flight", |m| m.name)
+            ),
+            header,
+        );
+        surface.set_string(
+            ox,
+            area.y + 1,
+            "walk ←/→/↑/↓ · Enter uses it · w next fighter · f formation · o first person · t roster",
+            dim,
+        );
+        // Deck plating and walls.
+        for r in 0..deck.height {
+            for c in 0..deck.width {
+                let edge = r == 0 || r == deck.height - 1 || c == 0 || c == deck.width - 1;
+                let glyph = if edge {
+                    "▒"
+                } else if r % 4 == 0 && c % 6 == 0 {
+                    "·"
+                } else {
+                    " "
+                };
+                surface.set_string(ox + c as u16, oy + r as u16, glyph, dim);
+            }
+        }
+        // Everything worth walking up to.
+        for (spot, pos) in &deck.spots {
+            let style = if Some(*spot) == deck.at_hand() {
+                header
+            } else {
+                text
+            };
+            match spot {
+                DeckSpot::Bay(index) => {
+                    let wing = g.squad.get(*index);
+                    let sprite = wing.map_or(["   ", "   "], |w| w.class.sprite());
+                    for (row, line) in sprite.iter().enumerate() {
+                        for (i, glyph) in line.chars().enumerate() {
+                            if glyph != ' ' {
+                                surface.set_string(
+                                    ox + (pos.1 + i as i16 - 1) as u16,
+                                    oy + (pos.0 + row as i16) as u16,
+                                    &glyph.to_string(),
+                                    if *index == g.active {
+                                        ship_style
+                                    } else {
+                                        style
+                                    },
+                                );
+                            }
+                        }
+                    }
+                    if let Some(wing) = wing {
+                        surface.set_string(
+                            ox + (pos.1 - 2).max(0) as u16,
+                            oy + (pos.0 + 2) as u16,
+                            &format!("{} {}", wing.name, if wing.alive { "" } else { "(down)" }),
+                            if *index == g.active { header } else { dim },
+                        );
+                    }
+                }
+                _ => {
+                    surface.set_string(ox + pos.1 as u16, oy + pos.0 as u16, spot.glyph(), style);
+                    surface.set_string(
+                        ox + (pos.1 - 3).max(0) as u16,
+                        oy + (pos.0 + 1) as u16,
+                        spot.name(),
+                        dim,
+                    );
+                }
+            }
+        }
+        // The pilot.
+        surface.set_string(
+            ox + deck.pilot.1 as u16,
+            oy + deck.pilot.0 as u16,
+            "Å",
+            header,
+        );
+        let foot = oy + deck.height as u16 + 1;
+        let standing = match deck.at_hand() {
+            Some(DeckSpot::Bay(i)) => {
+                let wing = &g.squad[i];
+                format!(
+                    "{} — {} · {} L{} · shields {}/{} · {}",
+                    wing.name,
+                    wing.class.name(),
+                    wing.weapon.name(),
+                    wing.weapon_level,
+                    wing.shield,
+                    wing.max_shield,
+                    wing.status()
+                )
+            }
+            Some(spot) => format!("{} — press Enter", spot.name()),
+            None => "Walk up to a bay or a station.".to_string(),
+        };
+        surface.set_string(ox, foot, &standing, text);
+        if let Some(line) = g.chatter.first() {
+            surface.set_string(ox, foot + 1, &line.line, header);
+        }
+    }
+
+    /// The hangar from the deck plates: what the pilot is actually looking at.
+    fn render_deck_pov(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let header = theme.get("ui.text.focus");
+        let text = theme.get("ui.text");
+        let dim = theme.get("ui.linenr");
+        let ship_style = theme.get("function");
+        let g = &self.game;
+        let deck = &g.deck;
+        let ox = area.x + 2;
+        let oy = area.y + 3;
+        let w = (area.width as i16 - 6).clamp(24, 90);
+        let h = (area.height as i16 - 8).clamp(10, 26);
+        let centre = w / 2;
+        surface.set_string(
+            ox,
+            area.y,
+            &format!(
+                "HANGAR DECK — first person   facing {}",
+                match deck.facing {
+                    (-1, _) => "the bays",
+                    (1, _) => "the doors",
+                    (_, -1) => "port",
+                    _ => "starboard",
+                }
+            ),
+            header,
+        );
+        surface.set_string(
+            ox,
+            area.y + 1,
+            "walk with ←/→/↑/↓ · Enter uses what is in front of you · o top-down",
+            dim,
+        );
+        // The bay walls run away from the pilot in perspective.
+        for y in 0..h {
+            let inset = y / 3;
+            surface.set_string(ox + inset as u16, oy + y as u16, "▙", dim);
+            surface.set_string(ox + (w - 1 - inset) as u16, oy + y as u16, "▟", dim);
+        }
+        for x in 0..w {
+            surface.set_string(ox + x as u16, oy, "▔", dim);
+            surface.set_string(ox + x as u16, oy + h as u16 - 1, "▁", dim);
+        }
+        // Whatever is in front, drawn big; everything else down the sides.
+        let ahead = deck.at_hand();
+        for (spot, pos) in &deck.spots {
+            let depth = ((pos.0 - deck.pilot.0).abs() + (pos.1 - deck.pilot.1).abs()).max(1);
+            if depth > 26 {
+                continue;
+            }
+            let x = centre + (pos.1 - deck.pilot.1) * 2;
+            let y = (h / 2 + depth / 3).clamp(2, h - 3);
+            if !(1..w - 1).contains(&x) {
+                continue;
+            }
+            match spot {
+                DeckSpot::Bay(index) => {
+                    let Some(wing) = g.squad.get(*index) else {
+                        continue;
+                    };
+                    let style = if *index == g.active { ship_style } else { text };
+                    let big = depth <= 6;
+                    for (row, line) in wing.class.sprite().iter().enumerate() {
+                        for (i, glyph) in line.chars().enumerate() {
+                            if glyph == ' ' {
+                                continue;
+                            }
+                            let scale = if big { 2 } else { 1 };
+                            for k in 0..scale {
+                                let sx = x + (i as i16 - 1) * scale + k;
+                                if (1..w - 1).contains(&sx) {
+                                    surface.set_string(
+                                        ox + sx as u16,
+                                        oy + (y + row as i16) as u16,
+                                        &glyph.to_string(),
+                                        style,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    surface.set_string(
+                        ox + (x - 2).max(1) as u16,
+                        oy + (y + 2).min(h - 2) as u16,
+                        wing.name,
+                        dim,
+                    );
+                }
+                _ => {
+                    surface.set_string(
+                        ox + x as u16,
+                        oy + y as u16,
+                        spot.glyph(),
+                        if Some(*spot) == ahead { header } else { text },
+                    );
+                    surface.set_string(
+                        ox + (x - 2).max(1) as u16,
+                        oy + (y + 1).min(h - 2) as u16,
+                        spot.name(),
+                        dim,
+                    );
+                }
+            }
+        }
+        let foot = oy + h as u16;
+        surface.set_string(
+            ox,
+            foot,
+            &match ahead {
+                Some(DeckSpot::Bay(i)) => format!(
+                    "In front of you: {} — {} · {} L{} · {}",
+                    g.squad[i].name,
+                    g.squad[i].class.name(),
+                    g.squad[i].weapon.name(),
+                    g.squad[i].weapon_level,
+                    g.squad[i].status()
+                ),
+                Some(spot) => format!("In front of you: {} — press Enter", spot.name()),
+                None => "Nothing within reach.".to_string(),
+            },
+            text,
+        );
+        if let Some(line) = g.chatter.first() {
+            surface.set_string(ox, foot + 1, &line.line, header);
+        }
     }
 
     /// The galaxy chart: every system, the lanes between them, and where the
@@ -6888,17 +7514,18 @@ impl Component for Nova {
                 _ => {}
             },
             Status::Hangar => match key {
-                key!(Enter) => {
-                    // In the campaign the next mission is the only way on.
-                    if self.game.mission.is_some() {
-                        let next = self.game.campaign_at + 1;
-                        self.game.fly_mission(next);
-                    } else {
-                        self.game.open_chart();
-                    }
+                key!(Left) | key!('h') => self.game.walk(-1, 0),
+                key!(Right) | key!('l') => self.game.walk(1, 0),
+                key!(Up) | key!('k') => self.game.walk(0, -1),
+                key!(Down) | key!('j') => self.game.walk(0, 1),
+                key!(Enter) | key!(' ') => {
+                    self.game.interact();
                 }
                 key!('w') => {
                     self.game.cycle_active();
+                }
+                key!('f') => {
+                    self.game.cycle_formation();
                 }
                 key!('n') => self.restart(),
                 _ => {
@@ -6968,6 +7595,9 @@ impl Component for Nova {
                 }
                 key!('b') => self.game.bomb(),
                 key!('p') => self.paused = !self.paused,
+                key!('g') => {
+                    self.game.cycle_formation();
+                }
                 key!('r') => self.retry(),
                 key!('n') => self.restart(),
                 _ => {}
@@ -7038,7 +7668,13 @@ impl Component for Nova {
                 return;
             }
             Status::Hangar => {
-                self.render_hangar(area, surface, ctx);
+                if self.game.shop_open {
+                    self.render_hangar(area, surface, ctx);
+                } else if self.view == ViewMode::Cockpit {
+                    self.render_deck_pov(area, surface, ctx);
+                } else {
+                    self.render_deck(area, surface, ctx);
+                }
                 return;
             }
             Status::Chart => {
@@ -10099,5 +10735,166 @@ mod campaign_tests {
                 mission.name
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod deck_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn docked() -> Game {
+        let mut g = flying();
+        g.status = Status::Hangar;
+        g.credits = 40_000;
+        g.deck = Deck::new(g.squad.len());
+        g
+    }
+
+    fn stand_at(g: &mut Game, spot: DeckSpot) {
+        let pos = g.deck.spot_at(spot).expect("the deck has one");
+        g.deck.pilot = pos;
+    }
+
+    #[test]
+    fn the_pilot_walks_the_deck_and_stays_on_it() {
+        let mut g = docked();
+        let start = g.deck.pilot;
+        g.walk(1, 0);
+        assert_eq!(g.deck.pilot.1, start.1 + 1, "a step to starboard");
+        for _ in 0..200 {
+            g.walk(-1, -1);
+        }
+        assert_eq!(g.deck.pilot, (1, 1), "and the bulkheads stop him");
+        g.status = Status::Playing;
+        let held = g.deck.pilot;
+        g.walk(1, 1);
+        assert_eq!(g.deck.pilot, held, "nobody walks the deck mid-sortie");
+    }
+
+    #[test]
+    fn standing_at_a_bay_boards_that_fighter() {
+        let mut g = docked();
+        let hull = g
+            .shop_lines()
+            .into_iter()
+            .find(|l| l.entry == ShopEntry::Consumable(Stock::Hull))
+            .expect("the yard sells fighters");
+        g.shop_open = true;
+        assert!(g.buy(hull.key));
+        g.shop_open = false;
+        g.deck = Deck::new(g.squad.len());
+        stand_at(&mut g, DeckSpot::Bay(1));
+        assert_eq!(g.at_hand(), Some(DeckSpot::Bay(1)), "he is at the bay");
+        assert_eq!(g.interact(), Some(DeckAction::Boarded(1)), "and climbs in");
+        assert_eq!(g.active, 1, "that fighter is his now");
+    }
+
+    #[test]
+    fn the_stations_do_what_they_say() {
+        let mut g = docked();
+        stand_at(&mut g, DeckSpot::Quartermaster);
+        assert_eq!(g.interact(), Some(DeckAction::OpenedShop));
+        assert!(g.shop_open, "the terminal is up");
+        assert_eq!(g.interact(), None, "and Enter shuts it again");
+        assert!(!g.shop_open);
+
+        g.shield = 0;
+        g.squad.push(Wing::new("Red Two", ShipClass::AWing));
+        g.squad[1].alive = false;
+        g.deck = Deck::new(g.squad.len());
+        stand_at(&mut g, DeckSpot::AstromechPit);
+        assert_eq!(g.interact(), Some(DeckAction::Repaired));
+        assert_eq!(g.shield, g.max_shield, "the droids top the shields up");
+        assert!(g.squad[1].alive, "and put the wing back together");
+
+        stand_at(&mut g, DeckSpot::BriefingTable);
+        assert_eq!(g.interact(), Some(DeckAction::ReadBriefing));
+        assert!(!g.chatter.is_empty(), "the briefing is read out");
+
+        stand_at(&mut g, DeckSpot::Navicomputer);
+        assert_eq!(g.interact(), Some(DeckAction::OpenedChart));
+        assert_eq!(g.status, Status::Chart, "and the chart comes up");
+    }
+
+    #[test]
+    fn the_launch_pad_flies_the_next_mission() {
+        let mut g = Game::new(8);
+        g.start_campaign(ShipClass::XWing, Difficulty::Normal);
+        g.status = Status::Hangar;
+        g.deck = Deck::new(g.squad.len());
+        let at = g.campaign_at;
+        stand_at(&mut g, DeckSpot::LaunchPad);
+        assert_eq!(g.interact(), Some(DeckAction::Launched));
+        assert_eq!(g.campaign_at, at + 1, "the next mission is on");
+        assert_eq!(g.status, Status::Playing);
+    }
+
+    #[test]
+    fn a_squadron_can_be_six_fighters_strong() {
+        let mut g = docked();
+        while g.squad.len() < MAX_SQUAD {
+            let hull = g
+                .shop_lines()
+                .into_iter()
+                .find(|l| l.entry == ShopEntry::Consumable(Stock::Hull))
+                .expect("the yard still has one");
+            assert!(hull.available, "and it is for sale");
+            g.shop_open = true;
+            assert!(g.buy(hull.key));
+            g.shop_open = false;
+        }
+        assert_eq!(g.squad.len(), 6, "six fighters on the line");
+        assert!(
+            !g.shop_lines()
+                .iter()
+                .any(|l| l.entry == ShopEntry::Consumable(Stock::Hull) && l.available),
+            "and that is the last of them"
+        );
+        g.status = Status::Playing;
+        assert_eq!(g.wing_cells().len(), 5, "five of them fly on your wing");
+        assert_eq!(
+            Deck::new(g.squad.len())
+                .spots
+                .iter()
+                .filter(|(s, _)| matches!(s, DeckSpot::Bay(_)))
+                .count(),
+            6,
+            "and the deck has a bay for each"
+        );
+    }
+
+    #[test]
+    fn the_wing_flies_the_formation_it_is_given() {
+        let mut g = docked();
+        for _ in 0..3 {
+            g.squad.push(Wing::new("Red Two", ShipClass::AWing));
+        }
+        g.status = Status::Playing;
+        // Fly up off the deck line so the wing has room astern.
+        g.ship.0 = SHIP_TOP;
+        g.wing_formation = WingFormation::LineAbreast;
+        let abreast = g.wing_cells();
+        assert!(
+            abreast.iter().all(|(_, pos)| pos.0 == abreast[0].1 .0),
+            "line abreast flies level"
+        );
+        g.wing_formation = WingFormation::Trail;
+        let trail = g.wing_cells();
+        assert!(
+            trail.windows(2).all(|w| w[0].1 .0 < w[1].1 .0),
+            "trail is line astern"
+        );
+        assert!(
+            trail.iter().all(|(_, pos)| pos.1 == g.ship.1),
+            "and stacked right behind the leader"
+        );
+        g.wing_formation = WingFormation::Echelon;
+        assert!(
+            g.wing_cells().iter().all(|(_, pos)| pos.1 <= g.ship.1),
+            "echelon stacks off one wing"
+        );
+        let shape = g.cycle_formation();
+        assert_ne!(shape, WingFormation::Echelon, "and the order changes it");
     }
 }
