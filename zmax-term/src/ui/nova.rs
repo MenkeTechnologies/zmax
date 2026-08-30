@@ -134,6 +134,15 @@ const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
 /// The score that gets a bounty posted on you, and what his ship is worth.
 const HUNTER_BOUNTY: u32 = 20_000;
+/// What a pilot signs on for, and what sits on a sabacc table.
+const HIRE_PRICE: u32 = 1_800;
+const SABACC_STAKE: u32 = 400;
+/// How long the droid takes between welds.
+const DROID_WELD_TICKS: u32 = 40;
+/// How close a shooter likes to be before it stops walking.
+const CLOSE_RANGE: i16 = 5;
+/// How often a beast can maul you.
+const BEAST_CADENCE: u32 = 12;
 /// Footing each side brings to a duel, how long a guard holds, how wide the
 /// parry window is, how long a riposte stays open and what a lock costs.
 const DUEL_POISE: i32 = 5;
@@ -241,9 +250,9 @@ const SERPENT_SEGMENTS: usize = 8;
 /// The vertical offsets a serpent's body cycles through as it swims.
 const SERPENT_WAVE: [i16; 8] = [0, 1, 2, 1, 0, -1, -2, -1];
 /// The keys the hangar hands out to its lines, in order.
-const SHOP_KEYS: [char; 20] = [
-    '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'c', 'e', 'g', 'i', 'k', 'm', 'o', 's', 'u',
-    'y',
+const SHOP_KEYS: [char; 24] = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'c', 'd', 'e', 'g', 'i', 'm', 'p', 's',
+    'u', 'v', 'x', 'y', 'z',
 ];
 
 /// How hard the run is, chosen on the picker.
@@ -1575,10 +1584,13 @@ pub enum Stock {
     Rescue,
     /// A pack for the missile launcher.
     Missiles,
+    /// An astromech: it rolls after you on the ground, welds you up between
+    /// firefights and opens Imperial doors.
+    Droid,
 }
 
 impl Stock {
-    pub const ALL: [Stock; 10] = [
+    pub const ALL: [Stock; 11] = [
         Stock::Repair,
         Stock::Missiles,
         Stock::GunLevel,
@@ -1589,6 +1601,7 @@ impl Stock {
         Stock::Rescue,
         Stock::Hull,
         Stock::Life,
+        Stock::Droid,
     ];
 
     pub fn name(self) -> &'static str {
@@ -1603,6 +1616,7 @@ impl Stock {
             Stock::Hull => "another fighter",
             Stock::Rescue => "recover the wing",
             Stock::Missiles => "torpedo pack",
+            Stock::Droid => "astromech droid",
         }
     }
 
@@ -1618,6 +1632,7 @@ impl Stock {
             Stock::Hull => "another hull for the squad, flown as a wingman",
             Stock::Rescue => "every downed wingman back in the air",
             Stock::Missiles => "+8 rounds for the launcher",
+            Stock::Droid => "rolls after you on foot, welds and slices",
         }
     }
 
@@ -1631,6 +1646,7 @@ impl Stock {
             Stock::Drone => 600,
             Stock::Life => 1200,
             Stock::Missiles => 350,
+            Stock::Droid => 1_600,
             Stock::Rescue => 700,
             Stock::Hull => 2500,
         }
@@ -3021,6 +3037,12 @@ pub enum DeckSpot {
     Outpost,
     /// Ruins older than the war.
     Ruins,
+    /// A detention block with one of yours in it.
+    Detention,
+    /// A hiring table: pilots looking for a wing to fly in.
+    HiringTable,
+    /// A sabacc table, and somebody who thinks you cannot count.
+    SabaccTable,
 }
 
 impl DeckSpot {
@@ -3038,6 +3060,9 @@ impl DeckSpot {
             DeckSpot::Settlement => "settlement",
             DeckSpot::Outpost => "outpost",
             DeckSpot::Ruins => "ruins",
+            DeckSpot::Detention => "detention block",
+            DeckSpot::HiringTable => "hiring table",
+            DeckSpot::SabaccTable => "sabacc table",
         }
     }
 
@@ -3055,6 +3080,9 @@ impl DeckSpot {
             DeckSpot::Settlement => "⌸",
             DeckSpot::Outpost => "⌺",
             DeckSpot::Ruins => "⍟",
+            DeckSpot::Detention => "⊟",
+            DeckSpot::HiringTable => "⌷",
+            DeckSpot::SabaccTable => "⌸",
         }
     }
 }
@@ -3230,7 +3258,7 @@ impl SideArm {
 }
 
 /// What kind of thing is walking about down there.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum GroundKind {
     /// A stormtrooper patrol.
     Trooper,
@@ -3239,6 +3267,8 @@ pub enum GroundKind {
     Scout,
     /// A duellist who has been waiting for you, and does not use a blaster.
     Duellist,
+    /// Whatever lives here: it is not on anybody's side and it is hungry.
+    Beast,
 }
 
 impl GroundKind {
@@ -3247,6 +3277,7 @@ impl GroundKind {
             GroundKind::Trooper => "stormtrooper",
             GroundKind::Scout => "scout walker",
             GroundKind::Duellist => "duellist",
+            GroundKind::Beast => "beast",
         }
     }
 
@@ -3255,6 +3286,7 @@ impl GroundKind {
             GroundKind::Trooper => "Ω",
             GroundKind::Scout => "Ѫ",
             GroundKind::Duellist => "Ѱ",
+            GroundKind::Beast => "Ѩ",
         }
     }
 
@@ -3263,6 +3295,7 @@ impl GroundKind {
             GroundKind::Trooper => 3,
             GroundKind::Scout => 14,
             GroundKind::Duellist => 24,
+            GroundKind::Beast => 18,
         }
     }
 
@@ -3272,12 +3305,14 @@ impl GroundKind {
             GroundKind::Trooper => 1,
             GroundKind::Scout => 2,
             GroundKind::Duellist => 3,
+            GroundKind::Beast => 4,
         }
     }
 
     pub fn reach(self) -> i16 {
         match self {
             GroundKind::Duellist => 2,
+            GroundKind::Beast => 1,
             _ => 14,
         }
     }
@@ -3401,6 +3436,15 @@ impl Duel {
     }
 }
 
+/// The astromech that trundles after you: it patches you up when it can catch
+/// its breath, and it is the only thing that will open a detention door.
+#[derive(Clone, Debug)]
+pub struct Astromech {
+    pub pos: (i16, i16),
+    /// Ticks until it can weld anything else.
+    pub cooldown: u32,
+}
+
 /// A blaster bolt on foot, from either side.
 #[derive(Clone, Debug)]
 pub struct Bolt {
@@ -3422,6 +3466,9 @@ pub struct Cover {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DeckAction {
     Boarded(usize),
+    Freed,
+    Hired,
+    Gambled,
     LiftedOff,
     Drank,
     Stripped,
@@ -3461,6 +3508,10 @@ pub struct Deck {
     pub riding: bool,
     /// The duel he is in the middle of, if a blade has found him.
     pub duel: Option<Duel>,
+    /// The droid, if one is rolling after you.
+    pub droid: Option<Astromech>,
+    /// Which spots have been worked over already, so a wreck is not endless.
+    pub spent: Vec<DeckSpot>,
 }
 
 impl Deck {
@@ -3487,18 +3538,26 @@ impl Deck {
                 DeckSpot::Cantina,
                 DeckSpot::SurfaceWreck,
                 DeckSpot::Settlement,
+                DeckSpot::SabaccTable,
+                DeckSpot::HiringTable,
             ],
             Planet::Hoth | Planet::Dagobah | Planet::Mustafar => {
                 &[DeckSpot::Outpost, DeckSpot::SurfaceWreck, DeckSpot::Ruins]
             }
-            Planet::Coruscant | Planet::Naboo | Planet::Bespin => {
-                &[DeckSpot::Settlement, DeckSpot::Cantina, DeckSpot::Outpost]
-            }
+            Planet::Coruscant | Planet::Naboo | Planet::Bespin => &[
+                DeckSpot::Settlement,
+                DeckSpot::Cantina,
+                DeckSpot::SabaccTable,
+                DeckSpot::HiringTable,
+                DeckSpot::Detention,
+            ],
             _ => &[
                 DeckSpot::Outpost,
                 DeckSpot::Ruins,
                 DeckSpot::SurfaceWreck,
                 DeckSpot::Cantina,
+                DeckSpot::SabaccTable,
+                DeckSpot::Detention,
             ],
         };
         for (i, &spot) in stock.iter().enumerate() {
@@ -3534,11 +3593,20 @@ impl Deck {
             let col = 3 + (rand() % (Deck::WIDTH as u64 - 6)) as i16;
             // Mostly troopers, the odd scout walker, and on the old worlds
             // somebody waiting with a sabre.
+            let wilds = matches!(
+                planet,
+                Planet::Hoth
+                    | Planet::Dagobah
+                    | Planet::Endor
+                    | Planet::Tatooine
+                    | Planet::Geonosis
+            );
             let kind = match rand() % 10 {
                 0 | 1 => GroundKind::Scout,
                 2 if matches!(planet, Planet::Dagobah | Planet::Mustafar | Planet::Endor) => {
                     GroundKind::Duellist
                 }
+                3 if wilds => GroundKind::Beast,
                 _ => GroundKind::Trooper,
             };
             troopers.push(Trooper::new(kind, (row, col), (rand() % 30) as u32));
@@ -3557,6 +3625,8 @@ impl Deck {
             sidearm: SideArm::ServicePistol,
             riding: false,
             duel: None,
+            droid: None,
+            spent: Vec::new(),
         }
     }
 
@@ -3589,6 +3659,8 @@ impl Deck {
             sidearm: SideArm::ServicePistol,
             riding: false,
             duel: None,
+            droid: None,
+            spent: Vec::new(),
         }
     }
 
@@ -3832,6 +3904,32 @@ impl Deck {
         self.riding
     }
 
+    /// The droid follows, and welds you back together between fights.
+    fn droid_tick(&mut self, tick: u32) -> i32 {
+        let pilot = self.pilot;
+        let quiet = self.bolts.iter().all(|bolt| bolt.friendly);
+        let Some(droid) = self.droid.as_mut() else {
+            return 0;
+        };
+        if tick.is_multiple_of(2) {
+            // It keeps station a pace behind and to one side.
+            let (dr, dc) = (pilot.0 - droid.pos.0, pilot.1 - droid.pos.1);
+            if dr.abs() + dc.abs() > 2 {
+                if dr.abs() > dc.abs() {
+                    droid.pos.0 += dr.signum();
+                } else {
+                    droid.pos.1 += dc.signum();
+                }
+            }
+        }
+        droid.cooldown = droid.cooldown.saturating_sub(1);
+        if quiet && droid.cooldown == 0 {
+            droid.cooldown = DROID_WELD_TICKS;
+            return 1;
+        }
+        0
+    }
+
     /// A tick of the firefight: bolts fly, troopers advance and shoot back.
     pub fn skirmish(&mut self, tick: u32) -> i32 {
         self.blaster_cooldown = self.blaster_cooldown.saturating_sub(1);
@@ -3890,7 +3988,18 @@ impl Deck {
         for trooper in self.troopers.iter_mut() {
             let (dr, dc) = (pilot.0 - trooper.pos.0, pilot.1 - trooper.pos.1);
             let range = dr.abs() + dc.abs();
-            if tick.is_multiple_of(3) && range > 4 {
+            // Everything closes: a beast until it can reach you, a shooter to
+            // where its own fire is worth something.
+            let pace = if trooper.kind == GroundKind::Beast {
+                2
+            } else {
+                3
+            };
+            let hold = match trooper.kind {
+                GroundKind::Beast | GroundKind::Duellist => trooper.kind.reach().max(1),
+                _ => CLOSE_RANGE,
+            };
+            if tick.is_multiple_of(pace) && range > hold {
                 let step = if dr.abs() > dc.abs() {
                     (dr.signum(), 0)
                 } else {
@@ -3915,6 +4024,13 @@ impl Deck {
                     // He fights in the duel, not by walking into you.
                     if range > DUEL_RANGE {
                         trooper.cooldown = DUEL_CADENCE;
+                    }
+                }
+                GroundKind::Beast => {
+                    // It runs you down and mauls whatever it reaches.
+                    if range <= GroundKind::Beast.reach() {
+                        trooper.cooldown = BEAST_CADENCE;
+                        melee += GroundKind::Beast.damage();
                     }
                 }
                 kind => {
@@ -3946,6 +4062,8 @@ impl Deck {
         self.bolts.extend(volley);
         // Blades are settled in their own exchange rather than by range alone.
         let duelled = self.trade_blows();
+        let welded = self.droid_tick(tick);
+        self.health = (self.health + welded).min(PILOT_HEALTH);
         damage + melee + duelled
     }
 
@@ -4485,6 +4603,8 @@ pub struct Game {
     /// the quartermaster's terminal is up.
     pub deck: Deck,
     pub shop_open: bool,
+    /// Which page of the terminal is up: the yard's stock, or the rack.
+    pub rack_open: bool,
     /// The campaign mission being flown, and where the squadron is up to.
     pub mission: Option<Mission>,
     pub campaign_at: usize,
@@ -4500,6 +4620,8 @@ pub struct Game {
     pub owned: Vec<Weapon>,
     /// What is on the pilot's belt, and what he has in his locker.
     pub armoury: Vec<SideArm>,
+    /// Whether an astromech is aboard to come down with him.
+    pub has_droid: bool,
     pub missiles: u32,
     pub score: u32,
     /// Salvage banked for the hangar.
@@ -4597,6 +4719,7 @@ impl Game {
             chatter: Vec::new(),
             deck: Deck::new(1),
             shop_open: false,
+            rack_open: false,
             mission: None,
             campaign_at: 0,
             planet: Planet::DeepSpace,
@@ -4606,6 +4729,7 @@ impl Game {
             walkers: Vec::new(),
             owned: vec![Weapon::LaserCannon],
             armoury: vec![SideArm::ServicePistol],
+            has_droid: false,
             missiles: MISSILE_START,
             score: 0,
             credits: 0,
@@ -4690,6 +4814,7 @@ impl Game {
         self.active = 0;
         self.owned = vec![Weapon::LaserCannon];
         self.armoury = vec![SideArm::ServicePistol];
+        self.has_droid = false;
         self.missiles = MISSILE_START;
         self.power = Power::default();
         self.force = FORCE_MAX / 2;
@@ -6540,6 +6665,7 @@ impl Game {
                 Stock::GunLevel => self.weapon_level < MAX_WEAPON_LEVEL,
                 Stock::Drone => self.drones.len() < MAX_DRONES,
                 Stock::Hull => self.squad.len() < MAX_SQUAD,
+                Stock::Droid => !self.has_droid,
                 Stock::Rescue => self.squad.iter().any(|w| !w.alive),
                 _ => true,
             };
@@ -6562,7 +6688,7 @@ impl Game {
 
     /// Buy the hangar line under `key`; returns whether the sale went through.
     pub fn buy(&mut self, key: char) -> bool {
-        if self.status != Status::Hangar {
+        if !matches!(self.status, Status::Hangar | Status::Surface) || self.rack_open {
             return false;
         }
         let Some(line) = self.shop_lines().into_iter().find(|l| l.key == key) else {
@@ -6599,6 +6725,7 @@ impl Game {
                 Stock::Life => self.lives += 1,
                 Stock::Missiles => self.missiles += MISSILE_PACK,
                 Stock::Rescue => self.rescue_wings(),
+                Stock::Droid => self.has_droid = true,
                 Stock::Hull => {
                     self.commission_hull();
                 }
@@ -7107,9 +7234,17 @@ impl Game {
         true
     }
 
+    /// Flip the terminal between the yard's stock and the rack.
+    pub fn turn_page(&mut self) -> bool {
+        if self.shop_open {
+            self.rack_open = !self.rack_open;
+        }
+        self.rack_open
+    }
+
     /// What the quartermaster has on the rack, and what he will take back.
     pub fn armoury_lines(&self) -> Vec<(char, SideArm, u32, bool, bool)> {
-        let keys = "qwertyuiopas";
+        let keys: String = SHOP_KEYS.iter().collect();
         let mut lines = Vec::new();
         for (i, arm) in SideArm::ALL.iter().enumerate() {
             let Some(key) = keys.chars().nth(i) else {
@@ -7129,6 +7264,9 @@ impl Game {
 
     /// Trade at the rack: buy what you do not have, sell back what you do.
     pub fn trade_sidearm(&mut self, key: char) -> bool {
+        if !self.rack_open {
+            return false;
+        }
         let Some(&(_, arm, _, owned, can)) = self.armoury_lines().iter().find(|line| line.0 == key)
         else {
             return false;
@@ -7227,6 +7365,10 @@ impl Game {
         let seed = self.rand();
         self.planet = planet;
         self.deck = Deck::surface(planet, seed);
+        if self.has_droid {
+            let pos = (self.deck.pilot.0 + 1, self.deck.pilot.1);
+            self.deck.droid = Some(Astromech { pos, cooldown: 0 });
+        }
         self.shop_open = false;
         self.status = Status::Surface;
         self.say(&format!("Down on {}. {}", planet.name(), planet.blurb()));
@@ -7336,6 +7478,73 @@ impl Game {
                 self.energy = self.max_energy();
                 self.say("Outpost topped us up.");
                 DeckAction::Resupplied
+            }
+            DeckSpot::Detention => {
+                // Imperial door, Imperial lock: the droid is the way in.
+                if self.deck.droid.is_none() {
+                    self.say("Sealed. Nothing here is opening that without a droid.");
+                    return None;
+                }
+                if let Some(wing) = self.squad.iter_mut().find(|w| !w.alive) {
+                    wing.alive = true;
+                    wing.shield = wing.max_shield;
+                    let name = wing.name;
+                    self.say(&format!("{name} is out. Get him to a fighter."));
+                } else {
+                    self.credits += 500;
+                    self.say("Empty cells, and a strongbox nobody had opened.");
+                }
+                DeckAction::Freed
+            }
+            DeckSpot::HiringTable => {
+                if self.squad.len() >= MAX_SQUAD {
+                    self.say("No room in the wing for another one.");
+                    return None;
+                }
+                if self.credits < HIRE_PRICE {
+                    self.say("Nobody flies for nothing.");
+                    return None;
+                }
+                self.credits -= HIRE_PRICE;
+                let name = HULL_NAMES[self.squad.len()];
+                let class = ShipClass::ALL[self.squad.len() % ShipClass::ALL.len()];
+                self.squad.push(Wing::new(name, class));
+                self.say(&format!("{name} signs on, flying a {}.", class.name()));
+                DeckAction::Hired
+            }
+            DeckSpot::SabaccTable => {
+                let stake = SABACC_STAKE.min(self.credits);
+                if stake == 0 {
+                    self.say("Nothing to put on the table.");
+                    return None;
+                }
+                // Two hands, closest to twenty-three without going over, and a
+                // pure twenty-three takes the pot twice over.
+                let draw = |game: &mut Game| -> u32 {
+                    let mut hand = 0;
+                    while hand < 17 {
+                        hand += (game.rand() % 11) as u32 + 1;
+                    }
+                    hand
+                };
+                let mine = draw(self);
+                let theirs = draw(self);
+                let bust = |hand: u32| hand > 23;
+                let won = match (bust(mine), bust(theirs)) {
+                    (false, true) => true,
+                    (true, false) => false,
+                    (true, true) => false,
+                    (false, false) => mine > theirs,
+                };
+                if won {
+                    let pot = if mine == 23 { stake * 3 } else { stake * 2 };
+                    self.credits += pot;
+                    self.say(&format!("{mine} against {theirs}. The pot is yours."));
+                } else {
+                    self.credits -= stake;
+                    self.say(&format!("{mine} against {theirs}. He takes it."));
+                }
+                DeckAction::Gambled
             }
             DeckSpot::Ruins => {
                 // Older than the war, and there is something in them.
@@ -9226,6 +9435,12 @@ impl Nova {
                 }
             }
         }
+        if let Some(droid) = &deck.droid {
+            if on_view(droid.pos.0, droid.pos.1) {
+                let (vx, vy) = at(droid.pos.0, droid.pos.1);
+                surface.set_string(ox + vx, oy + vy, "◍", header);
+            }
+        }
         for trooper in &deck.troopers {
             if on_view(trooper.pos.0, trooper.pos.1) {
                 let (vx, vy) = at(trooper.pos.0, trooper.pos.1);
@@ -9836,8 +10051,11 @@ impl Nova {
             );
             y += 1;
         }
-        y += 2;
+        y += 1;
         for line in g.shop_lines() {
+            if g.rack_open {
+                break;
+            }
             let style = if line.available { text } else { dim };
             surface.set_string(
                 ox,
@@ -10007,6 +10225,9 @@ impl Component for Nova {
                 }
                 key!('b') => {
                     self.game.parry();
+                }
+                key!('r') => {
+                    self.game.turn_page();
                 }
                 key!('2') => {
                     self.game.mount();
@@ -14508,6 +14729,8 @@ mod armoury_tests {
     #[test]
     fn the_rack_keys_buy_and_then_sell_the_same_line() {
         let mut g = at_the_rack();
+        g.shop_open = true;
+        g.rack_open = true;
         let (key, arm, _, owned, can) = g
             .armoury_lines()
             .into_iter()
@@ -14580,5 +14803,190 @@ mod armoury_tests {
             SideArm::DualSabres.cadence() < SideArm::CrossguardSabre.cadence(),
             "though the pair are quicker"
         );
+    }
+}
+
+#[cfg(test)]
+mod frontier_life_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn planetside(planet: Planet, seed: u64) -> Game {
+        let mut g = flying();
+        g.status = Status::Surface;
+        g.planet = planet;
+        g.deck = Deck::surface(planet, seed);
+        g.deck.cover.clear();
+        g.deck.bolts.clear();
+        g.deck.troopers.clear();
+        g
+    }
+
+    fn stand_at(g: &mut Game, spot: DeckSpot) -> bool {
+        match g.deck.spot_at(spot) {
+            Some(pos) => {
+                g.deck.pilot = pos;
+                true
+            }
+            None => false,
+        }
+    }
+
+    #[test]
+    fn the_wilds_have_something_living_in_them() {
+        let mut kinds = std::collections::HashSet::new();
+        for seed in 1..40 {
+            for (_, trooper) in Deck::surface(Planet::Hoth, seed)
+                .troopers
+                .iter()
+                .enumerate()
+            {
+                kinds.insert(trooper.kind);
+            }
+        }
+        assert!(
+            kinds.contains(&GroundKind::Beast),
+            "something lives on the ice worlds"
+        );
+        let city: std::collections::HashSet<GroundKind> = (1..40)
+            .flat_map(|seed| {
+                Deck::surface(Planet::Coruscant, seed)
+                    .troopers
+                    .into_iter()
+                    .map(|t| t.kind)
+            })
+            .collect();
+        assert!(
+            !city.contains(&GroundKind::Beast),
+            "and nothing like it walks the city worlds"
+        );
+    }
+
+    #[test]
+    fn a_beast_runs_you_down_and_mauls_rather_than_shooting() {
+        let mut g = planetside(Planet::Hoth, 3);
+        g.deck.pilot = (20, 30);
+        g.deck.troopers = vec![Trooper::new(GroundKind::Beast, (20, 36), 0)];
+        let start = g.deck.troopers[0].pos;
+        let mut hurt = 0;
+        for tick in 0..40 {
+            hurt += g.deck.skirmish(tick);
+        }
+        assert!(
+            g.deck.troopers.is_empty() || g.deck.troopers[0].pos != start,
+            "it comes at you"
+        );
+        assert!(
+            g.deck.bolts.iter().all(|bolt| bolt.friendly),
+            "and it has no blaster"
+        );
+        assert!(hurt > 0, "getting caught by one costs");
+    }
+
+    #[test]
+    fn an_astromech_is_bought_aboard_and_rolls_after_you_below() {
+        let mut g = flying();
+        g.status = Status::Hangar;
+        g.credits = 20_000;
+        let line = g
+            .shop_lines()
+            .into_iter()
+            .find(|l| l.entry == ShopEntry::Consumable(Stock::Droid))
+            .expect("the yard sells droids");
+        assert!(g.buy(line.key), "one is bought");
+        assert!(g.has_droid, "and it is aboard");
+        g.status = Status::Chart;
+        let at = g.map.cursor;
+        g.map.nodes[at].sector = Sector::AsteroidBelt;
+        assert!(g.land(), "down we go");
+        let droid = g.deck.droid.as_ref().expect("it came down too");
+        assert!(
+            (droid.pos.0 - g.deck.pilot.0).abs() <= 2,
+            "and it is right behind you"
+        );
+        g.deck.pilot = (droid.pos.0 + 8, droid.pos.1);
+        for tick in 0..20 {
+            g.deck.skirmish(tick);
+        }
+        let droid = g.deck.droid.as_ref().unwrap();
+        assert!(
+            (droid.pos.0 - g.deck.pilot.0).abs() < 8,
+            "it keeps up when you walk off"
+        );
+    }
+
+    #[test]
+    fn the_droid_welds_you_up_when_nobody_is_shooting() {
+        let mut g = planetside(Planet::Dagobah, 5);
+        g.deck.droid = Some(Astromech {
+            pos: g.deck.pilot,
+            cooldown: 1,
+        });
+        g.deck.health = 4;
+        for tick in 0..4 {
+            g.deck.skirmish(tick);
+        }
+        assert!(g.deck.health > 4, "it patches you between fights");
+    }
+
+    #[test]
+    fn a_detention_block_needs_a_droid_and_gives_a_pilot_back() {
+        let mut g = planetside(Planet::Coruscant, 9);
+        if !stand_at(&mut g, DeckSpot::Detention) {
+            return; // this stretch of world has no block on it
+        }
+        g.squad.push(Wing::new("Red Two", ShipClass::AWing));
+        g.squad[1].alive = false;
+        assert_eq!(g.interact(), None, "the door does not open for hands");
+        assert!(!g.squad[1].alive, "and he is still in there");
+        g.deck.droid = Some(Astromech {
+            pos: g.deck.pilot,
+            cooldown: 0,
+        });
+        assert_eq!(g.interact(), Some(DeckAction::Freed), "the droid slices it");
+        assert!(g.squad[1].alive, "and he walks out");
+    }
+
+    #[test]
+    fn a_pilot_can_be_hired_out_of_a_bar() {
+        let mut g = planetside(Planet::Tatooine, 11);
+        if !stand_at(&mut g, DeckSpot::HiringTable) {
+            return;
+        }
+        g.credits = 0;
+        assert_eq!(g.interact(), None, "nobody flies for nothing");
+        g.credits = HIRE_PRICE;
+        let wing = g.squad.len();
+        assert_eq!(g.interact(), Some(DeckAction::Hired), "and now they do");
+        assert_eq!(g.squad.len(), wing + 1, "the wing gains a pilot");
+        assert_eq!(g.credits, 0, "who costs what he costs");
+    }
+
+    #[test]
+    fn sabacc_takes_your_money_or_gives_you_somebody_elses() {
+        let mut g = planetside(Planet::Tatooine, 13);
+        if !stand_at(&mut g, DeckSpot::SabaccTable) {
+            return;
+        }
+        g.credits = 0;
+        assert_eq!(g.interact(), None, "an empty pocket sits out");
+        let mut wins = 0;
+        let mut losses = 0;
+        for _ in 0..40 {
+            g.credits = SABACC_STAKE * 4;
+            let before = g.credits;
+            assert_eq!(
+                g.interact(),
+                Some(DeckAction::Gambled),
+                "the hand is played"
+            );
+            if g.credits > before {
+                wins += 1;
+            } else if g.credits < before {
+                losses += 1;
+            }
+        }
+        assert!(wins > 0, "the table pays out sometimes");
+        assert!(losses > 0, "and takes it back the rest of the time");
     }
 }
