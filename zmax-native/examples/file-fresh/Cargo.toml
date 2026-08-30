@@ -1,0 +1,11 @@
+[package]
+name = "zmax-native-file-fresh"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zmax-native = { workspace = true }

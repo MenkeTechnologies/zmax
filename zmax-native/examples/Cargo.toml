@@ -40,6 +40,10 @@ members = [
   "mark-jump",
   "tab-map",
   "line-bytes",
+  "did-change",
+  "file-fresh",
+  "tag-trail",
+  "draw-context",
 ]
 
 [workspace.dependencies]

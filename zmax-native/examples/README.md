@@ -52,5 +52,9 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`mark-jump`](mark-jump) | `:mj [name]` | `mark` vs `marks`, and `:goto` being 1-based |
 | [`tab-map`](tab-map) | `:tabs` | `tab_index` is 0-based where vim counts from 1; windows are per-tab |
 | [`line-bytes`](line-bytes) | `:lb [byte]` | `line_to_byte` fails where `byte_to_line` CLAMPS — not symmetric |
+| [`did-change`](did-change) | `:did {command}` | `change_number` — success is not the same as having done anything |
+| [`file-fresh`](file-fresh) | `:fresh`, `:fresh-mark` | `file_time` + plugin-side state; there is no clock in the SDK |
+| [`tag-trail`](tag-trail) | `:tags` | `tag_stack` — `CTRL-T` unwinds from the END |
+| [`draw-context`](draw-context) | `:drawctx` | `window_size`/`bg_color` — a named colour's brightness is unknowable |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.
