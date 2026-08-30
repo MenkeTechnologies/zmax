@@ -30,11 +30,14 @@
 //!   from two bays, and a segmented serpent that swims behind its head. Each has
 //!   three attack phases keyed to how much hull is left.
 //!
-//! Controls: `←/→`/`h`/`l` and `↑/↓`/`k`/`j` fly, `SPC` (or `f`) fires, `x`
-//! triggers the hull special, `b` drops a smart bomb, `p` pauses, `r` retries
-//! with the same build, `n` restarts, `q`/`Esc` quits. The picker takes `1`/`2`/
-//! `3` or `←/→`, `d` cycles difficulty, `Enter` launches. In the hangar the
-//! listed key buys the line and `Enter` launches the next wave.
+//! Controls in flight: `←/→`/`h`/`l` and `↑/↓`/`k`/`j` fly, `SPC` (or `f`)
+//! fires, `m` throws missiles, `1`-`0` and `[`/`]` swap guns, `x` triggers the
+//! hull special, `b` drops a smart bomb, `p` pauses, `r` retries with the same
+//! build, `n` restarts, `q`/`Esc` quits. The picker takes `1`/`2`/`3` or `←/→`
+//! for the hull, `d` for difficulty, `g` for the galaxy, `Enter` to launch. In
+//! the hangar the listed key buys the line, `w` climbs into the next hull and
+//! `Enter` opens the chart; on the chart `←/→` picks a lane and `Enter` flies
+//! it.
 //!
 //! Like the other action games the overlay animates itself through
 //! `zmax_event::request_redraw` while a round is live; all of the game state
@@ -112,6 +115,15 @@ const BULWARK_TICKS: u32 = 60;
 const BARRAGE_STEP: i16 = 7;
 /// The most shield pips any hull can ever carry.
 const MAX_SHIELD_PIPS: u32 = 8;
+/// Hulls a squad can hold, where the wingmen ride, how often they fire, and
+/// what a new hull or a rescue costs.
+const MAX_SQUAD: usize = 4;
+const WING_OFFSETS: [i16; 3] = [-6, 6, -11];
+const WING_CADENCE: u32 = 9;
+/// Missiles the launcher fires per salvo, and what it holds to start with.
+const MISSILE_SALVO: u32 = 2;
+const MISSILE_START: u32 = 6;
+const MISSILE_PACK: u32 = 8;
 /// Wing drones the ship can carry, and how far out they ride.
 const MAX_DRONES: usize = 2;
 const DRONE_OFFSET: i16 = 4;
@@ -161,9 +173,6 @@ const TURRET_CADENCE: u32 = 34;
 const FLARE_CADENCE: u32 = 4;
 const FLARE_PERIOD: u32 = 60;
 const FLARE_ACTIVE: u32 = 18;
-/// Stops the star chart offers between waves, and the keys that pick them.
-const ROUTE_CHOICES: usize = 3;
-const ROUTE_KEYS: [char; 3] = ['z', 'x', 'v'];
 /// Ticks the arrival banner stays up for.
 const BANNER_TICKS: u32 = 40;
 /// Rows of parallax backdrop drawn behind the court.
@@ -173,8 +182,9 @@ const SERPENT_SEGMENTS: usize = 8;
 /// The vertical offsets a serpent's body cycles through as it swims.
 const SERPENT_WAVE: [i16; 8] = [0, 1, 2, 1, 0, -1, -2, -1];
 /// The keys the hangar hands out to its lines, in order.
-const SHOP_KEYS: [char; 17] = [
-    '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'c', 'e', 'g', 'i', 'm', 'o', 's',
+const SHOP_KEYS: [char; 20] = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'c', 'e', 'g', 'i', 'k', 'm', 'o', 's', 'u',
+    'y',
 ];
 
 /// How hard the run is, chosen on the picker.
@@ -1074,6 +1084,8 @@ pub enum PowerKind {
     Rapid,
     /// A wing drone that fires alongside the ship.
     Drone,
+    /// A pack for the missile launcher.
+    Missiles,
     /// Points and salvage.
     Medal,
     Life,
@@ -1087,6 +1099,7 @@ impl PowerKind {
             PowerKind::Bomb => "◆",
             PowerKind::Rapid => "»",
             PowerKind::Drone => "◇",
+            PowerKind::Missiles => "↥",
             PowerKind::Medal => "★",
             PowerKind::Life => "♥",
         }
@@ -1303,6 +1316,8 @@ pub enum Status {
     Playing,
     WaveClear,
     Hangar,
+    /// Parked at a system, reading the galaxy chart.
+    Chart,
     Lost,
 }
 
@@ -1350,16 +1365,25 @@ pub enum Stock {
     Bomb,
     Rapid,
     Life,
+    /// Another hull for the squad, flown by a wingman.
+    Hull,
+    /// Every downed wingman back in the air.
+    Rescue,
+    /// A pack for the missile launcher.
+    Missiles,
 }
 
 impl Stock {
-    pub const ALL: [Stock; 7] = [
+    pub const ALL: [Stock; 10] = [
         Stock::Repair,
+        Stock::Missiles,
         Stock::GunLevel,
         Stock::GunSwap,
         Stock::Drone,
         Stock::Bomb,
         Stock::Rapid,
+        Stock::Rescue,
+        Stock::Hull,
         Stock::Life,
     ];
 
@@ -1371,7 +1395,10 @@ impl Stock {
             Stock::Drone => "wing drone",
             Stock::Bomb => "smart bomb",
             Stock::Rapid => "rapid fire",
-            Stock::Life => "spare hull",
+            Stock::Life => "spare life",
+            Stock::Hull => "new hull",
+            Stock::Rescue => "rescue the wing",
+            Stock::Missiles => "missile pack",
         }
     }
 
@@ -1384,6 +1411,9 @@ impl Stock {
             Stock::Bomb => "+1 smart bomb",
             Stock::Rapid => "rapid fire through the next wave",
             Stock::Life => "+1 life",
+            Stock::Hull => "another hull for the squad, flown as a wingman",
+            Stock::Rescue => "every downed wingman back in the air",
+            Stock::Missiles => "+8 rounds for the launcher",
         }
     }
 
@@ -1396,6 +1426,9 @@ impl Stock {
             Stock::GunLevel => 500,
             Stock::Drone => 600,
             Stock::Life => 1200,
+            Stock::Missiles => 350,
+            Stock::Rescue => 700,
+            Stock::Hull => 2500,
         }
     }
 }
@@ -1771,24 +1804,408 @@ impl NodeBonus {
     }
 }
 
-/// One stop on the star chart: where you fly next, and what is waiting there.
+/// The galaxy a run is flown in. Each one fields a different mix of sectors,
+/// rock and enemies, and pays differently for it.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum Galaxy {
+    /// The starting arm: everything shows up, nothing is extreme.
+    Orion,
+    /// Swarm space: deeper formations, thinner armour, more drops.
+    Hive,
+    /// Industrial space: hulks, mines and turrets, but the salvage is rich.
+    Forge,
+    /// Burnt space: flares, corona and rock, with heavier hulls.
+    Cinder,
+    /// The deep: wells, void and long tunnels, and everything is armoured.
+    Abyss,
+}
+
+impl Galaxy {
+    pub const ALL: [Galaxy; 5] = [
+        Galaxy::Orion,
+        Galaxy::Hive,
+        Galaxy::Forge,
+        Galaxy::Cinder,
+        Galaxy::Abyss,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Galaxy::Orion => "Orion Arm",
+            Galaxy::Hive => "Hive Reach",
+            Galaxy::Forge => "Forge Span",
+            Galaxy::Cinder => "Cinder Belt",
+            Galaxy::Abyss => "The Abyss",
+        }
+    }
+
+    pub fn blurb(self) -> &'static str {
+        match self {
+            Galaxy::Orion => "a bit of everything, nothing extreme",
+            Galaxy::Hive => "deeper swarms, thinner hulls, richer drops",
+            Galaxy::Forge => "hulks, mines and turrets — and heavy salvage",
+            Galaxy::Cinder => "fire and rock; the hulls out here are tough",
+            Galaxy::Abyss => "wells, void and long tunnels; everything is armoured",
+        }
+    }
+
+    /// Extra rows of hulls a wave fields here.
+    pub fn swarm(self) -> usize {
+        match self {
+            Galaxy::Hive => 1,
+            _ => 0,
+        }
+    }
+
+    /// Extra armour on every enemy hull.
+    pub fn armour(self) -> i32 {
+        match self {
+            Galaxy::Hive => -1,
+            Galaxy::Cinder => 1,
+            Galaxy::Abyss => 2,
+            _ => 0,
+        }
+    }
+
+    /// Percentage on top of every salvage payout.
+    pub fn salvage_bonus(self) -> u32 {
+        match self {
+            Galaxy::Forge => 60,
+            Galaxy::Abyss => 30,
+            Galaxy::Hive => 15,
+            _ => 0,
+        }
+    }
+
+    /// The sectors that show up in this galaxy.
+    pub fn sectors(self) -> &'static [Sector] {
+        match self {
+            Galaxy::Orion => &Sector::ALL,
+            Galaxy::Hive => &[
+                Sector::OpenSpace,
+                Sector::Nebula,
+                Sector::CometTrail,
+                Sector::IonStorm,
+            ],
+            Galaxy::Forge => &[
+                Sector::Wreckage,
+                Sector::DebrisRing,
+                Sector::Minefield,
+                Sector::AsteroidBelt,
+            ],
+            Galaxy::Cinder => &[
+                Sector::SolarCorona,
+                Sector::AsteroidBelt,
+                Sector::OpenSpace,
+                Sector::IonStorm,
+            ],
+            Galaxy::Abyss => &[
+                Sector::VoidRift,
+                Sector::Nebula,
+                Sector::Minefield,
+                Sector::DebrisRing,
+            ],
+        }
+    }
+
+    /// The rock that shows up in this galaxy.
+    pub fn terrains(self) -> &'static [TerrainKind] {
+        match self {
+            Galaxy::Orion => &TerrainKind::ALL,
+            Galaxy::Hive => &[
+                TerrainKind::Open,
+                TerrainKind::Pillars,
+                TerrainKind::Canyon,
+                TerrainKind::Gates,
+            ],
+            Galaxy::Forge => &[
+                TerrainKind::Reef,
+                TerrainKind::Maze,
+                TerrainKind::Spine,
+                TerrainKind::Pillars,
+            ],
+            Galaxy::Cinder => &[
+                TerrainKind::Canyon,
+                TerrainKind::Cave,
+                TerrainKind::Open,
+                TerrainKind::Spine,
+            ],
+            Galaxy::Abyss => &[
+                TerrainKind::Tunnel,
+                TerrainKind::Maze,
+                TerrainKind::Cave,
+                TerrainKind::Gates,
+            ],
+        }
+    }
+
+    /// How many systems its star map holds.
+    pub fn systems(self) -> usize {
+        match self {
+            Galaxy::Orion => 18,
+            Galaxy::Hive => 20,
+            Galaxy::Forge => 16,
+            Galaxy::Cinder => 18,
+            Galaxy::Abyss => 22,
+        }
+    }
+}
+
+/// What is waiting at a system on the chart.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct RouteNode {
+pub enum NodeKind {
+    /// An ordinary wave.
+    Battle,
+    /// A wave with heavier hulls and a better payout.
+    Elite,
+    /// A boss.
+    Boss,
+    /// No fight: a hangar with a free repair.
+    Depot,
+    /// No fight: a hulk to strip for salvage and a gun.
+    Derelict,
+}
+
+impl NodeKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            NodeKind::Battle => "battle",
+            NodeKind::Elite => "elite",
+            NodeKind::Boss => "boss",
+            NodeKind::Depot => "depot",
+            NodeKind::Derelict => "derelict",
+        }
+    }
+
+    /// The glyph the chart draws it with.
+    pub fn glyph(self) -> &'static str {
+        match self {
+            NodeKind::Battle => "◇",
+            NodeKind::Elite => "◆",
+            NodeKind::Boss => "☠",
+            NodeKind::Depot => "⌂",
+            NodeKind::Derelict => "⌗",
+        }
+    }
+
+    /// Whether flying here means a fight.
+    pub fn fights(self) -> bool {
+        matches!(self, NodeKind::Battle | NodeKind::Elite | NodeKind::Boss)
+    }
+}
+
+/// One system on the chart.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct MapNode {
+    /// Where it sits on the chart, as `(column, row)`.
+    pub pos: (usize, usize),
+    pub kind: NodeKind,
     pub sector: Sector,
     pub terrain: TerrainKind,
     pub bonus: NodeBonus,
+    pub cleared: bool,
 }
 
-impl RouteNode {
+impl MapNode {
     pub fn label(&self) -> String {
         format!(
-            "{} · {} — {}",
+            "{} · {} · {} — {}",
+            self.kind.name(),
             self.sector.name(),
             self.terrain.name(),
             self.bonus.label()
         )
     }
 }
+
+/// The galaxy's star chart: systems, the lanes between them, and where the
+/// squad is sitting right now. Lanes run both ways, so a depot can be flown
+/// back to as easily as the next fight can be flown to.
+#[derive(Clone, Debug)]
+pub struct StarMap {
+    pub galaxy: Galaxy,
+    pub nodes: Vec<MapNode>,
+    pub lanes: Vec<Vec<usize>>,
+    /// Which system the squad is parked at.
+    pub at: usize,
+    /// Which reachable system the chart cursor is on.
+    pub cursor: usize,
+    /// Columns the chart is laid out in.
+    pub columns: usize,
+}
+
+impl StarMap {
+    /// Lay out a galaxy: a run of columns, each with one to three systems,
+    /// every system linked to one or two in the column ahead.
+    pub fn generate(galaxy: Galaxy, seed: u64) -> StarMap {
+        let mut rng = seed | 1;
+        let mut rand = move || {
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            rng >> 33
+        };
+        let sectors = galaxy.sectors();
+        let terrains = galaxy.terrains();
+        let mut nodes: Vec<MapNode> = Vec::new();
+        let mut columns: Vec<Vec<usize>> = Vec::new();
+        let target = galaxy.systems();
+        let mut column = 0;
+        while nodes.len() < target {
+            let height = if column == 0 {
+                1
+            } else {
+                1 + (rand() % 3) as usize
+            };
+            let mut here = Vec::new();
+            for row in 0..height {
+                let kind = if column == 0 {
+                    NodeKind::Depot
+                } else {
+                    match rand() % 12 {
+                        0 | 1 => NodeKind::Depot,
+                        2 => NodeKind::Derelict,
+                        3 | 4 => NodeKind::Elite,
+                        5 if column % 4 == 0 => NodeKind::Boss,
+                        _ => NodeKind::Battle,
+                    }
+                };
+                let sector = sectors[(rand() % sectors.len() as u64) as usize];
+                let terrain = terrains[(rand() % terrains.len() as u64) as usize];
+                let bonus = match rand() % 4 {
+                    0 => NodeBonus::Cache(300 + 80 * column as u32),
+                    1 => NodeBonus::Armoury(
+                        Weapon::ALL[(rand() % Weapon::ALL.len() as u64) as usize],
+                    ),
+                    2 => NodeBonus::Refit,
+                    _ => NodeBonus::Danger,
+                };
+                here.push(nodes.len());
+                nodes.push(MapNode {
+                    pos: (column, row),
+                    kind,
+                    sector,
+                    terrain,
+                    bonus,
+                    cleared: false,
+                });
+            }
+            columns.push(here);
+            column += 1;
+        }
+        let mut lanes = vec![Vec::new(); nodes.len()];
+        for pair in columns.windows(2) {
+            let (near, far) = (&pair[0], &pair[1]);
+            for (i, &from) in near.iter().enumerate() {
+                // Every system reaches the one across from it, and one of its
+                // neighbours, so the chart branches and rejoins.
+                let straight = far[i.min(far.len() - 1)];
+                let sideways = far[(i + 1) % far.len()];
+                for to in [straight, sideways] {
+                    if !lanes[from].contains(&to) {
+                        lanes[from].push(to);
+                        lanes[to].push(from);
+                    }
+                }
+            }
+        }
+        let mut map = StarMap {
+            galaxy,
+            nodes,
+            lanes,
+            at: 0,
+            cursor: 0,
+            columns: columns.len(),
+        };
+        map.nodes[0].cleared = true;
+        map.cursor = map.reachable().first().copied().unwrap_or(0);
+        map
+    }
+
+    /// The systems one lane away from where the squad is parked.
+    pub fn reachable(&self) -> Vec<usize> {
+        let mut lanes = self.lanes[self.at].clone();
+        lanes.sort_unstable();
+        lanes
+    }
+
+    /// Step the chart cursor through the reachable systems.
+    pub fn move_cursor(&mut self, delta: i32) {
+        let lanes = self.reachable();
+        if lanes.is_empty() {
+            return;
+        }
+        let at = lanes.iter().position(|&n| n == self.cursor).unwrap_or(0) as i32;
+        let next = (at + delta).rem_euclid(lanes.len() as i32) as usize;
+        self.cursor = lanes[next];
+    }
+
+    /// Fly to the system under the cursor, if a lane runs to it.
+    pub fn jump(&mut self) -> Option<MapNode> {
+        if !self.lanes[self.at].contains(&self.cursor) {
+            return None;
+        }
+        self.at = self.cursor;
+        let node = self.nodes[self.at];
+        self.cursor = self.reachable().first().copied().unwrap_or(self.at);
+        Some(node)
+    }
+
+    /// Mark the system the squad is parked at as done.
+    pub fn clear_here(&mut self) {
+        self.nodes[self.at].cleared = true;
+    }
+
+    pub fn here(&self) -> MapNode {
+        self.nodes[self.at]
+    }
+}
+
+/// One hull in the squad: the one being flown, or a wingman riding alongside.
+#[derive(Clone, Debug)]
+pub struct Wing {
+    pub name: &'static str,
+    pub class: ShipClass,
+    pub loadout: Loadout,
+    pub weapon: Weapon,
+    pub weapon_level: u32,
+    pub shield: u32,
+    pub max_shield: u32,
+    /// False once it has been shot down; a yard puts it back in the air.
+    pub alive: bool,
+}
+
+impl Wing {
+    /// A fresh hull of `class`, straight off the line.
+    pub fn new(name: &'static str, class: ShipClass) -> Wing {
+        Wing {
+            name,
+            class,
+            loadout: Loadout::default(),
+            weapon: Weapon::Blaster,
+            weapon_level: 1,
+            shield: class.max_shield(),
+            max_shield: class.max_shield(),
+            alive: true,
+        }
+    }
+
+    /// Damage this hull deals per shot.
+    pub fn damage(&self) -> i32 {
+        self.class.damage() + self.loadout.tier(Part::Cannon) as i32 + self.weapon_level as i32 - 1
+    }
+
+    pub fn status(&self) -> &'static str {
+        if self.alive {
+            "flying"
+        } else {
+            "down"
+        }
+    }
+}
+
+/// The names hulls are rolled off the line with.
+const HULL_NAMES: [&str; MAX_SQUAD] = ["Lead", "Two", "Three", "Four"];
 
 /// The pure Nova court. No I/O, no timing — unit-tested.
 #[derive(Clone)]
@@ -1807,6 +2224,12 @@ pub struct Game {
     pub bombs: u32,
     /// Wing drones riding either side of the hull, as `-1`/`1` sides.
     pub drones: Vec<i16>,
+    /// Every hull in the squad, and which one is being flown.
+    pub squad: Vec<Wing>,
+    pub active: usize,
+    /// The guns aboard, and the missiles in the launcher.
+    pub owned: Vec<Weapon>,
+    pub missiles: u32,
     pub score: u32,
     /// Salvage banked for the hangar.
     pub credits: u32,
@@ -1837,9 +2260,10 @@ pub struct Game {
     pub turrets: Vec<WallTurret>,
     /// Whatever else the sector is doing to the hull.
     pub hazards: Vec<Hazard>,
-    /// The stop being flown, and the three the chart offers next.
-    pub node: RouteNode,
-    pub route: Vec<RouteNode>,
+    /// The galaxy being flown, its chart, and the system in front of the hull.
+    pub galaxy: Galaxy,
+    pub map: StarMap,
+    pub node: MapNode,
     /// Ticks the arrival banner still has to run.
     pub banner: u32,
     /// Frames of flash left over from a bomb or a surge, for the renderer.
@@ -1883,6 +2307,10 @@ impl Game {
             lives: 3,
             bombs: 0,
             drones: Vec::new(),
+            squad: vec![Wing::new(HULL_NAMES[0], ShipClass::Cruiser)],
+            active: 0,
+            owned: vec![Weapon::Blaster],
+            missiles: MISSILE_START,
             score: 0,
             credits: 0,
             xp: 0,
@@ -1907,12 +2335,16 @@ impl Game {
             terrain: Terrain::new(TerrainKind::Open, seed),
             turrets: Vec::new(),
             hazards: Vec::new(),
-            node: RouteNode {
+            galaxy: Galaxy::Orion,
+            map: StarMap::generate(Galaxy::Orion, seed),
+            node: MapNode {
+                pos: (0, 0),
+                kind: NodeKind::Battle,
                 sector: Sector::of_wave(1),
                 terrain: TerrainKind::Open,
                 bonus: NodeBonus::Refit,
+                cleared: false,
             },
-            route: Vec::new(),
             banner: 0,
             flash: 0,
             intermission: 0,
@@ -1937,9 +2369,10 @@ impl Game {
     }
 
     /// Commit to a hull and a difficulty, and fly wave one.
-    pub fn start(&mut self, class: ShipClass, difficulty: Difficulty) {
+    pub fn start(&mut self, class: ShipClass, difficulty: Difficulty, galaxy: Galaxy) {
         self.class = class;
         self.difficulty = difficulty;
+        self.galaxy = galaxy;
         self.loadout = Loadout::default();
         self.ship = (SHIP_ROW, W / 2);
         self.weapon = Weapon::Blaster;
@@ -1951,6 +2384,10 @@ impl Game {
         self.shield = self.max_shield;
         self.bombs = class.bombs();
         self.drones.clear();
+        self.squad = vec![Wing::new(HULL_NAMES[0], class)];
+        self.active = 0;
+        self.owned = vec![Weapon::Blaster];
+        self.missiles = MISSILE_START;
         self.lives = 3;
         self.score = 0;
         self.credits = 0;
@@ -1962,14 +2399,18 @@ impl Game {
         self.energy = self.max_energy();
         self.next_extend = EXTEND_SCORE;
         self.wave = 1;
-        self.route.clear();
-        self.node = RouteNode {
-            sector: Sector::of_wave(1),
+        let seed = self.rand();
+        self.map = StarMap::generate(galaxy, seed);
+        self.node = MapNode {
+            pos: (0, 0),
+            kind: NodeKind::Battle,
+            sector: self.galaxy.sectors()[0],
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Refit,
+            cleared: false,
         };
-        self.status = Status::Playing;
-        self.spawn_wave();
+        // The run opens parked at the rim, reading the chart.
+        self.status = Status::Chart;
     }
 
     /// The same LCG PRNG the snake port uses.
@@ -1993,7 +2434,13 @@ impl Game {
     /// work for its kills.
     fn wave_armour(&self) -> i32 {
         let danger = if self.danger() { 2 } else { 0 };
-        self.difficulty.armour() + (self.wave / 3) as i32 + danger
+        let elite = if self.node.kind == NodeKind::Elite {
+            2
+        } else {
+            0
+        };
+        (self.difficulty.armour() + (self.wave / 3) as i32 + danger + elite + self.galaxy.armour())
+            .max(0)
     }
 
     /// Columns the hull covers per keypress, engine included.
@@ -2135,7 +2582,7 @@ impl Game {
         self.dress_sector();
         self.dress_terrain();
         self.claim_node_bonus();
-        if self.wave.is_multiple_of(BOSS_EVERY) {
+        if self.node.kind == NodeKind::Boss {
             let kind = BossKind::of_wave(self.wave);
             let hp = 60 + 40 * (self.wave / BOSS_EVERY) as i32 + 20 * self.wave_armour();
             self.boss = Some(Boss::new(kind, hp));
@@ -2148,7 +2595,7 @@ impl Game {
         }
         // Later waves come deeper as well as tougher, but a tight map fields a
         // narrower wave: there is only so much room between the rock.
-        let rows = (2 + (self.wave / 3) as usize).min(ROWS);
+        let rows = (2 + (self.wave / 3) as usize + self.galaxy.swarm()).min(ROWS);
         let span: i16 = (0..rows as i16)
             .map(|r| {
                 let (l, right) = self.terrain.channel(FORMATION_TOP + r * 2);
@@ -2167,15 +2614,20 @@ impl Game {
         }
     }
 
-    /// Leave the hangar and fly the next wave, keeping everything bought.
+    /// Leave the hangar for the chart, then fly the first lane on it. Kept as
+    /// one call for the places that just want the next fight.
     pub fn launch_next_wave(&mut self) {
-        self.wave += 1;
-        self.shield = self.max_shield;
-        self.bombs += 1;
-        self.energy = self.max_energy();
-        self.drone_stun = 0;
-        self.status = Status::Playing;
-        self.spawn_wave();
+        self.open_chart();
+        let fights: Vec<usize> = self
+            .map
+            .reachable()
+            .into_iter()
+            .filter(|&n| self.map.nodes[n].kind.fights())
+            .collect();
+        if let Some(&next) = fights.first() {
+            self.map.cursor = next;
+        }
+        self.jump();
     }
 
     /// Bank points, paying out a spare life on every extend threshold crossed.
@@ -2193,9 +2645,10 @@ impl Game {
         if self.loadout.has(Module::Salvager) {
             salvage += salvage / 2;
         }
-        if self.danger() {
+        if self.danger() || self.node.kind == NodeKind::Elite {
             salvage *= 2;
         }
+        salvage += salvage * self.galaxy.salvage_bonus() / 100;
         self.credits += salvage;
         self.xp += base / 4 + 1;
         while self.xp >= self.xp_next {
@@ -2470,7 +2923,8 @@ impl Game {
             PowerKind::Gun(w) if w == self.weapon => {
                 self.weapon_level = (self.weapon_level + 1).min(MAX_WEAPON_LEVEL);
             }
-            PowerKind::Gun(w) => self.weapon = w,
+            PowerKind::Gun(w) => self.stock_gun(w),
+            PowerKind::Missiles => self.missiles += MISSILE_PACK,
             PowerKind::Shield => self.shield = (self.shield + 1).min(self.max_shield + 2),
             PowerKind::Bomb => self.bombs += 1,
             PowerKind::Rapid => self.rapid = RAPID_TICKS,
@@ -2502,7 +2956,8 @@ impl Game {
             }
             6 | 7 => PowerKind::Shield,
             8 | 9 => PowerKind::Rapid,
-            10 | 11 => PowerKind::Medal,
+            10 => PowerKind::Medal,
+            11 => PowerKind::Missiles,
             12 => PowerKind::Drone,
             13 | 14 => PowerKind::Bomb,
             _ => PowerKind::Life,
@@ -3041,6 +3496,8 @@ impl Game {
         let shielded = self.bulwark > 0;
         let mut kept = Vec::with_capacity(self.enemy_shots.len());
         let mut hits: Vec<u32> = Vec::new();
+        let mut wing_hits: Vec<(usize, u32)> = Vec::new();
+        let wings = self.wing_cells();
         let mut blocked: Vec<(i16, i16)> = Vec::new();
         'shot: for mut s in std::mem::take(&mut self.enemy_shots) {
             for step in 0..s.speed.unsigned_abs() as i16 {
@@ -3064,6 +3521,10 @@ impl Game {
                     }
                     continue 'shot;
                 }
+                if let Some(&(index, _)) = wings.iter().find(|(_, cell)| *cell == s.pos) {
+                    wing_hits.push((index, s.damage.max(1) as u32));
+                    continue 'shot;
+                }
             }
             kept.push(s);
         }
@@ -3073,6 +3534,9 @@ impl Game {
         }
         for pips in hits {
             self.damage_ship(pips);
+        }
+        for (index, pips) in wing_hits {
+            self.damage_wing(index, pips);
         }
     }
 
@@ -3223,10 +3687,7 @@ impl Game {
         if self.enemies.is_empty() && self.boss.is_none() && self.status == Status::Playing {
             self.status = Status::WaveClear;
             self.intermission = INTERMISSION_TICKS;
-            self.route = self.roll_route();
-            if let Some(&first) = self.route.first() {
-                self.node = first;
-            }
+            self.map.clear_here();
             let bonus = 100 * self.wave;
             self.add_score(bonus);
             self.credits += bonus;
@@ -3301,10 +3762,12 @@ impl Game {
                 Stock::Repair => self.shield < self.max_shield,
                 Stock::GunLevel => self.weapon_level < MAX_WEAPON_LEVEL,
                 Stock::Drone => self.drones.len() < MAX_DRONES,
+                Stock::Hull => self.squad.len() < MAX_SQUAD,
+                Stock::Rescue => self.squad.iter().any(|w| !w.alive),
                 _ => true,
             };
             let label = match stock {
-                Stock::GunSwap => format!("swap gun → {}", self.weapon.next().name()),
+                Stock::GunSwap => format!("swap gun ({} in the racks)", self.owned.len()),
                 _ => stock.name().to_string(),
             };
             push(
@@ -3349,7 +3812,7 @@ impl Game {
                 Stock::GunLevel => {
                     self.weapon_level = (self.weapon_level + 1).min(MAX_WEAPON_LEVEL)
                 }
-                Stock::GunSwap => self.weapon = self.weapon.next(),
+                Stock::GunSwap => self.cycle_weapon(1),
                 Stock::Drone => {
                     let side = if self.drones.contains(&-1) { 1 } else { -1 };
                     self.drones.push(side);
@@ -3357,6 +3820,11 @@ impl Game {
                 Stock::Bomb => self.bombs += 1,
                 Stock::Rapid => self.rapid = RAPID_TICKS,
                 Stock::Life => self.lives += 1,
+                Stock::Missiles => self.missiles += MISSILE_PACK,
+                Stock::Rescue => self.rescue_wings(),
+                Stock::Hull => {
+                    self.commission_hull();
+                }
             },
         }
         true
@@ -3565,36 +4033,237 @@ impl Game {
         true
     }
 
-    /// The three stops the star chart offers from here.
-    fn roll_route(&mut self) -> Vec<RouteNode> {
-        let mut nodes = Vec::with_capacity(ROUTE_CHOICES);
-        for _ in 0..ROUTE_CHOICES {
-            let sector = Sector::ALL[(self.rand() % Sector::ALL.len() as u64) as usize];
-            let terrain = TerrainKind::ALL[(self.rand() % TerrainKind::ALL.len() as u64) as usize];
-            let bonus = match self.rand() % 4 {
-                0 => NodeBonus::Cache(200 + 60 * self.wave),
-                1 => NodeBonus::Armoury(Weapon::ALL[(self.rand() % 5) as usize]),
-                2 => NodeBonus::Refit,
-                _ => NodeBonus::Danger,
+    /// Where each living wingman is riding, as `(squad index, cell)`.
+    pub fn wing_cells(&self) -> Vec<(usize, (i16, i16))> {
+        let mut cells = Vec::new();
+        let mut slot = 0;
+        for (i, wing) in self.squad.iter().enumerate() {
+            if i == self.active || !wing.alive {
+                continue;
+            }
+            let Some(&offset) = WING_OFFSETS.get(slot) else {
+                break;
             };
-            nodes.push(RouteNode {
-                sector,
-                terrain,
-                bonus,
-            });
+            slot += 1;
+            let row = (self.ship.0 + 1).min(SHIP_ROW);
+            let (left, right) = self.terrain.channel(row);
+            let col = (self.ship.1 + offset).clamp(left.max(1), right.min(W - 2));
+            cells.push((i, (row, col)));
         }
-        nodes
+        cells
     }
 
-    /// Pick the next stop on the chart; returns whether the index was on it.
-    pub fn choose_route(&mut self, index: usize) -> bool {
-        if self.status != Status::Hangar {
+    /// The wingmen keep firing on their own, a little slower than the hull.
+    fn advance_wings(&mut self) {
+        if !self.tick.is_multiple_of(WING_CADENCE) {
+            return;
+        }
+        let mut volley = Vec::new();
+        for (i, (row, col)) in self.wing_cells() {
+            let damage = self.squad[i].damage();
+            volley.push(Shot::bolt((row - 1, col), 0, damage));
+        }
+        for shot in volley {
+            self.launch(shot);
+        }
+    }
+
+    /// A wingman takes a hit; at nothing left it is shot down and sits the rest
+    /// of the run out until a yard puts it back in the air.
+    fn damage_wing(&mut self, index: usize, pips: u32) {
+        let Some(wing) = self.squad.get_mut(index) else {
+            return;
+        };
+        let soaked = wing.shield.min(pips.max(1));
+        wing.shield -= soaked;
+        if wing.shield == 0 {
+            wing.alive = false;
+            self.flash = self.flash.max(4);
+        }
+    }
+
+    /// Put every downed hull back in the air with full shields.
+    pub fn rescue_wings(&mut self) {
+        for wing in self.squad.iter_mut() {
+            wing.alive = true;
+            wing.shield = wing.max_shield;
+        }
+    }
+
+    /// Store the hull being flown back into the squad roster.
+    fn stow_active(&mut self) {
+        let (weapon, level, shield, max_shield, loadout, class) = (
+            self.weapon,
+            self.weapon_level,
+            self.shield,
+            self.max_shield,
+            self.loadout.clone(),
+            self.class,
+        );
+        if let Some(wing) = self.squad.get_mut(self.active) {
+            wing.weapon = weapon;
+            wing.weapon_level = level;
+            wing.shield = shield;
+            wing.max_shield = max_shield;
+            wing.loadout = loadout;
+            wing.class = class;
+        }
+    }
+
+    /// Climb into another hull in the squad. Only in the hangar, and only into
+    /// one that is still flying.
+    pub fn switch_active(&mut self, index: usize) -> bool {
+        if self.status != Status::Hangar || index >= self.squad.len() || index == self.active {
             return false;
         }
-        let Some(&node) = self.route.get(index) else {
+        if !self.squad[index].alive {
+            return false;
+        }
+        self.stow_active();
+        let wing = self.squad[index].clone();
+        self.active = index;
+        self.class = wing.class;
+        self.loadout = wing.loadout;
+        self.weapon = wing.weapon;
+        self.weapon_level = wing.weapon_level;
+        self.bonus_plating = 0;
+        self.recompute_shield();
+        self.shield = wing.shield.min(self.max_shield);
+        true
+    }
+
+    /// Climb into the next hull along.
+    pub fn cycle_active(&mut self) -> bool {
+        let count = self.squad.len();
+        for step in 1..=count {
+            let next = (self.active + step) % count;
+            if self.switch_active(next) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Take on a hull the squad does not have yet.
+    fn commission_hull(&mut self) -> bool {
+        if self.squad.len() >= MAX_SQUAD {
+            return false;
+        }
+        let flown: Vec<ShipClass> = self.squad.iter().map(|w| w.class).collect();
+        let class = ShipClass::ALL
+            .into_iter()
+            .find(|c| !flown.contains(c))
+            .unwrap_or(ShipClass::Cruiser);
+        let name = HULL_NAMES[self.squad.len()];
+        self.squad.push(Wing::new(name, class));
+        true
+    }
+
+    /// Put a gun in the racks and fit it.
+    fn stock_gun(&mut self, weapon: Weapon) {
+        if !self.owned.contains(&weapon) {
+            self.owned.push(weapon);
+        }
+        self.weapon = weapon;
+    }
+
+    /// Swap to a gun already in the racks, by its slot on the HUD.
+    pub fn select_weapon(&mut self, index: usize) -> bool {
+        let Some(&weapon) = self.owned.get(index) else {
+            return false;
+        };
+        self.weapon = weapon;
+        true
+    }
+
+    /// Step through the racks one gun at a time.
+    pub fn cycle_weapon(&mut self, delta: i32) {
+        if self.owned.is_empty() {
+            return;
+        }
+        let at = self
+            .owned
+            .iter()
+            .position(|&w| w == self.weapon)
+            .unwrap_or(0) as i32;
+        let next = (at + delta).rem_euclid(self.owned.len() as i32) as usize;
+        self.weapon = self.owned[next];
+    }
+
+    /// Fire the missile launcher: seeking rounds that blow a hole where they
+    /// land, off their own ammunition rather than the gun cadence.
+    pub fn fire_missiles(&mut self) {
+        if self.status != Status::Playing || self.missiles == 0 {
+            return;
+        }
+        self.missiles -= 1;
+        let damage = self.gun_damage() + 4;
+        let (r, c) = (self.ship.0 - 1, self.ship.1);
+        for slot in 0..MISSILE_SALVO {
+            let dx = if slot % 2 == 0 { -2 } else { 2 };
+            let mut missile = Shot::missile((r, c + dx), damage);
+            missile.splash = 1;
+            self.launch(missile);
+        }
+    }
+
+    /// Open the galaxy chart from the hangar.
+    pub fn open_chart(&mut self) {
+        if matches!(self.status, Status::Hangar | Status::Chart) {
+            self.status = Status::Chart;
+        }
+    }
+
+    /// Move the chart cursor through the systems one lane out.
+    pub fn move_cursor(&mut self, delta: i32) {
+        if self.status == Status::Chart {
+            self.map.move_cursor(delta);
+        }
+    }
+
+    /// Fly the lane to the system under the cursor. A fight starts the next
+    /// wave; a depot or a derelict is worked over and parks the squad again.
+    pub fn jump(&mut self) -> bool {
+        if self.status != Status::Chart {
+            return false;
+        }
+        let Some(node) = self.map.jump() else {
             return false;
         };
         self.node = node;
+        self.drone_stun = 0;
+        match node.kind {
+            NodeKind::Depot => {
+                // A yard: shields filled, a bomb loaded, the wing back in the
+                // air and the launcher topped up, all of it free.
+                self.shield = self.max_shield;
+                self.bombs += 1;
+                self.missiles += MISSILE_PACK / 2;
+                self.energy = self.max_energy();
+                self.rescue_wings();
+                self.map.clear_here();
+                self.status = Status::Hangar;
+            }
+            NodeKind::Derelict => {
+                // A hulk worth stripping: salvage, and whatever gun is aboard.
+                let haul = 250 + 90 * self.wave;
+                self.credits += haul;
+                if let NodeBonus::Armoury(weapon) = node.bonus {
+                    self.stock_gun(weapon);
+                } else {
+                    self.bombs += 1;
+                }
+                self.map.clear_here();
+                self.status = Status::Hangar;
+            }
+            _ => {
+                self.wave += 1;
+                self.shield = self.max_shield;
+                self.energy = self.max_energy();
+                self.status = Status::Playing;
+                self.spawn_wave();
+            }
+        }
         true
     }
 
@@ -3603,7 +4272,7 @@ impl Game {
         match self.node.bonus {
             NodeBonus::Cache(credits) => self.credits += credits,
             NodeBonus::Armoury(weapon) => {
-                self.weapon = weapon;
+                self.stock_gun(weapon);
                 self.weapon_level = self.weapon_level.max(2);
             }
             NodeBonus::Refit => {
@@ -3628,6 +4297,7 @@ impl Game {
                 self.sway();
                 self.advance_enemies();
                 self.advance_boss();
+                self.advance_wings();
                 self.advance_shots();
                 self.advance_enemy_shots();
                 self.advance_mines();
@@ -3661,6 +4331,8 @@ pub struct Nova {
     pick: usize,
     /// Highlighted difficulty on the picker.
     diff: usize,
+    /// Highlighted galaxy on the picker.
+    gal: usize,
     paused: bool,
     last: Option<Instant>,
     interval: Duration,
@@ -3675,6 +4347,7 @@ impl Nova {
             seed: 1,
             pick: 1,
             diff: 0,
+            gal: 0,
             paused: false,
             last: None,
             interval: Duration::from_millis(70),
@@ -3692,16 +4365,17 @@ impl Nova {
 
     /// Straight back into a round with the same hull and difficulty.
     fn retry(&mut self) {
-        let (class, difficulty) = (self.game.class, self.game.difficulty);
+        let (class, difficulty, galaxy) = (self.game.class, self.game.difficulty, self.game.galaxy);
         self.restart();
-        self.game.start(class, difficulty);
+        self.game.start(class, difficulty, galaxy);
     }
 
     /// Launch the highlighted hull at the highlighted difficulty.
     fn launch(&mut self) {
         let class = ShipClass::ALL[self.pick];
         let difficulty = Difficulty::ALL[self.diff];
-        self.game.start(class, difficulty);
+        let galaxy = Galaxy::ALL[self.gal];
+        self.game.start(class, difficulty, galaxy);
     }
 
     /// Running = a live round or the cleared-wave pause, and not paused.
@@ -3756,10 +4430,22 @@ impl Nova {
             ox,
             y,
             &format!(
-                "Difficulty  [{}]   +{} armour on every enemy, ×{} score",
+                "Difficulty  [{}]   +{} armour on every enemy, ×{} score   (d cycles)",
                 difficulty.name(),
                 difficulty.armour(),
                 difficulty.score_bonus()
+            ),
+            header,
+        );
+        y += 1;
+        let galaxy = Galaxy::ALL[self.gal];
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "Galaxy      [{}]   {}   (g cycles)",
+                galaxy.name(),
+                galaxy.blurb()
             ),
             header,
         );
@@ -3785,8 +4471,121 @@ impl Nova {
         surface.set_string(
             ox,
             y + 3,
-            "Every 4th wave is a boss: dreadnought, twin, carrier, serpent.",
+            "Squad of four hulls, wingmen fly with you; bosses hold the chart's boss systems.",
             dim,
+        );
+    }
+
+    /// The galaxy chart: every system, the lanes between them, and where the
+    /// squad is parked.
+    fn render_chart(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let header = theme.get("ui.text.focus");
+        let text = theme.get("ui.text");
+        let dim = theme.get("ui.linenr");
+        let mark = theme.get("warning");
+        let g = &self.game;
+        let map = &g.map;
+        let ox = area.x + 2;
+        let oy = area.y + 4;
+        surface.set_string(
+            ox,
+            area.y,
+            &format!(
+                "GALAXY CHART — {}   wave {}   salvage {}   score {}",
+                g.galaxy.name(),
+                g.wave,
+                g.credits,
+                g.score
+            ),
+            header,
+        );
+        surface.set_string(
+            ox,
+            area.y + 1,
+            &format!(
+                "{} systems · {} · lanes run both ways, so a depot can be flown back to",
+                map.nodes.len(),
+                g.galaxy.blurb()
+            ),
+            dim,
+        );
+        surface.set_string(
+            ox,
+            area.y + 2,
+            "◇ battle   ◆ elite   ☠ boss   ⌂ depot   ⌗ derelict",
+            dim,
+        );
+        let reachable = map.reachable();
+        // The lanes first, so the systems sit on top of them.
+        for (from, lanes) in map.lanes.iter().enumerate() {
+            let a = map.nodes[from].pos;
+            for &to in lanes {
+                let b = map.nodes[to].pos;
+                if b.0 <= a.0 {
+                    continue;
+                }
+                let x = ox + (a.0 as u16) * 7 + 4;
+                let y = oy + (a.1 as u16) * 3;
+                let step = if b.1 > a.1 {
+                    "╲"
+                } else if b.1 < a.1 {
+                    "╱"
+                } else {
+                    "─"
+                };
+                for i in 0..3u16 {
+                    let dy = match step {
+                        "╲" => i / 2,
+                        "╱" => 0,
+                        _ => 0,
+                    };
+                    surface.set_string(x + i, y + dy, step, dim);
+                }
+            }
+        }
+        for (i, node) in map.nodes.iter().enumerate() {
+            let x = ox + (node.pos.0 as u16) * 7;
+            let y = oy + (node.pos.1 as u16) * 3;
+            let style = if i == map.at {
+                mark
+            } else if i == map.cursor {
+                header
+            } else if reachable.contains(&i) {
+                text
+            } else {
+                dim
+            };
+            let frame = if i == map.cursor {
+                format!("[{}]", node.kind.glyph())
+            } else if i == map.at {
+                format!("<{}>", node.kind.glyph())
+            } else {
+                format!(" {} ", node.kind.glyph())
+            };
+            surface.set_string(x, y, &frame, style);
+            if node.cleared {
+                surface.set_string(x + 3, y, "·", dim);
+            }
+        }
+        let cursor = map.nodes[map.cursor];
+        let footer = oy + 3 * 4 + 2;
+        surface.set_string(ox, footer, &format!("Target: {}", cursor.label()), header);
+        surface.set_string(
+            ox,
+            footer + 1,
+            &format!(
+                "Rock: {}   Sector: {}",
+                cursor.terrain.blurb(),
+                cursor.sector.blurb()
+            ),
+            dim,
+        );
+        surface.set_string(
+            ox,
+            footer + 3,
+            "←/→ pick a lane · Enter jump · n new run · q quit",
+            text,
         );
     }
 
@@ -3844,6 +4643,58 @@ impl Nova {
             ),
             dim,
         );
+        y += 1;
+        // The squad roster: every hull the run has, and which one is flown.
+        surface.set_string(ox, y, "SQUAD  (w climbs into the next hull)", header);
+        y += 1;
+        for (i, wing) in g.squad.iter().enumerate() {
+            let flown = i == g.active;
+            let style = if !wing.alive {
+                dim
+            } else if flown {
+                header
+            } else {
+                text
+            };
+            surface.set_string(
+                ox,
+                y,
+                &format!(
+                    "{} {:<6} {:<12} {:<8} L{}  shield {}/{}  E{} R{} P{} C{} M{}  {}",
+                    if flown { "▶" } else { " " },
+                    wing.name,
+                    wing.class.name(),
+                    wing.weapon.name(),
+                    wing.weapon_level,
+                    if flown { g.shield } else { wing.shield },
+                    if flown { g.max_shield } else { wing.max_shield },
+                    wing.loadout.tier(Part::Engine),
+                    wing.loadout.tier(Part::Reactor),
+                    wing.loadout.tier(Part::Plating),
+                    wing.loadout.tier(Part::Cannon),
+                    wing.loadout.tier(Part::Magazine),
+                    wing.status()
+                ),
+                style,
+            );
+            y += 1;
+        }
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "RACKS  {}   missiles {}",
+                g.owned
+                    .iter()
+                    .enumerate()
+                    .map(|(i, w)| format!("{}:{}", i + 1, w.name()))
+                    .collect::<Vec<_>>()
+                    .join("  "),
+                g.missiles
+            ),
+            text,
+        );
         y += 2;
         for line in g.shop_lines() {
             let style = if line.available { text } else { dim };
@@ -3857,34 +4708,13 @@ impl Nova {
             y += 1;
         }
         y += 1;
-        surface.set_string(ox, y, "STAR CHART — pick the next stop:", header);
-        y += 1;
-        for (i, node) in g.route.iter().enumerate() {
-            let key = ROUTE_KEYS[i.min(ROUTE_KEYS.len() - 1)];
-            let chosen = *node == g.node;
-            surface.set_string(
-                ox,
-                y,
-                &format!(
-                    "{} [{}] {}",
-                    if chosen { "▶" } else { " " },
-                    key,
-                    node.label()
-                ),
-                if chosen { header } else { text },
-            );
-            surface.set_string(ox + 52, y, node.terrain.blurb(), dim);
-            y += 1;
-        }
-        y += 1;
         surface.set_string(
             ox,
             y,
             &format!(
-                "Next up: wave {} — {} ({}).  Enter launches · q quits.",
-                g.wave + 1,
-                g.node.sector.name(),
-                g.node.sector.blurb()
+                "Parked at {} ({}).  Enter opens the galaxy chart · q quits.",
+                g.node.kind.name(),
+                g.node.sector.name()
             ),
             header,
         );
@@ -3916,6 +4746,7 @@ impl Component for Nova {
                     key!(Left) | key!('h') => self.pick = (self.pick + hulls - 1) % hulls,
                     key!(Right) | key!('l') => self.pick = (self.pick + 1) % hulls,
                     key!('d') | key!(Tab) => self.diff = (self.diff + 1) % Difficulty::ALL.len(),
+                    key!('g') => self.gal = (self.gal + 1) % Galaxy::ALL.len(),
                     key!('1') => {
                         self.pick = 0;
                         self.launch();
@@ -3932,18 +4763,21 @@ impl Component for Nova {
                     _ => {}
                 }
             }
-            Status::Hangar => match key {
-                key!(Enter) => self.game.launch_next_wave(),
+            Status::Chart => match key {
+                key!(Left) | key!('h') | key!(Up) | key!('k') => self.game.move_cursor(-1),
+                key!(Right) | key!('l') | key!(Down) | key!('j') => self.game.move_cursor(1),
+                key!(Enter) | key!(' ') => {
+                    self.game.jump();
+                }
                 key!('n') => self.restart(),
-                key!('z') => {
-                    self.game.choose_route(0);
+                _ => {}
+            },
+            Status::Hangar => match key {
+                key!(Enter) => self.game.open_chart(),
+                key!('w') => {
+                    self.game.cycle_active();
                 }
-                key!('x') => {
-                    self.game.choose_route(1);
-                }
-                key!('v') => {
-                    self.game.choose_route(2);
-                }
+                key!('n') => self.restart(),
                 _ => {
                     // Everything else is a hangar line key.
                     if let Some(c) = key.char() {
@@ -3957,6 +4791,39 @@ impl Component for Nova {
                 key!(Up) | key!('k') => self.game.move_ship(0, -1),
                 key!(Down) | key!('j') => self.game.move_ship(0, 1),
                 key!(' ') | key!('f') => self.game.fire(),
+                key!('m') => self.game.fire_missiles(),
+                key!('[') => self.game.cycle_weapon(-1),
+                key!(']') => self.game.cycle_weapon(1),
+                key!('1') => {
+                    self.game.select_weapon(0);
+                }
+                key!('2') => {
+                    self.game.select_weapon(1);
+                }
+                key!('3') => {
+                    self.game.select_weapon(2);
+                }
+                key!('4') => {
+                    self.game.select_weapon(3);
+                }
+                key!('5') => {
+                    self.game.select_weapon(4);
+                }
+                key!('6') => {
+                    self.game.select_weapon(5);
+                }
+                key!('7') => {
+                    self.game.select_weapon(6);
+                }
+                key!('8') => {
+                    self.game.select_weapon(7);
+                }
+                key!('9') => {
+                    self.game.select_weapon(8);
+                }
+                key!('0') => {
+                    self.game.select_weapon(9);
+                }
                 key!('x') => self.game.special(),
                 key!('b') => self.game.bomb(),
                 key!('p') => self.paused = !self.paused,
@@ -4028,6 +4895,10 @@ impl Component for Nova {
                 self.render_hangar(area, surface, ctx);
                 return;
             }
+            Status::Chart => {
+                self.render_chart(area, surface, ctx);
+                return;
+            }
             _ => {}
         }
 
@@ -4065,9 +4936,12 @@ impl Component for Nova {
             ox,
             area.y + 1,
             &format!(
-                "GUN {} L{}   SHIELD {}{}   BOMB {}   LIVES {}{}",
+                "GUN {} L{} [{}/{}]   MSL {}   SHIELD {}{}   BOMB {}   LIVES {}{}",
                 g.weapon.name(),
                 g.weapon_level,
+                g.owned.iter().position(|&w| w == g.weapon).unwrap_or(0) + 1,
+                g.owned.len(),
+                g.missiles,
                 shields,
                 spent,
                 "◆".repeat(g.bombs as usize),
@@ -4081,14 +4955,15 @@ impl Component for Nova {
             ox,
             area.y + 2,
             &format!(
-                "ENERGY {}{} {}{}   DRONES {}{}   MEDALS {}",
+                "ENERGY {}{} {}{}   DRONES {}{}   MEDALS {}   WING {}",
                 "▰".repeat(pips),
                 "▱".repeat(10 - pips),
                 g.class.special().name(),
                 if g.special_ready() { " READY" } else { "" },
                 "◇".repeat(g.drones.len()),
                 if g.drone_stun > 0 { " STUNNED" } else { "" },
-                g.medals
+                g.medals,
+                g.squad.iter().filter(|w| w.alive).count()
             ),
             if g.special_ready() {
                 header_style
@@ -4297,6 +5172,12 @@ impl Component for Nova {
                 }
             }
         }
+        for (index, (r, c)) in g.wing_cells() {
+            if on_board(r, c) {
+                let (x, y) = cell(r, c);
+                surface.set_string(x, y, g.squad[index].class.glyph(), drone_style);
+            }
+        }
         for &side in &g.drones {
             let (r, c) = (g.ship.0, g.ship.1 + side * DRONE_OFFSET);
             if on_board(r, c) {
@@ -4346,9 +5227,10 @@ impl Component for Nova {
                 "Paused — p resume · r retry · n new · q quit".to_string()
             }
             Status::Playing => {
-                "←/→/↑/↓ fly · SPC fire · x special · b bomb · p pause · n new · q quit".to_string()
+                "←/→/↑/↓ fly · SPC fire · m missiles · 1-0/[ ] guns · x special · b bomb · p pause · q quit"
+                    .to_string()
             }
-            Status::Select | Status::Hangar => String::new(),
+            Status::Select | Status::Hangar | Status::Chart => String::new(),
         };
         surface.set_string(ox, status_y, &status, text_style);
     }
@@ -4361,8 +5243,17 @@ mod tests {
     /// A cruiser one keypress into wave one, on an empty stretch of court.
     pub(super) fn flying() -> Game {
         let mut g = Game::new(1);
-        g.start(ShipClass::Cruiser, Difficulty::Normal);
-        g.node.terrain = TerrainKind::Open;
+        g.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Orion);
+        g.node = MapNode {
+            pos: (0, 0),
+            kind: NodeKind::Battle,
+            sector: Sector::OpenSpace,
+            terrain: TerrainKind::Open,
+            bonus: NodeBonus::Refit,
+            cleared: false,
+        };
+        g.status = Status::Playing;
+        g.spawn_wave();
         g.terrain = Terrain::new(TerrainKind::Open, 1);
         g.turrets.clear();
         g.hazards.clear();
@@ -4547,7 +5438,8 @@ mod tests {
     #[test]
     fn a_blink_jumps_the_hull_and_costs_energy() {
         let mut g = Game::new(1);
-        g.start(ShipClass::Interceptor, Difficulty::Normal);
+        g.start(ShipClass::Interceptor, Difficulty::Normal, Galaxy::Orion);
+        g.launch_next_wave();
         let (col, energy) = (g.ship.1, g.energy);
         g.move_ship(1, 0);
         g.special();
@@ -4563,7 +5455,8 @@ mod tests {
     #[test]
     fn a_barrage_lays_bolts_across_the_whole_court() {
         let mut g = Game::new(1);
-        g.start(ShipClass::Juggernaut, Difficulty::Normal);
+        g.start(ShipClass::Juggernaut, Difficulty::Normal, Galaxy::Orion);
+        g.launch_next_wave();
         g.special();
         assert!(g.shots.len() >= 8, "the wall covers the court");
         let spread = g.shots.last().unwrap().pos.1 - g.shots[0].pos.1;
@@ -4934,12 +5827,13 @@ mod tests {
     }
 
     #[test]
-    fn every_fourth_wave_is_a_boss_wave_and_the_bosses_cycle() {
+    fn a_boss_system_fields_a_boss_and_they_cycle() {
         let mut g = flying();
         g.wave = 3;
         g.spawn_wave();
-        assert!(g.boss.is_none(), "wave three is a formation");
+        assert!(g.boss.is_none(), "an ordinary system is a formation");
         g.wave = BOSS_EVERY;
+        g.node.kind = NodeKind::Boss;
         g.spawn_wave();
         assert!(g.boss.is_some(), "wave four brings the boss");
         assert!(!g.enemies.is_empty(), "with a kamikaze escort alongside it");
@@ -5019,6 +5913,7 @@ mod tests {
     fn killing_the_boss_pays_a_bounty_and_clears_the_wave() {
         let mut g = flying();
         g.wave = BOSS_EVERY;
+        g.node.kind = NodeKind::Boss;
         g.spawn_wave();
         g.enemies.clear();
         let score = g.score;
@@ -5114,14 +6009,14 @@ mod tests {
                 .any(|l| l.entry == ShopEntry::Consumable(Stock::Drone) && !l.available),
             "a full wing cannot take another drone"
         );
+        g.owned = vec![Weapon::Blaster, Weapon::Rail];
         let swap = g
             .shop_lines()
             .into_iter()
             .find(|l| l.entry == ShopEntry::Consumable(Stock::GunSwap))
             .expect("the swap is on the list");
-        let next = g.weapon.next();
         assert!(g.buy(swap.key));
-        assert_eq!(g.weapon, next, "the gun rotates on");
+        assert_eq!(g.weapon, Weapon::Rail, "the racks rotate to the next gun");
     }
 
     #[test]
@@ -5172,7 +6067,8 @@ mod tests {
     #[test]
     fn a_long_run_through_every_sector_never_panics() {
         let mut g = Game::new(7);
-        g.start(ShipClass::Interceptor, Difficulty::Insane);
+        g.start(ShipClass::Interceptor, Difficulty::Insane, Galaxy::Orion);
+        g.launch_next_wave();
         for i in 0..2_000 {
             if g.status == Status::Hangar {
                 g.launch_next_wave();
@@ -5209,8 +6105,16 @@ mod map_tests {
     /// A court flown through a given kind of rock.
     fn on_map(kind: TerrainKind) -> Game {
         let mut g = Game::new(3);
-        g.start(ShipClass::Cruiser, Difficulty::Normal);
-        g.node.terrain = kind;
+        g.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Orion);
+        g.node = MapNode {
+            pos: (0, 0),
+            kind: NodeKind::Battle,
+            sector: Sector::OpenSpace,
+            terrain: kind,
+            bonus: NodeBonus::Refit,
+            cleared: false,
+        };
+        g.status = Status::Playing;
         g.terrain = Terrain::new(kind, 11);
         g.enemies.clear();
         g.turrets.clear();
@@ -5378,30 +6282,44 @@ mod map_tests {
     }
 
     #[test]
-    fn the_chart_offers_three_stops_and_flies_the_one_you_pick() {
+    fn the_chart_flies_the_lane_you_pick() {
         let mut g = flying();
         g.check_end();
         for _ in 0..INTERMISSION_TICKS {
             g.step();
         }
-        assert_eq!(g.status, Status::Hangar);
-        assert_eq!(g.route.len(), ROUTE_CHOICES, "the chart offers three stops");
-        assert!(g.choose_route(2), "the third is a legal pick");
-        let picked = g.node;
-        assert!(!g.choose_route(9), "and nothing beyond the chart is");
-        g.launch_next_wave();
-        assert_eq!(g.sector, picked.sector, "the run flies the stop you picked");
-        assert_eq!(g.node.terrain, picked.terrain, "through its rock");
+        assert_eq!(g.status, Status::Hangar, "a cleared system docks the squad");
+        g.open_chart();
+        assert_eq!(g.status, Status::Chart);
+        let lanes = g.map.reachable();
+        assert!(!lanes.is_empty(), "there is always somewhere to fly");
+        g.move_cursor(1);
+        let picked = g.map.nodes[g.map.cursor];
+        assert!(
+            lanes.contains(&g.map.cursor),
+            "the cursor stays on the lanes"
+        );
+        assert!(g.jump(), "and the lane is flown");
+        assert_eq!(g.node, g.map.here(), "the squad is parked where it jumped");
+        if picked.kind.fights() {
+            assert_eq!(g.status, Status::Playing, "a fight starts straight away");
+            assert_eq!(g.sector, picked.sector, "in the system's own sector");
+        } else {
+            assert_eq!(g.status, Status::Hangar, "a depot or hulk parks the squad");
+        }
     }
 
     #[test]
     fn a_salvage_cache_pays_out_on_arrival() {
         let mut g = flying();
         g.credits = 0;
-        g.node = RouteNode {
+        g.node = MapNode {
+            pos: (0, 0),
+            kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Cache(750),
+            cleared: false,
         };
         g.spawn_wave();
         assert_eq!(g.credits, 750, "the cache is banked when the wave starts");
@@ -5412,10 +6330,13 @@ mod map_tests {
         let mut g = flying();
         g.weapon = Weapon::Blaster;
         g.weapon_level = 1;
-        g.node = RouteNode {
+        g.node = MapNode {
+            pos: (0, 0),
+            kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Armoury(Weapon::Plasma),
+            cleared: false,
         };
         g.spawn_wave();
         assert_eq!(g.weapon, Weapon::Plasma, "the crate is fitted");
@@ -5445,10 +6366,13 @@ mod map_tests {
     fn the_formation_is_squeezed_into_the_channel() {
         let mut g = flying();
         g.wave = 2;
-        g.node = RouteNode {
+        g.node = MapNode {
+            pos: (0, 0),
+            kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Tunnel,
             bonus: NodeBonus::Refit,
+            cleared: false,
         };
         g.spawn_wave();
         assert!(!g.enemies.is_empty());
@@ -5464,10 +6388,10 @@ mod map_tests {
     #[test]
     fn a_long_run_through_the_rock_never_panics() {
         let mut g = Game::new(21);
-        g.start(ShipClass::Juggernaut, Difficulty::Hard);
+        g.start(ShipClass::Juggernaut, Difficulty::Hard, Galaxy::Orion);
+        g.launch_next_wave();
         for i in 0..3_000 {
-            if g.status == Status::Hangar {
-                g.choose_route(i % ROUTE_CHOICES);
+            if matches!(g.status, Status::Hangar | Status::Chart) {
                 g.launch_next_wave();
             }
             if i % 3 == 0 {
@@ -5664,10 +6588,13 @@ mod terrain_kind_tests {
     fn the_new_sectors_bring_their_own_trouble() {
         let hazards = |sector: Sector| {
             let mut g = flying();
-            g.node = RouteNode {
+            g.node = MapNode {
+                pos: (0, 0),
+                kind: NodeKind::Battle,
                 sector,
                 terrain: TerrainKind::Open,
                 bonus: NodeBonus::Refit,
+                cleared: false,
             };
             g.spawn_wave();
             g
@@ -5715,11 +6642,15 @@ mod terrain_kind_tests {
         for terrain in TerrainKind::ALL {
             for sector in Sector::ALL {
                 let mut g = Game::new(5);
-                g.start(ShipClass::Cruiser, Difficulty::Normal);
-                g.node = RouteNode {
+                g.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Orion);
+                g.status = Status::Playing;
+                g.node = MapNode {
+                    pos: (0, 0),
+                    kind: NodeKind::Battle,
                     sector,
                     terrain,
                     bonus: NodeBonus::Refit,
+                    cleared: false,
                 };
                 g.spawn_wave();
                 for i in 0..300 {
@@ -5736,6 +6667,324 @@ mod terrain_kind_tests {
                     terrain.name(),
                     sector.name()
                 );
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod squad_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn docked() -> Game {
+        let mut g = flying();
+        g.status = Status::Hangar;
+        g.credits = 20_000;
+        g
+    }
+
+    fn line(g: &Game, stock: Stock) -> ShopLine {
+        g.shop_lines()
+            .into_iter()
+            .find(|l| l.entry == ShopEntry::Consumable(stock))
+            .expect("the hangar lists it")
+    }
+
+    #[test]
+    fn a_run_starts_with_one_hull_and_the_hangar_sells_more() {
+        let mut g = docked();
+        assert_eq!(g.squad.len(), 1, "one hull off the line");
+        let hull = line(&g, Stock::Hull);
+        assert!(g.buy(hull.key), "a second hull is for sale");
+        assert_eq!(g.squad.len(), 2, "and joins the squad");
+        assert_ne!(
+            g.squad[1].class, g.squad[0].class,
+            "a squad is built out of different hulls"
+        );
+        while g.squad.len() < MAX_SQUAD {
+            let hull = line(&g, Stock::Hull);
+            assert!(g.buy(hull.key));
+        }
+        assert!(
+            !line(&g, Stock::Hull).available,
+            "and it stops at a full squad"
+        );
+    }
+
+    #[test]
+    fn the_pilot_can_climb_into_another_hull_in_the_hangar() {
+        let mut g = docked();
+        let hull = line(&g, Stock::Hull);
+        g.buy(hull.key);
+        g.weapon = Weapon::Rail;
+        let flown = g.class;
+        assert!(g.cycle_active(), "the pilot climbs across");
+        assert_eq!(g.active, 1);
+        assert_ne!(g.class, flown, "into a different hull");
+        assert_eq!(g.weapon, Weapon::Blaster, "which carries its own gun");
+        assert!(g.cycle_active(), "and back again");
+        assert_eq!(g.active, 0);
+        assert_eq!(g.weapon, Weapon::Rail, "the first hull kept its rail gun");
+    }
+
+    #[test]
+    fn wingmen_fly_alongside_and_fire_on_their_own() {
+        let mut g = docked();
+        g.buy(line(&g, Stock::Hull).key);
+        g.status = Status::Playing;
+        let wings = g.wing_cells();
+        assert_eq!(wings.len(), 1, "the second hull rides as a wingman");
+        assert_ne!(wings[0].1 .1, g.ship.1, "off to one side of the hull");
+        g.tick = WING_CADENCE;
+        g.advance_wings();
+        assert_eq!(g.shots.len(), 1, "and puts its own fire up the court");
+    }
+
+    #[test]
+    fn a_wingman_can_be_shot_down_and_rescued() {
+        let mut g = docked();
+        g.buy(line(&g, Stock::Hull).key);
+        g.status = Status::Playing;
+        let (index, cell) = g.wing_cells()[0];
+        let pips = g.squad[index].shield;
+        g.enemy_shots = vec![Shot::enemy((cell.0 - 1, cell.1), 0, 1)];
+        for _ in 0..pips {
+            g.advance_enemy_shots();
+            g.enemy_shots = vec![Shot::enemy((cell.0 - 1, cell.1), 0, 1)];
+        }
+        assert!(!g.squad[index].alive, "the wingman goes down");
+        assert!(g.wing_cells().is_empty(), "and stops flying");
+        g.status = Status::Hangar;
+        assert!(g.buy(line(&g, Stock::Rescue).key), "a yard puts it back up");
+        assert!(g.squad[index].alive);
+        assert_eq!(g.squad[index].shield, g.squad[index].max_shield);
+    }
+
+    #[test]
+    fn guns_go_into_the_racks_and_can_be_swapped_mid_fight() {
+        let mut g = flying();
+        assert_eq!(g.owned, vec![Weapon::Blaster], "one gun to start with");
+        g.collect(PowerKind::Gun(Weapon::Rail));
+        g.collect(PowerKind::Gun(Weapon::Vulcan));
+        assert_eq!(g.owned.len(), 3, "picked-up guns are kept");
+        assert_eq!(g.weapon, Weapon::Vulcan, "and the last one is fitted");
+        assert!(g.select_weapon(0), "any rack slot can be selected");
+        assert_eq!(g.weapon, Weapon::Blaster);
+        g.cycle_weapon(-1);
+        assert_eq!(g.weapon, Weapon::Vulcan, "and the racks wrap around");
+        assert!(!g.select_weapon(9), "empty slots are refused");
+    }
+
+    #[test]
+    fn a_gun_picked_up_twice_levels_up_rather_than_stacking() {
+        let mut g = flying();
+        g.collect(PowerKind::Gun(Weapon::Flak));
+        let level = g.weapon_level;
+        g.collect(PowerKind::Gun(Weapon::Flak));
+        assert_eq!(g.owned.len(), 2, "the racks hold one of each");
+        assert_eq!(g.weapon_level, level + 1, "the second one is an upgrade");
+    }
+
+    #[test]
+    fn the_launcher_fires_seeking_rounds_off_its_own_ammunition() {
+        let mut g = flying();
+        g.enemies = vec![Enemy::new(EnemyKind::Grunt, (4, g.ship.1 - 10))];
+        let ammo = g.missiles;
+        g.fire_missiles();
+        assert_eq!(g.missiles, ammo - 1, "a round leaves the launcher");
+        assert_eq!(g.shots.len(), MISSILE_SALVO as usize, "as a salvo");
+        assert!(g.shots.iter().all(|s| s.homing), "the rounds seek");
+        assert!(g.shots.iter().all(|s| s.splash > 0), "and blast on impact");
+        g.advance_shots();
+        assert!(
+            g.shots.iter().all(|s| s.drift <= 0),
+            "leaning toward the hull off to port"
+        );
+        g.missiles = 0;
+        g.shots.clear();
+        g.fire_missiles();
+        assert!(g.shots.is_empty(), "an empty launcher fires nothing");
+    }
+
+    #[test]
+    fn the_hangar_sells_missile_packs() {
+        let mut g = docked();
+        g.missiles = 0;
+        assert!(g.buy(line(&g, Stock::Missiles).key));
+        assert_eq!(g.missiles, MISSILE_PACK, "a pack is loaded");
+    }
+}
+
+#[cfg(test)]
+mod galaxy_tests {
+    use super::tests::flying;
+    use super::*;
+
+    #[test]
+    fn every_galaxy_lays_out_a_chart_that_can_be_flown() {
+        for galaxy in Galaxy::ALL {
+            let map = StarMap::generate(galaxy, 7);
+            assert!(
+                map.nodes.len() >= galaxy.systems(),
+                "{} fills its chart",
+                galaxy.name()
+            );
+            assert!(
+                !map.reachable().is_empty(),
+                "there is a lane out of the rim"
+            );
+            for node in &map.nodes {
+                assert!(
+                    galaxy.sectors().contains(&node.sector),
+                    "{} only fields its own sectors",
+                    galaxy.name()
+                );
+                assert!(
+                    galaxy.terrains().contains(&node.terrain),
+                    "{} only fields its own rock",
+                    galaxy.name()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn lanes_run_both_ways_so_a_depot_can_be_flown_back_to() {
+        let mut map = StarMap::generate(Galaxy::Orion, 3);
+        let start = map.at;
+        let out = map.reachable()[0];
+        map.cursor = out;
+        assert!(map.jump().is_some(), "the lane is flown");
+        assert_eq!(map.at, out);
+        assert!(
+            map.reachable().contains(&start),
+            "and the way back is still open"
+        );
+    }
+
+    #[test]
+    fn the_chart_cursor_only_walks_the_lanes_out_of_here() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        let lanes = g.map.reachable();
+        for _ in 0..lanes.len() * 2 {
+            g.move_cursor(1);
+            assert!(
+                lanes.contains(&g.map.cursor),
+                "the cursor never leaves the lanes"
+            );
+        }
+    }
+
+    #[test]
+    fn a_depot_repairs_the_squad_without_a_fight() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        g.shield = 0;
+        g.squad.push(Wing::new("Two", ShipClass::Interceptor));
+        g.squad[1].alive = false;
+        let depot = MapNode {
+            pos: (1, 0),
+            kind: NodeKind::Depot,
+            sector: Sector::OpenSpace,
+            terrain: TerrainKind::Open,
+            bonus: NodeBonus::Refit,
+            cleared: false,
+        };
+        let at = g.map.reachable()[0];
+        g.map.nodes[at] = depot;
+        g.map.cursor = at;
+        assert!(g.jump(), "the lane is flown");
+        assert_eq!(g.status, Status::Hangar, "a yard is not a fight");
+        assert_eq!(g.shield, g.max_shield, "the hull is patched up");
+        assert!(g.squad[1].alive, "and the wing is back in the air");
+    }
+
+    #[test]
+    fn a_derelict_pays_salvage_and_leaves_a_gun_behind() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        g.credits = 0;
+        let hulk = MapNode {
+            pos: (1, 0),
+            kind: NodeKind::Derelict,
+            sector: Sector::OpenSpace,
+            terrain: TerrainKind::Open,
+            bonus: NodeBonus::Armoury(Weapon::Rail),
+            cleared: false,
+        };
+        let at = g.map.reachable()[0];
+        g.map.nodes[at] = hulk;
+        g.map.cursor = at;
+        assert!(g.jump());
+        assert!(g.credits > 0, "the hulk is worth stripping");
+        assert_eq!(g.weapon, Weapon::Rail, "and the gun aboard is fitted");
+        assert!(g.owned.contains(&Weapon::Rail), "into the racks");
+    }
+
+    #[test]
+    fn an_elite_system_is_tougher_and_pays_double() {
+        let mut g = flying();
+        let plain = g.wave_armour();
+        g.credits = 0;
+        g.award(100);
+        let plain_salvage = g.credits;
+        g.node.kind = NodeKind::Elite;
+        assert_eq!(g.wave_armour(), plain + 2, "elite hulls carry more armour");
+        g.credits = 0;
+        g.combo = 1;
+        g.award(100);
+        assert_eq!(g.credits, plain_salvage * 2, "and pay twice as much");
+    }
+
+    #[test]
+    fn galaxies_bias_the_run_they_are_flown_in() {
+        let mut hive = Game::new(2);
+        hive.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Hive);
+        let mut abyss = Game::new(2);
+        abyss.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Abyss);
+        assert!(
+            hive.wave_armour() < abyss.wave_armour(),
+            "the abyss armours everything the hive does not"
+        );
+        assert_eq!(Galaxy::Hive.swarm(), 1, "and the hive fields deeper waves");
+        assert!(
+            Galaxy::Forge.salvage_bonus() > Galaxy::Orion.salvage_bonus(),
+            "the forge is where the salvage is"
+        );
+    }
+
+    #[test]
+    fn a_run_across_a_galaxy_never_panics() {
+        for galaxy in Galaxy::ALL {
+            let mut g = Game::new(13);
+            g.start(ShipClass::Cruiser, Difficulty::Normal, galaxy);
+            for i in 0..4_000 {
+                match g.status {
+                    Status::Lost => break,
+                    Status::Hangar => {
+                        while let Some(l) = g.shop_lines().into_iter().find(|l| l.available) {
+                            g.buy(l.key);
+                        }
+                        g.open_chart();
+                    }
+                    Status::Chart => {
+                        g.move_cursor(1);
+                        g.jump();
+                    }
+                    _ => {
+                        if i % 3 == 0 {
+                            g.fire();
+                        }
+                        if i % 31 == 0 {
+                            g.fire_missiles();
+                        }
+                        g.move_ship(if i % 5 < 2 { 1 } else { -1 }, 0);
+                        g.step();
+                    }
+                }
+                assert!(g.active < g.squad.len(), "the squad index stays sane");
             }
         }
     }
