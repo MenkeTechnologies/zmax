@@ -132,6 +132,9 @@ const SENSE_COST: u32 = 45;
 const SENSE_TICKS: u32 = 90;
 const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
+/// Ticks between the Alliance cruiser's salvoes, and what they hit for.
+const ALLY_CADENCE: u32 = 18;
+const ALLY_DAMAGE: i32 = 6;
 /// Ticks between a walker's shots, and turns of cable it takes to bring one down.
 const WALKER_CADENCE: u32 = 26;
 const CABLE_WRAPS: u32 = 2;
@@ -441,15 +444,18 @@ pub enum Part {
     Cannon,
     /// Ticks between shots.
     Magazine,
+    /// How many lanes a jump can cross at once.
+    Hyperdrive,
 }
 
 impl Part {
-    pub const ALL: [Part; 5] = [
+    pub const ALL: [Part; 6] = [
         Part::Engine,
         Part::Reactor,
         Part::Plating,
         Part::Cannon,
         Part::Magazine,
+        Part::Hyperdrive,
     ];
 
     pub fn name(self) -> &'static str {
@@ -459,6 +465,7 @@ impl Part {
             Part::Plating => "deflector plating",
             Part::Cannon => "laser cannons",
             Part::Magazine => "capacitors",
+            Part::Hyperdrive => "hyperdrive",
         }
     }
 
@@ -469,6 +476,7 @@ impl Part {
             Part::Plating => "+1 shield pip per tier",
             Part::Cannon => "+1 damage per tier",
             Part::Magazine => "-1 tick between shots every two tiers",
+            Part::Hyperdrive => "+1 lane of jump range every two tiers",
         }
     }
 
@@ -1225,6 +1233,8 @@ pub enum PowerKind {
     Drone,
     /// A pack for the missile launcher.
     Missiles,
+    /// An escape pod: a pilot back, and salvage with him.
+    EscapePod,
     /// Points and salvage.
     Medal,
     Life,
@@ -1239,6 +1249,7 @@ impl PowerKind {
             PowerKind::Rapid => "»",
             PowerKind::Drone => "◇",
             PowerKind::Missiles => "↥",
+            PowerKind::EscapePod => "☉",
             PowerKind::Medal => "★",
             PowerKind::Life => "♥",
         }
@@ -1465,6 +1476,10 @@ pub enum Status {
     Hangar,
     /// Parked at a system, reading the galaxy chart.
     Chart,
+    /// Down on a world, out of the cockpit and on foot.
+    Surface,
+    /// The war is won: the ceremony at the base.
+    Ceremony,
     Lost,
 }
 
@@ -1624,10 +1639,12 @@ pub enum TerrainKind {
     /// A capital ship's surface trench: two walls, one lane, and the guns are
     /// bolted to both sides of it.
     Trench,
+    /// The forest floor: trunks everywhere and barely a lane between them.
+    Forest,
 }
 
 impl TerrainKind {
-    pub const ALL: [TerrainKind; 10] = [
+    pub const ALL: [TerrainKind; 11] = [
         TerrainKind::Open,
         TerrainKind::Canyon,
         TerrainKind::Cave,
@@ -1638,6 +1655,7 @@ impl TerrainKind {
         TerrainKind::Maze,
         TerrainKind::Reef,
         TerrainKind::Trench,
+        TerrainKind::Forest,
     ];
 
     pub fn name(self) -> &'static str {
@@ -1652,6 +1670,7 @@ impl TerrainKind {
             TerrainKind::Maze => "maze",
             TerrainKind::Reef => "reef",
             TerrainKind::Trench => "trench",
+            TerrainKind::Forest => "forest",
         }
     }
 
@@ -1667,6 +1686,7 @@ impl TerrainKind {
             TerrainKind::Maze => "half-walls that force a weave",
             TerrainKind::Reef => "columns wall to wall",
             TerrainKind::Trench => "one lane between two armoured walls",
+            TerrainKind::Forest => "trunks everywhere; fly it at speed and see",
         }
     }
 
@@ -1680,6 +1700,7 @@ impl TerrainKind {
             TerrainKind::Pillars | TerrainKind::Reef => (W - 8, W - 4),
             TerrainKind::Gates | TerrainKind::Spine | TerrainKind::Maze => (W - 6, W - 2),
             TerrainKind::Trench => (18, 22),
+            TerrainKind::Forest => (W - 10, W - 4),
         }
     }
 
@@ -1693,6 +1714,7 @@ impl TerrainKind {
             TerrainKind::Gates | TerrainKind::Spine => 2,
             TerrainKind::Maze => 0,
             TerrainKind::Trench => 1,
+            TerrainKind::Forest => 2,
         }
     }
 
@@ -1700,13 +1722,18 @@ impl TerrainKind {
     fn destructible(self) -> bool {
         matches!(
             self,
-            TerrainKind::Cave | TerrainKind::Pillars | TerrainKind::Reef | TerrainKind::Spine
+            TerrainKind::Cave
+                | TerrainKind::Pillars
+                | TerrainKind::Reef
+                | TerrainKind::Spine
+                | TerrainKind::Forest
         )
     }
 
     /// 1-in-N odds a generated row grows a rock column in the channel.
     fn pillar_chance(self) -> u64 {
         match self {
+            TerrainKind::Forest => 2,
             TerrainKind::Reef => 2,
             TerrainKind::Pillars => 4,
             TerrainKind::Cave => 14,
@@ -2405,9 +2432,42 @@ impl StarMap {
 
     /// The systems one lane away from where the squad is parked.
     pub fn reachable(&self) -> Vec<usize> {
-        let mut lanes = self.lanes[self.at].clone();
-        lanes.sort_by_key(|&i| (self.nodes[i].pos.0, self.nodes[i].pos.1));
-        lanes
+        self.reachable_within(1)
+    }
+
+    /// Everything within `range` lanes, which is what a tuned hyperdrive buys.
+    pub fn reachable_within(&self, range: usize) -> Vec<usize> {
+        let mut seen = vec![false; self.nodes.len()];
+        let mut edge = vec![self.at];
+        seen[self.at] = true;
+        let mut out = Vec::new();
+        for _ in 0..range.max(1) {
+            let mut next = Vec::new();
+            for &node in &edge {
+                for &lane in &self.lanes[node] {
+                    if !seen[lane] {
+                        seen[lane] = true;
+                        out.push(lane);
+                        next.push(lane);
+                    }
+                }
+            }
+            edge = next;
+        }
+        out.sort_by_key(|&i| (self.nodes[i].pos.0, self.nodes[i].pos.1));
+        out
+    }
+
+    /// Fly a lane, or a run of them, to the system under the cursor.
+    pub fn jump_within(&mut self, range: usize) -> Option<MapNode> {
+        if !self.reachable_within(range).contains(&self.cursor) {
+            return None;
+        }
+        self.at = self.cursor;
+        self.chart_surroundings();
+        let node = self.nodes[self.at];
+        self.cursor = self.reachable().first().copied().unwrap_or(self.at);
+        Some(node)
     }
 
     /// Step the chart cursor through the reachable systems.
@@ -2492,6 +2552,9 @@ pub enum CapitalKind {
     /// An interdictor: gravity-well projectors that hold a hull in the system
     /// and drag it wherever they please.
     Interdictor,
+    /// A Mon Calamari cruiser: the Alliance's own capital, which fights on your
+    /// side and can be lost.
+    MonCalamari,
 }
 
 impl CapitalKind {
@@ -2502,6 +2565,7 @@ impl CapitalKind {
             CapitalKind::DeathStar => "Death Star",
             CapitalKind::SuperDestroyer => "Super Star Destroyer",
             CapitalKind::Interdictor => "Interdictor cruiser",
+            CapitalKind::MonCalamari => "Mon Calamari cruiser",
         }
     }
 
@@ -2513,6 +2577,7 @@ impl CapitalKind {
             CapitalKind::DeathStar => 8,
             CapitalKind::SuperDestroyer => 9,
             CapitalKind::Interdictor => 5,
+            CapitalKind::MonCalamari => 4,
         }
     }
 
@@ -2525,6 +2590,7 @@ impl CapitalKind {
             CapitalKind::DeathStar => W / 2 - 2,
             CapitalKind::SuperDestroyer => 5 + row * 4,
             CapitalKind::Interdictor => 10,
+            CapitalKind::MonCalamari => 12,
         }
     }
 
@@ -2536,6 +2602,7 @@ impl CapitalKind {
             CapitalKind::DeathStar => 400,
             CapitalKind::SuperDestroyer => 700,
             CapitalKind::Interdictor => 220,
+            CapitalKind::MonCalamari => 320,
         }
     }
 }
@@ -2690,6 +2757,15 @@ impl Capital {
                 fit(Emplacement::EngineBank, (0, -6));
                 fit(Emplacement::EngineBank, (0, 6));
             }
+            CapitalKind::MonCalamari => {
+                fit(Emplacement::ShieldDome, (1, -6));
+                fit(Emplacement::ShieldDome, (1, 6));
+                fit(Emplacement::Turbolaser, (0, -9));
+                fit(Emplacement::Turbolaser, (0, 0));
+                fit(Emplacement::Turbolaser, (0, 9));
+                fit(Emplacement::HangarBay, (3, 0));
+                fit(Emplacement::EngineBank, (3, -9));
+            }
             CapitalKind::Interdictor => {
                 fit(Emplacement::ShieldDome, (1, 0));
                 fit(Emplacement::GravityProjector, (2, -7));
@@ -2788,6 +2864,7 @@ impl Capital {
             CapitalKind::DeathStar => 12,
             CapitalKind::SuperDestroyer => 10,
             CapitalKind::Interdictor => 18,
+            CapitalKind::MonCalamari => 14,
         };
         if tower {
             base
@@ -2890,6 +2967,18 @@ pub enum DeckSpot {
     BriefingTable,
     /// The launch pad: walk onto it to fly.
     LaunchPad,
+    /// Your own fighter, parked on the surface: walk to it to lift off.
+    ParkedShip,
+    /// A cantina: drinks, rumours, and somebody who knows where the Empire is.
+    Cantina,
+    /// A wreck worth stripping.
+    SurfaceWreck,
+    /// A settlement that trades.
+    Settlement,
+    /// An outpost with a droid and a power cell.
+    Outpost,
+    /// Ruins older than the war.
+    Ruins,
 }
 
 impl DeckSpot {
@@ -2901,6 +2990,12 @@ impl DeckSpot {
             DeckSpot::AstromechPit => "astromech pit",
             DeckSpot::BriefingTable => "briefing table",
             DeckSpot::LaunchPad => "launch pad",
+            DeckSpot::ParkedShip => "your fighter",
+            DeckSpot::Cantina => "cantina",
+            DeckSpot::SurfaceWreck => "wreck",
+            DeckSpot::Settlement => "settlement",
+            DeckSpot::Outpost => "outpost",
+            DeckSpot::Ruins => "ruins",
         }
     }
 
@@ -2912,6 +3007,12 @@ impl DeckSpot {
             DeckSpot::AstromechPit => "◍",
             DeckSpot::BriefingTable => "⌹",
             DeckSpot::LaunchPad => "◎",
+            DeckSpot::ParkedShip => "✕",
+            DeckSpot::Cantina => "⌂",
+            DeckSpot::SurfaceWreck => "⌗",
+            DeckSpot::Settlement => "⌸",
+            DeckSpot::Outpost => "⌺",
+            DeckSpot::Ruins => "⍟",
         }
     }
 }
@@ -2920,6 +3021,12 @@ impl DeckSpot {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DeckAction {
     Boarded(usize),
+    LiftedOff,
+    Drank,
+    Stripped,
+    Traded,
+    Resupplied,
+    Explored,
     OpenedShop,
     OpenedChart,
     Repaired,
@@ -2946,6 +3053,50 @@ impl Deck {
     pub const HEIGHT: i16 = 16;
     /// How close counts as standing at something.
     pub const REACH: i16 = 2;
+
+    /// Lay out a stretch of surface on `planet`, with the fighter parked on it
+    /// and whatever the world has to walk to.
+    pub fn surface(planet: Planet, seed: u64) -> Deck {
+        let mut rng = seed | 1;
+        let mut rand = move || {
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            rng >> 33
+        };
+        let mut spots = vec![(DeckSpot::ParkedShip, (Deck::HEIGHT - 4, Deck::WIDTH / 2))];
+        let stock: &[DeckSpot] = match planet {
+            Planet::Tatooine | Planet::Jakku | Planet::Mandalore => &[
+                DeckSpot::Cantina,
+                DeckSpot::SurfaceWreck,
+                DeckSpot::Settlement,
+            ],
+            Planet::Hoth | Planet::Dagobah | Planet::Mustafar => {
+                &[DeckSpot::Outpost, DeckSpot::SurfaceWreck, DeckSpot::Ruins]
+            }
+            Planet::Coruscant | Planet::Naboo | Planet::Bespin => {
+                &[DeckSpot::Settlement, DeckSpot::Cantina, DeckSpot::Outpost]
+            }
+            _ => &[
+                DeckSpot::Outpost,
+                DeckSpot::Ruins,
+                DeckSpot::SurfaceWreck,
+                DeckSpot::Cantina,
+            ],
+        };
+        for (i, &spot) in stock.iter().enumerate() {
+            let row = 2 + (rand() % 6) as i16;
+            let col = 6 + i as i16 * 14 + (rand() % 5) as i16;
+            spots.push((spot, (row, col.min(Deck::WIDTH - 4))));
+        }
+        Deck {
+            width: Deck::WIDTH,
+            height: Deck::HEIGHT,
+            pilot: (Deck::HEIGHT - 6, Deck::WIDTH / 2),
+            facing: (-1, 0),
+            spots,
+        }
+    }
 
     /// Lay the deck out for a squadron of `hulls` fighters.
     pub fn new(hulls: usize) -> Deck {
@@ -3532,6 +3683,8 @@ pub struct Game {
     pub boss: Option<Boss>,
     /// The capital ship holding this system, if one does.
     pub capital: Option<Capital>,
+    /// The Alliance cruiser fighting alongside, if the fleet came out.
+    pub ally: Option<Capital>,
     pub shots: Vec<Shot>,
     pub enemy_shots: Vec<Shot>,
     pub powerups: Vec<Powerup>,
@@ -3626,6 +3779,7 @@ impl Game {
             enemies: Vec::new(),
             boss: None,
             capital: None,
+            ally: None,
             shots: Vec::new(),
             enemy_shots: Vec::new(),
             powerups: Vec::new(),
@@ -3943,6 +4097,7 @@ impl Game {
         self.enemies.clear();
         self.boss = None;
         self.capital = None;
+        self.ally = None;
         self.shots.clear();
         self.enemy_shots.clear();
         self.powerups.clear();
@@ -3982,6 +4137,14 @@ impl Game {
             let armour = self.wave_armour();
             let capital = Capital::new(kind, armour, 40 * self.wave as i32);
             self.capital = Some(capital);
+            // Against a wedge or bigger, the fleet comes out with you.
+            if !matches!(kind, CapitalKind::ImperialFrigate) {
+                let mut ally =
+                    Capital::new(CapitalKind::MonCalamari, armour, 20 * self.wave as i32);
+                ally.pos = (H - 5, W / 3);
+                self.ally = Some(ally);
+                self.say("Alliance cruiser is with us. Screen her.");
+            }
             // A screen of fighters comes out with it.
             for col in (0..COLS).step_by(3) {
                 let home = self.place((FORMATION_TOP + 9, BASE_X + col as i16 * ENEMY_GAP));
@@ -4361,6 +4524,19 @@ impl Game {
             }
             PowerKind::Gun(w) => self.stock_gun(w),
             PowerKind::Missiles => self.missiles += MISSILE_PACK,
+            PowerKind::EscapePod => {
+                // A pilot picked up is a fighter back in the air.
+                self.credits += 400;
+                if let Some(wing) = self.squad.iter_mut().find(|w| !w.alive) {
+                    wing.alive = true;
+                    wing.shield = wing.max_shield;
+                    let name = wing.name;
+                    self.say(&format!("{name} is aboard. Get him a fighter."));
+                } else {
+                    self.lives += 1;
+                    self.say("Pod recovered. That is a pilot we keep.");
+                }
+            }
             PowerKind::Shield => self.shield = (self.shield + 1).min(self.max_shield + 2),
             PowerKind::Bomb => self.bombs += 1,
             PowerKind::Rapid => self.rapid = RAPID_TICKS,
@@ -4394,6 +4570,7 @@ impl Game {
             8 | 9 => PowerKind::Rapid,
             10 => PowerKind::Medal,
             11 => PowerKind::Missiles,
+            15 => PowerKind::EscapePod,
             12 => PowerKind::Drone,
             13 | 14 => PowerKind::Bomb,
             _ => PowerKind::Life,
@@ -4832,6 +5009,63 @@ impl Game {
         self.capital = Some(cap);
     }
 
+    /// Work the Alliance cruiser: she holds station low, fires up the court and
+    /// can be lost like anything else.
+    fn advance_ally(&mut self) {
+        let Some(mut ally) = self.ally.take() else {
+            return;
+        };
+        ally.tick = ally.tick.wrapping_add(1);
+        if ally.tick.is_multiple_of(10) {
+            let next = ally.pos.1 + ally.dir;
+            if (14..W - 14).contains(&next) {
+                ally.pos.1 = next;
+            } else {
+                ally.dir = -ally.dir;
+            }
+        }
+        let mut volley = Vec::new();
+        for part in ally.parts.iter_mut() {
+            if part.hp <= 0 || part.kind != Emplacement::Turbolaser {
+                continue;
+            }
+            if part.cooldown > 0 {
+                part.cooldown -= 1;
+                continue;
+            }
+            part.cooldown = ALLY_CADENCE;
+            let (row, col) = (ally.pos.0 + part.offset.0, ally.pos.1 + part.offset.1);
+            let mut shell = Shot::bolt((row - 1, col), 0, ALLY_DAMAGE);
+            shell.splash = 1;
+            volley.push(shell);
+        }
+        for shot in volley {
+            self.launch(shot);
+        }
+        if ally.hp <= 0 {
+            self.say("They got the cruiser. We are on our own.");
+            self.ally = None;
+            return;
+        }
+        self.ally = Some(ally);
+    }
+
+    /// Imperial fire that reaches the cruiser chews on her instead of us.
+    fn shell_ally(&mut self, pos: (i16, i16), damage: i32) -> bool {
+        let Some(ally) = self.ally.as_mut() else {
+            return false;
+        };
+        let hit = ally.covers(pos.0, pos.1)
+            || ally
+                .parts
+                .iter()
+                .any(|p| p.hp > 0 && ally.part_cell(p) == pos);
+        if hit {
+            ally.hp -= damage;
+        }
+        hit
+    }
+
     /// Put a shot into a capital ship. Emplacements take it first; the hull is
     /// untouchable while a dome is up, and a hit on an open exhaust port takes
     /// the whole ship with it.
@@ -5156,6 +5390,9 @@ impl Game {
                     continue 'shot;
                 }
                 if self.terrain.solid(s.pos.0, s.pos.1) {
+                    continue 'shot;
+                }
+                if self.shell_ally(s.pos, s.damage.max(1)) {
                     continue 'shot;
                 }
                 if s.pos == ship {
@@ -5921,23 +6158,44 @@ impl Game {
         }
     }
 
-    /// Walk about the hangar. Only on the deck, and only with the terminal shut.
+    /// Walk about, on the hangar deck or down on a world. Not with a terminal
+    /// open, and never mid-sortie.
     pub fn walk(&mut self, dc: i16, dr: i16) {
-        if self.status == Status::Hangar && !self.shop_open {
+        if matches!(self.status, Status::Hangar | Status::Surface) && !self.shop_open {
             self.deck.walk(dc, dr);
         }
     }
 
+    /// Put down on the world under the system the cursor is on. Deep space has
+    /// nothing to land on.
+    pub fn land(&mut self) -> bool {
+        if self.status != Status::Chart {
+            return false;
+        }
+        let planet = Planet::of_sector(self.map.nodes[self.map.cursor].sector);
+        if planet == Planet::DeepSpace {
+            self.say("Nothing down there but vacuum.");
+            return false;
+        }
+        let seed = self.rand();
+        self.planet = planet;
+        self.deck = Deck::surface(planet, seed);
+        self.shop_open = false;
+        self.status = Status::Surface;
+        self.say(&format!("Down on {}. {}", planet.name(), planet.blurb()));
+        true
+    }
+
     /// Whatever the pilot is standing at right now.
     pub fn at_hand(&self) -> Option<DeckSpot> {
-        (self.status == Status::Hangar)
+        matches!(self.status, Status::Hangar | Status::Surface)
             .then(|| self.deck.at_hand())
             .flatten()
     }
 
     /// Use whatever is under the pilot's hand.
     pub fn interact(&mut self) -> Option<DeckAction> {
-        if self.status != Status::Hangar {
+        if !matches!(self.status, Status::Hangar | Status::Surface) {
             return None;
         }
         if self.shop_open {
@@ -5992,6 +6250,58 @@ impl Game {
                 }
                 DeckAction::Launched
             }
+            DeckSpot::ParkedShip => {
+                self.status = Status::Chart;
+                self.say("Lifting off.");
+                DeckAction::LiftedOff
+            }
+            DeckSpot::Cantina => {
+                // Somebody in here always knows where the Empire is.
+                let unknown: Vec<usize> = self
+                    .map
+                    .nodes
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, n)| !n.explored)
+                    .map(|(i, _)| i)
+                    .take(6)
+                    .collect();
+                for i in unknown {
+                    self.map.nodes[i].explored = true;
+                }
+                self.credits += 60;
+                self.say("Word in here puts a few more systems on the chart.");
+                DeckAction::Drank
+            }
+            DeckSpot::SurfaceWreck => {
+                let haul = 300 + 40 * self.wave;
+                self.credits += haul;
+                self.say(&format!("Stripped the wreck. {haul} in salvage."));
+                DeckAction::Stripped
+            }
+            DeckSpot::Settlement => {
+                self.shop_open = true;
+                DeckAction::Traded
+            }
+            DeckSpot::Outpost => {
+                self.shield = self.max_shield;
+                self.missiles += MISSILE_PACK / 2;
+                self.energy = self.max_energy();
+                self.say("Outpost topped us up.");
+                DeckAction::Resupplied
+            }
+            DeckSpot::Ruins => {
+                // Older than the war, and there is something in them.
+                self.force = FORCE_MAX;
+                if self.rand().is_multiple_of(2) {
+                    let gun = Weapon::ALL[(self.rand() % Weapon::ALL.len() as u64) as usize];
+                    self.stock_gun(gun);
+                    self.say("Something in the ruins. A gun, and the Force is strong here.");
+                } else {
+                    self.say("The Force is strong in this place.");
+                }
+                DeckAction::Explored
+            }
         };
         Some(action)
     }
@@ -6007,10 +6317,10 @@ impl Game {
     /// Set up the campaign mission at `index` and launch straight into it.
     pub fn fly_mission(&mut self, index: usize) {
         let Some(&mission) = Mission::CAMPAIGN.get(index) else {
-            // The war is over; the ceremony is the reward.
+            // The war is over; what is left is the ceremony.
             self.mission = None;
-            self.status = Status::Hangar;
-            self.say("That is the last of them. Stand down — you have earned it.");
+            self.status = Status::Ceremony;
+            self.say("That is the last of them. The fleet is standing down.");
             return;
         };
         self.campaign_at = index;
@@ -6162,6 +6472,36 @@ impl Game {
         true
     }
 
+    /// How many lanes a jump can cross. Gravity wells cut it back to one.
+    pub fn jump_range(&self) -> usize {
+        if self.interdicted() {
+            return 1;
+        }
+        1 + (self.loadout.tier(Part::Hyperdrive) / 2) as usize
+    }
+
+    /// True while an Imperial gravity well is holding the squadron down: a
+    /// capital with its projectors still up, here or one lane out.
+    pub fn interdicted(&self) -> bool {
+        if self
+            .capital
+            .as_ref()
+            .is_some_and(|c| c.standing(Emplacement::GravityProjector) > 0)
+        {
+            return true;
+        }
+        self.map
+            .reachable()
+            .into_iter()
+            .chain(std::iter::once(self.map.at))
+            .any(|i| {
+                let node = self.map.nodes[i];
+                node.kind == NodeKind::Capital
+                    && !node.cleared
+                    && node.terrain != TerrainKind::Trench
+            })
+    }
+
     /// Open the galaxy chart from the hangar.
     pub fn open_chart(&mut self) {
         if matches!(self.status, Status::Hangar | Status::Chart) {
@@ -6171,9 +6511,19 @@ impl Game {
 
     /// Move the chart cursor through the systems one lane out.
     pub fn move_cursor(&mut self, delta: i32) {
-        if self.status == Status::Chart {
-            self.map.move_cursor(delta);
+        if self.status != Status::Chart {
+            return;
         }
+        let lanes = self.map.reachable_within(self.jump_range());
+        if lanes.is_empty() {
+            return;
+        }
+        let at = lanes
+            .iter()
+            .position(|&n| n == self.map.cursor)
+            .unwrap_or(0) as i32;
+        let next = (at + delta).rem_euclid(lanes.len() as i32) as usize;
+        self.map.cursor = lanes[next];
     }
 
     /// Point the chart cursor at whichever system lies that way.
@@ -6189,7 +6539,9 @@ impl Game {
         if self.status != Status::Chart {
             return false;
         }
-        let Some(node) = self.map.jump() else {
+        let range = self.jump_range();
+        let Some(node) = self.map.jump_within(range) else {
+            self.say("The gravity wells have us. Nothing jumps until they are down.");
             return false;
         };
         self.node = node;
@@ -6265,6 +6617,7 @@ impl Game {
                 self.advance_enemies();
                 self.advance_boss();
                 self.advance_capital();
+                self.advance_ally();
                 self.advance_transports();
                 self.advance_walkers();
                 self.advance_wings();
@@ -6311,8 +6664,9 @@ impl ViewMode {
     }
 }
 
-/// How many rows ahead of the hull the canopy shows.
-const COCKPIT_DEPTH: i16 = 18;
+/// How far ahead the canopy sees: the whole court, so nothing in front of the
+/// hull is ever off the glass.
+const COCKPIT_DEPTH: i16 = H;
 
 /// The interactive Nova overlay.
 pub struct Nova {
@@ -6407,15 +6761,20 @@ impl Nova {
                 surface.set_string(ox + x as u16, oy + y as u16, glyph, style);
             }
         };
-        // Project a court cell onto the glass: `depth` is how far ahead it is.
+        // Project a court cell onto the glass. The whole width of the court maps
+        // onto the glass, so every contact ahead is somewhere on it; near rows
+        // spread a little wider than far ones, and anything that would fall off
+        // the edge is held at the edge rather than dropped.
         let project = |row: i16, col: i16| -> Option<(i16, i16, i16)> {
             let depth = g.ship.0 - row;
             if !(0..COCKPIT_DEPTH).contains(&depth) {
                 return None;
             }
             let near = COCKPIT_DEPTH - depth;
-            let x = centre_x + (col - g.ship.1) * near / (COCKPIT_DEPTH / 3).max(1);
-            let y = horizon + (near * (glass_h - horizon - 2)) / COCKPIT_DEPTH;
+            let dx = col - g.ship.1;
+            let spread = (glass_w * (COCKPIT_DEPTH + near)) / (W * COCKPIT_DEPTH);
+            let x = (centre_x + dx * spread.max(1)).clamp(1, glass_w - 2);
+            let y = horizon + (near * (glass_h - horizon - 3)) / COCKPIT_DEPTH;
             Some((x, y, depth))
         };
 
@@ -6446,12 +6805,18 @@ impl Nova {
                 }
             }
         }
-        // Contacts, biggest when they are closest.
+        // Contacts, biggest when they are closest. Everything in front of the
+        // hull is drawn; anything behind it goes on the rear-view strip.
+        let mut behind = 0;
         for e in &g.enemies {
+            if e.pos.0 > g.ship.0 {
+                behind += 1;
+                continue;
+            }
             let Some((x, y, depth)) = project(e.pos.0, e.pos.1) else {
                 continue;
             };
-            if depth < 7 {
+            if depth < 10 {
                 for (i, glyph) in e.kind.sprite().chars().enumerate() {
                     if glyph != ' ' {
                         put(
@@ -6477,6 +6842,12 @@ impl Nova {
             if let Some((x, y, _)) = project(s.pos.0, s.pos.1) {
                 put(surface, x, y, "|", shot_style);
             }
+        }
+        // Rear view: what is on your tail, and how much of it.
+        if behind > 0 {
+            let rear = format!("◄ REAR {behind} ►");
+            let rx = (centre_x - rear.chars().count() as i16 / 2).max(1);
+            surface.set_string(ox + rx as u16, oy + 1, &rear, enemy_style);
         }
         // The wing, off the glass either side: they fly beside the hull, not
         // ahead of it, so they are drawn low and wide where a pilot would
@@ -6558,13 +6929,14 @@ impl Nova {
             ox,
             dash,
             &format!(
-                "SHIELDS {}{}   LASERS {}   ENGINES {}   FORCE {}   TORPEDOES {}",
+                "SHIELDS {}{}   LASERS {}   ENGINES {}   FORCE {}   TORPEDOES {}   CONTACTS {}",
                 "▮".repeat(g.shield as usize),
                 "▯".repeat(g.max_shield.saturating_sub(g.shield) as usize),
                 "▮".repeat(g.power.lasers as usize),
                 "▮".repeat(g.power.engines as usize),
                 "▰".repeat((g.force * 6 / FORCE_MAX) as usize),
-                g.missiles
+                g.missiles,
+                g.enemies.len() + g.capital.iter().count() + g.boss.iter().count()
             ),
             text_style,
         );
@@ -6589,6 +6961,72 @@ impl Nova {
             "o returns to top-down · p pause · t roster · SPC fire · m torpedoes",
             frame_style,
         );
+    }
+
+    /// The ceremony: the war is over and the squadron is decorated for it.
+    fn render_ceremony(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let header = theme.get("ui.text.focus");
+        let text = theme.get("ui.text");
+        let dim = theme.get("ui.linenr");
+        let g = &self.game;
+        let ox = area.x + 4;
+        let mut y = area.y + 2;
+        surface.set_string(ox, y, "THE WAR IS OVER", header);
+        y += 2;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "{} {} — {} · {} kills logged · {} medals",
+                g.rank().name(),
+                g.class.name(),
+                g.galaxy.name(),
+                g.score / 100,
+                g.medals
+            ),
+            text,
+        );
+        y += 2;
+        surface.set_string(ox, y, "THE SQUADRON", header);
+        y += 1;
+        for wing in &g.squad {
+            surface.set_string(
+                ox,
+                y,
+                &format!(
+                    "  {:<12} {:<20} {:<16} {}",
+                    wing.name,
+                    wing.class.name(),
+                    wing.weapon.name(),
+                    if wing.alive {
+                        "flew it out"
+                    } else {
+                        "did not come back"
+                    }
+                ),
+                if wing.alive { text } else { dim },
+            );
+            y += 1;
+        }
+        y += 1;
+        surface.set_string(ox, y, "MISSIONS FLOWN", header);
+        y += 1;
+        for mission in Mission::CAMPAIGN.iter() {
+            surface.set_string(ox, y, &format!("  {}", mission.name), dim);
+            y += 1;
+        }
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "Final score {}   pilot level {}   salvage banked {}",
+                g.score, g.level, g.credits
+            ),
+            header,
+        );
+        surface.set_string(ox, y + 2, "n flies another war · q stands down", text);
     }
 
     /// The pause panel: what the mission wants, what is in the racks, and every
@@ -6932,26 +7370,37 @@ impl Nova {
             ox,
             area.y,
             &format!(
-                "HANGAR DECK — {} · {}   salvage {}   {}",
+                "{} — {} · {}   salvage {}",
+                if g.status == Status::Surface {
+                    format!("{} SURFACE", g.planet.name().to_uppercase())
+                } else {
+                    "HANGAR DECK".to_string()
+                },
                 g.galaxy.name(),
                 g.rank().name(),
-                g.credits,
-                g.mission.map_or("free flight", |m| m.name)
+                g.credits
             ),
             header,
         );
         surface.set_string(
             ox,
             area.y + 1,
-            "walk ←/→/↑/↓ · Enter uses it · w next fighter · f formation · o first person · t roster",
+            "walk ←/→/↑/↓ · Enter uses it · w fighter · f formation · o first person · t roster",
             dim,
         );
         // Deck plating and walls.
         for r in 0..deck.height {
             for c in 0..deck.width {
                 let edge = r == 0 || r == deck.height - 1 || c == 0 || c == deck.width - 1;
+                // Deck plating in a hangar; the ground itself on a world.
                 let glyph = if edge {
                     "▒"
+                } else if g.status == Status::Surface {
+                    if (r * 7 + c * 3) % 11 == 0 {
+                        g.planet.shade()
+                    } else {
+                        " "
+                    }
                 } else if r % 4 == 0 && c % 6 == 0 {
                     "·"
                 } else {
@@ -7056,7 +7505,12 @@ impl Nova {
             ox,
             area.y,
             &format!(
-                "HANGAR DECK — first person   facing {}",
+                "{} — first person   facing {}",
+                if g.status == Status::Surface {
+                    g.planet.name().to_uppercase()
+                } else {
+                    "HANGAR DECK".to_string()
+                },
                 match deck.facing {
                     (-1, _) => "the bays",
                     (1, _) => "the doors",
@@ -7282,7 +7736,7 @@ impl Nova {
         surface.set_string(
             ox,
             footer + 3,
-            "←/→/↑/↓ pick a lane · Enter jump · t roster · o view · n new run · q quit",
+            "←/→/↑/↓ pick a lane · Enter jump · d land on the world · t roster · o view · n new",
             text,
         );
     }
@@ -7510,10 +7964,13 @@ impl Component for Nova {
                 key!(Enter) | key!(' ') => {
                     self.game.jump();
                 }
+                key!('d') => {
+                    self.game.land();
+                }
                 key!('n') => self.restart(),
                 _ => {}
             },
-            Status::Hangar => match key {
+            Status::Hangar | Status::Surface => match key {
                 key!(Left) | key!('h') => self.game.walk(-1, 0),
                 key!(Right) | key!('l') => self.game.walk(1, 0),
                 key!(Up) | key!('k') => self.game.walk(0, -1),
@@ -7663,11 +8120,15 @@ impl Component for Nova {
             return;
         }
         match self.game.status {
+            Status::Ceremony => {
+                self.render_ceremony(area, surface, ctx);
+                return;
+            }
             Status::Select => {
                 self.render_select(area, surface, ctx);
                 return;
             }
-            Status::Hangar => {
+            Status::Hangar | Status::Surface => {
                 if self.game.shop_open {
                     self.render_hangar(area, surface, ctx);
                 } else if self.view == ViewMode::Cockpit {
@@ -8163,7 +8624,11 @@ impl Component for Nova {
                 "fly ←/→/↑/↓ · SPC fire · m torpedoes · 1-0 guns · z/c/v power · e/y/u Force · o cockpit · t roster"
                     .to_string()
             }
-            Status::Select | Status::Hangar | Status::Chart => String::new(),
+            Status::Select
+            | Status::Hangar
+            | Status::Chart
+            | Status::Surface
+            | Status::Ceremony => String::new(),
         };
         surface.set_string(ox, status_y, &status, text_style);
     }
@@ -10615,7 +11080,7 @@ mod campaign_tests {
         assert!(names.contains(&"Battle of Endor"));
         g.fly_mission(Mission::CAMPAIGN.len());
         assert!(g.mission.is_none(), "past the last one the war is over");
-        assert_eq!(g.status, Status::Hangar);
+        assert_eq!(g.status, Status::Ceremony, "and the ceremony closes it");
     }
 
     #[test]
@@ -10896,5 +11361,169 @@ mod deck_tests {
         );
         let shape = g.cycle_formation();
         assert_ne!(shape, WingFormation::Echelon, "and the order changes it");
+    }
+}
+
+#[cfg(test)]
+mod frontier_tests {
+    use super::tests::flying;
+    use super::*;
+
+    #[test]
+    fn a_tuned_hyperdrive_reaches_further_across_the_chart() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        assert_eq!(g.jump_range(), 1, "stock, one lane at a time");
+        let near = g.map.reachable_within(1).len();
+        g.loadout.tiers[Part::Hyperdrive as usize] = 4;
+        assert_eq!(g.jump_range(), 3, "tuned, three");
+        assert!(
+            g.map.reachable_within(3).len() > near,
+            "and the chart opens up"
+        );
+        let far = g.map.reachable_within(3);
+        g.map.cursor = *far.last().unwrap();
+        assert!(g.jump(), "a long jump is flown in one go");
+    }
+
+    #[test]
+    fn gravity_wells_hold_the_squadron_to_one_lane() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        g.loadout.tiers[Part::Hyperdrive as usize] = 4;
+        let out = g.map.reachable()[0];
+        g.map.nodes[out].kind = NodeKind::Capital;
+        g.map.nodes[out].cleared = false;
+        g.map.nodes[out].terrain = TerrainKind::Open;
+        assert!(g.interdicted(), "there is a well one lane out");
+        assert_eq!(g.jump_range(), 1, "and nothing jumps past it");
+        g.map.nodes[out].cleared = true;
+        assert!(!g.interdicted(), "clear it and the lanes open");
+        assert_eq!(g.jump_range(), 3);
+    }
+
+    #[test]
+    fn the_fleet_comes_out_for_the_big_ships_and_fires_with_you() {
+        let mut g = flying();
+        g.node.kind = NodeKind::Capital;
+        g.node.region = Region::Core;
+        g.node.terrain = TerrainKind::Open;
+        g.spawn_wave();
+        let ally = g.ally.as_ref().expect("the cruiser is with us");
+        assert_eq!(ally.kind, CapitalKind::MonCalamari);
+        for part in g.ally.as_mut().unwrap().parts.iter_mut() {
+            part.cooldown = 0;
+        }
+        g.shots.clear();
+        g.advance_ally();
+        assert!(!g.shots.is_empty(), "her batteries fire up the court");
+        assert!(
+            g.shots.iter().all(|s| s.speed < 0),
+            "on our side of the fight"
+        );
+    }
+
+    #[test]
+    fn imperial_fire_that_reaches_the_cruiser_hits_her_instead_of_us() {
+        let mut g = flying();
+        let mut ally = Capital::new(CapitalKind::MonCalamari, 0, 0);
+        ally.pos = (H - 5, W / 3);
+        let cell = (ally.pos.0, ally.pos.1);
+        let hp = ally.hp;
+        g.ally = Some(ally);
+        g.enemy_shots = vec![Shot::enemy((cell.0 - 1, cell.1), 0, 1)];
+        let shield = g.shield;
+        g.advance_enemy_shots();
+        assert!(g.ally.as_ref().unwrap().hp < hp, "the cruiser takes it");
+        assert_eq!(g.shield, shield, "and we do not");
+    }
+
+    #[test]
+    fn the_squadron_can_put_down_on_a_world_and_walk_it() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        let at = g.map.cursor;
+        g.map.nodes[at].sector = Sector::AsteroidBelt;
+        assert!(g.land(), "there is a world down there");
+        assert_eq!(g.status, Status::Surface);
+        assert_eq!(g.planet, Planet::Hoth);
+        assert!(
+            g.deck.spot_at(DeckSpot::ParkedShip).is_some(),
+            "the fighter is parked where we left it"
+        );
+        let start = g.deck.pilot;
+        g.walk(1, 0);
+        assert_ne!(g.deck.pilot, start, "and the pilot walks about");
+        g.deck.pilot = g.deck.spot_at(DeckSpot::ParkedShip).unwrap();
+        assert_eq!(g.interact(), Some(DeckAction::LiftedOff));
+        assert_eq!(g.status, Status::Chart, "and lifts off again");
+    }
+
+    #[test]
+    fn deep_space_has_nothing_to_land_on() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        let at = g.map.cursor;
+        g.map.nodes[at].sector = Sector::OpenSpace;
+        assert!(!g.land(), "you cannot walk about in vacuum");
+        assert_eq!(g.status, Status::Chart);
+    }
+
+    #[test]
+    fn what_is_down_there_is_worth_the_walk() {
+        let mut g = flying();
+        g.status = Status::Surface;
+        g.deck = Deck::surface(Planet::Tatooine, 5);
+        g.credits = 0;
+        if g.deck.spot_at(DeckSpot::SurfaceWreck).is_some() {
+            g.deck.pilot = g.deck.spot_at(DeckSpot::SurfaceWreck).unwrap();
+            assert_eq!(g.interact(), Some(DeckAction::Stripped));
+            assert!(g.credits > 0, "a wreck is worth stripping");
+        }
+        g.deck = Deck::surface(Planet::Yavin, 9);
+        if let Some(pos) = g.deck.spot_at(DeckSpot::Ruins) {
+            g.deck.pilot = pos;
+            g.force = 0;
+            assert_eq!(g.interact(), Some(DeckAction::Explored));
+            assert_eq!(g.force, FORCE_MAX, "the ruins are strong with it");
+        }
+        g.deck = Deck::surface(Planet::Tatooine, 3);
+        if let Some(pos) = g.deck.spot_at(DeckSpot::Cantina) {
+            g.deck.pilot = pos;
+            let charted = g.map.charted();
+            assert_eq!(g.interact(), Some(DeckAction::Drank));
+            assert!(g.map.charted() >= charted, "and the cantina talks");
+        }
+    }
+
+    #[test]
+    fn an_escape_pod_puts_a_pilot_back_in_the_air() {
+        let mut g = flying();
+        g.squad.push(Wing::new("Red Two", ShipClass::AWing));
+        g.squad[1].alive = false;
+        g.collect(PowerKind::EscapePod);
+        assert!(g.squad[1].alive, "the pilot is back");
+        g.collect(PowerKind::EscapePod);
+        assert!(g.lives >= 4, "and a spare pilot is a spare life");
+    }
+
+    #[test]
+    fn the_forest_is_thick_enough_to_matter() {
+        let forest = Terrain::new(TerrainKind::Forest, 4);
+        let trunks: usize = forest.rows.iter().map(|r| r.pillars.len()).sum();
+        assert!(trunks > 0, "there are trunks in it");
+        assert!(
+            TerrainKind::Forest.destructible(),
+            "and a cannon will clear one"
+        );
+    }
+
+    #[test]
+    fn the_war_ends_in_a_ceremony() {
+        let mut g = Game::new(3);
+        g.start_campaign(ShipClass::XWing, Difficulty::Normal);
+        g.fly_mission(Mission::CAMPAIGN.len());
+        assert_eq!(g.status, Status::Ceremony, "the war is over");
+        assert!(g.mission.is_none());
     }
 }
