@@ -297,6 +297,25 @@ pub struct HostApi {
     /// plugin-registered commands alike. Null when nothing matches. Release with
     /// `free_cstring`.
     pub completions: extern "C" fn(host: *const HostApi, prefix: *const c_char) -> *mut c_char,
+
+    /// vim `getmarklist()` — every set mark as `name:offset:line`, one per
+    /// line, sorted by name. Null when none are set. This is the whole list;
+    /// `mark` looks one up. Release with `free_cstring`.
+    pub marks: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    /// vim `getchangelist()` — how many edit positions the changelist holds.
+    pub changelist_count: extern "C" fn(host: *const HostApi) -> usize,
+    /// The `index`th changelist entry, oldest first. See [`Span`]; `valid` is 0
+    /// past the last one.
+    pub changelist: extern "C" fn(host: *const HostApi, index: usize) -> Span,
+    /// Where `g;`/`g,` would resume in the changelist — vim's changelist index.
+    pub changelist_index: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `strdisplaywidth({text})` — how many terminal cells `text` occupies,
+    /// which is not its length in characters: a CJK glyph takes two and a
+    /// combining mark none. Pairs with `window_width` for anything laying text
+    /// out.
+    pub display_width: extern "C" fn(host: *const HostApi, text: *const c_char) -> usize,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -674,6 +693,49 @@ impl Host {
             .unwrap_or_default()
     }
 
+    /// vim `getmarklist()` — every set mark, as `(name, offset, line)`, sorted
+    /// by name. A malformed row is skipped rather than failing the list.
+    pub fn marks(&self) -> Vec<(char, usize, usize)> {
+        let Some(joined) = self.take_string((self.t().marks)(self.api)) else {
+            return Vec::new();
+        };
+        joined
+            .lines()
+            .filter_map(|row| {
+                let mut parts = row.splitn(3, ':');
+                let name = parts.next()?.chars().next()?;
+                let offset = parts.next()?.parse().ok()?;
+                let line = parts.next()?.parse().ok()?;
+                Some((name, offset, line))
+            })
+            .collect()
+    }
+
+    /// vim `getchangelist()` — every edit position, oldest first.
+    pub fn changelist(&self) -> Vec<Span> {
+        (0..(self.t().changelist_count)(self.api))
+            .filter_map(|i| {
+                let span = (self.t().changelist)(self.api, i);
+                (span.valid != 0).then_some(span)
+            })
+            .collect()
+    }
+
+    /// Where `g;`/`g,` would resume in the changelist.
+    pub fn changelist_index(&self) -> usize {
+        (self.t().changelist_index)(self.api)
+    }
+
+    /// vim `strdisplaywidth({text})` — terminal cells, not characters. A CJK
+    /// glyph is two cells and a combining mark none, so laying anything out
+    /// from `text.len()` misaligns it.
+    pub fn display_width(&self, text: &str) -> usize {
+        match CString::new(text) {
+            Ok(text) => (self.t().display_width)(self.api, text.as_ptr()),
+            Err(_) => 0,
+        }
+    }
+
     /// Adopt a host-allocated C string and release it through the host's own
     /// allocator, which is the only correct way to free one across the ABI.
     fn take_string(&self, raw: *mut c_char) -> Option<String> {
@@ -1019,6 +1081,28 @@ mod tests {
     extern "C" fn fake_window_height(_h: *const HostApi) -> usize {
         24
     }
+    extern "C" fn fake_marks(_h: *const HostApi) -> *mut c_char {
+        // Including a row that cannot be parsed, so the reader has to skip it
+        // rather than give up on the whole list.
+        reply("a:15:4\nb:99:20\nbroken")
+    }
+    extern "C" fn fake_changelist_count(_h: *const HostApi) -> usize {
+        2
+    }
+    extern "C" fn fake_changelist(_h: *const HostApi, index: usize) -> Span {
+        match index {
+            0 => Span { anchor: 3, head: 3, line: 0, valid: 1 },
+            1 => Span { anchor: 40, head: 40, line: 9, valid: 1 },
+            _ => Span { anchor: 0, head: 0, line: 0, valid: 0 },
+        }
+    }
+    extern "C" fn fake_changelist_index(_h: *const HostApi) -> usize {
+        1
+    }
+    extern "C" fn fake_display_width(_h: *const HostApi, text: *const c_char) -> usize {
+        // Two cells per char, so a caller using `len()` instead cannot pass.
+        unsafe { CStr::from_ptr(text) }.to_string_lossy().chars().count() * 2
+    }
     extern "C" fn fake_completions(_h: *const HostApi, prefix: *const c_char) -> *mut c_char {
         let prefix = unsafe { CStr::from_ptr(prefix) }.to_string_lossy().into_owned();
         record(format!("completions:{prefix}"));
@@ -1074,6 +1158,11 @@ mod tests {
             window_width: fake_window_width,
             window_height: fake_window_height,
             completions: fake_completions,
+            marks: fake_marks,
+            changelist_count: fake_changelist_count,
+            changelist: fake_changelist,
+            changelist_index: fake_changelist_index,
+            display_width: fake_display_width,
         }
     }
 
@@ -1306,6 +1395,41 @@ mod tests {
             vec!["write", "write-all", "write-quit"]
         );
         assert!(host.completions("zzz").is_empty(), "nothing matches");
+    }
+
+    /// The mark list parses into name/offset/line, and one malformed row is
+    /// skipped rather than discarding every other mark with it.
+    #[test]
+    fn the_mark_list_skips_a_row_it_cannot_read() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.marks(), vec![('a', 15, 4), ('b', 99, 20)]);
+    }
+
+    /// The changelist comes back oldest first, and the index says where `g;`
+    /// would resume -- which is not the same as its length.
+    #[test]
+    fn the_changelist_reports_its_entries_and_its_cursor() {
+        let api = table();
+        let host = host(&api);
+
+        let changes = host.changelist();
+        assert_eq!(changes.len(), 2);
+        assert_eq!((changes[0].anchor, changes[0].line), (3, 0));
+        assert_eq!((changes[1].anchor, changes[1].line), (40, 9));
+        assert_eq!(host.changelist_index(), 1);
+    }
+
+    /// Display width is cells, not characters. The fake returns two cells per
+    /// char precisely so a wrapper handing back `len()` cannot pass.
+    #[test]
+    fn display_width_is_cells_not_characters() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.display_width("abc"), 6);
+        assert_eq!(host.display_width(""), 0);
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

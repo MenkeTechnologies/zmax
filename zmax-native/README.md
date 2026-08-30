@@ -117,6 +117,9 @@ What is in the buffer, and what the language servers said about it:
 | `mark(name)` | `getpos("'a")` | a named mark, `None` when never set |
 | `window_size()` | `getwininfo()` width/height | the text area in cells, gutters excluded |
 | `completions(prefix)` | `getcompletion(p, "command")` | matching `:`-command names |
+| `marks()` | `getmarklist()` | every set mark, sorted by name |
+| `changelist()` / `changelist_index()` | `getchangelist()` | edit positions, oldest first, and where `g;` resumes |
+| `display_width(text)` | `strdisplaywidth()` | terminal cells, not characters |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:

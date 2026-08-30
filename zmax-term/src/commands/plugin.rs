@@ -732,6 +732,74 @@ extern "C" fn host_completions(_host: *const HostApi, prefix: *const c_char) -> 
     into_raw_cstring((!names.is_empty()).then(|| names.join("\n")))
 }
 
+extern "C" fn host_marks(_host: *const HostApi) -> *mut c_char {
+    let rows = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let mut marks: Vec<(char, usize)> = doc.marks_iter().collect();
+        // Sorted by name so the list is stable between calls; a HashMap's order
+        // is not.
+        marks.sort_unstable();
+        marks
+            .into_iter()
+            .map(|(name, pos)| {
+                let pos = pos.min(text.len_chars());
+                format!("{name}:{pos}:{}", text.char_to_line(pos))
+            })
+            .collect::<Vec<_>>()
+    });
+    into_raw_cstring(rows.filter(|rows| !rows.is_empty()).map(|rows| rows.join("\n")))
+}
+
+extern "C" fn host_changelist_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.changelist().0.len()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_changelist(_host: *const HostApi, index: usize) -> Span {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        match doc.changelist().0.get(index) {
+            Some(&pos) => {
+                let pos = pos.min(text.len_chars());
+                Span {
+                    // A change is recorded as a point, like a mark.
+                    anchor: pos,
+                    head: pos,
+                    line: text.char_to_line(pos),
+                    valid: 1,
+                }
+            }
+            None => NO_SPAN,
+        }
+    })
+    .unwrap_or(NO_SPAN)
+}
+
+extern "C" fn host_changelist_index(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.changelist().1
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_display_width(_host: *const HostApi, text: *const c_char) -> usize {
+    let Some(text) = arg_string(text) else {
+        return 0;
+    };
+    // Per grapheme cluster, the way the renderer measures it -- summing char
+    // widths would double-count a combining mark's base.
+    use zmax_core::unicode::segmentation::UnicodeSegmentation;
+    text.graphemes(true)
+        .map(zmax_core::graphemes::grapheme_width)
+        .sum()
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -792,6 +860,11 @@ fn host_api() -> *const HostApi {
             window_width: host_window_width,
             window_height: host_window_height,
             completions: host_completions,
+            marks: host_marks,
+            changelist_count: host_changelist_count,
+            changelist: host_changelist,
+            changelist_index: host_changelist_index,
+            display_width: host_display_width,
         });
         Box::into_raw(boxed) as usize
     });
