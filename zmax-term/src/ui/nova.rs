@@ -11,11 +11,14 @@
 //!   magazine) upgrade through four tiers, and five modules (magnet, autoloader,
 //!   salvager, repair bay, overdrive) bolt on permanently. Everything is bought
 //!   in the hangar between waves with salvage picked up from kills.
-//! * **Guns** — ten of them, three levels each, with wing drones firing
+//! * **Guns** — twelve of them, three levels each, with wing drones firing
 //!   alongside: blaster, spread, piercing laser, homing missiles, wide plasma,
 //!   the vulcan machine gun, dumb-fire rockets that blast a hole where they
 //!   land, flak shells that burst into a fan, a rail slug that runs the whole
-//!   court, and an arc bolt that earths itself through a crowd.
+//!   court, an arc bolt that earths itself through a crowd, proton torpedoes
+//!   that take an emplacement off a capital hull in one go, and an ion cannon
+//!   that scrambles emplacements rather than breaking them — a scrambled dome
+//!   is a hull that can be shot.
 //! * **Progression** — kills pay experience and salvage; each pilot level hands
 //!   out a permanent upgrade in a fixed rotation, and every extend threshold
 //!   pays a spare hull.
@@ -87,6 +90,8 @@ const RAPID_TICKS: u32 = 240;
 const MAX_COMBO: u32 = 8;
 /// Highest level any gun can be upgraded to.
 const MAX_WEAPON_LEVEL: u32 = 3;
+/// Ticks an ion hit scrambles an emplacement for.
+const ION_STUN: u32 = 90;
 /// Rows a flak shell climbs before it bursts.
 const FLAK_FUSE: i16 = 6;
 /// How far an arc bolt will reach for its next hull.
@@ -501,10 +506,16 @@ pub enum Weapon {
     Rail,
     /// A bolt that jumps from hull to hull.
     Arc,
+    /// Proton torpedoes: slow, few, and they take a battery off a capital hull
+    /// in one go.
+    Torpedo,
+    /// An ion cannon: it scrambles emplacements instead of breaking them, and a
+    /// scrambled shield dome is a hull that can be shot.
+    Ion,
 }
 
 impl Weapon {
-    pub const ALL: [Weapon; 10] = [
+    pub const ALL: [Weapon; 12] = [
         Weapon::Blaster,
         Weapon::Spread,
         Weapon::Laser,
@@ -515,6 +526,8 @@ impl Weapon {
         Weapon::Flak,
         Weapon::Rail,
         Weapon::Arc,
+        Weapon::Torpedo,
+        Weapon::Ion,
     ];
 
     pub fn name(self) -> &'static str {
@@ -529,6 +542,8 @@ impl Weapon {
             Weapon::Flak => "flak",
             Weapon::Rail => "rail",
             Weapon::Arc => "arc",
+            Weapon::Torpedo => "torpedo",
+            Weapon::Ion => "ion",
         }
     }
 
@@ -540,7 +555,8 @@ impl Weapon {
             Weapon::Blaster | Weapon::Spread => 0,
             Weapon::Laser | Weapon::Arc => 1,
             Weapon::Homing | Weapon::Plasma | Weapon::Flak => 2,
-            Weapon::Rocket => 3,
+            Weapon::Rocket | Weapon::Ion => 3,
+            Weapon::Torpedo => 8,
             Weapon::Rail => 6,
         }
     }
@@ -558,6 +574,8 @@ impl Weapon {
             Weapon::Flak => "F",
             Weapon::Rail => "X",
             Weapon::Arc => "A",
+            Weapon::Torpedo => "T",
+            Weapon::Ion => "I",
         }
     }
 
@@ -620,6 +638,8 @@ pub struct Shot {
     pub fuse: i16,
     /// Hulls an arc bolt may still jump to.
     pub chain: u32,
+    /// Ion rounds scramble what they hit rather than breaking it.
+    pub ion: bool,
     pub kind: ShotKind,
 }
 
@@ -636,6 +656,7 @@ impl Shot {
             splash: 0,
             fuse: 0,
             chain: 0,
+            ion: false,
             kind: ShotKind::Bolt,
         }
     }
@@ -674,6 +695,28 @@ impl Shot {
             speed: -6,
             pierce: true,
             kind: ShotKind::Rail,
+            ..Shot::bolt(pos, 0, damage)
+        }
+    }
+
+    /// A proton torpedo: slow, heavy, and it takes a whole emplacement with it.
+    fn torpedo(pos: (i16, i16), damage: i32) -> Shot {
+        Shot {
+            speed: -1,
+            splash: 1,
+            homing: true,
+            kind: ShotKind::Rocket,
+            ..Shot::bolt(pos, 0, damage)
+        }
+    }
+
+    /// An ion bolt: it scrambles emplacements and gun crews for a while.
+    fn ion(pos: (i16, i16), damage: i32) -> Shot {
+        Shot {
+            speed: -2,
+            splash: 1,
+            ion: true,
+            kind: ShotKind::Arc,
             ..Shot::bolt(pos, 0, damage)
         }
     }
@@ -754,13 +797,15 @@ pub enum EnemyKind {
     Splitter,
     /// Repairs damaged hulls flying near it.
     Healer,
+    /// A capital ship's fighter screen: fast, twitchy, fires in pairs.
+    Interceptor,
 }
 
 impl EnemyKind {
     pub fn hp(self) -> i32 {
         match self {
             EnemyKind::Grunt | EnemyKind::Kamikaze => 1,
-            EnemyKind::Weaver | EnemyKind::Sniper => 2,
+            EnemyKind::Weaver | EnemyKind::Sniper | EnemyKind::Interceptor => 2,
             EnemyKind::Turret | EnemyKind::Miner | EnemyKind::Splitter | EnemyKind::Healer => 3,
             EnemyKind::Bomber => 4,
             EnemyKind::Tank => 7,
@@ -772,6 +817,7 @@ impl EnemyKind {
             EnemyKind::Grunt => 10,
             EnemyKind::Weaver => 20,
             EnemyKind::Kamikaze => 25,
+            EnemyKind::Interceptor => 30,
             EnemyKind::Turret => 30,
             EnemyKind::Miner => 35,
             EnemyKind::Bomber => 40,
@@ -794,6 +840,7 @@ impl EnemyKind {
             EnemyKind::Miner => "Ѳ",
             EnemyKind::Splitter => "Ж",
             EnemyKind::Healer => "✚",
+            EnemyKind::Interceptor => "Ж",
         }
     }
 
@@ -804,6 +851,7 @@ impl EnemyKind {
             EnemyKind::Kamikaze => 70,
             EnemyKind::Bomber => 220,
             EnemyKind::Splitter => 160,
+            EnemyKind::Interceptor => 50,
             _ => 0,
         }
     }
@@ -818,6 +866,7 @@ impl EnemyKind {
             EnemyKind::Tank => 120,
             EnemyKind::Sniper => 100,
             EnemyKind::Miner => 150,
+            EnemyKind::Interceptor => 70,
             _ => 0,
         }
     }
@@ -825,7 +874,7 @@ impl EnemyKind {
     /// Rows a diving hull of this kind covers per tick.
     fn dive_speed(self) -> i16 {
         match self {
-            EnemyKind::Kamikaze => 2,
+            EnemyKind::Kamikaze | EnemyKind::Interceptor => 2,
             _ => 1,
         }
     }
@@ -1474,10 +1523,13 @@ pub enum TerrainKind {
     Maze,
     /// Thick with columns, wall to wall.
     Reef,
+    /// A capital ship's surface trench: two walls, one lane, and the guns are
+    /// bolted to both sides of it.
+    Trench,
 }
 
 impl TerrainKind {
-    pub const ALL: [TerrainKind; 9] = [
+    pub const ALL: [TerrainKind; 10] = [
         TerrainKind::Open,
         TerrainKind::Canyon,
         TerrainKind::Cave,
@@ -1487,6 +1539,7 @@ impl TerrainKind {
         TerrainKind::Spine,
         TerrainKind::Maze,
         TerrainKind::Reef,
+        TerrainKind::Trench,
     ];
 
     pub fn name(self) -> &'static str {
@@ -1500,6 +1553,7 @@ impl TerrainKind {
             TerrainKind::Spine => "spine",
             TerrainKind::Maze => "maze",
             TerrainKind::Reef => "reef",
+            TerrainKind::Trench => "trench",
         }
     }
 
@@ -1514,6 +1568,7 @@ impl TerrainKind {
             TerrainKind::Spine => "a rock spine splitting the court",
             TerrainKind::Maze => "half-walls that force a weave",
             TerrainKind::Reef => "columns wall to wall",
+            TerrainKind::Trench => "one lane between two armoured walls",
         }
     }
 
@@ -1526,6 +1581,7 @@ impl TerrainKind {
             TerrainKind::Tunnel => (22, 32),
             TerrainKind::Pillars | TerrainKind::Reef => (W - 8, W - 4),
             TerrainKind::Gates | TerrainKind::Spine | TerrainKind::Maze => (W - 6, W - 2),
+            TerrainKind::Trench => (18, 22),
         }
     }
 
@@ -1538,6 +1594,7 @@ impl TerrainKind {
             TerrainKind::Pillars | TerrainKind::Reef => 1,
             TerrainKind::Gates | TerrainKind::Spine => 2,
             TerrainKind::Maze => 0,
+            TerrainKind::Trench => 1,
         }
     }
 
@@ -1939,15 +1996,22 @@ impl Galaxy {
         }
     }
 
-    /// How many systems its star map holds.
-    pub fn systems(self) -> usize {
+    /// The grid its chart is laid out on, as `(columns, rows)`. A galaxy is a
+    /// map to roam, not a corridor: even the smallest runs to sixty systems.
+    pub fn chart(self) -> (usize, usize) {
         match self {
-            Galaxy::Orion => 18,
-            Galaxy::Hive => 20,
-            Galaxy::Forge => 16,
-            Galaxy::Cinder => 18,
-            Galaxy::Abyss => 22,
+            Galaxy::Orion => (14, 7),
+            Galaxy::Hive => (15, 8),
+            Galaxy::Forge => (13, 7),
+            Galaxy::Cinder => (14, 8),
+            Galaxy::Abyss => (16, 9),
         }
+    }
+
+    /// Roughly how many systems that grid holds once it is scattered.
+    pub fn systems(self) -> usize {
+        let (w, h) = self.chart();
+        w * h * 7 / 10
     }
 }
 
@@ -1964,6 +2028,9 @@ pub enum NodeKind {
     Depot,
     /// No fight: a hulk to strip for salvage and a gun.
     Derelict,
+    /// A capital ship: a wedge destroyer holding the system, or a battlestation
+    /// with a trench to run.
+    Capital,
 }
 
 impl NodeKind {
@@ -1974,6 +2041,7 @@ impl NodeKind {
             NodeKind::Boss => "boss",
             NodeKind::Depot => "depot",
             NodeKind::Derelict => "derelict",
+            NodeKind::Capital => "capital",
         }
     }
 
@@ -1985,12 +2053,16 @@ impl NodeKind {
             NodeKind::Boss => "☠",
             NodeKind::Depot => "⌂",
             NodeKind::Derelict => "⌗",
+            NodeKind::Capital => "▰",
         }
     }
 
     /// Whether flying here means a fight.
     pub fn fights(self) -> bool {
-        matches!(self, NodeKind::Battle | NodeKind::Elite | NodeKind::Boss)
+        matches!(
+            self,
+            NodeKind::Battle | NodeKind::Elite | NodeKind::Boss | NodeKind::Capital
+        )
     }
 }
 
@@ -1999,18 +2071,23 @@ impl NodeKind {
 pub struct MapNode {
     /// Where it sits on the chart, as `(column, row)`.
     pub pos: (usize, usize),
+    /// The band of the galaxy it stands in.
+    pub region: Region,
     pub kind: NodeKind,
     pub sector: Sector,
     pub terrain: TerrainKind,
     pub bonus: NodeBonus,
     pub cleared: bool,
+    /// True once the chart has seen it.
+    pub explored: bool,
 }
 
 impl MapNode {
     pub fn label(&self) -> String {
         format!(
-            "{} · {} · {} — {}",
+            "{} · {} · {} · {} — {}",
             self.kind.name(),
+            self.region.name(),
             self.sector.name(),
             self.terrain.name(),
             self.bonus.label()
@@ -2018,25 +2095,72 @@ impl MapNode {
     }
 }
 
-/// The galaxy's star chart: systems, the lanes between them, and where the
-/// squad is sitting right now. Lanes run both ways, so a depot can be flown
-/// back to as easily as the next fight can be flown to.
+/// A band of the galaxy, from the quiet rim in to the deep.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub enum Region {
+    Rim,
+    Verge,
+    Reach,
+    Core,
+    Deep,
+}
+
+impl Region {
+    /// Which band a column of the chart falls in.
+    pub fn of_column(col: usize, width: usize) -> Region {
+        match col * 5 / width.max(1) {
+            0 => Region::Rim,
+            1 => Region::Verge,
+            2 => Region::Reach,
+            3 => Region::Core,
+            _ => Region::Deep,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Region::Rim => "the Rim",
+            Region::Verge => "the Verge",
+            Region::Reach => "the Reach",
+            Region::Core => "the Core",
+            Region::Deep => "the Deep",
+        }
+    }
+
+    /// Extra armour every hull in this band carries.
+    pub fn armour(self) -> i32 {
+        match self {
+            Region::Rim => 0,
+            Region::Verge => 1,
+            Region::Reach => 2,
+            Region::Core => 3,
+            Region::Deep => 5,
+        }
+    }
+}
+
+/// The galaxy chart: a grid of systems joined by lanes, most of it dark until
+/// it is flown. Lanes run both ways and neighbours link up in four directions,
+/// so the squad roams rather than following a corridor.
 #[derive(Clone, Debug)]
 pub struct StarMap {
     pub galaxy: Galaxy,
     pub nodes: Vec<MapNode>,
+    /// `grid[row][col]` is the system standing there, if any.
+    pub grid: Vec<Vec<Option<usize>>>,
     pub lanes: Vec<Vec<usize>>,
     /// Which system the squad is parked at.
     pub at: usize,
     /// Which reachable system the chart cursor is on.
     pub cursor: usize,
-    /// Columns the chart is laid out in.
-    pub columns: usize,
+    pub width: usize,
+    pub height: usize,
 }
 
 impl StarMap {
-    /// Lay out a galaxy: a run of columns, each with one to three systems,
-    /// every system linked to one or two in the column ahead.
+    /// Lay out a galaxy: a grid of systems, most cells filled, every one linked
+    /// to the neighbours it has, plus a few hyperlanes across the map. What
+    /// stands in a system gets nastier the deeper into the galaxy it is.
     pub fn generate(galaxy: Galaxy, seed: u64) -> StarMap {
         let mut rng = seed | 1;
         let mut rand = move || {
@@ -2045,87 +2169,146 @@ impl StarMap {
                 .wrapping_add(1442695040888963407);
             rng >> 33
         };
+        let (width, height) = galaxy.chart();
         let sectors = galaxy.sectors();
         let terrains = galaxy.terrains();
         let mut nodes: Vec<MapNode> = Vec::new();
-        let mut columns: Vec<Vec<usize>> = Vec::new();
-        let target = galaxy.systems();
-        let mut column = 0;
-        while nodes.len() < target {
-            let height = if column == 0 {
-                1
-            } else {
-                1 + (rand() % 3) as usize
-            };
-            let mut here = Vec::new();
+        let mut grid = vec![vec![None; width]; height];
+        for col in 0..width {
             for row in 0..height {
-                let kind = if column == 0 {
-                    NodeKind::Depot
+                // The rim column is solid so the run always has somewhere to
+                // start; everything past it is scattered.
+                let filled = col == 0 || rand() % 10 < 7;
+                if !filled {
+                    continue;
+                }
+                let region = Region::of_column(col, width);
+                let kind = if col == 0 {
+                    if row == height / 2 {
+                        NodeKind::Depot
+                    } else {
+                        NodeKind::Battle
+                    }
                 } else {
-                    match rand() % 12 {
-                        0 | 1 => NodeKind::Depot,
+                    match rand() % 24 {
+                        0..=1 => NodeKind::Depot,
                         2 => NodeKind::Derelict,
-                        3 | 4 => NodeKind::Elite,
-                        5 if column % 4 == 0 => NodeKind::Boss,
+                        3..=5 => NodeKind::Elite,
+                        6 if region >= Region::Reach => NodeKind::Capital,
+                        7 if region >= Region::Core => NodeKind::Capital,
+                        8 if region >= Region::Verge => NodeKind::Boss,
                         _ => NodeKind::Battle,
                     }
                 };
                 let sector = sectors[(rand() % sectors.len() as u64) as usize];
-                let terrain = terrains[(rand() % terrains.len() as u64) as usize];
+                let terrain = if kind == NodeKind::Capital {
+                    // A capital ship is fought over open plating or down a
+                    // trench, never in a cave.
+                    if rand() % 2 == 0 {
+                        TerrainKind::Trench
+                    } else {
+                        TerrainKind::Open
+                    }
+                } else {
+                    terrains[(rand() % terrains.len() as u64) as usize]
+                };
                 let bonus = match rand() % 4 {
-                    0 => NodeBonus::Cache(300 + 80 * column as u32),
+                    0 => NodeBonus::Cache(300 + 120 * col as u32),
                     1 => NodeBonus::Armoury(
                         Weapon::ALL[(rand() % Weapon::ALL.len() as u64) as usize],
                     ),
                     2 => NodeBonus::Refit,
                     _ => NodeBonus::Danger,
                 };
-                here.push(nodes.len());
+                grid[row][col] = Some(nodes.len());
                 nodes.push(MapNode {
-                    pos: (column, row),
+                    pos: (col, row),
+                    region,
                     kind,
                     sector,
                     terrain,
                     bonus,
                     cleared: false,
+                    explored: false,
                 });
             }
-            columns.push(here);
-            column += 1;
         }
         let mut lanes = vec![Vec::new(); nodes.len()];
-        for pair in columns.windows(2) {
-            let (near, far) = (&pair[0], &pair[1]);
-            for (i, &from) in near.iter().enumerate() {
-                // Every system reaches the one across from it, and one of its
-                // neighbours, so the chart branches and rejoins.
-                let straight = far[i.min(far.len() - 1)];
-                let sideways = far[(i + 1) % far.len()];
-                for to in [straight, sideways] {
-                    if !lanes[from].contains(&to) {
-                        lanes[from].push(to);
-                        lanes[to].push(from);
+        let mut link = |lanes: &mut Vec<Vec<usize>>, a: usize, b: usize| {
+            if a != b && !lanes[a].contains(&b) {
+                lanes[a].push(b);
+                lanes[b].push(a);
+            }
+        };
+        for row in 0..height {
+            for col in 0..width {
+                let Some(here) = grid[row][col] else {
+                    continue;
+                };
+                if col + 1 < width {
+                    // The lane ahead, or the nearest diagonal when the cell
+                    // straight on is empty space.
+                    for (dr, dc) in [(0i32, 1i32), (-1, 1), (1, 1)] {
+                        let r = row as i32 + dr;
+                        let c = col as i32 + dc;
+                        if r < 0 || r >= height as i32 || c >= width as i32 {
+                            continue;
+                        }
+                        if let Some(there) = grid[r as usize][c as usize] {
+                            link(&mut lanes, here, there);
+                            if dr == 0 {
+                                break;
+                            }
+                        }
+                    }
+                }
+                if row + 1 < height {
+                    if let Some(there) = grid[row + 1][col] {
+                        link(&mut lanes, here, there);
                     }
                 }
             }
         }
+        // A handful of hyperlanes, so the deep is not always a long haul.
+        for _ in 0..width / 2 {
+            let a = (rand() % nodes.len() as u64) as usize;
+            let b = (rand() % nodes.len() as u64) as usize;
+            let far = nodes[a].pos.0.abs_diff(nodes[b].pos.0);
+            if (3..=6).contains(&far) {
+                link(&mut lanes, a, b);
+            }
+        }
+        let start = grid[height / 2][0]
+            .or_else(|| (0..height).find_map(|r| grid[r][0]))
+            .unwrap_or(0);
         let mut map = StarMap {
             galaxy,
             nodes,
+            grid,
             lanes,
-            at: 0,
-            cursor: 0,
-            columns: columns.len(),
+            at: start,
+            cursor: start,
+            width,
+            height,
         };
-        map.nodes[0].cleared = true;
-        map.cursor = map.reachable().first().copied().unwrap_or(0);
+        map.nodes[start].cleared = true;
+        map.chart_surroundings();
+        map.cursor = map.reachable().first().copied().unwrap_or(start);
         map
+    }
+
+    /// Everything one lane out of the current system is on the chart now.
+    fn chart_surroundings(&mut self) {
+        self.nodes[self.at].explored = true;
+        for i in self.lanes[self.at].clone() {
+            self.nodes[i].explored = true;
+        }
     }
 
     /// The systems one lane away from where the squad is parked.
     pub fn reachable(&self) -> Vec<usize> {
         let mut lanes = self.lanes[self.at].clone();
-        lanes.sort_unstable();
+        lanes.sort_by_key(|&i| (self.nodes[i].pos.0, self.nodes[i].pos.1));
         lanes
     }
 
@@ -2140,12 +2323,36 @@ impl StarMap {
         self.cursor = lanes[next];
     }
 
+    /// Point the cursor at whichever reachable system lies that way.
+    pub fn steer(&mut self, dc: i32, dr: i32) {
+        let here = self.nodes[self.at].pos;
+        let best = self
+            .reachable()
+            .into_iter()
+            .filter(|&i| {
+                let there = self.nodes[i].pos;
+                let (dx, dy) = (
+                    there.0 as i32 - here.0 as i32,
+                    there.1 as i32 - here.1 as i32,
+                );
+                (dc != 0 && dx.signum() == dc) || (dr != 0 && dy.signum() == dr)
+            })
+            .min_by_key(|&i| {
+                let there = self.nodes[i].pos;
+                (there.0 as i32 - here.0 as i32).abs() + (there.1 as i32 - here.1 as i32).abs()
+            });
+        if let Some(next) = best {
+            self.cursor = next;
+        }
+    }
+
     /// Fly to the system under the cursor, if a lane runs to it.
     pub fn jump(&mut self) -> Option<MapNode> {
         if !self.lanes[self.at].contains(&self.cursor) {
             return None;
         }
         self.at = self.cursor;
+        self.chart_surroundings();
         let node = self.nodes[self.at];
         self.cursor = self.reachable().first().copied().unwrap_or(self.at);
         Some(node)
@@ -2158,6 +2365,291 @@ impl StarMap {
 
     pub fn here(&self) -> MapNode {
         self.nodes[self.at]
+    }
+
+    /// How much of the galaxy has been seen.
+    pub fn charted(&self) -> usize {
+        self.nodes.iter().filter(|n| n.explored).count()
+    }
+
+    /// How much of it has been cleared out.
+    pub fn cleared(&self) -> usize {
+        self.nodes.iter().filter(|n| n.cleared).count()
+    }
+}
+
+/// The class of capital ship holding a system.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CapitalKind {
+    /// A picket: short, lightly gunned, one dome.
+    Frigate,
+    /// The wedge: a long arrowhead bristling with batteries, its domes on the
+    /// tower and its bays feeding fighters into the court.
+    WedgeDestroyer,
+    /// A moon-sized plate of armour with a trench cut across it, and a port at
+    /// the bottom of the trench that ends it.
+    Battlestation,
+}
+
+impl CapitalKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            CapitalKind::Frigate => "frigate",
+            CapitalKind::WedgeDestroyer => "wedge destroyer",
+            CapitalKind::Battlestation => "battlestation",
+        }
+    }
+
+    /// Rows of hull, counted down from the anchor.
+    pub fn depth(self) -> i16 {
+        match self {
+            CapitalKind::Frigate => 3,
+            CapitalKind::WedgeDestroyer => 6,
+            CapitalKind::Battlestation => 8,
+        }
+    }
+
+    /// Half-width of the hull on a given row of it: the wedge tapers, the
+    /// station is a wall.
+    pub fn span(self, row: i16) -> i16 {
+        match self {
+            CapitalKind::Frigate => 9,
+            CapitalKind::WedgeDestroyer => 4 + row * 3,
+            CapitalKind::Battlestation => W / 2 - 2,
+        }
+    }
+
+    /// Hull points before the campaign scales it.
+    pub fn hull(self) -> i32 {
+        match self {
+            CapitalKind::Frigate => 120,
+            CapitalKind::WedgeDestroyer => 260,
+            CapitalKind::Battlestation => 400,
+        }
+    }
+}
+
+/// What a piece of a capital ship does.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Emplacement {
+    /// While one still stands the hull cannot be touched at all.
+    ShieldDome,
+    /// Heavy batteries: two shield pips a hit.
+    Turbolaser,
+    /// Launches fighters until it is knocked out.
+    HangarBay,
+    /// The command tower: without it the ship's guns are half as quick.
+    CommandTower,
+    /// The engines: without them the ship cannot hold station.
+    EngineBank,
+    /// Drags the hull toward the ship.
+    TractorBeam,
+    /// The weak point at the bottom of the trench. One hit through the shields
+    /// takes the whole ship.
+    ExhaustPort,
+}
+
+impl Emplacement {
+    pub fn name(self) -> &'static str {
+        match self {
+            Emplacement::ShieldDome => "shield dome",
+            Emplacement::Turbolaser => "turbolaser",
+            Emplacement::HangarBay => "hangar bay",
+            Emplacement::CommandTower => "command tower",
+            Emplacement::EngineBank => "engine bank",
+            Emplacement::TractorBeam => "tractor beam",
+            Emplacement::ExhaustPort => "exhaust port",
+        }
+    }
+
+    pub fn glyph(self) -> &'static str {
+        match self {
+            Emplacement::ShieldDome => "◓",
+            Emplacement::Turbolaser => "╪",
+            Emplacement::HangarBay => "⊓",
+            Emplacement::CommandTower => "♜",
+            Emplacement::EngineBank => "◙",
+            Emplacement::TractorBeam => "◈",
+            Emplacement::ExhaustPort => "◎",
+        }
+    }
+
+    pub fn hp(self) -> i32 {
+        match self {
+            Emplacement::ShieldDome => 26,
+            Emplacement::Turbolaser => 14,
+            Emplacement::HangarBay => 20,
+            Emplacement::CommandTower => 30,
+            Emplacement::EngineBank => 18,
+            Emplacement::TractorBeam => 16,
+            Emplacement::ExhaustPort => 6,
+        }
+    }
+
+    pub fn score(self) -> u32 {
+        match self {
+            Emplacement::ShieldDome => 400,
+            Emplacement::Turbolaser => 200,
+            Emplacement::HangarBay => 300,
+            Emplacement::CommandTower => 500,
+            Emplacement::EngineBank => 250,
+            Emplacement::TractorBeam => 350,
+            Emplacement::ExhaustPort => 1_000,
+        }
+    }
+}
+
+/// One emplacement bolted to a capital hull.
+#[derive(Clone, Debug)]
+pub struct CapitalPart {
+    pub kind: Emplacement,
+    /// Offset from the ship's anchor, as `(row, column)`.
+    pub offset: (i16, i16),
+    pub hp: i32,
+    pub max_hp: i32,
+    cooldown: u32,
+    /// Ticks this emplacement is still ion-scrambled for.
+    pub ion: u32,
+}
+
+impl CapitalPart {
+    fn new(kind: Emplacement, offset: (i16, i16), armour: i32) -> CapitalPart {
+        let hp = kind.hp() + armour * 4;
+        CapitalPart {
+            kind,
+            offset,
+            hp,
+            max_hp: hp,
+            cooldown: kind.hp() as u32 % 17 + 8,
+            ion: 0,
+        }
+    }
+
+    /// A scrambled emplacement does nothing at all until it comes back.
+    pub fn live(&self) -> bool {
+        self.ion == 0
+    }
+}
+
+/// A capital ship holding a system: a wall of hull, its emplacements, and the
+/// order they have to come apart in.
+#[derive(Clone, Debug)]
+pub struct Capital {
+    pub kind: CapitalKind,
+    /// Anchor: the top row of the hull and the column it is centred on.
+    pub pos: (i16, i16),
+    pub hp: i32,
+    pub max_hp: i32,
+    pub dir: i16,
+    pub parts: Vec<CapitalPart>,
+    tick: u32,
+}
+
+impl Capital {
+    pub fn new(kind: CapitalKind, armour: i32, hull_bonus: i32) -> Capital {
+        let hp = kind.hull() + hull_bonus;
+        let mut parts = Vec::new();
+        let mut fit = |kind, offset| parts.push(CapitalPart::new(kind, offset, armour));
+        match kind {
+            CapitalKind::Frigate => {
+                fit(Emplacement::ShieldDome, (1, 0));
+                fit(Emplacement::Turbolaser, (2, -6));
+                fit(Emplacement::Turbolaser, (2, 6));
+                fit(Emplacement::HangarBay, (2, 0));
+                fit(Emplacement::EngineBank, (0, -8));
+            }
+            CapitalKind::WedgeDestroyer => {
+                fit(Emplacement::CommandTower, (1, 0));
+                fit(Emplacement::ShieldDome, (1, -3));
+                fit(Emplacement::ShieldDome, (1, 3));
+                fit(Emplacement::Turbolaser, (3, -9));
+                fit(Emplacement::Turbolaser, (3, 9));
+                fit(Emplacement::Turbolaser, (5, -14));
+                fit(Emplacement::Turbolaser, (5, 14));
+                fit(Emplacement::HangarBay, (5, -5));
+                fit(Emplacement::HangarBay, (5, 5));
+                fit(Emplacement::TractorBeam, (4, 0));
+                fit(Emplacement::EngineBank, (0, -6));
+                fit(Emplacement::EngineBank, (0, 6));
+            }
+            CapitalKind::Battlestation => {
+                fit(Emplacement::ShieldDome, (1, -18));
+                fit(Emplacement::ShieldDome, (1, 18));
+                fit(Emplacement::ShieldDome, (2, -8));
+                fit(Emplacement::ShieldDome, (2, 8));
+                fit(Emplacement::Turbolaser, (4, -22));
+                fit(Emplacement::Turbolaser, (4, -13));
+                fit(Emplacement::Turbolaser, (4, 13));
+                fit(Emplacement::Turbolaser, (4, 22));
+                fit(Emplacement::HangarBay, (6, -17));
+                fit(Emplacement::HangarBay, (6, 17));
+                fit(Emplacement::TractorBeam, (6, 0));
+                // The port sits at the bottom of the trench, dead centre.
+                fit(Emplacement::ExhaustPort, (7, 0));
+            }
+        }
+        Capital {
+            kind,
+            pos: (0, W / 2),
+            hp,
+            max_hp: hp,
+            dir: 1,
+            parts,
+            tick: 0,
+        }
+    }
+
+    /// Emplacements of a kind that are still standing.
+    pub fn standing(&self, kind: Emplacement) -> usize {
+        self.parts
+            .iter()
+            .filter(|p| p.kind == kind && p.hp > 0)
+            .count()
+    }
+
+    /// While a dome is up and unscrambled, nothing reaches the hull.
+    pub fn shielded(&self) -> bool {
+        self.parts
+            .iter()
+            .any(|p| p.kind == Emplacement::ShieldDome && p.hp > 0 && p.live())
+    }
+
+    /// The absolute cell an emplacement sits in.
+    pub fn part_cell(&self, part: &CapitalPart) -> (i16, i16) {
+        (self.pos.0 + part.offset.0, self.pos.1 + part.offset.1)
+    }
+
+    /// Is this cell hull plating?
+    pub fn covers(&self, row: i16, col: i16) -> bool {
+        let dr = row - self.pos.0;
+        if !(0..self.kind.depth()).contains(&dr) {
+            return false;
+        }
+        (col - self.pos.1).abs() <= self.kind.span(dr)
+    }
+
+    /// Ticks between volleys; losing the tower slows the whole ship down.
+    fn cadence(&self) -> u32 {
+        let tower = self.standing(Emplacement::CommandTower) > 0
+            || !self
+                .parts
+                .iter()
+                .any(|p| p.kind == Emplacement::CommandTower);
+        let base = match self.kind {
+            CapitalKind::Frigate => 20,
+            CapitalKind::WedgeDestroyer => 16,
+            CapitalKind::Battlestation => 12,
+        };
+        if tower {
+            base
+        } else {
+            base * 2
+        }
+    }
+
+    /// It only holds station while an engine bank is left.
+    fn under_way(&self) -> bool {
+        self.standing(Emplacement::EngineBank) > 0
     }
 }
 
@@ -2247,6 +2739,8 @@ pub struct Game {
     pub status: Status,
     pub enemies: Vec<Enemy>,
     pub boss: Option<Boss>,
+    /// The capital ship holding this system, if one does.
+    pub capital: Option<Capital>,
     pub shots: Vec<Shot>,
     pub enemy_shots: Vec<Shot>,
     pub powerups: Vec<Powerup>,
@@ -2325,6 +2819,7 @@ impl Game {
             status: Status::Select,
             enemies: Vec::new(),
             boss: None,
+            capital: None,
             shots: Vec::new(),
             enemy_shots: Vec::new(),
             powerups: Vec::new(),
@@ -2339,11 +2834,13 @@ impl Game {
             map: StarMap::generate(Galaxy::Orion, seed),
             node: MapNode {
                 pos: (0, 0),
+                region: Region::Rim,
                 kind: NodeKind::Battle,
                 sector: Sector::of_wave(1),
                 terrain: TerrainKind::Open,
                 bonus: NodeBonus::Refit,
                 cleared: false,
+                explored: true,
             },
             banner: 0,
             flash: 0,
@@ -2403,11 +2900,13 @@ impl Game {
         self.map = StarMap::generate(galaxy, seed);
         self.node = MapNode {
             pos: (0, 0),
+            region: Region::Rim,
             kind: NodeKind::Battle,
             sector: self.galaxy.sectors()[0],
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Refit,
             cleared: false,
+            explored: true,
         };
         // The run opens parked at the rim, reading the chart.
         self.status = Status::Chart;
@@ -2567,6 +3066,7 @@ impl Game {
     pub fn spawn_wave(&mut self) {
         self.enemies.clear();
         self.boss = None;
+        self.capital = None;
         self.shots.clear();
         self.enemy_shots.clear();
         self.powerups.clear();
@@ -2582,6 +3082,27 @@ impl Game {
         self.dress_sector();
         self.dress_terrain();
         self.claim_node_bonus();
+        if self.node.kind == NodeKind::Capital {
+            // A trench means a battlestation; open plating means a wedge, and
+            // the rim only ever fields a picket.
+            let kind = if self.node.terrain == TerrainKind::Trench {
+                CapitalKind::Battlestation
+            } else if self.node.region >= Region::Reach {
+                CapitalKind::WedgeDestroyer
+            } else {
+                CapitalKind::Frigate
+            };
+            let armour = self.wave_armour();
+            let capital = Capital::new(kind, armour, 40 * self.wave as i32);
+            self.capital = Some(capital);
+            // A screen of fighters comes out with it.
+            for col in (0..COLS).step_by(3) {
+                let home = self.place((FORMATION_TOP + 9, BASE_X + col as i16 * ENEMY_GAP));
+                let escort = self.hatch(EnemyKind::Interceptor, home);
+                self.enemies.push(escort);
+            }
+            return;
+        }
         if self.node.kind == NodeKind::Boss {
             let kind = BossKind::of_wave(self.wave);
             let hp = 60 + 40 * (self.wave / BOSS_EVERY) as i32 + 20 * self.wave_armour();
@@ -2808,6 +3329,23 @@ impl Game {
             }
             Weapon::Arc => {
                 self.launch(Shot::arc((r, c), dmg + 1, level + 1));
+            }
+            Weapon::Torpedo => {
+                // Two in the tube, three once it is tuned.
+                let lanes: &[i16] = if level >= 3 { &[-3, 0, 3] } else { &[-3, 3] };
+                for &dx in lanes {
+                    self.launch(Shot::torpedo((r, c + dx), dmg * 4 + 6));
+                }
+            }
+            Weapon::Ion => {
+                let lanes: &[i16] = match level {
+                    1 => &[0],
+                    2 => &[-2, 2],
+                    _ => &[-2, 0, 2],
+                };
+                for &dx in lanes {
+                    self.launch(Shot::ion((r, c + dx), dmg));
+                }
             }
         }
         // The drones throw a plain bolt each, unless a surge has stunned them.
@@ -3144,6 +3682,12 @@ impl Game {
                             spawned.push(Shot::enemy(muzzle, drift, 1));
                         }
                     }
+                    // A fighter screen fires in pairs, spread a column apart.
+                    EnemyKind::Interceptor => {
+                        for drift in [-1, 1] {
+                            spawned.push(Shot::enemy(muzzle, drift, 1));
+                        }
+                    }
                     EnemyKind::Sniper => e.charge = SNIPER_CHARGE,
                     EnemyKind::Miner => mined.push(muzzle),
                     _ => spawned.push(Shot::enemy(muzzle, 0, 1)),
@@ -3286,6 +3830,145 @@ impl Game {
         self.boss = Some(boss);
     }
 
+    /// Work the capital ship: hold station, run the batteries, launch fighters
+    /// out of the bays and drag the hull in on the tractor beam.
+    fn advance_capital(&mut self) {
+        let Some(mut cap) = self.capital.take() else {
+            return;
+        };
+        cap.tick = cap.tick.wrapping_add(1);
+        for part in cap.parts.iter_mut() {
+            part.ion = part.ion.saturating_sub(1);
+        }
+        // It creeps across the top of the court while its engines hold.
+        if cap.under_way() && cap.tick.is_multiple_of(6) {
+            let span = cap.kind.span(cap.kind.depth() - 1);
+            let next = cap.pos.1 + cap.dir;
+            if (span + 1..W - span - 1).contains(&next) {
+                cap.pos.1 = next;
+            } else {
+                cap.dir = -cap.dir;
+            }
+        }
+        let ship = self.ship;
+        let cadence = cap.cadence();
+        let mut volley: Vec<Shot> = Vec::new();
+        let mut launches: Vec<(i16, i16)> = Vec::new();
+        let mut pull = 0;
+        for part in cap.parts.iter_mut() {
+            if part.hp <= 0 || !part.live() {
+                continue;
+            }
+            let (row, col) = (cap.pos.0 + part.offset.0, cap.pos.1 + part.offset.1);
+            match part.kind {
+                Emplacement::Turbolaser => {
+                    if part.cooldown > 0 {
+                        part.cooldown -= 1;
+                    } else {
+                        part.cooldown = cadence;
+                        // Heavy batteries lead the hull and hit for two pips.
+                        let aim = (ship.1 - col).signum();
+                        volley.push(Shot::enemy((row + 1, col), aim, 1).heavy());
+                        volley.push(Shot::enemy((row + 1, col), 0, 2).heavy());
+                    }
+                }
+                Emplacement::HangarBay => {
+                    if part.cooldown > 0 {
+                        part.cooldown -= 1;
+                    } else {
+                        part.cooldown = cadence * 4;
+                        launches.push((row + 1, col));
+                    }
+                }
+                Emplacement::TractorBeam => {
+                    if cap.tick.is_multiple_of(3) {
+                        pull += (col - ship.1).signum();
+                    }
+                }
+                _ => {}
+            }
+        }
+        for shot in volley {
+            self.launch_enemy(shot);
+        }
+        for (row, col) in launches {
+            for dx in [-2, 2] {
+                let home = (row.min(H - 2), (col + dx).clamp(1, W - 2));
+                let mut fighter = self.hatch(EnemyKind::Interceptor, home);
+                fighter.state = EnemyState::Diving { target_x: ship.1 };
+                self.enemies.push(fighter);
+            }
+        }
+        if pull != 0 {
+            let (left, right) = self.terrain.channel(self.ship.0);
+            self.ship.1 = (self.ship.1 + pull).clamp(left.max(1), right.min(W - 2));
+        }
+        self.capital = Some(cap);
+    }
+
+    /// Put a shot into a capital ship. Emplacements take it first; the hull is
+    /// untouchable while a dome is up, and a hit on an open exhaust port takes
+    /// the whole ship with it.
+    fn hit_capital(&mut self, shot: &Shot) -> bool {
+        let Some(mut cap) = self.capital.take() else {
+            return false;
+        };
+        let (r, c) = shot.pos;
+        let mut struck = false;
+        let mut spoils: Vec<Emplacement> = Vec::new();
+        let mut scuttled = false;
+        let mut shaken = false;
+        let shielded = cap.shielded();
+        let reach = 1 + shot.half_width.max(shot.splash);
+        for part in cap.parts.iter_mut() {
+            if part.hp <= 0 {
+                continue;
+            }
+            let (row, col) = (cap.pos.0 + part.offset.0, cap.pos.1 + part.offset.1);
+            if (r - row).abs() > shot.splash || (c - col).abs() > reach {
+                continue;
+            }
+            struck = true;
+            if shot.ion {
+                // An ion bolt scrambles rather than breaks: a dome that is out
+                // is a hull that can be hit.
+                part.ion = part.ion.max(ION_STUN);
+                continue;
+            }
+            if part.kind == Emplacement::ExhaustPort && shielded {
+                // The shaft is inside the envelope: the blast shakes the ship
+                // but the port itself is untouched while the domes hold.
+                shaken = true;
+                continue;
+            }
+            part.hp -= shot.damage;
+            if part.hp <= 0 {
+                spoils.push(part.kind);
+                if part.kind == Emplacement::ExhaustPort {
+                    scuttled = true;
+                }
+            }
+        }
+        if !struck && cap.covers(r, c) {
+            struck = true;
+            if !shielded && !shot.ion {
+                cap.hp -= shot.damage;
+            }
+        }
+        if scuttled {
+            // Straight down the shaft: the whole ship goes up.
+            cap.hp = 0;
+        } else if shaken {
+            // The shields held the blast in, but it was felt.
+            cap.hp -= cap.max_hp / 8;
+        }
+        self.capital = Some(cap);
+        for kind in spoils {
+            self.award(kind.score());
+        }
+        struck
+    }
+
     /// Column a homing missile should slide toward: the nearest enemy, or the
     /// boss when the formation is gone.
     fn steer(&self, shot: &Shot) -> i16 {
@@ -3352,6 +4035,9 @@ impl Game {
     fn hit_targets(&mut self, shot: &Shot) -> bool {
         let (r, c) = shot.pos;
         let mut hit = self.hit_boss(shot);
+        if self.hit_capital(shot) {
+            hit = true;
+        }
         if self.hit_debris((r, c), shot.damage) {
             hit = true;
         }
@@ -3684,7 +4370,17 @@ impl Game {
             self.status = Status::Lost;
             return;
         }
-        if self.enemies.is_empty() && self.boss.is_none() && self.status == Status::Playing {
+        if self.capital.as_ref().is_some_and(|c| c.hp <= 0) {
+            let bounty = 2_000 + 400 * self.wave;
+            self.capital = None;
+            self.add_score(bounty);
+            self.gain_xp(bounty / 4);
+        }
+        if self.enemies.is_empty()
+            && self.boss.is_none()
+            && self.capital.is_none()
+            && self.status == Status::Playing
+        {
             self.status = Status::WaveClear;
             self.intermission = INTERMISSION_TICKS;
             self.map.clear_here();
@@ -4221,6 +4917,13 @@ impl Game {
         }
     }
 
+    /// Point the chart cursor at whichever system lies that way.
+    pub fn steer_chart(&mut self, dc: i32, dr: i32) {
+        if self.status == Status::Chart {
+            self.map.steer(dc, dr);
+        }
+    }
+
     /// Fly the lane to the system under the cursor. A fight starts the next
     /// wave; a depot or a derelict is worked over and parks the squad again.
     pub fn jump(&mut self) -> bool {
@@ -4297,6 +5000,7 @@ impl Game {
                 self.sway();
                 self.advance_enemies();
                 self.advance_boss();
+                self.advance_capital();
                 self.advance_wings();
                 self.advance_shots();
                 self.advance_enemy_shots();
@@ -4504,8 +5208,10 @@ impl Nova {
             ox,
             area.y + 1,
             &format!(
-                "{} systems · {} · lanes run both ways, so a depot can be flown back to",
+                "{} systems · {} charted · {} cleared · {} — lanes run both ways",
                 map.nodes.len(),
+                map.charted(),
+                map.cleared(),
                 g.galaxy.blurb()
             ),
             dim,
@@ -4513,40 +5219,42 @@ impl Nova {
         surface.set_string(
             ox,
             area.y + 2,
-            "◇ battle   ◆ elite   ☠ boss   ⌂ depot   ⌗ derelict",
+            "◇ battle  ◆ elite  ☠ boss  ▰ capital  ⌂ depot  ⌗ derelict  ? uncharted",
             dim,
         );
         let reachable = map.reachable();
-        // The lanes first, so the systems sit on top of them.
+        // Lanes first, so the systems sit on top of them.
         for (from, lanes) in map.lanes.iter().enumerate() {
+            if !map.nodes[from].explored {
+                continue;
+            }
             let a = map.nodes[from].pos;
             for &to in lanes {
                 let b = map.nodes[to].pos;
-                if b.0 <= a.0 {
+                if !map.nodes[to].explored || (b.0, b.1) <= (a.0, a.1) {
                     continue;
                 }
-                let x = ox + (a.0 as u16) * 7 + 4;
-                let y = oy + (a.1 as u16) * 3;
-                let step = if b.1 > a.1 {
-                    "╲"
-                } else if b.1 < a.1 {
-                    "╱"
-                } else {
+                let glyph = if b.1 == a.1 {
                     "─"
+                } else if b.1 > a.1 {
+                    "╲"
+                } else {
+                    "╱"
                 };
-                for i in 0..3u16 {
-                    let dy = match step {
-                        "╲" => i / 2,
-                        "╱" => 0,
-                        _ => 0,
-                    };
-                    surface.set_string(x + i, y + dy, step, dim);
+                if b.0 > a.0 {
+                    let x = ox + (a.0 as u16) * 4 + 3;
+                    let y = oy + (a.1 as u16) * 2;
+                    surface.set_string(x, y, glyph, dim);
+                } else {
+                    let x = ox + (a.0 as u16) * 4 + 1;
+                    let y = oy + (a.1 as u16) * 2 + 1;
+                    surface.set_string(x, y, "│", dim);
                 }
             }
         }
         for (i, node) in map.nodes.iter().enumerate() {
-            let x = ox + (node.pos.0 as u16) * 7;
-            let y = oy + (node.pos.1 as u16) * 3;
+            let x = ox + (node.pos.0 as u16) * 4;
+            let y = oy + (node.pos.1 as u16) * 2;
             let style = if i == map.at {
                 mark
             } else if i == map.cursor {
@@ -4556,20 +5264,24 @@ impl Nova {
             } else {
                 dim
             };
-            let frame = if i == map.cursor {
-                format!("[{}]", node.kind.glyph())
-            } else if i == map.at {
-                format!("<{}>", node.kind.glyph())
+            let glyph = if node.explored {
+                node.kind.glyph()
             } else {
-                format!(" {} ", node.kind.glyph())
+                "?"
+            };
+            let frame = if i == map.cursor {
+                format!("[{glyph}]")
+            } else if i == map.at {
+                format!("<{glyph}>")
+            } else if node.cleared {
+                format!(" {glyph}·")
+            } else {
+                format!(" {glyph} ")
             };
             surface.set_string(x, y, &frame, style);
-            if node.cleared {
-                surface.set_string(x + 3, y, "·", dim);
-            }
         }
         let cursor = map.nodes[map.cursor];
-        let footer = oy + 3 * 4 + 2;
+        let footer = oy + (map.height as u16) * 2 + 1;
         surface.set_string(ox, footer, &format!("Target: {}", cursor.label()), header);
         surface.set_string(
             ox,
@@ -4584,7 +5296,7 @@ impl Nova {
         surface.set_string(
             ox,
             footer + 3,
-            "←/→ pick a lane · Enter jump · n new run · q quit",
+            "←/→/↑/↓ pick a lane · Enter jump · n new run · q quit",
             text,
         );
     }
@@ -4764,8 +5476,11 @@ impl Component for Nova {
                 }
             }
             Status::Chart => match key {
-                key!(Left) | key!('h') | key!(Up) | key!('k') => self.game.move_cursor(-1),
-                key!(Right) | key!('l') | key!(Down) | key!('j') => self.game.move_cursor(1),
+                key!(Left) | key!('h') => self.game.steer_chart(-1, 0),
+                key!(Right) | key!('l') => self.game.steer_chart(1, 0),
+                key!(Up) | key!('k') => self.game.steer_chart(0, -1),
+                key!(Down) | key!('j') => self.game.steer_chart(0, 1),
+                key!(Tab) => self.game.move_cursor(1),
                 key!(Enter) | key!(' ') => {
                     self.game.jump();
                 }
@@ -4973,46 +5688,72 @@ impl Component for Nova {
         );
         // The boss bar takes the fourth line while a boss is up; otherwise the
         // pilot's progress does.
-        match &g.boss {
-            Some(boss) => {
-                let width = 24i32;
-                let filled = (boss.hp.max(0) * width / boss.max_hp.max(1)) as usize;
-                surface.set_string(
-                    ox,
-                    area.y + 3,
-                    &format!(
-                        "{} {}{}  phase {}{}",
-                        boss.kind.name().to_uppercase(),
-                        "▰".repeat(filled),
-                        "▱".repeat(width as usize - filled),
-                        boss.phase(),
-                        match boss.parts.len() {
-                            0 => String::new(),
-                            n => format!("  parts {n}"),
-                        }
-                    ),
-                    boss_style,
-                );
-            }
-            None => {
-                let bar = (g.xp * 10 / g.xp_next.max(1)).min(10) as usize;
-                surface.set_string(
-                    ox,
-                    area.y + 3,
-                    &format!(
-                        "LVL {}  XP {}{}  SALVAGE {}   E{} R{} P{} C{} M{}",
-                        g.level,
-                        "▰".repeat(bar),
-                        "▱".repeat(10 - bar),
-                        g.credits,
-                        g.loadout.tier(Part::Engine),
-                        g.loadout.tier(Part::Reactor),
-                        g.loadout.tier(Part::Plating),
-                        g.loadout.tier(Part::Cannon),
-                        g.loadout.tier(Part::Magazine)
-                    ),
-                    text_style,
-                );
+        if let Some(cap) = &g.capital {
+            let width = 20i32;
+            let filled = (cap.hp.max(0) * width / cap.max_hp.max(1)) as usize;
+            surface.set_string(
+                ox,
+                area.y + 3,
+                &format!(
+                    "{} {}{}  domes {}  batteries {}  bays {}  {}",
+                    cap.kind.name().to_uppercase(),
+                    "▰".repeat(filled),
+                    "▱".repeat(width as usize - filled),
+                    cap.standing(Emplacement::ShieldDome),
+                    cap.standing(Emplacement::Turbolaser),
+                    cap.standing(Emplacement::HangarBay),
+                    if cap.shielded() {
+                        "SHIELDED"
+                    } else if cap.standing(Emplacement::ExhaustPort) > 0 {
+                        "PORT OPEN"
+                    } else {
+                        "HULL EXPOSED"
+                    }
+                ),
+                boss_style,
+            );
+        } else {
+            match &g.boss {
+                Some(boss) => {
+                    let width = 24i32;
+                    let filled = (boss.hp.max(0) * width / boss.max_hp.max(1)) as usize;
+                    surface.set_string(
+                        ox,
+                        area.y + 3,
+                        &format!(
+                            "{} {}{}  phase {}{}",
+                            boss.kind.name().to_uppercase(),
+                            "▰".repeat(filled),
+                            "▱".repeat(width as usize - filled),
+                            boss.phase(),
+                            match boss.parts.len() {
+                                0 => String::new(),
+                                n => format!("  parts {n}"),
+                            }
+                        ),
+                        boss_style,
+                    );
+                }
+                None => {
+                    let bar = (g.xp * 10 / g.xp_next.max(1)).min(10) as usize;
+                    surface.set_string(
+                        ox,
+                        area.y + 3,
+                        &format!(
+                            "LVL {}  XP {}{}  SALVAGE {}   E{} R{} P{} C{} M{}",
+                            g.level,
+                            "▰".repeat(bar),
+                            "▱".repeat(10 - bar),
+                            g.credits,
+                            g.loadout.tier(Part::Engine),
+                            g.loadout.tier(Part::Reactor),
+                            g.loadout.tier(Part::Plating),
+                            g.loadout.tier(Part::Cannon),
+                            g.loadout.tier(Part::Magazine)
+                        ),
+                        text_style,
+                    );
+                }
             }
         }
 
@@ -5088,6 +5829,53 @@ impl Component for Nova {
                         }
                     }
                 }
+            }
+        }
+        // The capital ship: plating first, then everything bolted to it.
+        if let Some(cap) = &g.capital {
+            let shielded = cap.shielded();
+            for dr in 0..cap.kind.depth() {
+                let span = cap.kind.span(dr);
+                for dc in -span..=span {
+                    let (r, c) = (cap.pos.0 + dr, cap.pos.1 + dc);
+                    if !on_board(r, c) {
+                        continue;
+                    }
+                    let (x, y) = cell(r, c);
+                    let edge = dc.abs() == span || dr == cap.kind.depth() - 1;
+                    let glyph = if edge { "▛" } else { "▓" };
+                    surface.set_string(x, y, glyph, boss_style);
+                }
+            }
+            if shielded {
+                // The shield envelope, one row proud of the hull.
+                let span = cap.kind.span(cap.kind.depth() - 1) + 1;
+                let row = cap.pos.0 + cap.kind.depth();
+                for dc in -span..=span {
+                    let (r, c) = (row, cap.pos.1 + dc);
+                    if on_board(r, c) && (dc + g.tick as i16 / 2) % 3 == 0 {
+                        let (x, y) = cell(r, c);
+                        surface.set_string(x, y, "˷", beam_style);
+                    }
+                }
+            }
+            for part in &cap.parts {
+                if part.hp <= 0 {
+                    continue;
+                }
+                let (r, c) = cap.part_cell(part);
+                if !on_board(r, c) {
+                    continue;
+                }
+                let (x, y) = cell(r, c);
+                let style = if !part.live() {
+                    hazard_style
+                } else if part.kind == Emplacement::ExhaustPort && !shielded {
+                    beam_style
+                } else {
+                    part_style
+                };
+                surface.set_string(x, y, part.kind.glyph(), style);
             }
         }
         // The boss hull and its parts.
@@ -5246,11 +6034,13 @@ mod tests {
         g.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Orion);
         g.node = MapNode {
             pos: (0, 0),
+            region: Region::Rim,
             kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Refit,
             cleared: false,
+            explored: true,
         };
         g.status = Status::Playing;
         g.spawn_wave();
@@ -6108,11 +6898,13 @@ mod map_tests {
         g.start(ShipClass::Cruiser, Difficulty::Normal, Galaxy::Orion);
         g.node = MapNode {
             pos: (0, 0),
+            region: Region::Rim,
             kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: kind,
             bonus: NodeBonus::Refit,
             cleared: false,
+            explored: true,
         };
         g.status = Status::Playing;
         g.terrain = Terrain::new(kind, 11);
@@ -6315,11 +7107,13 @@ mod map_tests {
         g.credits = 0;
         g.node = MapNode {
             pos: (0, 0),
+            region: Region::Rim,
             kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Cache(750),
             cleared: false,
+            explored: true,
         };
         g.spawn_wave();
         assert_eq!(g.credits, 750, "the cache is banked when the wave starts");
@@ -6332,11 +7126,13 @@ mod map_tests {
         g.weapon_level = 1;
         g.node = MapNode {
             pos: (0, 0),
+            region: Region::Rim,
             kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Armoury(Weapon::Plasma),
             cleared: false,
+            explored: true,
         };
         g.spawn_wave();
         assert_eq!(g.weapon, Weapon::Plasma, "the crate is fitted");
@@ -6368,11 +7164,13 @@ mod map_tests {
         g.wave = 2;
         g.node = MapNode {
             pos: (0, 0),
+            region: Region::Rim,
             kind: NodeKind::Battle,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Tunnel,
             bonus: NodeBonus::Refit,
             cleared: false,
+            explored: true,
         };
         g.spawn_wave();
         assert!(!g.enemies.is_empty());
@@ -6590,11 +7388,13 @@ mod terrain_kind_tests {
             let mut g = flying();
             g.node = MapNode {
                 pos: (0, 0),
+                region: Region::Rim,
                 kind: NodeKind::Battle,
                 sector,
                 terrain: TerrainKind::Open,
                 bonus: NodeBonus::Refit,
                 cleared: false,
+                explored: true,
             };
             g.spawn_wave();
             g
@@ -6646,11 +7446,13 @@ mod terrain_kind_tests {
                 g.status = Status::Playing;
                 g.node = MapNode {
                     pos: (0, 0),
+                    region: Region::Rim,
                     kind: NodeKind::Battle,
                     sector,
                     terrain,
                     bonus: NodeBonus::Refit,
                     cleared: false,
+                    explored: true,
                 };
                 g.spawn_wave();
                 for i in 0..300 {
@@ -6826,7 +7628,7 @@ mod galaxy_tests {
         for galaxy in Galaxy::ALL {
             let map = StarMap::generate(galaxy, 7);
             assert!(
-                map.nodes.len() >= galaxy.systems(),
+                map.nodes.len() >= galaxy.systems() * 8 / 10,
                 "{} fills its chart",
                 galaxy.name()
             );
@@ -6841,8 +7643,8 @@ mod galaxy_tests {
                     galaxy.name()
                 );
                 assert!(
-                    galaxy.terrains().contains(&node.terrain),
-                    "{} only fields its own rock",
+                    galaxy.terrains().contains(&node.terrain) || node.kind == NodeKind::Capital,
+                    "{} only fields its own rock outside a capital system",
                     galaxy.name()
                 );
             }
@@ -6886,11 +7688,13 @@ mod galaxy_tests {
         g.squad[1].alive = false;
         let depot = MapNode {
             pos: (1, 0),
+            region: Region::Rim,
             kind: NodeKind::Depot,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Refit,
             cleared: false,
+            explored: true,
         };
         let at = g.map.reachable()[0];
         g.map.nodes[at] = depot;
@@ -6908,11 +7712,13 @@ mod galaxy_tests {
         g.credits = 0;
         let hulk = MapNode {
             pos: (1, 0),
+            region: Region::Rim,
             kind: NodeKind::Derelict,
             sector: Sector::OpenSpace,
             terrain: TerrainKind::Open,
             bonus: NodeBonus::Armoury(Weapon::Rail),
             cleared: false,
+            explored: true,
         };
         let at = g.map.reachable()[0];
         g.map.nodes[at] = hulk;
@@ -6985,6 +7791,308 @@ mod galaxy_tests {
                     }
                 }
                 assert!(g.active < g.squad.len(), "the squad index stays sane");
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod capital_tests {
+    use super::tests::flying;
+    use super::*;
+
+    /// A court with a capital ship in it, and nothing else.
+    fn against(kind: CapitalKind) -> Game {
+        let mut g = flying();
+        g.node.kind = NodeKind::Capital;
+        g.capital = Some(Capital::new(kind, 0, 0));
+        g.enemies.clear();
+        g
+    }
+
+    fn cell_of(g: &Game, kind: Emplacement) -> (i16, i16) {
+        let cap = g.capital.as_ref().expect("a capital is in the system");
+        let part = cap
+            .parts
+            .iter()
+            .find(|p| p.kind == kind && p.hp > 0)
+            .unwrap_or_else(|| panic!("the ship carries a {}", kind.name()));
+        cap.part_cell(part)
+    }
+
+    #[test]
+    fn a_capital_system_fields_a_capital_and_its_fighter_screen() {
+        let mut g = flying();
+        g.node.kind = NodeKind::Capital;
+        g.node.terrain = TerrainKind::Trench;
+        g.spawn_wave();
+        let cap = g
+            .capital
+            .as_ref()
+            .expect("the station is holding the system");
+        assert_eq!(
+            cap.kind,
+            CapitalKind::Battlestation,
+            "a trench means a station"
+        );
+        assert!(
+            g.enemies.iter().all(|e| e.kind == EnemyKind::Interceptor),
+            "with a screen of fighters out in front of it"
+        );
+        g.node.terrain = TerrainKind::Open;
+        g.node.region = Region::Core;
+        g.spawn_wave();
+        assert_eq!(
+            g.capital.as_ref().unwrap().kind,
+            CapitalKind::WedgeDestroyer,
+            "the core fields wedges"
+        );
+    }
+
+    #[test]
+    fn the_hull_cannot_be_touched_while_a_dome_stands() {
+        let mut g = against(CapitalKind::WedgeDestroyer);
+        let hull = {
+            let cap = g.capital.as_ref().unwrap();
+            (cap.pos.0 + cap.kind.depth() - 1, cap.pos.1 + 12)
+        };
+        let before = g.capital.as_ref().unwrap().hp;
+        assert!(
+            g.hit_capital(&Shot::bolt(hull, 0, 20)),
+            "the plating is hit"
+        );
+        assert_eq!(
+            g.capital.as_ref().unwrap().hp,
+            before,
+            "but the shields hold it out"
+        );
+        for part in g.capital.as_mut().unwrap().parts.iter_mut() {
+            if part.kind == Emplacement::ShieldDome {
+                part.hp = 0;
+            }
+        }
+        assert!(
+            !g.capital.as_ref().unwrap().shielded(),
+            "the domes are down"
+        );
+        g.hit_capital(&Shot::bolt(hull, 0, 20));
+        assert!(
+            g.capital.as_ref().unwrap().hp < before,
+            "and now the hull takes it"
+        );
+    }
+
+    #[test]
+    fn an_ion_bolt_scrambles_a_dome_instead_of_breaking_it() {
+        let mut g = against(CapitalKind::WedgeDestroyer);
+        let dome = cell_of(&g, Emplacement::ShieldDome);
+        let hp = g.capital.as_ref().unwrap().parts[1].hp;
+        g.hit_capital(&Shot::ion(dome, 3));
+        let cap = g.capital.as_ref().unwrap();
+        let part = cap
+            .parts
+            .iter()
+            .find(|p| p.kind == Emplacement::ShieldDome)
+            .unwrap();
+        assert_eq!(part.hp, hp, "the dome is not broken");
+        assert!(part.ion > 0, "it is scrambled");
+        assert!(!part.live(), "and offline while it is");
+    }
+
+    #[test]
+    fn a_run_down_the_trench_ends_the_station() {
+        let mut g = against(CapitalKind::Battlestation);
+        let port = cell_of(&g, Emplacement::ExhaustPort);
+        let full = g.capital.as_ref().unwrap().hp;
+        g.hit_capital(&Shot::torpedo(port, 30));
+        assert!(
+            g.capital.as_ref().unwrap().hp > 0,
+            "shielded, the blast is contained"
+        );
+        assert!(
+            g.capital.as_ref().unwrap().hp < full,
+            "though it still shakes the station"
+        );
+        for part in g.capital.as_mut().unwrap().parts.iter_mut() {
+            if part.kind == Emplacement::ShieldDome {
+                part.hp = 0;
+            }
+        }
+        let port = cell_of(&g, Emplacement::ExhaustPort);
+        g.hit_capital(&Shot::torpedo(port, 30));
+        assert!(
+            g.capital.as_ref().unwrap().hp <= 0,
+            "with the shields down the port takes the whole station"
+        );
+        g.check_end();
+        assert!(g.capital.is_none(), "and it is gone");
+        assert_eq!(g.status, Status::WaveClear, "the system is clear");
+        assert!(g.score >= 2_000, "the bounty is paid");
+    }
+
+    #[test]
+    fn the_batteries_fire_heavy_and_the_bays_launch_fighters() {
+        let mut g = against(CapitalKind::WedgeDestroyer);
+        for part in g.capital.as_mut().unwrap().parts.iter_mut() {
+            part.cooldown = 0;
+        }
+        g.advance_capital();
+        assert!(!g.enemy_shots.is_empty(), "the batteries open up");
+        assert!(
+            g.enemy_shots.iter().any(|s| s.damage >= 2),
+            "and they hit for two pips"
+        );
+        assert!(
+            g.enemies.iter().any(|e| e.kind == EnemyKind::Interceptor),
+            "the bays put fighters in the air"
+        );
+    }
+
+    #[test]
+    fn a_tractor_beam_drags_the_hull_in() {
+        let mut g = against(CapitalKind::WedgeDestroyer);
+        {
+            let cap = g.capital.as_mut().unwrap();
+            cap.pos.1 = W - 12;
+            cap.tick = 2;
+            for part in cap.parts.iter_mut() {
+                // Silence everything but the beam so only the pull moves us.
+                if part.kind != Emplacement::TractorBeam {
+                    part.hp = 0;
+                }
+            }
+        }
+        g.ship.1 = 10;
+        g.advance_capital();
+        assert_eq!(g.ship.1, 11, "the beam walks the hull toward the ship");
+    }
+
+    #[test]
+    fn losing_the_engines_pins_the_ship_and_losing_the_tower_slows_its_guns() {
+        let mut g = against(CapitalKind::WedgeDestroyer);
+        {
+            let cap = g.capital.as_mut().unwrap();
+            cap.tick = 5;
+            cap.pos.1 = W / 2;
+        }
+        g.advance_capital();
+        let moved = g.capital.as_ref().unwrap().pos.1;
+        assert_ne!(moved, W / 2, "under way it holds station across the court");
+        let quick = g.capital.as_ref().unwrap().cadence();
+        for part in g.capital.as_mut().unwrap().parts.iter_mut() {
+            if matches!(
+                part.kind,
+                Emplacement::EngineBank | Emplacement::CommandTower
+            ) {
+                part.hp = 0;
+            }
+        }
+        assert!(
+            g.capital.as_ref().unwrap().cadence() > quick,
+            "a headless ship is half as quick on the trigger"
+        );
+        let pinned = g.capital.as_ref().unwrap().pos.1;
+        for _ in 0..12 {
+            g.advance_capital();
+        }
+        assert_eq!(
+            g.capital.as_ref().unwrap().pos.1,
+            pinned,
+            "and with its engines gone it cannot move at all"
+        );
+    }
+
+    #[test]
+    fn torpedoes_and_ion_bolts_are_in_the_racks() {
+        let mut g = flying();
+        for weapon in [Weapon::Torpedo, Weapon::Ion] {
+            g.weapon = weapon;
+            g.weapon_level = 1;
+            g.fire_cooldown = 0;
+            g.shots.clear();
+            g.fire();
+            assert!(!g.shots.is_empty(), "{} fires", weapon.name());
+        }
+        g.weapon = Weapon::Torpedo;
+        let slow = g.cadence();
+        g.weapon = Weapon::Vulcan;
+        assert!(slow > g.cadence(), "a torpedo tube is slow to reload");
+        g.weapon = Weapon::Torpedo;
+        g.fire_cooldown = 0;
+        g.shots.clear();
+        g.fire();
+        assert!(g.shots.iter().all(|s| s.homing), "torpedoes track");
+        assert!(g.shots.iter().all(|s| s.splash > 0), "and blast on impact");
+    }
+
+    #[test]
+    fn a_trench_is_one_lane_between_two_walls() {
+        let trench = Terrain::new(TerrainKind::Trench, 5);
+        let (left, right) = trench.channel(4);
+        assert!(left > 1, "armour to port");
+        assert!(right < W - 2, "armour to starboard");
+        assert!(right - left <= 24, "and only a lane between them");
+    }
+
+    #[test]
+    fn the_chart_is_a_grid_that_can_be_roamed_and_charts_itself() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        let charted = g.map.charted();
+        assert!(charted < g.map.nodes.len(), "most of the galaxy is dark");
+        assert!(g.map.nodes.len() >= 60, "and it is a big galaxy");
+        let start = g.map.at;
+        g.steer_chart(1, 0);
+        assert!(
+            g.map.nodes[g.map.cursor].pos.0 >= g.map.nodes[start].pos.0,
+            "steering right looks deeper in"
+        );
+        assert!(g.jump(), "the lane is flown");
+        assert!(
+            g.map.charted() > charted,
+            "and arriving lights up the neighbours"
+        );
+    }
+
+    #[test]
+    fn regions_get_meaner_the_deeper_in_they_are() {
+        assert!(
+            Region::Deep > Region::Rim,
+            "the deep is deeper than the rim"
+        );
+        assert!(
+            Region::Deep.armour() > Region::Rim.armour(),
+            "and everything out there is armoured"
+        );
+        assert_eq!(Region::of_column(0, 10), Region::Rim);
+        assert_eq!(Region::of_column(9, 10), Region::Deep);
+    }
+
+    #[test]
+    fn a_capital_fight_plays_out_without_panicking() {
+        for kind in [
+            CapitalKind::Frigate,
+            CapitalKind::WedgeDestroyer,
+            CapitalKind::Battlestation,
+        ] {
+            let mut g = against(kind);
+            g.weapon = Weapon::Torpedo;
+            for i in 0..2_000 {
+                if g.status != Status::Playing {
+                    break;
+                }
+                if i % 4 == 0 {
+                    g.fire();
+                }
+                if i % 37 == 0 {
+                    g.fire_missiles();
+                }
+                g.move_ship(if i % 9 < 4 { 1 } else { -1 }, 0);
+                g.step();
+                assert!(
+                    (1..W - 1).contains(&g.ship.1),
+                    "the hull stays on the court"
+                );
             }
         }
     }
