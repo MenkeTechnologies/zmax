@@ -1279,7 +1279,7 @@ impl Prompt {
     /// A `<BS>` that arrives with a digraph already armed cancels it and deletes
     /// normally — `take()` clears the arming and the `is_none()` fails — which is
     /// how `:h digraphs-use` says to recover from an unwanted one ("you will have
-    /// to type <BS> e again").
+    /// to type `<BS>` e again").
     fn arm_digraph(&mut self) -> bool {
         if self.digraph_pending.take().is_some()
             || !crate::commands::typed::vim_opt_bool("digraph")
