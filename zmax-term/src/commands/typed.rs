@@ -2407,7 +2407,10 @@ fn with_compilation<R>(f: impl FnOnce(&mut zmax_core::compilation::CompilationLi
 /// `SPC m t b`, `SPC p T` and every `:compile`-backed build come through here.
 /// [`run_compile_capture`] is the synchronous twin, kept for vim `:make`, which
 /// has to jump to the first error the moment it returns.
-pub(crate) fn run_compile_command(cx: &mut compositor::Context, command: &str) -> anyhow::Result<()> {
+pub(crate) fn run_compile_command(
+    cx: &mut compositor::Context,
+    command: &str,
+) -> anyhow::Result<()> {
     sandbox_check("shell command")?;
     let command = command.trim().to_string();
     if command.is_empty() {
@@ -2886,9 +2889,6 @@ const PROJECTILE_TEST_TYPES: &[(&str, &[&str], &str, &str)] = &[
     ("dotnet", &["*.fsproj"], "", "dotnet test"),
     ("haskell-cabal", &["*.cabal"], "", "cabal test"),
 ];
-
-
-
 
 /// The dotted namespace/class a JVM- or Lisp-style runner names a file by:
 /// the path under the project root with its source-root prefix and extension
@@ -3848,6 +3848,18 @@ fn push_tag_from(cx: &compositor::Context) {
 /// [`push_tag_from`] against a bare [`Editor`], so the static `tag_jump` command
 /// bound to normal-mode `CTRL-]` records its "from" through the same path the
 /// `:tag` family uses, rather than keeping a second tag stack.
+/// vim `gettagstack()` — the tag stack as (file, char offset) pairs, oldest
+/// first. The read half of the stack `push_tag_from_editor` writes and `:pop`
+/// consumes; `TagFrom` itself stays private to this module.
+pub(crate) fn tag_stack_frames() -> Vec<(std::path::PathBuf, usize)> {
+    TAG_STACK.with(|s| {
+        s.borrow()
+            .iter()
+            .map(|frame| (frame.file.clone(), frame.pos))
+            .collect()
+    })
+}
+
 pub(crate) fn push_tag_from_editor(editor: &Editor) {
     // vim `tagstack`: `:set notagstack` makes `:tag` jump without recording where
     // it jumped from, so `:pop` has nothing to return to.
@@ -6579,7 +6591,8 @@ pub(crate) fn run_replace_in_entries(
     if entries.is_empty() {
         bail!("no results to replace in");
     }
-    cx.editor.set_status("xref-replace: rewriting the result lines…");
+    cx.editor
+        .set_status("xref-replace: rewriting the result lines…");
     cx.jobs.callback(async move {
         let res = tokio::task::spawn_blocking(
             move || -> (usize, usize, Vec<std::path::PathBuf>) {
@@ -8279,10 +8292,7 @@ fn diff(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     // `diff` exits 1 when the files differ, which is the interesting case; only a
     // status above that is a real failure (missing file, bad switch).
     if output.status.code().is_none_or(|c| c > 1) {
-        bail!(
-            "diff: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        );
+        bail!("diff: {}", String::from_utf8_lossy(&output.stderr).trim());
     }
     let text = String::from_utf8_lossy(&output.stdout).into_owned();
     if text.trim().is_empty() {
@@ -14480,7 +14490,11 @@ pub(crate) fn spawn_into_run_console(cx: &mut compositor::Context, cmd: String) 
 
 /// `:grep <pattern>` — search the project and stream jumpable results into the
 /// Run console.
-pub(crate) fn grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+pub(crate) fn grep(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -39338,7 +39352,8 @@ fn message_send(
     }
     match send_current_draft(cx)? {
         Some(to) => {
-            cx.editor.set_status(format!("Sending message to {to}...done"));
+            cx.editor
+                .set_status(format!("Sending message to {to}...done"));
         }
         None => {
             let path = queue_current_draft(cx)?;
@@ -74925,7 +74940,10 @@ mod vim_set_tests {
         assert_eq!(expand_env_vars("a$ZMAX_TEST_MISSING/b"), "a/b");
         // A `$` that names nothing stays a `$`, and a value with none is untouched.
         assert_eq!(expand_env_vars("costs $ 5"), "costs $ 5");
-        assert_eq!(expand_env_vars("/usr/share/help.txt"), "/usr/share/help.txt");
+        assert_eq!(
+            expand_env_vars("/usr/share/help.txt"),
+            "/usr/share/help.txt"
+        );
         std::env::remove_var("ZMAX_TEST_RUNTIME");
     }
 

@@ -45,7 +45,9 @@ use std::ptr;
 use std::sync::{Mutex, OnceLock};
 
 use zmax_core::{Tendril, Transaction};
-use zmax_native::{CommandFn, Cursor, HostApi, InitFn, PluginInfo, Span, ABI_VERSION, INIT_SYMBOL};
+use zmax_native::{
+    CommandFn, Cursor, HostApi, InitFn, PluginInfo, QfPos, Span, ABI_VERSION, INIT_SYMBOL,
+};
 
 use crate::compositor;
 
@@ -1472,62 +1474,86 @@ extern "C" fn host_syntax_at(_host: *const HostApi, offset: usize) -> *mut c_cha
     into_raw_cstring(scopes.flatten())
 }
 
-/// vim `getregion()`. Charwise and linewise are offset arithmetic; blockwise
-/// is the rectangle between the two SCREEN columns, and follows the same rule
-/// `block_reproject` applies to `CTRL-V`: a row whose text does not reach the
-/// block's left column is skipped, not emitted as an empty row.
+/// The char-offset extent of every row a region covers. Shared by
+/// `host_region` and `host_region_pos` so the text and the positions can never
+/// disagree about which rows a blockwise region includes.
+///
+/// Blockwise follows the same rule `block_reproject` applies to `CTRL-V`: a row
+/// whose text does not reach the block's left column is SKIPPED, not emitted as
+/// an empty row.
 #[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: no softwrap in a block
-extern "C" fn host_region(_host: *const HostApi, from: usize, to: usize, mode: u8) -> *mut c_char {
-    use zmax_core::{pos_at_visual_coords, visual_coords_at_pos, Position};
+fn region_rows(
+    doc: &zmax_view::Document,
+    from: usize,
+    to: usize,
+    mode: u8,
+) -> Option<Vec<(usize, usize)>> {
+    use zmax_core::{
+        line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos, Position,
+    };
 
+    let text = doc.text().slice(..);
+    let len = text.len_chars();
+    let (from, to) = (from.min(len), to.min(len));
+    let (from, to) = (from.min(to), from.max(to));
+
+    // One extent PER LINE, as vim's getregionpos() reports them, so the text
+    // rows and the position rows always correspond one to one.
+    let (first, last) = (text.char_to_line(from), text.char_to_line(to));
+    match mode {
+        // Charwise: clipped to the offsets on the first and last rows, whole
+        // lines in between.
+        0 => Some(
+            (first..=last)
+                .map(|row| {
+                    let start = text.line_to_char(row).max(from);
+                    let end = line_end_char_index(&text, row).min(to);
+                    (start, end.max(start))
+                })
+                .collect(),
+        ),
+        // Linewise: every row entire, each without its line ending.
+        1 => Some(
+            (first..=last)
+                .map(|row| (text.line_to_char(row), line_end_char_index(&text, row)))
+                .collect(),
+        ),
+        // Blockwise: the rectangle between the two screen columns.
+        2 => {
+            let tab_width = doc.tab_width();
+            let a = visual_coords_at_pos(text, from, tab_width);
+            let b = visual_coords_at_pos(text, to, tab_width);
+            let (r0, r1) = (a.row.min(b.row), a.row.max(b.row));
+            let (cmin, cmax) = (a.col.min(b.col), a.col.max(b.col));
+
+            let mut out = Vec::new();
+            for row in r0..=r1.min(text.len_lines().saturating_sub(1)) {
+                let left = pos_at_visual_coords(text, Position::new(row, cmin), tab_width);
+                // The row's text stops short of the block's left edge.
+                if visual_coords_at_pos(text, left, tab_width).col != cmin {
+                    continue;
+                }
+                let right = pos_at_visual_coords(text, Position::new(row, cmax + 1), tab_width);
+                out.push((left, right.max(left)));
+            }
+            (!out.is_empty()).then_some(out)
+        }
+        _ => None,
+    }
+}
+
+/// vim `getregion()` — the text of each row `region_rows` selects.
+extern "C" fn host_region(_host: *const HostApi, from: usize, to: usize, mode: u8) -> *mut c_char {
     let rows = with_cx(|cx| {
         let (_view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
-        let len = text.len_chars();
-        let (from, to) = (from.min(len), to.min(len));
-        let (from, to) = (from.min(to), from.max(to));
-
-        match mode {
-            // Charwise: exactly the offsets, as `text_range` reads them.
-            0 => Some(text.slice(from..to).to_string()),
-            // Linewise: widened to whole lines, the last without its ending.
-            1 => {
-                let (first, last) = (text.char_to_line(from), text.char_to_line(to));
-                let start = text.line_to_char(first);
-                let end = if last + 1 < text.len_lines() {
-                    text.line_to_char(last + 1)
-                } else {
-                    len
-                };
-                Some(
-                    text.slice(start..end)
-                        .to_string()
-                        .trim_end_matches('\n')
-                        .to_string(),
-                )
-            }
-            // Blockwise: the rectangle between the two screen columns.
-            2 => {
-                let tab_width = doc.tab_width();
-                let a = visual_coords_at_pos(text, from, tab_width);
-                let b = visual_coords_at_pos(text, to, tab_width);
-                let (r0, r1) = (a.row.min(b.row), a.row.max(b.row));
-                let (cmin, cmax) = (a.col.min(b.col), a.col.max(b.col));
-
-                let mut out: Vec<String> = Vec::new();
-                for row in r0..=r1.min(text.len_lines().saturating_sub(1)) {
-                    let left = pos_at_visual_coords(text, Position::new(row, cmin), tab_width);
-                    // The row's text stops short of the block's left edge.
-                    if visual_coords_at_pos(text, left, tab_width).col != cmin {
-                        continue;
-                    }
-                    let right = pos_at_visual_coords(text, Position::new(row, cmax + 1), tab_width);
-                    out.push(text.slice(left..right.max(left)).to_string());
-                }
-                (!out.is_empty()).then(|| out.join("\n"))
-            }
-            _ => None,
-        }
+        let extents = region_rows(doc, from, to, mode)?;
+        let joined = extents
+            .iter()
+            .map(|(start, end)| text.slice(*start..*end).to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        Some(joined)
     });
     into_raw_cstring(rows.flatten())
 }
@@ -1555,6 +1581,135 @@ extern "C" fn host_bg_color(_host: *const HostApi) -> *mut c_char {
         })
     });
     into_raw_cstring(color.flatten())
+}
+
+/// The quickfix list is `editor.quickfix`; the location list is per-window and
+/// lives on the focused `View`. Both hold `QfEntry`, so the four readers differ only
+/// in which list they index.
+fn qf_pos(entry: Option<&zmax_view::editor::QfEntry>) -> QfPos {
+    match entry {
+        Some(e) => QfPos {
+            line: e.line,
+            col: e.col,
+            valid: 1,
+        },
+        None => QfPos {
+            line: 0,
+            col: 0,
+            valid: 0,
+        },
+    }
+}
+
+extern "C" fn host_quickfix_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| cx.editor.quickfix.len()).unwrap_or(0)
+}
+
+extern "C" fn host_quickfix(_host: *const HostApi, index: usize) -> QfPos {
+    with_cx(|cx| qf_pos(cx.editor.quickfix.get(index))).unwrap_or(QfPos {
+        line: 0,
+        col: 0,
+        valid: 0,
+    })
+}
+
+extern "C" fn host_quickfix_path(_host: *const HostApi, index: usize) -> *mut c_char {
+    into_raw_cstring(
+        with_cx(|cx| {
+            cx.editor
+                .quickfix
+                .get(index)
+                .map(|e| e.path.to_string_lossy().into_owned())
+        })
+        .flatten(),
+    )
+}
+
+extern "C" fn host_quickfix_text(_host: *const HostApi, index: usize) -> *mut c_char {
+    into_raw_cstring(with_cx(|cx| cx.editor.quickfix.get(index).map(|e| e.text.clone())).flatten())
+}
+
+extern "C" fn host_loclist_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (view, _doc) = current!(cx.editor);
+        view.loclist.len()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_loclist(_host: *const HostApi, index: usize) -> QfPos {
+    with_cx(|cx| {
+        let (view, _doc) = current!(cx.editor);
+        qf_pos(view.loclist.get(index))
+    })
+    .unwrap_or(QfPos {
+        line: 0,
+        col: 0,
+        valid: 0,
+    })
+}
+
+extern "C" fn host_loclist_path(_host: *const HostApi, index: usize) -> *mut c_char {
+    into_raw_cstring(
+        with_cx(|cx| {
+            let (view, _doc) = current!(cx.editor);
+            view.loclist
+                .get(index)
+                .map(|e| e.path.to_string_lossy().into_owned())
+        })
+        .flatten(),
+    )
+}
+
+extern "C" fn host_loclist_text(_host: *const HostApi, index: usize) -> *mut c_char {
+    into_raw_cstring(
+        with_cx(|cx| {
+            let (view, _doc) = current!(cx.editor);
+            view.loclist.get(index).map(|e| e.text.clone())
+        })
+        .flatten(),
+    )
+}
+
+extern "C" fn host_tag_stack_count(_host: *const HostApi) -> usize {
+    super::typed::tag_stack_frames().len()
+}
+
+extern "C" fn host_tag_stack_path(_host: *const HostApi, index: usize) -> *mut c_char {
+    into_raw_cstring(
+        super::typed::tag_stack_frames()
+            .get(index)
+            .map(|(file, _pos)| file.to_string_lossy().into_owned()),
+    )
+}
+
+extern "C" fn host_tag_stack_pos(_host: *const HostApi, index: usize) -> usize {
+    super::typed::tag_stack_frames()
+        .get(index)
+        .map(|(_file, pos)| *pos)
+        .unwrap_or(usize::MAX)
+}
+
+/// vim `getregionpos()`: the same rows `host_region` returns, as char-offset
+/// extents. Shares `region_rows` with it so the two can never disagree about
+/// which rows a blockwise region covers.
+extern "C" fn host_region_pos(
+    _host: *const HostApi,
+    from: usize,
+    to: usize,
+    mode: u8,
+) -> *mut c_char {
+    let rows = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let extents = region_rows(doc, from, to, mode)?;
+        let joined = extents
+            .iter()
+            .map(|(start, end)| format!("{start},{end}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        Some(joined)
+    });
+    into_raw_cstring(rows.flatten())
 }
 
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
@@ -1667,6 +1822,18 @@ fn host_api() -> *const HostApi {
             tab_count: host_tab_count,
             tab_index: host_tab_index,
             bg_color: host_bg_color,
+            quickfix_count: host_quickfix_count,
+            quickfix: host_quickfix,
+            quickfix_path: host_quickfix_path,
+            quickfix_text: host_quickfix_text,
+            loclist_count: host_loclist_count,
+            loclist: host_loclist,
+            loclist_path: host_loclist_path,
+            loclist_text: host_loclist_text,
+            tag_stack_count: host_tag_stack_count,
+            tag_stack_path: host_tag_stack_path,
+            tag_stack_pos: host_tag_stack_pos,
+            region_pos: host_region_pos,
         });
         Box::into_raw(boxed) as usize
     });

@@ -102,7 +102,7 @@ What is in the buffer, and what the language servers said about it:
 | `selection(i)` / `selections()` | `getpos("'<")`, `getpos("'>")` | one selection as a `Span { anchor, head, line }` |
 | `text_range(from, to)` | — | the text a `Span` addresses; clamped and ordered |
 | `buffer_count()` / `buffer_name(i)` / `buffer_names()` | `getbufinfo()` | the open buffers |
-| `diagnostic_count()` / `diagnostic(i)` / `diagnostics()` | `getqflist()` | position, message and severity |
+| `diagnostic_count()` / `diagnostic(i)` / `diagnostics()` | — | the LANGUAGE SERVER's diagnostics; vim has no equivalent and `:cnext` does not walk them |
 | `option(name)` | `&{option}` | by long or short name, as on `:set` |
 | `search_pattern()` | `getreg("/")` | the last search |
 | `window_count()` | `getwininfo()` | open splits |
@@ -153,6 +153,10 @@ What is in the buffer, and what the language servers said about it:
 | `region(from, to, mode)` | `getregion()` | charwise, linewise or blockwise, where `text_range` is charwise only |
 | `tab_count()` / `tab_index()` | `tabpagenr("$")`, `tabpagenr()` | zero-based, where vim counts from 1 |
 | `bg_color()` | `getbgcolor()` | `#rrggbb` or a colour name; `None` leaves the terminal's own |
+| `quickfix()` | `getqflist()` | the real quickfix list, filled by `:grep`/`:make`/`:cfile` |
+| `loclist()` | `getloclist()` | per-window, so it follows the focus |
+| `tag_stack()` | `gettagstack()` | where tag jumps started, oldest first; what `CTRL-T` unwinds |
+| `region_pos(from, to, mode)` | `getregionpos()` | `region`'s rows as char-offset extents, one per row |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:
@@ -176,6 +180,12 @@ would lose information zmax has:
 - **`jump_buffer` reports `None` for a closed buffer.** A jump outlives the
   buffer it points into, and a stale index into whatever now occupies that slot
   would be worse than admitting the buffer is gone.
+- **The quickfix list and the diagnostics are different lists.** `quickfix()`
+  is vim's, filled by `:grep`/`:make` and walked by `:cnext`; `diagnostics()` is
+  the language server's, which vim has no concept of. Reading one when you meant
+  the other is silent, so they are named apart.
+- **Quickfix line/column are 1-based**, unlike the char offsets everywhere else
+  here, because an entry can name a file that is not open and so has no offset.
 - **A blockwise `region` can be shorter than its row span.** A row whose text
   does not reach the block's left column is skipped rather than padded out to an
   empty string, which is what `CTRL-V` itself does.

@@ -120,6 +120,19 @@ pub struct Span {
     pub valid: u8,
 }
 
+/// One quickfix / location-list entry's position. `line` and `col` are
+/// 1-based, as vim reports them and as the `:grep` output they came from wrote
+/// them -- unlike the char offsets everywhere else in this API, because a
+/// quickfix entry can name a file that is not open and so has no offset.
+/// `valid` is 0 when the index was out of range.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct QfPos {
+    pub line: usize,
+    pub col: usize,
+    pub valid: u8,
+}
+
 /// How [`HostApi::region`] reads the span between two offsets — vim's
 /// `getregion()` `type` option.
 #[repr(u8)]
@@ -541,6 +554,53 @@ pub struct HostApi {
     /// the theme leaves `ui.background` unset, which means the terminal's own
     /// background shows through. Release with `free_cstring`.
     pub bg_color: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    /// vim `getqflist()` — the REAL quickfix list, the one `:grep`, `:make` and
+    /// `:cfile` fill. This is not the diagnostic list: `diagnostic_count` and
+    /// friends report what the language server said, which vim has no
+    /// equivalent for and which `:cnext` does not walk.
+    pub quickfix_count: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// One quickfix entry's line/column. `valid` is 0 past the end.
+    pub quickfix: extern "C" fn(host: *const HostApi, index: usize) -> QfPos,
+
+    /// A quickfix entry's file, which need NOT be an open buffer. Null past the
+    /// end. Release with `free_cstring`.
+    pub quickfix_path: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// A quickfix entry's message text. Release with `free_cstring`.
+    pub quickfix_text: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// vim `getloclist()` — the location list of the CURRENT window. Unlike the
+    /// quickfix list there is one per window, so this follows the focus.
+    pub loclist_count: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// One location-list entry's line/column. `valid` is 0 past the end.
+    pub loclist: extern "C" fn(host: *const HostApi, index: usize) -> QfPos,
+
+    /// A location-list entry's file. Release with `free_cstring`.
+    pub loclist_path: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// A location-list entry's message text. Release with `free_cstring`.
+    pub loclist_text: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// vim `gettagstack()` — how deep the tag stack is, oldest frame first.
+    pub tag_stack_count: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// The file a tag jump started FROM. Null past the end. Release with
+    /// `free_cstring`.
+    pub tag_stack_path: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// The char offset a tag jump started from, or `usize::MAX` past the end.
+    pub tag_stack_pos: extern "C" fn(host: *const HostApi, index: usize) -> usize,
+
+    /// vim `getregionpos()` — the same rows [`HostApi::region`] returns, as
+    /// char-offset extents instead of text: `start,end` per row,
+    /// newline-separated. The complement of `region`, and the only way to learn
+    /// where a blockwise row actually began once short rows were skipped. Null
+    /// when there is no editor context. Release with `free_cstring`.
+    pub region_pos:
+        extern "C" fn(host: *const HostApi, from: usize, to: usize, mode: u8) -> *mut c_char,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -1302,6 +1362,83 @@ impl Host {
         self.take_string((self.t().bg_color)(self.api))
     }
 
+    /// vim `getqflist()` — the quickfix list `:grep`/`:make` fill.
+    ///
+    /// Not the same list as [`Host::diagnostics`]: that one is the language
+    /// server's, which `:cnext` does not walk.
+    pub fn quickfix(&self) -> Vec<QfItem> {
+        self.qf_list(
+            (self.t().quickfix_count)(self.api),
+            self.t().quickfix,
+            self.t().quickfix_path,
+            self.t().quickfix_text,
+        )
+    }
+
+    /// vim `getloclist()` — the current window's location list.
+    pub fn loclist(&self) -> Vec<QfItem> {
+        self.qf_list(
+            (self.t().loclist_count)(self.api),
+            self.t().loclist,
+            self.t().loclist_path,
+            self.t().loclist_text,
+        )
+    }
+
+    /// Shared by [`Host::quickfix`] and [`Host::loclist`], which differ only in
+    /// which four entries of the table they read.
+    fn qf_list(
+        &self,
+        count: usize,
+        pos: extern "C" fn(*const HostApi, usize) -> QfPos,
+        path: extern "C" fn(*const HostApi, usize) -> *mut c_char,
+        text: extern "C" fn(*const HostApi, usize) -> *mut c_char,
+    ) -> Vec<QfItem> {
+        (0..count)
+            .filter_map(|i| {
+                let at = pos(self.api, i);
+                (at.valid != 0).then(|| QfItem {
+                    path: self.take_string(path(self.api, i)).unwrap_or_default(),
+                    line: at.line,
+                    col: at.col,
+                    text: self.take_string(text(self.api, i)).unwrap_or_default(),
+                })
+            })
+            .collect()
+    }
+
+    /// vim `gettagstack()` — the locations tag jumps started from, oldest
+    /// first, which `CTRL-T` unwinds.
+    pub fn tag_stack(&self) -> Vec<TagFrame> {
+        (0..(self.t().tag_stack_count)(self.api))
+            .filter_map(|i| {
+                let pos = (self.t().tag_stack_pos)(self.api, i);
+                let path = self.take_string((self.t().tag_stack_path)(self.api, i))?;
+                (pos != usize::MAX).then_some(TagFrame { path, pos })
+            })
+            .collect()
+    }
+
+    /// vim `getregionpos()` — the char-offset extents of the rows
+    /// [`Host::region`] returns, as `(start, end)` per row.
+    ///
+    /// For a blockwise region this is the only way to learn where each row
+    /// began, since rows too short to reach the left column are skipped and the
+    /// text alone no longer says which rows survived.
+    pub fn region_pos(&self, from: usize, to: usize, mode: RegionMode) -> Vec<(usize, usize)> {
+        self.take_string((self.t().region_pos)(self.api, from, to, mode as u8))
+            .map(|joined| {
+                joined
+                    .split('\n')
+                    .filter_map(|row| {
+                        let (start, end) = row.split_once(',')?;
+                        Some((start.parse().ok()?, end.parse().ok()?))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     /// vim `getcompletion({prefix}, "option")` — option names beginning with
     /// `prefix`. Only options that have been set are known.
     pub fn option_completions(&self, prefix: &str) -> Vec<String> {
@@ -1335,6 +1472,22 @@ pub struct DiagnosticInfo {
     pub span: Span,
     pub message: String,
     pub severity: String,
+}
+
+/// One quickfix or location-list entry: where, in which file, and what it says.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QfItem {
+    pub path: String,
+    pub line: usize,
+    pub col: usize,
+    pub text: String,
+}
+
+/// One tag-stack frame: the file and char offset a tag jump started from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TagFrame {
+    pub path: String,
+    pub pos: usize,
 }
 
 /// Safe view over a command's `(argc, argv)`. `argv[0]` is the command name.
@@ -1833,6 +1986,91 @@ mod tests {
     extern "C" fn fake_bg_color(_h: *const HostApi) -> *mut c_char {
         reply("#1e1e2e")
     }
+    const QF: [(&str, usize, usize, &str); 2] = [
+        ("src/main.rs", 42, 5, "undefined name"),
+        ("src/lib.rs", 7, 1, "unused import"),
+    ];
+    // A DIFFERENT list from the quickfix one, so a wrapper that reads the wrong
+    // table cannot pass.
+    const LOC: [(&str, usize, usize, &str); 1] = [("README.md", 3, 9, "broken link")];
+
+    extern "C" fn fake_quickfix_count(_h: *const HostApi) -> usize {
+        QF.len()
+    }
+    extern "C" fn fake_quickfix(_h: *const HostApi, i: usize) -> QfPos {
+        match QF.get(i) {
+            Some((_, line, col, _)) => QfPos {
+                line: *line,
+                col: *col,
+                valid: 1,
+            },
+            None => QfPos {
+                line: 0,
+                col: 0,
+                valid: 0,
+            },
+        }
+    }
+    extern "C" fn fake_quickfix_path(_h: *const HostApi, i: usize) -> *mut c_char {
+        QF.get(i).map_or(ptr::null_mut(), |(p, ..)| reply(p))
+    }
+    extern "C" fn fake_quickfix_text(_h: *const HostApi, i: usize) -> *mut c_char {
+        QF.get(i).map_or(ptr::null_mut(), |(.., t)| reply(t))
+    }
+    extern "C" fn fake_loclist_count(_h: *const HostApi) -> usize {
+        LOC.len()
+    }
+    extern "C" fn fake_loclist(_h: *const HostApi, i: usize) -> QfPos {
+        match LOC.get(i) {
+            Some((_, line, col, _)) => QfPos {
+                line: *line,
+                col: *col,
+                valid: 1,
+            },
+            None => QfPos {
+                line: 0,
+                col: 0,
+                valid: 0,
+            },
+        }
+    }
+    extern "C" fn fake_loclist_path(_h: *const HostApi, i: usize) -> *mut c_char {
+        LOC.get(i).map_or(ptr::null_mut(), |(p, ..)| reply(p))
+    }
+    extern "C" fn fake_loclist_text(_h: *const HostApi, i: usize) -> *mut c_char {
+        LOC.get(i).map_or(ptr::null_mut(), |(.., t)| reply(t))
+    }
+    extern "C" fn fake_tag_stack_count(_h: *const HostApi) -> usize {
+        2
+    }
+    extern "C" fn fake_tag_stack_path(_h: *const HostApi, i: usize) -> *mut c_char {
+        match i {
+            0 => reply("src/a.rs"),
+            1 => reply("src/b.rs"),
+            _ => ptr::null_mut(),
+        }
+    }
+    extern "C" fn fake_tag_stack_pos(_h: *const HostApi, i: usize) -> usize {
+        match i {
+            0 => 100,
+            1 => 250,
+            _ => usize::MAX,
+        }
+    }
+    extern "C" fn fake_region_pos(
+        _h: *const HostApi,
+        _from: usize,
+        _to: usize,
+        mode: u8,
+    ) -> *mut c_char {
+        // Two rows for every mode, matching `fake_region`'s two rows.
+        match mode {
+            0 => reply("3,5\n10,12"),
+            1 => reply("0,5\n6,11"),
+            2 => reply("2,4\n22,24"),
+            _ => ptr::null_mut(),
+        }
+    }
     extern "C" fn fake_long_word_at_cursor(_h: *const HostApi) -> *mut c_char {
         // The WORD keeps its punctuation; `word_at_cursor` gives "UnixStream".
         reply("UnixStream::connect(path)")
@@ -2201,6 +2439,18 @@ mod tests {
             tab_count: fake_tab_count,
             tab_index: fake_tab_index,
             bg_color: fake_bg_color,
+            quickfix_count: fake_quickfix_count,
+            quickfix: fake_quickfix,
+            quickfix_path: fake_quickfix_path,
+            quickfix_text: fake_quickfix_text,
+            loclist_count: fake_loclist_count,
+            loclist: fake_loclist,
+            loclist_path: fake_loclist_path,
+            loclist_text: fake_loclist_text,
+            tag_stack_count: fake_tag_stack_count,
+            tag_stack_path: fake_tag_stack_path,
+            tag_stack_pos: fake_tag_stack_pos,
+            region_pos: fake_region_pos,
         }
     }
 
@@ -2899,6 +3149,86 @@ mod tests {
         assert_eq!(host.tab_index(), 1, "the second tab, zero-based");
         assert!(host.tab_index() < host.tab_count(), "always addressable");
         assert_eq!(host.bg_color().as_deref(), Some("#1e1e2e"));
+    }
+
+    /// The quickfix list and the diagnostic list are DIFFERENT lists. vim's
+    /// `getqflist()` is the `:grep`/`:make` list that `:cnext` walks; the
+    /// diagnostics come from the language server and vim has no equivalent.
+    /// Reading one when you wanted the other is the mistake this pins.
+    #[test]
+    fn quickfix_is_not_the_diagnostic_list() {
+        let api = table();
+        let host = host(&api);
+
+        let qf = host.quickfix();
+        let diags = host.diagnostics();
+        assert_eq!(qf.len(), 2);
+        assert_eq!(qf[0].path, "src/main.rs");
+        assert_eq!((qf[0].line, qf[0].col), (42, 5), "1-based, as vim reports");
+        assert_eq!(qf[0].text, "undefined name");
+        assert_ne!(
+            qf.len(),
+            diags.len(),
+            "distinct lists, so a wrapper reading the wrong one is visible"
+        );
+    }
+
+    /// The location list is per-window and holds different entries from the
+    /// global quickfix list.
+    #[test]
+    fn the_location_list_is_its_own_list() {
+        let api = table();
+        let host = host(&api);
+
+        let loc = host.loclist();
+        assert_eq!(loc.len(), 1);
+        assert_eq!(loc[0].path, "README.md");
+        assert_eq!(loc[0].text, "broken link");
+        assert_ne!(loc[0].path, host.quickfix()[0].path, "not the same list");
+    }
+
+    /// The tag stack is oldest-first, the order `CTRL-T` unwinds from the end.
+    #[test]
+    fn the_tag_stack_is_oldest_first() {
+        let api = table();
+        let host = host(&api);
+
+        let stack = host.tag_stack();
+        assert_eq!(stack.len(), 2);
+        assert_eq!(stack[0].path, "src/a.rs");
+        assert_eq!(stack[0].pos, 100);
+        assert_eq!(
+            stack.last().map(|f| f.pos),
+            Some(250),
+            "the newest frame, which CTRL-T returns to first"
+        );
+    }
+
+    /// `region_pos` reports one extent per row, matching `region`'s rows one to
+    /// one -- otherwise a caller could not tell which blockwise rows survived
+    /// the short-row skip.
+    #[test]
+    fn region_pos_rows_line_up_with_region_rows() {
+        let api = table();
+        let host = host(&api);
+
+        for mode in [
+            RegionMode::Charwise,
+            RegionMode::Linewise,
+            RegionMode::Blockwise,
+        ] {
+            let text = host.region(3, 8, mode);
+            let pos = host.region_pos(3, 8, mode);
+            assert_eq!(
+                text.len(),
+                pos.len(),
+                "{mode:?}: one extent per row of text"
+            );
+        }
+        assert_eq!(
+            host.region_pos(3, 8, RegionMode::Charwise),
+            [(3, 5), (10, 12)]
+        );
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.
