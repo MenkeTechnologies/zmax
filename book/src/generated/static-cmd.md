@@ -1627,7 +1627,7 @@
 | `video_poker` | Play Jacks-or-Better video poker |  |
 | `klondike` | Play Klondike solitaire |  |
 | `nonogram` | Play nonogram / picross |  |
-| `nova` | Play Nova, the shoot-em-up with ship building, sectors, powerups and bosses |  |
+| `nova` | Play Nova, the shoot-em-up with ship building, ten guns, star-chart maps and bosses |  |
 | `xref_find_references` | Find references to a symbol across the workspace (emacs xref-find-references) | **spacemacs** — normal: `` <A-?> ``, `` <space>pE ``, select: `` <space>pE `` |
 | `project_find_file` | Find a file under the project root (emacs project-find-file) |  |
 | `diffmode` | Open the unified-diff viewer (emacs diff-mode) |  |

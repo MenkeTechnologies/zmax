@@ -11,8 +11,11 @@
 //!   magazine) upgrade through four tiers, and five modules (magnet, autoloader,
 //!   salvager, repair bay, overdrive) bolt on permanently. Everything is bought
 //!   in the hangar between waves with salvage picked up from kills.
-//! * **Guns** — blaster, spread, piercing laser, homing missiles and wide
-//!   plasma, three levels each, with wing drones firing alongside them.
+//! * **Guns** — ten of them, three levels each, with wing drones firing
+//!   alongside: blaster, spread, piercing laser, homing missiles, wide plasma,
+//!   the vulcan machine gun, dumb-fire rockets that blast a hole where they
+//!   land, flak shells that burst into a fan, a rail slug that runs the whole
+//!   court, and an arc bolt that earths itself through a crowd.
 //! * **Progression** — kills pay experience and salvage; each pilot level hands
 //!   out a permanent upgrade in a fixed rotation, and every extend threshold
 //!   pays a spare hull.
@@ -48,21 +51,21 @@ use crate::{
 };
 
 /// Court width in cells.
-const W: i16 = 54;
+const W: i16 = 76;
 /// Court height in cells.
-const H: i16 = 21;
+const H: i16 = 28;
 /// Topmost row the ship may fly to; it owns the bottom seven rows.
-const SHIP_TOP: i16 = H - 7;
+const SHIP_TOP: i16 = H - 9;
 /// The row the ship starts on.
 const SHIP_ROW: i16 = H - 1;
 /// Formation columns.
-const COLS: usize = 9;
+const COLS: usize = 12;
 /// Formation rows the court has room for.
-const ROWS: usize = 5;
+const ROWS: usize = 6;
 /// Horizontal spacing between formation columns.
-const ENEMY_GAP: i16 = 5;
+const ENEMY_GAP: i16 = 6;
 /// Column of the leftmost formation column at zero sway.
-const BASE_X: i16 = 4;
+const BASE_X: i16 = 5;
 /// Row of the top formation row.
 const FORMATION_TOP: i16 = 2;
 /// Ticks between successive formation sway steps.
@@ -81,8 +84,12 @@ const RAPID_TICKS: u32 = 240;
 const MAX_COMBO: u32 = 8;
 /// Highest level any gun can be upgraded to.
 const MAX_WEAPON_LEVEL: u32 = 3;
+/// Rows a flak shell climbs before it bursts.
+const FLAK_FUSE: i16 = 6;
+/// How far an arc bolt will reach for its next hull.
+const ARC_REACH: i16 = 10;
 /// Cap on player shots in flight.
-const MAX_SHOTS: usize = 32;
+const MAX_SHOTS: usize = 48;
 /// Damage a smart bomb deals to everything on the court.
 const BOMB_DAMAGE: i32 = 4;
 /// Ticks between a cleared wave and the hangar opening.
@@ -97,17 +104,17 @@ const SPECIAL_COST: u32 = 60;
 /// Energy the meter recovers per tick before any reactor upgrade.
 const ENERGY_REGEN: u32 = 1;
 /// Columns an Interceptor blink covers, and the invulnerability it lands with.
-const BLINK_DISTANCE: i16 = 8;
+const BLINK_DISTANCE: i16 = 10;
 const BLINK_IFRAMES: u32 = 20;
 /// Ticks a Cruiser bulwark holds enemy fire off the hull.
 const BULWARK_TICKS: u32 = 60;
 /// Columns between the bolts a Juggernaut barrage lays across the court.
-const BARRAGE_STEP: i16 = 6;
+const BARRAGE_STEP: i16 = 7;
 /// The most shield pips any hull can ever carry.
 const MAX_SHIELD_PIPS: u32 = 8;
 /// Wing drones the ship can carry, and how far out they ride.
 const MAX_DRONES: usize = 2;
-const DRONE_OFFSET: i16 = 3;
+const DRONE_OFFSET: i16 = 4;
 /// A spare life every this many points.
 const EXTEND_SCORE: u32 = 25_000;
 /// Ticks a sniper spends telegraphing before its shot goes off.
@@ -135,10 +142,34 @@ const REPAIR_CADENCE: u32 = 300;
 /// Energy an ion surge drains, and how long it stuns the drones for.
 const SURGE_DRAIN: u32 = 25;
 const SURGE_STUN: u32 = 40;
+/// Rows between the bulkheads in a gates map, and the gap left in each.
+const GATE_PERIOD: u32 = 7;
+const GATE_GAP: i16 = 16;
+/// Rows in one maze block, and how many of them are walled.
+const MAZE_PERIOD: u32 = 8;
+const MAZE_WALL: u32 = 4;
+/// Rock columns a row may grow.
+const PILLARS_PER_ROW: usize = 3;
+/// Ticks between the rock scrolling one row down the court.
+const SCROLL_CADENCE: u32 = 5;
+/// Wall turrets a map keeps bolted to its rock, and what they carry.
+const TURRETS_PER_MAP: usize = 2;
+const TURRET_HP: i32 = 4;
+const TURRET_CADENCE: u32 = 34;
+/// Ticks between a solar flare stepping one column across the court, and the
+/// rhythm it burns on: it is only hot for FLARE_ACTIVE ticks in FLARE_PERIOD.
+const FLARE_CADENCE: u32 = 4;
+const FLARE_PERIOD: u32 = 60;
+const FLARE_ACTIVE: u32 = 18;
+/// Stops the star chart offers between waves, and the keys that pick them.
+const ROUTE_CHOICES: usize = 3;
+const ROUTE_KEYS: [char; 3] = ['z', 'x', 'v'];
+/// Ticks the arrival banner stays up for.
+const BANNER_TICKS: u32 = 40;
 /// Rows of parallax backdrop drawn behind the court.
 const STAR_LAYERS: usize = 3;
 /// Segments a serpent boss trails behind its head.
-const SERPENT_SEGMENTS: usize = 6;
+const SERPENT_SEGMENTS: usize = 8;
 /// The vertical offsets a serpent's body cycles through as it swims.
 const SERPENT_WAVE: [i16; 8] = [0, 1, 2, 1, 0, -1, -2, -1];
 /// The keys the hangar hands out to its lines, in order.
@@ -450,15 +481,30 @@ pub enum Weapon {
     Laser,
     Homing,
     Plasma,
+    /// A stuttering machine gun: little rounds, almost no gap between them.
+    Vulcan,
+    /// Dumb-fire rockets that blow a hole where they land.
+    Rocket,
+    /// Shells that burst into a fan of fragments part way up the court.
+    Flak,
+    /// One slow, enormous piercing slug.
+    Rail,
+    /// A bolt that jumps from hull to hull.
+    Arc,
 }
 
 impl Weapon {
-    pub const ALL: [Weapon; 5] = [
+    pub const ALL: [Weapon; 10] = [
         Weapon::Blaster,
         Weapon::Spread,
         Weapon::Laser,
         Weapon::Homing,
         Weapon::Plasma,
+        Weapon::Vulcan,
+        Weapon::Rocket,
+        Weapon::Flak,
+        Weapon::Rail,
+        Weapon::Arc,
     ];
 
     pub fn name(self) -> &'static str {
@@ -468,6 +514,24 @@ impl Weapon {
             Weapon::Laser => "laser",
             Weapon::Homing => "homing",
             Weapon::Plasma => "plasma",
+            Weapon::Vulcan => "vulcan",
+            Weapon::Rocket => "rocket",
+            Weapon::Flak => "flak",
+            Weapon::Rail => "rail",
+            Weapon::Arc => "arc",
+        }
+    }
+
+    /// Ticks added to (or shaved off) the hull's firing cadence: a vulcan
+    /// hoses, a rail gun takes its time.
+    pub fn cadence_shift(self) -> i32 {
+        match self {
+            Weapon::Vulcan => -2,
+            Weapon::Blaster | Weapon::Spread => 0,
+            Weapon::Laser | Weapon::Arc => 1,
+            Weapon::Homing | Weapon::Plasma | Weapon::Flak => 2,
+            Weapon::Rocket => 3,
+            Weapon::Rail => 6,
         }
     }
 
@@ -479,6 +543,11 @@ impl Weapon {
             Weapon::Laser => "L",
             Weapon::Homing => "H",
             Weapon::Plasma => "P",
+            Weapon::Vulcan => "V",
+            Weapon::Rocket => "R",
+            Weapon::Flak => "F",
+            Weapon::Rail => "X",
+            Weapon::Arc => "A",
         }
     }
 
@@ -496,6 +565,10 @@ pub enum ShotKind {
     Beam,
     Missile,
     Plasma,
+    Rocket,
+    Flak,
+    Rail,
+    Arc,
     Enemy,
 }
 
@@ -506,6 +579,10 @@ impl ShotKind {
             ShotKind::Beam => "┃",
             ShotKind::Missile => "↟",
             ShotKind::Plasma => "◍",
+            ShotKind::Rocket => "⇈",
+            ShotKind::Flak => "✱",
+            ShotKind::Rail => "║",
+            ShotKind::Arc => "≈",
             ShotKind::Enemy => "!",
         }
     }
@@ -527,6 +604,12 @@ pub struct Shot {
     pub homing: bool,
     /// Half-width of the damage footprint; plasma is three cells wide.
     pub half_width: i16,
+    /// Blast radius on impact: a rocket takes the cells around what it hits.
+    pub splash: i16,
+    /// Rows left before a flak shell bursts; zero means it never does.
+    pub fuse: i16,
+    /// Hulls an arc bolt may still jump to.
+    pub chain: u32,
     pub kind: ShotKind,
 }
 
@@ -540,7 +623,58 @@ impl Shot {
             pierce: false,
             homing: false,
             half_width: 0,
+            splash: 0,
+            fuse: 0,
+            chain: 0,
             kind: ShotKind::Bolt,
+        }
+    }
+
+    /// A machine-gun round: small, quick, no frills.
+    fn vulcan(pos: (i16, i16), drift: i16, damage: i32) -> Shot {
+        Shot {
+            speed: -3,
+            ..Shot::bolt(pos, drift, damage)
+        }
+    }
+
+    /// A dumb-fire rocket: slow, heavy, and it takes the neighbours with it.
+    fn rocket(pos: (i16, i16), damage: i32) -> Shot {
+        Shot {
+            speed: -1,
+            splash: 1,
+            kind: ShotKind::Rocket,
+            ..Shot::bolt(pos, 0, damage)
+        }
+    }
+
+    /// A flak shell: it climbs `fuse` rows, then bursts into fragments.
+    fn flak(pos: (i16, i16), damage: i32, fuse: i16) -> Shot {
+        Shot {
+            speed: -2,
+            fuse,
+            kind: ShotKind::Flak,
+            ..Shot::bolt(pos, 0, damage)
+        }
+    }
+
+    /// A rail slug: the length of the court in a tick, through everything.
+    fn rail(pos: (i16, i16), damage: i32) -> Shot {
+        Shot {
+            speed: -6,
+            pierce: true,
+            kind: ShotKind::Rail,
+            ..Shot::bolt(pos, 0, damage)
+        }
+    }
+
+    /// An arc bolt: it jumps to the next hull along, `chain` times.
+    fn arc(pos: (i16, i16), damage: i32, chain: u32) -> Shot {
+        Shot {
+            speed: -2,
+            chain,
+            kind: ShotKind::Arc,
+            ..Shot::bolt(pos, 0, damage)
         }
     }
 
@@ -786,20 +920,32 @@ pub enum Sector {
     Minefield,
     IonStorm,
     DebrisRing,
+    /// Close to the star: flares sweep the court in pairs.
+    SolarCorona,
+    /// A graveyard of hulks and old mines.
+    Wreckage,
+    /// The tail of a comet, thick with ice and rock.
+    CometTrail,
+    /// A tear in space: wells drag at everything, and the stars are gone.
+    VoidRift,
 }
 
 impl Sector {
-    pub const ALL: [Sector; 6] = [
+    pub const ALL: [Sector; 10] = [
         Sector::OpenSpace,
         Sector::AsteroidBelt,
         Sector::Nebula,
         Sector::Minefield,
         Sector::IonStorm,
         Sector::DebrisRing,
+        Sector::SolarCorona,
+        Sector::Wreckage,
+        Sector::CometTrail,
+        Sector::VoidRift,
     ];
 
     pub fn of_wave(wave: u32) -> Sector {
-        Sector::ALL[(wave as usize + 5) % Sector::ALL.len()]
+        Sector::ALL[(wave as usize + 9) % Sector::ALL.len()]
     }
 
     pub fn name(self) -> &'static str {
@@ -810,6 +956,10 @@ impl Sector {
             Sector::Minefield => "minefield",
             Sector::IonStorm => "ion storm",
             Sector::DebrisRing => "debris ring",
+            Sector::SolarCorona => "solar corona",
+            Sector::Wreckage => "wreckage",
+            Sector::CometTrail => "comet trail",
+            Sector::VoidRift => "void rift",
         }
     }
 
@@ -821,13 +971,19 @@ impl Sector {
             Sector::Minefield => "mines already hanging in the lanes",
             Sector::IonStorm => "surges drain the reactor and stun the drones",
             Sector::DebrisRing => "hulks that eat shots and block the lanes",
+            Sector::SolarCorona => "two walls of fire sweeping the court",
+            Sector::Wreckage => "a graveyard of hulks and old mines",
+            Sector::CometTrail => "ice and rock, pouring past",
+            Sector::VoidRift => "wells that drag at the hull, and no stars",
         }
     }
 
     /// 1-in-N odds per tick that a rock drifts in.
     fn asteroid_chance(self) -> u64 {
         match self {
+            Sector::CometTrail => 24,
             Sector::AsteroidBelt => 40,
+            Sector::Wreckage => 90,
             Sector::DebrisRing => 160,
             _ => ASTEROID_CHANCE,
         }
@@ -836,7 +992,8 @@ impl Sector {
     /// Mines already scattered in the court when the wave starts.
     fn starting_mines(self) -> usize {
         match self {
-            Sector::Minefield => 10,
+            Sector::Minefield => 14,
+            Sector::Wreckage => 6,
             Sector::DebrisRing => 3,
             _ => 0,
         }
@@ -845,7 +1002,8 @@ impl Sector {
     /// Debris blocks drifting through the court.
     fn debris_blocks(self) -> usize {
         match self {
-            Sector::DebrisRing => 7,
+            Sector::Wreckage => 11,
+            Sector::DebrisRing => 8,
             Sector::AsteroidBelt => 2,
             _ => 0,
         }
@@ -867,10 +1025,12 @@ impl Sector {
     /// How thick the backdrop is drawn, in cells per layer.
     fn backdrop(self) -> usize {
         match self {
-            Sector::Nebula => 26,
-            Sector::IonStorm => 20,
-            Sector::OpenSpace => 14,
-            _ => 10,
+            Sector::Nebula => 30,
+            Sector::SolarCorona => 26,
+            Sector::IonStorm => 22,
+            Sector::OpenSpace | Sector::CometTrail => 16,
+            Sector::VoidRift => 4,
+            _ => 12,
         }
     }
 
@@ -880,6 +1040,13 @@ impl Sector {
             (Sector::Nebula, 0) => "░",
             (Sector::Nebula, 1) => "▒",
             (Sector::Nebula, _) => "▓",
+            (Sector::SolarCorona, 0) => "░",
+            (Sector::SolarCorona, 1) => "▒",
+            (Sector::SolarCorona, _) => "▓",
+            (Sector::CometTrail, 0) => "·",
+            (Sector::CometTrail, 1) => "˙",
+            (Sector::CometTrail, _) => "❄",
+            (Sector::VoidRift, _) => "‧",
             (Sector::IonStorm, 0) => "·",
             (Sector::IonStorm, 1) => "¦",
             (Sector::IonStorm, _) => "⌇",
@@ -991,9 +1158,9 @@ impl BossKind {
     /// Half-width of the core hull.
     pub fn core_half(self) -> i16 {
         match self {
-            BossKind::Twin => 2,
+            BossKind::Twin => 3,
             BossKind::Serpent => 1,
-            _ => 4,
+            _ => 6,
         }
     }
 
@@ -1253,6 +1420,376 @@ pub struct ShopLine {
     pub available: bool,
 }
 
+/// How the rock is laid out in a sector: the shape of the flyable channel.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum TerrainKind {
+    /// Nothing but the court walls.
+    Open,
+    /// A channel that pinches shut and opens back up.
+    Canyon,
+    /// A wide, wandering passage with a rough edge.
+    Cave,
+    /// A narrow run with almost no room either side.
+    Tunnel,
+    /// A wide channel studded with rock columns.
+    Pillars,
+    /// Bulkheads across the court with a single gap to thread.
+    Gates,
+    /// A rock spine down the middle, splitting the court in two.
+    Spine,
+    /// Alternating half-walls that force the hull to weave.
+    Maze,
+    /// Thick with columns, wall to wall.
+    Reef,
+}
+
+impl TerrainKind {
+    pub const ALL: [TerrainKind; 9] = [
+        TerrainKind::Open,
+        TerrainKind::Canyon,
+        TerrainKind::Cave,
+        TerrainKind::Tunnel,
+        TerrainKind::Pillars,
+        TerrainKind::Gates,
+        TerrainKind::Spine,
+        TerrainKind::Maze,
+        TerrainKind::Reef,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            TerrainKind::Open => "open",
+            TerrainKind::Canyon => "canyon",
+            TerrainKind::Cave => "cave",
+            TerrainKind::Tunnel => "tunnel",
+            TerrainKind::Pillars => "pillars",
+            TerrainKind::Gates => "gates",
+            TerrainKind::Spine => "spine",
+            TerrainKind::Maze => "maze",
+            TerrainKind::Reef => "reef",
+        }
+    }
+
+    pub fn blurb(self) -> &'static str {
+        match self {
+            TerrainKind::Open => "clear lanes wall to wall",
+            TerrainKind::Canyon => "a channel that pinches shut",
+            TerrainKind::Cave => "a wandering passage with rough edges",
+            TerrainKind::Tunnel => "barely wider than the hull",
+            TerrainKind::Pillars => "open, but studded with rock columns",
+            TerrainKind::Gates => "bulkheads with one gap to thread",
+            TerrainKind::Spine => "a rock spine splitting the court",
+            TerrainKind::Maze => "half-walls that force a weave",
+            TerrainKind::Reef => "columns wall to wall",
+        }
+    }
+
+    /// Narrowest and widest the channel gets, in columns.
+    fn width_range(self) -> (i16, i16) {
+        match self {
+            TerrainKind::Open => (W - 2, W - 2),
+            TerrainKind::Canyon => (26, W - 8),
+            TerrainKind::Cave => (28, W - 4),
+            TerrainKind::Tunnel => (22, 32),
+            TerrainKind::Pillars | TerrainKind::Reef => (W - 8, W - 4),
+            TerrainKind::Gates | TerrainKind::Spine | TerrainKind::Maze => (W - 6, W - 2),
+        }
+    }
+
+    /// Columns the channel centre may wander per row.
+    fn wander(self) -> i16 {
+        match self {
+            TerrainKind::Open => 0,
+            TerrainKind::Canyon | TerrainKind::Tunnel => 1,
+            TerrainKind::Cave => 2,
+            TerrainKind::Pillars | TerrainKind::Reef => 1,
+            TerrainKind::Gates | TerrainKind::Spine => 2,
+            TerrainKind::Maze => 0,
+        }
+    }
+
+    /// Whether shooting the rock carves it away.
+    fn destructible(self) -> bool {
+        matches!(
+            self,
+            TerrainKind::Cave | TerrainKind::Pillars | TerrainKind::Reef | TerrainKind::Spine
+        )
+    }
+
+    /// 1-in-N odds a generated row grows a rock column in the channel.
+    fn pillar_chance(self) -> u64 {
+        match self {
+            TerrainKind::Reef => 2,
+            TerrainKind::Pillars => 4,
+            TerrainKind::Cave => 14,
+            _ => 0,
+        }
+    }
+}
+
+/// One row of the scrolling rock: the open channel, plus any column standing in
+/// the middle of it.
+#[derive(Clone, Debug)]
+pub struct TerrainRow {
+    /// Leftmost and rightmost flyable columns, inclusive.
+    pub open: (i16, i16),
+    /// Rock columns standing inside the channel, if this row grew any.
+    pub pillars: Vec<i16>,
+}
+
+impl TerrainRow {
+    fn solid(&self, col: i16) -> bool {
+        col < self.open.0 || col > self.open.1 || self.pillars.contains(&col)
+    }
+}
+
+/// The rock the sector is flown through: one row per board row, scrolling down
+/// the court as the ship flies up the map.
+#[derive(Clone, Debug)]
+pub struct Terrain {
+    pub kind: TerrainKind,
+    /// Indexed by board row; row zero is the top of the court.
+    pub rows: Vec<TerrainRow>,
+    centre: i16,
+    width: i16,
+    drift: i16,
+    squeeze: i16,
+    /// Rows generated so far, which is what paces gates and maze walls.
+    phase: u32,
+    rng: u64,
+}
+
+impl Terrain {
+    pub fn new(kind: TerrainKind, seed: u64) -> Terrain {
+        let (min, max) = kind.width_range();
+        let mut terrain = Terrain {
+            kind,
+            rows: Vec::with_capacity(H as usize),
+            centre: W / 2,
+            width: max,
+            drift: 1,
+            squeeze: -1,
+            phase: 0,
+            rng: seed | 1,
+            //
+        };
+        let _ = min;
+        for _ in 0..H {
+            let row = terrain.generate();
+            terrain.rows.push(row);
+        }
+        terrain
+    }
+
+    fn rand(&mut self) -> u64 {
+        self.rng = self
+            .rng
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        self.rng >> 33
+    }
+
+    /// Walk the channel one row on: the centre wanders, the width breathes
+    /// between the kind's limits, and some rows grow a pillar.
+    fn generate(&mut self) -> TerrainRow {
+        self.phase = self.phase.wrapping_add(1);
+        match self.kind {
+            // A bulkhead every few rows, with one gap to thread.
+            TerrainKind::Gates => {
+                return if self.phase.is_multiple_of(GATE_PERIOD) {
+                    let gap = GATE_GAP;
+                    let centre = (self.rand() % (W as u64 - gap as u64 - 4)) as i16 + gap / 2 + 2;
+                    TerrainRow {
+                        open: (centre - gap / 2, centre + gap / 2),
+                        pillars: Vec::new(),
+                    }
+                } else {
+                    TerrainRow {
+                        open: (1, W - 2),
+                        pillars: Vec::new(),
+                    }
+                };
+            }
+            // A spine of rock down the middle, wandering as it goes.
+            TerrainKind::Spine => {
+                if self.rand().is_multiple_of(4) {
+                    self.drift = -self.drift;
+                }
+                self.centre = (self.centre + self.drift).clamp(8, W - 9);
+                return TerrainRow {
+                    open: (2, W - 3),
+                    pillars: vec![self.centre, self.centre + 1],
+                };
+            }
+            // Half-walls, alternating sides every few rows.
+            TerrainKind::Maze => {
+                let block = self.phase / MAZE_PERIOD;
+                let open = if self.phase % MAZE_PERIOD >= MAZE_WALL {
+                    (1, W - 2)
+                } else if block.is_multiple_of(2) {
+                    (W / 4, W - 2)
+                } else {
+                    (1, 3 * W / 4)
+                };
+                return TerrainRow {
+                    open,
+                    pillars: Vec::new(),
+                };
+            }
+            _ => {}
+        }
+        let (min, max) = self.kind.width_range();
+        let wander = self.kind.wander();
+        if wander > 0 {
+            if self.rand().is_multiple_of(3) {
+                self.drift = -self.drift;
+            }
+            self.centre = (self.centre + self.drift * wander).clamp(min / 2 + 2, W - min / 2 - 2);
+            self.width = (self.width + self.squeeze).clamp(min, max);
+            if self.width == min || self.width == max {
+                self.squeeze = -self.squeeze;
+            }
+        }
+        let half = self.width / 2;
+        let open = ((self.centre - half).max(1), (self.centre + half).min(W - 2));
+        let chance = self.kind.pillar_chance();
+        let mut pillars = Vec::new();
+        if chance > 0 {
+            let span = (open.1 - open.0).max(2) as u64;
+            for _ in 0..PILLARS_PER_ROW {
+                if self.rand().is_multiple_of(chance) {
+                    let col = open.0 + 1 + (self.rand() % (span - 1)) as i16;
+                    if !pillars.contains(&col) {
+                        pillars.push(col);
+                    }
+                }
+            }
+        }
+        TerrainRow { open, pillars }
+    }
+
+    /// Scroll the rock one row down the court, generating a fresh row on top.
+    pub fn scroll(&mut self) {
+        let row = self.generate();
+        self.rows.pop();
+        self.rows.insert(0, row);
+    }
+
+    /// Is the cell rock?
+    pub fn solid(&self, r: i16, c: i16) -> bool {
+        if self.kind == TerrainKind::Open {
+            return false;
+        }
+        match self.rows.get(r.max(0) as usize) {
+            Some(row) => row.solid(c),
+            None => false,
+        }
+    }
+
+    /// Blast a cell of rock away, where the kind allows it.
+    pub fn carve(&mut self, r: i16, c: i16) -> bool {
+        if !self.kind.destructible() {
+            return false;
+        }
+        let Some(row) = self.rows.get_mut(r.max(0) as usize) else {
+            return false;
+        };
+        if let Some(i) = row.pillars.iter().position(|&p| p == c) {
+            row.pillars.remove(i);
+            return true;
+        }
+        if c < row.open.0 {
+            row.open.0 = (row.open.0 - 1).max(1);
+            return true;
+        }
+        if c > row.open.1 {
+            row.open.1 = (row.open.1 + 1).min(W - 2);
+            return true;
+        }
+        false
+    }
+
+    /// The flyable span on a row, for keeping ships and spawns inside it.
+    pub fn channel(&self, r: i16) -> (i16, i16) {
+        match self.rows.get(r.max(0) as usize) {
+            Some(row) if self.kind != TerrainKind::Open => row.open,
+            _ => (1, W - 2),
+        }
+    }
+}
+
+/// A gun emplacement bolted to the rock, riding down with the scroll.
+#[derive(Clone, Debug)]
+pub struct WallTurret {
+    pub pos: (i16, i16),
+    pub hp: i32,
+    cooldown: u32,
+}
+
+/// Something the sector itself does to you, over and above the rock.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Hazard {
+    /// Drags the hull a column toward it every few ticks.
+    GravityWell { pos: (i16, i16) },
+    /// A wall of fire sweeping across the court a column at a time.
+    SolarFlare { col: i16, dir: i16 },
+    /// A current that shoves the hull sideways.
+    IonStream { push: i16 },
+}
+
+impl Hazard {
+    pub fn name(self) -> &'static str {
+        match self {
+            Hazard::GravityWell { .. } => "gravity well",
+            Hazard::SolarFlare { .. } => "solar flare",
+            Hazard::IonStream { .. } => "ion stream",
+        }
+    }
+}
+
+/// What a route node pays out when it is flown.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NodeBonus {
+    /// A salvage cache banked the moment the wave starts.
+    Cache(u32),
+    /// A gun crate: the node hands over a weapon.
+    Armoury(Weapon),
+    /// Shields and a bomb, topped up on arrival.
+    Refit,
+    /// Thicker enemy armour, double salvage from every kill.
+    Danger,
+}
+
+impl NodeBonus {
+    pub fn label(self) -> String {
+        match self {
+            NodeBonus::Cache(credits) => format!("salvage cache ({credits})"),
+            NodeBonus::Armoury(w) => format!("armoury ({})", w.name()),
+            NodeBonus::Refit => "refit (shields + bomb)".to_string(),
+            NodeBonus::Danger => "danger (armoured, double salvage)".to_string(),
+        }
+    }
+}
+
+/// One stop on the star chart: where you fly next, and what is waiting there.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct RouteNode {
+    pub sector: Sector,
+    pub terrain: TerrainKind,
+    pub bonus: NodeBonus,
+}
+
+impl RouteNode {
+    pub fn label(&self) -> String {
+        format!(
+            "{} · {} — {}",
+            self.sector.name(),
+            self.terrain.name(),
+            self.bonus.label()
+        )
+    }
+}
+
 /// The pure Nova court. No I/O, no timing — unit-tested.
 #[derive(Clone)]
 pub struct Game {
@@ -1294,6 +1831,17 @@ pub struct Game {
     pub asteroids: Vec<Asteroid>,
     pub debris: Vec<Debris>,
     pub stars: Vec<Star>,
+    /// The rock this leg of the route is flown through.
+    pub terrain: Terrain,
+    /// Guns bolted to that rock.
+    pub turrets: Vec<WallTurret>,
+    /// Whatever else the sector is doing to the hull.
+    pub hazards: Vec<Hazard>,
+    /// The stop being flown, and the three the chart offers next.
+    pub node: RouteNode,
+    pub route: Vec<RouteNode>,
+    /// Ticks the arrival banner still has to run.
+    pub banner: u32,
     /// Frames of flash left over from a bomb or a surge, for the renderer.
     pub flash: u32,
     /// Ticks left of the cleared-wave pause.
@@ -1316,7 +1864,8 @@ pub struct Game {
     repair_timer: u32,
     facing: i16,
     next_extend: u32,
-    tick: u32,
+    /// Ticks flown this run; the renderer reads it for the hazard rhythms.
+    pub tick: u32,
     rng: u64,
 }
 
@@ -1355,6 +1904,16 @@ impl Game {
             asteroids: Vec::new(),
             debris: Vec::new(),
             stars: Vec::new(),
+            terrain: Terrain::new(TerrainKind::Open, seed),
+            turrets: Vec::new(),
+            hazards: Vec::new(),
+            node: RouteNode {
+                sector: Sector::of_wave(1),
+                terrain: TerrainKind::Open,
+                bonus: NodeBonus::Refit,
+            },
+            route: Vec::new(),
+            banner: 0,
             flash: 0,
             intermission: 0,
             bulwark: 0,
@@ -1403,6 +1962,12 @@ impl Game {
         self.energy = self.max_energy();
         self.next_extend = EXTEND_SCORE;
         self.wave = 1;
+        self.route.clear();
+        self.node = RouteNode {
+            sector: Sector::of_wave(1),
+            terrain: TerrainKind::Open,
+            bonus: NodeBonus::Refit,
+        };
         self.status = Status::Playing;
         self.spawn_wave();
     }
@@ -1427,7 +1992,8 @@ impl Game {
     /// campaign thickens it every few waves, so a maxed-out build still has to
     /// work for its kills.
     fn wave_armour(&self) -> i32 {
-        self.difficulty.armour() + (self.wave / 3) as i32
+        let danger = if self.danger() { 2 } else { 0 };
+        self.difficulty.armour() + (self.wave / 3) as i32 + danger
     }
 
     /// Columns the hull covers per keypress, engine included.
@@ -1444,7 +2010,7 @@ impl Game {
         if self.loadout.has(Module::Autoloader) {
             ticks = ticks.saturating_sub(1);
         }
-        ticks.max(1)
+        (ticks as i32 + self.weapon.cadence_shift()).max(1) as u32
     }
 
     /// Damage the gun deals before its level bonus, cannon included.
@@ -1563,26 +2129,38 @@ impl Game {
         self.sway_x = 0;
         self.sway_dir = 1;
         self.sway_counter = SWAY_CADENCE;
-        self.sector = Sector::of_wave(self.wave);
+        self.sector = self.node.sector;
         self.formation = Formation::of_wave(self.wave);
+        self.banner = BANNER_TICKS;
         self.dress_sector();
+        self.dress_terrain();
+        self.claim_node_bonus();
         if self.wave.is_multiple_of(BOSS_EVERY) {
             let kind = BossKind::of_wave(self.wave);
             let hp = 60 + 40 * (self.wave / BOSS_EVERY) as i32 + 20 * self.wave_armour();
             self.boss = Some(Boss::new(kind, hp));
             for col in (0..COLS).step_by(2) {
-                let home = (FORMATION_TOP + 5, BASE_X + col as i16 * ENEMY_GAP);
+                let home = self.place((FORMATION_TOP + 5, BASE_X + col as i16 * ENEMY_GAP));
                 let escort = self.hatch(EnemyKind::Kamikaze, home);
                 self.enemies.push(escort);
             }
             return;
         }
-        // Later waves come deeper as well as tougher.
+        // Later waves come deeper as well as tougher, but a tight map fields a
+        // narrower wave: there is only so much room between the rock.
         let rows = (2 + (self.wave / 3) as usize).min(ROWS);
+        let span: i16 = (0..rows as i16)
+            .map(|r| {
+                let (l, right) = self.terrain.channel(FORMATION_TOP + r * 2);
+                right - l
+            })
+            .min()
+            .unwrap_or(W - 2);
+        let lanes = ((COLS as i16 * span / (W - 2)).clamp(4, COLS as i16)) as usize;
         for row in 0..rows {
-            for col in 0..COLS {
+            for col in 0..lanes {
                 let kind = self.wave_kind(row, col);
-                let home = self.formation.slot(row, col);
+                let home = self.place(self.formation.slot(row, col));
                 let hull = self.hatch(kind, home);
                 self.enemies.push(hull);
             }
@@ -1615,6 +2193,9 @@ impl Game {
         if self.loadout.has(Module::Salvager) {
             salvage += salvage / 2;
         }
+        if self.danger() {
+            salvage *= 2;
+        }
         self.credits += salvage;
         self.xp += base / 4 + 1;
         while self.xp >= self.xp_next {
@@ -1642,8 +2223,15 @@ impl Game {
         if dc != 0 {
             self.facing = dc.signum();
         }
-        self.ship.1 = (self.ship.1 + dc * self.thrust()).clamp(1, W - 2);
-        self.ship.0 = (self.ship.0 + dr).clamp(SHIP_TOP, SHIP_ROW);
+        let wanted = (self.ship.1 + dc * self.thrust()).clamp(1, W - 2);
+        let row = (self.ship.0 + dr).clamp(SHIP_TOP, SHIP_ROW);
+        let (left, right) = self.terrain.channel(row);
+        self.ship.0 = row;
+        self.ship.1 = wanted.clamp(left, right);
+        if self.terrain.solid(self.ship.0, self.ship.1) {
+            // A column stands in the way: slide to the open cell beside it.
+            self.shove_into_lane();
+        }
     }
 
     /// Put a player shot in the air, slowed if the sector drags.
@@ -1727,6 +2315,47 @@ impl Game {
                 let half_width = if level >= 3 { 2 } else { 1 };
                 self.launch(Shot::plasma((r, c), dmg + 2, half_width));
             }
+            Weapon::Vulcan => {
+                // The barrel walks a column either side as it hoses.
+                let jitter = if self.tick.is_multiple_of(2) { 1 } else { -1 };
+                self.launch(Shot::vulcan((r, c), 0, dmg));
+                if level >= 2 {
+                    self.launch(Shot::vulcan((r, c + jitter), 0, dmg));
+                }
+                if level >= 3 {
+                    self.launch(Shot::vulcan((r, c - jitter), 0, dmg));
+                }
+            }
+            Weapon::Rocket => {
+                let lanes: &[i16] = match level {
+                    1 => &[0],
+                    2 => &[-2, 2],
+                    _ => &[-2, 0, 2],
+                };
+                for &dx in lanes {
+                    self.launch(Shot::rocket((r, c + dx), dmg + 2));
+                }
+            }
+            Weapon::Flak => {
+                self.launch(Shot::flak((r, c), dmg + 1, FLAK_FUSE));
+                if level >= 2 {
+                    self.launch(Shot::flak((r, c - 3), dmg + 1, FLAK_FUSE + 2));
+                }
+                if level >= 3 {
+                    self.launch(Shot::flak((r, c + 3), dmg + 1, FLAK_FUSE + 2));
+                }
+            }
+            Weapon::Rail => {
+                self.launch(Shot::rail((r, c), dmg * 3 + 2));
+                if level >= 3 {
+                    for dx in [-2, 2] {
+                        self.launch(Shot::rail((r, c + dx), dmg * 2));
+                    }
+                }
+            }
+            Weapon::Arc => {
+                self.launch(Shot::arc((r, c), dmg + 1, level + 1));
+            }
         }
         // The drones throw a plain bolt each, unless a surge has stunned them.
         if self.drone_stun == 0 {
@@ -1786,6 +2415,10 @@ impl Game {
         self.enemies = survivors;
         self.asteroids.retain(|a| a.hp > BOMB_DAMAGE);
         self.debris.retain(|d| d.hp > BOMB_DAMAGE);
+        for turret in self.turrets.iter_mut() {
+            turret.hp -= BOMB_DAMAGE;
+        }
+        self.turrets.retain(|t| t.hp > 0);
         if let Some(boss) = self.boss.as_mut() {
             let bite = (boss.max_hp / 12).max(BOMB_DAMAGE);
             for part in boss.parts.iter_mut() {
@@ -1886,6 +2519,7 @@ impl Game {
         self.flash = self.flash.saturating_sub(1);
         self.bulwark = self.bulwark.saturating_sub(1);
         self.drone_stun = self.drone_stun.saturating_sub(1);
+        self.banner = self.banner.saturating_sub(1);
         self.energy = (self.energy + self.regen()).min(self.max_energy());
         if self.combo_timer > 0 {
             self.combo_timer -= 1;
@@ -2007,6 +2641,8 @@ impl Game {
                     e.state = EnemyState::Weaving { dir };
                 }
             }
+            let (left, right) = self.terrain.channel(e.pos.0);
+            e.pos.1 = e.pos.1.clamp(left, right);
             if e.pos.0 >= H {
                 if e.kind == EnemyKind::Kamikaze {
                     continue;
@@ -2108,7 +2744,7 @@ impl Game {
             match boss.kind {
                 BossKind::Dreadnought => match phase {
                     1 => {
-                        for dx in [-4, 0, 4] {
+                        for dx in [-6, -2, 2, 6] {
                             volley.push(Shot::enemy((row, boss.pos.1 + dx), aim, 1));
                         }
                     }
@@ -2139,8 +2775,8 @@ impl Game {
                 BossKind::Carrier => {
                     // A curtain of shots across the hull, denser as it burns.
                     let step = if phase == 1 { 4 } else { 2 };
-                    let mut dx = -4;
-                    while dx <= 4 {
+                    let mut dx = -6;
+                    while dx <= 6 {
                         volley.push(Shot::enemy((row, boss.pos.1 + dx), 0, 1));
                         dx += step;
                     }
@@ -2180,8 +2816,8 @@ impl Game {
                     cells.clone()
                 } else {
                     vec![
-                        (boss.pos.0 + 3, boss.pos.1 - 4),
-                        (boss.pos.0 + 3, boss.pos.1 + 4),
+                        (boss.pos.0 + 3, boss.pos.1 - 6),
+                        (boss.pos.0 + 3, boss.pos.1 + 6),
                     ]
                 };
                 for (r, c) in bays {
@@ -2264,10 +2900,15 @@ impl Game {
         if self.hit_debris((r, c), shot.damage) {
             hit = true;
         }
+        if self.hit_turret((r, c), shot.damage) {
+            hit = true;
+        }
         let mut kills: Vec<(EnemyKind, (i16, i16))> = Vec::new();
         let mut kept = Vec::with_capacity(self.enemies.len());
+        let reach_rows = shot.splash;
+        let reach_cols = shot.half_width.max(shot.splash);
         for mut e in std::mem::take(&mut self.enemies) {
-            if e.pos.0 == r && (e.pos.1 - c).abs() <= shot.half_width {
+            if (e.pos.0 - r).abs() <= reach_rows && (e.pos.1 - c).abs() <= reach_cols {
                 e.hp -= shot.damage;
                 hit = true;
                 if e.hp <= 0 {
@@ -2331,6 +2972,7 @@ impl Game {
     /// only piercing beams survive a hit.
     fn advance_shots(&mut self) {
         let mut kept = Vec::with_capacity(self.shots.len());
+        let mut fragments: Vec<Shot> = Vec::new();
         'shot: for mut s in std::mem::take(&mut self.shots) {
             if s.homing {
                 s.drift = self.steer(&s);
@@ -2343,13 +2985,53 @@ impl Game {
                 if s.pos.0 < 0 || !(0..W).contains(&s.pos.1) {
                     continue 'shot;
                 }
-                if self.hit_targets(&s) && !s.pierce {
+                if self.terrain.solid(s.pos.0, s.pos.1) {
+                    self.terrain.carve(s.pos.0, s.pos.1);
+                    continue 'shot;
+                }
+                if self.hit_targets(&s) {
+                    // An arc bolt earths itself through the hulls around it.
+                    while s.chain > 0 {
+                        let Some(next) = self.nearest_enemy(s.pos) else {
+                            break;
+                        };
+                        s.pos = next;
+                        s.chain -= 1;
+                        self.hit_targets(&s);
+                    }
+                    if !s.pierce {
+                        continue 'shot;
+                    }
+                }
+            }
+            // A flak shell counts down and then throws its fan.
+            if s.fuse > 0 {
+                s.fuse -= 1;
+                if s.fuse == 0 {
+                    for drift in -2..=2 {
+                        let mut fragment = Shot::bolt(s.pos, drift, s.damage);
+                        fragment.speed = -1;
+                        if self.sector.drag() {
+                            fragment.slow();
+                        }
+                        fragments.push(fragment);
+                    }
                     continue 'shot;
                 }
             }
             kept.push(s);
         }
         self.shots = kept;
+        self.shots.extend(fragments);
+    }
+
+    /// The nearest hull to a cell, for an arc bolt looking for its next jump.
+    fn nearest_enemy(&self, from: (i16, i16)) -> Option<(i16, i16)> {
+        self.enemies
+            .iter()
+            .map(|e| e.pos)
+            .filter(|&p| p != from && (p.0 - from.0).abs() + (p.1 - from.1).abs() <= ARC_REACH)
+            .min_by_key(|p| (p.0 - from.0).abs() + (p.1 - from.1).abs())
     }
 
     /// Advance enemy fire; hulks eat it, the bulwark eats it, and anything that
@@ -2371,6 +3053,9 @@ impl Game {
                 }
                 if self.debris.iter().any(|d| d.pos == s.pos) {
                     blocked.push(s.pos);
+                    continue 'shot;
+                }
+                if self.terrain.solid(s.pos.0, s.pos.1) {
                     continue 'shot;
                 }
                 if s.pos == ship {
@@ -2538,6 +3223,10 @@ impl Game {
         if self.enemies.is_empty() && self.boss.is_none() && self.status == Status::Playing {
             self.status = Status::WaveClear;
             self.intermission = INTERMISSION_TICKS;
+            self.route = self.roll_route();
+            if let Some(&first) = self.route.first() {
+                self.node = first;
+            }
             let bonus = 100 * self.wave;
             self.add_score(bonus);
             self.credits += bonus;
@@ -2673,12 +3362,268 @@ impl Game {
         true
     }
 
+    /// True while this leg of the route is a danger run.
+    pub fn danger(&self) -> bool {
+        self.node.bonus == NodeBonus::Danger
+    }
+
+    /// Squeeze a formation slot into the rock: the wave keeps its shape, but a
+    /// narrow channel packs it in rather than burying half of it in the wall.
+    fn place(&self, slot: (i16, i16)) -> (i16, i16) {
+        let (left, right) = self.terrain.channel(slot.0);
+        let span = (right - left).max(1);
+        let x = left + (slot.1 - 1) * span / (W - 2);
+        (slot.0, x.clamp(left, right))
+    }
+
+    /// Lay the rock, bolt turrets to it and set whatever the sector throws at
+    /// you on top of the formation.
+    fn dress_terrain(&mut self) {
+        let seed = self.rand();
+        self.terrain = Terrain::new(self.node.terrain, seed);
+        self.turrets.clear();
+        self.hazards.clear();
+        if self.node.terrain != TerrainKind::Open {
+            for _ in 0..TURRETS_PER_MAP {
+                if let Some(turret) = self.turret_on_the_rock() {
+                    self.turrets.push(turret);
+                }
+            }
+        }
+        match self.sector {
+            Sector::Nebula => {
+                let col = (self.rand() % (W as u64 - 8)) as i16 + 4;
+                let row = (self.rand() % 6) as i16 + 3;
+                self.hazards.push(Hazard::GravityWell { pos: (row, col) });
+            }
+            Sector::IonStorm => {
+                let push = if self.rand() & 1 == 0 { 1 } else { -1 };
+                self.hazards.push(Hazard::IonStream { push });
+            }
+            Sector::SolarCorona => {
+                for dir in [1, -1] {
+                    let col = (self.rand() % (W as u64 - 4)) as i16 + 2;
+                    self.hazards.push(Hazard::SolarFlare { col, dir });
+                }
+            }
+            Sector::CometTrail => {
+                let push = if self.rand() & 1 == 0 { 1 } else { -1 };
+                self.hazards.push(Hazard::IonStream { push });
+            }
+            Sector::VoidRift => {
+                for _ in 0..2 {
+                    let col = (self.rand() % (W as u64 - 8)) as i16 + 4;
+                    let row = (self.rand() % 8) as i16 + 3;
+                    self.hazards.push(Hazard::GravityWell { pos: (row, col) });
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Find a cell of rock with open court under it and put a gun on it.
+    fn turret_on_the_rock(&mut self) -> Option<WallTurret> {
+        for _ in 0..12 {
+            let row = (self.rand() % (SHIP_TOP as u64 - 2)) as i16 + 1;
+            let (left, right) = self.terrain.channel(row);
+            let col = if self.rand() & 1 == 0 {
+                left - 1
+            } else {
+                right + 1
+            };
+            if (1..W - 1).contains(&col) && self.terrain.solid(row, col) {
+                return Some(WallTurret {
+                    pos: (row, col),
+                    hp: TURRET_HP + self.wave_armour(),
+                    cooldown: TURRET_CADENCE,
+                });
+            }
+        }
+        None
+    }
+
+    /// Scroll the rock, ride the turrets down with it and let them shoot; the
+    /// hull scrapes if it is caught in the wall.
+    fn advance_terrain(&mut self) {
+        if self.node.terrain != TerrainKind::Open && self.tick.is_multiple_of(SCROLL_CADENCE) {
+            self.terrain.scroll();
+            let mut kept = Vec::with_capacity(self.turrets.len());
+            for mut t in std::mem::take(&mut self.turrets) {
+                t.pos.0 += 1;
+                if t.pos.0 < H {
+                    kept.push(t);
+                }
+            }
+            self.turrets = kept;
+            if self.turrets.len() < TURRETS_PER_MAP {
+                if let Some(turret) = self.turret_on_the_rock() {
+                    self.turrets.push(turret);
+                }
+            }
+        }
+        // Turret fire, aimed down the court at the hull.
+        let ship = self.ship;
+        let mut volley = Vec::new();
+        for t in self.turrets.iter_mut() {
+            if t.cooldown > 0 {
+                t.cooldown -= 1;
+                continue;
+            }
+            t.cooldown = TURRET_CADENCE;
+            volley.push(Shot::enemy(
+                (t.pos.0 + 1, t.pos.1),
+                (ship.1 - t.pos.1).signum(),
+                1,
+            ));
+        }
+        for shot in volley {
+            self.launch_enemy(shot);
+        }
+        // Rock closing on the hull shoves it aside; it only crushes when there
+        // is nowhere left to go.
+        self.shove_into_lane();
+    }
+
+    /// Push the hull to the nearest open cell on its row. Flying is never
+    /// punished by rock arriving from above — only by rock with no way out.
+    fn shove_into_lane(&mut self) {
+        let row = self.ship.0;
+        if !self.terrain.solid(row, self.ship.1) {
+            return;
+        }
+        let (left, right) = self.terrain.channel(row);
+        for step in 1..W {
+            for col in [self.ship.1 - step, self.ship.1 + step] {
+                if (left..=right).contains(&col) && !self.terrain.solid(row, col) {
+                    self.ship.1 = col;
+                    return;
+                }
+            }
+        }
+        self.damage_ship(1);
+    }
+
+    /// Run whatever the sector does to the hull beyond the rock and the wave.
+    fn advance_hazards(&mut self) {
+        let tick = self.tick;
+        let ship = self.ship;
+        let mut pull = 0;
+        let mut burn = false;
+        let mut updated = Vec::with_capacity(self.hazards.len());
+        for hazard in std::mem::take(&mut self.hazards) {
+            match hazard {
+                Hazard::GravityWell { pos } => {
+                    if tick.is_multiple_of(2) {
+                        pull += (pos.1 - ship.1).signum();
+                    }
+                    updated.push(hazard);
+                }
+                Hazard::IonStream { push } => {
+                    if tick.is_multiple_of(3) {
+                        pull += push;
+                    }
+                    updated.push(hazard);
+                }
+                Hazard::SolarFlare { col, dir } => {
+                    let (col, dir) = if tick.is_multiple_of(FLARE_CADENCE) {
+                        let next = col + dir;
+                        if (1..W - 1).contains(&next) {
+                            (next, dir)
+                        } else {
+                            (col - dir, -dir)
+                        }
+                    } else {
+                        (col, dir)
+                    };
+                    if ship.1 == col && tick % FLARE_PERIOD < FLARE_ACTIVE {
+                        burn = true;
+                    }
+                    updated.push(Hazard::SolarFlare { col, dir });
+                }
+            }
+        }
+        self.hazards = updated;
+        if pull != 0 {
+            let (left, right) = self.terrain.channel(self.ship.0);
+            self.ship.1 = (self.ship.1 + pull).clamp(left.max(1), right.min(W - 2));
+        }
+        if burn {
+            self.damage_ship(1);
+        }
+    }
+
+    /// Chew on the wall turret at a cell, if there is one.
+    fn hit_turret(&mut self, pos: (i16, i16), damage: i32) -> bool {
+        let Some(i) = self.turrets.iter().position(|t| t.pos == pos) else {
+            return false;
+        };
+        self.turrets[i].hp -= damage;
+        if self.turrets[i].hp <= 0 {
+            self.turrets.remove(i);
+            self.award(60);
+        }
+        true
+    }
+
+    /// The three stops the star chart offers from here.
+    fn roll_route(&mut self) -> Vec<RouteNode> {
+        let mut nodes = Vec::with_capacity(ROUTE_CHOICES);
+        for _ in 0..ROUTE_CHOICES {
+            let sector = Sector::ALL[(self.rand() % Sector::ALL.len() as u64) as usize];
+            let terrain = TerrainKind::ALL[(self.rand() % TerrainKind::ALL.len() as u64) as usize];
+            let bonus = match self.rand() % 4 {
+                0 => NodeBonus::Cache(200 + 60 * self.wave),
+                1 => NodeBonus::Armoury(Weapon::ALL[(self.rand() % 5) as usize]),
+                2 => NodeBonus::Refit,
+                _ => NodeBonus::Danger,
+            };
+            nodes.push(RouteNode {
+                sector,
+                terrain,
+                bonus,
+            });
+        }
+        nodes
+    }
+
+    /// Pick the next stop on the chart; returns whether the index was on it.
+    pub fn choose_route(&mut self, index: usize) -> bool {
+        if self.status != Status::Hangar {
+            return false;
+        }
+        let Some(&node) = self.route.get(index) else {
+            return false;
+        };
+        self.node = node;
+        true
+    }
+
+    /// Hand over whatever the chosen stop was carrying.
+    fn claim_node_bonus(&mut self) {
+        match self.node.bonus {
+            NodeBonus::Cache(credits) => self.credits += credits,
+            NodeBonus::Armoury(weapon) => {
+                self.weapon = weapon;
+                self.weapon_level = self.weapon_level.max(2);
+            }
+            NodeBonus::Refit => {
+                self.shield = self.max_shield;
+                self.bombs += 1;
+            }
+            // A danger run pays for itself through wave_armour and the salvage
+            // multiplier rather than up front.
+            NodeBonus::Danger => {}
+        }
+    }
+
     /// Advance one tick of the round, or of the pause before the hangar opens.
     pub fn step(&mut self) {
         match self.status {
             Status::Playing => {
                 self.tick_timers();
                 self.advance_stars();
+                self.advance_terrain();
+                self.advance_hazards();
                 self.advance_storm();
                 self.sway();
                 self.advance_enemies();
@@ -2834,7 +3779,7 @@ impl Nova {
         surface.set_string(
             ox,
             y + 2,
-            "Sectors: open space, asteroid belt, nebula, minefield, ion storm, debris ring.",
+            "Ten sectors over nine kinds of rock, picked from the star chart each hangar.",
             dim,
         );
         surface.set_string(
@@ -2912,14 +3857,34 @@ impl Nova {
             y += 1;
         }
         y += 1;
+        surface.set_string(ox, y, "STAR CHART — pick the next stop:", header);
+        y += 1;
+        for (i, node) in g.route.iter().enumerate() {
+            let key = ROUTE_KEYS[i.min(ROUTE_KEYS.len() - 1)];
+            let chosen = *node == g.node;
+            surface.set_string(
+                ox,
+                y,
+                &format!(
+                    "{} [{}] {}",
+                    if chosen { "▶" } else { " " },
+                    key,
+                    node.label()
+                ),
+                if chosen { header } else { text },
+            );
+            surface.set_string(ox + 52, y, node.terrain.blurb(), dim);
+            y += 1;
+        }
+        y += 1;
         surface.set_string(
             ox,
             y,
             &format!(
                 "Next up: wave {} — {} ({}).  Enter launches · q quits.",
                 g.wave + 1,
-                Sector::of_wave(g.wave + 1).name(),
-                Sector::of_wave(g.wave + 1).blurb()
+                g.node.sector.name(),
+                g.node.sector.blurb()
             ),
             header,
         );
@@ -2970,6 +3935,15 @@ impl Component for Nova {
             Status::Hangar => match key {
                 key!(Enter) => self.game.launch_next_wave(),
                 key!('n') => self.restart(),
+                key!('z') => {
+                    self.game.choose_route(0);
+                }
+                key!('x') => {
+                    self.game.choose_route(1);
+                }
+                key!('v') => {
+                    self.game.choose_route(2);
+                }
                 _ => {
                     // Everything else is a hangar line key.
                     if let Some(c) = key.char() {
@@ -3033,6 +4007,7 @@ impl Component for Nova {
         let eshot_style = theme.get("error");
         let power_style = theme.get("string");
         let hazard_style = theme.get("comment");
+        let rock_style = theme.get("ui.linenr");
 
         surface.clear_with(area, bg);
         if area.width < W as u16 + 4 || area.height < H as u16 + 7 {
@@ -3066,8 +4041,18 @@ impl Component for Nova {
                 "NOVA  wave {}  {}  score {}  chain ×{}",
                 g.wave,
                 match &g.boss {
-                    Some(boss) => format!("{} · {}", g.sector.name(), boss.kind.name()),
-                    None => format!("{} · {}", g.sector.name(), g.formation.name()),
+                    Some(boss) => format!(
+                        "{} · {} · {}",
+                        g.sector.name(),
+                        g.node.terrain.name(),
+                        boss.kind.name()
+                    ),
+                    None => format!(
+                        "{} · {} · {}",
+                        g.sector.name(),
+                        g.node.terrain.name(),
+                        g.formation.name()
+                    ),
                 },
                 g.score,
                 g.combo
@@ -3170,6 +4155,64 @@ impl Component for Nova {
             if on_board(r, c) {
                 let (x, y) = cell(r, c);
                 surface.set_string(x, y, g.sector.star_glyph(star.layer), star_style);
+            }
+        }
+        // The rock itself: everything outside the flyable channel.
+        if g.node.terrain != TerrainKind::Open {
+            for r in 0..H {
+                for c in 0..W {
+                    if g.terrain.solid(r, c) {
+                        let (x, y) = cell(r, c);
+                        surface.set_string(x, y, "▓", rock_style);
+                    }
+                }
+            }
+        }
+        for t in &g.turrets {
+            let (r, c) = t.pos;
+            if on_board(r, c) {
+                let (x, y) = cell(r, c);
+                surface.set_string(x, y, "Ø", enemy_style);
+            }
+        }
+        for hazard in &g.hazards {
+            match *hazard {
+                Hazard::GravityWell { pos } => {
+                    for (dr, dc) in [(0, 0), (0, -1), (0, 1), (-1, 0), (1, 0)] {
+                        let (r, c) = (pos.0 + dr, pos.1 + dc);
+                        if on_board(r, c) {
+                            let (x, y) = cell(r, c);
+                            let glyph = if (dr, dc) == (0, 0) { "◎" } else { "∙" };
+                            surface.set_string(x, y, glyph, beam_style);
+                        }
+                    }
+                }
+                Hazard::SolarFlare { col, .. } => {
+                    // Dim while it is cold, lit while it burns.
+                    let hot = g.tick % FLARE_PERIOD < FLARE_ACTIVE;
+                    let (glyph, style) = if hot {
+                        ("≋", shot_style)
+                    } else {
+                        ("┊", hazard_style)
+                    };
+                    for r in 0..H {
+                        if on_board(r, col) {
+                            let (x, y) = cell(r, col);
+                            surface.set_string(x, y, glyph, style);
+                        }
+                    }
+                }
+                Hazard::IonStream { push } => {
+                    let glyph = if push > 0 { "»" } else { "«" };
+                    for r in (0..H).step_by(4) {
+                        for c in [1, W - 2] {
+                            if on_board(r, c) {
+                                let (x, y) = cell(r, c);
+                                surface.set_string(x, y, glyph, beam_style);
+                            }
+                        }
+                    }
+                }
             }
         }
         // The boss hull and its parts.
@@ -3277,6 +4320,18 @@ impl Component for Nova {
             surface.set_string(x, y, g.class.glyph(), ship_style);
         }
 
+        if g.banner > 0 {
+            let banner = format!(
+                "◈ {} · {} — {} ◈",
+                g.sector.name().to_uppercase(),
+                g.node.terrain.name(),
+                g.node.bonus.label()
+            );
+            let x = ox + (W as u16).saturating_sub(banner.chars().count() as u16) / 2;
+            let (_, y) = cell(H / 2, 0);
+            surface.set_string(x, y, &banner, header_style);
+        }
+
         let status_y = top + 2 + H as u16;
         let status = match g.status {
             Status::Lost => format!(
@@ -3304,9 +4359,13 @@ mod tests {
     use super::*;
 
     /// A cruiser one keypress into wave one, on an empty stretch of court.
-    fn flying() -> Game {
+    pub(super) fn flying() -> Game {
         let mut g = Game::new(1);
         g.start(ShipClass::Cruiser, Difficulty::Normal);
+        g.node.terrain = TerrainKind::Open;
+        g.terrain = Terrain::new(TerrainKind::Open, 1);
+        g.turrets.clear();
+        g.hazards.clear();
         g.enemies.clear();
         g.mines.clear();
         g.debris.clear();
@@ -4138,6 +5197,546 @@ mod tests {
                 "no hull is left below the floor"
             );
             assert!(g.energy <= g.max_energy(), "the meter never overfills");
+        }
+    }
+}
+
+#[cfg(test)]
+mod map_tests {
+    use super::tests::flying;
+    use super::*;
+
+    /// A court flown through a given kind of rock.
+    fn on_map(kind: TerrainKind) -> Game {
+        let mut g = Game::new(3);
+        g.start(ShipClass::Cruiser, Difficulty::Normal);
+        g.node.terrain = kind;
+        g.terrain = Terrain::new(kind, 11);
+        g.enemies.clear();
+        g.turrets.clear();
+        g.hazards.clear();
+        g.enemy_shots.clear();
+        g
+    }
+
+    /// A row where the rock actually closes in, and the wall cell beside it.
+    fn wall_cell(g: &Game, row: i16) -> i16 {
+        let (left, right) = g.terrain.channel(row);
+        if left > 1 {
+            left - 1
+        } else {
+            right + 1
+        }
+    }
+
+    #[test]
+    fn terrain_kinds_shape_the_channel() {
+        let tunnel = Terrain::new(TerrainKind::Tunnel, 5);
+        let canyon = Terrain::new(TerrainKind::Canyon, 5);
+        let open = Terrain::new(TerrainKind::Open, 5);
+        let span = |t: &Terrain| {
+            let (l, r) = t.channel(6);
+            r - l
+        };
+        assert!(
+            span(&tunnel) < span(&canyon),
+            "a tunnel is the tightest run"
+        );
+        assert!(span(&canyon) < span(&open), "and open space the widest");
+        assert!(
+            !open.solid(6, 1),
+            "open space has no rock to fly into at all"
+        );
+    }
+
+    #[test]
+    fn the_rock_scrolls_down_the_court() {
+        let mut terrain = Terrain::new(TerrainKind::Cave, 9);
+        let second = terrain.rows[1].open;
+        terrain.scroll();
+        assert_eq!(
+            terrain.rows[2].open, second,
+            "every row slides one place down"
+        );
+        assert_eq!(terrain.rows.len(), H as usize, "and the court stays full");
+    }
+
+    #[test]
+    fn rock_stops_a_shot_and_a_cave_lets_it_be_carved() {
+        let mut g = on_map(TerrainKind::Cave);
+        let row = g.ship.0 - 2;
+        let col = wall_cell(&g, row);
+        assert!(g.terrain.solid(row, col), "the cell is rock to begin with");
+        g.ship.1 = col;
+        g.fire();
+        g.advance_shots();
+        assert!(g.shots.is_empty(), "the shot is stopped by the rock");
+        assert!(!g.terrain.solid(row, col), "and a cave wall is carved open");
+    }
+
+    #[test]
+    fn canyon_walls_cannot_be_carved() {
+        let mut g = on_map(TerrainKind::Canyon);
+        let row = g.ship.0 - 2;
+        let col = wall_cell(&g, row);
+        g.ship.1 = col;
+        g.fire();
+        g.advance_shots();
+        assert!(
+            g.terrain.solid(row, col),
+            "canyon rock takes the hit and holds"
+        );
+    }
+
+    #[test]
+    fn enemy_fire_is_stopped_by_the_rock_as_well() {
+        let mut g = on_map(TerrainKind::Tunnel);
+        let row = g.ship.0 - 3;
+        let col = wall_cell(&g, row);
+        g.enemy_shots = vec![Shot::enemy((row - 1, col), 0, 1)];
+        g.advance_enemy_shots();
+        assert!(g.enemy_shots.is_empty(), "the wall eats it");
+    }
+
+    #[test]
+    fn rock_closing_in_shoves_the_hull_back_into_the_lane() {
+        let mut g = on_map(TerrainKind::Tunnel);
+        g.tick = 1;
+        let col = wall_cell(&g, g.ship.0);
+        g.ship.1 = col;
+        let shield = g.shield;
+        g.advance_terrain();
+        assert_eq!(g.shield, shield, "being shoved aside does not cost a pip");
+        let (left, right) = g.terrain.channel(g.ship.0);
+        assert!(
+            (left..=right).contains(&g.ship.1),
+            "and is shoved back into the lane"
+        );
+    }
+
+    #[test]
+    fn a_wall_turret_fires_and_can_be_shot_off() {
+        let mut g = on_map(TerrainKind::Canyon);
+        g.tick = 1;
+        g.turrets = vec![WallTurret {
+            pos: (5, 12),
+            hp: 3,
+            cooldown: 0,
+        }];
+        g.advance_terrain();
+        assert_eq!(g.enemy_shots.len(), 1, "the emplacement opens up");
+        assert!(g.hit_targets(&Shot::bolt((5, 12), 0, 3)), "and can be hit");
+        assert!(g.turrets.is_empty(), "three points of damage takes it out");
+    }
+
+    #[test]
+    fn a_gravity_well_drags_the_hull_toward_it() {
+        let mut g = on_map(TerrainKind::Open);
+        g.hazards = vec![Hazard::GravityWell {
+            pos: (4, g.ship.1 + 6),
+        }];
+        g.tick = 2;
+        let col = g.ship.1;
+        g.advance_hazards();
+        assert_eq!(g.ship.1, col + 1, "the well pulls a column a time");
+    }
+
+    #[test]
+    fn an_ion_stream_shoves_the_hull_sideways() {
+        let mut g = on_map(TerrainKind::Open);
+        g.hazards = vec![Hazard::IonStream { push: -1 }];
+        g.tick = 3;
+        let col = g.ship.1;
+        g.advance_hazards();
+        assert_eq!(g.ship.1, col - 1, "the current carries the hull with it");
+    }
+
+    #[test]
+    fn a_solar_flare_burns_whatever_is_in_its_column() {
+        let mut g = on_map(TerrainKind::Open);
+        g.shield = 4;
+        g.hazards = vec![Hazard::SolarFlare {
+            col: g.ship.1,
+            dir: 1,
+        }];
+        g.tick = 1;
+        g.advance_hazards();
+        assert_eq!(g.shield, 3, "standing in a hot flare costs a pip");
+        g.invuln = 0;
+        g.tick = FLARE_ACTIVE + 1;
+        g.advance_hazards();
+        assert_eq!(g.shield, 3, "but the column is cold between pulses");
+        g.tick = FLARE_CADENCE;
+        g.invuln = 0;
+        g.advance_hazards();
+        match g.hazards[0] {
+            Hazard::SolarFlare { col, .. } => {
+                assert_ne!(col, g.ship.1, "and the wall of fire sweeps on")
+            }
+            _ => panic!("the flare is still the hazard"),
+        }
+    }
+
+    #[test]
+    fn the_chart_offers_three_stops_and_flies_the_one_you_pick() {
+        let mut g = flying();
+        g.check_end();
+        for _ in 0..INTERMISSION_TICKS {
+            g.step();
+        }
+        assert_eq!(g.status, Status::Hangar);
+        assert_eq!(g.route.len(), ROUTE_CHOICES, "the chart offers three stops");
+        assert!(g.choose_route(2), "the third is a legal pick");
+        let picked = g.node;
+        assert!(!g.choose_route(9), "and nothing beyond the chart is");
+        g.launch_next_wave();
+        assert_eq!(g.sector, picked.sector, "the run flies the stop you picked");
+        assert_eq!(g.node.terrain, picked.terrain, "through its rock");
+    }
+
+    #[test]
+    fn a_salvage_cache_pays_out_on_arrival() {
+        let mut g = flying();
+        g.credits = 0;
+        g.node = RouteNode {
+            sector: Sector::OpenSpace,
+            terrain: TerrainKind::Open,
+            bonus: NodeBonus::Cache(750),
+        };
+        g.spawn_wave();
+        assert_eq!(g.credits, 750, "the cache is banked when the wave starts");
+    }
+
+    #[test]
+    fn an_armoury_stop_hands_over_its_gun() {
+        let mut g = flying();
+        g.weapon = Weapon::Blaster;
+        g.weapon_level = 1;
+        g.node = RouteNode {
+            sector: Sector::OpenSpace,
+            terrain: TerrainKind::Open,
+            bonus: NodeBonus::Armoury(Weapon::Plasma),
+        };
+        g.spawn_wave();
+        assert_eq!(g.weapon, Weapon::Plasma, "the crate is fitted");
+        assert!(g.weapon_level >= 2, "and comes half tuned");
+    }
+
+    #[test]
+    fn a_danger_run_is_armoured_but_pays_double() {
+        let mut g = flying();
+        let plain = g.wave_armour();
+        g.credits = 0;
+        g.award(100);
+        let plain_salvage = g.credits;
+        g.node.bonus = NodeBonus::Danger;
+        assert_eq!(
+            g.wave_armour(),
+            plain + 2,
+            "everything out there is tougher"
+        );
+        g.credits = 0;
+        g.combo = 1;
+        g.award(100);
+        assert_eq!(g.credits, plain_salvage * 2, "and worth twice as much");
+    }
+
+    #[test]
+    fn the_formation_is_squeezed_into_the_channel() {
+        let mut g = flying();
+        g.wave = 2;
+        g.node = RouteNode {
+            sector: Sector::OpenSpace,
+            terrain: TerrainKind::Tunnel,
+            bonus: NodeBonus::Refit,
+        };
+        g.spawn_wave();
+        assert!(!g.enemies.is_empty());
+        for e in &g.enemies {
+            let (left, right) = g.terrain.channel(e.home.0);
+            assert!(
+                (left..=right).contains(&e.home.1),
+                "every hull in the wave holds station inside the rock"
+            );
+        }
+    }
+
+    #[test]
+    fn a_long_run_through_the_rock_never_panics() {
+        let mut g = Game::new(21);
+        g.start(ShipClass::Juggernaut, Difficulty::Hard);
+        for i in 0..3_000 {
+            if g.status == Status::Hangar {
+                g.choose_route(i % ROUTE_CHOICES);
+                g.launch_next_wave();
+            }
+            if i % 3 == 0 {
+                g.fire();
+            }
+            g.move_ship(if i % 5 < 2 { 1 } else { -1 }, 0);
+            g.step();
+            assert!(
+                (1..W - 1).contains(&g.ship.1),
+                "the hull stays on the court"
+            );
+            assert_eq!(
+                g.terrain.rows.len(),
+                H as usize,
+                "the rock always fills the court"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod gun_tests {
+    use super::tests::flying;
+    use super::*;
+
+    #[test]
+    fn the_vulcan_hoses_faster_than_anything_else() {
+        let mut g = flying();
+        g.weapon = Weapon::Blaster;
+        let blaster = g.cadence();
+        g.weapon = Weapon::Vulcan;
+        assert!(g.cadence() < blaster, "the machine gun barely pauses");
+        g.weapon = Weapon::Rail;
+        assert!(g.cadence() > blaster, "the rail gun takes its time");
+        g.weapon = Weapon::Vulcan;
+        g.weapon_level = 3;
+        g.fire();
+        assert_eq!(g.shots.len(), 3, "and walks three rounds across at level 3");
+    }
+
+    #[test]
+    fn a_rocket_takes_the_neighbours_with_it() {
+        let mut g = flying();
+        g.weapon = Weapon::Rocket;
+        let (row, col) = (g.ship.0 - 2, g.ship.1);
+        g.enemies = vec![
+            Enemy::new(EnemyKind::Grunt, (row, col)),
+            Enemy::new(EnemyKind::Grunt, (row, col + 1)),
+            Enemy::new(EnemyKind::Grunt, (row - 1, col - 1)),
+        ];
+        g.fire();
+        g.advance_shots();
+        assert!(g.enemies.is_empty(), "the blast clears the cells around it");
+    }
+
+    #[test]
+    fn a_flak_shell_bursts_into_a_fan() {
+        let mut g = flying();
+        g.weapon = Weapon::Flak;
+        g.fire();
+        assert_eq!(g.shots.len(), 1, "one shell goes up");
+        for _ in 0..FLAK_FUSE {
+            g.advance_shots();
+        }
+        assert_eq!(g.shots.len(), 5, "and comes apart into five fragments");
+        assert!(
+            g.shots.iter().all(|s| s.fuse == 0),
+            "fragments have no fuse of their own"
+        );
+    }
+
+    #[test]
+    fn a_rail_slug_runs_the_length_of_the_court() {
+        let mut g = flying();
+        g.weapon = Weapon::Rail;
+        let col = g.ship.1;
+        g.enemies = (2..=5)
+            .map(|dr| Enemy::new(EnemyKind::Tank, (g.ship.0 - dr, col)))
+            .collect();
+        g.fire();
+        g.advance_shots();
+        assert!(
+            g.enemies.is_empty(),
+            "the slug punches through the whole column"
+        );
+    }
+
+    #[test]
+    fn an_arc_bolt_earths_itself_through_a_crowd() {
+        let mut g = flying();
+        g.weapon = Weapon::Arc;
+        g.weapon_level = 2;
+        let (row, col) = (g.ship.0 - 2, g.ship.1);
+        g.enemies = vec![
+            Enemy::new(EnemyKind::Grunt, (row, col)),
+            Enemy::new(EnemyKind::Grunt, (row, col + 3)),
+            Enemy::new(EnemyKind::Grunt, (row - 1, col + 5)),
+        ];
+        g.fire();
+        g.advance_shots();
+        assert!(
+            g.enemies.len() <= 1,
+            "the bolt jumps from hull to hull, {} left",
+            g.enemies.len()
+        );
+    }
+
+    #[test]
+    fn every_gun_puts_something_in_the_air() {
+        for weapon in Weapon::ALL {
+            let mut g = flying();
+            g.weapon = weapon;
+            g.weapon_level = 3;
+            g.fire();
+            assert!(
+                !g.shots.is_empty(),
+                "{} fires something at level three",
+                weapon.name()
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod terrain_kind_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn count_pillars(kind: TerrainKind) -> usize {
+        Terrain::new(kind, 17)
+            .rows
+            .iter()
+            .map(|r| r.pillars.len())
+            .sum()
+    }
+
+    #[test]
+    fn gates_leave_exactly_one_gap_to_thread() {
+        let terrain = Terrain::new(TerrainKind::Gates, 4);
+        let gate = terrain
+            .rows
+            .iter()
+            .find(|r| r.open.1 - r.open.0 <= GATE_GAP)
+            .expect("a bulkhead stands somewhere in the court");
+        assert!(gate.open.0 > 1, "rock to the left of the gap");
+        assert!(gate.open.1 < W - 2, "and rock to the right of it");
+        assert!(
+            terrain.rows.iter().any(|r| r.open == (1, W - 2)),
+            "with clear rows between the bulkheads"
+        );
+    }
+
+    #[test]
+    fn a_spine_splits_the_court_down_the_middle() {
+        let terrain = Terrain::new(TerrainKind::Spine, 4);
+        assert!(
+            terrain.rows.iter().all(|r| r.pillars.len() == 2),
+            "every row carries the spine"
+        );
+        let row = &terrain.rows[3];
+        assert!(
+            (8..W - 8).contains(&row.pillars[0]),
+            "and it runs down the middle of the court"
+        );
+    }
+
+    #[test]
+    fn maze_walls_alternate_sides() {
+        let terrain = Terrain::new(TerrainKind::Maze, 4);
+        assert!(
+            terrain.rows.iter().any(|r| r.open.0 > 1),
+            "some blocks wall the left"
+        );
+        assert!(
+            terrain.rows.iter().any(|r| r.open.1 < W - 2),
+            "some wall the right"
+        );
+        assert!(
+            terrain.rows.iter().any(|r| r.open == (1, W - 2)),
+            "and there is clear water between them"
+        );
+    }
+
+    #[test]
+    fn a_reef_is_thicker_than_a_cave() {
+        assert!(
+            count_pillars(TerrainKind::Reef) > count_pillars(TerrainKind::Cave),
+            "the reef is the one that is wall to wall"
+        );
+        assert_eq!(count_pillars(TerrainKind::Canyon), 0, "a canyon is clear");
+    }
+
+    #[test]
+    fn the_new_sectors_bring_their_own_trouble() {
+        let hazards = |sector: Sector| {
+            let mut g = flying();
+            g.node = RouteNode {
+                sector,
+                terrain: TerrainKind::Open,
+                bonus: NodeBonus::Refit,
+            };
+            g.spawn_wave();
+            g
+        };
+        let corona = hazards(Sector::SolarCorona);
+        assert_eq!(
+            corona
+                .hazards
+                .iter()
+                .filter(|h| matches!(h, Hazard::SolarFlare { .. }))
+                .count(),
+            2,
+            "the corona sweeps two walls of fire"
+        );
+        let void = hazards(Sector::VoidRift);
+        assert_eq!(
+            void.hazards
+                .iter()
+                .filter(|h| matches!(h, Hazard::GravityWell { .. }))
+                .count(),
+            2,
+            "the rift drags from two wells"
+        );
+        let comet = hazards(Sector::CometTrail);
+        assert!(
+            comet
+                .hazards
+                .iter()
+                .any(|h| matches!(h, Hazard::IonStream { .. })),
+            "the comet trail runs a current"
+        );
+        assert!(
+            Sector::CometTrail.asteroid_chance() < Sector::AsteroidBelt.asteroid_chance(),
+            "and throws more rock than the belt"
+        );
+        let wreck = hazards(Sector::Wreckage);
+        assert!(
+            wreck.debris.len() > 8 && !wreck.mines.is_empty(),
+            "the graveyard is full of hulks and old mines"
+        );
+    }
+
+    #[test]
+    fn every_map_can_be_flown_without_panicking() {
+        for terrain in TerrainKind::ALL {
+            for sector in Sector::ALL {
+                let mut g = Game::new(5);
+                g.start(ShipClass::Cruiser, Difficulty::Normal);
+                g.node = RouteNode {
+                    sector,
+                    terrain,
+                    bonus: NodeBonus::Refit,
+                };
+                g.spawn_wave();
+                for i in 0..300 {
+                    if i % 3 == 0 {
+                        g.fire();
+                    }
+                    g.move_ship(if i % 7 < 3 { 1 } else { -1 }, 0);
+                    g.step();
+                }
+                assert_eq!(
+                    g.terrain.rows.len(),
+                    H as usize,
+                    "{} in {} keeps its rock",
+                    terrain.name(),
+                    sector.name()
+                );
+            }
         }
     }
 }
