@@ -574,7 +574,11 @@ mod tests {
         let grapheme = span.styled_graphemes(base).next().unwrap();
 
         assert_eq!(grapheme.style.fg, Some(Color::Yellow), "the span wins");
-        assert_eq!(grapheme.style.bg, Some(Color::Black), "the base shows through");
+        assert_eq!(
+            grapheme.style.bg,
+            Some(Color::Black),
+            "the base shows through"
+        );
     }
 
     /// `patch_style` merges into what a span already carries; `set_style`

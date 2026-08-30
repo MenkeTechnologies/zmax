@@ -439,21 +439,18 @@ mod merge_depth_tests {
         );
 
         let languages = merged.get("language").unwrap().as_array().unwrap();
-        assert_eq!(languages.len(), 1, "the base array is discarded: {languages:?}");
         assert_eq!(
-            languages[0].get("name").unwrap().as_str(),
-            Some("stryke")
+            languages.len(),
+            1,
+            "the base array is discarded: {languages:?}"
         );
+        assert_eq!(languages[0].get("name").unwrap().as_str(), Some("stryke"));
     }
 
     /// A scalar on either side is not merged -- the user's value wins whole.
     #[test]
     fn scalars_take_the_user_value() {
-        let merged = merge(
-            r##"theme = "base16""##,
-            r##"theme = "onedark""##,
-            3,
-        );
+        let merged = merge(r##"theme = "base16""##, r##"theme = "onedark""##, 3);
 
         assert_eq!(merged.get("theme").unwrap().as_str(), Some("onedark"));
     }
@@ -506,7 +503,10 @@ mod runtime_and_workspace_tests {
     fn runtime_file_falls_back_to_a_reportable_path() {
         let path = runtime_file("grammars/sources/definitely-absent");
 
-        assert!(path.ends_with("grammars/sources/definitely-absent"), "{path:?}");
+        assert!(
+            path.ends_with("grammars/sources/definitely-absent"),
+            "{path:?}"
+        );
     }
 
     /// `.git`, `.svn`, `.jj` and `.zmax` each mark a workspace root, and the

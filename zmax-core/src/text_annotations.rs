@@ -443,7 +443,11 @@ mod tests {
     fn a_layer_consumes_one_annotation_per_position_in_order() {
         let annotations = [inline(0, "a"), inline(2, "b"), inline(2, "c")];
         let layer: Layer<'_, InlineAnnotation, ()> = (&annotations[..], ()).into();
-        let at = |idx| layer.consume(idx, |a| a.char_idx).map(|a| a.text.to_string());
+        let at = |idx| {
+            layer
+                .consume(idx, |a| a.char_idx)
+                .map(|a| a.text.to_string())
+        };
 
         assert_eq!(at(0).as_deref(), Some("a"));
         assert_eq!(at(0), None, "consumed: the cursor moved past it");
@@ -464,13 +468,22 @@ mod tests {
         let layer: Layer<'_, InlineAnnotation, ()> = (&annotations[..], ()).into();
         let seek_then_take = |seek, at| {
             layer.reset_pos(seek, |a: &InlineAnnotation| a.char_idx);
-            layer.consume(at, |a: &InlineAnnotation| a.char_idx)
+            layer
+                .consume(at, |a: &InlineAnnotation| a.char_idx)
                 .map(|a| a.text.to_string())
         };
 
         assert_eq!(seek_then_take(5, 5).as_deref(), Some("b"), "lands on 5");
-        assert_eq!(seek_then_take(2, 5).as_deref(), Some("b"), "next after 2 is 5");
-        assert_eq!(seek_then_take(0, 1).as_deref(), Some("a"), "seeking back works");
+        assert_eq!(
+            seek_then_take(2, 5).as_deref(),
+            Some("b"),
+            "next after 2 is 5"
+        );
+        assert_eq!(
+            seek_then_take(0, 1).as_deref(),
+            Some("a"),
+            "seeking back works"
+        );
         // Past the end: nothing left to consume.
         assert_eq!(seek_then_take(10, 10), None);
     }

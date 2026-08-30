@@ -205,12 +205,18 @@ mod tests {
         assert_eq!(name('A').as_deref(), Some("LATIN CAPITAL LETTER A"));
         assert_eq!(character("LATIN CAPITAL LETTER A"), Some('A'));
         assert_eq!(name(' ').as_deref(), Some("SPACE"));
-        assert_eq!(name('ä').as_deref(), Some("LATIN SMALL LETTER A WITH DIAERESIS"));
+        assert_eq!(
+            name('ä').as_deref(),
+            Some("LATIN SMALL LETTER A WITH DIAERESIS")
+        );
         assert_eq!(character("latin small letter a with diaeresis"), Some('ä'));
         assert_eq!(name('€').as_deref(), Some("EURO SIGN"));
 
         // NR2: a fixed prefix plus the codepoint in hex.
-        assert_eq!(name('\u{4E00}').as_deref(), Some("CJK UNIFIED IDEOGRAPH-4E00"));
+        assert_eq!(
+            name('\u{4E00}').as_deref(),
+            Some("CJK UNIFIED IDEOGRAPH-4E00")
+        );
         assert_eq!(character("CJK UNIFIED IDEOGRAPH-4E00"), Some('\u{4E00}'));
         assert_eq!(
             name('\u{20000}').as_deref(),

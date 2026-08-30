@@ -997,10 +997,7 @@ mod test {
         let expected =
             std::fs::canonicalize(runtime.join("grammars").join("sources").join("stryke")).unwrap();
 
-        let resolved = local_grammar_dir(
-            Path::new("../runtime/grammars/sources/stryke"),
-            &runtime,
-        );
+        let resolved = local_grammar_dir(Path::new("../runtime/grammars/sources/stryke"), &runtime);
 
         assert_eq!(resolved, expected);
     }
@@ -1222,7 +1219,10 @@ mod test {
             })
             .collect();
 
-        assert_eq!(local, vec![("stryke", "../runtime/grammars/sources/stryke")]);
+        assert_eq!(
+            local,
+            vec![("stryke", "../runtime/grammars/sources/stryke")]
+        );
         assert!(Path::new(local[0].1).is_relative());
     }
 

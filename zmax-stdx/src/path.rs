@@ -510,7 +510,10 @@ mod tests {
         let absolute = path::canonicalize("definitely/absent/file.rs");
 
         assert!(absolute.is_absolute(), "{absolute:?}");
-        assert!(absolute.ends_with("definitely/absent/file.rs"), "{absolute:?}");
+        assert!(
+            absolute.ends_with("definitely/absent/file.rs"),
+            "{absolute:?}"
+        );
         assert!(!absolute.exists(), "the fixture must stay hypothetical");
     }
 

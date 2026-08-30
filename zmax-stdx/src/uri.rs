@@ -348,9 +348,18 @@ mod tests {
     fn to_file_path_decodes_percent_escapes() {
         let path_of = |input: &str| Url::parse(input).unwrap().to_file_path().unwrap();
 
-        assert_eq!(path_of("file:///tmp/a%20b.txt"), PathBuf::from("/tmp/a b.txt"));
-        assert_eq!(path_of("file:///tmp/%5Btest%5D/x.ts"), PathBuf::from("/tmp/[test]/x.ts"));
-        assert_eq!(path_of("file:///tmp/%23hash.rs"), PathBuf::from("/tmp/#hash.rs"));
+        assert_eq!(
+            path_of("file:///tmp/a%20b.txt"),
+            PathBuf::from("/tmp/a b.txt")
+        );
+        assert_eq!(
+            path_of("file:///tmp/%5Btest%5D/x.ts"),
+            PathBuf::from("/tmp/[test]/x.ts")
+        );
+        assert_eq!(
+            path_of("file:///tmp/%23hash.rs"),
+            PathBuf::from("/tmp/#hash.rs")
+        );
     }
 
     #[test]

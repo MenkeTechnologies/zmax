@@ -111,11 +111,9 @@ mod tests {
 
         assert!(loader.language_for_name("not-a-language").is_none());
         assert!(loader.language_for_scope("source.nothing").is_none());
-        assert!(
-            loader
-                .language_for_filename(Path::new("file.unknown-extension"))
-                .is_none()
-        );
+        assert!(loader
+            .language_for_filename(Path::new("file.unknown-extension"))
+            .is_none());
     }
 
     /// Errors name the language whose entry failed. Without the context a user

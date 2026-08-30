@@ -323,10 +323,7 @@ mod tests {
             // The table of expansion kinds uses the same row shape; variables are
             // plain snake_case names, so anything else is a different table.
             .filter(|name| {
-                !name.is_empty()
-                    && name
-                        .chars()
-                        .all(|c| c.is_ascii_lowercase() || c == '_')
+                !name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c == '_')
             })
             .collect()
     }

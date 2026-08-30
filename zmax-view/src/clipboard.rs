@@ -543,7 +543,10 @@ mod tests {
     #[test]
     fn the_name_lists_both_programs_only_when_they_differ() {
         // pbpaste reads, pbcopy writes.
-        assert_eq!(ClipboardProvider::Pasteboard.name(), "pasteboard (pbpaste+pbcopy)");
+        assert_eq!(
+            ClipboardProvider::Pasteboard.name(),
+            "pasteboard (pbpaste+pbcopy)"
+        );
         assert_eq!(
             ClipboardProvider::Termux.name(),
             "termux (termux-clipboard-get+termux-clipboard-set)"

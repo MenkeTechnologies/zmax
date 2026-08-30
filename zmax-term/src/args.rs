@@ -256,7 +256,11 @@ mod test {
         for (arg, path, row, col) in cases {
             let (parsed_path, position) = parse_file(arg);
             assert_eq!(parsed_path, PathBuf::from(path), "path of {arg}");
-            assert_eq!((position.row, position.col), (row, col), "position of {arg}");
+            assert_eq!(
+                (position.row, position.col),
+                (row, col),
+                "position of {arg}"
+            );
         }
     }
 

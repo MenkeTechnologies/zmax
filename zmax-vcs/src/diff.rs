@@ -422,7 +422,10 @@ mod tests {
             Some(1),
             "and the flag does not exclude it"
         );
-        assert!(diff.nth_hunk(1).after.is_empty(), "a removal covers no lines");
+        assert!(
+            diff.nth_hunk(1).after.is_empty(),
+            "a removal covers no lines"
+        );
     }
 
     /// Inverting swaps which side of each hunk the line numbers refer to, so the

@@ -485,21 +485,33 @@ mod tests {
     /// to be a non-word too -- otherwise `don't` would gain a second quote.
     #[test]
     fn a_quote_needs_both_sides_clear_to_close() {
-        let pair = Pair { open: '\'', close: '\'' };
+        let pair = Pair {
+            open: '\'',
+            close: '\'',
+        };
 
         let (doc, range) = doc_and_cursor("don#t");
         assert!(!pair.should_close(&doc, &range), "inside a word");
         assert!(!Pair::prev_is_not_alpha(&doc, &range));
 
         let (doc, range) = doc_and_cursor("say #");
-        assert!(pair.should_close(&doc, &range), "after a space at end of line");
+        assert!(
+            pair.should_close(&doc, &range),
+            "after a space at end of line"
+        );
 
         // A bracket only looks forward, so it closes even mid-word-boundary.
-        let bracket = Pair { open: '(', close: ')' };
+        let bracket = Pair {
+            open: '(',
+            close: ')',
+        };
         let (doc, range) = doc_and_cursor("foo#");
         assert!(bracket.should_close(&doc, &range));
         let (doc, range) = doc_and_cursor("don#t");
-        assert!(!bracket.should_close(&doc, &range), "next char is alphanumeric");
+        assert!(
+            !bracket.should_close(&doc, &range),
+            "next char is alphanumeric"
+        );
     }
 
     /// Backspacing between the two halves takes both.

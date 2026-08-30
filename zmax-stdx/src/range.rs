@@ -120,10 +120,7 @@ mod tests {
         super_set: &[(usize, usize)],
         sub_set: &[(usize, usize)],
     ) -> bool {
-        is_subset::<ALLOW_EMPTY>(
-            ranges(super_set).into_iter(),
-            ranges(sub_set).into_iter(),
-        )
+        is_subset::<ALLOW_EMPTY>(ranges(super_set).into_iter(), ranges(sub_set).into_iter())
     }
 
     #[test]
@@ -132,13 +129,25 @@ mod tests {
 
         assert!(range.contains(range), "a range contains itself");
         assert!(range.contains(Range { start: 5, end: 7 }));
-        assert!(range.contains(Range { start: 4, end: 4 }), "empty at the start");
-        assert!(range.contains(Range { start: 8, end: 8 }), "empty at the end");
-        assert!(!range.contains(Range { start: 3, end: 8 }), "starts earlier");
+        assert!(
+            range.contains(Range { start: 4, end: 4 }),
+            "empty at the start"
+        );
+        assert!(
+            range.contains(Range { start: 8, end: 8 }),
+            "empty at the end"
+        );
+        assert!(
+            !range.contains(Range { start: 3, end: 8 }),
+            "starts earlier"
+        );
         assert!(!range.contains(Range { start: 4, end: 9 }), "ends later");
 
         assert!(Range { start: 4, end: 4 }.is_empty());
-        assert!(Range { start: 5, end: 4 }.is_empty(), "inverted counts as empty");
+        assert!(
+            Range { start: 5, end: 4 }.is_empty(),
+            "inverted counts as empty"
+        );
         assert!(!Range { start: 4, end: 5 }.is_empty());
     }
 
@@ -193,10 +202,7 @@ mod tests {
     #[test]
     fn exact_subset_requires_every_super_range_to_be_matched() {
         let exact = |super_set: &[(usize, usize)], sub_set: &[(usize, usize)]| {
-            is_exact_subset(
-                ranges(super_set).into_iter(),
-                ranges(sub_set).into_iter(),
-            )
+            is_exact_subset(ranges(super_set).into_iter(), ranges(sub_set).into_iter())
         };
 
         assert!(exact(&[(0, 10)], &[(0, 5)]));

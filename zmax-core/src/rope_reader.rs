@@ -120,7 +120,9 @@ mod tests {
     fn empty_ropes_and_empty_buffers_read_nothing() {
         let empty = Rope::new();
         let mut out = Vec::new();
-        RopeReader::new(empty.slice(..)).read_to_end(&mut out).unwrap();
+        RopeReader::new(empty.slice(..))
+            .read_to_end(&mut out)
+            .unwrap();
         assert!(out.is_empty());
 
         let rope = Rope::from("abc");
