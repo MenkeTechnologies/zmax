@@ -10,6 +10,10 @@
 //!   [`Host::buffer_modified`] — the same facts `language()` and friends give
 //!   for the current one.
 //!
+//! Note that [`Host::buffer_index`] resolves a name to an index in one call.
+//! This plugin does the lookup itself only because it refuses ambiguity — see
+//! `resolve` below.
+//!
 //! Buffer indices are positions in the open-buffer list, not stable ids: closing
 //! a buffer renumbers the ones after it. An index is only good for as long as
 //! the command holding it runs, which is why this plugin resolves a NAME to an
@@ -27,9 +31,15 @@ use zmax_native::{declare_plugin, Args, Host};
 
 /// Resolve a name fragment to a buffer index.
 ///
-/// Substring matching, like `bufnr()` — `main` finds `src/main.rs`. Ambiguity
-/// is reported rather than silently taking the first match, since picking one
-/// arbitrarily is how a plugin reads the wrong file.
+/// [`Host::buffer_index`] already does substring matching — `main` finds
+/// `src/main.rs` — and for most plugins it is the right call. This deliberately
+/// does NOT use it: `buffer_index` returns the FIRST buffer whose name matches,
+/// and a command that reads or edits a file must not pick between
+/// `src/main.rs` and `tests/main_test.rs` on its own. Ambiguity is refused with
+/// both candidates named instead.
+///
+/// Reach for `buffer_index` when a wrong-but-plausible match is harmless, and
+/// for something like this when it is not.
 fn resolve(names: &[String], fragment: &str) -> Result<usize, String> {
     let matches: Vec<usize> = names
         .iter()

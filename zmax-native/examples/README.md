@@ -48,5 +48,9 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`under-cursor`](under-cursor) | `:under` | `<cword>` vs `<cWORD>` vs `<cfile>` — three answers, one position |
 | [`diag-triage`](diag-triage) | `:diags` | `diagnostics` severity, ordered explicitly (LSP's integers run backwards) |
 | [`plugin-doctor`](plugin-doctor) | `:plugins`, `:plugins-free {name}` | `command_exists` — a taken name is unreachable, not rejected |
+| [`sticky-column`](sticky-column) | `:col` | three columns: char, cell, and `curswant` — the aim vs the compromise |
+| [`mark-jump`](mark-jump) | `:mj [name]` | `mark` vs `marks`, and `:goto` being 1-based |
+| [`tab-map`](tab-map) | `:tabs` | `tab_index` is 0-based where vim counts from 1; windows are per-tab |
+| [`line-bytes`](line-bytes) | `:lb [byte]` | `line_to_byte` fails where `byte_to_line` CLAMPS — not symmetric |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.

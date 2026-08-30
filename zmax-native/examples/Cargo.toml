@@ -36,6 +36,10 @@ members = [
   "under-cursor",
   "diag-triage",
   "plugin-doctor",
+  "sticky-column",
+  "mark-jump",
+  "tab-map",
+  "line-bytes",
 ]
 
 [workspace.dependencies]
