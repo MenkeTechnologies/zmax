@@ -68,6 +68,7 @@ pub mod minesweeper;
 pub mod missilecommand;
 pub mod mpuz;
 pub mod nonogram;
+pub mod nova;
 pub mod occur;
 pub mod org_agenda;
 pub mod overlay;
