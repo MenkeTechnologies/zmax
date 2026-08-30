@@ -24,6 +24,10 @@ members = [
   "fold-outline",
   "search-peek",
   "three-coords",
+  "todo-scan",
+  "registers",
+  "project-check",
+  "writing-stats",
 ]
 
 [workspace.dependencies]

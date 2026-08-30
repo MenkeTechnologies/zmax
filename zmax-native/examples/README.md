@@ -36,5 +36,9 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`fold-outline`](fold-outline) | `:outline` | `fold_level` + `fold_closed` — structure without a second parse |
 | [`search-peek`](search-peek) | `:sc [pattern]` | `search_count`/`search_next` — Rust regexes, and zero is ambiguous |
 | [`three-coords`](three-coords) | `:pos` | chars vs bytes vs cells, and the bridges between them |
+| [`todo-scan`](todo-scan) | `:todo`, `:todo-next` | `search_next` driven as a LOOP — must advance, and needs a ceiling |
+| [`registers`](registers) | `:regs [names]` | `register` — newline-joined, and no register TYPE is recorded |
+| [`project-check`](project-check) | `:project` | `executable` + `exepath` — whether, and *which* one won |
+| [`writing-stats`](writing-stats) | `:writing` | `word_count` (three counts, one call) + `indent` in columns |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.

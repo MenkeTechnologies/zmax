@@ -1,0 +1,11 @@
+[package]
+name = "zmax-native-writing-stats"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zmax-native = { workspace = true }
