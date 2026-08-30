@@ -3139,8 +3139,8 @@ impl Deck {
             ],
         };
         for (i, &spot) in stock.iter().enumerate() {
-            let row = 2 + (rand() % 6) as i16;
-            let col = 6 + i as i16 * 14 + (rand() % 5) as i16;
+            let row = Deck::HEIGHT - 16 + (rand() % 10) as i16;
+            let col = Deck::WIDTH / 2 - 24 + i as i16 * 16 + (rand() % 5) as i16;
             spots.push((spot, (row, col.min(Deck::WIDTH - 4))));
         }
         // A world is not an empty floor: blocks of city, rock or trees, and
@@ -3178,7 +3178,7 @@ impl Deck {
         Deck {
             width: Deck::WIDTH,
             height: Deck::HEIGHT,
-            pilot: (Deck::HEIGHT - 6, Deck::WIDTH / 2),
+            pilot: (Deck::HEIGHT - 9, Deck::WIDTH / 2),
             facing: (-1, 0),
             spots,
             cover,
@@ -3195,19 +3195,19 @@ impl Deck {
         for i in 0..hulls.max(1) {
             // Two ranks of bays along the back wall, so a full squadron fits.
             let rank = i / 3;
-            let col = 8 + (i % 3) as i16 * 18;
-            let row = 2 + rank as i16 * 4;
+            let col = 12 + (i % 3) as i16 * 16;
+            let row = 4 + rank as i16 * 6;
             spots.push((DeckSpot::Bay(i), (row, col.min(Deck::WIDTH - 6))));
         }
-        spots.push((DeckSpot::Quartermaster, (10, 8)));
-        spots.push((DeckSpot::AstromechPit, (10, 20)));
-        spots.push((DeckSpot::BriefingTable, (10, 33)));
-        spots.push((DeckSpot::Navicomputer, (10, 46)));
-        spots.push((DeckSpot::LaunchPad, (13, Deck::WIDTH / 2)));
+        spots.push((DeckSpot::Quartermaster, (18, 8)));
+        spots.push((DeckSpot::AstromechPit, (18, 20)));
+        spots.push((DeckSpot::BriefingTable, (18, 32)));
+        spots.push((DeckSpot::Navicomputer, (18, 44)));
+        spots.push((DeckSpot::LaunchPad, (22, 24)));
         Deck {
             width: Deck::WIDTH,
             height: Deck::HEIGHT,
-            pilot: (Deck::HEIGHT - 8, Deck::WIDTH / 2),
+            pilot: (12, 24),
             facing: (-1, 0),
             spots,
             cover: Vec::new(),
@@ -7024,6 +7024,10 @@ impl Solid {
     }
 }
 
+/// How big a hull is drawn: model units are fighter-sized, not cell-sized, so a
+/// TIE at ten cells fills a chunk of the glass rather than a couple of cells.
+const HULL_SCALE: f32 = 2.6;
+
 /// The shading ramp, darkest to brightest. A face's brightness comes from how
 /// square it is to the light, dimmed by how far away it is.
 const RAMP: [char; 7] = [' ', '·', '░', '▒', '▓', '█', '█'];
@@ -7035,9 +7039,9 @@ const LIGHT: [f32; 3] = [-0.45, 0.78, -0.44];
 /// How lit a face is, from its normal, and how much the distance eats it.
 fn face_light(normal: [f32; 3], depth: f32) -> f32 {
     let lit = normal[0] * LIGHT[0] + normal[1] * LIGHT[1] + normal[2] * LIGHT[2];
-    let ambient = 0.32;
-    let direct = lit.max(0.0) * 0.68;
-    let fog = (1.0 - (depth / 46.0)).clamp(0.22, 1.0);
+    let ambient = 0.5;
+    let direct = lit.max(0.0) * 0.5;
+    let fog = (1.0 - (depth / 70.0)).clamp(0.45, 1.0);
     ((ambient + direct) * fog).clamp(0.0, 1.0)
 }
 
@@ -7277,14 +7281,20 @@ fn draw_horizon(
         } else {
             (ground, ground_style)
         };
-        // Thin the texture out towards the horizon line so it reads as depth.
-        let band = (y - horizon).abs();
-        let step = if band > 6 { 2 } else { 4 };
+        // Scattered, not a grid: a cheap hash keeps it from reading as texture
+        // wallpaper, and it thins out towards the horizon so that line reads.
+        let band = (y - horizon).unsigned_abs() as u32;
         for x in 0..canvas.w {
-            if (x + y) % step == 0 {
+            let hash = (x as u32).wrapping_mul(73_856_093) ^ (y as u32).wrapping_mul(19_349_663);
+            let density = if band > 5 { 11 } else { 23 };
+            if hash % density == 0 {
                 canvas.plot(x, y, 900.0, glyph, style);
             }
         }
+    }
+    // The horizon itself, so there is a line between the two.
+    for x in 0..canvas.w {
+        canvas.plot(x, horizon, 890.0, '─', ground_style);
     }
 }
 
@@ -7300,16 +7310,18 @@ fn draw_canopy(canvas: &mut Canvas, style: zmax_view::graphics::Style) {
         canvas.plot(0, y, 0.01, '║', style);
         canvas.plot(w - 1, y, 0.01, '║', style);
     }
-    // The two struts a pilot actually looks past.
-    for y in 0..h {
-        let inset = 3 + (h - y) / 4;
-        canvas.plot(inset, y, 0.02, '╲', style);
-        canvas.plot(w - 1 - inset, y, 0.02, '╱', style);
+    // Corner braces, the way a canopy actually frames the view: short runs in
+    // from each corner rather than struts across the glass.
+    let brace = (h / 4).clamp(2, 6);
+    for step in 0..brace {
+        canvas.plot(1 + step, 1 + step, 0.02, '╲', style);
+        canvas.plot(w - 2 - step, 1 + step, 0.02, '╱', style);
+        canvas.plot(1 + step, h - 2 - step, 0.02, '╱', style);
+        canvas.plot(w - 2 - step, h - 2 - step, 0.02, '╲', style);
     }
-    // The coaming across the bottom of the glass.
+    // The coaming across the very bottom of the glass.
     for x in 0..w {
-        let dip = ((x - w / 2).abs() / 6).min(3);
-        canvas.plot(x, h - 2 - dip, 0.02, '▄', style);
+        canvas.plot(x, h - 2, 0.02, '▄', style);
     }
 }
 
@@ -7654,7 +7666,7 @@ impl Nova {
                 &cam,
                 e.kind.solid(),
                 [e.pos.1 as f32, 0.0, e.pos.0 as f32],
-                1.0,
+                HULL_SCALE,
                 enemy_style,
             );
         }
@@ -7663,8 +7675,8 @@ impl Nova {
                 &mut canvas,
                 &cam,
                 g.squad[index].class.solid(),
-                [c as f32, -0.4, r as f32],
-                1.0,
+                [c as f32, -0.6, r as f32],
+                HULL_SCALE,
                 header_style,
             );
         }
@@ -8544,7 +8556,7 @@ impl Nova {
                 text,
             );
         }
-        draw_ground(&mut canvas, &cam, 0.0, 26.0, 1.0, ground, dim);
+        draw_ground(&mut canvas, &cam, 0.0, 30.0, 2.0, ground, dim);
         // Lane markings running away from the pilot, which is what sells the
         // perspective on a flat floor.
         for lane in -6..=6 {
@@ -8620,12 +8632,19 @@ impl Nova {
                         continue;
                     };
                     let style = if i == g.active { ship_style } else { text };
-                    draw_model(&mut canvas, &cam, wing.class.solid(), origin, 1.1, style);
+                    draw_model(
+                        &mut canvas,
+                        &cam,
+                        wing.class.solid(),
+                        origin,
+                        HULL_SCALE,
+                        style,
+                    );
                 }
                 _ => {
                     // A console: a lit slab with a screen on top of it.
-                    let body = Solid::new([0.0, -0.3, 0.0], [0.8, 0.5, 0.8], '█');
-                    let screen = Solid::new([0.0, 0.5, 0.0], [0.6, 0.3, 0.15], '▓');
+                    let body = Solid::new([0.0, -0.3, 0.0], [1.1, 0.7, 1.1], '█');
+                    let screen = Solid::new([0.0, 0.9, 0.0], [0.8, 0.4, 0.2], '▓');
                     let style = if Some(*spot) == deck.at_hand() {
                         header
                     } else {
@@ -13061,5 +13080,158 @@ mod raster_tests {
         ] {
             assert!(!kind.solid().is_empty(), "{} is built", kind.glyph());
         }
+    }
+}
+
+#[cfg(test)]
+mod frame_tests {
+    use super::*;
+
+    /// The frame as text, which is how these were looked at while they were
+    /// being built.
+    fn dump(canvas: &Canvas) -> String {
+        let mut out = String::new();
+        for y in 0..canvas.h {
+            for x in 0..canvas.w {
+                let cell = canvas.cells[(y * canvas.w + x) as usize];
+                out.push(cell.map_or(' ', |c| c.glyph));
+            }
+            out.push('\n');
+        }
+        out
+    }
+
+    /// How much of the frame is drawn on, and how many shading levels it uses.
+    fn coverage(canvas: &Canvas) -> (f32, usize) {
+        let drawn = canvas.cells.iter().flatten().count();
+        let shades: std::collections::HashSet<char> = canvas
+            .cells
+            .iter()
+            .flatten()
+            .map(|cell| cell.glyph)
+            .filter(|glyph| RAMP.contains(glyph))
+            .collect();
+        (drawn as f32 / canvas.cells.len() as f32, shades.len())
+    }
+
+    #[test]
+    fn a_cockpit_frame_is_a_scene_and_not_an_empty_box() {
+        let (w, h) = (96i16, 30i16);
+        let mut canvas = Canvas::new(w, h);
+        let cam = pilot_camera((20, 38), w, h);
+        let style = zmax_view::graphics::Style::default();
+        draw_horizon(&mut canvas, &cam, '·', '·', style, style);
+        draw_planet_disc(&mut canvas, (h / 4, w / 4), h / 5, '▓', style);
+        for (row, col) in [(14, 30), (10, 44), (6, 36), (16, 50)] {
+            draw_model(
+                &mut canvas,
+                &cam,
+                EnemyKind::TieFighter.solid(),
+                [col as f32, 0.0, row as f32],
+                HULL_SCALE,
+                style,
+            );
+        }
+        draw_model(
+            &mut canvas,
+            &cam,
+            ShipClass::XWing.solid(),
+            [44.0, -0.6, 21.0],
+            HULL_SCALE,
+            style,
+        );
+        for dr in 0..4 {
+            let slab = Solid::new([0.0, 0.0, 0.0], [8.0, 0.6, 0.5], '█');
+            draw_solid(
+                &mut canvas,
+                &cam,
+                &slab,
+                [38.0, 1.5, (2 + dr) as f32],
+                1.0,
+                style,
+            );
+        }
+        draw_canopy(&mut canvas, style);
+        let frame = dump(&canvas);
+        let (filled, shades) = coverage(&canvas);
+        assert!(
+            filled > 0.4,
+            "the glass is mostly drawn on, not empty: {filled}
+{frame}"
+        );
+        assert!(
+            shades >= 3,
+            "and the hulls are shaded, not one flat tone: {shades}
+{frame}"
+        );
+        assert!(
+            frame.lines().next().is_some_and(|top| top.contains('═')),
+            "with the canopy round it
+{frame}"
+        );
+        assert!(
+            frame.contains('▓') && frame.contains('░'),
+            "a world in the sky and hulls in front of it
+{frame}"
+        );
+    }
+
+    #[test]
+    fn a_hangar_frame_puts_the_fighters_in_front_of_you() {
+        let (w, h) = (96i16, 30i16);
+        let mut deck = Deck::new(3);
+        deck.pilot = (14, 24);
+        deck.facing = (-1, 0);
+        let mut canvas = Canvas::new(w, h);
+        let cam = walker_camera(&deck, w, h);
+        let style = zmax_view::graphics::Style::default();
+        draw_horizon(&mut canvas, &cam, '▒', '·', style, style);
+        draw_ground(&mut canvas, &cam, 0.0, 30.0, 2.0, '·', style);
+        for (spot, pos) in &deck.spots {
+            let origin = [pos.1 as f32, 0.9, pos.0 as f32];
+            match spot {
+                DeckSpot::Bay(i) => draw_model(
+                    &mut canvas,
+                    &cam,
+                    ShipClass::ALL[i % ShipClass::ALL.len()].solid(),
+                    origin,
+                    HULL_SCALE,
+                    style,
+                ),
+                _ => {
+                    let body = Solid::new([0.0, -0.3, 0.0], [0.8, 0.5, 0.8], '█');
+                    draw_solid(&mut canvas, &cam, &body, origin, 1.0, style);
+                }
+            }
+        }
+        let frame = dump(&canvas);
+        let (filled, shades) = coverage(&canvas);
+        assert!(
+            filled > 0.25,
+            "the deck is drawn, not blank: {filled}
+{frame}"
+        );
+        assert!(
+            shades >= 3,
+            "with lit and shaded faces: {shades}
+{frame}"
+        );
+        // A fighter parked ahead should be a solid mass of hull somewhere in
+        // the middle of the frame, not a scattering of marks.
+        let middle: Vec<&str> = frame.lines().skip(10).take(10).collect();
+        let solid = middle
+            .iter()
+            .map(|row| {
+                row.chars()
+                    .filter(|glyph| matches!(glyph, '█' | '▓' | '▒'))
+                    .count()
+            })
+            .max()
+            .unwrap_or(0);
+        assert!(
+            solid > 8,
+            "the fighter in front of you fills the view: {solid}
+{frame}"
+        );
     }
 }
