@@ -1472,6 +1472,91 @@ extern "C" fn host_syntax_at(_host: *const HostApi, offset: usize) -> *mut c_cha
     into_raw_cstring(scopes.flatten())
 }
 
+/// vim `getregion()`. Charwise and linewise are offset arithmetic; blockwise
+/// is the rectangle between the two SCREEN columns, and follows the same rule
+/// `block_reproject` applies to `CTRL-V`: a row whose text does not reach the
+/// block's left column is skipped, not emitted as an empty row.
+#[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: no softwrap in a block
+extern "C" fn host_region(_host: *const HostApi, from: usize, to: usize, mode: u8) -> *mut c_char {
+    use zmax_core::{pos_at_visual_coords, visual_coords_at_pos, Position};
+
+    let rows = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let len = text.len_chars();
+        let (from, to) = (from.min(len), to.min(len));
+        let (from, to) = (from.min(to), from.max(to));
+
+        match mode {
+            // Charwise: exactly the offsets, as `text_range` reads them.
+            0 => Some(text.slice(from..to).to_string()),
+            // Linewise: widened to whole lines, the last without its ending.
+            1 => {
+                let (first, last) = (text.char_to_line(from), text.char_to_line(to));
+                let start = text.line_to_char(first);
+                let end = if last + 1 < text.len_lines() {
+                    text.line_to_char(last + 1)
+                } else {
+                    len
+                };
+                Some(
+                    text.slice(start..end)
+                        .to_string()
+                        .trim_end_matches('\n')
+                        .to_string(),
+                )
+            }
+            // Blockwise: the rectangle between the two screen columns.
+            2 => {
+                let tab_width = doc.tab_width();
+                let a = visual_coords_at_pos(text, from, tab_width);
+                let b = visual_coords_at_pos(text, to, tab_width);
+                let (r0, r1) = (a.row.min(b.row), a.row.max(b.row));
+                let (cmin, cmax) = (a.col.min(b.col), a.col.max(b.col));
+
+                let mut out: Vec<String> = Vec::new();
+                for row in r0..=r1.min(text.len_lines().saturating_sub(1)) {
+                    let left = pos_at_visual_coords(text, Position::new(row, cmin), tab_width);
+                    // The row's text stops short of the block's left edge.
+                    if visual_coords_at_pos(text, left, tab_width).col != cmin {
+                        continue;
+                    }
+                    let right = pos_at_visual_coords(text, Position::new(row, cmax + 1), tab_width);
+                    out.push(text.slice(left..right.max(left)).to_string());
+                }
+                (!out.is_empty()).then(|| out.join("\n"))
+            }
+            _ => None,
+        }
+    });
+    into_raw_cstring(rows.flatten())
+}
+
+extern "C" fn host_tab_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| cx.editor.tab_count()).unwrap_or(1)
+}
+
+extern "C" fn host_tab_index(_host: *const HostApi) -> usize {
+    with_cx(|cx| cx.editor.current_tab()).unwrap_or(0)
+}
+
+/// vim `getbgcolor()`. A theme that leaves `ui.background` unset lets the
+/// terminal's own background show through, which is reported as null rather
+/// than as an invented colour.
+extern "C" fn host_bg_color(_host: *const HostApi) -> *mut c_char {
+    use zmax_view::graphics::Color;
+
+    let color = with_cx(|cx| {
+        let bg = cx.editor.theme.get("ui.background").bg?;
+        Some(match bg {
+            Color::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
+            Color::Indexed(n) => n.to_string(),
+            named => format!("{named:?}").to_lowercase(),
+        })
+    });
+    into_raw_cstring(color.flatten())
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -1578,6 +1663,10 @@ fn host_api() -> *const HostApi {
             jump_index: host_jump_index,
             option_completions: host_option_completions,
             syntax_at: host_syntax_at,
+            region: host_region,
+            tab_count: host_tab_count,
+            tab_index: host_tab_index,
+            bg_color: host_bg_color,
         });
         Box::into_raw(boxed) as usize
     });

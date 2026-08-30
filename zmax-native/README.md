@@ -150,6 +150,9 @@ What is in the buffer, and what the language servers said about it:
 | `cursor_wanted_column()` | `getcurpos()[4]` | the column vertical motion aims for, once a long line has been left |
 | `jumps()` / `jump_index()` | `getjumplist()` | the jump list, oldest first, and where `C-o` resumes |
 | `syntax_at(offset)` | `synIDattr(synID(...), "name")` | the theme's scope stack, outermost first |
+| `region(from, to, mode)` | `getregion()` | charwise, linewise or blockwise, where `text_range` is charwise only |
+| `tab_count()` / `tab_index()` | `tabpagenr("$")`, `tabpagenr()` | zero-based, where vim counts from 1 |
+| `bg_color()` | `getbgcolor()` | `#rrggbb` or a colour name; `None` leaves the terminal's own |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:
@@ -159,7 +162,7 @@ the same split vim has between `col()` and `charcol()`, so there is a bridge:
 | `byte_offset(char)` | the byte offset of a char offset |
 | `char_offset(byte)` | the inverse, rounded down to a char boundary |
 
-Two places where this deliberately differs from vim, both because copying vim
+Where this deliberately differs from vim, in each case because copying vim
 would lose information zmax has:
 
 - **`Span` carries `anchor`/`head`, not start/end.** vim's `'<`/`'>` are always
@@ -173,6 +176,9 @@ would lose information zmax has:
 - **`jump_buffer` reports `None` for a closed buffer.** A jump outlives the
   buffer it points into, and a stale index into whatever now occupies that slot
   would be worse than admitting the buffer is gone.
+- **A blockwise `region` can be shorter than its row span.** A row whose text
+  does not reach the block's left column is skipped rather than padded out to an
+  empty string, which is what `CTRL-V` itself does.
 
 Every one of these reports `None`/`0` when there is no active editor context
 rather than inventing a value, and every string is released through the host's

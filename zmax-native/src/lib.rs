@@ -120,6 +120,19 @@ pub struct Span {
     pub valid: u8,
 }
 
+/// How [`HostApi::region`] reads the span between two offsets — vim's
+/// `getregion()` `type` option.
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RegionMode {
+    /// vim `v`: exactly the offsets given.
+    Charwise = 0,
+    /// vim `V`: widened to whole lines.
+    Linewise = 1,
+    /// vim `CTRL-V`: the rectangle between the two screen columns.
+    Blockwise = 2,
+}
+
 #[repr(C)]
 pub struct HostApi {
     /// Must equal [`ABI_VERSION`]. Checked by the plugin's own `declare_plugin!`
@@ -501,6 +514,33 @@ pub struct HostApi {
     /// answered by the inner one, and a plugin needs to choose. Release with
     /// `free_cstring`.
     pub syntax_at: extern "C" fn(host: *const HostApi, offset: usize) -> *mut c_char,
+
+    /// vim `getregion({p1}, {p2}, {opts})` — the text between two char offsets
+    /// read under a selection TYPE, where `text_range` only ever reads
+    /// charwise. `mode` is a [`RegionMode`]: charwise takes the offsets as
+    /// written, linewise widens to whole lines, and blockwise takes the
+    /// rectangle between the two screen columns.
+    ///
+    /// Rows come back newline-separated. Blockwise SKIPS a row whose text does
+    /// not reach the block's left column rather than yielding an empty string
+    /// for it, which is what vim does and what the editor's own `CTRL-V`
+    /// already does. Null when there is no editor context. Release with
+    /// `free_cstring`.
+    pub region:
+        extern "C" fn(host: *const HostApi, from: usize, to: usize, mode: u8) -> *mut c_char,
+
+    /// vim `tabpagenr("$")` — how many tabpages exist. Always at least 1.
+    pub tab_count: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `tabpagenr()` — the active tabpage, ZERO-based here where vim counts
+    /// from 1.
+    pub tab_index: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `getbgcolor()` — the theme's background, as `#rrggbb` when it is a
+    /// true colour and otherwise the lowercase terminal colour name. Null when
+    /// the theme leaves `ui.background` unset, which means the terminal's own
+    /// background shows through. Release with `free_cstring`.
+    pub bg_color: extern "C" fn(host: *const HostApi) -> *mut c_char,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -1235,6 +1275,33 @@ impl Host {
             .unwrap_or_default()
     }
 
+    /// vim `getregion({p1}, {p2}, {opts})` — the text between two char offsets
+    /// under a selection type, one row per element as vim returns a list.
+    ///
+    /// [`RegionMode::Blockwise`] omits rows too short to reach the block's left
+    /// column, so the result can be shorter than the row span.
+    pub fn region(&self, from: usize, to: usize, mode: RegionMode) -> Vec<String> {
+        self.take_string((self.t().region)(self.api, from, to, mode as u8))
+            .map(|joined| joined.split('\n').map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
+    /// vim `tabpagenr("$")` — how many tabpages exist. Always at least 1.
+    pub fn tab_count(&self) -> usize {
+        (self.t().tab_count)(self.api)
+    }
+
+    /// vim `tabpagenr()` — the active tabpage, zero-based.
+    pub fn tab_index(&self) -> usize {
+        (self.t().tab_index)(self.api)
+    }
+
+    /// vim `getbgcolor()` — the theme background as `#rrggbb` or a colour name,
+    /// `None` when the theme leaves it to the terminal.
+    pub fn bg_color(&self) -> Option<String> {
+        self.take_string((self.t().bg_color)(self.api))
+    }
+
     /// vim `getcompletion({prefix}, "option")` — option names beginning with
     /// `prefix`. Only options that have been set are known.
     pub fn option_completions(&self, prefix: &str) -> Vec<String> {
@@ -1746,6 +1813,26 @@ mod tests {
             ptr::null_mut()
         }
     }
+    extern "C" fn fake_region(_h: *const HostApi, from: usize, to: usize, mode: u8) -> *mut c_char {
+        record(format!("region:{from}:{to}:{mode}"));
+        match mode {
+            0 => reply("de\nfg"),
+            1 => reply("abcde\nfghij"),
+            // The middle row is too short to reach the block's left column, so
+            // the block is two rows over a three-row span.
+            2 => reply("cd\nyz"),
+            _ => ptr::null_mut(),
+        }
+    }
+    extern "C" fn fake_tab_count(_h: *const HostApi) -> usize {
+        3
+    }
+    extern "C" fn fake_tab_index(_h: *const HostApi) -> usize {
+        1
+    }
+    extern "C" fn fake_bg_color(_h: *const HostApi) -> *mut c_char {
+        reply("#1e1e2e")
+    }
     extern "C" fn fake_long_word_at_cursor(_h: *const HostApi) -> *mut c_char {
         // The WORD keeps its punctuation; `word_at_cursor` gives "UnixStream".
         reply("UnixStream::connect(path)")
@@ -2110,6 +2197,10 @@ mod tests {
             jump_index: fake_jump_index,
             option_completions: fake_option_completions,
             syntax_at: fake_syntax_at,
+            region: fake_region,
+            tab_count: fake_tab_count,
+            tab_index: fake_tab_index,
+            bg_color: fake_bg_color,
         }
     }
 
@@ -2746,6 +2837,68 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["syntax:42", "syntax:0"]
         );
+    }
+
+    /// The mode reaches the host as the number it switches on. A reordered
+    /// enum would silently read a region under the wrong type, so the
+    /// discriminants are pinned rather than left to declaration order.
+    #[test]
+    fn region_modes_are_the_numbers_the_host_switches_on() {
+        assert_eq!(RegionMode::Charwise as u8, 0);
+        assert_eq!(RegionMode::Linewise as u8, 1);
+        assert_eq!(RegionMode::Blockwise as u8, 2);
+
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        host.region(3, 8, RegionMode::Charwise);
+        host.region(3, 8, RegionMode::Linewise);
+        host.region(3, 8, RegionMode::Blockwise);
+        assert_eq!(
+            calls()
+                .into_iter()
+                .filter(|c| c != "free")
+                .collect::<Vec<_>>(),
+            vec!["region:3:8:0", "region:3:8:1", "region:3:8:2"]
+        );
+    }
+
+    /// A region comes back one row per element, and a blockwise one can be
+    /// SHORTER than its row span because rows too short to reach the left
+    /// column are skipped rather than padded.
+    #[test]
+    fn a_blockwise_region_skips_rows_it_cannot_reach() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.region(3, 8, RegionMode::Charwise), vec!["de", "fg"]);
+        assert_eq!(
+            host.region(3, 8, RegionMode::Linewise),
+            vec!["abcde", "fghij"],
+            "widened to whole lines"
+        );
+
+        let block = host.region(3, 8, RegionMode::Blockwise);
+        assert_eq!(block, vec!["cd", "yz"]);
+        assert_eq!(block.len(), 2, "two rows over a three-row span");
+        assert!(
+            !block.iter().any(String::is_empty),
+            "a skipped row is absent, not empty"
+        );
+    }
+
+    /// Tabs are zero-based here where vim counts from 1, and the count is
+    /// always at least one because there is always a current tab.
+    #[test]
+    fn tabs_are_zero_based_and_never_empty() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.tab_count(), 3);
+        assert_eq!(host.tab_index(), 1, "the second tab, zero-based");
+        assert!(host.tab_index() < host.tab_count(), "always addressable");
+        assert_eq!(host.bg_color().as_deref(), Some("#1e1e2e"));
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.
