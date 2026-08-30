@@ -44,5 +44,9 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`undo-branches`](undo-branches) | `:undo-tree` | `undo_tree` branches — the saved revision may not be an ancestor |
 | [`cross-buffer`](cross-buffer) | `:peek [name] [line]` | `buffer_line` — read another buffer without switching |
 | [`complete-peek`](complete-peek) | `:comp {prefix}` | the four completion namespaces; options list only what is SET |
+| [`multi-cursor`](multi-cursor) | `:cursors` | `selections` — `head < anchor` is a BACKWARDS selection, not a bug |
+| [`under-cursor`](under-cursor) | `:under` | `<cword>` vs `<cWORD>` vs `<cfile>` — three answers, one position |
+| [`diag-triage`](diag-triage) | `:diags` | `diagnostics` severity, ordered explicitly (LSP's integers run backwards) |
+| [`plugin-doctor`](plugin-doctor) | `:plugins`, `:plugins-free {name}` | `command_exists` — a taken name is unreachable, not rejected |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.

@@ -32,6 +32,10 @@ members = [
   "undo-branches",
   "cross-buffer",
   "complete-peek",
+  "multi-cursor",
+  "under-cursor",
+  "diag-triage",
+  "plugin-doctor",
 ]
 
 [workspace.dependencies]
