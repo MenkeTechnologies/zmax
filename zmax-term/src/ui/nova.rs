@@ -132,6 +132,20 @@ const SENSE_COST: u32 = 45;
 const SENSE_TICKS: u32 = 90;
 const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
+/// The score that gets a bounty posted on you, and what his ship is worth.
+const HUNTER_BOUNTY: u32 = 20_000;
+/// What a Force shove costs, and how far it throws somebody.
+const PUSH_COST: u32 = 25;
+const PUSH_REACH: i16 = 4;
+/// What a sabre does, how fast it cuts and how far it reaches; how fast a scout
+/// walker and a duellist work; and what a speeder costs you if you hit a tree.
+const SABRE_DAMAGE: i32 = 6;
+const SABRE_CADENCE: u32 = 4;
+const SABRE_REACH: i16 = 2;
+const SCOUT_CADENCE: u32 = 30;
+const DUEL_CADENCE: u32 = 10;
+const SPEEDER_PACE: i16 = 3;
+const SPEEDER_CRASH: i32 = 3;
 /// What a pilot can take on foot, how fast his sidearm cycles, how fast a
 /// patrol answers, and how far a blaster bolt carries.
 const PILOT_HEALTH: i32 = 12;
@@ -3035,12 +3049,97 @@ impl DeckSpot {
     }
 }
 
+/// What is in the pilot's hands down on the surface.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Sidearm {
+    /// A blaster: bolts at range.
+    Blaster,
+    /// A sabre: nothing at range, but it cuts what is in front of you and it
+    /// turns bolts back the way they came.
+    Sabre,
+}
+
+impl Sidearm {
+    pub fn name(self) -> &'static str {
+        match self {
+            Sidearm::Blaster => "blaster",
+            Sidearm::Sabre => "lightsabre",
+        }
+    }
+}
+
+/// What kind of thing is walking about down there.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum GroundKind {
+    /// A stormtrooper patrol.
+    Trooper,
+    /// A scout walker: two legs, a chin gun and far too much armour for a
+    /// sidearm.
+    Scout,
+    /// A duellist who has been waiting for you, and does not use a blaster.
+    Duellist,
+}
+
+impl GroundKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            GroundKind::Trooper => "stormtrooper",
+            GroundKind::Scout => "scout walker",
+            GroundKind::Duellist => "duellist",
+        }
+    }
+
+    pub fn glyph(self) -> &'static str {
+        match self {
+            GroundKind::Trooper => "Ω",
+            GroundKind::Scout => "Ѫ",
+            GroundKind::Duellist => "Ѱ",
+        }
+    }
+
+    pub fn hp(self) -> i32 {
+        match self {
+            GroundKind::Trooper => 3,
+            GroundKind::Scout => 14,
+            GroundKind::Duellist => 24,
+        }
+    }
+
+    /// How hard it hits, and how close it has to be to do it.
+    pub fn damage(self) -> i32 {
+        match self {
+            GroundKind::Trooper => 1,
+            GroundKind::Scout => 2,
+            GroundKind::Duellist => 3,
+        }
+    }
+
+    pub fn reach(self) -> i16 {
+        match self {
+            GroundKind::Duellist => 2,
+            _ => 14,
+        }
+    }
+}
+
 /// A stormtrooper patrol, or whatever the world has walking about on it.
 #[derive(Clone, Debug)]
 pub struct Trooper {
+    pub kind: GroundKind,
     pub pos: (i16, i16),
     pub hp: i32,
     pub cooldown: u32,
+}
+
+impl Trooper {
+    fn new(kind: GroundKind, pos: (i16, i16), cooldown: u32) -> Trooper {
+        Trooper {
+            kind,
+            pos,
+            hp: kind.hp(),
+            cooldown,
+        }
+    }
 }
 
 /// A blaster bolt on foot, from either side.
@@ -3098,6 +3197,9 @@ pub struct Deck {
     /// What the pilot can take before he goes down.
     pub health: i32,
     pub blaster_cooldown: u32,
+    /// What is in his hands, and whether he is on a speeder.
+    pub sidearm: Sidearm,
+    pub riding: bool,
 }
 
 impl Deck {
@@ -3169,11 +3271,16 @@ impl Deck {
         for _ in 0..(6 + (rand() % 6) as usize) {
             let row = 2 + (rand() % (Deck::HEIGHT as u64 - 6)) as i16;
             let col = 3 + (rand() % (Deck::WIDTH as u64 - 6)) as i16;
-            troopers.push(Trooper {
-                pos: (row, col),
-                hp: 3,
-                cooldown: (rand() % 30) as u32,
-            });
+            // Mostly troopers, the odd scout walker, and on the old worlds
+            // somebody waiting with a sabre.
+            let kind = match rand() % 10 {
+                0 | 1 => GroundKind::Scout,
+                2 if matches!(planet, Planet::Dagobah | Planet::Mustafar | Planet::Endor) => {
+                    GroundKind::Duellist
+                }
+                _ => GroundKind::Trooper,
+            };
+            troopers.push(Trooper::new(kind, (row, col), (rand() % 30) as u32));
         }
         Deck {
             width: Deck::WIDTH,
@@ -3186,6 +3293,8 @@ impl Deck {
             bolts: Vec::new(),
             health: PILOT_HEALTH,
             blaster_cooldown: 0,
+            sidearm: Sidearm::Blaster,
+            riding: false,
         }
     }
 
@@ -3215,6 +3324,8 @@ impl Deck {
             bolts: Vec::new(),
             health: PILOT_HEALTH,
             blaster_cooldown: 0,
+            sidearm: Sidearm::Blaster,
+            riding: false,
         }
     }
 
@@ -3238,33 +3349,82 @@ impl Deck {
     /// Walk the way you are facing, or back off it.
     pub fn step(&mut self, ahead: i16) {
         let (dr, dc) = self.facing;
-        let row = (self.pilot.0 + dr * ahead).clamp(1, self.height - 2);
-        let col = (self.pilot.1 + dc * ahead).clamp(1, self.width - 2);
-        if !self.blocked(row, col) {
+        // A speeder covers ground three times as fast, and a tree at that speed
+        // is the end of the ride.
+        let pace = if self.riding { SPEEDER_PACE } else { 1 };
+        for _ in 0..pace {
+            let row = (self.pilot.0 + dr * ahead).clamp(1, self.height - 2);
+            let col = (self.pilot.1 + dc * ahead).clamp(1, self.width - 2);
+            if self.blocked(row, col) {
+                if self.riding {
+                    self.riding = false;
+                    self.health -= SPEEDER_CRASH;
+                }
+                return;
+            }
             self.pilot = (row, col);
         }
     }
 
-    /// Fire the sidearm the way the pilot is looking.
+    /// Use whatever is in the pilot's hands: a bolt down the lane, or a cut
+    /// through whatever is standing in front of him.
     pub fn shoot(&mut self) -> bool {
-        if self.blaster_cooldown > 0 {
+        if self.blaster_cooldown > 0 || self.riding {
             return false;
         }
-        self.blaster_cooldown = BLASTER_CADENCE;
         let (dr, dc) = self.facing;
-        self.bolts.push(Bolt {
-            pos: (self.pilot.0 + dr, self.pilot.1 + dc),
-            dir: (dr, dc),
-            friendly: true,
-            life: BOLT_RANGE,
-        });
+        match self.sidearm {
+            Sidearm::Blaster => {
+                self.blaster_cooldown = BLASTER_CADENCE;
+                self.bolts.push(Bolt {
+                    pos: (self.pilot.0 + dr, self.pilot.1 + dc),
+                    dir: (dr, dc),
+                    friendly: true,
+                    life: BOLT_RANGE,
+                });
+            }
+            Sidearm::Sabre => {
+                self.blaster_cooldown = SABRE_CADENCE;
+                // A cut takes the two cells in front and either side of them.
+                for reach in 1..=SABRE_REACH {
+                    for across in -1..=1 {
+                        let cell = (
+                            self.pilot.0 + dr * reach + (dc != 0) as i16 * across,
+                            self.pilot.1 + dc * reach + (dr != 0) as i16 * across,
+                        );
+                        if let Some(hit) =
+                            self.troopers.iter_mut().find(|t| t.hp > 0 && t.pos == cell)
+                        {
+                            hit.hp -= SABRE_DAMAGE;
+                        }
+                    }
+                }
+                self.troopers.retain(|t| t.hp > 0);
+            }
+        }
         true
+    }
+
+    /// Swap between what is on the belt.
+    pub fn draw_sidearm(&mut self) -> Sidearm {
+        self.sidearm = match self.sidearm {
+            Sidearm::Blaster => Sidearm::Sabre,
+            Sidearm::Sabre => Sidearm::Blaster,
+        };
+        self.sidearm
+    }
+
+    /// Get on or off the speeder parked beside you.
+    pub fn mount(&mut self) -> bool {
+        self.riding = !self.riding;
+        self.riding
     }
 
     /// A tick of the firefight: bolts fly, troopers advance and shoot back.
     pub fn skirmish(&mut self, tick: u32) -> i32 {
         self.blaster_cooldown = self.blaster_cooldown.saturating_sub(1);
         let mut damage = 0;
+        let mut deflected: Vec<Bolt> = Vec::new();
         let pilot = self.pilot;
         // Bolts first, so a trooper that just fired does not eat his own shot.
         let mut kept = Vec::with_capacity(self.bolts.len());
@@ -3289,6 +3449,19 @@ impl Deck {
                         hit.hp -= 2;
                         continue 'bolt;
                     }
+                } else if self.sidearm == Sidearm::Sabre
+                    && !self.riding
+                    && (bolt.pos.0 - pilot.0).abs() <= 1
+                    && (bolt.pos.1 - pilot.1).abs() <= 1
+                {
+                    // Turned back the way it came.
+                    deflected.push(Bolt {
+                        pos: bolt.pos,
+                        dir: (-bolt.dir.0, -bolt.dir.1),
+                        friendly: true,
+                        life: BOLT_RANGE,
+                    });
+                    continue 'bolt;
                 } else if bolt.pos == pilot {
                     damage += 1;
                     continue 'bolt;
@@ -3297,9 +3470,11 @@ impl Deck {
             kept.push(bolt);
         }
         self.bolts = kept;
+        self.bolts.extend(deflected);
         self.troopers.retain(|t| t.hp > 0);
         // Then the patrol: close the range, and fire when they have the angle.
         let mut volley = Vec::new();
+        let mut melee = 0;
         for trooper in self.troopers.iter_mut() {
             let (dr, dc) = (pilot.0 - trooper.pos.0, pilot.1 - trooper.pos.1);
             let range = dr.abs() + dc.abs();
@@ -3322,18 +3497,42 @@ impl Deck {
                 trooper.cooldown -= 1;
                 continue;
             }
-            if range <= 14 && (dr == 0 || dc == 0) {
-                trooper.cooldown = TROOPER_CADENCE;
-                volley.push(Bolt {
-                    pos: trooper.pos,
-                    dir: (dr.signum(), dc.signum()),
-                    friendly: false,
-                    life: BOLT_RANGE,
-                });
+            match trooper.kind {
+                // A duellist does not shoot: he closes and cuts.
+                GroundKind::Duellist => {
+                    if range <= trooper.kind.reach() {
+                        trooper.cooldown = DUEL_CADENCE;
+                        melee += trooper.kind.damage();
+                    }
+                }
+                kind => {
+                    if range <= kind.reach() && (dr == 0 || dc == 0) {
+                        trooper.cooldown = if kind == GroundKind::Scout {
+                            SCOUT_CADENCE
+                        } else {
+                            TROOPER_CADENCE
+                        };
+                        volley.push(Bolt {
+                            pos: trooper.pos,
+                            dir: (dr.signum(), dc.signum()),
+                            friendly: false,
+                            life: BOLT_RANGE,
+                        });
+                        if kind == GroundKind::Scout {
+                            // The chin gun fires in pairs.
+                            volley.push(Bolt {
+                                pos: trooper.pos,
+                                dir: (dr.signum(), dc.signum()),
+                                friendly: false,
+                                life: BOLT_RANGE,
+                            });
+                        }
+                    }
+                }
             }
         }
         self.bolts.extend(volley);
-        damage
+        damage + melee
     }
 
     /// Walk a step, staying on the deck.
@@ -3926,6 +4125,11 @@ pub struct Game {
     pub node: MapNode,
     /// Ticks the arrival banner still has to run.
     pub banner: u32,
+    /// Which system the bounty hunter is sitting in, if one has taken the
+    /// contract yet.
+    pub hunter: Option<usize>,
+    /// How many times he has caught up with you.
+    pub hunted: u32,
     /// Frames of flash left over from a bomb or a surge, for the renderer.
     pub flash: u32,
     /// Ticks left of the cleared-wave pause.
@@ -4025,6 +4229,8 @@ impl Game {
                 explored: true,
             },
             banner: 0,
+            hunter: None,
+            hunted: 0,
             flash: 0,
             intermission: 0,
             bulwark: 0,
@@ -4076,6 +4282,8 @@ impl Game {
         self.shop_open = false;
         self.mission = None;
         self.campaign_at = 0;
+        self.hunter = None;
+        self.hunted = 0;
         self.objective = Objective::Destroy;
         self.transports.clear();
         self.walkers.clear();
@@ -4344,6 +4552,18 @@ impl Game {
         self.dress_terrain();
         self.dress_objective();
         self.claim_node_bonus();
+        if self.hunted_here() {
+            // He does not fly a TIE, and he does not fly alone.
+            self.hunted += 1;
+            let hunter = Boss::new(BossKind::AceTie, 80 + 40 * self.hunted as i32);
+            self.boss = Some(hunter);
+            for col in (0..COLS).step_by(4) {
+                let home = self.place((FORMATION_TOP + 6, BASE_X + col as i16 * ENEMY_GAP));
+                let escort = self.hatch(EnemyKind::TieAdvanced, home);
+                self.enemies.push(escort);
+            }
+            self.say("That is the hunter. He brought friends.");
+        }
         if self.node.kind == NodeKind::Capital {
             // A trench means a battlestation; open plating means a wedge, and
             // the rim only ever fields a picket.
@@ -5775,6 +5995,11 @@ impl Game {
             .as_ref()
             .is_some_and(|b| b.hp <= 0 && !b.armoured())
         {
+            if self.hunted_here() {
+                self.hunter = None;
+                self.credits += HUNTER_BOUNTY;
+                self.say("That is the hunter down. Somebody else will come.");
+            }
             let bounty = 500 * self.wave;
             self.boss = None;
             self.add_score(bounty);
@@ -6386,6 +6611,63 @@ impl Game {
         }
     }
 
+    /// Shove whatever is in front of you off its feet, with the Force.
+    pub fn force_push(&mut self) -> bool {
+        if self.status != Status::Surface || self.force < PUSH_COST {
+            return false;
+        }
+        self.force -= PUSH_COST;
+        let (dr, dc) = self.deck.facing;
+        let pilot = self.deck.pilot;
+        let mut shoved = 0;
+        for trooper in self.deck.troopers.iter_mut() {
+            let (tr, tc) = (trooper.pos.0 - pilot.0, trooper.pos.1 - pilot.1);
+            let ahead = tr * dr + tc * dc;
+            let across = (tr * -dc + tc * dr).abs();
+            if (1..=PUSH_REACH).contains(&ahead) && across <= 2 {
+                trooper.pos = (
+                    (trooper.pos.0 + dr * PUSH_REACH).clamp(1, Deck::HEIGHT - 2),
+                    (trooper.pos.1 + dc * PUSH_REACH).clamp(1, Deck::WIDTH - 2),
+                );
+                trooper.hp -= 2;
+                trooper.cooldown = trooper.cooldown.max(20);
+                shoved += 1;
+            }
+        }
+        self.deck.troopers.retain(|t| t.hp > 0);
+        if shoved > 0 {
+            self.say("Off their feet.");
+        }
+        true
+    }
+
+    /// Swap between the blaster and the sabre.
+    pub fn draw_sidearm(&mut self) -> Option<Sidearm> {
+        if !matches!(self.status, Status::Hangar | Status::Surface) {
+            return None;
+        }
+        let drawn = self.deck.draw_sidearm();
+        self.say(match drawn {
+            Sidearm::Sabre => "Sabre lit.",
+            Sidearm::Blaster => "Blaster out.",
+        });
+        Some(drawn)
+    }
+
+    /// Get on or off the speeder.
+    pub fn mount(&mut self) -> bool {
+        if self.status != Status::Surface {
+            return false;
+        }
+        let riding = self.deck.mount();
+        self.say(if riding {
+            "On the speeder. Watch the trees."
+        } else {
+            "Off the speeder."
+        });
+        riding
+    }
+
     /// Fire the sidearm, on foot.
     pub fn shoot(&mut self) -> bool {
         if matches!(self.status, Status::Hangar | Status::Surface) && !self.shop_open {
@@ -6801,6 +7083,51 @@ impl Game {
         }
     }
 
+    /// Move the bounty hunter one lane closer. He takes the contract once the
+    /// squadron has made enough of a nuisance of itself, and after that he is
+    /// always one system behind.
+    fn advance_hunter(&mut self) {
+        if self.hunter.is_none() && self.score > HUNTER_BOUNTY {
+            // He starts as far from you as the chart allows.
+            let far = self
+                .map
+                .nodes
+                .iter()
+                .enumerate()
+                .max_by_key(|(_, node)| {
+                    node.pos.0.abs_diff(self.map.nodes[self.map.at].pos.0)
+                        + node.pos.1.abs_diff(self.map.nodes[self.map.at].pos.1)
+                })
+                .map(|(i, _)| i);
+            self.hunter = far;
+            self.say("Somebody has posted a bounty. There is a ship on our trail.");
+            return;
+        }
+        let Some(at) = self.hunter else {
+            return;
+        };
+        if at == self.map.at {
+            return;
+        }
+        // One lane a jump, always toward you.
+        let target = self.map.nodes[self.map.at].pos;
+        let next = self.map.lanes[at].iter().copied().min_by_key(|&i| {
+            let pos = self.map.nodes[i].pos;
+            pos.0.abs_diff(target.0) + pos.1.abs_diff(target.1)
+        });
+        if let Some(next) = next {
+            self.hunter = Some(next);
+            if next == self.map.at {
+                self.say("He has us. Turn and fight.");
+            }
+        }
+    }
+
+    /// True while the hunter is sitting in the same system as the squadron.
+    pub fn hunted_here(&self) -> bool {
+        self.hunter == Some(self.map.at)
+    }
+
     /// Fly the lane to the system under the cursor. A fight starts the next
     /// wave; a depot or a derelict is worked over and parks the squad again.
     pub fn jump(&mut self) -> bool {
@@ -6814,6 +7141,7 @@ impl Game {
         };
         self.node = node;
         self.drone_stun = 0;
+        self.advance_hunter();
         match node.kind {
             NodeKind::Depot => {
                 // A yard: shields filled, a bomb loaded, the wing back in the
@@ -8404,7 +8732,16 @@ impl Nova {
         for trooper in &deck.troopers {
             if on_view(trooper.pos.0, trooper.pos.1) {
                 let (vx, vy) = at(trooper.pos.0, trooper.pos.1);
-                surface.set_string(ox + vx, oy + vy, "Ω", theme.get("error"));
+                surface.set_string(
+                    ox + vx,
+                    oy + vy,
+                    trooper.kind.glyph(),
+                    if trooper.kind == GroundKind::Duellist {
+                        theme.get("warning")
+                    } else {
+                        theme.get("error")
+                    },
+                );
             }
         }
         for bolt in &deck.bolts {
@@ -8499,9 +8836,11 @@ impl Nova {
                 ox,
                 foot + 1,
                 &format!(
-                    "HEALTH {}{}   patrol {}   SPC fires the blaster",
+                    "HEALTH {}{}   {}{}   hostiles {}   SPC strike · 1 swap · 2 speeder · e push",
                     "▮".repeat(deck.health.max(0) as usize),
                     "▯".repeat((PILOT_HEALTH - deck.health.max(0)) as usize),
+                    deck.sidearm.name(),
+                    if deck.riding { " · riding" } else { "" },
                     deck.troopers.len()
                 ),
                 text,
@@ -9127,6 +9466,15 @@ impl Component for Nova {
                     } else {
                         self.game.interact();
                     }
+                }
+                key!('1') => {
+                    self.game.draw_sidearm();
+                }
+                key!('2') => {
+                    self.game.mount();
+                }
+                key!('e') => {
+                    self.game.force_push();
                 }
                 key!('w') => {
                     self.game.cycle_active();
@@ -12856,11 +13204,9 @@ mod ground_tests {
         g.deck.pilot = (20, 20);
         g.deck.facing = (0, 1);
         g.deck.cover.clear();
-        g.deck.troopers.push(Trooper {
-            pos: (20, 26),
-            hp: 3,
-            cooldown: 99,
-        });
+        g.deck
+            .troopers
+            .push(Trooper::new(GroundKind::Trooper, (20, 26), 99));
         assert!(g.shoot(), "the sidearm fires");
         assert!(!g.deck.bolts.is_empty(), "a bolt is in the air");
         assert!(!g.shoot(), "and it cycles before the next one");
@@ -12881,11 +13227,7 @@ mod ground_tests {
         g.deck.cover.clear();
         g.deck.bolts.clear();
         g.deck.pilot = (20, 20);
-        g.deck.troopers = vec![Trooper {
-            pos: (20, 30),
-            hp: 3,
-            cooldown: 0,
-        }];
+        g.deck.troopers = vec![Trooper::new(GroundKind::Trooper, (20, 30), 0)];
         let start = g.deck.troopers[0].pos;
         let mut fired = false;
         for tick in 0..12 {
@@ -13233,5 +13575,190 @@ mod frame_tests {
             "the fighter in front of you fills the view: {solid}
 {frame}"
         );
+    }
+}
+
+#[cfg(test)]
+mod sabre_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn planetside() -> Game {
+        let mut g = flying();
+        g.status = Status::Surface;
+        g.planet = Planet::Endor;
+        g.deck = Deck::surface(Planet::Endor, 31);
+        g.deck.cover.clear();
+        g.deck.troopers.clear();
+        g.deck.bolts.clear();
+        g.deck.pilot = (20, 40);
+        g.deck.facing = (0, 1);
+        g
+    }
+
+    #[test]
+    fn the_sabre_cuts_what_is_in_front_of_it_and_the_blaster_does_not_reach() {
+        let mut g = planetside();
+        assert_eq!(
+            g.deck.sidearm,
+            Sidearm::Blaster,
+            "the blaster is on the belt"
+        );
+        assert_eq!(
+            g.draw_sidearm(),
+            Some(Sidearm::Sabre),
+            "and the sabre lights"
+        );
+        g.deck.troopers = vec![
+            Trooper::new(GroundKind::Trooper, (20, 41), 99),
+            Trooper::new(GroundKind::Trooper, (20, 48), 99),
+        ];
+        assert!(g.shoot(), "the cut goes in");
+        assert_eq!(g.deck.troopers.len(), 1, "the near one is cut down");
+        assert_eq!(
+            g.deck.troopers[0].pos,
+            (20, 48),
+            "and the far one is well out of reach"
+        );
+        assert!(g.deck.bolts.is_empty(), "a sabre puts nothing in the air");
+    }
+
+    #[test]
+    fn a_sabre_turns_a_bolt_back_the_way_it_came() {
+        let mut g = planetside();
+        g.deck.sidearm = Sidearm::Sabre;
+        g.deck.bolts = vec![Bolt {
+            pos: (20, 41),
+            dir: (0, -1),
+            friendly: false,
+            life: 8,
+        }];
+        g.deck.skirmish(1);
+        assert!(!g.deck.bolts.is_empty(), "the bolt is still in the air");
+        assert!(
+            g.deck.bolts.iter().all(|b| b.friendly && b.dir == (0, 1)),
+            "and it is going back the other way, on our side"
+        );
+        assert_eq!(g.deck.health, PILOT_HEALTH, "nothing got through");
+    }
+
+    #[test]
+    fn a_force_shove_puts_a_patrol_on_its_back() {
+        let mut g = planetside();
+        g.force = FORCE_MAX;
+        g.deck.troopers = vec![Trooper::new(GroundKind::Trooper, (20, 42), 0)];
+        assert!(g.force_push(), "the Force answers");
+        assert!(g.force < FORCE_MAX, "and it costs");
+        match g.deck.troopers.first() {
+            Some(trooper) => assert!(trooper.pos.1 > 42, "he is thrown back"),
+            None => {} // Thrown hard enough to finish him, which is fine.
+        }
+        g.force = 0;
+        assert!(!g.force_push(), "an empty pilot shoves nothing");
+    }
+
+    #[test]
+    fn a_scout_walker_is_more_than_a_sidearm_can_handle_in_one_go() {
+        let mut g = planetside();
+        g.deck.troopers = vec![Trooper::new(GroundKind::Scout, (20, 42), 0)];
+        assert_eq!(g.deck.troopers[0].hp, GroundKind::Scout.hp());
+        assert!(
+            GroundKind::Scout.hp() > GroundKind::Trooper.hp() * 4,
+            "it is armoured"
+        );
+        g.deck.sidearm = Sidearm::Sabre;
+        g.shoot();
+        assert!(!g.deck.troopers.is_empty(), "one cut does not fell it");
+        g.deck.troopers[0].cooldown = 0;
+        g.deck.skirmish(1);
+        assert!(
+            g.deck.bolts.iter().filter(|b| !b.friendly).count() >= 2,
+            "and its chin gun fires in pairs"
+        );
+    }
+
+    #[test]
+    fn a_duellist_closes_and_cuts_rather_than_shooting() {
+        let mut g = planetside();
+        g.deck.troopers = vec![Trooper::new(GroundKind::Duellist, (20, 41), 0)];
+        let hurt = g.deck.skirmish(1);
+        assert!(hurt > 0, "he is inside your guard and cutting");
+        assert!(
+            g.deck.bolts.iter().all(|b| b.friendly),
+            "and he does not shoot"
+        );
+        assert!(
+            GroundKind::Duellist.reach() < GroundKind::Trooper.reach(),
+            "he has to be close to do it"
+        );
+    }
+
+    #[test]
+    fn a_speeder_covers_ground_fast_and_a_tree_ends_the_ride() {
+        let mut g = planetside();
+        g.deck.pilot = (20, 20);
+        g.deck.facing = (0, 1);
+        assert!(g.mount(), "on the speeder");
+        g.step_ahead(1);
+        assert_eq!(g.deck.pilot.1, 20 + SPEEDER_PACE, "three cells a step");
+        g.deck.cover = vec![Cover {
+            pos: (20, g.deck.pilot.1 + 1),
+            size: (1, 1),
+            tall: false,
+        }];
+        let health = g.deck.health;
+        g.step_ahead(1);
+        assert!(!g.deck.riding, "the ride ends in the tree");
+        assert_eq!(g.deck.health, health - SPEEDER_CRASH, "and it hurts");
+    }
+
+    #[test]
+    fn a_bounty_hunter_takes_the_contract_and_closes_on_you() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        g.score = HUNTER_BOUNTY + 1;
+        g.map.cursor = g.map.reachable()[0];
+        assert!(g.jump(), "the lane is flown");
+        assert!(g.hunter.is_some(), "somebody posts the bounty");
+        let start = g.hunter.unwrap();
+        assert_ne!(start, g.map.at, "he starts a long way off");
+        // Fly on and he keeps coming.
+        for _ in 0..12 {
+            if g.status == Status::Hangar {
+                g.open_chart();
+            }
+            if g.status == Status::Chart {
+                g.map.cursor = g.map.reachable()[0];
+                g.jump();
+            }
+            g.status = Status::Chart;
+        }
+        let hunter = g.hunter.expect("still on the trail");
+        let (hx, hy) = g.map.nodes[hunter].pos;
+        let (sx, sy) = g.map.nodes[g.map.at].pos;
+        let (ox, oy) = g.map.nodes[start].pos;
+        assert!(
+            hx.abs_diff(sx) + hy.abs_diff(sy) < ox.abs_diff(sx) + oy.abs_diff(sy) + 12,
+            "and he is closer than where he started"
+        );
+    }
+
+    #[test]
+    fn catching_the_hunter_in_a_system_is_a_fight_and_killing_him_pays() {
+        let mut g = flying();
+        g.hunter = Some(g.map.at);
+        assert!(g.hunted_here(), "he is sitting in this system");
+        g.spawn_wave();
+        let boss = g.boss.as_ref().expect("he is waiting");
+        assert_eq!(boss.kind, BossKind::AceTie, "and he flies something quick");
+        assert!(
+            g.enemies.iter().any(|e| e.kind == EnemyKind::TieAdvanced),
+            "with friends"
+        );
+        g.boss.as_mut().unwrap().hp = 0;
+        let credits = g.credits;
+        g.check_end();
+        assert!(g.hunter.is_none(), "that is the hunter dealt with");
+        assert!(g.credits > credits, "and his ship is worth something");
     }
 }
