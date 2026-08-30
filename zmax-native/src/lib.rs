@@ -316,6 +316,37 @@ pub struct HostApi {
     /// combining mark none. Pairs with `window_width` for anything laying text
     /// out.
     pub display_width: extern "C" fn(host: *const HostApi, text: *const c_char) -> usize,
+
+    /// vim `getbufinfo()[i].name` — the `index`th buffer's absolute path, or
+    /// null for a scratch buffer or past the last. `buffer_name` gives the
+    /// display name; this is the path on disk. Release with `free_cstring`.
+    pub buffer_path_at: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+    /// vim `getbufinfo()[i].changed` — 1 when the `index`th buffer has unsaved
+    /// changes. A buffer list that cannot show which entries are dirty is not
+    /// much of a buffer list.
+    pub buffer_modified: extern "C" fn(host: *const HostApi, index: usize) -> c_int,
+    /// vim `winnr()` — which window is focused, as an index into the same order
+    /// `window_count` walks.
+    pub window_index: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `col("$")` — the length of a line in characters, its line ending
+    /// excluded. `usize::MAX` when the line is past the end of the buffer, so
+    /// it is distinguishable from an empty line.
+    pub line_length: extern "C" fn(host: *const HostApi, line: usize) -> usize,
+    /// vim `indent({lnum})` — a line's indentation in columns, counting a tab
+    /// as `tabstop` columns rather than as one character.
+    pub indent: extern "C" fn(host: *const HostApi, line: usize) -> usize,
+    /// vim `wordcount()` — characters, words and lines in the current buffer,
+    /// as `chars:words:lines`. One call rather than three, since a plugin
+    /// showing a count wants all of them. Release with `free_cstring`.
+    pub word_count: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    /// vim `&{option}` read as a number, or `usize::MAX` when the option is
+    /// unset or is not numeric. `option` returns the raw string; this saves
+    /// every caller parsing `shiftwidth` by hand.
+    pub option_num: extern "C" fn(host: *const HostApi, name: *const c_char) -> usize,
+    /// vim `&{option}` read as a boolean, the way `:set` understands one.
+    pub option_bool: extern "C" fn(host: *const HostApi, name: *const c_char) -> c_int,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -736,6 +767,64 @@ impl Host {
         }
     }
 
+    /// The `index`th buffer's path on disk, or `None` for a scratch buffer.
+    pub fn buffer_path_at(&self, index: usize) -> Option<String> {
+        self.take_string((self.t().buffer_path_at)(self.api, index))
+    }
+
+    /// vim `getbufinfo()[i].changed` — whether that buffer has unsaved changes.
+    pub fn buffer_modified(&self, index: usize) -> bool {
+        (self.t().buffer_modified)(self.api, index) != 0
+    }
+
+    /// vim `winnr()` — which window is focused.
+    pub fn window_index(&self) -> usize {
+        (self.t().window_index)(self.api)
+    }
+
+    /// vim `col("$")` — a line's length in characters, its line ending
+    /// excluded. `None` past the end of the buffer.
+    pub fn line_length(&self, line: usize) -> Option<usize> {
+        match (self.t().line_length)(self.api, line) {
+            usize::MAX => None,
+            length => Some(length),
+        }
+    }
+
+    /// vim `indent({lnum})` — a line's indentation in columns, a tab counting
+    /// as `tabstop` columns.
+    pub fn indent(&self, line: usize) -> usize {
+        (self.t().indent)(self.api, line)
+    }
+
+    /// vim `wordcount()` — `(chars, words, lines)` for the current buffer.
+    pub fn word_count(&self) -> Option<(usize, usize, usize)> {
+        let counts = self.take_string((self.t().word_count)(self.api))?;
+        let mut parts = counts.splitn(3, ':');
+        Some((
+            parts.next()?.parse().ok()?,
+            parts.next()?.parse().ok()?,
+            parts.next()?.parse().ok()?,
+        ))
+    }
+
+    /// vim `&{option}` as a number, or `None` when unset or not numeric.
+    pub fn option_num(&self, name: &str) -> Option<usize> {
+        let name = CString::new(name).ok()?;
+        match (self.t().option_num)(self.api, name.as_ptr()) {
+            usize::MAX => None,
+            value => Some(value),
+        }
+    }
+
+    /// vim `&{option}` as a boolean, the way `:set` reads one.
+    pub fn option_bool(&self, name: &str) -> bool {
+        match CString::new(name) {
+            Ok(name) => (self.t().option_bool)(self.api, name.as_ptr()) != 0,
+            Err(_) => false,
+        }
+    }
+
     /// Adopt a host-allocated C string and release it through the host's own
     /// allocator, which is the only correct way to free one across the ABI.
     fn take_string(&self, raw: *mut c_char) -> Option<String> {
@@ -1081,6 +1170,39 @@ mod tests {
     extern "C" fn fake_window_height(_h: *const HostApi) -> usize {
         24
     }
+    extern "C" fn fake_buffer_path_at(_h: *const HostApi, index: usize) -> *mut c_char {
+        // The second buffer is a scratch one, so the no-path case is reachable.
+        if index == 0 { reply("/tmp/a.rs") } else { ptr::null_mut() }
+    }
+    extern "C" fn fake_buffer_modified(_h: *const HostApi, index: usize) -> c_int {
+        c_int::from(index == 1)
+    }
+    extern "C" fn fake_window_index(_h: *const HostApi) -> usize {
+        2
+    }
+    extern "C" fn fake_line_length(_h: *const HostApi, line: usize) -> usize {
+        match line {
+            0 => 11,
+            1 => 0, // an empty line, which must not read as "past the end"
+            _ => usize::MAX,
+        }
+    }
+    extern "C" fn fake_indent(_h: *const HostApi, _line: usize) -> usize {
+        8
+    }
+    extern "C" fn fake_word_count(_h: *const HostApi) -> *mut c_char {
+        reply("120:20:5")
+    }
+    extern "C" fn fake_option_num(_h: *const HostApi, name: *const c_char) -> usize {
+        if unsafe { CStr::from_ptr(name) }.to_string_lossy() == "shiftwidth" {
+            4
+        } else {
+            usize::MAX
+        }
+    }
+    extern "C" fn fake_option_bool(_h: *const HostApi, name: *const c_char) -> c_int {
+        c_int::from(unsafe { CStr::from_ptr(name) }.to_string_lossy() == "expandtab")
+    }
     extern "C" fn fake_marks(_h: *const HostApi) -> *mut c_char {
         // Including a row that cannot be parsed, so the reader has to skip it
         // rather than give up on the whole list.
@@ -1163,6 +1285,14 @@ mod tests {
             changelist: fake_changelist,
             changelist_index: fake_changelist_index,
             display_width: fake_display_width,
+            buffer_path_at: fake_buffer_path_at,
+            buffer_modified: fake_buffer_modified,
+            window_index: fake_window_index,
+            line_length: fake_line_length,
+            indent: fake_indent,
+            word_count: fake_word_count,
+            option_num: fake_option_num,
+            option_bool: fake_option_bool,
         }
     }
 
@@ -1430,6 +1560,57 @@ mod tests {
 
         assert_eq!(host.display_width("abc"), 6);
         assert_eq!(host.display_width(""), 0);
+    }
+
+    /// An empty line has length 0 and a line past the end has none at all --
+    /// collapsing the two would make the end of the buffer invisible to a
+    /// caller walking lines.
+    #[test]
+    fn an_empty_line_is_not_the_end_of_the_buffer() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.line_length(0), Some(11));
+        assert_eq!(host.line_length(1), Some(0), "empty, but a real line");
+        assert_eq!(host.line_length(9), None, "past the end");
+    }
+
+    /// A buffer list needs the path and the dirty flag per entry, and a scratch
+    /// buffer legitimately has no path.
+    #[test]
+    fn buffer_entries_carry_a_path_and_a_dirty_flag() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.buffer_path_at(0).as_deref(), Some("/tmp/a.rs"));
+        assert!(host.buffer_path_at(1).is_none(), "a scratch buffer");
+        assert!(!host.buffer_modified(0));
+        assert!(host.buffer_modified(1));
+        assert_eq!(host.window_index(), 2);
+    }
+
+    /// The typed option readers exist so callers do not parse `&opt` by hand,
+    /// and an unset numeric option is `None` rather than 0 -- which is a
+    /// perfectly valid `shiftwidth`.
+    #[test]
+    fn typed_options_report_unset_as_none() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.option_num("shiftwidth"), Some(4));
+        assert_eq!(host.option_num("nosuchoption"), None, "not 0");
+        assert!(host.option_bool("expandtab"));
+        assert!(!host.option_bool("nosuchoption"));
+    }
+
+    /// `wordcount()` comes back as one value with all three counts.
+    #[test]
+    fn the_word_count_carries_chars_words_and_lines() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.word_count(), Some((120, 20, 5)));
+        assert_eq!(host.indent(3), 8);
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

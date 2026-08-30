@@ -800,6 +800,102 @@ extern "C" fn host_display_width(_host: *const HostApi, text: *const c_char) -> 
         .sum()
 }
 
+extern "C" fn host_buffer_path_at(_host: *const HostApi, index: usize) -> *mut c_char {
+    let path = with_cx(|cx| {
+        cx.editor
+            .documents()
+            .nth(index)
+            .and_then(|doc| doc.path().map(|p| p.to_string_lossy().into_owned()))
+    });
+    into_raw_cstring(path.flatten())
+}
+
+extern "C" fn host_buffer_modified(_host: *const HostApi, index: usize) -> c_int {
+    let modified = with_cx(|cx| {
+        cx.editor
+            .documents()
+            .nth(index)
+            .map(|doc| doc.is_modified())
+            .unwrap_or(false)
+    });
+    c_int::from(modified.unwrap_or(false))
+}
+
+extern "C" fn host_window_index(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        cx.editor
+            .tree
+            .views()
+            .position(|(_, focused)| focused)
+            .unwrap_or(0)
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_line_length(_host: *const HostApi, line: usize) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        if line >= text.len_lines() {
+            // Distinguishable from an empty line, which is length 0.
+            return usize::MAX;
+        }
+        let slice = text.line(line);
+        // Without the line ending, as `col("$")` counts it.
+        let mut len = slice.len_chars();
+        let mut chars = slice.chars_at(len);
+        while len > 0 {
+            match chars.prev() {
+                Some('\n') | Some('\r') => len -= 1,
+                _ => break,
+            }
+        }
+        len
+    })
+    .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_indent(_host: *const HostApi, line: usize) -> usize {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        if line >= text.len_lines() {
+            return 0;
+        }
+        // Columns, not characters: a tab is worth `tabstop` of them.
+        zmax_core::indent::indent_level_for_line(
+            text.line(line),
+            doc.tab_width(),
+            doc.indent_width(),
+        ) * doc.indent_width()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_word_count(_host: *const HostApi) -> *mut c_char {
+    let counts = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let chars = text.len_chars();
+        let words = text.slice(..).to_string().split_whitespace().count();
+        format!("{chars}:{words}:{}", text.len_lines())
+    });
+    into_raw_cstring(counts)
+}
+
+extern "C" fn host_option_num(_host: *const HostApi, name: *const c_char) -> usize {
+    arg_string(name)
+        .and_then(|name| zmax_core::vim_opts::get_num(&[name.as_str()]))
+        .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_option_bool(_host: *const HostApi, name: *const c_char) -> c_int {
+    let set = arg_string(name)
+        .map(|name| zmax_core::vim_opts::get_bool(&[name.as_str()]))
+        .unwrap_or(false);
+    c_int::from(set)
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -865,6 +961,14 @@ fn host_api() -> *const HostApi {
             changelist: host_changelist,
             changelist_index: host_changelist_index,
             display_width: host_display_width,
+            buffer_path_at: host_buffer_path_at,
+            buffer_modified: host_buffer_modified,
+            window_index: host_window_index,
+            line_length: host_line_length,
+            indent: host_indent,
+            word_count: host_word_count,
+            option_num: host_option_num,
+            option_bool: host_option_bool,
         });
         Box::into_raw(boxed) as usize
     });

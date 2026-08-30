@@ -120,6 +120,12 @@ What is in the buffer, and what the language servers said about it:
 | `marks()` | `getmarklist()` | every set mark, sorted by name |
 | `changelist()` / `changelist_index()` | `getchangelist()` | edit positions, oldest first, and where `g;` resumes |
 | `display_width(text)` | `strdisplaywidth()` | terminal cells, not characters |
+| `buffer_path_at(i)` / `buffer_modified(i)` | `getbufinfo()` | the path on disk, and whether it is dirty |
+| `window_index()` | `winnr()` | which window is focused |
+| `line_length(n)` | `col("$")` | characters, line ending excluded; `None` past the end |
+| `indent(n)` | `indent({lnum})` | columns, a tab counting as `tabstop` |
+| `word_count()` | `wordcount()` | chars, words and lines in one call |
+| `option_num(name)` / `option_bool(name)` | `&opt` | typed, so callers do not parse the string |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:
