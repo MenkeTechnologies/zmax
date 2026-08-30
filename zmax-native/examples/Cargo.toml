@@ -20,6 +20,10 @@ members = [
   "window-map",
   "width-check",
   "opt-info",
+  "file-facts",
+  "fold-outline",
+  "search-peek",
+  "three-coords",
 ]
 
 [workspace.dependencies]

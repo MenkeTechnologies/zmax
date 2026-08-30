@@ -32,5 +32,9 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`window-map`](window-map) | `:windows` | `window_buffer`/`buffer_window` — not inverses; finds hidden buffers |
 | [`width-check`](width-check) | `:width [limit]` | `display_width` vs `line_length` — cells, not characters |
 | [`opt-info`](opt-info) | `:opt {option}` | `option_set` vs `option` — set-to-empty is not unset |
+| [`file-facts`](file-facts) | `:finfo [path]` | `file_type`/`file_perm`/`file_writable` — a symlink is a `link`, and 2 ≠ writable |
+| [`fold-outline`](fold-outline) | `:outline` | `fold_level` + `fold_closed` — structure without a second parse |
+| [`search-peek`](search-peek) | `:sc [pattern]` | `search_count`/`search_next` — Rust regexes, and zero is ambiguous |
+| [`three-coords`](three-coords) | `:pos` | chars vs bytes vs cells, and the bridges between them |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.
