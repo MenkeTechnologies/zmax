@@ -24,5 +24,9 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`trim-trailing`](trim-trailing) | `:trim-trailing` | `buffer_text` guard + `eval` (`:%s`) |
 | [`banner`](banner) | `:banner <text…>` | `Args` + multi-line `insert_text` |
 | [`zwire-lookup`](zwire-lookup) | `:zwire-lookup [site] [term…]` | `word_at_cursor` + `selection_text`, and an IPC socket |
+| [`scope-at-cursor`](scope-at-cursor) | `:scope`, `:scope-copy` | `syntax_at` + `cursor` — the theme scope stack under the cursor |
+| [`swap-doctor`](swap-doctor) | `:swap-doctor` | `swap_path`/`swap_exists`/`swap_locked_by` + `undo_tree` |
+| [`three-lists`](three-lists) | `:lists` | `quickfix` vs `loclist` vs `diagnostics` — three different lists |
+| [`block-peek`](block-peek) | `:block-peek` | `region` + `region_pos` + `select_kind`, incl. the blockwise skip |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.

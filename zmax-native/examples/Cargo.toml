@@ -12,6 +12,10 @@ members = [
   "trim-trailing",
   "banner",
   "zwire-lookup",
+  "scope-at-cursor",
+  "swap-doctor",
+  "three-lists",
+  "block-peek",
 ]
 
 [workspace.dependencies]

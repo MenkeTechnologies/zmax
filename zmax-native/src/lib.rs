@@ -1734,6 +1734,14 @@ macro_rules! declare_plugin {
             version: concat!($version, "\0").as_ptr() as *const ::std::os::raw::c_char,
         };
 
+        // The host's table is a raw pointer by construction -- this is the C
+        // entry point the loader resolves, and its type must stay
+        // `extern "C" fn` to match `InitFn`, so it cannot be an `unsafe fn`.
+        // The pointer is null-checked and ABI-checked below before anything is
+        // read through it. Without this the lint (deny-by-default, and
+        // reported at the `declare_plugin!` call site) would fail `cargo
+        // clippy` for every plugin written with this SDK.
+        #[allow(clippy::not_unsafe_ptr_arg_deref)]
         #[no_mangle]
         pub extern "C" fn zmax_native_init(
             host: *const $crate::HostApi,

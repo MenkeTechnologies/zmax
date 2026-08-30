@@ -355,7 +355,9 @@ fn zwire_lookup(host: &Host, args: &Args) -> c_int {
     // The bus is down. Open it anyway rather than making the user start a
     // daemon to read documentation, and say so.
     if open_directly(&url) {
-        host.message(&format!("zwire-host is not running; opened {label} directly"));
+        host.message(&format!(
+            "zwire-host is not running; opened {label} directly"
+        ));
         0
     } else {
         host.error(&format!("zwire-lookup: could not open {label}"));
@@ -541,7 +543,10 @@ mod tests {
             reply_is_ok(r#"{"ok":true,"text":"UnixStream"}"#),
             "clipboard_get"
         );
-        assert!(reply_is_ok(r#"{"ok": true}"#), "spaced, in case that changes");
+        assert!(
+            reply_is_ok(r#"{"ok": true}"#),
+            "spaced, in case that changes"
+        );
 
         assert!(
             !reply_is_ok(r#"{"err":"exit Some(1)","ok":false}"#),
@@ -567,7 +572,10 @@ mod tests {
             reply_text(r#"{"ok":true,"text":"one\ntwo"}"#).as_deref(),
             Some("one\ntwo")
         );
-        assert_eq!(reply_text(r#"{"ok":false,"err":"no_clipboard_tool"}"#), None);
+        assert_eq!(
+            reply_text(r#"{"ok":false,"err":"no_clipboard_tool"}"#),
+            None
+        );
         assert_eq!(reply_text(r#"{"text":"unterminated"#), None);
     }
 

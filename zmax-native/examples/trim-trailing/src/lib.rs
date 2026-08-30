@@ -20,9 +20,7 @@ fn trim_trailing(host: &Host, _args: &Args) -> c_int {
         host.error("trim-trailing: no active buffer");
         return 1;
     };
-    let has_trailing = text
-        .lines()
-        .any(|l| l.ends_with(' ') || l.ends_with('\t'));
+    let has_trailing = text.lines().any(|l| l.ends_with(' ') || l.ends_with('\t'));
     if !has_trailing {
         host.message("trim-trailing: nothing to trim");
         return 0;

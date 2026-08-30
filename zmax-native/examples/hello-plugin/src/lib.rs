@@ -17,7 +17,11 @@ use zmax_native::{declare_plugin, Args, Host};
 /// exercising `message` + `buffer_text`.
 fn hello(host: &Host, args: &Args) -> c_int {
     let who = args.rest().join(" ");
-    let who = if who.is_empty() { "world".to_string() } else { who };
+    let who = if who.is_empty() {
+        "world".to_string()
+    } else {
+        who
+    };
     let chars = host.buffer_text().map(|t| t.chars().count()).unwrap_or(0);
     host.message(&format!("hello, {who} (buffer has {chars} chars)"));
     0
