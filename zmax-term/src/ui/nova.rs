@@ -7024,18 +7024,188 @@ impl Solid {
     }
 }
 
-/// How solid a surface looks at a given distance.
-fn solid_shade(depth: f32, face: char) -> char {
-    match depth {
-        d if d < 4.0 => face,
-        d if d < 9.0 => '▓',
-        d if d < 18.0 => '▒',
-        _ => '░',
+/// The shading ramp, darkest to brightest. A face's brightness comes from how
+/// square it is to the light, dimmed by how far away it is.
+const RAMP: [char; 7] = [' ', '·', '░', '▒', '▓', '█', '█'];
+
+/// Where the light comes from: over your left shoulder, as in every hangar
+/// photograph ever taken.
+const LIGHT: [f32; 3] = [-0.45, 0.78, -0.44];
+
+/// How lit a face is, from its normal, and how much the distance eats it.
+fn face_light(normal: [f32; 3], depth: f32) -> f32 {
+    let lit = normal[0] * LIGHT[0] + normal[1] * LIGHT[1] + normal[2] * LIGHT[2];
+    let ambient = 0.32;
+    let direct = lit.max(0.0) * 0.68;
+    let fog = (1.0 - (depth / 46.0)).clamp(0.22, 1.0);
+    ((ambient + direct) * fog).clamp(0.0, 1.0)
+}
+
+/// The glyph a surface of that brightness is drawn with.
+fn ramp_glyph(light: f32) -> char {
+    let step = (light * (RAMP.len() - 1) as f32).round() as usize;
+    RAMP[step.min(RAMP.len() - 1)]
+}
+
+/// One flat face of a model, in world coordinates.
+struct Quad {
+    pts: [[f32; 3]; 4],
+    normal: [f32; 3],
+}
+
+/// Rasterise a face: project its corners, walk the scanlines it covers, and
+/// fill them at the depth and brightness the face has there.
+fn fill_quad(
+    canvas: &mut Canvas,
+    cam: &Camera,
+    quad: &Quad,
+    style: zmax_view::graphics::Style,
+    material: f32,
+) {
+    let mut screen = [(0.0f32, 0.0f32, 0.0f32); 4];
+    for (i, point) in quad.pts.iter().enumerate() {
+        match cam.project(point[0], point[1], point[2]) {
+            // A face with a corner behind the lens is dropped rather than
+            // clipped: at these sizes the difference is a cell or two.
+            None => return,
+            Some(projected) => screen[i] = projected,
+        }
+    }
+    let top = screen.iter().fold(f32::MAX, |a, p| a.min(p.1));
+    let bottom = screen.iter().fold(f32::MIN, |a, p| a.max(p.1));
+    if bottom < 0.0 || top > canvas.h as f32 {
+        return;
+    }
+    let lit = face_light(quad.normal, screen.iter().map(|p| p.2).sum::<f32>() / 4.0) * material;
+    let glyph = ramp_glyph(lit);
+    let mut y = top.floor().max(0.0);
+    while y <= bottom.ceil().min(canvas.h as f32 - 1.0) {
+        // Where the face's edges cross this scanline, and how deep it is there.
+        let mut spans: Vec<(f32, f32)> = Vec::new();
+        for i in 0..4 {
+            let (ax, ay, ad) = screen[i];
+            let (bx, by, bd) = screen[(i + 1) % 4];
+            if (ay <= y && by > y) || (by <= y && ay > y) {
+                let t = (y - ay) / (by - ay);
+                spans.push((ax + (bx - ax) * t, ad + (bd - ad) * t));
+            }
+        }
+        if spans.len() >= 2 {
+            spans.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+            let (left, right) = (spans[0], spans[spans.len() - 1]);
+            let mut x = left.0.floor().max(0.0);
+            while x <= right.0.ceil().min(canvas.w as f32 - 1.0) {
+                let t = if (right.0 - left.0).abs() < 0.001 {
+                    0.0
+                } else {
+                    (x - left.0) / (right.0 - left.0)
+                };
+                let depth = left.1 + (right.1 - left.1) * t;
+                canvas.plot(x as i16, y as i16, depth, glyph, style);
+                x += 1.0;
+            }
+        }
+        y += 1.0;
     }
 }
 
-/// Draw one box into the canvas by walking its faces. The sampling step falls
-/// off with distance, so near boxes are solid and far ones are cheap.
+/// Draw the outline of a face, which is what stops a hull reading as a blob.
+fn edge_quad(canvas: &mut Canvas, cam: &Camera, quad: &Quad, style: zmax_view::graphics::Style) {
+    let mut screen = [(0.0f32, 0.0f32, 0.0f32); 4];
+    for (i, point) in quad.pts.iter().enumerate() {
+        match cam.project(point[0], point[1], point[2]) {
+            None => return,
+            Some(projected) => screen[i] = projected,
+        }
+    }
+    for i in 0..4 {
+        let (ax, ay, ad) = screen[i];
+        let (bx, by, bd) = screen[(i + 1) % 4];
+        let steps = ((bx - ax).abs().max((by - ay).abs()) as i32).clamp(1, 200);
+        for step in 0..=steps {
+            let t = step as f32 / steps as f32;
+            let x = ax + (bx - ax) * t;
+            let y = ay + (by - ay) * t;
+            let depth = ad + (bd - ad) * t;
+            let glyph = if (by - ay).abs() < 0.6 {
+                '─'
+            } else if (bx - ax).abs() < 0.6 {
+                '│'
+            } else if (bx - ax) * (by - ay) > 0.0 {
+                '╲'
+            } else {
+                '╱'
+            };
+            // Just in front of the face it belongs to, so it never z-fights.
+            canvas.plot(x as i16, y as i16, depth - 0.05, glyph, style);
+        }
+    }
+}
+
+/// The six faces of a box, in world coordinates.
+fn box_quads(centre: [f32; 3], half: [f32; 3]) -> [Quad; 6] {
+    let (cx, cy, cz) = (centre[0], centre[1], centre[2]);
+    let (hx, hy, hz) = (half[0], half[1], half[2]);
+    let corner = |sx: f32, sy: f32, sz: f32| [cx + sx * hx, cy + sy * hy, cz + sz * hz];
+    [
+        Quad {
+            pts: [
+                corner(-1.0, -1.0, -1.0),
+                corner(1.0, -1.0, -1.0),
+                corner(1.0, 1.0, -1.0),
+                corner(-1.0, 1.0, -1.0),
+            ],
+            normal: [0.0, 0.0, -1.0],
+        },
+        Quad {
+            pts: [
+                corner(-1.0, -1.0, 1.0),
+                corner(1.0, -1.0, 1.0),
+                corner(1.0, 1.0, 1.0),
+                corner(-1.0, 1.0, 1.0),
+            ],
+            normal: [0.0, 0.0, 1.0],
+        },
+        Quad {
+            pts: [
+                corner(-1.0, 1.0, -1.0),
+                corner(1.0, 1.0, -1.0),
+                corner(1.0, 1.0, 1.0),
+                corner(-1.0, 1.0, 1.0),
+            ],
+            normal: [0.0, 1.0, 0.0],
+        },
+        Quad {
+            pts: [
+                corner(-1.0, -1.0, -1.0),
+                corner(1.0, -1.0, -1.0),
+                corner(1.0, -1.0, 1.0),
+                corner(-1.0, -1.0, 1.0),
+            ],
+            normal: [0.0, -1.0, 0.0],
+        },
+        Quad {
+            pts: [
+                corner(-1.0, -1.0, -1.0),
+                corner(-1.0, 1.0, -1.0),
+                corner(-1.0, 1.0, 1.0),
+                corner(-1.0, -1.0, 1.0),
+            ],
+            normal: [-1.0, 0.0, 0.0],
+        },
+        Quad {
+            pts: [
+                corner(1.0, -1.0, -1.0),
+                corner(1.0, 1.0, -1.0),
+                corner(1.0, 1.0, 1.0),
+                corner(1.0, -1.0, 1.0),
+            ],
+            normal: [1.0, 0.0, 0.0],
+        },
+    ]
+}
+
+/// Draw one box: its faces filled and lit, then its edges drawn over them.
 fn draw_solid(
     canvas: &mut Canvas,
     cam: &Camera,
@@ -7044,6 +7214,12 @@ fn draw_solid(
     scale: f32,
     style: zmax_view::graphics::Style,
 ) {
+    // Panels and plating take the light differently from bare hull.
+    let material = match solid.face {
+        '█' => 1.0,
+        '▓' => 0.85,
+        _ => 0.7,
+    };
     let centre = [
         origin[0] + solid.at[0] * scale,
         origin[1] + solid.at[1] * scale,
@@ -7054,49 +7230,18 @@ fn draw_solid(
         solid.half[1] * scale,
         solid.half[2] * scale,
     ];
-    let step = 0.34_f32;
-    // The front face, then the top, then the two sides: enough for a shape to
-    // read as a body rather than an outline.
-    let mut u = -half[0];
-    while u <= half[0] {
-        let mut v = -half[1];
-        while v <= half[1] {
-            for &z in &[centre[2] - half[2], centre[2] + half[2]] {
-                if let Some((sx, sy, depth)) = cam.project(centre[0] + u, centre[1] + v, z) {
-                    canvas.plot(
-                        sx as i16,
-                        sy as i16,
-                        depth,
-                        solid_shade(depth, solid.face),
-                        style,
-                    );
-                }
-            }
-            v += step;
-        }
-        let mut w = -half[2];
-        while w <= half[2] {
-            for &y in &[centre[1] - half[1], centre[1] + half[1]] {
-                if let Some((sx, sy, depth)) = cam.project(centre[0] + u, y, centre[2] + w) {
-                    canvas.plot(sx as i16, sy as i16, depth, solid_shade(depth, '▀'), style);
-                }
-            }
-            w += step;
-        }
-        u += step;
+    let quads = box_quads(centre, half);
+    for quad in &quads {
+        fill_quad(canvas, cam, quad, style, material);
     }
-    let mut v = -half[1];
-    while v <= half[1] {
-        let mut w = -half[2];
-        while w <= half[2] {
-            for &x in &[centre[0] - half[0], centre[0] + half[0]] {
-                if let Some((sx, sy, depth)) = cam.project(x, centre[1] + v, centre[2] + w) {
-                    canvas.plot(sx as i16, sy as i16, depth, solid_shade(depth, '▓'), style);
-                }
-            }
-            w += step;
+    // Close work gets its outline; distant hulls are left as solids.
+    let near = cam
+        .project(centre[0], centre[1], centre[2])
+        .is_some_and(|p| p.2 < 22.0);
+    if near {
+        for quad in &quads {
+            edge_quad(canvas, cam, quad, style);
         }
-        v += step;
     }
 }
 
@@ -7111,6 +7256,82 @@ fn draw_model(
 ) {
     for solid in model {
         draw_solid(canvas, cam, solid, origin, scale, style);
+    }
+}
+
+/// Sky and ground behind everything else: a lit band above the horizon and a
+/// darker one below it, so the world has a floor and a ceiling before a single
+/// hull is drawn.
+fn draw_horizon(
+    canvas: &mut Canvas,
+    cam: &Camera,
+    sky: char,
+    ground: char,
+    sky_style: zmax_view::graphics::Style,
+    ground_style: zmax_view::graphics::Style,
+) {
+    let horizon = (cam.h / 2.0) as i16;
+    for y in 0..canvas.h {
+        let (glyph, style) = if y < horizon {
+            (sky, sky_style)
+        } else {
+            (ground, ground_style)
+        };
+        // Thin the texture out towards the horizon line so it reads as depth.
+        let band = (y - horizon).abs();
+        let step = if band > 6 { 2 } else { 4 };
+        for x in 0..canvas.w {
+            if (x + y) % step == 0 {
+                canvas.plot(x, y, 900.0, glyph, style);
+            }
+        }
+    }
+}
+
+/// The canopy itself: struts down the corners of the glass and a frame round
+/// it, drawn nearest of all so it always sits in front of the fight.
+fn draw_canopy(canvas: &mut Canvas, style: zmax_view::graphics::Style) {
+    let (w, h) = (canvas.w, canvas.h);
+    for x in 0..w {
+        canvas.plot(x, 0, 0.01, '═', style);
+        canvas.plot(x, h - 1, 0.01, '▁', style);
+    }
+    for y in 0..h {
+        canvas.plot(0, y, 0.01, '║', style);
+        canvas.plot(w - 1, y, 0.01, '║', style);
+    }
+    // The two struts a pilot actually looks past.
+    for y in 0..h {
+        let inset = 3 + (h - y) / 4;
+        canvas.plot(inset, y, 0.02, '╲', style);
+        canvas.plot(w - 1 - inset, y, 0.02, '╱', style);
+    }
+    // The coaming across the bottom of the glass.
+    for x in 0..w {
+        let dip = ((x - w / 2).abs() / 6).min(3);
+        canvas.plot(x, h - 2 - dip, 0.02, '▄', style);
+    }
+}
+
+/// A world hanging in the sky: a disc, shaded across its face.
+fn draw_planet_disc(
+    canvas: &mut Canvas,
+    centre: (i16, i16),
+    radius: i16,
+    shade: char,
+    style: zmax_view::graphics::Style,
+) {
+    for dy in -radius..=radius {
+        for dx in -(radius * 2)..=(radius * 2) {
+            // Cells are twice as tall as wide, so the disc is drawn wide.
+            let inside = (dx * dx) as f32 / 4.0 + (dy * dy) as f32 <= (radius * radius) as f32;
+            if !inside {
+                continue;
+            }
+            let limb = ((dx * dx) as f32 / 4.0 + (dy * dy) as f32).sqrt() / radius as f32;
+            let glyph = if limb > 0.86 { '░' } else { shade };
+            canvas.plot(centre.1 + dx, centre.0 + dy, 800.0, glyph, style);
+        }
     }
 }
 
@@ -7400,6 +7621,18 @@ impl Nova {
         // nearest hull wins each cell, so ships pass in front of each other.
         let mut canvas = Canvas::new(glass_w, glass_h);
         let cam = pilot_camera(g.ship, glass_w, glass_h);
+        // Space first: a black field, the world this system belongs to hanging
+        // in it, and the sector's own haze.
+        draw_horizon(&mut canvas, &cam, '·', '·', star_style, star_style);
+        if g.planet != Planet::DeepSpace {
+            draw_planet_disc(
+                &mut canvas,
+                (glass_h / 4, glass_w / 4),
+                (glass_h / 5).max(3),
+                g.planet.shade().chars().next().unwrap_or('▓'),
+                frame_style,
+            );
+        }
         for star in &g.stars {
             let y = ((star.pos.1 % 7) as f32 - 3.0) * 0.8;
             if let Some((sx, sy, depth)) = cam.project(star.pos.1 as f32, y, star.pos.0 as f32) {
@@ -7512,6 +7745,9 @@ impl Nova {
                 }
             }
         }
+        draw_canopy(&mut canvas, frame_style);
+        canvas.blit(surface, ox, oy);
+
         // What is behind you goes on the rear-view strip rather than the glass.
         let behind = g.enemies.iter().filter(|e| e.pos.0 > g.ship.0).count();
         // Fire, ours and theirs.
@@ -8280,13 +8516,49 @@ impl Nova {
         let mut canvas = Canvas::new(w, h);
         let cam = walker_camera(deck, w, h);
 
-        // The deck itself, and the roof over it when there is one.
+        // Sky over ground, so there is a world before anything stands on it.
         let ground = if g.status == Status::Surface {
             g.planet.shade().chars().next().unwrap_or('·')
         } else {
             '·'
         };
+        draw_horizon(
+            &mut canvas,
+            &cam,
+            if g.status == Status::Surface {
+                '░'
+            } else {
+                '▒'
+            },
+            ground,
+            dim,
+            dim,
+        );
+        if g.status == Status::Surface && g.planet != Planet::DeepSpace {
+            // Something else in the sky: a moon, or the world you are orbiting.
+            draw_planet_disc(
+                &mut canvas,
+                (h / 5, w * 3 / 4),
+                (h / 8).max(2),
+                g.planet.shade().chars().next().unwrap_or('▓'),
+                text,
+            );
+        }
         draw_ground(&mut canvas, &cam, 0.0, 26.0, 1.0, ground, dim);
+        // Lane markings running away from the pilot, which is what sells the
+        // perspective on a flat floor.
+        for lane in -6..=6 {
+            let mut ahead = 1.0;
+            while ahead < 26.0 {
+                let (dr, dc) = deck.facing;
+                let x = deck.pilot.1 as f32 + dc as f32 * ahead - dr as f32 * lane as f32;
+                let z = deck.pilot.0 as f32 + dr as f32 * ahead + dc as f32 * lane as f32;
+                if let Some((sx, sy, depth)) = cam.project(x, 0.02, z) {
+                    canvas.plot(sx as i16, sy as i16, depth + 0.2, '·', dim);
+                }
+                ahead += 0.6;
+            }
+        }
         if g.status != Status::Surface {
             draw_ground(&mut canvas, &cam, 4.5, 20.0, 2.0, '╤', dim);
         }
@@ -12635,5 +12907,159 @@ mod ground_tests {
         assert!(g.deck.cover.is_empty(), "and clear to walk");
         g.ground_tick();
         assert_eq!(g.status, Status::Hangar, "and the tick does nothing there");
+    }
+}
+
+#[cfg(test)]
+mod raster_tests {
+    use super::*;
+
+    fn camera(w: i16, h: i16) -> Camera {
+        Camera {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            yaw: 0.0,
+            focal: w as f32 * 0.6,
+            w: w as f32,
+            h: h as f32,
+        }
+    }
+
+    fn filled(canvas: &Canvas) -> usize {
+        canvas.cells.iter().filter(|cell| cell.is_some()).count()
+    }
+
+    #[test]
+    fn a_face_square_to_the_light_is_brighter_than_one_edge_on() {
+        let lit = face_light([0.0, 1.0, 0.0], 1.0);
+        let dark = face_light([0.0, -1.0, 0.0], 1.0);
+        assert!(lit > dark, "the top of a hull catches the light");
+        assert!(dark > 0.0, "and the underside is not pitch black");
+        assert!(
+            face_light([0.0, 1.0, 0.0], 40.0) < lit,
+            "distance eats the light"
+        );
+        assert_eq!(ramp_glyph(1.0), '█', "full brightness is solid");
+        assert_eq!(ramp_glyph(0.0), ' ', "and nothing is nothing");
+    }
+
+    #[test]
+    fn a_box_rasterises_into_a_solid_block_of_cells() {
+        let cam = camera(60, 24);
+        let mut canvas = Canvas::new(60, 24);
+        let solid = Solid::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], '█');
+        draw_solid(
+            &mut canvas,
+            &cam,
+            &solid,
+            [0.0, 0.0, 8.0],
+            1.0,
+            Default::default(),
+        );
+        let painted = filled(&canvas);
+        assert!(painted > 40, "the face fills, it does not dot: {painted}");
+    }
+
+    #[test]
+    fn nearer_geometry_hides_what_is_behind_it() {
+        let cam = camera(60, 24);
+        let mut canvas = Canvas::new(60, 24);
+        let far = Solid::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], '█');
+        draw_solid(
+            &mut canvas,
+            &cam,
+            &far,
+            [0.0, 0.0, 20.0],
+            1.0,
+            Default::default(),
+        );
+        let behind: Vec<Option<f32>> = canvas
+            .cells
+            .iter()
+            .map(|cell| cell.map(|c| c.depth))
+            .collect();
+        let near = Solid::new([0.0, 0.0, 0.0], [1.5, 1.5, 1.5], '█');
+        draw_solid(
+            &mut canvas,
+            &cam,
+            &near,
+            [0.0, 0.0, 6.0],
+            1.0,
+            Default::default(),
+        );
+        let mut covered = 0;
+        for (i, cell) in canvas.cells.iter().enumerate() {
+            if let (Some(now), Some(Some(was))) = (cell, behind.get(i)) {
+                if now.depth < *was {
+                    covered += 1;
+                }
+            }
+        }
+        assert!(covered > 0, "the near hull takes those cells over");
+        assert!(
+            canvas.cells.iter().flatten().all(|cell| cell.depth > 0.0),
+            "and nothing ends up in front of the lens"
+        );
+    }
+
+    #[test]
+    fn a_box_behind_the_camera_is_not_drawn() {
+        let cam = camera(60, 24);
+        let mut canvas = Canvas::new(60, 24);
+        let solid = Solid::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], '█');
+        draw_solid(
+            &mut canvas,
+            &cam,
+            &solid,
+            [0.0, 0.0, -10.0],
+            1.0,
+            Default::default(),
+        );
+        assert_eq!(filled(&canvas), 0, "what is behind you is behind you");
+    }
+
+    #[test]
+    fn the_canopy_frames_the_glass() {
+        let mut canvas = Canvas::new(40, 16);
+        draw_canopy(&mut canvas, Default::default());
+        let corner = canvas.cells[0].expect("the frame is drawn");
+        assert!(corner.depth < 0.1, "and it sits in front of everything");
+        assert!(filled(&canvas) > 40, "with struts and a coaming on it");
+    }
+
+    #[test]
+    fn a_planet_disc_is_wider_than_it_is_tall() {
+        let mut canvas = Canvas::new(60, 24);
+        draw_planet_disc(&mut canvas, (12, 30), 6, '▓', Default::default());
+        let cells: Vec<(i16, i16)> = (0..canvas.h)
+            .flat_map(|y| (0..canvas.w).map(move |x| (x, y)))
+            .filter(|(x, y)| canvas.cells[(y * canvas.w + x) as usize].is_some())
+            .collect();
+        let width =
+            cells.iter().map(|c| c.0).max().unwrap() - cells.iter().map(|c| c.0).min().unwrap();
+        let height =
+            cells.iter().map(|c| c.1).max().unwrap() - cells.iter().map(|c| c.1).min().unwrap();
+        assert!(
+            width > height,
+            "terminal cells are tall, so a round world is drawn wide: {width}x{height}"
+        );
+    }
+
+    #[test]
+    fn every_hull_in_the_game_has_geometry_to_draw() {
+        for class in ShipClass::ALL {
+            assert!(!class.solid().is_empty(), "{} is built", class.name());
+        }
+        for kind in [
+            EnemyKind::TieFighter,
+            EnemyKind::TieInterceptor,
+            EnemyKind::TieBomber,
+            EnemyKind::Gunboat,
+            EnemyKind::GunPlatform,
+            EnemyKind::BuzzDroid,
+        ] {
+            assert!(!kind.solid().is_empty(), "{} is built", kind.glyph());
+        }
     }
 }
