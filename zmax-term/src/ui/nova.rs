@@ -132,6 +132,8 @@ const SENSE_COST: u32 = 45;
 const SENSE_TICKS: u32 = 90;
 const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
+/// Probe droids the Empire keeps drifting across a galaxy.
+const PROBE_COUNT: usize = 4;
 /// The score that gets a bounty posted on you, and what his ship is worth.
 const HUNTER_BOUNTY: u32 = 20_000;
 /// One jump in this many with contraband aboard gets you looked at.
@@ -4805,6 +4807,10 @@ pub struct Game {
     pub node: MapNode,
     /// Ticks the arrival banner still has to run.
     pub banner: u32,
+    /// Imperial probe droids drifting the chart, by the system each is in.
+    pub probes: Vec<usize>,
+    /// True once a probe has found the squadron and got a signal out.
+    pub reported: bool,
     /// Which system the bounty hunter is sitting in, if one has taken the
     /// contract yet.
     pub hunter: Option<usize>,
@@ -4914,6 +4920,8 @@ impl Game {
                 explored: true,
             },
             banner: 0,
+            probes: Vec::new(),
+            reported: false,
             hunter: None,
             hunted: 0,
             flash: 0,
@@ -4973,6 +4981,8 @@ impl Game {
         self.campaign_at = 0;
         self.hunter = None;
         self.hunted = 0;
+        self.probes.clear();
+        self.reported = false;
         self.objective = Objective::Destroy;
         self.transports.clear();
         self.walkers.clear();
@@ -4989,6 +4999,12 @@ impl Game {
         self.wave = 1;
         let seed = self.rand();
         self.map = StarMap::generate(galaxy, seed);
+        // The Empire seeds a few probes across every galaxy it holds.
+        self.probes.clear();
+        for _ in 0..PROBE_COUNT {
+            let at = (self.rand() % self.map.nodes.len() as u64) as usize;
+            self.probes.push(at);
+        }
         self.node = MapNode {
             pos: (0, 0),
             region: Region::Rim,
@@ -5242,6 +5258,23 @@ impl Game {
         self.dress_objective();
         self.claim_node_bonus();
         self.customs_check();
+        if self.probed_here() {
+            // Kill the droid before it reports, or fly with the consequences.
+            let home = self.place((FORMATION_TOP, W / 2));
+            let mut probe = self.hatch(EnemyKind::TieAdvanced, home);
+            probe.hp = probe.max_hp / 2;
+            self.enemies.push(probe);
+        }
+        if self.reported {
+            // A reported squadron gets met by whatever was closest.
+            self.reported = false;
+            for col in (0..COLS).step_by(2) {
+                let home = self.place((FORMATION_TOP + 2, BASE_X + col as i16 * ENEMY_GAP));
+                let response = self.hatch(EnemyKind::TieInterceptor, home);
+                self.enemies.push(response);
+            }
+            self.say("They were waiting for us. Somebody talked.");
+        }
         if self.hunted_here() {
             // He does not fly a TIE, and he does not fly alone.
             self.hunted += 1;
@@ -8100,6 +8133,29 @@ impl Game {
         }
     }
 
+    /// Drift every probe one lane, and see whether one of them has us. A probe
+    /// that gets a signal out brings the fleet down on the next system.
+    fn advance_probes(&mut self) {
+        for i in 0..self.probes.len() {
+            let at = self.probes[i];
+            let lanes = self.map.lanes[at].clone();
+            if lanes.is_empty() {
+                continue;
+            }
+            let next = lanes[(self.rand() % lanes.len() as u64) as usize];
+            self.probes[i] = next;
+        }
+        if self.probes.contains(&self.map.at) && !self.reported {
+            self.reported = true;
+            self.say("Probe droid. It got a signal out before we could stop it.");
+        }
+    }
+
+    /// True while a probe is sitting in the same system as the squadron.
+    pub fn probed_here(&self) -> bool {
+        self.probes.contains(&self.map.at)
+    }
+
     /// True while the hunter is sitting in the same system as the squadron.
     pub fn hunted_here(&self) -> bool {
         self.hunter == Some(self.map.at)
@@ -8119,6 +8175,7 @@ impl Game {
         self.node = node;
         self.drone_stun = 0;
         self.advance_hunter();
+        self.advance_probes();
         match node.kind {
             NodeKind::Depot => {
                 // A yard: shields filled, a bomb loaded, the wing back in the
@@ -15504,6 +15561,71 @@ mod ally_tests {
             g.deck.troopers[0].hp,
             GroundKind::Ally.hp(),
             "and untouched by your fire"
+        );
+    }
+}
+
+#[cfg(test)]
+mod probe_tests {
+    use super::tests::flying;
+    use super::*;
+
+    #[test]
+    fn the_empire_keeps_probes_drifting_across_a_galaxy() {
+        let mut g = Game::new(5);
+        g.start(ShipClass::XWing, Difficulty::Normal, Galaxy::Orion);
+        assert_eq!(g.probes.len(), PROBE_COUNT, "a handful of them are out");
+        assert!(
+            g.probes.iter().all(|&at| at < g.map.nodes.len()),
+            "and every one of them is somewhere real"
+        );
+    }
+
+    #[test]
+    fn probes_drift_a_lane_every_time_you_jump() {
+        let mut g = flying();
+        g.status = Status::Chart;
+        let before = g.probes.clone();
+        for _ in 0..6 {
+            if g.status == Status::Hangar {
+                g.open_chart();
+            }
+            if g.status == Status::Chart {
+                g.map.cursor = g.map.reachable()[0];
+                g.jump();
+            }
+            g.status = Status::Chart;
+        }
+        assert_ne!(g.probes, before, "they do not sit still");
+    }
+
+    #[test]
+    fn a_probe_in_your_system_is_something_to_kill_before_it_talks() {
+        let mut g = flying();
+        g.probes = vec![g.map.at];
+        assert!(g.probed_here(), "one is right here");
+        g.spawn_wave();
+        assert!(
+            g.enemies.iter().any(|e| e.kind == EnemyKind::TieAdvanced),
+            "and it is in the wave, on half strength"
+        );
+    }
+
+    #[test]
+    fn being_reported_brings_the_fleet_down_on_the_next_system() {
+        let mut g = flying();
+        g.reported = true;
+        g.spawn_wave();
+        let interceptors = g
+            .enemies
+            .iter()
+            .filter(|e| e.kind == EnemyKind::TieInterceptor)
+            .count();
+        assert!(interceptors >= 4, "a squadron is waiting: {interceptors}");
+        assert!(!g.reported, "and the report is spent on that welcome");
+        assert!(
+            g.chatter.iter().any(|c| c.line.contains("waiting")),
+            "somebody says so"
         );
     }
 }
