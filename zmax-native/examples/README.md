@@ -28,5 +28,9 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`swap-doctor`](swap-doctor) | `:swap-doctor` | `swap_path`/`swap_exists`/`swap_locked_by` + `undo_tree` |
 | [`three-lists`](three-lists) | `:lists` | `quickfix` vs `loclist` vs `diagnostics` — three different lists |
 | [`block-peek`](block-peek) | `:block-peek` | `region` + `region_pos` + `select_kind`, incl. the blockwise skip |
+| [`nav-history`](nav-history) | `:nav` | `marks` vs `jumps` vs `changelist` — three histories, incl. closed buffers |
+| [`window-map`](window-map) | `:windows` | `window_buffer`/`buffer_window` — not inverses; finds hidden buffers |
+| [`width-check`](width-check) | `:width [limit]` | `display_width` vs `line_length` — cells, not characters |
+| [`opt-info`](opt-info) | `:opt {option}` | `option_set` vs `option` — set-to-empty is not unset |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.

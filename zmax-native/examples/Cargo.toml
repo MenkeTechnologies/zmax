@@ -16,6 +16,10 @@ members = [
   "swap-doctor",
   "three-lists",
   "block-peek",
+  "nav-history",
+  "window-map",
+  "width-check",
+  "opt-info",
 ]
 
 [workspace.dependencies]
