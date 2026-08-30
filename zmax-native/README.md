@@ -139,6 +139,17 @@ What is in the buffer, and what the language servers said about it:
 | `file_at_cursor()` | `expand("<cfile>")` | by `isfname` rules, so a path survives its separators |
 | `change_number()` | `changenr()` | compare across an edit to know if anything changed |
 | `buffer_window(buf)` | `bufwinnr()` | the inverse of `window_buffer` |
+| `long_word_at_cursor()` | `expand("<cWORD>")` | whitespace-delimited, where `word_at_cursor` stops at punctuation |
+| `screen_position()` | `screenpos()` | the cursor's cell in the window, scroll included |
+| `window_width_at(i)` / `window_height_at(i)` | `winwidth()`, `winheight()` | any window, not just the focused one |
+| `file_completions(p)` | `getcompletion(p, "file")` | paths, where `completions` returns `:`-command names |
+| `dir_completions(p)` | `getcompletion(p, "dir")` | directories only, a subset of the above |
+| `option_completions(p)` | `getcompletion(p, "option")` | only options that have been set, since that is all `:set` records |
+| `option_set(name)` | `exists("&opt")` | separates set-to-empty from never-set, which `option` cannot |
+| `buffer_language(i)` | `getbufvar(i, "&filetype")` | `language()` for any buffer |
+| `cursor_wanted_column()` | `getcurpos()[4]` | the column vertical motion aims for, once a long line has been left |
+| `jumps()` / `jump_index()` | `getjumplist()` | the jump list, oldest first, and where `C-o` resumes |
+| `syntax_at(offset)` | `synIDattr(synID(...), "name")` | the theme's scope stack, outermost first |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:
@@ -156,6 +167,12 @@ would lose information zmax has:
   backwards one, and that is which end the user is extending from.
 - **`file_type` reports a symlink as `link`**, like `getftype`, because it stats
   the link rather than its target.
+- **`syntax_at` returns the whole scope stack**, where `synID` returns one id.
+  `comment` answers "is this a comment" and `comment.line.documentation` answers
+  "what kind"; only the caller knows which it wanted, so both are returned.
+- **`jump_buffer` reports `None` for a closed buffer.** A jump outlives the
+  buffer it points into, and a stale index into whatever now occupies that slot
+  would be worse than admitting the buffer is gone.
 
 Every one of these reports `None`/`0` when there is no active editor context
 rather than inventing a value, and every string is released through the host's
