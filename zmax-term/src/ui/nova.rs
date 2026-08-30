@@ -122,6 +122,18 @@ const BULWARK_TICKS: u32 = 60;
 const BARRAGE_STEP: i16 = 7;
 /// The most shield pips any hull can ever carry.
 const MAX_SHIELD_PIPS: u32 = 8;
+/// The Force builds as you fly and is spent on the three things a pilot who
+/// trusts it can do: stretch out with his senses, pull what he needs to him,
+/// and let go of the targeting computer.
+const FORCE_MAX: u32 = 100;
+const FORCE_PER_KILL: u32 = 6;
+const FORCE_REGEN_TICKS: u32 = 20;
+const SENSE_COST: u32 = 45;
+const SENSE_TICKS: u32 = 90;
+const PULL_COST: u32 = 30;
+const GUIDED_COST: u32 = 60;
+/// Ticks a line of radio chatter stays on the display.
+const CHATTER_TICKS: u32 = 110;
 /// Pips of power the reactor splits between lasers, shields and engines, and
 /// how long a fully-charged shield takes to knit a pip back.
 const POWER_PIPS: u32 = 6;
@@ -311,6 +323,19 @@ impl ShipClass {
         }
     }
 
+    /// The hull as it is actually drawn: three cells across, two rows deep,
+    /// centred on the cell the game tracks. An X-wing has its S-foils out, a
+    /// Y-wing its engine nacelles, a B-wing its cross, and so on.
+    pub fn sprite(self) -> [&'static str; 2] {
+        match self {
+            ShipClass::AWing => [" ▲ ", "╘═╛"],
+            ShipClass::XWing => ["╲▲╱", "╱█╲"],
+            ShipClass::YWing => ["┳▲┳", "╹█╹"],
+            ShipClass::BWing => [" ┃ ", "━█━"],
+            ShipClass::Freighter => ["╭◙╮", "╰─╯"],
+        }
+    }
+
     /// Columns the hull slides per keypress before the engine is upgraded.
     pub fn speed(self) -> i16 {
         match self {
@@ -376,6 +401,26 @@ impl ShipClass {
             ShipClass::Freighter => {
                 "a light freighter with a full bomb bay; she has it where it counts"
             }
+        }
+    }
+}
+
+/// Imperial hardware, as it is actually drawn.
+impl EnemyKind {
+    /// Three cells of hull, centred on the cell it flies in.
+    pub fn sprite(self) -> &'static str {
+        match self {
+            EnemyKind::TieFighter => "|●|",
+            EnemyKind::TieInterceptor => "/●\\",
+            EnemyKind::TieBomber => "[●]",
+            EnemyKind::TieDefender => "⟨●⟩",
+            EnemyKind::TieAdvanced => "«●»",
+            EnemyKind::GunPlatform => "╪⊕╪",
+            EnemyKind::Gunboat => "▐Ѫ▌",
+            EnemyKind::MineLayer => "◄Ѳ►",
+            EnemyKind::VultureDroid => "≺Ж≻",
+            EnemyKind::BuzzDroid => " ѵ ",
+            EnemyKind::RepairDroid => " ✚ ",
         }
     }
 }
@@ -1218,16 +1263,20 @@ pub enum BossKind {
     Carrier,
     /// A head trailing segments that swim behind it.
     Serpent,
+    /// A TIE Advanced x1 flown by somebody who knows how: it jinks, it leads
+    /// the hull, and it breaks off rather than die.
+    AceTie,
 }
 
 impl BossKind {
     /// The bosses cycle in this order, one per boss wave.
     pub fn of_wave(wave: u32) -> BossKind {
-        match (wave / BOSS_EVERY) % 4 {
-            1 => BossKind::Dreadnought,
+        match (wave / BOSS_EVERY) % 5 {
+            1 => BossKind::AceTie,
             2 => BossKind::Twin,
             3 => BossKind::Carrier,
-            _ => BossKind::Serpent,
+            4 => BossKind::Serpent,
+            _ => BossKind::Dreadnought,
         }
     }
 
@@ -1237,6 +1286,7 @@ impl BossKind {
             BossKind::Twin => "twin",
             BossKind::Carrier => "carrier",
             BossKind::Serpent => "serpent",
+            BossKind::AceTie => "TIE Advanced x1",
         }
     }
 
@@ -1244,7 +1294,7 @@ impl BossKind {
     pub fn core_half(self) -> i16 {
         match self {
             BossKind::Twin => 3,
-            BossKind::Serpent => 1,
+            BossKind::Serpent | BossKind::AceTie => 1,
             _ => 6,
         }
     }
@@ -1252,7 +1302,7 @@ impl BossKind {
     /// Extra rows the core hull covers below its anchor row.
     pub fn core_depth(self) -> i16 {
         match self {
-            BossKind::Serpent => 0,
+            BossKind::Serpent | BossKind::AceTie => 0,
             _ => 1,
         }
     }
@@ -1304,6 +1354,7 @@ impl Boss {
                 BossPart::new((1, -5), hp / 4),
                 BossPart::new((1, 5), hp / 4),
             ],
+            BossKind::AceTie => Vec::new(),
             BossKind::Serpent => (0..SERPENT_SEGMENTS)
                 .map(|i| BossPart::new((0, -(i as i16 + 1) * 2), hp / 6))
                 .collect(),
@@ -1362,6 +1413,8 @@ impl Boss {
     /// Columns it sweeps per tick.
     fn speed(&self) -> i16 {
         match (self.kind, self.phase()) {
+            (BossKind::AceTie, 3) => 3,
+            (BossKind::AceTie, _) => 2,
             (BossKind::Serpent, 3) => 3,
             (BossKind::Serpent, _) => 2,
             (BossKind::Carrier, _) => 1,
@@ -2414,6 +2467,9 @@ pub enum CapitalKind {
     DeathStar,
     /// The command ship: a wedge twice the size, and twice the batteries.
     SuperDestroyer,
+    /// An interdictor: gravity-well projectors that hold a hull in the system
+    /// and drag it wherever they please.
+    Interdictor,
 }
 
 impl CapitalKind {
@@ -2423,6 +2479,7 @@ impl CapitalKind {
             CapitalKind::StarDestroyer => "Star Destroyer",
             CapitalKind::DeathStar => "Death Star",
             CapitalKind::SuperDestroyer => "Super Star Destroyer",
+            CapitalKind::Interdictor => "Interdictor cruiser",
         }
     }
 
@@ -2433,6 +2490,7 @@ impl CapitalKind {
             CapitalKind::StarDestroyer => 6,
             CapitalKind::DeathStar => 8,
             CapitalKind::SuperDestroyer => 9,
+            CapitalKind::Interdictor => 5,
         }
     }
 
@@ -2444,6 +2502,7 @@ impl CapitalKind {
             CapitalKind::StarDestroyer => 4 + row * 3,
             CapitalKind::DeathStar => W / 2 - 2,
             CapitalKind::SuperDestroyer => 5 + row * 4,
+            CapitalKind::Interdictor => 10,
         }
     }
 
@@ -2454,6 +2513,7 @@ impl CapitalKind {
             CapitalKind::StarDestroyer => 260,
             CapitalKind::DeathStar => 400,
             CapitalKind::SuperDestroyer => 700,
+            CapitalKind::Interdictor => 220,
         }
     }
 }
@@ -2476,6 +2536,9 @@ pub enum Emplacement {
     /// The weak point at the bottom of the trench. One hit through the shields
     /// takes the whole ship.
     ExhaustPort,
+    /// A gravity-well projector: it drags harder than a tractor beam, and while
+    /// one is up no hull in the system can go to lightspeed.
+    GravityProjector,
 }
 
 impl Emplacement {
@@ -2488,6 +2551,7 @@ impl Emplacement {
             Emplacement::EngineBank => "ion engines",
             Emplacement::TractorBeam => "tractor beam",
             Emplacement::ExhaustPort => "thermal exhaust port",
+            Emplacement::GravityProjector => "gravity-well projector",
         }
     }
 
@@ -2500,6 +2564,7 @@ impl Emplacement {
             Emplacement::EngineBank => "◙",
             Emplacement::TractorBeam => "◈",
             Emplacement::ExhaustPort => "◎",
+            Emplacement::GravityProjector => "◍",
         }
     }
 
@@ -2512,6 +2577,7 @@ impl Emplacement {
             Emplacement::EngineBank => 18,
             Emplacement::TractorBeam => 16,
             Emplacement::ExhaustPort => 6,
+            Emplacement::GravityProjector => 22,
         }
     }
 
@@ -2524,6 +2590,7 @@ impl Emplacement {
             Emplacement::EngineBank => 250,
             Emplacement::TractorBeam => 350,
             Emplacement::ExhaustPort => 1_000,
+            Emplacement::GravityProjector => 450,
         }
     }
 }
@@ -2600,6 +2667,15 @@ impl Capital {
                 fit(Emplacement::TractorBeam, (4, 0));
                 fit(Emplacement::EngineBank, (0, -6));
                 fit(Emplacement::EngineBank, (0, 6));
+            }
+            CapitalKind::Interdictor => {
+                fit(Emplacement::ShieldDome, (1, 0));
+                fit(Emplacement::GravityProjector, (2, -7));
+                fit(Emplacement::GravityProjector, (2, 7));
+                fit(Emplacement::Turbolaser, (3, -4));
+                fit(Emplacement::Turbolaser, (3, 4));
+                fit(Emplacement::HangarBay, (4, 0));
+                fit(Emplacement::EngineBank, (0, 0));
             }
             CapitalKind::SuperDestroyer => {
                 fit(Emplacement::CommandTower, (1, 0));
@@ -2689,6 +2765,7 @@ impl Capital {
             CapitalKind::StarDestroyer => 16,
             CapitalKind::DeathStar => 12,
             CapitalKind::SuperDestroyer => 10,
+            CapitalKind::Interdictor => 18,
         };
         if tower {
             base
@@ -2701,6 +2778,78 @@ impl Capital {
     fn under_way(&self) -> bool {
         self.standing(Emplacement::EngineBank) > 0
     }
+}
+
+/// What a pilot can do with the Force, once there is enough of it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ForcePower {
+    /// Stretch out: everything the Empire throws flies at half speed.
+    Sense,
+    /// Pull: every loose pickup on the court comes to the hull.
+    Pull,
+    /// Let go: the next torpedo salvo flies itself into a weak point.
+    Guided,
+}
+
+impl ForcePower {
+    pub fn name(self) -> &'static str {
+        match self {
+            ForcePower::Sense => "sense",
+            ForcePower::Pull => "pull",
+            ForcePower::Guided => "guided",
+        }
+    }
+
+    pub fn cost(self) -> u32 {
+        match self {
+            ForcePower::Sense => SENSE_COST,
+            ForcePower::Pull => PULL_COST,
+            ForcePower::Guided => GUIDED_COST,
+        }
+    }
+}
+
+/// What the Alliance calls you, by the flying you have done.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum Rank {
+    FlightCadet,
+    FlightOfficer,
+    Lieutenant,
+    Captain,
+    Commander,
+    General,
+}
+
+impl Rank {
+    /// The rank a pilot of this level has earned.
+    pub fn of_level(level: u32) -> Rank {
+        match level {
+            0..=2 => Rank::FlightCadet,
+            3..=5 => Rank::FlightOfficer,
+            6..=9 => Rank::Lieutenant,
+            10..=14 => Rank::Captain,
+            15..=21 => Rank::Commander,
+            _ => Rank::General,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Rank::FlightCadet => "Flight Cadet",
+            Rank::FlightOfficer => "Flight Officer",
+            Rank::Lieutenant => "Lieutenant",
+            Rank::Captain => "Captain",
+            Rank::Commander => "Commander",
+            Rank::General => "General",
+        }
+    }
+}
+
+/// One line of squadron radio traffic, and how long it stays up.
+#[derive(Clone, Debug)]
+pub struct Chatter {
+    pub line: String,
+    pub ticks: u32,
 }
 
 /// Where the reactor's output is going. Six pips, split three ways: cannons hit
@@ -2847,6 +2996,14 @@ pub struct Game {
     pub active: usize,
     /// Where the reactor's output is going.
     pub power: Power,
+    /// How much of the Force is to hand, and what it is doing right now.
+    pub force: u32,
+    /// Ticks left of stretched-out senses.
+    pub sense: u32,
+    /// True while the next torpedo salvo flies itself.
+    pub guided: bool,
+    /// Squadron radio traffic, newest first.
+    pub chatter: Vec<Chatter>,
     /// The guns aboard, and the missiles in the launcher.
     pub owned: Vec<Weapon>,
     pub missiles: u32,
@@ -2932,6 +3089,10 @@ impl Game {
             squad: vec![Wing::new(HULL_NAMES[0], ShipClass::XWing)],
             active: 0,
             power: Power::default(),
+            force: FORCE_MAX / 2,
+            sense: 0,
+            guided: false,
+            chatter: Vec::new(),
             owned: vec![Weapon::LaserCannon],
             missiles: MISSILE_START,
             score: 0,
@@ -3015,6 +3176,10 @@ impl Game {
         self.owned = vec![Weapon::LaserCannon];
         self.missiles = MISSILE_START;
         self.power = Power::default();
+        self.force = FORCE_MAX / 2;
+        self.sense = 0;
+        self.guided = false;
+        self.chatter.clear();
         self.lives = 3;
         self.score = 0;
         self.credits = 0;
@@ -3104,6 +3269,52 @@ impl Game {
     /// Energy recovered per tick, reactor included.
     pub fn regen(&self) -> u32 {
         ENERGY_REGEN + self.loadout.tier(Part::Reactor) + self.bonus_regen + self.power.engines / 2
+    }
+
+    /// The rank the Alliance has you at.
+    pub fn rank(&self) -> Rank {
+        Rank::of_level(self.level)
+    }
+
+    /// Put a line of squadron traffic on the display.
+    pub fn say(&mut self, line: &str) {
+        if self.chatter.first().is_some_and(|c| c.line == line) {
+            return;
+        }
+        self.chatter.insert(
+            0,
+            Chatter {
+                line: line.to_string(),
+                ticks: CHATTER_TICKS,
+            },
+        );
+        self.chatter.truncate(3);
+    }
+
+    /// Reach for the Force. It only answers if there is enough of it.
+    pub fn use_force(&mut self, power: ForcePower) -> bool {
+        if self.status != Status::Playing || self.force < power.cost() {
+            return false;
+        }
+        self.force -= power.cost();
+        match power {
+            ForcePower::Sense => {
+                self.sense = SENSE_TICKS;
+                self.say("Stretch out with your feelings.");
+            }
+            ForcePower::Pull => {
+                let ship = self.ship;
+                for pickup in self.powerups.iter_mut() {
+                    pickup.pos = (ship.0, ship.1);
+                }
+                self.say("Pulling them in.");
+            }
+            ForcePower::Guided => {
+                self.guided = true;
+                self.say("Targeting computer off. Trusting the Force.");
+            }
+        }
+        true
     }
 
     /// Send a pip of power to one of the three systems.
@@ -3221,6 +3432,13 @@ impl Game {
         self.sector = self.node.sector;
         self.formation = Formation::of_wave(self.wave);
         self.banner = BANNER_TICKS;
+        let arrival = match self.node.kind {
+            NodeKind::Capital => "Heavy contact. That is no moon.",
+            NodeKind::Boss => "Watch it — that one flies like he means it.",
+            NodeKind::Elite => "Elite squadron on the scope. Lock S-foils.",
+            _ => "All wings report in. Stay on target.",
+        };
+        self.say(arrival);
         self.dress_sector();
         self.dress_terrain();
         self.claim_node_bonus();
@@ -3582,12 +3800,16 @@ impl Game {
         let soaked = self.shield.min(pips);
         self.shield -= soaked;
         if soaked == pips {
+            if self.shield == 0 {
+                self.say("Deflectors gone!");
+            }
             return;
         }
         self.lives = self.lives.saturating_sub(1);
         self.shield = self.max_shield;
         self.weapon_level = self.weapon_level.saturating_sub(1).max(1);
         self.drones.pop();
+        self.say("I'm hit! Punching out — bring up the spare.");
     }
 
     /// Bank a kill at the current chain multiplier and extend the chain.
@@ -3597,6 +3819,7 @@ impl Game {
         self.gain_xp(base);
         self.combo = (self.combo + 1).min(MAX_COMBO);
         self.combo_timer = COMBO_TICKS;
+        self.force = (self.force + FORCE_PER_KILL).min(FORCE_MAX);
     }
 
     /// Pick up a dropped powerup.
@@ -3657,6 +3880,14 @@ impl Game {
         self.bulwark = self.bulwark.saturating_sub(1);
         self.drone_stun = self.drone_stun.saturating_sub(1);
         self.banner = self.banner.saturating_sub(1);
+        self.sense = self.sense.saturating_sub(1);
+        if self.tick.is_multiple_of(FORCE_REGEN_TICKS) {
+            self.force = (self.force + 1).min(FORCE_MAX);
+        }
+        for line in self.chatter.iter_mut() {
+            line.ticks = line.ticks.saturating_sub(1);
+        }
+        self.chatter.retain(|c| c.ticks > 0);
         self.energy = (self.energy + self.regen()).min(self.max_energy());
         if self.combo_timer > 0 {
             self.combo_timer -= 1;
@@ -3932,6 +4163,12 @@ impl Game {
                         dx += step;
                     }
                 }
+                BossKind::AceTie => {
+                    // He leads the hull and jinks away from where it was.
+                    let speed = if phase == 3 { 2 } else { 1 };
+                    volley.push(Shot::enemy((row, boss.pos.1), aim, speed));
+                    volley.push(Shot::enemy((row, boss.pos.1), aim * 2, speed));
+                }
                 BossKind::Serpent => {
                     // The head spits at the ship; the body drools once enraged.
                     let head = Shot::enemy((row, boss.pos.1), aim, if phase == 3 { 2 } else { 1 });
@@ -4037,6 +4274,11 @@ impl Game {
                         pull += (col - ship.1).signum();
                     }
                 }
+                Emplacement::GravityProjector => {
+                    if cap.tick.is_multiple_of(2) {
+                        pull += (col - ship.1).signum() * 2;
+                    }
+                }
                 _ => {}
             }
         }
@@ -4110,6 +4352,7 @@ impl Game {
         if scuttled {
             // Straight down the shaft: the whole ship goes up.
             cap.hp = 0;
+            self.say("Great shot, kid! That was one in a million.");
         } else if shaken {
             // The shields held the blast in, but it was felt.
             cap.hp -= cap.max_hp / 8;
@@ -4318,6 +4561,26 @@ impl Game {
         self.shots.extend(fragments);
     }
 
+    /// The weak point a guided salvo goes for: an open exhaust port first, then
+    /// a shield generator, then whatever emplacement is nearest.
+    pub fn weak_point(&self) -> Option<(i16, i16)> {
+        let cap = self.capital.as_ref()?;
+        let pick = |kind: Emplacement| {
+            cap.parts
+                .iter()
+                .find(|p| p.kind == kind && p.hp > 0)
+                .map(|p| cap.part_cell(p))
+        };
+        if !cap.shielded() {
+            if let Some(port) = pick(Emplacement::ExhaustPort) {
+                return Some(port);
+            }
+        }
+        pick(Emplacement::ShieldDome)
+            .or_else(|| pick(Emplacement::Turbolaser))
+            .or_else(|| pick(Emplacement::HangarBay))
+    }
+
     /// The nearest hull to a cell, for an arc bolt looking for its next jump.
     fn nearest_enemy(&self, from: (i16, i16)) -> Option<(i16, i16)> {
         self.enemies
@@ -4337,7 +4600,13 @@ impl Game {
         let mut wing_hits: Vec<(usize, u32)> = Vec::new();
         let wings = self.wing_cells();
         let mut blocked: Vec<(i16, i16)> = Vec::new();
+        let slowed = self.sense > 0;
         'shot: for mut s in std::mem::take(&mut self.enemy_shots) {
+            if slowed && !self.tick.is_multiple_of(2) {
+                // Everything crawls while the Force is up.
+                kept.push(s);
+                continue 'shot;
+            }
             for step in 0..s.speed.unsigned_abs() as i16 {
                 s.pos.0 += 1;
                 if step == 0 {
@@ -4525,6 +4794,7 @@ impl Game {
         if self.capital.as_ref().is_some_and(|c| c.hp <= 0) {
             let bounty = 2_000 + 400 * self.wave;
             self.capital = None;
+            self.say("She's coming apart! Break off, break off.");
             self.add_score(bounty);
             self.gain_xp(bounty / 4);
         }
@@ -4926,7 +5196,9 @@ impl Game {
         wing.shield -= soaked;
         if wing.shield == 0 {
             wing.alive = false;
+            let name = wing.name;
             self.flash = self.flash.max(4);
+            self.say(&format!("{name} is hit! {name}, come in!"));
         }
     }
 
@@ -5045,13 +5317,26 @@ impl Game {
             return;
         }
         self.missiles -= 1;
-        let damage = self.gun_damage() + 4;
+        let damage = if self.guided {
+            self.gun_damage() * 3 + 12
+        } else {
+            self.gun_damage() + 4
+        };
         let (r, c) = (self.ship.0 - 1, self.ship.1);
+        // A guided salvo goes for the weak point rather than the nearest hull.
+        let aim = self.guided.then(|| self.weak_point()).flatten();
         for slot in 0..MISSILE_SALVO {
             let dx = if slot % 2 == 0 { -2 } else { 2 };
             let mut missile = Shot::missile((r, c + dx), damage);
             missile.splash = 1;
+            if let Some(target) = aim {
+                missile.drift = (target.1 - (c + dx)).signum();
+                missile.homing = false;
+            }
             self.launch(missile);
+        }
+        if self.guided {
+            self.guided = false;
         }
     }
 
@@ -5098,6 +5383,7 @@ impl Game {
                 self.rescue_wings();
                 self.map.clear_here();
                 self.status = Status::Hangar;
+                self.say("Docking at the outpost. Get her patched up.");
             }
             NodeKind::Derelict => {
                 // A hulk worth stripping: salvage, and whatever gun is aboard.
@@ -5381,9 +5667,12 @@ impl Nova {
             surface.set_string(
                 ox,
                 y,
-                &format!("{marker} {}  {}  {}", i + 1, class.glyph(), class.name()),
+                &format!("{marker} {}  {}", i + 1, class.name()),
                 style,
             );
+            let sprite = class.sprite();
+            surface.set_string(ox + 17, y, sprite[0], style);
+            surface.set_string(ox + 17, y + 1, sprite[1], style);
             surface.set_string(
                 ox + 22,
                 y,
@@ -5843,6 +6132,15 @@ impl Component for Nova {
                 key!('v') => {
                     self.game.divert(System::Engines);
                 }
+                key!('e') => {
+                    self.game.use_force(ForcePower::Sense);
+                }
+                key!('y') => {
+                    self.game.use_force(ForcePower::Pull);
+                }
+                key!('u') => {
+                    self.game.use_force(ForcePower::Guided);
+                }
                 key!('b') => self.game.bomb(),
                 key!('p') => self.paused = !self.paused,
                 key!('r') => self.retry(),
@@ -5932,7 +6230,8 @@ impl Component for Nova {
             ox,
             area.y,
             &format!(
-                "NOVA  wave {}  {}  score {}  chain ×{}",
+                "{} · wave {}  {}  score {}  chain ×{}",
+                g.rank().name(),
                 g.wave,
                 match &g.boss {
                     Some(boss) => format!(
@@ -5978,7 +6277,7 @@ impl Component for Nova {
             ox,
             area.y + 2,
             &format!(
-                "ENERGY {}{} {}{}   PWR L{} S{} E{}   DRONES {}{}   WING {}",
+                "ENERGY {}{} {}{}   PWR L{} S{} E{}   FORCE {}{}{}   WING {}",
                 "▰".repeat(pips),
                 "▱".repeat(10 - pips),
                 g.class.special().name(),
@@ -5986,8 +6285,9 @@ impl Component for Nova {
                 "▮".repeat(g.power.lasers as usize),
                 "▮".repeat(g.power.shields as usize),
                 "▮".repeat(g.power.engines as usize),
-                "◇".repeat(g.drones.len()),
-                if g.drone_stun > 0 { " STUNNED" } else { "" },
+                "▰".repeat((g.force * 6 / FORCE_MAX) as usize),
+                "▱".repeat(6 - (g.force * 6 / FORCE_MAX).min(6) as usize),
+                if g.sense > 0 { " SENSE" } else { "" },
                 g.squad.iter().filter(|w| w.alive).count()
             ),
             if g.special_ready() {
@@ -6237,14 +6537,18 @@ impl Component for Nova {
         }
         for e in &g.enemies {
             let (r, c) = e.pos;
-            if on_board(r, c) {
-                let (x, y) = cell(r, c);
-                let style = match e.kind {
-                    EnemyKind::Gunboat | EnemyKind::RepairDroid => tank_style,
-                    _ if e.charge > 0 => beam_style,
-                    _ => enemy_style,
-                };
-                surface.set_string(x, y, e.kind.glyph(), style);
+            let style = match e.kind {
+                EnemyKind::Gunboat | EnemyKind::RepairDroid => tank_style,
+                _ if e.charge > 0 => beam_style,
+                _ => enemy_style,
+            };
+            // Three cells of hull, centred on the cell the game tracks.
+            for (i, glyph) in e.kind.sprite().chars().enumerate() {
+                let col = c + i as i16 - 1;
+                if glyph != ' ' && on_board(r, col) {
+                    let (x, y) = cell(r, col);
+                    surface.set_string(x, y, &glyph.to_string(), style);
+                }
             }
         }
         for p in &g.powerups {
@@ -6273,9 +6577,12 @@ impl Component for Nova {
             }
         }
         for (index, (r, c)) in g.wing_cells() {
-            if on_board(r, c) {
-                let (x, y) = cell(r, c);
-                surface.set_string(x, y, g.squad[index].class.glyph(), drone_style);
+            for (i, glyph) in g.squad[index].class.sprite()[1].chars().enumerate() {
+                let col = c + i as i16 - 1;
+                if glyph != ' ' && on_board(r, col) {
+                    let (x, y) = cell(r, col);
+                    surface.set_string(x, y, &glyph.to_string(), drone_style);
+                }
             }
         }
         for &side in &g.drones {
@@ -6297,8 +6604,18 @@ impl Component for Nova {
             }
         }
         if !g.invulnerable() || self.frames % 6 < 3 {
-            let (x, y) = cell(g.ship.0, g.ship.1);
-            surface.set_string(x, y, g.class.glyph(), ship_style);
+            // The fighter is two rows of hull: canopy and S-foils over engines.
+            let sprite = g.class.sprite();
+            for (row, line) in sprite.iter().enumerate() {
+                let r = g.ship.0 + row as i16 - 1;
+                for (i, glyph) in line.chars().enumerate() {
+                    let col = g.ship.1 + i as i16 - 1;
+                    if glyph != ' ' && on_board(r, col) {
+                        let (x, y) = cell(r, col);
+                        surface.set_string(x, y, &glyph.to_string(), ship_style);
+                    }
+                }
+            }
         }
 
         if g.banner > 0 {
@@ -6311,6 +6628,16 @@ impl Component for Nova {
             let x = ox + (view_w as u16).saturating_sub(banner.chars().count() as u16) / 2;
             let (_, y) = cell(cam_y + view_h / 2, cam_x);
             surface.set_string(x, y, &banner, header_style);
+        }
+
+        // Squadron traffic, newest at the top, under the court.
+        for (i, line) in g.chatter.iter().take(2).enumerate() {
+            surface.set_string(
+                ox,
+                top + 2 + view_h as u16 + i as u16 + 1,
+                &line.line,
+                if i == 0 { header_style } else { wall_style },
+            );
         }
 
         let status_y = top + 2 + view_h as u16;
@@ -6327,7 +6654,7 @@ impl Component for Nova {
                 "Paused — p resume · r retry · n new · q quit".to_string()
             }
             Status::Playing => {
-                "fly ←/→/↑/↓ · SPC fire · m torpedoes · 1-0 guns · z/c/v power · x special · b bomb · t roster"
+                "fly ←/→/↑/↓ · SPC fire · m torpedoes · 1-0 guns · z/c/v power · e/y/u Force · x special · t roster"
                     .to_string()
             }
             Status::Select | Status::Hangar | Status::Chart => String::new(),
@@ -8569,5 +8896,183 @@ mod fleet_tests {
             .expect("the yard has another fighter");
         assert!(g.buy(hull.key));
         assert_eq!(g.squad[1].name, "Red Two", "the wing fills out in order");
+    }
+}
+
+#[cfg(test)]
+mod force_tests {
+    use super::tests::flying;
+    use super::*;
+
+    #[test]
+    fn the_force_builds_with_the_flying_and_is_spent_on_powers() {
+        let mut g = flying();
+        g.force = 0;
+        g.award(50);
+        assert_eq!(g.force, FORCE_PER_KILL, "a kill puts some of it back");
+        g.force = FORCE_MAX;
+        assert!(
+            g.use_force(ForcePower::Sense),
+            "there is enough to reach for"
+        );
+        assert_eq!(g.force, FORCE_MAX - SENSE_COST, "and it costs");
+        assert_eq!(g.sense, SENSE_TICKS, "senses are stretched out");
+        g.force = 0;
+        assert!(
+            !g.use_force(ForcePower::Sense),
+            "an empty pilot reaches for nothing"
+        );
+    }
+
+    #[test]
+    fn stretched_out_senses_halve_the_speed_of_imperial_fire() {
+        let mut g = flying();
+        g.sense = SENSE_TICKS;
+        g.tick = 1;
+        g.enemy_shots = vec![Shot::enemy((4, 20), 0, 1)];
+        g.advance_enemy_shots();
+        assert_eq!(g.enemy_shots[0].pos.0, 4, "on the odd tick nothing moves");
+        g.tick = 2;
+        g.advance_enemy_shots();
+        assert_eq!(g.enemy_shots[0].pos.0, 5, "on the even tick it crawls on");
+    }
+
+    #[test]
+    fn a_force_pull_brings_the_pickups_in() {
+        let mut g = flying();
+        g.force = FORCE_MAX;
+        g.powerups = vec![Powerup {
+            pos: (2, 4),
+            kind: PowerKind::Bomb,
+        }];
+        assert!(g.use_force(ForcePower::Pull));
+        assert_eq!(g.powerups[0].pos, g.ship, "it comes to the hull");
+    }
+
+    #[test]
+    fn letting_go_of_the_targeting_computer_puts_a_salvo_down_the_shaft() {
+        let mut g = flying();
+        g.node.kind = NodeKind::Capital;
+        g.capital = Some(Capital::new(CapitalKind::DeathStar, 0, 0));
+        for part in g.capital.as_mut().unwrap().parts.iter_mut() {
+            if part.kind == Emplacement::ShieldDome {
+                part.hp = 0;
+            }
+        }
+        let port = g.weak_point().expect("the port is open");
+        g.force = FORCE_MAX;
+        assert!(g.use_force(ForcePower::Guided), "he lets go");
+        g.ship.1 = 8;
+        let plain = g.gun_damage() + 4;
+        g.fire_missiles();
+        assert!(!g.guided, "the salvo spends it");
+        assert!(
+            g.shots.iter().all(|s| s.damage > plain),
+            "a guided torpedo hits far harder"
+        );
+        assert!(
+            g.shots.iter().all(|s| s.drift == (port.1 - 8).signum()),
+            "and every round leans toward the port"
+        );
+    }
+
+    #[test]
+    fn the_alliance_promotes_a_pilot_who_keeps_flying() {
+        assert_eq!(Rank::of_level(1), Rank::FlightCadet);
+        assert_eq!(Rank::of_level(7), Rank::Lieutenant);
+        assert_eq!(Rank::of_level(30), Rank::General);
+        assert!(Rank::General > Rank::FlightCadet, "and rank has an order");
+        let mut g = flying();
+        g.level = 12;
+        assert_eq!(
+            g.rank(),
+            Rank::Captain,
+            "the pilot wears what he has earned"
+        );
+    }
+
+    #[test]
+    fn the_squadron_calls_it_out_over_the_radio() {
+        let mut g = flying();
+        g.chatter.clear();
+        g.shield = 1;
+        g.damage_ship(1);
+        assert!(!g.chatter.is_empty(), "losing the deflectors is called out");
+        let first = g.chatter[0].line.clone();
+        g.say(&first);
+        assert_eq!(g.chatter.len(), 1, "the same line is not repeated");
+        for _ in 0..CHATTER_TICKS {
+            g.tick_timers();
+        }
+        assert!(g.chatter.is_empty(), "and traffic ages off the display");
+    }
+
+    #[test]
+    fn an_interdictor_drags_twice_as_hard_as_a_tractor_beam() {
+        let mut g = flying();
+        g.node.kind = NodeKind::Capital;
+        g.capital = Some(Capital::new(CapitalKind::Interdictor, 0, 0));
+        {
+            let cap = g.capital.as_mut().unwrap();
+            cap.pos.1 = W - 14;
+            cap.tick = 1;
+            for part in cap.parts.iter_mut() {
+                if part.kind != Emplacement::GravityProjector {
+                    part.hp = 0;
+                }
+            }
+        }
+        g.ship.1 = 10;
+        g.advance_capital();
+        assert!(
+            g.ship.1 >= 12,
+            "the wells haul the hull two columns at a time, not one"
+        );
+    }
+
+    #[test]
+    fn the_ace_flies_his_own_pattern() {
+        let ace = Boss::new(BossKind::AceTie, 60);
+        assert!(ace.parts.is_empty(), "one fighter, no emplacements");
+        assert_eq!(ace.kind.core_half(), 1, "and a fighter-sized target");
+        assert!(
+            ace.speed() >= 2,
+            "he moves faster than anything else in the sky"
+        );
+        let bosses: Vec<BossKind> = (1..=5).map(|n| BossKind::of_wave(n * BOSS_EVERY)).collect();
+        assert!(
+            bosses.contains(&BossKind::AceTie),
+            "and he holds boss systems"
+        );
+    }
+
+    #[test]
+    fn every_fighter_and_every_tie_is_drawn_differently() {
+        let hulls: std::collections::HashSet<[&str; 2]> =
+            ShipClass::ALL.iter().map(|c| c.sprite()).collect();
+        assert_eq!(
+            hulls.len(),
+            ShipClass::ALL.len(),
+            "no two fighters look alike"
+        );
+        for class in ShipClass::ALL {
+            for row in class.sprite() {
+                assert_eq!(
+                    row.chars().count(),
+                    3,
+                    "{} is three cells wide",
+                    class.name()
+                );
+            }
+        }
+        let ties = [
+            EnemyKind::TieFighter,
+            EnemyKind::TieInterceptor,
+            EnemyKind::TieBomber,
+            EnemyKind::TieDefender,
+            EnemyKind::TieAdvanced,
+        ];
+        let shapes: std::collections::HashSet<&str> = ties.iter().map(|k| k.sprite()).collect();
+        assert_eq!(shapes.len(), ties.len(), "and no two TIEs do either");
     }
 }
