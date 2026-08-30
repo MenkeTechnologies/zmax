@@ -132,6 +132,8 @@ const SENSE_COST: u32 = 45;
 const SENSE_TICKS: u32 = 90;
 const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
+/// What taking a barge is worth in credits.
+const SKIFF_PURSE: u32 = 1_200;
 /// What a win on the Boonta course is worth, before placing takes its cut.
 const POD_PURSE: u32 = 2_500;
 /// Probe droids the Empire keeps drifting across a galaxy.
@@ -1537,6 +1539,8 @@ pub enum Status {
     Surface,
     /// On the starting grid, and then round the canyon.
     Podracing,
+    /// Out over the pit, on a plank, with somebody's guards aboard.
+    Skiff,
     /// The war is won: the ceremony at the base.
     Ceremony,
     Lost,
@@ -3056,6 +3060,8 @@ pub enum DeckSpot {
     Settlement,
     /// An outpost with a droid and a power cell.
     Outpost,
+    /// A sail barge moored over the pit, and an invitation aboard.
+    SkiffBarge,
     /// A starting grid, and a pod somebody will lend you for a cut.
     StartingGrid,
     /// Ruins older than the war.
@@ -3082,6 +3088,7 @@ impl DeckSpot {
             DeckSpot::SurfaceWreck => "wreck",
             DeckSpot::Settlement => "settlement",
             DeckSpot::Outpost => "outpost",
+            DeckSpot::SkiffBarge => "sail barge",
             DeckSpot::StartingGrid => "starting grid",
             DeckSpot::Ruins => "ruins",
             DeckSpot::Detention => "detention block",
@@ -3103,6 +3110,7 @@ impl DeckSpot {
             DeckSpot::SurfaceWreck => "⌗",
             DeckSpot::Settlement => "⌸",
             DeckSpot::Outpost => "⌺",
+            DeckSpot::SkiffBarge => "⛵",
             DeckSpot::StartingGrid => "⌾",
             DeckSpot::Ruins => "⍟",
             DeckSpot::Detention => "⊟",
@@ -3585,6 +3593,8 @@ pub struct Cover {
 pub enum DeckAction {
     Boarded(usize),
     Raced,
+    TookThePlank,
+    Thawed,
     Freed,
     Hired,
     Gambled,
@@ -3654,6 +3664,7 @@ impl Deck {
         let mut spots = vec![(DeckSpot::ParkedShip, (Deck::HEIGHT - 4, Deck::WIDTH / 2))];
         let stock: &[DeckSpot] = match planet {
             Planet::Tatooine | Planet::Jakku | Planet::Mandalore => &[
+                DeckSpot::SkiffBarge,
                 DeckSpot::StartingGrid,
                 DeckSpot::Cantina,
                 DeckSpot::SurfaceWreck,
@@ -4837,6 +4848,9 @@ pub struct Game {
     pub capital: Option<Capital>,
     /// The race being run, if the pilot has taken somebody's pod out.
     pub race: Option<Podrace>,
+    /// The plank fight over the pit, and whatever is frozen in the hold.
+    pub skiff: Option<Skiff>,
+    pub slabs: Vec<Carbonite>,
     /// The base being held, and the assault coming at it.
     pub base: Option<Base>,
     pub assault: Option<Assault>,
@@ -4955,6 +4969,8 @@ impl Game {
             boss: None,
             capital: None,
             race: None,
+            skiff: None,
+            slabs: Vec::new(),
             base: None,
             assault: None,
             reactor: None,
@@ -5043,6 +5059,8 @@ impl Game {
         self.mission = None;
         self.campaign_at = 0;
         self.race = None;
+        self.skiff = None;
+        self.slabs.clear();
         self.hunter = None;
         self.hunted = 0;
         self.probes.clear();
@@ -7747,6 +7765,48 @@ impl Game {
         false
     }
 
+    /// A tick out on the plank: guards swing, the gap opens and closes, and
+    /// anybody who goes over the rail is gone.
+    pub fn skiff_tick(&mut self) {
+        if self.status != Status::Skiff {
+            return;
+        }
+        self.tick = self.tick.wrapping_add(1);
+        let tick = self.tick;
+        let Some(mut skiff) = self.skiff.take() else {
+            self.status = Status::Surface;
+            return;
+        };
+        let hurt = skiff.step(tick);
+        for slab in self.slabs.iter_mut() {
+            slab.tick();
+        }
+        if hurt > 0 {
+            self.deck.health -= hurt;
+        }
+        if skiff.overboard() || self.deck.health <= 0 {
+            self.deck.health = PILOT_HEALTH;
+            self.lives = self.lives.saturating_sub(1);
+            self.status = Status::Surface;
+            self.say("Over the rail. They fished him out of the sand.");
+            return;
+        }
+        if skiff.cleared() {
+            self.status = Status::Surface;
+            self.credits += SKIFF_PURSE;
+            self.say("Barge is ours. There is a slab in the hold worth having.");
+            let wing = self.squad.iter().position(|w| !w.alive).unwrap_or(0);
+            let name = self.squad.get(wing).map_or("a stranger", |w| w.name);
+            self.slabs.push(Carbonite::new(wing, name));
+            return;
+        }
+        self.skiff = Some(skiff);
+        for line in self.chatter.iter_mut() {
+            line.ticks = line.ticks.saturating_sub(1);
+        }
+        self.chatter.retain(|c| c.ticks > 0);
+    }
+
     /// A tick of the ground fight: bolts fly, the patrol closes, and a pilot
     /// who takes too much of it is carried back to his fighter.
     pub fn ground_tick(&mut self) {
@@ -7905,6 +7965,24 @@ impl Game {
                 DeckAction::Stripped
             }
             DeckSpot::Settlement => {
+                // A settlement has the gear to thaw somebody out.
+                let spot = DeckSpot::Settlement;
+                let mut thawed = None;
+                for slab in self.slabs.iter_mut() {
+                    if let Some(wing) = slab.thaw(spot) {
+                        thawed = Some(wing);
+                        break;
+                    }
+                }
+                if let Some(wing) = thawed {
+                    if let Some(hull) = self.squad.get_mut(wing) {
+                        hull.alive = true;
+                        hull.shield = hull.max_shield;
+                        let name = hull.name;
+                        self.say(&format!("{name} is thawed out and standing."));
+                    }
+                    return Some(DeckAction::Thawed);
+                }
                 self.shop_open = true;
                 DeckAction::Traded
             }
@@ -7981,6 +8059,13 @@ impl Game {
                     self.say(&format!("{mine} against {theirs}. He takes it."));
                 }
                 DeckAction::Gambled
+            }
+            DeckSpot::SkiffBarge => {
+                let seed = self.rand();
+                self.skiff = Some(Skiff::new(seed));
+                self.status = Status::Skiff;
+                self.say("Out over the pit, then. Mind the plank.");
+                DeckAction::TookThePlank
             }
             DeckSpot::StartingGrid => {
                 let seed = self.rand();
@@ -9136,7 +9221,11 @@ impl Nova {
     fn running(&self) -> bool {
         matches!(
             self.game.status,
-            Status::Playing | Status::WaveClear | Status::Surface | Status::Podracing
+            Status::Playing
+                | Status::WaveClear
+                | Status::Surface
+                | Status::Podracing
+                | Status::Skiff
         ) && !self.paused
             && !self.roster
     }
@@ -9547,6 +9636,76 @@ impl Nova {
             header,
         );
         surface.set_string(ox, y + 2, "n flies another war · q stands down", text);
+    }
+
+    /// The plank, the gap and the pit: drawn side-on, because that is the only
+    /// way the drop reads.
+    fn render_skiff(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let header = theme.get("ui.text.focus");
+        let text = theme.get("ui.text");
+        let dim = theme.get("ui.linenr");
+        let foe = theme.get("error");
+        let Some(skiff) = &self.game.skiff else {
+            return;
+        };
+        let ox = area.x + 4;
+        let oy = area.y + 4;
+        surface.set_string(
+            ox,
+            area.y,
+            &format!(
+                "OVER THE PIT — {}   health {}{}",
+                skiff.prompt(),
+                "▮".repeat(self.game.deck.health.max(0) as usize),
+                "▯".repeat((PILOT_HEALTH - self.game.deck.health.max(0)) as usize)
+            ),
+            header,
+        );
+        surface.set_string(
+            ox,
+            area.y + 1,
+            "←/→ walk the plank · ↑ jump the gap · SPC shove aft · b shove forward · q quit",
+            dim,
+        );
+        // The skiff you are on, the gap, and the one alongside.
+        for plank in 0..skiff.planks {
+            surface.set_string(ox + plank as u16 * 2, oy, "═", text);
+            surface.set_string(ox + plank as u16 * 2, oy + 1, "║", dim);
+        }
+        let across = ox + (skiff.planks + skiff.gap) as u16 * 2;
+        for plank in 0..skiff.planks {
+            surface.set_string(across + plank as u16 * 2, oy, "═", text);
+        }
+        for guard in &skiff.guards {
+            let deck = if guard.skiff == 0 { ox } else { across };
+            surface.set_string(deck + guard.at as u16 * 2, oy - 1, guard.kind.glyph(), foe);
+        }
+        let deck = if skiff.aboard == 0 { ox } else { across };
+        surface.set_string(deck + skiff.stand.max(0) as u16 * 2, oy - 1, "Å", header);
+        // The pit itself, under all of it.
+        for row in 2..6 {
+            for col in 0..(skiff.planks * 2 + skiff.gap * 2 + skiff.planks * 2) {
+                if (col + row) % 3 == 0 {
+                    surface.set_string(ox + col as u16, oy + row as u16, "░", dim);
+                }
+            }
+        }
+        surface.set_string(
+            ox,
+            oy + 7,
+            &format!(
+                "{} guards aboard   gap {}   {}",
+                skiff.guards.len(),
+                skiff.gap,
+                if self.game.slabs.is_empty() {
+                    "nothing in the hold".to_string()
+                } else {
+                    format!("{} in the hold", self.game.slabs.len())
+                }
+            ),
+            text,
+        );
     }
 
     /// The canyon from above, with the pod in the middle of it: the track
@@ -10757,6 +10916,36 @@ impl Component for Nova {
                     _ => {}
                 }
             }
+            Status::Skiff => match key {
+                key!(Left) | key!('h') => {
+                    if let Some(skiff) = self.game.skiff.as_mut() {
+                        skiff.stride(-1);
+                    }
+                }
+                key!(Right) | key!('l') => {
+                    if let Some(skiff) = self.game.skiff.as_mut() {
+                        skiff.stride(1);
+                    }
+                }
+                key!(Up) | key!('k') => {
+                    if let Some(skiff) = self.game.skiff.as_mut() {
+                        skiff.jump();
+                    }
+                }
+                key!(' ') | key!('f') => {
+                    if let Some(skiff) = self.game.skiff.as_mut() {
+                        skiff.shove(1);
+                    }
+                }
+                key!('b') => {
+                    if let Some(skiff) = self.game.skiff.as_mut() {
+                        skiff.shove(-1);
+                    }
+                }
+                key!('p') => self.paused = !self.paused,
+                key!('n') => self.restart(),
+                _ => {}
+            },
             Status::Podracing => match key {
                 key!(Left) | key!('h') => {
                     if let Some(race) = self.game.race.as_mut() {
@@ -10972,10 +11161,10 @@ impl Component for Nova {
         if self.running() {
             match self.last {
                 Some(t) if now.duration_since(t) >= self.interval => {
-                    if self.game.status == Status::Surface {
-                        self.game.ground_tick();
-                    } else {
-                        self.game.step();
+                    match self.game.status {
+                        Status::Surface => self.game.ground_tick(),
+                        Status::Skiff => self.game.skiff_tick(),
+                        _ => self.game.step(),
                     }
                     self.last = Some(now);
                 }
@@ -11031,6 +11220,10 @@ impl Component for Nova {
             }
             Status::Podracing => {
                 self.render_race(area, surface, ctx);
+                return;
+            }
+            Status::Skiff => {
+                self.render_skiff(area, surface, ctx);
                 return;
             }
             Status::Hangar | Status::Surface => {
@@ -11558,6 +11751,7 @@ impl Component for Nova {
             | Status::Chart
             | Status::Surface
             | Status::Podracing
+            | Status::Skiff
             | Status::Ceremony => String::new(),
         };
         surface.set_string(ox, status_y, &status, text_style);
@@ -18009,5 +18203,737 @@ mod podrace_tests {
             4,
             "and one already home is ahead of you whatever the count says"
         );
+    }
+}
+// Draft for appending to nova.rs. Nothing here does any I/O and nothing here
+// touches `Game`; the wiring notes at the foot of the file say where it hangs.
+// ---------------------------------------------------------------------------
+
+/// Cells along a skiff deck. Deliberately narrow: on a plank this short every
+/// shove is worth something and both ends are always a threat.
+const SKIFF_PLANKS: i16 = 11;
+/// Cells a shove throws whoever takes it. Two is enough to reach the pit from
+/// the ends but not from the middle, so where you stand is the whole fight.
+const SHOVE_FORCE: i16 = 2;
+/// How far a shove reaches. This is elbows and boots, not blaster range.
+const SHOVE_REACH: i16 = 1;
+/// The widest gap a pilot will clear with both hands free.
+const SKIFF_JUMP: i16 = 4;
+/// How the second skiff swings in and out while the crew hold station: a fixed
+/// rhythm rather than a roll, so the jump can be timed rather than gambled on.
+/// The wide end of it sits past `SKIFF_JUMP`, so there is a wrong moment.
+const SKIFF_SWING: [i16; 6] = [2, 3, 4, 5, 4, 3];
+/// Ticks between one swing step and the next.
+const SKIFF_DRIFT: u32 = 9;
+/// Ticks a guard keeps hold of you before he has you at the rail. Run it out
+/// and he lets go over the side, which is the whole point of a hold.
+const GRAPPLE_TICKS: u32 = 36;
+/// Ticks between one squeeze of a grapple and the next.
+const GRAPPLE_CADENCE: u32 = 6;
+/// Pulls it takes to break a hold. Three, so it is a struggle and not a key.
+const BREAK_PULLS: u32 = 3;
+/// Ticks a guard needs between one attempt on you and the next.
+const GUARD_CADENCE: u32 = 14;
+/// Ticks between a guard's steps along the plank towards you.
+const GUARD_PACE: u32 = 3;
+/// Cells a pilot covers in a stride, and what a slab on his back costs him.
+const SKIFF_PACE: i16 = 2;
+const SLAB_TOLL: i16 = 1;
+/// Ticks of hibernation sickness a thaw leaves behind. He is blind and useless
+/// through it, which is why a thaw does not put a man straight in a cockpit.
+const THAW_SICKNESS: u32 = 240;
+
+/// A guard riding the skiff with you. The kinds are the ones the ground fight
+/// already uses, so a duellist aboard hits as hard here as he does on a world.
+#[derive(Clone, Debug)]
+pub struct SkiffGuard {
+    pub kind: GroundKind,
+    /// Which of the two skiffs he is riding.
+    pub skiff: usize,
+    /// Where along that skiff's plank he is standing.
+    pub at: i16,
+    pub hp: i32,
+    pub cooldown: u32,
+}
+
+impl SkiffGuard {
+    fn new(kind: GroundKind, skiff: usize, at: i16, cooldown: u32) -> SkiffGuard {
+        SkiffGuard {
+            kind,
+            skiff,
+            at,
+            hp: kind.hp(),
+            cooldown,
+        }
+    }
+}
+
+/// Somebody has hold of you. A hold is not damage so much as a clock: while it
+/// runs you cannot walk, cannot jump and cannot shove anybody else, and when it
+/// runs out he drops you over the rail.
+#[derive(Clone, Copy, Debug)]
+pub struct Grapple {
+    /// Which guard has you.
+    pub guard: usize,
+    /// Ticks until he gets you to the rail.
+    pub ticks: u32,
+    /// How many times you have pulled against it.
+    pub pulls: u32,
+}
+
+/// The skiff set-piece: a narrow moving platform over the pit, a second skiff
+/// holding station alongside, and a crew whose only real weapon is the drop.
+///
+/// The pit is what makes this different from a fight on the ground. There is no
+/// cover, there is nowhere to retreat to, and neither side needs to do any
+/// damage at all — a boot in the right place ends it either way.
+#[derive(Clone, Debug)]
+pub struct Skiff {
+    /// Cells along the plank you are fighting on.
+    pub planks: i16,
+    /// Where the pilot is standing, measured from the bow. Outside the plank
+    /// means the sand has him.
+    pub stand: i16,
+    /// Which skiff he is aboard: `0` is the one they put him on, `1` is the one
+    /// alongside.
+    pub aboard: usize,
+    /// Cells between the two skiffs at the moment.
+    pub gap: i16,
+    /// How many swing steps the pair have taken, which is what sets the gap.
+    pub drift: u32,
+    /// Everybody else aboard, on either skiff.
+    pub guards: Vec<SkiffGuard>,
+    /// The hold somebody has on you, if anybody does.
+    pub grappled: Option<Grapple>,
+    /// The slab on your back, if you came up here carrying one.
+    pub slab: Option<Carbonite>,
+    /// How many the pit has taken. It counts guards only; the pilot going over
+    /// ends the set-piece rather than adding to a tally.
+    pub swallowed: u32,
+}
+
+impl Skiff {
+    /// Put a pilot on a skiff over the pit with `seed` deciding the crew.
+    ///
+    /// Most of the barge's crew go on the skiff he is on — clearing one plank
+    /// is not supposed to be the end of it — and the rest hold back on the
+    /// second, so jumping across is a decision rather than an escape.
+    pub fn new(seed: u64) -> Skiff {
+        let mut rng = seed | 1;
+        let mut roll = || {
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            rng >> 33
+        };
+        let stand = SKIFF_PLANKS / 2;
+        let mut guards = Vec::new();
+        let post = |roll: &mut dyn FnMut() -> u64, skiff: usize, guards: &mut Vec<SkiffGuard>| {
+            // A duellist or whatever they keep in the hold takes hold of you;
+            // the rest are troopers, and troopers kick.
+            let kind = match roll() % 6 {
+                0 => GroundKind::Duellist,
+                1 => GroundKind::Beast,
+                _ => GroundKind::Trooper,
+            };
+            // Nobody starts on the pilot's cell or on the very ends, where a
+            // first shove would be free.
+            let at = (1 + (roll() % (SKIFF_PLANKS as u64 - 2)) as i16).clamp(1, SKIFF_PLANKS - 2);
+            let at = if at == stand { at + 1 } else { at };
+            guards.push(SkiffGuard::new(kind, skiff, at, (roll() % 20) as u32));
+        };
+        for _ in 0..(3 + roll() % 3) {
+            post(&mut roll, 0, &mut guards);
+        }
+        for _ in 0..(1 + roll() % 2) {
+            post(&mut roll, 1, &mut guards);
+        }
+        Skiff {
+            planks: SKIFF_PLANKS,
+            stand,
+            aboard: 0,
+            gap: SKIFF_SWING[0],
+            drift: 0,
+            guards,
+            grappled: None,
+            slab: None,
+            swallowed: 0,
+        }
+    }
+
+    /// Has the pilot gone over the side? The plank runs bow to stern and there
+    /// is nothing off either end but the pit.
+    pub fn overboard(&self) -> bool {
+        !(0..self.planks).contains(&self.stand)
+    }
+
+    /// Nobody left aboard worth worrying about.
+    pub fn cleared(&self) -> bool {
+        self.guards.is_empty()
+    }
+
+    /// What a slab on your back costs you, in cells.
+    fn burden(&self) -> i16 {
+        self.slab.as_ref().map_or(0, Carbonite::burden)
+    }
+
+    /// Cells a stride covers. Carrying a man in a slab you shuffle.
+    pub fn pace(&self) -> i16 {
+        (SKIFF_PACE - self.burden()).max(1)
+    }
+
+    /// The widest gap this pilot will clear right now.
+    pub fn reach(&self) -> i16 {
+        (SKIFF_JUMP - self.burden()).max(1)
+    }
+
+    /// Take the fallen off the plank. Indices shift when somebody goes over the
+    /// side, so a hold has to be repointed with him or dropped along with him.
+    fn settle(&mut self) {
+        let planks = self.planks;
+        let mut kept = Vec::with_capacity(self.guards.len());
+        let mut moved = Vec::with_capacity(self.guards.len());
+        for guard in std::mem::take(&mut self.guards) {
+            let off = !(0..planks).contains(&guard.at);
+            if off {
+                self.swallowed += 1;
+            }
+            if off || guard.hp <= 0 {
+                moved.push(None);
+            } else {
+                moved.push(Some(kept.len()));
+                kept.push(guard);
+            }
+        }
+        self.guards = kept;
+        self.grappled = self.grappled.and_then(|hold| {
+            moved
+                .get(hold.guard)
+                .copied()
+                .flatten()
+                .map(|guard| Grapple { guard, ..hold })
+        });
+    }
+
+    /// Walk along the plank: `-1` towards the bow, `1` towards the stern.
+    ///
+    /// A stride stops at the ends. Nobody walks into the pit of his own accord;
+    /// it takes a shove or a guard's hands to put a man over.
+    pub fn stride(&mut self, dir: i16) -> bool {
+        if self.overboard() || self.grappled.is_some() || dir == 0 {
+            return false;
+        }
+        self.stand = (self.stand + dir.signum() * self.pace()).clamp(0, self.planks - 1);
+        true
+    }
+
+    /// Put your hands on whoever is next to you — or, if somebody has hold of
+    /// you, pull against it. There is nothing else `shove` can usefully mean
+    /// while you are held, and a player mashing the key is already struggling.
+    pub fn shove(&mut self, dir: i16) -> bool {
+        if self.overboard() {
+            return false;
+        }
+        if let Some(mut hold) = self.grappled {
+            hold.pulls += 1;
+            if hold.pulls < BREAK_PULLS {
+                self.grappled = Some(hold);
+                return true;
+            }
+            self.grappled = None;
+            if let Some(guard) = self.guards.get_mut(hold.guard) {
+                // He comes off you going backwards, which may be far enough.
+                let away = (guard.at - self.stand).signum();
+                guard.at += if away == 0 { 1 } else { away } * SHOVE_FORCE;
+                guard.cooldown = GUARD_CADENCE;
+            }
+            self.settle();
+            return true;
+        }
+        let dir = dir.signum();
+        if dir == 0 {
+            return false;
+        }
+        let cell = self.stand + dir * SHOVE_REACH;
+        let aboard = self.aboard;
+        let Some(mark) = self
+            .guards
+            .iter()
+            .position(|guard| guard.skiff == aboard && guard.at == cell)
+        else {
+            return false;
+        };
+        self.guards[mark].at += dir * SHOVE_FORCE;
+        self.guards[mark].cooldown = GUARD_CADENCE;
+        self.settle();
+        true
+    }
+
+    /// Jump to the skiff alongside.
+    ///
+    /// Only when it is actually alongside: too wide and the pilot does not try
+    /// it, and while somebody has hold of you there is no jump to make. He
+    /// lands away from the ends rather than on one, so a jump is never the last
+    /// mistake of the fight.
+    pub fn jump(&mut self) -> bool {
+        if self.overboard() || self.grappled.is_some() {
+            return false;
+        }
+        if !(1..=self.reach()).contains(&self.gap) {
+            return false;
+        }
+        self.aboard ^= 1;
+        self.stand = self.stand.clamp(1, self.planks - 2);
+        true
+    }
+
+    /// One tick of the set-piece, returning what it took off the pilot.
+    ///
+    /// Mirrors `Deck::skirmish`: the damage comes back rather than being applied
+    /// here, so a pilot's health stays in one place.
+    pub fn step(&mut self, tick: u32) -> i32 {
+        if self.overboard() {
+            return 0;
+        }
+        let mut damage = 0;
+        // The pair hold station badly, and the gap opens and closes on it.
+        if tick.is_multiple_of(SKIFF_DRIFT) {
+            self.drift = self.drift.wrapping_add(1);
+            self.gap = SKIFF_SWING[self.drift as usize % SKIFF_SWING.len()];
+        }
+        // A hold is settled first: while you are in one, nothing else you or
+        // anybody else does aboard matters.
+        if let Some(mut hold) = self.grappled {
+            hold.ticks = hold.ticks.saturating_sub(1);
+            if tick.is_multiple_of(GRAPPLE_CADENCE) {
+                damage += self
+                    .guards
+                    .get(hold.guard)
+                    .map_or(0, |guard| guard.kind.damage());
+            }
+            if hold.ticks == 0 {
+                // He has walked you to the rail and let go of you over it.
+                let over = self
+                    .guards
+                    .get(hold.guard)
+                    .map_or(1, |guard| (self.stand - guard.at).signum());
+                self.stand += if over == 0 { 1 } else { over } * self.planks;
+                self.grappled = None;
+            } else {
+                self.grappled = Some(hold);
+            }
+            return damage;
+        }
+        let stand = self.stand;
+        let aboard = self.aboard;
+        let mut taken: Option<Grapple> = None;
+        let mut boot: Option<(i32, i16)> = None;
+        for (index, guard) in self.guards.iter_mut().enumerate() {
+            if guard.skiff != aboard {
+                continue;
+            }
+            let away = stand - guard.at;
+            // Close first, then decide, so a guard on cooldown still walks up.
+            if away.abs() > SHOVE_REACH && tick.is_multiple_of(GUARD_PACE) {
+                guard.at += away.signum();
+            }
+            if guard.cooldown > 0 {
+                guard.cooldown -= 1;
+                continue;
+            }
+            if away.abs() > SHOVE_REACH {
+                continue;
+            }
+            guard.cooldown = GUARD_CADENCE;
+            // Anything that fights with its hands takes hold; a trooper kicks.
+            let hands = matches!(guard.kind, GroundKind::Duellist | GroundKind::Beast);
+            if hands && taken.is_none() {
+                taken = Some(Grapple {
+                    guard: index,
+                    ticks: GRAPPLE_TICKS,
+                    pulls: 0,
+                });
+            } else if boot.is_none() {
+                let dir = if away == 0 { 1 } else { away.signum() };
+                boot = Some((guard.kind.damage(), dir));
+            }
+        }
+        // A hold beats a boot: once he has you the kick has nothing to send.
+        if let Some(hold) = taken {
+            self.grappled = Some(hold);
+        } else if let Some((hurt, dir)) = boot {
+            // A slab on your back is exactly what makes you easy to shift.
+            self.stand += dir * (SHOVE_FORCE + self.burden());
+            damage += hurt;
+        }
+        damage
+    }
+
+    /// What the readout should be telling him to do right now.
+    pub fn prompt(&self) -> &'static str {
+        if self.overboard() {
+            "THE SAND HAS HIM"
+        } else if self.grappled.is_some() {
+            "HE HAS YOU — pull"
+        } else if self.stand <= 1 || self.stand >= self.planks - 2 {
+            "ON THE EDGE"
+        } else if (1..=self.reach()).contains(&self.gap) {
+            "the other skiff is alongside"
+        } else if self.cleared() {
+            "the plank is clear"
+        } else {
+            "over the pit"
+        }
+    }
+}
+
+/// A wingman frozen in carbonite: a slab, a name on it, and a settlement
+/// somewhere that will run it through a thaw if you can get it there.
+///
+/// It is deliberately awkward. On your back it is worth a squadron hull; set
+/// down it is worth `Cargo::Carbonite` and nothing more, and the whole point of
+/// carrying it across a skiff is that carrying it is the hard way to do it.
+#[derive(Clone, Debug)]
+pub struct Carbonite {
+    /// Which hull in the squadron he flew, so a thaw knows who to put back up.
+    pub wing: usize,
+    /// The name on the slab, for the readout.
+    pub name: &'static str,
+    /// True while somebody has it on their back rather than in a hold.
+    pub carried: bool,
+    /// True once a settlement has run it through.
+    pub thawed: bool,
+    /// Ticks of hibernation sickness left.
+    pub sickness: u32,
+}
+
+impl Carbonite {
+    /// Freeze `name`, who flew squadron hull `wing`.
+    pub fn new(wing: usize, name: &'static str) -> Carbonite {
+        Carbonite {
+            wing,
+            name,
+            carried: false,
+            thawed: false,
+            sickness: 0,
+        }
+    }
+
+    /// Cells of pace it costs while it is on somebody's back.
+    pub fn burden(&self) -> i16 {
+        if self.carried && !self.thawed {
+            SLAB_TOLL
+        } else {
+            0
+        }
+    }
+
+    /// Get it on your back. A man already thawed is walking; there is nothing
+    /// left to carry.
+    pub fn carry(&mut self) -> bool {
+        if self.thawed || self.carried {
+            return false;
+        }
+        self.carried = true;
+        true
+    }
+
+    /// Set it down again, which is the only way to move at a proper pace.
+    pub fn stow(&mut self) -> bool {
+        let held = self.carried;
+        self.carried = false;
+        held
+    }
+
+    /// Run it through a thaw and get the man out, returning which squadron hull
+    /// he flies. Only a settlement or an outpost has the gear for it — a
+    /// cantina, a wreck or a set of ruins will not do.
+    pub fn thaw(&mut self, spot: DeckSpot) -> Option<usize> {
+        if self.thawed || !matches!(spot, DeckSpot::Settlement | DeckSpot::Outpost) {
+            return None;
+        }
+        self.thawed = true;
+        self.carried = false;
+        self.sickness = THAW_SICKNESS;
+        Some(self.wing)
+    }
+
+    /// One tick of coming round.
+    pub fn tick(&mut self) {
+        self.sickness = self.sickness.saturating_sub(1);
+    }
+
+    /// Thawed, and over it: fit to fly.
+    pub fn ready(&self) -> bool {
+        self.thawed && self.sickness == 0
+    }
+
+    /// What the squadron readout should say about him.
+    pub fn status(&self) -> &'static str {
+        if self.ready() {
+            "flying"
+        } else if self.thawed {
+            "coming round"
+        } else if self.carried {
+            "on your back"
+        } else {
+            "frozen"
+        }
+    }
+}
+
+#[cfg(test)]
+mod skiff_tests {
+    use super::*;
+
+    /// A bare skiff with the crew cleared off it, so a test puts aboard only
+    /// what it means to test.
+    fn plank() -> Skiff {
+        let mut skiff = Skiff::new(7);
+        skiff.guards.clear();
+        skiff.grappled = None;
+        skiff.stand = SKIFF_PLANKS / 2;
+        skiff.aboard = 0;
+        skiff
+    }
+
+    #[test]
+    fn a_skiff_comes_crewed_and_the_same_seed_lays_it_out_the_same_way() {
+        let one = Skiff::new(19);
+        let two = Skiff::new(19);
+        assert!(!one.guards.is_empty(), "there is a crew aboard");
+        assert!(
+            one.guards.iter().any(|g| g.skiff == 1),
+            "and some of it on the skiff alongside"
+        );
+        assert!(
+            one.guards.iter().all(|g| (0..one.planks).contains(&g.at)),
+            "everybody starts on the plank"
+        );
+        assert_eq!(one.guards.len(), two.guards.len(), "the seed is the crew");
+        assert!(
+            one.guards
+                .iter()
+                .zip(&two.guards)
+                .all(|(a, b)| a.at == b.at && a.kind == b.kind && a.skiff == b.skiff),
+            "and it lays out the same way every time"
+        );
+        assert!(!one.overboard(), "and the pilot starts on his feet");
+    }
+
+    #[test]
+    fn a_guard_shoved_off_the_end_goes_into_the_pit() {
+        let mut skiff = plank();
+        skiff.stand = SKIFF_PLANKS - 3;
+        skiff
+            .guards
+            .push(SkiffGuard::new(GroundKind::Trooper, 0, SKIFF_PLANKS - 2, 0));
+        assert!(skiff.shove(1), "the shove lands");
+        assert!(skiff.guards.is_empty(), "and the pit takes him");
+        assert_eq!(skiff.swallowed, 1, "one fewer aboard");
+        assert!(skiff.cleared(), "the plank is clear");
+    }
+
+    #[test]
+    fn a_shove_in_the_middle_only_moves_a_man_along_the_plank() {
+        let mut skiff = plank();
+        skiff
+            .guards
+            .push(SkiffGuard::new(GroundKind::Trooper, 0, skiff.stand - 1, 0));
+        assert!(!skiff.shove(1), "there is nobody on that side of him");
+        assert!(skiff.shove(-1), "but there is on this one");
+        assert_eq!(
+            skiff.guards[0].at,
+            SKIFF_PLANKS / 2 - 1 - SHOVE_FORCE,
+            "and he goes back the width of a shove"
+        );
+        assert_eq!(skiff.swallowed, 0, "still aboard, and still a problem");
+    }
+
+    #[test]
+    fn being_shoved_past_the_end_puts_the_pilot_in_the_sand() {
+        let mut skiff = plank();
+        skiff.stand = 1;
+        skiff
+            .guards
+            .push(SkiffGuard::new(GroundKind::Trooper, 0, 2, 0));
+        let mut hurt = 0;
+        for tick in 0..40 {
+            hurt += skiff.step(tick);
+            if skiff.overboard() {
+                break;
+            }
+        }
+        assert!(skiff.overboard(), "the boot puts him over the side");
+        assert!(hurt > 0, "and it hurt on the way");
+        assert_eq!(skiff.step(41), 0, "there is nothing further to do to him");
+        assert!(!skiff.jump(), "nobody jumps out of the sand");
+        assert!(!skiff.shove(1), "nor shoves out of it");
+    }
+
+    #[test]
+    fn a_jump_only_carries_when_the_other_skiff_is_alongside() {
+        let mut skiff = plank();
+        skiff.gap = SKIFF_JUMP + 1;
+        assert!(!skiff.jump(), "too wide to try");
+        assert_eq!(skiff.aboard, 0, "so he stays where he is");
+        skiff.gap = 0;
+        assert!(
+            !skiff.jump(),
+            "and grinding alongside there is nothing to jump"
+        );
+        skiff.gap = SKIFF_JUMP;
+        assert!(skiff.jump(), "at the far edge of it he clears the gap");
+        assert_eq!(skiff.aboard, 1, "and lands on the other skiff");
+        assert!(
+            (1..skiff.planks - 1).contains(&skiff.stand),
+            "away from the ends rather than on one"
+        );
+        assert!(skiff.jump(), "and back again");
+        assert_eq!(skiff.aboard, 0, "to the one he started on");
+    }
+
+    #[test]
+    fn the_skiffs_swing_in_and_out_so_a_jump_can_be_timed() {
+        let mut skiff = plank();
+        let mut gaps = Vec::new();
+        for tick in 0..=(SKIFF_DRIFT * SKIFF_SWING.len() as u32) {
+            skiff.step(tick);
+            gaps.push(skiff.gap);
+        }
+        assert!(
+            gaps.iter().any(|&gap| gap <= SKIFF_JUMP),
+            "sometimes it is close enough to clear"
+        );
+        assert!(
+            gaps.iter().any(|&gap| gap > SKIFF_JUMP),
+            "and sometimes it is not"
+        );
+    }
+
+    #[test]
+    fn a_guard_grapples_at_close_quarters_and_holds_you_there() {
+        let mut skiff = plank();
+        skiff.gap = 2;
+        skiff
+            .guards
+            .push(SkiffGuard::new(GroundKind::Duellist, 0, skiff.stand + 1, 0));
+        skiff.step(1);
+        assert!(skiff.grappled.is_some(), "he has hold of you");
+        assert!(!skiff.jump(), "and nobody jumps out of a hold");
+        assert!(!skiff.stride(-1), "nor walks out of one");
+        let mut hurt = 0;
+        for tick in 2..10 {
+            hurt += skiff.step(tick);
+        }
+        assert!(hurt > 0, "it costs while it lasts");
+        let held = skiff.stand;
+        for tick in 10..(GRAPPLE_TICKS + 20) {
+            skiff.step(tick);
+        }
+        assert!(
+            skiff.overboard(),
+            "and run out it ends with him over the rail, from {held}"
+        );
+    }
+
+    #[test]
+    fn pulling_against_a_hold_breaks_it_and_the_guard_reels_back() {
+        let mut skiff = plank();
+        skiff
+            .guards
+            .push(SkiffGuard::new(GroundKind::Beast, 0, skiff.stand + 1, 0));
+        skiff.step(1);
+        let stood = skiff.guards[0].at;
+        for pull in 1..BREAK_PULLS {
+            assert!(skiff.shove(-1), "he pulls against it");
+            assert!(skiff.grappled.is_some(), "and it holds, pull {pull}");
+        }
+        assert!(skiff.shove(-1), "the last pull");
+        assert!(skiff.grappled.is_none(), "and it comes loose");
+        assert_eq!(
+            skiff.guards[0].at,
+            stood + SHOVE_FORCE,
+            "with the guard staggering off him"
+        );
+        assert!(skiff.stride(-1), "and he can move again");
+    }
+
+    #[test]
+    fn a_slab_on_your_back_slows_the_pace_and_shortens_the_jump() {
+        let mut skiff = plank();
+        skiff.gap = SKIFF_JUMP;
+        skiff.stand = 2;
+        let mut free = skiff.clone();
+        assert!(free.stride(1), "unburdened he moves");
+        assert_eq!(free.stand, 2 + SKIFF_PACE, "and covers ground doing it");
+        assert!(free.jump(), "and clears the gap");
+
+        let mut slab = Carbonite::new(2, "Kite");
+        assert!(slab.carry(), "the slab goes on his back");
+        skiff.slab = Some(slab);
+        assert!(skiff.stride(1), "he can still move");
+        assert_eq!(
+            skiff.stand,
+            2 + SKIFF_PACE - SLAB_TOLL,
+            "but he shuffles it"
+        );
+        assert!(
+            !skiff.jump(),
+            "and he cannot clear a gap he would clear empty-handed"
+        );
+        assert_eq!(skiff.aboard, 0, "so he is still on the skiff with the slab");
+    }
+
+    #[test]
+    fn a_slab_is_easier_to_shove_over_the_side_than_a_man() {
+        let mut skiff = plank();
+        skiff.stand = SKIFF_PLANKS - 1 - SHOVE_FORCE;
+        let mut loaded = skiff.clone();
+        skiff
+            .guards
+            .push(SkiffGuard::new(GroundKind::Trooper, 0, skiff.stand - 1, 0));
+        skiff.step(1);
+        assert!(!skiff.overboard(), "the boot alone leaves him on the end");
+
+        let mut slab = Carbonite::new(1, "Kite");
+        slab.carry();
+        loaded.slab = Some(slab);
+        loaded
+            .guards
+            .push(SkiffGuard::new(GroundKind::Trooper, 0, loaded.stand - 1, 0));
+        loaded.step(1);
+        assert!(
+            loaded.overboard(),
+            "and the same boot with a slab on his back does not"
+        );
+    }
+
+    #[test]
+    fn thawing_a_slab_at_a_settlement_gives_the_squadron_a_pilot_back() {
+        let mut slab = Carbonite::new(3, "Kite");
+        assert_eq!(slab.status(), "frozen", "he starts in the block");
+        assert!(slab.carry(), "he goes on your back");
+        assert_eq!(slab.burden(), SLAB_TOLL, "and weighs something there");
+        assert_eq!(slab.thaw(DeckSpot::Cantina), None, "a bar has no thaw gear");
+        assert_eq!(slab.thaw(DeckSpot::SurfaceWreck), None, "nor has a wreck");
+        assert_eq!(
+            slab.thaw(DeckSpot::Settlement),
+            Some(3),
+            "the settlement runs it through and hands back the hull he flew"
+        );
+        assert!(!slab.carried, "he is off your back");
+        assert_eq!(slab.burden(), 0, "and weighs nothing now");
+        assert!(!slab.ready(), "though he is blind for a while yet");
+        for _ in 0..THAW_SICKNESS {
+            slab.tick();
+        }
+        assert!(slab.ready(), "and then he can fly");
+        assert_eq!(
+            slab.thaw(DeckSpot::Settlement),
+            None,
+            "you only thaw a man once"
+        );
+        assert!(!slab.carry(), "and nobody carries a man who is walking");
     }
 }
