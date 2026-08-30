@@ -4300,6 +4300,33 @@ pub(crate) fn editor_menu_entries(
             })
         }),
         Entry::sep(),
+        Entry::item_key("Copy", "y", |co, cx| {
+            run_editor_command(co, cx, |c| {
+                // What counts as "nothing selected": a resting caret in this
+                // editor is a ONE-CHARACTER range, not an empty one, so
+                // `Range::is_empty` would call every caret a selection and the
+                // whole-buffer branch would never run. A real selection is
+                // Select mode, more than one range, or a primary range
+                // spanning more than one character.
+                let (has_selection, saved, view_id) = {
+                    let (view, doc) = zmax_view::current_ref!(c.editor);
+                    let sel = doc.selection(view.id);
+                    let has = c.editor.mode() == Mode::Select
+                        || sel.len() > 1
+                        || sel.primary().len() > 1;
+                    (has, sel.clone(), view.id)
+                };
+                if has_selection {
+                    MC::yank_to_clipboard.execute(c);
+                } else {
+                    // Nothing selected: copy the whole buffer, then put the
+                    // caret back. Copying must not move the user's cursor.
+                    MC::select_all.execute(c);
+                    MC::yank_to_clipboard.execute(c);
+                    doc_mut!(c.editor).set_selection(view_id, saved);
+                }
+            })
+        }),
         Entry::item_key("Paste", "p", |co, cx| {
             run_editor_command(co, cx, |c| {
                 MC::paste_clipboard_after.execute(c);
