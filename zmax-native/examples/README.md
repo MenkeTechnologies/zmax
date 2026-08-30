@@ -40,5 +40,9 @@ then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 | [`registers`](registers) | `:regs [names]` | `register` — newline-joined, and no register TYPE is recorded |
 | [`project-check`](project-check) | `:project` | `executable` + `exepath` — whether, and *which* one won |
 | [`writing-stats`](writing-stats) | `:writing` | `word_count` (three counts, one call) + `indent` in columns |
+| [`screen-where`](screen-where) | `:where` | document vs screen position; `window_view` packs its ends differently |
+| [`undo-branches`](undo-branches) | `:undo-tree` | `undo_tree` branches — the saved revision may not be an ancestor |
+| [`cross-buffer`](cross-buffer) | `:peek [name] [line]` | `buffer_line` — read another buffer without switching |
+| [`complete-peek`](complete-peek) | `:comp {prefix}` | the four completion namespaces; options list only what is SET |
 
 See [`../README.md`](../README.md) for the SDK reference and how to write your own.

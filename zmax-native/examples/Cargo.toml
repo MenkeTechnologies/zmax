@@ -28,6 +28,10 @@ members = [
   "registers",
   "project-check",
   "writing-stats",
+  "screen-where",
+  "undo-branches",
+  "cross-buffer",
+  "complete-peek",
 ]
 
 [workspace.dependencies]
