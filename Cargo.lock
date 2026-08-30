@@ -271,16 +271,14 @@ dependencies = [
 
 [[package]]
 name = "arblang"
-version = "0.1.8"
+version = "0.1.6"
 dependencies = [
  "ansi-to-tui",
  "base64 0.22.1",
  "bincode",
  "clap",
- "ego-tree 0.6.3",
- "fusevm",
+ "fusevm 0.23.0",
  "libc",
- "memchr",
  "nu-ansi-term",
  "percent-encoding",
  "portable-pty 0.9.0",
@@ -290,11 +288,11 @@ dependencies = [
  "regex",
  "rkyv 0.7.46",
  "rustc-hash 2.1.2",
- "saphyr-parser",
  "scraper 0.20.0",
  "semver",
  "serde",
  "serde_json",
+ "serde_yaml",
  "time",
  "toml 0.8.23",
 ]
@@ -319,12 +317,6 @@ dependencies = [
  "cpufeatures 0.2.17",
  "password-hash",
 ]
-
-[[package]]
-name = "arraydeque"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d902e3d592a523def97af8f317b08ce16b7ab854c1985a0c671e6f15cebc236"
 
 [[package]]
 name = "arrayref"
@@ -392,7 +384,7 @@ dependencies = [
 
 [[package]]
 name = "awkrs"
-version = "0.5.1"
+version = "0.4.21"
 dependencies = [
  "bincode",
  "chrono",
@@ -403,7 +395,7 @@ dependencies = [
  "cranelift-module",
  "cranelift-native",
  "dirs 5.0.1",
- "fusevm",
+ "fusevm 0.22.0",
  "gettext",
  "gmp-mpfr-sys",
  "libc",
@@ -2133,12 +2125,12 @@ checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
 name = "elisprs"
-version = "0.1.9"
+version = "0.1.8"
 dependencies = [
  "bincode",
  "fancy-regex 0.16.2",
  "flate2",
- "fusevm",
+ "fusevm 0.22.0",
  "libc",
  "lsp-server",
  "lsp-types",
@@ -2273,6 +2265,12 @@ checksum = "1cc3c5651fb62ab8aa3103998dade57efdd028544bd300516baa31840c252a83"
 dependencies = [
  "encoding_rs",
 ]
+
+[[package]]
+name = "endian-type"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c34f04666d835ff5d62e058c3995147c06f42fe86ff053337632bca83e42702d"
 
 [[package]]
 name = "enum-as-inner"
@@ -2664,6 +2662,50 @@ name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
+
+[[package]]
+name = "fusevm"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5517df70d8cd1a68bad7275edec3a4dbdb1a7c334b12d0d6f0ce4e2a06beabd"
+dependencies = [
+ "base64 0.22.1",
+ "bincode",
+ "chrono",
+ "cranelift-codegen",
+ "cranelift-frontend",
+ "cranelift-jit",
+ "cranelift-module",
+ "cranelift-native",
+ "cranelift-object",
+ "glob",
+ "libc",
+ "serde",
+ "sha2 0.10.9",
+ "tracing",
+]
+
+[[package]]
+name = "fusevm"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26d646198633747a11ba7987347e163a115e59cb14ab7f4465cdcb1f87f652e2"
+dependencies = [
+ "base64 0.22.1",
+ "bincode",
+ "chrono",
+ "cranelift-codegen",
+ "cranelift-frontend",
+ "cranelift-jit",
+ "cranelift-module",
+ "cranelift-native",
+ "cranelift-object",
+ "glob",
+ "libc",
+ "serde",
+ "sha2 0.10.9",
+ "tracing",
+]
 
 [[package]]
 name = "fusevm"
@@ -5434,6 +5476,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
+name = "nibble_vec"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77a5d83df9f36fe23f0c3648c6bbb8b0298bb5f1939c8f2704431371f4b84d43"
+dependencies = [
+ "smallvec",
+]
+
+[[package]]
 name = "nix"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5486,7 +5537,7 @@ dependencies = [
 
 [[package]]
 name = "node-js"
-version = "0.1.2"
+version = "0.1.1"
 dependencies = [
  "aes",
  "argon2",
@@ -5504,7 +5555,7 @@ dependencies = [
  "ed25519-dalek",
  "fancy-regex 0.18.0",
  "flate2",
- "fusevm",
+ "fusevm 0.22.0",
  "getrandom 0.2.17",
  "hickory-resolver",
  "hkdf",
@@ -5544,7 +5595,6 @@ dependencies = [
  "spki",
  "subtle",
  "thiserror 2.0.20",
- "unicode-normalization",
  "webpki-roots 0.26.11",
  "x25519-dalek",
  "x509-cert",
@@ -6365,7 +6415,7 @@ dependencies = [
 
 [[package]]
 name = "phplang"
-version = "0.2.1"
+version = "0.1.1"
 dependencies = [
  "base64 0.22.1",
  "bigdecimal",
@@ -6374,7 +6424,7 @@ dependencies = [
  "corosensei",
  "crc32fast",
  "fancy-regex 0.18.0",
- "fusevm",
+ "fusevm 0.22.0",
  "hex",
  "indexmap",
  "libc",
@@ -6767,7 +6817,7 @@ checksum = "e0c5ccf5294c6ccd63a74f1565028353830a9c2f5eb0c682c355c471726a6e3f"
 
 [[package]]
 name = "pythonrs"
-version = "0.1.3"
+version = "0.1.2"
 dependencies = [
  "bincode",
  "blake2",
@@ -6776,7 +6826,7 @@ dependencies = [
  "digest 0.10.7",
  "dirs 5.0.1",
  "fancy-regex 0.18.0",
- "fusevm",
+ "fusevm 0.22.0",
  "glob",
  "indexmap",
  "libc",
@@ -6867,6 +6917,16 @@ name = "radium"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09"
+
+[[package]]
+name = "radix_trie"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c069c179fcdc6a2fe24d8d18305cf085fdbd4f922c041943e203685d6a1c58fd"
+dependencies = [
+ "endian-type",
+ "nibble_vec",
+]
 
 [[package]]
 name = "rancor"
@@ -7416,13 +7476,13 @@ dependencies = [
 
 [[package]]
 name = "rlang"
-version = "0.1.2"
+version = "0.1.1"
 dependencies = [
  "base64 0.22.1",
  "bincode",
  "clap",
  "dirs 5.0.1",
- "fusevm",
+ "fusevm 0.22.0",
  "glob",
  "icu_collator",
  "indexmap",
@@ -7434,7 +7494,6 @@ dependencies = [
  "reedline 0.47.0",
  "regex",
  "rkyv 0.7.46",
- "rustc-hash 2.1.2",
  "serde",
  "serde_json",
 ]
@@ -7497,14 +7556,14 @@ dependencies = [
 
 [[package]]
 name = "rubylang"
-version = "0.1.6"
+version = "0.1.4"
 dependencies = [
  "bincode",
  "corosensei",
  "dirs 5.0.1",
  "fancy-regex 0.18.0",
  "flate2",
- "fusevm",
+ "fusevm 0.22.0",
  "glob",
  "indexmap",
  "libc",
@@ -7712,6 +7771,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustyline"
+version = "14.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7803e8936da37efd9b6d4478277f4b2b9bb5cdb37a113e8d63222e58da647e63"
+dependencies = [
+ "bitflags 2.13.0",
+ "cfg-if",
+ "clipboard-win",
+ "fd-lock",
+ "home",
+ "libc",
+ "log 0.4.33",
+ "memchr",
+ "nix 0.28.0",
+ "radix_trie",
+ "unicode-segmentation",
+ "unicode-width 0.1.12",
+ "utf8parse",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7745,16 +7826,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "saphyr-parser"
-version = "0.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0b1b76852c5643f558e7347e4de549474c3ecb7154295a189f4668428c1b453"
-dependencies = [
- "arraydeque",
- "thiserror 2.0.20",
-]
-
-[[package]]
 name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7771,7 +7842,6 @@ dependencies = [
  "ego-tree 0.6.3",
  "getopts",
  "html5ever 0.27.0",
- "indexmap",
  "once_cell",
  "selectors 0.25.0",
  "tendril 0.4.3",
@@ -8580,11 +8650,12 @@ dependencies = [
 
 [[package]]
 name = "strykelang"
-version = "0.17.49"
+version = "0.17.47"
 dependencies = [
  "aes",
  "aes-gcm",
  "argon2",
+ "atty",
  "barcoders",
  "base32",
  "base64 0.22.1",
@@ -8625,7 +8696,7 @@ dependencies = [
  "errno",
  "fancy-regex 0.14.0",
  "flate2",
- "fusevm",
+ "fusevm 0.22.0",
  "git2",
  "glob",
  "hex",
@@ -8681,6 +8752,7 @@ dependencies = [
  "roxmltree 0.21.1",
  "rsa",
  "rusqlite",
+ "rustyline",
  "salsa20",
  "scraper 0.26.0",
  "scrypt",
@@ -8993,9 +9065,9 @@ checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
 
 [[package]]
 name = "tclrs"
-version = "0.4.1"
+version = "0.4.0"
 dependencies = [
- "fusevm",
+ "fusevm 0.22.0",
  "libc",
  "lsp-server",
  "lsp-types",
@@ -10056,12 +10128,12 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vimlrs"
-version = "0.2.5"
+version = "0.2.4"
 dependencies = [
  "bincode",
  "clap",
  "dirs 5.0.1",
- "fusevm",
+ "fusevm 0.17.0",
  "glob",
  "indexmap",
  "libc",
@@ -11497,7 +11569,7 @@ checksum = "0f4a4e8e9dc5c62d159f04fcdbe07f4c3fb710415aab4754bf11505501e3251d"
 
 [[package]]
 name = "znative"
-version = "0.12.39"
+version = "0.12.35"
 
 [[package]]
 name = "zopfli"
@@ -11513,7 +11585,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs"
-version = "0.12.39"
+version = "0.12.35"
 dependencies = [
  "atty",
  "bincode",
@@ -11524,9 +11596,8 @@ dependencies = [
  "crossterm 0.27.0",
  "ctrlc",
  "dirs 5.0.1",
- "fancy-regex 0.18.0",
  "filetime",
- "fusevm",
+ "fusevm 0.22.0",
  "glob",
  "hostname",
  "indexmap",
@@ -11566,7 +11637,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs-daemon"
-version = "0.12.39"
+version = "0.12.35"
 dependencies = [
  "atty",
  "axum",
