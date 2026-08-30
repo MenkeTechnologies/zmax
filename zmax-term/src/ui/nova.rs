@@ -2377,7 +2377,7 @@ impl StarMap {
             }
         }
         let mut lanes = vec![Vec::new(); nodes.len()];
-        let mut link = |lanes: &mut Vec<Vec<usize>>, a: usize, b: usize| {
+        let link = |lanes: &mut Vec<Vec<usize>>, a: usize, b: usize| {
             if a != b && !lanes[a].contains(&b) {
                 lanes[a].push(b);
                 lanes[b].push(a);
@@ -3771,7 +3771,7 @@ impl WingFormation {
     /// Where the wingman in `slot` rides, as `(rows back, columns out)`.
     pub fn offset(self, slot: usize) -> (i16, i16) {
         let n = slot as i16;
-        let side = if slot % 2 == 0 { -1 } else { 1 };
+        let side = if slot.is_multiple_of(2) { -1 } else { 1 };
         let rank = n / 2 + 1;
         match self {
             WingFormation::LineAbreast => (0, side * 6 * rank),
@@ -4277,7 +4277,7 @@ impl Game {
             1 if w >= 3 && col % 4 == 2 => EnemyKind::TieBomber,
             1 if w >= 7 && col % 5 == 4 => EnemyKind::MineLayer,
             1 => EnemyKind::TieInterceptor,
-            2 if w >= 5 && col % 5 == 0 => EnemyKind::Gunboat,
+            2 if w >= 5 && col.is_multiple_of(5) => EnemyKind::Gunboat,
             2 if w >= 9 && col % 4 == 2 => EnemyKind::RepairDroid,
             2 if w >= 6 && col % 3 == 1 => EnemyKind::VultureDroid,
             2 => EnemyKind::TieFighter,
@@ -5205,10 +5205,8 @@ impl Game {
                         pull += (col - ship.1).signum();
                     }
                 }
-                Emplacement::GravityProjector => {
-                    if cap.tick.is_multiple_of(2) {
-                        pull += (col - ship.1).signum() * 2;
-                    }
+                Emplacement::GravityProjector if cap.tick.is_multiple_of(2) => {
+                    pull += (col - ship.1).signum() * 2;
                 }
                 _ => {}
             }
@@ -12535,7 +12533,7 @@ mod ground_tests {
     #[test]
     fn a_world_is_big_and_has_things_on_it() {
         let g = planetside(Planet::Coruscant);
-        assert!(Deck::WIDTH >= 120 && Deck::HEIGHT >= 40, "worlds are large");
+        const _: () = assert!(Deck::WIDTH >= 120 && Deck::HEIGHT >= 40, "worlds are large");
         assert!(!g.deck.cover.is_empty(), "with blocks to hide behind");
         assert!(!g.deck.troopers.is_empty(), "and a patrol on them");
         let city = g.deck.cover.iter().filter(|c| c.tall).count();
