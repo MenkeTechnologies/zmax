@@ -134,6 +134,8 @@ const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
 /// The score that gets a bounty posted on you, and what his ship is worth.
 const HUNTER_BOUNTY: u32 = 20_000;
+/// One jump in this many with contraband aboard gets you looked at.
+const CUSTOMS_ODDS: u64 = 3;
 /// What a pilot signs on for, and what sits on a sabacc table.
 const HIRE_PRICE: u32 = 1_800;
 const SABACC_STAKE: u32 = 400;
@@ -3087,6 +3089,92 @@ impl DeckSpot {
     }
 }
 
+/// What can sit in a hold, and what the Empire thinks of it.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum Cargo {
+    /// Field rations: legal, cheap, and always worth something somewhere.
+    Rations,
+    /// Ore out of the belt worlds.
+    Ore,
+    /// Medical supplies. The Alliance pays for these.
+    Medicine,
+    /// Machine parts and power cells.
+    Parts,
+    /// Blasters and charge packs. The Empire minds.
+    Weapons,
+    /// Spice out of Kessel. The Empire minds a great deal.
+    Spice,
+    /// Somebody frozen in carbonite, and somebody else who wants them.
+    Carbonite,
+}
+
+impl Cargo {
+    pub const ALL: [Cargo; 7] = [
+        Cargo::Rations,
+        Cargo::Ore,
+        Cargo::Medicine,
+        Cargo::Parts,
+        Cargo::Weapons,
+        Cargo::Spice,
+        Cargo::Carbonite,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Cargo::Rations => "rations",
+            Cargo::Ore => "ore",
+            Cargo::Medicine => "medical supplies",
+            Cargo::Parts => "machine parts",
+            Cargo::Weapons => "blasters",
+            Cargo::Spice => "spice",
+            Cargo::Carbonite => "carbonite slab",
+        }
+    }
+
+    /// What a crate of it goes for before anybody haggles.
+    pub fn base_price(self) -> u32 {
+        match self {
+            Cargo::Rations => 60,
+            Cargo::Ore => 120,
+            Cargo::Parts => 200,
+            Cargo::Medicine => 320,
+            Cargo::Weapons => 500,
+            Cargo::Spice => 900,
+            Cargo::Carbonite => 1_500,
+        }
+    }
+
+    /// The Empire will shoot you for carrying this.
+    pub fn contraband(self) -> bool {
+        matches!(self, Cargo::Weapons | Cargo::Spice | Cargo::Carbonite)
+    }
+
+    /// Where it comes from cheap, and where it sells dear: a sector either
+    /// produces it or wants it.
+    pub fn local_price(self, sector: Sector) -> u32 {
+        let base = self.base_price() as i64;
+        let swing = match (self, sector) {
+            // A world that makes a thing sells it cheap.
+            (Cargo::Ore, Sector::AsteroidBelt) => -40,
+            (Cargo::Spice, Sector::Nebula) => -45,
+            (Cargo::Parts, Sector::Wreckage) => -35,
+            (Cargo::Rations, Sector::OpenSpace) => -20,
+            (Cargo::Weapons, Sector::Minefield) => -30,
+            // A world that needs it pays for it.
+            (Cargo::Medicine, Sector::DebrisRing) => 70,
+            (Cargo::Medicine, Sector::IonStorm) => 45,
+            (Cargo::Rations, Sector::VoidRift) => 60,
+            (Cargo::Parts, Sector::SolarCorona) => 40,
+            (Cargo::Spice, Sector::CometTrail) => 55,
+            (Cargo::Weapons, Sector::DebrisRing) => 50,
+            (Cargo::Carbonite, Sector::SolarCorona) => 40,
+            (Cargo::Ore, Sector::Wreckage) => 30,
+            _ => 0,
+        };
+        ((base * (100 + swing)) / 100).max(10) as u32
+    }
+}
+
 /// Everything a pilot can carry on his belt: the blasters, and the blades.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SideArm {
@@ -3269,6 +3357,8 @@ pub enum GroundKind {
     Duellist,
     /// Whatever lives here: it is not on anybody's side and it is hungry.
     Beast,
+    /// A local who does not care for the Empire either, and has a bow.
+    Ally,
 }
 
 impl GroundKind {
@@ -3278,6 +3368,7 @@ impl GroundKind {
             GroundKind::Scout => "scout walker",
             GroundKind::Duellist => "duellist",
             GroundKind::Beast => "beast",
+            GroundKind::Ally => "local",
         }
     }
 
@@ -3287,6 +3378,7 @@ impl GroundKind {
             GroundKind::Scout => "Ѫ",
             GroundKind::Duellist => "Ѱ",
             GroundKind::Beast => "Ѩ",
+            GroundKind::Ally => "Ѧ",
         }
     }
 
@@ -3296,6 +3388,7 @@ impl GroundKind {
             GroundKind::Scout => 14,
             GroundKind::Duellist => 24,
             GroundKind::Beast => 18,
+            GroundKind::Ally => 5,
         }
     }
 
@@ -3306,6 +3399,7 @@ impl GroundKind {
             GroundKind::Scout => 2,
             GroundKind::Duellist => 3,
             GroundKind::Beast => 4,
+            GroundKind::Ally => 2,
         }
     }
 
@@ -3313,6 +3407,7 @@ impl GroundKind {
         match self {
             GroundKind::Duellist => 2,
             GroundKind::Beast => 1,
+            GroundKind::Ally => 12,
             _ => 14,
         }
     }
@@ -3551,6 +3646,12 @@ impl Deck {
                 DeckSpot::HiringTable,
                 DeckSpot::Detention,
             ],
+            Planet::Kashyyyk | Planet::Endor => &[
+                DeckSpot::Outpost,
+                DeckSpot::SurfaceWreck,
+                DeckSpot::Ruins,
+                DeckSpot::Detention,
+            ],
             _ => &[
                 DeckSpot::Outpost,
                 DeckSpot::Ruins,
@@ -3607,6 +3708,9 @@ impl Deck {
                     GroundKind::Duellist
                 }
                 3 if wilds => GroundKind::Beast,
+                4 | 5 if matches!(planet, Planet::Endor | Planet::Naboo | Planet::Kashyyyk) => {
+                    GroundKind::Ally
+                }
                 _ => GroundKind::Trooper,
             };
             troopers.push(Trooper::new(kind, (row, col), (rand() % 30) as u32));
@@ -3954,7 +4058,7 @@ impl Deck {
                     if let Some(hit) = self
                         .troopers
                         .iter_mut()
-                        .find(|t| t.hp > 0 && t.pos == bolt.pos)
+                        .find(|t| t.hp > 0 && t.kind != GroundKind::Ally && t.pos == bolt.pos)
                     {
                         hit.hp -= 2;
                         continue 'bolt;
@@ -3985,8 +4089,25 @@ impl Deck {
         // Then the patrol: close the range, and fire when they have the angle.
         let mut volley = Vec::new();
         let mut melee = 0;
+        // Where the Empire is standing, for anybody shooting at it rather than
+        // at you.
+        let imperials: Vec<(i16, i16)> = self
+            .troopers
+            .iter()
+            .filter(|t| t.hp > 0 && t.kind != GroundKind::Ally)
+            .map(|t| t.pos)
+            .collect();
         for trooper in self.troopers.iter_mut() {
-            let (dr, dc) = (pilot.0 - trooper.pos.0, pilot.1 - trooper.pos.1);
+            let mark = if trooper.kind == GroundKind::Ally {
+                imperials
+                    .iter()
+                    .copied()
+                    .min_by_key(|pos| (pos.0 - trooper.pos.0).abs() + (pos.1 - trooper.pos.1).abs())
+                    .unwrap_or(pilot)
+            } else {
+                pilot
+            };
+            let (dr, dc) = (mark.0 - trooper.pos.0, mark.1 - trooper.pos.1);
             let range = dr.abs() + dc.abs();
             // Everything closes: a beast until it can reach you, a shooter to
             // where its own fire is worth something.
@@ -4031,6 +4152,18 @@ impl Deck {
                     if range <= GroundKind::Beast.reach() {
                         trooper.cooldown = BEAST_CADENCE;
                         melee += GroundKind::Beast.damage();
+                    }
+                }
+                GroundKind::Ally => {
+                    // A local looses one at whichever trooper is nearest.
+                    if range <= GroundKind::Ally.reach() && (dr == 0 || dc == 0) {
+                        trooper.cooldown = TROOPER_CADENCE;
+                        volley.push(Bolt {
+                            pos: trooper.pos,
+                            dir: (dr.signum(), dc.signum()),
+                            friendly: true,
+                            life: BOLT_RANGE,
+                        });
                     }
                 }
                 kind => {
@@ -4124,12 +4257,14 @@ pub enum Planet {
     Naboo,
     Geonosis,
     Mandalore,
+    /// Forests the height of a city, and locals who do not forget a debt.
+    Kashyyyk,
     /// Nothing but stars out here.
     DeepSpace,
 }
 
 impl Planet {
-    pub const ALL: [Planet; 16] = [
+    pub const ALL: [Planet; 17] = [
         Planet::Tatooine,
         Planet::Hoth,
         Planet::Yavin,
@@ -4145,6 +4280,7 @@ impl Planet {
         Planet::Naboo,
         Planet::Geonosis,
         Planet::Mandalore,
+        Planet::Kashyyyk,
         Planet::DeepSpace,
     ];
 
@@ -4165,6 +4301,7 @@ impl Planet {
             Planet::Naboo => "Naboo",
             Planet::Geonosis => "Geonosis",
             Planet::Mandalore => "Mandalore",
+            Planet::Kashyyyk => "Kashyyyk",
             Planet::DeepSpace => "deep space",
         }
     }
@@ -4186,6 +4323,7 @@ impl Planet {
             Planet::Naboo => "green plains and a hangar full of fighters",
             Planet::Geonosis => "red rock and droid foundries",
             Planet::Mandalore => "grey dust and old armour",
+            Planet::Kashyyyk => "wroshyr trees, and locals who owe the Empire",
             Planet::DeepSpace => "nothing out here but stars",
         }
     }
@@ -4204,7 +4342,7 @@ impl Planet {
     pub fn surface(self) -> bool {
         matches!(
             self,
-            Planet::Hoth | Planet::Endor | Planet::Scarif | Planet::Geonosis
+            Planet::Hoth | Planet::Endor | Planet::Scarif | Planet::Geonosis | Planet::Kashyyyk
         )
     }
 
@@ -4622,6 +4760,10 @@ pub struct Game {
     pub armoury: Vec<SideArm>,
     /// Whether an astromech is aboard to come down with him.
     pub has_droid: bool,
+    /// What is in the hold, and how many crates it takes.
+    pub hold: Vec<(Cargo, u32)>,
+    /// Whether the terminal is showing the market rather than the yard.
+    pub market_open: bool,
     pub missiles: u32,
     pub score: u32,
     /// Salvage banked for the hangar.
@@ -4730,6 +4872,8 @@ impl Game {
             owned: vec![Weapon::LaserCannon],
             armoury: vec![SideArm::ServicePistol],
             has_droid: false,
+            hold: Vec::new(),
+            market_open: false,
             missiles: MISSILE_START,
             score: 0,
             credits: 0,
@@ -4815,6 +4959,8 @@ impl Game {
         self.owned = vec![Weapon::LaserCannon];
         self.armoury = vec![SideArm::ServicePistol];
         self.has_droid = false;
+        self.hold.clear();
+        self.market_open = false;
         self.missiles = MISSILE_START;
         self.power = Power::default();
         self.force = FORCE_MAX / 2;
@@ -5095,6 +5241,7 @@ impl Game {
         self.dress_terrain();
         self.dress_objective();
         self.claim_node_bonus();
+        self.customs_check();
         if self.hunted_here() {
             // He does not fly a TIE, and he does not fly alone.
             self.hunted += 1;
@@ -6688,7 +6835,10 @@ impl Game {
 
     /// Buy the hangar line under `key`; returns whether the sale went through.
     pub fn buy(&mut self, key: char) -> bool {
-        if !matches!(self.status, Status::Hangar | Status::Surface) || self.rack_open {
+        if !matches!(self.status, Status::Hangar | Status::Surface)
+            || self.rack_open
+            || self.market_open
+        {
             return false;
         }
         let Some(line) = self.shop_lines().into_iter().find(|l| l.key == key) else {
@@ -7234,12 +7384,133 @@ impl Game {
         true
     }
 
+    /// Crates the hold takes: a freighter is mostly hold, a fighter mostly not.
+    pub fn hold_capacity(&self) -> u32 {
+        let frame = match self.class {
+            ShipClass::Freighter => 24,
+            ShipClass::YWing => 12,
+            ShipClass::BWing => 8,
+            ShipClass::XWing => 6,
+            ShipClass::AWing => 4,
+        };
+        frame + self.loadout.tier(Part::Hyperdrive) * 2
+    }
+
+    /// Crates aboard right now.
+    pub fn hold_used(&self) -> u32 {
+        self.hold.iter().map(|(_, crates)| crates).sum()
+    }
+
+    /// Anything aboard the Empire would shoot you for.
+    pub fn carrying_contraband(&self) -> bool {
+        self.hold
+            .iter()
+            .any(|(cargo, crates)| *crates > 0 && cargo.contraband())
+    }
+
+    /// What the market here pays, and what it wants for a crate.
+    pub fn market_lines(&self) -> Vec<(char, Cargo, u32, u32)> {
+        let keys: String = SHOP_KEYS.iter().collect();
+        Cargo::ALL
+            .iter()
+            .enumerate()
+            .filter_map(|(i, cargo)| {
+                let key = keys.chars().nth(i)?;
+                let price = cargo.local_price(self.sector);
+                let held = self
+                    .hold
+                    .iter()
+                    .find(|(kind, _)| kind == cargo)
+                    .map_or(0, |(_, crates)| *crates);
+                Some((key, *cargo, price, held))
+            })
+            .collect()
+    }
+
+    /// Buy a crate of something at the local price.
+    pub fn buy_cargo(&mut self, cargo: Cargo) -> bool {
+        let price = cargo.local_price(self.sector);
+        if self.credits < price || self.hold_used() >= self.hold_capacity() {
+            return false;
+        }
+        self.credits -= price;
+        match self.hold.iter_mut().find(|(kind, _)| *kind == cargo) {
+            Some((_, crates)) => *crates += 1,
+            None => self.hold.push((cargo, 1)),
+        }
+        true
+    }
+
+    /// Sell a crate at whatever this system pays for it.
+    pub fn sell_cargo(&mut self, cargo: Cargo) -> bool {
+        let Some(slot) = self.hold.iter_mut().find(|(kind, _)| *kind == cargo) else {
+            return false;
+        };
+        if slot.1 == 0 {
+            return false;
+        }
+        slot.1 -= 1;
+        let price = cargo.local_price(self.sector);
+        self.credits += price;
+        self.hold.retain(|(_, crates)| *crates > 0);
+        true
+    }
+
+    /// Trade at the market: the key buys, and buying what you already hold at a
+    /// loss is your business.
+    pub fn trade_cargo(&mut self, key: char, selling: bool) -> bool {
+        let Some(&(_, cargo, _, held)) = self.market_lines().iter().find(|line| line.0 == key)
+        else {
+            return false;
+        };
+        if selling {
+            held > 0 && self.sell_cargo(cargo)
+        } else {
+            self.buy_cargo(cargo)
+        }
+    }
+
+    /// An Imperial patrol pulls you over on the way in. Contraband aboard means
+    /// paying them off, or fighting your way out of it.
+    fn customs_check(&mut self) {
+        if !self.carrying_contraband() {
+            return;
+        }
+        if !self.rand().is_multiple_of(CUSTOMS_ODDS) {
+            return;
+        }
+        let bribe = (self.hold_used() * 120).min(self.credits);
+        if bribe > 0 && self.rand().is_multiple_of(2) {
+            self.credits -= bribe;
+            self.say("Customs patrol. That cost us, but they waved us through.");
+        } else {
+            self.say("Customs patrol, and they want the hold open. Fight.");
+            for col in (0..COLS).step_by(3) {
+                let home = self.place((FORMATION_TOP + 3, BASE_X + col as i16 * ENEMY_GAP));
+                let patrol = self.hatch(EnemyKind::TieFighter, home);
+                self.enemies.push(patrol);
+            }
+        }
+    }
+
     /// Flip the terminal between the yard's stock and the rack.
     pub fn turn_page(&mut self) -> bool {
-        if self.shop_open {
-            self.rack_open = !self.rack_open;
+        if !self.shop_open {
+            return false;
         }
-        self.rack_open
+        // Yard stock, then the rack, then the market, then round again.
+        match (self.rack_open, self.market_open) {
+            (false, false) => self.rack_open = true,
+            (true, false) => {
+                self.rack_open = false;
+                self.market_open = true;
+            }
+            _ => {
+                self.rack_open = false;
+                self.market_open = false;
+            }
+        }
+        self.rack_open || self.market_open
     }
 
     /// What the quartermaster has on the rack, and what he will take back.
@@ -8568,6 +8839,8 @@ pub struct Nova {
     frames: u64,
     /// True while the squadron roster is up over everything else.
     roster: bool,
+    /// True while the market's next key press is a sale rather than a buy.
+    selling: bool,
     /// Whether the fight is watched from above or out of the canopy.
     view: ViewMode,
 }
@@ -8585,6 +8858,7 @@ impl Nova {
             interval: Duration::from_millis(70),
             frames: 0,
             roster: false,
+            selling: false,
             view: ViewMode::TopDown,
         }
     }
@@ -10242,11 +10516,18 @@ impl Component for Nova {
                     self.game.cycle_formation();
                 }
                 key!('n') => self.restart(),
+                key!('s') if self.game.market_open => {
+                    // Selling out of the hold takes the shift key off the deal:
+                    // s marks the next line pressed as a sale.
+                    self.selling = !self.selling;
+                }
                 _ => {
-                    // Everything else is a terminal key: the rack first, then
-                    // the yard's own stock.
+                    // Whichever page is up takes the key.
                     if let Some(c) = key.char() {
-                        if !self.game.trade_sidearm(c) {
+                        if self.game.market_open {
+                            let selling = self.selling;
+                            self.game.trade_cargo(c, selling);
+                        } else if !self.game.trade_sidearm(c) {
                             self.game.buy(c);
                         }
                     }
@@ -14988,5 +15269,241 @@ mod frontier_life_tests {
         }
         assert!(wins > 0, "the table pays out sometimes");
         assert!(losses > 0, "and takes it back the rest of the time");
+    }
+}
+
+#[cfg(test)]
+mod trade_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn docked_at(sector: Sector) -> Game {
+        let mut g = flying();
+        g.status = Status::Hangar;
+        g.sector = sector;
+        g.credits = 20_000;
+        g.shop_open = true;
+        g.market_open = true;
+        g
+    }
+
+    #[test]
+    fn a_hold_is_as_big_as_the_ship_it_is_in() {
+        let mut g = flying();
+        g.class = ShipClass::Freighter;
+        let freighter = g.hold_capacity();
+        g.class = ShipClass::AWing;
+        assert!(
+            freighter > g.hold_capacity() * 4,
+            "a freighter is mostly hold and an A-wing is not"
+        );
+        g.loadout.tiers[Part::Hyperdrive as usize] = 4;
+        assert!(
+            g.hold_capacity() > ShipClass::AWing.max_shield(),
+            "and a tuned drive finds room for a little more"
+        );
+    }
+
+    #[test]
+    fn cargo_is_cheap_where_it_is_made_and_dear_where_it_is_wanted() {
+        assert!(
+            Cargo::Ore.local_price(Sector::AsteroidBelt) < Cargo::Ore.local_price(Sector::Wreckage),
+            "ore is cheap at the belt and worth something at a graveyard"
+        );
+        assert!(
+            Cargo::Spice.local_price(Sector::Nebula) < Cargo::Spice.local_price(Sector::CometTrail),
+            "spice is cheapest where it comes out of the ground"
+        );
+        assert!(
+            Cargo::Medicine.local_price(Sector::DebrisRing) > Cargo::Medicine.base_price(),
+            "and medicine is worth most where something has just happened"
+        );
+    }
+
+    #[test]
+    fn buying_low_and_selling_high_is_the_whole_trade() {
+        let mut g = docked_at(Sector::AsteroidBelt);
+        let start = g.credits;
+        assert!(g.buy_cargo(Cargo::Ore), "a crate is bought at the belt");
+        assert_eq!(g.hold_used(), 1, "and it is in the hold");
+        assert_eq!(
+            g.credits,
+            start - Cargo::Ore.local_price(Sector::AsteroidBelt)
+        );
+        g.sector = Sector::Wreckage;
+        let before = g.credits;
+        assert!(g.sell_cargo(Cargo::Ore), "and sold on at the graveyard");
+        assert!(g.credits > before + Cargo::Ore.local_price(Sector::AsteroidBelt) - 1);
+        assert_eq!(g.hold_used(), 0, "the hold is empty again");
+        assert!(
+            !g.sell_cargo(Cargo::Ore),
+            "and there is nothing left to sell"
+        );
+    }
+
+    #[test]
+    fn a_hold_only_takes_what_it_takes() {
+        let mut g = docked_at(Sector::OpenSpace);
+        g.class = ShipClass::AWing;
+        let room = g.hold_capacity();
+        for _ in 0..room {
+            assert!(g.buy_cargo(Cargo::Rations), "the crate goes aboard");
+        }
+        assert_eq!(g.hold_used(), room, "full");
+        assert!(!g.buy_cargo(Cargo::Rations), "and that is all it takes");
+    }
+
+    #[test]
+    fn the_empire_minds_some_of_it() {
+        assert!(Cargo::Spice.contraband() && Cargo::Weapons.contraband());
+        assert!(!Cargo::Rations.contraband() && !Cargo::Ore.contraband());
+        let mut g = docked_at(Sector::Nebula);
+        assert!(!g.carrying_contraband(), "an empty hold is a clean hold");
+        g.buy_cargo(Cargo::Spice);
+        assert!(g.carrying_contraband(), "and that is not");
+    }
+
+    #[test]
+    fn customs_either_takes_a_cut_or_comes_aboard() {
+        let mut bribed = false;
+        let mut boarded = false;
+        for seed in 1..60 {
+            let mut g = Game::new(seed);
+            g.start(ShipClass::Freighter, Difficulty::Normal, Galaxy::Orion);
+            g.status = Status::Playing;
+            g.node.kind = NodeKind::Battle;
+            g.credits = 5_000;
+            g.hold = vec![(Cargo::Spice, 3)];
+            let credits = g.credits;
+            g.spawn_wave();
+            if g.credits < credits {
+                bribed = true;
+            }
+            if g.chatter.iter().any(|c| c.line.contains("open")) {
+                boarded = true;
+            }
+            if bribed && boarded {
+                break;
+            }
+        }
+        assert!(bribed, "sometimes they take the money");
+        assert!(boarded, "and sometimes they want the hold open");
+    }
+
+    #[test]
+    fn a_clean_hold_is_never_stopped() {
+        for seed in 1..30 {
+            let mut g = Game::new(seed);
+            g.start(ShipClass::XWing, Difficulty::Normal, Galaxy::Orion);
+            g.status = Status::Playing;
+            g.hold = vec![(Cargo::Rations, 4)];
+            let credits = g.credits;
+            g.spawn_wave();
+            assert_eq!(g.credits, credits, "nobody shakes down a rations run");
+        }
+    }
+
+    #[test]
+    fn the_terminal_turns_through_its_three_pages() {
+        let mut g = flying();
+        g.status = Status::Hangar;
+        g.shop_open = true;
+        assert!(!g.rack_open && !g.market_open, "the yard's stock first");
+        g.turn_page();
+        assert!(g.rack_open, "then the rack");
+        g.turn_page();
+        assert!(g.market_open && !g.rack_open, "then the market");
+        g.turn_page();
+        assert!(!g.rack_open && !g.market_open, "and round again");
+    }
+}
+
+#[cfg(test)]
+mod ally_tests {
+    use super::tests::flying;
+    use super::*;
+
+    #[test]
+    fn the_forest_worlds_have_locals_who_are_on_your_side() {
+        let kinds: std::collections::HashSet<GroundKind> = (1..50)
+            .flat_map(|seed| {
+                Deck::surface(Planet::Endor, seed)
+                    .troopers
+                    .into_iter()
+                    .map(|t| t.kind)
+            })
+            .collect();
+        assert!(
+            kinds.contains(&GroundKind::Ally),
+            "somebody helps out on Endor"
+        );
+        let city: std::collections::HashSet<GroundKind> = (1..50)
+            .flat_map(|seed| {
+                Deck::surface(Planet::Mustafar, seed)
+                    .troopers
+                    .into_iter()
+                    .map(|t| t.kind)
+            })
+            .collect();
+        assert!(
+            !city.contains(&GroundKind::Ally),
+            "and nobody helps on Mustafar"
+        );
+    }
+
+    #[test]
+    fn a_local_shoots_at_the_empire_rather_than_at_you() {
+        let mut g = flying();
+        g.status = Status::Surface;
+        g.deck = Deck::surface(Planet::Endor, 17);
+        g.deck.cover.clear();
+        g.deck.bolts.clear();
+        g.deck.pilot = (30, 10);
+        g.deck.troopers = vec![
+            Trooper::new(GroundKind::Ally, (20, 20), 0),
+            Trooper::new(GroundKind::Trooper, (20, 28), 99),
+        ];
+        let mut loosed = false;
+        for tick in 0..24 {
+            g.deck.skirmish(tick);
+            loosed |= g.deck.bolts.iter().any(|bolt| bolt.friendly);
+        }
+        assert!(loosed, "the local looses one");
+        let trooper = g
+            .deck
+            .troopers
+            .iter()
+            .find(|t| t.kind == GroundKind::Trooper);
+        assert!(
+            trooper.is_none() || trooper.is_some_and(|t| t.hp < GroundKind::Trooper.hp()),
+            "and it goes into the trooper, not the pilot"
+        );
+        assert_eq!(
+            g.deck.health, PILOT_HEALTH,
+            "nobody friendly shot the pilot"
+        );
+    }
+
+    #[test]
+    fn your_fire_does_not_go_through_the_locals() {
+        let mut g = flying();
+        g.status = Status::Surface;
+        g.deck = Deck::surface(Planet::Kashyyyk, 23);
+        g.deck.cover.clear();
+        g.deck.bolts.clear();
+        g.deck.troopers = vec![Trooper::new(GroundKind::Ally, (20, 24), 99)];
+        g.deck.bolts = vec![Bolt {
+            pos: (20, 23),
+            dir: (0, 1),
+            friendly: true,
+            life: 6,
+        }];
+        g.deck.skirmish(1);
+        assert_eq!(g.deck.troopers.len(), 1, "the local is still standing");
+        assert_eq!(
+            g.deck.troopers[0].hp,
+            GroundKind::Ally.hp(),
+            "and untouched by your fire"
+        );
     }
 }
