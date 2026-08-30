@@ -258,8 +258,7 @@ pub struct HostApi {
     /// vim `getbufline({buf}, {lnum})` — one line of ANY open buffer, not just
     /// the current one, by the same index `buffer_name` uses. Zero-based, and
     /// null past either end. Release with `free_cstring`.
-    pub buffer_line:
-        extern "C" fn(host: *const HostApi, buffer: usize, line: usize) -> *mut c_char,
+    pub buffer_line: extern "C" fn(host: *const HostApi, buffer: usize, line: usize) -> *mut c_char,
 
     /// The byte offset of a char offset in the current buffer. vim's `col()` is
     /// byte-based while `charcol()` is char-based; everything else in this API
@@ -428,6 +427,80 @@ pub struct HostApi {
     /// vim `bufwinnr({buf})` — the first window showing a buffer, the inverse of
     /// `window_buffer`. `usize::MAX` when no window shows it.
     pub buffer_window: extern "C" fn(host: *const HostApi, buffer: usize) -> usize,
+
+    /// vim `expand("<cWORD>")` — the WORD under the cursor, delimited by
+    /// whitespace alone. `word_at_cursor` is `<cword>` and stops at
+    /// punctuation, so on `foo.bar(baz)` it gives `bar` where this gives the
+    /// whole `foo.bar(baz)`. Release with `free_cstring`.
+    pub long_word_at_cursor: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    /// vim `screenpos()` — where the cursor sits inside its window rather than
+    /// inside the buffer. `line` is the row and `anchor` the column, both
+    /// counted from the window's top-left and both in screen cells. `valid` is
+    /// 0 with no editor context. What a plugin drawing next to the cursor
+    /// needs, since a buffer position says nothing about where it is on screen.
+    pub screen_position: extern "C" fn(host: *const HostApi) -> Span,
+
+    /// vim `winwidth({win})` / `winheight({win})` — any window's text area, not
+    /// just the focused one. `usize::MAX` past the last window.
+    pub window_width_at: extern "C" fn(host: *const HostApi, index: usize) -> usize,
+    pub window_height_at: extern "C" fn(host: *const HostApi, index: usize) -> usize,
+
+    /// vim `getcompletion({prefix}, "file")` — the paths that begin with
+    /// `prefix`, newline-separated and sorted, directories marked with a
+    /// trailing separator as vim marks them. Null when nothing matches.
+    /// Release with `free_cstring`.
+    pub file_completions: extern "C" fn(host: *const HostApi, prefix: *const c_char) -> *mut c_char,
+    /// vim `getcompletion({prefix}, "dir")` — the same, directories only, for a
+    /// plugin prompting for somewhere to put something.
+    pub dir_completions: extern "C" fn(host: *const HostApi, prefix: *const c_char) -> *mut c_char,
+
+    /// vim `exists("&{option}")` — whether an option has been set at all, which
+    /// `option` cannot express: an option set to the empty string and one never
+    /// set both read as no value.
+    pub option_set: extern "C" fn(host: *const HostApi, name: *const c_char) -> c_int,
+
+    /// vim `getbufvar({buf}, "&filetype")` — the `index`th buffer's language,
+    /// where `language` reports only the current one. Null for a buffer with no
+    /// language configured. Release with `free_cstring`.
+    pub buffer_language: extern "C" fn(host: *const HostApi, index: usize) -> *mut c_char,
+
+    /// vim `getcurpos()`'s `curswant` — the column a vertical motion is aiming
+    /// for, which is not where the cursor is: moving down through a short line
+    /// keeps the wanted column so the next long line lands back at it.
+    /// `usize::MAX` when nothing is remembered.
+    pub cursor_wanted_column: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `getjumplist()` — how many jumps the current window has recorded.
+    pub jump_count: extern "C" fn(host: *const HostApi) -> usize,
+    /// One recorded jump, oldest first. `anchor` and `head` are the primary
+    /// cursor of the selection the jump was made from, `line` the line it sits
+    /// on. `valid` is 0 past the last jump.
+    pub jump: extern "C" fn(host: *const HostApi, index: usize) -> Span,
+    /// Which buffer the `index`th jump was made in, as an index into the
+    /// `buffer_name` order. `usize::MAX` when that buffer is no longer open --
+    /// a jump outlives the buffer it points into.
+    pub jump_buffer: extern "C" fn(host: *const HostApi, index: usize) -> usize,
+    /// vim `getjumplist()`'s second element — where `C-o`/`C-i` would resume.
+    pub jump_index: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `getcompletion({prefix}, "option")` — the option names that begin
+    /// with `prefix`, newline-separated and sorted. Only options that have been
+    /// set are known, since that is all `:set` records. Null when nothing
+    /// matches. Release with `free_cstring`.
+    pub option_completions:
+        extern "C" fn(host: *const HostApi, prefix: *const c_char) -> *mut c_char,
+
+    /// vim `synIDattr(synID(...), "name")` — the syntax scopes covering a char
+    /// offset, innermost LAST, newline-separated: a Rust doc comment reads
+    /// `comment` then `comment.line.documentation`. Null when the buffer has no
+    /// syntax tree or nothing covers the offset.
+    ///
+    /// The whole stack rather than one name, because "is the cursor in a
+    /// comment" is answered by the outer scope while "which kind of comment" is
+    /// answered by the inner one, and a plugin needs to choose. Release with
+    /// `free_cstring`.
+    pub syntax_at: extern "C" fn(host: *const HostApi, offset: usize) -> *mut c_char,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -1044,6 +1117,135 @@ impl Host {
         }
     }
 
+    /// vim `expand("<cWORD>")` — the whitespace-delimited WORD under the
+    /// cursor, where [`Self::word_at_cursor`] is `<cword>` and stops at
+    /// punctuation.
+    pub fn long_word_at_cursor(&self) -> Option<String> {
+        self.take_string((self.t().long_word_at_cursor)(self.api))
+    }
+
+    /// vim `screenpos()` — the cursor's row and column inside its window, in
+    /// screen cells. `None` with no editor context.
+    pub fn screen_position(&self) -> Option<Span> {
+        let span = (self.t().screen_position)(self.api);
+        (span.valid != 0).then_some(span)
+    }
+
+    /// vim `winwidth({win})` / `winheight({win})` — any window's text area.
+    /// `None` past the last window.
+    pub fn window_size_at(&self, index: usize) -> Option<(usize, usize)> {
+        match (
+            (self.t().window_width_at)(self.api, index),
+            (self.t().window_height_at)(self.api, index),
+        ) {
+            (usize::MAX, _) | (_, usize::MAX) => None,
+            (width, height) => Some((width, height)),
+        }
+    }
+
+    /// vim `getcompletion({prefix}, "file")` — paths beginning with `prefix`,
+    /// sorted, directories ending in a separator.
+    pub fn file_completions(&self, prefix: &str) -> Vec<String> {
+        let Ok(prefix) = CString::new(prefix) else {
+            return Vec::new();
+        };
+        self.take_string((self.t().file_completions)(self.api, prefix.as_ptr()))
+            .map(|joined| joined.lines().map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
+    /// vim `getcompletion({prefix}, "dir")` — directories only.
+    pub fn dir_completions(&self, prefix: &str) -> Vec<String> {
+        let Ok(prefix) = CString::new(prefix) else {
+            return Vec::new();
+        };
+        self.take_string((self.t().dir_completions)(self.api, prefix.as_ptr()))
+            .map(|joined| joined.lines().map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
+    /// vim `exists("&{option}")` — whether the option is set at all, which
+    /// [`Self::option`] cannot tell you: set-to-empty and never-set both read
+    /// as no value.
+    pub fn option_set(&self, name: &str) -> bool {
+        match CString::new(name) {
+            Ok(name) => (self.t().option_set)(self.api, name.as_ptr()) != 0,
+            Err(_) => false,
+        }
+    }
+
+    /// vim `getbufvar({buf}, "&filetype")` — any buffer's language, where
+    /// [`Self::language`] reports only the current one.
+    pub fn buffer_language(&self, index: usize) -> Option<String> {
+        self.take_string((self.t().buffer_language)(self.api, index))
+    }
+
+    /// vim `getcurpos()`'s `curswant` — the column vertical motion is aiming
+    /// for, which is not the cursor's column once it has passed through a
+    /// shorter line. `None` when nothing is remembered.
+    pub fn cursor_wanted_column(&self) -> Option<usize> {
+        match (self.t().cursor_wanted_column)(self.api) {
+            usize::MAX => None,
+            column => Some(column),
+        }
+    }
+
+    /// vim `getjumplist()` — how many jumps this window has recorded.
+    pub fn jump_count(&self) -> usize {
+        (self.t().jump_count)(self.api)
+    }
+
+    /// One recorded jump and the buffer it was made in, oldest first. The
+    /// buffer is `None` when it is no longer open, which a jump outlives.
+    pub fn jump(&self, index: usize) -> Option<(Span, Option<usize>)> {
+        let span = (self.t().jump)(self.api, index);
+        if span.valid == 0 {
+            return None;
+        }
+        let buffer = match (self.t().jump_buffer)(self.api, index) {
+            usize::MAX => None,
+            buffer => Some(buffer),
+        };
+        Some((span, buffer))
+    }
+
+    /// Every recorded jump, oldest first.
+    pub fn jumps(&self) -> Vec<(Span, Option<usize>)> {
+        (0..self.jump_count())
+            .filter_map(|i| self.jump(i))
+            .collect()
+    }
+
+    /// Where `C-o`/`C-i` would resume in the jump list.
+    pub fn jump_index(&self) -> usize {
+        (self.t().jump_index)(self.api)
+    }
+
+    /// vim `synIDattr(synID(...), "name")` — the syntax scopes covering a char
+    /// offset, outermost first and innermost last. Empty when the buffer has no
+    /// syntax tree.
+    ///
+    /// The innermost scope is the specific one (`comment.line.documentation`);
+    /// the outermost is the broad one (`comment`). Ask
+    /// [`Self::syntax_at`]`(..).iter().any(|s| s.starts_with("comment"))` for
+    /// "is this a comment", and take the last element for the exact kind.
+    pub fn syntax_at(&self, offset: usize) -> Vec<String> {
+        self.take_string((self.t().syntax_at)(self.api, offset))
+            .map(|joined| joined.lines().map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
+    /// vim `getcompletion({prefix}, "option")` — option names beginning with
+    /// `prefix`. Only options that have been set are known.
+    pub fn option_completions(&self, prefix: &str) -> Vec<String> {
+        let Ok(prefix) = CString::new(prefix) else {
+            return Vec::new();
+        };
+        self.take_string((self.t().option_completions)(self.api, prefix.as_ptr()))
+            .map(|joined| joined.lines().map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
     /// Adopt a host-allocated C string and release it through the host's own
     /// allocator, which is the only correct way to free one across the ABI.
     fn take_string(&self, raw: *mut c_char) -> Option<String> {
@@ -1216,20 +1418,32 @@ mod tests {
         0
     }
     extern "C" fn fake_message(_h: *const HostApi, text: *const c_char) {
-        record(format!("message:{}", unsafe { CStr::from_ptr(text) }.to_string_lossy()));
+        record(format!(
+            "message:{}",
+            unsafe { CStr::from_ptr(text) }.to_string_lossy()
+        ));
     }
     extern "C" fn fake_error(_h: *const HostApi, text: *const c_char) {
-        record(format!("error:{}", unsafe { CStr::from_ptr(text) }.to_string_lossy()));
+        record(format!(
+            "error:{}",
+            unsafe { CStr::from_ptr(text) }.to_string_lossy()
+        ));
     }
     extern "C" fn fake_eval(_h: *const HostApi, line: *const c_char) -> c_int {
-        record(format!("eval:{}", unsafe { CStr::from_ptr(line) }.to_string_lossy()));
+        record(format!(
+            "eval:{}",
+            unsafe { CStr::from_ptr(line) }.to_string_lossy()
+        ));
         0
     }
     extern "C" fn fake_buffer_text(_h: *const HostApi) -> *mut c_char {
         reply("buffer")
     }
     extern "C" fn fake_insert_text(_h: *const HostApi, text: *const c_char) -> c_int {
-        record(format!("insert:{}", unsafe { CStr::from_ptr(text) }.to_string_lossy()));
+        record(format!(
+            "insert:{}",
+            unsafe { CStr::from_ptr(text) }.to_string_lossy()
+        ));
         0
     }
     extern "C" fn fake_free_cstring(_h: *const HostApi, s: *mut c_char) {
@@ -1239,7 +1453,12 @@ mod tests {
         }
     }
     extern "C" fn fake_cursor(_h: *const HostApi) -> Cursor {
-        Cursor { line: 3, column: 7, offset: 42, valid: 1 }
+        Cursor {
+            line: 3,
+            column: 7,
+            offset: 42,
+            valid: 1,
+        }
     }
     extern "C" fn fake_word_at_cursor(_h: *const HostApi) -> *mut c_char {
         reply("UnixStream")
@@ -1249,7 +1468,11 @@ mod tests {
     }
     extern "C" fn fake_line(_h: *const HostApi, line: usize) -> *mut c_char {
         // Two lines only, so the past-the-end case is reachable.
-        if line < 2 { reply(&format!("line {line}")) } else { ptr::null_mut() }
+        if line < 2 {
+            reply(&format!("line {line}"))
+        } else {
+            ptr::null_mut()
+        }
     }
     extern "C" fn fake_line_count(_h: *const HostApi) -> usize {
         2
@@ -1279,9 +1502,24 @@ mod tests {
     extern "C" fn fake_selection(_h: *const HostApi, index: usize) -> Span {
         match index {
             // A backwards selection: head before anchor.
-            0 => Span { anchor: 10, head: 4, line: 1, valid: 1 },
-            1 => Span { anchor: 20, head: 25, line: 2, valid: 1 },
-            _ => Span { anchor: 0, head: 0, line: 0, valid: 0 },
+            0 => Span {
+                anchor: 10,
+                head: 4,
+                line: 1,
+                valid: 1,
+            },
+            1 => Span {
+                anchor: 20,
+                head: 25,
+                line: 2,
+                valid: 1,
+            },
+            _ => Span {
+                anchor: 0,
+                head: 0,
+                line: 0,
+                valid: 0,
+            },
         }
     }
     extern "C" fn fake_text_range(_h: *const HostApi, from: usize, to: usize) -> *mut c_char {
@@ -1291,16 +1529,30 @@ mod tests {
         2
     }
     extern "C" fn fake_buffer_name(_h: *const HostApi, index: usize) -> *mut c_char {
-        if index < 2 { reply(&format!("buf{index}")) } else { ptr::null_mut() }
+        if index < 2 {
+            reply(&format!("buf{index}"))
+        } else {
+            ptr::null_mut()
+        }
     }
     extern "C" fn fake_diagnostic_count(_h: *const HostApi) -> usize {
         1
     }
     extern "C" fn fake_diagnostic(_h: *const HostApi, index: usize) -> Span {
         if index == 0 {
-            Span { anchor: 5, head: 9, line: 2, valid: 1 }
+            Span {
+                anchor: 5,
+                head: 9,
+                line: 2,
+                valid: 1,
+            }
         } else {
-            Span { anchor: 0, head: 0, line: 0, valid: 0 }
+            Span {
+                anchor: 0,
+                head: 0,
+                line: 0,
+                valid: 0,
+            }
         }
     }
     extern "C" fn fake_diagnostic_message(_h: *const HostApi, _index: usize) -> *mut c_char {
@@ -1310,7 +1562,10 @@ mod tests {
         reply("warning")
     }
     extern "C" fn fake_option(_h: *const HostApi, name: *const c_char) -> *mut c_char {
-        record(format!("option:{}", unsafe { CStr::from_ptr(name) }.to_string_lossy()));
+        record(format!(
+            "option:{}",
+            unsafe { CStr::from_ptr(name) }.to_string_lossy()
+        ));
         reply("4")
     }
     extern "C" fn fake_search_pattern(_h: *const HostApi) -> *mut c_char {
@@ -1320,7 +1575,12 @@ mod tests {
         3
     }
     extern "C" fn fake_window_view(_h: *const HostApi) -> Span {
-        Span { anchor: 100, head: 400, line: 12, valid: 1 }
+        Span {
+            anchor: 100,
+            head: 400,
+            line: 12,
+            valid: 1,
+        }
     }
     extern "C" fn fake_file_size(_h: *const HostApi, path: *const c_char) -> i64 {
         // A missing file is -1, which the wrapper must turn into `None` rather
@@ -1344,11 +1604,7 @@ mod tests {
     extern "C" fn fake_file_perm(_h: *const HostApi, _path: *const c_char) -> *mut c_char {
         reply("rw-r--r--")
     }
-    extern "C" fn fake_buffer_line(
-        _h: *const HostApi,
-        buffer: usize,
-        line: usize,
-    ) -> *mut c_char {
+    extern "C" fn fake_buffer_line(_h: *const HostApi, buffer: usize, line: usize) -> *mut c_char {
         if buffer < 2 && line < 2 {
             reply(&format!("buf{buffer} line{line}"))
         } else {
@@ -1364,7 +1620,9 @@ mod tests {
         byte_offset / 2
     }
     extern "C" fn fake_command_exists(_h: *const HostApi, name: *const c_char) -> c_int {
-        let name = unsafe { CStr::from_ptr(name) }.to_string_lossy().into_owned();
+        let name = unsafe { CStr::from_ptr(name) }
+            .to_string_lossy()
+            .into_owned();
         record(format!("exists:{name}"));
         c_int::from(name == "write")
     }
@@ -1372,13 +1630,27 @@ mod tests {
         1
     }
     extern "C" fn fake_plugin_name(_h: *const HostApi, index: usize) -> *mut c_char {
-        if index == 0 { reply("hello 0.1.0") } else { ptr::null_mut() }
+        if index == 0 {
+            reply("hello 0.1.0")
+        } else {
+            ptr::null_mut()
+        }
     }
     extern "C" fn fake_mark(_h: *const HostApi, name: c_char) -> Span {
         if name as u8 as char == 'a' {
-            Span { anchor: 15, head: 15, line: 4, valid: 1 }
+            Span {
+                anchor: 15,
+                head: 15,
+                line: 4,
+                valid: 1,
+            }
         } else {
-            Span { anchor: 0, head: 0, line: 0, valid: 0 }
+            Span {
+                anchor: 0,
+                head: 0,
+                line: 0,
+                valid: 0,
+            }
         }
     }
     extern "C" fn fake_window_width(_h: *const HostApi) -> usize {
@@ -1388,6 +1660,131 @@ mod tests {
     }
     extern "C" fn fake_window_height(_h: *const HostApi) -> usize {
         24
+    }
+    extern "C" fn fake_dir_completions(_h: *const HostApi, prefix: *const c_char) -> *mut c_char {
+        // Only the directory from the file list, so a wrapper returning every
+        // path cannot pass.
+        if unsafe { CStr::from_ptr(prefix) }
+            .to_string_lossy()
+            .starts_with("src/")
+        {
+            reply("src/ui/")
+        } else {
+            ptr::null_mut()
+        }
+    }
+    extern "C" fn fake_option_set(_h: *const HostApi, name: *const c_char) -> c_int {
+        // `emptyopt` is set to "", which `option` cannot distinguish from unset.
+        let name = unsafe { CStr::from_ptr(name) }
+            .to_string_lossy()
+            .into_owned();
+        c_int::from(name == "shiftwidth" || name == "emptyopt")
+    }
+    extern "C" fn fake_buffer_language(_h: *const HostApi, index: usize) -> *mut c_char {
+        match index {
+            0 => reply("rust"),
+            1 => reply("toml"),
+            _ => ptr::null_mut(),
+        }
+    }
+    extern "C" fn fake_cursor_wanted_column(_h: *const HostApi) -> usize {
+        // Different from both the character column (7) and virtcol (11).
+        20
+    }
+    extern "C" fn fake_jump_count(_h: *const HostApi) -> usize {
+        2
+    }
+    extern "C" fn fake_jump(_h: *const HostApi, index: usize) -> Span {
+        match index {
+            0 => Span {
+                anchor: 5,
+                head: 5,
+                line: 1,
+                valid: 1,
+            },
+            1 => Span {
+                anchor: 90,
+                head: 90,
+                line: 30,
+                valid: 1,
+            },
+            _ => Span {
+                anchor: 0,
+                head: 0,
+                line: 0,
+                valid: 0,
+            },
+        }
+    }
+    extern "C" fn fake_jump_buffer(_h: *const HostApi, index: usize) -> usize {
+        // The older jump points into a buffer that has since been closed.
+        match index {
+            0 => usize::MAX,
+            1 => 0,
+            _ => usize::MAX,
+        }
+    }
+    extern "C" fn fake_jump_index(_h: *const HostApi) -> usize {
+        1
+    }
+    extern "C" fn fake_option_completions(
+        _h: *const HostApi,
+        prefix: *const c_char,
+    ) -> *mut c_char {
+        if unsafe { CStr::from_ptr(prefix) }.to_string_lossy() == "shift" {
+            reply("shiftround\nshiftwidth")
+        } else {
+            ptr::null_mut()
+        }
+    }
+    extern "C" fn fake_syntax_at(_h: *const HostApi, offset: usize) -> *mut c_char {
+        record(format!("syntax:{offset}"));
+        // Outermost first, innermost last -- the order the API promises.
+        if offset == 42 {
+            reply("comment\ncomment.line.documentation")
+        } else {
+            ptr::null_mut()
+        }
+    }
+    extern "C" fn fake_long_word_at_cursor(_h: *const HostApi) -> *mut c_char {
+        // The WORD keeps its punctuation; `word_at_cursor` gives "UnixStream".
+        reply("UnixStream::connect(path)")
+    }
+    extern "C" fn fake_screen_position(_h: *const HostApi) -> Span {
+        // Row 3 within the window, column 11 -- neither equal to the buffer
+        // line (4) nor to the character column (7).
+        Span {
+            anchor: 11,
+            head: 0,
+            line: 3,
+            valid: 1,
+        }
+    }
+    extern "C" fn fake_window_width_at(_h: *const HostApi, index: usize) -> usize {
+        match index {
+            0 => 80,
+            1 => 40, // a split, so the two windows differ
+            _ => usize::MAX,
+        }
+    }
+    extern "C" fn fake_window_height_at(_h: *const HostApi, index: usize) -> usize {
+        match index {
+            0 => 24,
+            1 => 12,
+            _ => usize::MAX,
+        }
+    }
+    extern "C" fn fake_file_completions(_h: *const HostApi, prefix: *const c_char) -> *mut c_char {
+        let prefix = unsafe { CStr::from_ptr(prefix) }
+            .to_string_lossy()
+            .into_owned();
+        record(format!("filecomp:{prefix}"));
+        if prefix.starts_with("src/") {
+            // A directory carries a trailing separator, as vim marks them.
+            reply("src/main.rs\nsrc/lib.rs\nsrc/ui/")
+        } else {
+            ptr::null_mut()
+        }
     }
     extern "C" fn fake_virtual_column(_h: *const HostApi) -> usize {
         // Deliberately unequal to `Cursor::column` (7), because the whole point
@@ -1433,10 +1830,17 @@ mod tests {
         }
     }
     extern "C" fn fake_fold_closed(_h: *const HostApi, line: usize) -> usize {
-        if line == 5 { 3 } else { usize::MAX }
+        if line == 5 {
+            3
+        } else {
+            usize::MAX
+        }
     }
     extern "C" fn fake_search_count(_h: *const HostApi, pattern: *const c_char) -> usize {
-        match unsafe { CStr::from_ptr(pattern) }.to_string_lossy().as_ref() {
+        match unsafe { CStr::from_ptr(pattern) }
+            .to_string_lossy()
+            .as_ref()
+        {
             "fn " => 7,
             "((" => 0, // an invalid regex counts zero rather than erroring
             _ => 0,
@@ -1447,12 +1851,24 @@ mod tests {
         pattern: *const c_char,
         from: usize,
     ) -> Span {
-        let pattern = unsafe { CStr::from_ptr(pattern) }.to_string_lossy().into_owned();
+        let pattern = unsafe { CStr::from_ptr(pattern) }
+            .to_string_lossy()
+            .into_owned();
         record(format!("search:{pattern}:{from}"));
         if pattern == "fn " && from < 100 {
-            Span { anchor: 100, head: 103, line: 12, valid: 1 }
+            Span {
+                anchor: 100,
+                head: 103,
+                line: 12,
+                valid: 1,
+            }
         } else {
-            Span { anchor: 0, head: 0, line: 0, valid: 0 }
+            Span {
+                anchor: 0,
+                head: 0,
+                line: 0,
+                valid: 0,
+            }
         }
     }
     extern "C" fn fake_pid(_h: *const HostApi) -> u32 {
@@ -1463,8 +1879,12 @@ mod tests {
         path: *const c_char,
         mods: *const c_char,
     ) -> *mut c_char {
-        let path = unsafe { CStr::from_ptr(path) }.to_string_lossy().into_owned();
-        let mods = unsafe { CStr::from_ptr(mods) }.to_string_lossy().into_owned();
+        let path = unsafe { CStr::from_ptr(path) }
+            .to_string_lossy()
+            .into_owned();
+        let mods = unsafe { CStr::from_ptr(mods) }
+            .to_string_lossy()
+            .into_owned();
         record(format!("fnamemodify:{path}:{mods}"));
         // An unknown modifier is refused, which the wrapper must surface as
         // None rather than as the untouched path.
@@ -1489,7 +1909,11 @@ mod tests {
         }
     }
     extern "C" fn fake_line_to_byte(_h: *const HostApi, line: usize) -> usize {
-        if line < 2 { line * 12 } else { usize::MAX }
+        if line < 2 {
+            line * 12
+        } else {
+            usize::MAX
+        }
     }
     extern "C" fn fake_byte_to_line(_h: *const HostApi, byte: usize) -> usize {
         byte / 12
@@ -1503,7 +1927,11 @@ mod tests {
     }
     extern "C" fn fake_buffer_path_at(_h: *const HostApi, index: usize) -> *mut c_char {
         // The second buffer is a scratch one, so the no-path case is reachable.
-        if index == 0 { reply("/tmp/a.rs") } else { ptr::null_mut() }
+        if index == 0 {
+            reply("/tmp/a.rs")
+        } else {
+            ptr::null_mut()
+        }
     }
     extern "C" fn fake_buffer_modified(_h: *const HostApi, index: usize) -> c_int {
         c_int::from(index == 1)
@@ -1544,9 +1972,24 @@ mod tests {
     }
     extern "C" fn fake_changelist(_h: *const HostApi, index: usize) -> Span {
         match index {
-            0 => Span { anchor: 3, head: 3, line: 0, valid: 1 },
-            1 => Span { anchor: 40, head: 40, line: 9, valid: 1 },
-            _ => Span { anchor: 0, head: 0, line: 0, valid: 0 },
+            0 => Span {
+                anchor: 3,
+                head: 3,
+                line: 0,
+                valid: 1,
+            },
+            1 => Span {
+                anchor: 40,
+                head: 40,
+                line: 9,
+                valid: 1,
+            },
+            _ => Span {
+                anchor: 0,
+                head: 0,
+                line: 0,
+                valid: 0,
+            },
         }
     }
     extern "C" fn fake_changelist_index(_h: *const HostApi) -> usize {
@@ -1554,12 +1997,22 @@ mod tests {
     }
     extern "C" fn fake_display_width(_h: *const HostApi, text: *const c_char) -> usize {
         // Two cells per char, so a caller using `len()` instead cannot pass.
-        unsafe { CStr::from_ptr(text) }.to_string_lossy().chars().count() * 2
+        unsafe { CStr::from_ptr(text) }
+            .to_string_lossy()
+            .chars()
+            .count()
+            * 2
     }
     extern "C" fn fake_completions(_h: *const HostApi, prefix: *const c_char) -> *mut c_char {
-        let prefix = unsafe { CStr::from_ptr(prefix) }.to_string_lossy().into_owned();
+        let prefix = unsafe { CStr::from_ptr(prefix) }
+            .to_string_lossy()
+            .into_owned();
         record(format!("completions:{prefix}"));
-        if prefix == "wr" { reply("write\nwrite-all\nwrite-quit") } else { ptr::null_mut() }
+        if prefix == "wr" {
+            reply("write\nwrite-all\nwrite-quit")
+        } else {
+            ptr::null_mut()
+        }
     }
 
     fn table() -> HostApi {
@@ -1642,6 +2095,21 @@ mod tests {
             file_at_cursor: fake_file_at_cursor,
             change_number: fake_change_number,
             buffer_window: fake_buffer_window,
+            long_word_at_cursor: fake_long_word_at_cursor,
+            screen_position: fake_screen_position,
+            window_width_at: fake_window_width_at,
+            window_height_at: fake_window_height_at,
+            file_completions: fake_file_completions,
+            dir_completions: fake_dir_completions,
+            option_set: fake_option_set,
+            buffer_language: fake_buffer_language,
+            cursor_wanted_column: fake_cursor_wanted_column,
+            jump_count: fake_jump_count,
+            jump: fake_jump,
+            jump_buffer: fake_jump_buffer,
+            jump_index: fake_jump_index,
+            option_completions: fake_option_completions,
+            syntax_at: fake_syntax_at,
         }
     }
 
@@ -1977,7 +2445,10 @@ mod tests {
         );
         assert!(host.fname_modify("/tmp/a.rs", ":z").is_none(), "refused");
         assert_eq!(
-            calls().into_iter().filter(|c| c != "free").collect::<Vec<_>>(),
+            calls()
+                .into_iter()
+                .filter(|c| c != "free")
+                .collect::<Vec<_>>(),
             vec!["fnamemodify:/tmp/a.rs::p:h", "fnamemodify:/tmp/a.rs::z"]
         );
     }
@@ -2067,7 +2538,10 @@ mod tests {
         assert!(host.search_next("fn ", 500).is_none(), "nothing after 500");
 
         assert_eq!(
-            calls().into_iter().filter(|c| c != "free").collect::<Vec<_>>(),
+            calls()
+                .into_iter()
+                .filter(|c| c != "free")
+                .collect::<Vec<_>>(),
             vec!["search:fn :0", "search:fn :500"]
         );
 
@@ -2112,6 +2586,168 @@ mod tests {
         assert_eq!(host.change_number(), 17);
     }
 
+    /// `<cWORD>` keeps punctuation where `<cword>` stops at it, which is the
+    /// only reason to have both.
+    #[test]
+    fn the_word_and_the_long_word_are_different_objects() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.word_at_cursor().as_deref(), Some("UnixStream"));
+        assert_eq!(
+            host.long_word_at_cursor().as_deref(),
+            Some("UnixStream::connect(path)")
+        );
+    }
+
+    /// A screen position is relative to the window, so it matches neither the
+    /// buffer line nor the character column.
+    #[test]
+    fn the_screen_position_is_relative_to_the_window() {
+        let api = table();
+        let host = host(&api);
+
+        let screen = host.screen_position().expect("on screen");
+        assert_eq!((screen.line, screen.anchor), (3, 11));
+        assert_eq!(
+            host.cursor().unwrap().line,
+            3,
+            "buffer line differs in general"
+        );
+        assert_ne!(
+            screen.anchor,
+            host.cursor().unwrap().column,
+            "cells vs chars"
+        );
+    }
+
+    /// Each window has its own size, so a split does not report the focused
+    /// window's dimensions for both.
+    #[test]
+    fn each_window_reports_its_own_size() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.window_size_at(0), Some((80, 24)));
+        assert_eq!(host.window_size_at(1), Some((40, 12)), "a split");
+        assert_eq!(host.window_size_at(9), None);
+    }
+
+    /// File completions come back as a list with directories marked, and the
+    /// prefix reaches the host unchanged.
+    #[test]
+    fn file_completions_mark_directories() {
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        let paths = host.file_completions("src/");
+        assert_eq!(paths, vec!["src/main.rs", "src/lib.rs", "src/ui/"]);
+        assert!(
+            paths.last().unwrap().ends_with('/'),
+            "a directory is marked"
+        );
+        assert!(host.file_completions("nowhere/").is_empty());
+        assert_eq!(
+            calls()
+                .into_iter()
+                .filter(|c| c != "free")
+                .collect::<Vec<_>>(),
+            vec!["filecomp:src/", "filecomp:nowhere/"]
+        );
+    }
+
+    /// `exists("&opt")` answers what `option` cannot: an option set to the
+    /// empty string is set, and one never set is not, though both read as no
+    /// value.
+    #[test]
+    fn option_set_distinguishes_empty_from_absent() {
+        let api = table();
+        let host = host(&api);
+
+        assert!(host.option_set("shiftwidth"));
+        assert!(host.option_set("emptyopt"), "set to empty is still set");
+        assert!(!host.option_set("nosuchoption"));
+    }
+
+    /// The wanted column is a third distinct number, alongside the character
+    /// column and the screen column.
+    #[test]
+    fn the_wanted_column_is_its_own_number() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.cursor().unwrap().column, 7, "characters");
+        assert_eq!(host.virtual_column(), 11, "cells");
+        assert_eq!(
+            host.cursor_wanted_column(),
+            Some(20),
+            "what motion aims for"
+        );
+    }
+
+    /// A jump outlives the buffer it points into, so its buffer is `None` when
+    /// that buffer has been closed rather than a stale index into whatever now
+    /// sits at that position.
+    #[test]
+    fn a_jump_into_a_closed_buffer_has_no_buffer() {
+        let api = table();
+        let host = host(&api);
+
+        let jumps = host.jumps();
+        assert_eq!(jumps.len(), 2);
+        assert_eq!(jumps[0].0.anchor, 5);
+        assert!(jumps[0].1.is_none(), "that buffer is gone");
+        assert_eq!(jumps[1].1, Some(0), "still open");
+        assert_eq!(host.jump_index(), 1, "where C-o resumes");
+    }
+
+    /// Directory completion is a subset of file completion, and option
+    /// completion covers only what has been set.
+    #[test]
+    fn the_narrower_completions_return_less() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.file_completions("src/").len(), 3);
+        assert_eq!(host.dir_completions("src/"), vec!["src/ui/"], "dirs only");
+        assert_eq!(
+            host.option_completions("shift"),
+            vec!["shiftround", "shiftwidth"]
+        );
+        assert!(host.option_completions("zzz").is_empty());
+        assert_eq!(host.buffer_language(1).as_deref(), Some("toml"));
+    }
+
+    /// The syntax stack is outermost-first, so the broad scope answers "is this
+    /// a comment" and the last element answers "what kind".
+    #[test]
+    fn the_syntax_stack_runs_outermost_to_innermost() {
+        let api = table();
+        let host = host(&api);
+        CALLS.with(|calls| calls.borrow_mut().clear());
+
+        let scopes = host.syntax_at(42);
+        assert_eq!(scopes, vec!["comment", "comment.line.documentation"]);
+        assert!(
+            scopes.iter().any(|s| s.starts_with("comment")),
+            "the broad question"
+        );
+        assert_eq!(
+            scopes.last().map(String::as_str),
+            Some("comment.line.documentation"),
+            "the specific one"
+        );
+        assert!(host.syntax_at(0).is_empty(), "nothing covers it");
+        assert_eq!(
+            calls()
+                .into_iter()
+                .filter(|c| c != "free")
+                .collect::<Vec<_>>(),
+            vec!["syntax:42", "syntax:0"]
+        );
+    }
+
     /// A diagnostic arrives as one value: where, what, and how bad.
     #[test]
     fn a_diagnostic_arrives_whole() {
@@ -2122,7 +2758,10 @@ mod tests {
         assert_eq!(diagnostics.len(), 1);
         assert_eq!(diagnostics[0].message, "unused variable");
         assert_eq!(diagnostics[0].severity, "warning");
-        assert_eq!((diagnostics[0].span.anchor, diagnostics[0].span.head), (5, 9));
+        assert_eq!(
+            (diagnostics[0].span.anchor, diagnostics[0].span.head),
+            (5, 9)
+        );
     }
 
     /// `lines` stops at the buffer's end rather than running to the requested

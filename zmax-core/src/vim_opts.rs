@@ -23,6 +23,17 @@ thread_local! {
     static STORE: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
 }
 
+/// Every option name that has been set, sorted. The read half of [`set`]:
+/// `:set` can record an option, so something has to be able to list them --
+/// vim's `getcompletion(.., "option")` and `:set all` both need this.
+pub fn names() -> Vec<String> {
+    STORE.with(|s| {
+        let mut names: Vec<String> = s.borrow().keys().cloned().collect();
+        names.sort_unstable();
+        names
+    })
+}
+
 /// Record a `:set name=value` (`value` is `on`/`off` for boolean options).
 pub fn set(name: &str, value: &str) {
     STORE.with(|s| {

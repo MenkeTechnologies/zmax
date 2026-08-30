@@ -275,6 +275,30 @@ impl JumpList {
         Self { jumps, current: 0 }
     }
 
+    /// How many jumps are recorded (vim `getjumplist()`'s list length).
+    pub fn len(&self) -> usize {
+        self.jumps.len()
+    }
+
+    /// Whether the jump list is empty.
+    pub fn is_empty(&self) -> bool {
+        self.jumps.is_empty()
+    }
+
+    /// Where `C-o`/`C-i` would resume — vim `getjumplist()`'s second element.
+    pub fn current_index(&self) -> usize {
+        self.current
+    }
+
+    /// One recorded jump, oldest first: the document it was made in and the
+    /// selection it was made from. The read half of the pushing side, which
+    /// the list has had all along.
+    pub fn get(&self, index: usize) -> Option<(DocumentId, &Selection)> {
+        self.jumps
+            .get(index)
+            .map(|entry| (entry.jump.0, &entry.jump.1))
+    }
+
     /// Empty the jump list (vim `:clearjumps`).
     pub fn clear(&mut self) {
         self.jumps.clear();

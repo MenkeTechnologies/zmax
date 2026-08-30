@@ -544,14 +544,16 @@ extern "C" fn host_file_type(_host: *const HostApi, path: *const c_char) -> *mut
         // `symlink_metadata` so a link reports as one rather than as its
         // target, which is what vim's `getftype` does.
         let meta = std::fs::symlink_metadata(&p).ok()?;
-        Some(if meta.file_type().is_symlink() {
-            "link"
-        } else if meta.is_dir() {
-            "dir"
-        } else {
-            "file"
-        }
-        .to_string())
+        Some(
+            if meta.file_type().is_symlink() {
+                "link"
+            } else if meta.is_dir() {
+                "dir"
+            } else {
+                "file"
+            }
+            .to_string(),
+        )
     });
     into_raw_cstring(kind)
 }
@@ -574,9 +576,15 @@ extern "C" fn host_file_perm(_host: *const HostApi, path: *const c_char) -> *mut
             let mode = meta.permissions().mode();
             // `rwxrwxrwx`, high bit first, exactly as getfperm renders it.
             let bits = [
-                (0o400, 'r'), (0o200, 'w'), (0o100, 'x'),
-                (0o040, 'r'), (0o020, 'w'), (0o010, 'x'),
-                (0o004, 'r'), (0o002, 'w'), (0o001, 'x'),
+                (0o400, 'r'),
+                (0o200, 'w'),
+                (0o100, 'x'),
+                (0o040, 'r'),
+                (0o020, 'w'),
+                (0o010, 'x'),
+                (0o004, 'r'),
+                (0o002, 'w'),
+                (0o001, 'x'),
             ];
             Some(
                 bits.iter()
@@ -597,11 +605,7 @@ extern "C" fn host_file_perm(_host: *const HostApi, path: *const c_char) -> *mut
     into_raw_cstring(perm)
 }
 
-extern "C" fn host_buffer_line(
-    _host: *const HostApi,
-    buffer: usize,
-    line: usize,
-) -> *mut c_char {
+extern "C" fn host_buffer_line(_host: *const HostApi, buffer: usize, line: usize) -> *mut c_char {
     let text = with_cx(|cx| {
         let doc = cx.editor.documents().nth(buffer)?;
         let rope = doc.text();
@@ -748,7 +752,10 @@ extern "C" fn host_marks(_host: *const HostApi) -> *mut c_char {
             })
             .collect::<Vec<_>>()
     });
-    into_raw_cstring(rows.filter(|rows| !rows.is_empty()).map(|rows| rows.join("\n")))
+    into_raw_cstring(
+        rows.filter(|rows| !rows.is_empty())
+            .map(|rows| rows.join("\n")),
+    )
 }
 
 extern "C" fn host_changelist_count(_host: *const HostApi) -> usize {
@@ -1048,10 +1055,7 @@ extern "C" fn host_fold_level(_host: *const HostApi, line: usize) -> usize {
 }
 
 extern "C" fn host_fold_closed(_host: *const HostApi, line: usize) -> usize {
-    with_cx(|cx| {
-        doc_folds_closed_start(cx, line)
-    })
-    .unwrap_or(usize::MAX)
+    with_cx(|cx| doc_folds_closed_start(cx, line)).unwrap_or(usize::MAX)
 }
 
 /// The first line of the innermost closed fold covering `line`.
@@ -1082,11 +1086,7 @@ extern "C" fn host_search_count(_host: *const HostApi, pattern: *const c_char) -
     .unwrap_or(0)
 }
 
-extern "C" fn host_search_next(
-    _host: *const HostApi,
-    pattern: *const c_char,
-    from: usize,
-) -> Span {
+extern "C" fn host_search_next(_host: *const HostApi, pattern: *const c_char, from: usize) -> Span {
     let Some(pattern) = arg_string(pattern) else {
         return NO_SPAN;
     };
@@ -1190,6 +1190,288 @@ extern "C" fn host_buffer_window(_host: *const HostApi, buffer: usize) -> usize 
     .unwrap_or(usize::MAX)
 }
 
+extern "C" fn host_long_word_at_cursor(_host: *const HostApi) -> *mut c_char {
+    let word = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        // `long` is vim's WORD: whitespace-delimited, so punctuation stays.
+        let word = zmax_core::textobject::textobject_word(
+            text,
+            range,
+            zmax_core::textobject::TextObject::Inside,
+            1,
+            true,
+        );
+        let selected = text.slice(word.from()..word.to()).to_string();
+        (!selected.trim().is_empty()).then_some(selected)
+    });
+    into_raw_cstring(word.flatten())
+}
+
+extern "C" fn host_screen_position(_host: *const HostApi) -> Span {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let cursor_line = text.char_to_line(cursor);
+
+        let first = doc.view_offset(view.id).anchor.min(text.len_chars());
+        let first_line = text.char_to_line(first);
+        // Above the viewport there is no screen row, so the position is not a
+        // valid one rather than a negative row clamped to zero.
+        if cursor_line < first_line {
+            return NO_SPAN;
+        }
+        Span {
+            anchor: host_virtual_column(_host),
+            head: 0,
+            line: cursor_line - first_line,
+            valid: 1,
+        }
+    })
+    .unwrap_or(NO_SPAN)
+}
+
+extern "C" fn host_window_width_at(_host: *const HostApi, index: usize) -> usize {
+    with_cx(|cx| {
+        let Some((view, _)) = cx.editor.tree.views().nth(index) else {
+            return usize::MAX;
+        };
+        let doc_id = view.doc;
+        let area = cx
+            .editor
+            .documents()
+            .find(|doc| doc.id() == doc_id)
+            .map(|doc| view.inner_area(doc));
+        area.map(|area| area.width as usize).unwrap_or(usize::MAX)
+    })
+    .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_window_height_at(_host: *const HostApi, index: usize) -> usize {
+    with_cx(|cx| {
+        let Some((view, _)) = cx.editor.tree.views().nth(index) else {
+            return usize::MAX;
+        };
+        let doc_id = view.doc;
+        let area = cx
+            .editor
+            .documents()
+            .find(|doc| doc.id() == doc_id)
+            .map(|doc| view.inner_area(doc));
+        area.map(|area| area.height as usize).unwrap_or(usize::MAX)
+    })
+    .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_file_completions(_host: *const HostApi, prefix: *const c_char) -> *mut c_char {
+    let Some(prefix) = arg_string(prefix) else {
+        return ptr::null_mut();
+    };
+    let expanded = zmax_stdx::path::expand_tilde(std::path::Path::new(&prefix));
+    // Split into the directory to read and the fragment to match, so a prefix
+    // ending in a separator lists that directory whole.
+    let (dir, fragment) = if prefix.ends_with(std::path::MAIN_SEPARATOR) {
+        (expanded.to_path_buf(), String::new())
+    } else {
+        (
+            expanded
+                .parent()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| std::path::PathBuf::from(".")),
+            expanded
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+        )
+    };
+
+    let Ok(entries) = std::fs::read_dir(if dir.as_os_str().is_empty() {
+        std::path::Path::new(".")
+    } else {
+        dir.as_path()
+    }) else {
+        return ptr::null_mut();
+    };
+
+    let mut matches: Vec<String> = entries
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if !name.starts_with(&fragment) {
+                return None;
+            }
+            let mut path = dir.join(&name).to_string_lossy().into_owned();
+            // vim marks a directory with a trailing separator so a caller can
+            // tell it apart without stat'ing it again.
+            if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                path.push(std::path::MAIN_SEPARATOR);
+            }
+            Some(path)
+        })
+        .collect();
+    matches.sort_unstable();
+
+    into_raw_cstring((!matches.is_empty()).then(|| matches.join("\n")))
+}
+
+extern "C" fn host_dir_completions(_host: *const HostApi, prefix: *const c_char) -> *mut c_char {
+    // The file list already marks directories with a trailing separator, so
+    // filtering on that keeps the two in step rather than re-deriving it.
+    let raw = host_file_completions(_host, prefix);
+    if raw.is_null() {
+        return ptr::null_mut();
+    }
+    let all = unsafe { CStr::from_ptr(raw) }
+        .to_string_lossy()
+        .into_owned();
+    unsafe { drop(CString::from_raw(raw)) };
+
+    let dirs: Vec<&str> = all
+        .lines()
+        .filter(|path| path.ends_with(std::path::MAIN_SEPARATOR))
+        .collect();
+    into_raw_cstring((!dirs.is_empty()).then(|| dirs.join("\n")))
+}
+
+extern "C" fn host_option_set(_host: *const HostApi, name: *const c_char) -> c_int {
+    let set = arg_string(name)
+        .map(|name| zmax_core::vim_opts::get(&[name.as_str()]).is_some())
+        .unwrap_or(false);
+    c_int::from(set)
+}
+
+extern "C" fn host_buffer_language(_host: *const HostApi, index: usize) -> *mut c_char {
+    let language = with_cx(|cx| {
+        cx.editor
+            .documents()
+            .nth(index)
+            .and_then(|doc| doc.language_name().map(str::to_string))
+    });
+    into_raw_cstring(language.flatten())
+}
+
+extern "C" fn host_cursor_wanted_column(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        doc.selection(view.id)
+            .primary()
+            .old_visual_position
+            // The remembered column a vertical motion aims for; the row half of
+            // the pair is not part of `curswant`.
+            .map(|(_row, column)| column as usize)
+            .unwrap_or(usize::MAX)
+    })
+    .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_jump_count(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let view = cx.editor.tree.get(cx.editor.tree.focus);
+        view.jumps.len()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_jump(_host: *const HostApi, index: usize) -> Span {
+    with_cx(|cx| {
+        let view = cx.editor.tree.get(cx.editor.tree.focus);
+        let Some((doc_id, selection)) = view.jumps.get(index) else {
+            return NO_SPAN;
+        };
+        let range = selection.primary();
+        // The jump's own document, which is not necessarily the current one --
+        // measuring the line against the wrong buffer would be nonsense.
+        let Some(doc) = cx.editor.documents().find(|doc| doc.id() == doc_id) else {
+            return NO_SPAN;
+        };
+        let text = doc.text().slice(..);
+        let cursor = range.cursor(text).min(text.len_chars());
+        Span {
+            anchor: cursor,
+            head: cursor,
+            line: text.char_to_line(cursor),
+            valid: 1,
+        }
+    })
+    .unwrap_or(NO_SPAN)
+}
+
+extern "C" fn host_jump_buffer(_host: *const HostApi, index: usize) -> usize {
+    with_cx(|cx| {
+        let view = cx.editor.tree.get(cx.editor.tree.focus);
+        let Some((doc_id, _)) = view.jumps.get(index) else {
+            return usize::MAX;
+        };
+        // A jump outlives the buffer it points into, so a closed one has no
+        // index rather than a stale one.
+        cx.editor
+            .documents()
+            .position(|doc| doc.id() == doc_id)
+            .unwrap_or(usize::MAX)
+    })
+    .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_jump_index(_host: *const HostApi) -> usize {
+    with_cx(|cx| {
+        let view = cx.editor.tree.get(cx.editor.tree.focus);
+        view.jumps.current_index()
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn host_option_completions(_host: *const HostApi, prefix: *const c_char) -> *mut c_char {
+    let Some(prefix) = arg_string(prefix) else {
+        return ptr::null_mut();
+    };
+    // Only options that have been set are known: `:set` is the only thing that
+    // records one, so there is no table of every possible name to draw on.
+    let matches: Vec<String> = zmax_core::vim_opts::names()
+        .into_iter()
+        .filter(|name| name.starts_with(&prefix))
+        .collect();
+    into_raw_cstring((!matches.is_empty()).then(|| matches.join("\n")))
+}
+
+extern "C" fn host_syntax_at(_host: *const HostApi, offset: usize) -> *mut c_char {
+    let scopes = with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let syntax = doc.syntax()?;
+        let text = doc.text().slice(..);
+        let target = text.char_to_byte(offset.min(text.len_chars())) as u32;
+
+        let loader = cx.editor.syn_loader.load();
+        let mut highlighter = syntax.highlighter(text, &loader, ..);
+
+        // Walk events up to the offset, keeping the active stack. `Refresh`
+        // means the highlighter rebuilt the stack rather than pushing onto it,
+        // so the old contents no longer apply -- the same contract the renderer
+        // follows in ui::markdown.
+        let mut stack: Vec<zmax_core::syntax::Highlight> = Vec::new();
+        while highlighter.next_event_offset() <= target {
+            let (event, new_highlights) = highlighter.advance();
+            if event == zmax_core::syntax::HighlightEvent::Refresh {
+                stack.clear();
+            }
+            stack.extend(new_highlights);
+            // `advance` past the end stops moving, so bail rather than spin.
+            if highlighter.next_event_offset() == u32::MAX {
+                break;
+            }
+        }
+
+        let theme = &cx.editor.theme;
+        let names: Vec<String> = stack
+            .into_iter()
+            .map(|highlight| theme.scope(highlight).to_string())
+            .collect();
+        (!names.is_empty()).then(|| names.join("\n"))
+    });
+    into_raw_cstring(scopes.flatten())
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -1281,6 +1563,21 @@ fn host_api() -> *const HostApi {
             file_at_cursor: host_file_at_cursor,
             change_number: host_change_number,
             buffer_window: host_buffer_window,
+            long_word_at_cursor: host_long_word_at_cursor,
+            screen_position: host_screen_position,
+            window_width_at: host_window_width_at,
+            window_height_at: host_window_height_at,
+            file_completions: host_file_completions,
+            dir_completions: host_dir_completions,
+            option_set: host_option_set,
+            buffer_language: host_buffer_language,
+            cursor_wanted_column: host_cursor_wanted_column,
+            jump_count: host_jump_count,
+            jump: host_jump,
+            jump_buffer: host_jump_buffer,
+            jump_index: host_jump_index,
+            option_completions: host_option_completions,
+            syntax_at: host_syntax_at,
         });
         Box::into_raw(boxed) as usize
     });
