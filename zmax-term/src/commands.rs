@@ -2098,7 +2098,7 @@ impl MappableCommand {
         video_poker, "Play Jacks-or-Better video poker",
         klondike, "Play Klondike solitaire",
         nonogram, "Play nonogram / picross",
-        nova, "Play Nova, the open-galaxy fighter campaign with a squadron, Star Destroyers and trench runs",
+        nova, "Play Nova, the fighter campaign: squadrons, Star Destroyers, trench runs, walkers and a cockpit view",
         xref_find_references, "Find references to a symbol across the workspace (emacs xref-find-references)",
         project_find_file, "Find a file under the project root (emacs project-find-file)",
         diffmode, "Open the unified-diff viewer (emacs diff-mode)",

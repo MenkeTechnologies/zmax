@@ -132,6 +132,9 @@ const SENSE_COST: u32 = 45;
 const SENSE_TICKS: u32 = 90;
 const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
+/// Ticks between a walker's shots, and turns of cable it takes to bring one down.
+const WALKER_CADENCE: u32 = 26;
+const CABLE_WRAPS: u32 = 2;
 /// Ticks a line of radio chatter stays on the display.
 const CHATTER_TICKS: u32 = 110;
 /// Pips of power the reactor splits between lasers, shields and engines, and
@@ -577,10 +580,13 @@ pub enum Weapon {
     /// An ion cannon: it scrambles emplacements instead of breaking them, and a
     /// scrambled shield dome is a hull that can be shot.
     IonCannon,
+    /// A tow cable: useless against fighters, and the only thing that will put
+    /// a walker on its side.
+    TowCable,
 }
 
 impl Weapon {
-    pub const ALL: [Weapon; 12] = [
+    pub const ALL: [Weapon; 13] = [
         Weapon::LaserCannon,
         Weapon::QuadLaser,
         Weapon::HeavyLaser,
@@ -593,6 +599,7 @@ impl Weapon {
         Weapon::ArcCaster,
         Weapon::ProtonTorpedo,
         Weapon::IonCannon,
+        Weapon::TowCable,
     ];
 
     pub fn name(self) -> &'static str {
@@ -609,6 +616,7 @@ impl Weapon {
             Weapon::ArcCaster => "arc caster",
             Weapon::ProtonTorpedo => "proton torpedo",
             Weapon::IonCannon => "ion cannon",
+            Weapon::TowCable => "tow cable",
         }
     }
 
@@ -621,6 +629,7 @@ impl Weapon {
             Weapon::HeavyLaser | Weapon::ArcCaster => 1,
             Weapon::ConcussionMissile | Weapon::ProtonBomb | Weapon::Flechette => 2,
             Weapon::RocketPod | Weapon::IonCannon => 3,
+            Weapon::TowCable => 5,
             Weapon::ProtonTorpedo => 8,
             Weapon::MassDriver => 6,
         }
@@ -641,6 +650,7 @@ impl Weapon {
             Weapon::ArcCaster => "A",
             Weapon::ProtonTorpedo => "T",
             Weapon::IonCannon => "I",
+            Weapon::TowCable => "C",
         }
     }
 
@@ -662,6 +672,7 @@ pub enum ShotKind {
     Flak,
     Rail,
     Arc,
+    Cable,
     Enemy,
 }
 
@@ -676,6 +687,7 @@ impl ShotKind {
             ShotKind::Flak => "✱",
             ShotKind::Rail => "║",
             ShotKind::Arc => "≈",
+            ShotKind::Cable => "═",
             ShotKind::Enemy => "!",
         }
     }
@@ -783,6 +795,16 @@ impl Shot {
             ion: true,
             kind: ShotKind::Arc,
             ..Shot::bolt(pos, 0, damage)
+        }
+    }
+
+    /// A tow cable: it sweeps out and wraps whatever it drags across.
+    fn cable(pos: (i16, i16), drift: i16) -> Shot {
+        Shot {
+            speed: -1,
+            pierce: true,
+            kind: ShotKind::Cable,
+            ..Shot::bolt(pos, drift, 1)
         }
     }
 
@@ -2852,6 +2874,280 @@ pub struct Chatter {
     pub ticks: u32,
 }
 
+/// A world the fighting happens over. Most systems have one hanging in the
+/// court; a surface mission is flown down on the deck of one.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum Planet {
+    Tatooine,
+    Hoth,
+    Yavin,
+    Endor,
+    Bespin,
+    Kessel,
+    Alderaan,
+    Jakku,
+    Scarif,
+    Mustafar,
+    Dagobah,
+    Coruscant,
+    Naboo,
+    Geonosis,
+    Mandalore,
+    /// Nothing but stars out here.
+    DeepSpace,
+}
+
+impl Planet {
+    pub const ALL: [Planet; 16] = [
+        Planet::Tatooine,
+        Planet::Hoth,
+        Planet::Yavin,
+        Planet::Endor,
+        Planet::Bespin,
+        Planet::Kessel,
+        Planet::Alderaan,
+        Planet::Jakku,
+        Planet::Scarif,
+        Planet::Mustafar,
+        Planet::Dagobah,
+        Planet::Coruscant,
+        Planet::Naboo,
+        Planet::Geonosis,
+        Planet::Mandalore,
+        Planet::DeepSpace,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Planet::Tatooine => "Tatooine",
+            Planet::Hoth => "Hoth",
+            Planet::Yavin => "Yavin IV",
+            Planet::Endor => "Endor",
+            Planet::Bespin => "Bespin",
+            Planet::Kessel => "Kessel",
+            Planet::Alderaan => "Alderaan",
+            Planet::Jakku => "Jakku",
+            Planet::Scarif => "Scarif",
+            Planet::Mustafar => "Mustafar",
+            Planet::Dagobah => "Dagobah",
+            Planet::Coruscant => "Coruscant",
+            Planet::Naboo => "Naboo",
+            Planet::Geonosis => "Geonosis",
+            Planet::Mandalore => "Mandalore",
+            Planet::DeepSpace => "deep space",
+        }
+    }
+
+    pub fn blurb(self) -> &'static str {
+        match self {
+            Planet::Tatooine => "twin suns over open desert",
+            Planet::Hoth => "ice, and not much else",
+            Planet::Yavin => "a gas giant with a moon full of Rebels",
+            Planet::Endor => "forest moon under a half-built station",
+            Planet::Bespin => "gas streams and floating cities",
+            Planet::Kessel => "spice mines at the edge of the Maw",
+            Planet::Alderaan => "what is left of it",
+            Planet::Jakku => "a graveyard of hulls half-buried in sand",
+            Planet::Scarif => "beaches, and a shield gate above them",
+            Planet::Mustafar => "lava, ash and Imperial works",
+            Planet::Dagobah => "swamp thick enough to hide in",
+            Planet::Coruscant => "the whole world is one city",
+            Planet::Naboo => "green plains and a hangar full of fighters",
+            Planet::Geonosis => "red rock and droid foundries",
+            Planet::Mandalore => "grey dust and old armour",
+            Planet::DeepSpace => "nothing out here but stars",
+        }
+    }
+
+    /// The shading the disc is drawn with; ice reads bright, lava dark.
+    pub fn shade(self) -> &'static str {
+        match self {
+            Planet::Hoth | Planet::Bespin | Planet::Naboo => "░",
+            Planet::Tatooine | Planet::Jakku | Planet::Geonosis | Planet::Scarif => "▒",
+            Planet::DeepSpace => " ",
+            _ => "▓",
+        }
+    }
+
+    /// Whether a mission here is flown down on the deck rather than in orbit.
+    pub fn surface(self) -> bool {
+        matches!(
+            self,
+            Planet::Hoth | Planet::Endor | Planet::Scarif | Planet::Geonosis
+        )
+    }
+
+    /// Which world hangs over a given stretch of space.
+    pub fn of_sector(sector: Sector) -> Planet {
+        match sector {
+            Sector::SolarCorona => Planet::Tatooine,
+            Sector::AsteroidBelt => Planet::Hoth,
+            Sector::Nebula => Planet::Kessel,
+            Sector::DebrisRing => Planet::Alderaan,
+            Sector::Wreckage => Planet::Jakku,
+            Sector::CometTrail => Planet::Bespin,
+            Sector::VoidRift => Planet::Mustafar,
+            Sector::Minefield => Planet::Scarif,
+            Sector::IonStorm => Planet::Geonosis,
+            Sector::OpenSpace => Planet::DeepSpace,
+        }
+    }
+}
+
+/// What a mission actually asks of the squadron.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Objective {
+    /// Clear the system: everything Imperial in it has to go.
+    Destroy,
+    /// Get the transports out: this many have to reach the far side.
+    Escort { needed: usize },
+    /// Hold out for this long, whatever comes.
+    Survive { ticks: u32 },
+    /// Bring the walkers down; the cables are the only thing that will do it.
+    Walkers { count: usize },
+    /// Down the trench and put one in the port.
+    CoreRun,
+}
+
+impl Objective {
+    pub fn label(self) -> String {
+        match self {
+            Objective::Destroy => "clear the system".to_string(),
+            Objective::Escort { needed } => format!("get {needed} transports through"),
+            Objective::Survive { ticks } => format!("hold out for {}s", ticks / 14),
+            Objective::Walkers { count } => format!("bring down {count} walkers"),
+            Objective::CoreRun => "one shot down the shaft".to_string(),
+        }
+    }
+}
+
+/// One mission in the campaign: where it is fought, what is waiting, and what
+/// counts as flying it properly.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Mission {
+    pub name: &'static str,
+    pub briefing: &'static str,
+    pub sector: Sector,
+    pub terrain: TerrainKind,
+    pub objective: Objective,
+    pub capital: Option<CapitalKind>,
+    pub boss: Option<BossKind>,
+}
+
+impl Mission {
+    /// The campaign, flown in this order.
+    pub const CAMPAIGN: [Mission; 8] = [
+        Mission {
+            name: "Tatooine Patrol",
+            briefing: "A patrol out of the twin suns. Warm the cannons up on it.",
+            sector: Sector::SolarCorona,
+            terrain: TerrainKind::Open,
+            objective: Objective::Destroy,
+            capital: None,
+            boss: None,
+        },
+        Mission {
+            name: "The Kessel Run",
+            briefing: "Twelve parsecs of nebula with the Maw pulling at you. Fly it.",
+            sector: Sector::Nebula,
+            terrain: TerrainKind::Tunnel,
+            objective: Objective::Survive { ticks: 900 },
+            capital: None,
+            boss: None,
+        },
+        Mission {
+            name: "Blockade Run",
+            briefing: "A Star Destroyer is sitting on the lane. Punch a hole in it.",
+            sector: Sector::OpenSpace,
+            terrain: TerrainKind::Open,
+            objective: Objective::Destroy,
+            capital: Some(CapitalKind::StarDestroyer),
+            boss: None,
+        },
+        Mission {
+            name: "Battle of Yavin",
+            briefing: "The station's shields are down to the trench. Use the Force.",
+            sector: Sector::OpenSpace,
+            terrain: TerrainKind::Trench,
+            objective: Objective::CoreRun,
+            capital: Some(CapitalKind::DeathStar),
+            boss: None,
+        },
+        Mission {
+            name: "Battle of Hoth",
+            briefing: "Walkers on the north ridge. The cannons will not cut it — use the cables.",
+            sector: Sector::AsteroidBelt,
+            terrain: TerrainKind::Open,
+            objective: Objective::Walkers { count: 3 },
+            capital: None,
+            boss: None,
+        },
+        Mission {
+            name: "Evacuation of Hoth",
+            briefing: "Transports are lifting off. Keep them alive until they jump.",
+            sector: Sector::AsteroidBelt,
+            terrain: TerrainKind::Open,
+            objective: Objective::Escort { needed: 3 },
+            capital: Some(CapitalKind::StarDestroyer),
+            boss: None,
+        },
+        Mission {
+            name: "Cloud City",
+            briefing: "An ace is waiting in the gas streams. He knows you are coming.",
+            sector: Sector::CometTrail,
+            terrain: TerrainKind::Gates,
+            objective: Objective::Destroy,
+            capital: None,
+            boss: Some(BossKind::AceTie),
+        },
+        Mission {
+            name: "Battle of Endor",
+            briefing: "The command ship first, then straight into the second station.",
+            sector: Sector::DebrisRing,
+            terrain: TerrainKind::Trench,
+            objective: Objective::CoreRun,
+            capital: Some(CapitalKind::DeathStar),
+            boss: None,
+        },
+    ];
+}
+
+/// A transport running for the far side of the court.
+#[derive(Clone, Debug)]
+pub struct Transport {
+    pub pos: (i16, i16),
+    pub hp: i32,
+    /// True once it has crossed and gone to lightspeed.
+    pub away: bool,
+}
+
+/// An armoured walker on the surface. Cannons barely mark it; a cable wrapped
+/// round its legs twice puts it down.
+#[derive(Clone, Debug)]
+pub struct Walker {
+    pub pos: (i16, i16),
+    pub hp: i32,
+    /// Turns of cable round the legs.
+    pub wraps: u32,
+    pub cooldown: u32,
+    pub down: bool,
+}
+
+impl Walker {
+    /// Six cells of hull, drawn from the anchor.
+    pub const SPAN: i16 = 3;
+
+    fn new(pos: (i16, i16), armour: i32) -> Walker {
+        Walker {
+            pos,
+            hp: 60 + armour * 8,
+            wraps: 0,
+            cooldown: 24,
+            down: false,
+        }
+    }
+}
+
 /// Where the reactor's output is going. Six pips, split three ways: cannons hit
 /// harder, deflectors knit themselves back, engines push the hull along and
 /// charge the special faster.
@@ -3004,6 +3300,17 @@ pub struct Game {
     pub guided: bool,
     /// Squadron radio traffic, newest first.
     pub chatter: Vec<Chatter>,
+    /// The campaign mission being flown, and where the squadron is up to.
+    pub mission: Option<Mission>,
+    pub campaign_at: usize,
+    /// The world this system belongs to.
+    pub planet: Planet,
+    /// What the mission wants, and the clock or count that tracks it.
+    pub objective: Objective,
+    pub objective_ticks: u32,
+    /// Transports being escorted, and walkers to be brought down.
+    pub transports: Vec<Transport>,
+    pub walkers: Vec<Walker>,
     /// The guns aboard, and the missiles in the launcher.
     pub owned: Vec<Weapon>,
     pub missiles: u32,
@@ -3093,6 +3400,13 @@ impl Game {
             sense: 0,
             guided: false,
             chatter: Vec::new(),
+            mission: None,
+            campaign_at: 0,
+            planet: Planet::DeepSpace,
+            objective: Objective::Destroy,
+            objective_ticks: 0,
+            transports: Vec::new(),
+            walkers: Vec::new(),
             owned: vec![Weapon::LaserCannon],
             missiles: MISSILE_START,
             score: 0,
@@ -3180,6 +3494,11 @@ impl Game {
         self.sense = 0;
         self.guided = false;
         self.chatter.clear();
+        self.mission = None;
+        self.campaign_at = 0;
+        self.objective = Objective::Destroy;
+        self.transports.clear();
+        self.walkers.clear();
         self.lives = 3;
         self.score = 0;
         self.credits = 0;
@@ -3439,8 +3758,10 @@ impl Game {
             _ => "All wings report in. Stay on target.",
         };
         self.say(arrival);
+        self.planet = Planet::of_sector(self.sector);
         self.dress_sector();
         self.dress_terrain();
+        self.dress_objective();
         self.claim_node_bonus();
         if self.node.kind == NodeKind::Capital {
             // A trench means a battlestation; open plating means a wedge, and
@@ -3699,6 +4020,12 @@ impl Game {
                     self.launch(Shot::torpedo((r, c + dx), dmg * 4 + 6));
                 }
             }
+            Weapon::TowCable => {
+                // The cable sweeps both ways; it is aimed at legs, not hulls.
+                for drift in [-1, 1] {
+                    self.launch(Shot::cable((r, c), drift));
+                }
+            }
             Weapon::IonCannon => {
                 let lanes: &[i16] = match level {
                     1 => &[0],
@@ -3888,6 +4215,7 @@ impl Game {
             line.ticks = line.ticks.saturating_sub(1);
         }
         self.chatter.retain(|c| c.ticks > 0);
+        self.objective_ticks = self.objective_ticks.saturating_sub(1);
         self.energy = (self.energy + self.regen()).min(self.max_energy());
         if self.combo_timer > 0 {
             self.combo_timer -= 1;
@@ -4429,6 +4757,10 @@ impl Game {
     /// Damage everything under a shot's footprint; returns whether it connected.
     fn hit_targets(&mut self, shot: &Shot) -> bool {
         let (r, c) = shot.pos;
+        if shot.kind == ShotKind::Cable {
+            // A cable does nothing to anything but legs.
+            return self.snag_walker((r, c));
+        }
         let mut hit = self.hit_boss(shot);
         if self.hit_capital(shot) {
             hit = true;
@@ -4798,11 +5130,32 @@ impl Game {
             self.add_score(bounty);
             self.gain_xp(bounty / 4);
         }
-        if self.enemies.is_empty()
-            && self.boss.is_none()
-            && self.capital.is_none()
-            && self.status == Status::Playing
-        {
+        // What counts as done depends on what was asked for.
+        let swept = self.enemies.is_empty() && self.boss.is_none() && self.capital.is_none();
+        let done = match self.objective {
+            Objective::Destroy => swept,
+            Objective::CoreRun => self.capital.is_none(),
+            Objective::Survive { .. } => self.objective_ticks == 0,
+            Objective::Walkers { .. } => {
+                !self.walkers.is_empty() && self.walkers.iter().all(|w| w.down)
+            }
+            Objective::Escort { .. } => {
+                !self.transports.is_empty() && self.transports.iter().all(|t| t.away || t.hp <= 0)
+            }
+        };
+        if done && self.status == Status::Playing {
+            if let Objective::Escort { needed } = self.objective {
+                let away = self.transports.iter().filter(|t| t.away).count();
+                if away >= needed {
+                    self.say("All transports away. Good work.");
+                    let bonus = 500 * away as u32;
+                    self.add_score(bonus);
+                } else {
+                    self.say("We lost too many of them.");
+                }
+            }
+        }
+        if done && self.status == Status::Playing {
             self.status = Status::WaveClear;
             self.intermission = INTERMISSION_TICKS;
             self.map.clear_here();
@@ -5340,6 +5693,172 @@ impl Game {
         }
     }
 
+    /// Fly the campaign instead of the open galaxy: the missions from the war,
+    /// in the order they were fought.
+    pub fn start_campaign(&mut self, class: ShipClass, difficulty: Difficulty) {
+        self.start(class, difficulty, Galaxy::Orion);
+        self.campaign_at = 0;
+        self.fly_mission(0);
+    }
+
+    /// Set up the campaign mission at `index` and launch straight into it.
+    pub fn fly_mission(&mut self, index: usize) {
+        let Some(&mission) = Mission::CAMPAIGN.get(index) else {
+            // The war is over; the ceremony is the reward.
+            self.mission = None;
+            self.status = Status::Hangar;
+            self.say("That is the last of them. Stand down — you have earned it.");
+            return;
+        };
+        self.campaign_at = index;
+        self.mission = Some(mission);
+        self.objective = mission.objective;
+        self.wave = index as u32 + 1;
+        self.node = MapNode {
+            pos: (index, 0),
+            region: Region::of_column(index, Mission::CAMPAIGN.len()),
+            kind: if mission.capital.is_some() {
+                NodeKind::Capital
+            } else if mission.boss.is_some() {
+                NodeKind::Boss
+            } else {
+                NodeKind::Battle
+            },
+            sector: mission.sector,
+            terrain: mission.terrain,
+            bonus: NodeBonus::Refit,
+            cleared: false,
+            explored: true,
+        };
+        self.status = Status::Playing;
+        self.spawn_wave();
+        self.say(mission.briefing);
+    }
+
+    /// Lay out whatever the mission's objective needs on top of the wave.
+    fn dress_objective(&mut self) {
+        self.transports.clear();
+        self.walkers.clear();
+        self.objective_ticks = 0;
+        match self.objective {
+            Objective::Survive { ticks } => self.objective_ticks = ticks,
+            Objective::Escort { needed } => {
+                for i in 0..needed + 1 {
+                    let row = SHIP_TOP - 2 - (i as i16 % 3);
+                    let col = 4 + i as i16 * 6;
+                    self.transports.push(Transport {
+                        pos: (row, col.min(W - 3)),
+                        hp: 18 + self.wave_armour() * 3,
+                        away: false,
+                    });
+                }
+            }
+            Objective::Walkers { count } => {
+                for i in 0..count {
+                    let col = 8 + i as i16 * 18;
+                    let walker = Walker::new((H - 3, col.min(W - 6)), self.wave_armour());
+                    self.walkers.push(walker);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Run the transports for the far side, and let the Empire shoot at them.
+    fn advance_transports(&mut self) {
+        if self.transports.is_empty() || !self.tick.is_multiple_of(3) {
+            return;
+        }
+        let mut lost = 0;
+        let mut away = 0;
+        for transport in self.transports.iter_mut() {
+            if transport.away || transport.hp <= 0 {
+                continue;
+            }
+            transport.pos.1 += 1;
+            if transport.pos.1 >= W - 2 {
+                transport.away = true;
+                away += 1;
+            }
+        }
+        // Anything Imperial in the same cell chews on them.
+        let cells: Vec<(usize, (i16, i16))> = self
+            .transports
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| !t.away && t.hp > 0)
+            .map(|(i, t)| (i, t.pos))
+            .collect();
+        let mut hits: Vec<usize> = Vec::new();
+        self.enemy_shots.retain(
+            |shot| match cells.iter().find(|(_, pos)| *pos == shot.pos) {
+                Some(&(i, _)) => {
+                    hits.push(i);
+                    false
+                }
+                None => true,
+            },
+        );
+        for i in hits {
+            self.transports[i].hp -= 3;
+            if self.transports[i].hp <= 0 {
+                lost += 1;
+            }
+        }
+        if lost > 0 {
+            self.say("They got one of the transports!");
+        }
+        if away > 0 {
+            self.say("Transport away. Keep the rest of them alive.");
+        }
+    }
+
+    /// Walk the walkers up the court and let them fire.
+    fn advance_walkers(&mut self) {
+        if self.walkers.is_empty() {
+            return;
+        }
+        let ship = self.ship;
+        let mut volley = Vec::new();
+        for walker in self.walkers.iter_mut() {
+            if walker.down {
+                continue;
+            }
+            if walker.cooldown > 0 {
+                walker.cooldown -= 1;
+            } else {
+                walker.cooldown = WALKER_CADENCE;
+                volley.push(Shot::enemy((walker.pos.0 - 1, walker.pos.1), 0, 1).heavy());
+            }
+        }
+        for shot in volley {
+            self.launch_enemy(shot);
+        }
+        let _ = ship;
+    }
+
+    /// Put a turn of cable round a walker's legs; two turns and it goes over.
+    fn snag_walker(&mut self, pos: (i16, i16)) -> bool {
+        let hit = self.walkers.iter_mut().find(|w| {
+            !w.down && (w.pos.0 - pos.0).abs() <= 1 && (w.pos.1 - pos.1).abs() <= Walker::SPAN
+        });
+        let Some(walker) = hit else {
+            return false;
+        };
+        walker.wraps += 1;
+        let down = walker.wraps >= CABLE_WRAPS;
+        if down {
+            walker.down = true;
+        }
+        if down {
+            self.award(600);
+            self.say("That got him! One down.");
+        } else {
+            self.say("Cable engaged — go around again.");
+        }
+        true
+    }
+
     /// Open the galaxy chart from the hangar.
     pub fn open_chart(&mut self) {
         if matches!(self.status, Status::Hangar | Status::Chart) {
@@ -5439,6 +5958,8 @@ impl Game {
                 self.advance_enemies();
                 self.advance_boss();
                 self.advance_capital();
+                self.advance_transports();
+                self.advance_walkers();
                 self.advance_wings();
                 self.advance_shots();
                 self.advance_enemy_shots();
@@ -5465,6 +5986,27 @@ impl Default for Game {
     }
 }
 
+/// Which way the fight is watched.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ViewMode {
+    /// Straight down on the court, the way the arcade did it.
+    TopDown,
+    /// Out of the canopy, with everything ahead projected onto the glass.
+    Cockpit,
+}
+
+impl ViewMode {
+    pub fn name(self) -> &'static str {
+        match self {
+            ViewMode::TopDown => "top-down",
+            ViewMode::Cockpit => "cockpit",
+        }
+    }
+}
+
+/// How many rows ahead of the hull the canopy shows.
+const COCKPIT_DEPTH: i16 = 18;
+
 /// The interactive Nova overlay.
 pub struct Nova {
     game: Game,
@@ -5482,6 +6024,8 @@ pub struct Nova {
     frames: u64,
     /// True while the squadron roster is up over everything else.
     roster: bool,
+    /// Whether the fight is watched from above or out of the canopy.
+    view: ViewMode,
 }
 
 impl Nova {
@@ -5497,6 +6041,7 @@ impl Nova {
             interval: Duration::from_millis(70),
             frames: 0,
             roster: false,
+            view: ViewMode::TopDown,
         }
     }
 
@@ -5529,6 +6074,261 @@ impl Nova {
         matches!(self.game.status, Status::Playing | Status::WaveClear)
             && !self.paused
             && !self.roster
+    }
+
+    /// The fight as it looks out of the canopy: everything ahead of the hull
+    /// projected onto the glass, near contacts big and low, far ones small and
+    /// close to the horizon.
+    fn render_cockpit(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let text_style = theme.get("ui.text");
+        let header_style = theme.get("ui.text.focus");
+        let frame_style = theme.get("ui.linenr");
+        let enemy_style = theme.get("error");
+        let boss_style = theme.get("error");
+        let shot_style = theme.get("warning");
+        let star_style = theme.get("ui.linenr");
+        let g = &self.game;
+        let ox = area.x + 1;
+        let oy = area.y + 1;
+        let glass_w = (area.width as i16 - 4).clamp(20, 96);
+        let glass_h = (area.height as i16 - 8).clamp(8, 30);
+        let centre_x = glass_w / 2;
+        let horizon = glass_h / 3;
+        let put = |surface: &mut Surface, x: i16, y: i16, glyph: &str, style| {
+            if (0..glass_w).contains(&x) && (0..glass_h).contains(&y) {
+                surface.set_string(ox + x as u16, oy + y as u16, glyph, style);
+            }
+        };
+        // Project a court cell onto the glass: `depth` is how far ahead it is.
+        let project = |row: i16, col: i16| -> Option<(i16, i16, i16)> {
+            let depth = g.ship.0 - row;
+            if !(0..COCKPIT_DEPTH).contains(&depth) {
+                return None;
+            }
+            let near = COCKPIT_DEPTH - depth;
+            let x = centre_x + (col - g.ship.1) * near / (COCKPIT_DEPTH / 3).max(1);
+            let y = horizon + (near * (glass_h - horizon - 2)) / COCKPIT_DEPTH;
+            Some((x, y, depth))
+        };
+
+        // Starfield, streaming out from the vanishing point.
+        for star in &g.stars {
+            if let Some((x, y, depth)) = project(star.pos.0, star.pos.1) {
+                let glyph = if depth < 6 { "*" } else { "·" };
+                put(surface, x, y, glyph, star_style);
+            }
+        }
+        // The capital ship: a wall of hull hanging over the horizon.
+        if let Some(cap) = &g.capital {
+            for dr in 0..cap.kind.depth() {
+                let span = cap.kind.span(dr);
+                for dc in (-span..=span).step_by(2) {
+                    if let Some((x, y, _)) = project(cap.pos.0 + dr, cap.pos.1 + dc) {
+                        put(surface, x, y, "▓", boss_style);
+                    }
+                }
+            }
+            for part in &cap.parts {
+                if part.hp <= 0 {
+                    continue;
+                }
+                let (r, c) = cap.part_cell(part);
+                if let Some((x, y, _)) = project(r, c) {
+                    put(surface, x, y, part.kind.glyph(), header_style);
+                }
+            }
+        }
+        // Contacts, biggest when they are closest.
+        for e in &g.enemies {
+            let Some((x, y, depth)) = project(e.pos.0, e.pos.1) else {
+                continue;
+            };
+            if depth < 7 {
+                for (i, glyph) in e.kind.sprite().chars().enumerate() {
+                    if glyph != ' ' {
+                        put(
+                            surface,
+                            x + i as i16 - 1,
+                            y,
+                            &glyph.to_string(),
+                            enemy_style,
+                        );
+                    }
+                }
+            } else {
+                put(surface, x, y, "•", enemy_style);
+            }
+        }
+        // Fire, ours and theirs.
+        for s in &g.enemy_shots {
+            if let Some((x, y, _)) = project(s.pos.0, s.pos.1) {
+                put(surface, x, y, "!", enemy_style);
+            }
+        }
+        for s in &g.shots {
+            if let Some((x, y, _)) = project(s.pos.0, s.pos.1) {
+                put(surface, x, y, "|", shot_style);
+            }
+        }
+        // Cannon tracers converging on the reticle from the wing roots.
+        for i in 1..4 {
+            let y = glass_h - 1 - i;
+            put(surface, centre_x - 6 + i, y, "╲", shot_style);
+            put(surface, centre_x + 6 - i, y, "╱", shot_style);
+        }
+        // The reticle, and a box on whatever is dead ahead.
+        let target = g
+            .enemies
+            .iter()
+            .filter(|e| e.pos.0 < g.ship.0 && (e.pos.1 - g.ship.1).abs() <= 3)
+            .min_by_key(|e| g.ship.0 - e.pos.0);
+        if let Some(e) = target {
+            if let Some((x, y, _)) = project(e.pos.0, e.pos.1) {
+                put(surface, x - 2, y, "⟦", header_style);
+                put(surface, x + 2, y, "⟧", header_style);
+            }
+        }
+        put(surface, centre_x, horizon + 1, "┼", header_style);
+        put(surface, centre_x - 2, horizon + 1, "─", frame_style);
+        put(surface, centre_x + 2, horizon + 1, "─", frame_style);
+        // Canopy frame: struts down the sides and the dash across the bottom.
+        for y in 0..glass_h {
+            put(surface, 0, y, "║", frame_style);
+            put(surface, glass_w - 1, y, "║", frame_style);
+        }
+        for x in 0..glass_w {
+            put(surface, x, 0, "═", frame_style);
+            put(surface, x, glass_h - 1, "▁", frame_style);
+        }
+        let dash = oy + glass_h as u16;
+        surface.set_string(
+            ox,
+            dash,
+            &format!(
+                "SHIELDS {}{}   LASERS {}   ENGINES {}   FORCE {}   TORPEDOES {}",
+                "▮".repeat(g.shield as usize),
+                "▯".repeat(g.max_shield.saturating_sub(g.shield) as usize),
+                "▮".repeat(g.power.lasers as usize),
+                "▮".repeat(g.power.engines as usize),
+                "▰".repeat((g.force * 6 / FORCE_MAX) as usize),
+                g.missiles
+            ),
+            text_style,
+        );
+        surface.set_string(
+            ox,
+            dash + 1,
+            &format!(
+                "{} · {} over {} · {}",
+                g.class.name(),
+                g.sector.name(),
+                g.planet.name(),
+                g.objective.label()
+            ),
+            header_style,
+        );
+        if let Some(line) = g.chatter.first() {
+            surface.set_string(ox, dash + 2, &line.line, header_style);
+        }
+        surface.set_string(
+            ox,
+            dash + 3,
+            "o returns to top-down · p pause · t roster · SPC fire · m torpedoes",
+            frame_style,
+        );
+    }
+
+    /// The pause panel: what the mission wants, what is in the racks, and every
+    /// key that changes the loadout without flying.
+    fn render_pause(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let header = theme.get("ui.text.focus");
+        let text = theme.get("ui.text");
+        let dim = theme.get("ui.linenr");
+        let g = &self.game;
+        let ox = area.x + 2;
+        let mut y = area.y;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "PAUSED — {} · {}",
+                g.mission.map_or("free flight", |m| m.name),
+                g.objective.label()
+            ),
+            header,
+        );
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "{} over {}   {}",
+                g.sector.name(),
+                g.planet.name(),
+                g.planet.blurb()
+            ),
+            dim,
+        );
+        y += 2;
+        surface.set_string(ox, y, "GUNS — press the number to fit it", header);
+        y += 1;
+        for (i, weapon) in g.owned.iter().enumerate() {
+            let fitted = *weapon == g.weapon;
+            surface.set_string(
+                ox,
+                y,
+                &format!(
+                    "{} [{}] {:<20} L{}",
+                    if fitted { "▶" } else { " " },
+                    (i + 1) % 10,
+                    weapon.name(),
+                    if fitted { g.weapon_level } else { 1 }
+                ),
+                if fitted { header } else { text },
+            );
+            y += 1;
+        }
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "POWER   [z] lasers {}   [c] deflectors {}   [v] engines {}",
+                "▮".repeat(g.power.lasers as usize),
+                "▮".repeat(g.power.shields as usize),
+                "▮".repeat(g.power.engines as usize)
+            ),
+            text,
+        );
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "FORCE   {}/{}   [e] sense ({})   [y] pull ({})   [u] guided ({})",
+                g.force, FORCE_MAX, SENSE_COST, PULL_COST, GUIDED_COST
+            ),
+            text,
+        );
+        y += 1;
+        surface.set_string(
+            ox,
+            y,
+            &format!(
+                "STORES  torpedoes {}   bombs {}   shields {}/{}   lives {}",
+                g.missiles, g.bombs, g.shield, g.max_shield, g.lives
+            ),
+            text,
+        );
+        y += 2;
+        surface.set_string(
+            ox,
+            y,
+            "p resumes · o swaps view · t roster · [ ] cycles guns · r retry · n new · q quit",
+            dim,
+        );
     }
 
     /// The squadron roster: every fighter, what it is carrying and how it is
@@ -5657,7 +6457,7 @@ impl Nova {
         surface.set_string(
             ox,
             y,
-            "Pick a fighter — ←/→ or 1-5 · d difficulty · g sector · t roster · Enter launches",
+            "Pick a fighter — ←/→ or 1-5 · d difficulty · g galaxy · Enter free flight · m campaign",
             text,
         );
         y += 2;
@@ -5735,7 +6535,7 @@ impl Nova {
         surface.set_string(
             ox,
             y + 3,
-            "Squad of four hulls, wingmen fly with you; bosses hold the chart's boss systems.",
+            "m flies the campaign: Tatooine, the Kessel Run, Yavin, Hoth, Cloud City, Endor.",
             dim,
         );
     }
@@ -5856,7 +6656,7 @@ impl Nova {
         surface.set_string(
             ox,
             footer + 3,
-            "←/→/↑/↓ pick a lane · Enter jump · t roster · n new run · q quit",
+            "←/→/↑/↓ pick a lane · Enter jump · t roster · o view · n new run · q quit",
             text,
         );
     }
@@ -6011,6 +6811,17 @@ impl Component for Nova {
         if matches!(key, key!('q') | key!(Esc) | ctrl!('c')) {
             return EventResult::Consumed(Some(close));
         }
+        // The view swaps from anywhere: picker, chart, hangar, pause or flight.
+        if matches!(key, key!('o')) {
+            self.view = match self.view {
+                ViewMode::TopDown => ViewMode::Cockpit,
+                ViewMode::Cockpit => ViewMode::TopDown,
+            };
+            if self.running() {
+                zmax_event::request_redraw();
+            }
+            return EventResult::Consumed(None);
+        }
         // The roster opens over anything and swallows everything but its own key.
         if matches!(key, key!('t')) {
             self.roster = !self.roster;
@@ -6034,6 +6845,12 @@ impl Component for Nova {
                     key!(Right) | key!('l') => self.pick = (self.pick + 1) % hulls,
                     key!('d') | key!(Tab) => self.diff = (self.diff + 1) % Difficulty::ALL.len(),
                     key!('g') => self.gal = (self.gal + 1) % Galaxy::ALL.len(),
+                    key!('m') => {
+                        // Fly the war itself rather than the open galaxy.
+                        let class = ShipClass::ALL[self.pick];
+                        let difficulty = Difficulty::ALL[self.diff];
+                        self.game.start_campaign(class, difficulty);
+                    }
                     key!('1') => {
                         self.pick = 0;
                         self.launch();
@@ -6071,7 +6888,15 @@ impl Component for Nova {
                 _ => {}
             },
             Status::Hangar => match key {
-                key!(Enter) => self.game.open_chart(),
+                key!(Enter) => {
+                    // In the campaign the next mission is the only way on.
+                    if self.game.mission.is_some() {
+                        let next = self.game.campaign_at + 1;
+                        self.game.fly_mission(next);
+                    } else {
+                        self.game.open_chart();
+                    }
+                }
                 key!('w') => {
                     self.game.cycle_active();
                 }
@@ -6197,6 +7022,16 @@ impl Component for Nova {
             self.render_roster(area, surface, ctx);
             return;
         }
+        if self.paused && matches!(self.game.status, Status::Playing | Status::WaveClear) {
+            self.render_pause(area, surface, ctx);
+            return;
+        }
+        if self.view == ViewMode::Cockpit
+            && matches!(self.game.status, Status::Playing | Status::WaveClear)
+        {
+            self.render_cockpit(area, surface, ctx);
+            return;
+        }
         match self.game.status {
             Status::Select => {
                 self.render_select(area, surface, ctx);
@@ -6230,9 +7065,12 @@ impl Component for Nova {
             ox,
             area.y,
             &format!(
-                "{} · wave {}  {}  score {}  chain ×{}",
+                "{} · {}  {}  score {}  chain ×{}",
                 g.rank().name(),
-                g.wave,
+                match g.mission {
+                    Some(mission) => mission.name.to_string(),
+                    None => format!("wave {}", g.wave),
+                },
                 match &g.boss {
                     Some(boss) => format!(
                         "{} · {} · {}",
@@ -6241,10 +7079,10 @@ impl Component for Nova {
                         boss.kind.name()
                     ),
                     None => format!(
-                        "{} · {} · {}",
+                        "{} over {} · {}",
                         g.sector.name(),
-                        g.node.terrain.name(),
-                        g.formation.name()
+                        g.planet.name(),
+                        g.objective.label()
                     ),
                 },
                 g.score,
@@ -6514,6 +7352,38 @@ impl Component for Nova {
                 }
             }
         }
+        for t in &g.transports {
+            if t.away || t.hp <= 0 {
+                continue;
+            }
+            for (i, glyph) in "▭▬▭".chars().enumerate() {
+                let (r, c) = (t.pos.0, t.pos.1 + i as i16 - 1);
+                if on_board(r, c) {
+                    let (x, y) = cell(r, c);
+                    surface.set_string(x, y, &glyph.to_string(), power_style);
+                }
+            }
+        }
+        for walker in &g.walkers {
+            if walker.down {
+                continue;
+            }
+            // Four legs and a body: it reads as a walker even at this size.
+            for (i, glyph) in "▟▛▜▙".chars().enumerate() {
+                let (r, c) = (walker.pos.0, walker.pos.1 + i as i16 - 1);
+                if on_board(r, c) {
+                    let (x, y) = cell(r, c);
+                    surface.set_string(x, y, &glyph.to_string(), tank_style);
+                }
+            }
+            for i in 0..3 {
+                let (r, c) = (walker.pos.0 + 1, walker.pos.1 + i - 1);
+                if on_board(r, c) {
+                    let (x, y) = cell(r, c);
+                    surface.set_string(x, y, "╿", tank_style);
+                }
+            }
+        }
         for d in &g.debris {
             let (r, c) = d.pos;
             if on_board(r, c) {
@@ -6654,7 +7524,7 @@ impl Component for Nova {
                 "Paused — p resume · r retry · n new · q quit".to_string()
             }
             Status::Playing => {
-                "fly ←/→/↑/↓ · SPC fire · m torpedoes · 1-0 guns · z/c/v power · e/y/u Force · x special · t roster"
+                "fly ←/→/↑/↓ · SPC fire · m torpedoes · 1-0 guns · z/c/v power · e/y/u Force · o cockpit · t roster"
                     .to_string()
             }
             Status::Select | Status::Hangar | Status::Chart => String::new(),
@@ -9074,5 +9944,160 @@ mod force_tests {
         ];
         let shapes: std::collections::HashSet<&str> = ties.iter().map(|k| k.sprite()).collect();
         assert_eq!(shapes.len(), ties.len(), "and no two TIEs do either");
+    }
+}
+
+#[cfg(test)]
+mod campaign_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn on_mission(index: usize) -> Game {
+        let mut g = Game::new(6);
+        g.start_campaign(ShipClass::XWing, Difficulty::Normal);
+        g.fly_mission(index);
+        g
+    }
+
+    #[test]
+    fn the_campaign_flies_the_war_in_order() {
+        let mut g = Game::new(6);
+        g.start_campaign(ShipClass::XWing, Difficulty::Normal);
+        assert_eq!(
+            g.status,
+            Status::Playing,
+            "the first mission starts at once"
+        );
+        assert_eq!(
+            g.mission.unwrap().name,
+            Mission::CAMPAIGN[0].name,
+            "with the first mission of the war"
+        );
+        let names: Vec<&str> = Mission::CAMPAIGN.iter().map(|m| m.name).collect();
+        assert!(names.contains(&"Battle of Yavin"));
+        assert!(names.contains(&"Battle of Hoth"));
+        assert!(names.contains(&"Battle of Endor"));
+        g.fly_mission(Mission::CAMPAIGN.len());
+        assert!(g.mission.is_none(), "past the last one the war is over");
+        assert_eq!(g.status, Status::Hangar);
+    }
+
+    #[test]
+    fn yavin_is_a_trench_run_at_a_station() {
+        let g = on_mission(3);
+        assert_eq!(g.mission.unwrap().name, "Battle of Yavin");
+        assert_eq!(g.objective, Objective::CoreRun, "one shot down the shaft");
+        assert_eq!(g.node.terrain, TerrainKind::Trench);
+        assert_eq!(
+            g.capital.as_ref().map(|c| c.kind),
+            Some(CapitalKind::DeathStar),
+            "and a station to run"
+        );
+    }
+
+    #[test]
+    fn hoth_puts_walkers_on_the_deck_and_only_cables_stop_them() {
+        let mut g = on_mission(4);
+        assert_eq!(g.objective, Objective::Walkers { count: 3 });
+        assert_eq!(g.walkers.len(), 3, "three of them on the ridge");
+        let pos = g.walkers[0].pos;
+        let hp = g.walkers[0].hp;
+        g.hit_targets(&Shot::bolt(pos, 0, 40));
+        assert_eq!(g.walkers[0].hp, hp, "cannons do not mark the armour");
+        assert!(g.hit_targets(&Shot::cable(pos, 0)), "the cable catches");
+        assert_eq!(g.walkers[0].wraps, 1, "one turn round the legs");
+        assert!(!g.walkers[0].down, "one turn is not enough");
+        g.hit_targets(&Shot::cable(pos, 0));
+        assert!(g.walkers[0].down, "the second turn puts it over");
+        for walker in g.walkers.iter_mut() {
+            walker.down = true;
+        }
+        g.check_end();
+        assert_eq!(g.status, Status::WaveClear, "and that is the mission");
+    }
+
+    #[test]
+    fn the_evacuation_is_won_by_transports_that_get_away() {
+        let mut g = on_mission(5);
+        assert!(matches!(g.objective, Objective::Escort { .. }));
+        assert!(g.transports.len() >= 4, "the convoy is on the deck");
+        for transport in g.transports.iter_mut() {
+            transport.away = true;
+        }
+        let score = g.score;
+        g.check_end();
+        assert_eq!(g.status, Status::WaveClear, "the convoy is through");
+        assert!(g.score > score, "and it pays");
+    }
+
+    #[test]
+    fn a_transport_under_fire_can_be_lost() {
+        let mut g = on_mission(5);
+        let pos = g.transports[0].pos;
+        g.transports[0].hp = 2;
+        g.enemy_shots = vec![Shot::enemy((pos.0, pos.1 + 1), 0, 1)];
+        g.tick = 3;
+        g.advance_transports();
+        assert!(g.transports[0].hp <= 0, "the shot goes home");
+        assert!(
+            g.chatter.iter().any(|c| c.line.contains("transports")),
+            "and the squadron hears about it"
+        );
+    }
+
+    #[test]
+    fn the_kessel_run_is_a_hold_out() {
+        let mut g = on_mission(1);
+        assert!(matches!(g.objective, Objective::Survive { .. }));
+        assert!(g.objective_ticks > 0, "with a clock on it");
+        g.objective_ticks = 0;
+        g.check_end();
+        assert_eq!(g.status, Status::WaveClear, "outrunning it is the mission");
+    }
+
+    #[test]
+    fn every_system_hangs_over_a_world() {
+        for sector in Sector::ALL {
+            let planet = Planet::of_sector(sector);
+            assert!(!planet.name().is_empty());
+        }
+        assert_eq!(Planet::of_sector(Sector::AsteroidBelt), Planet::Hoth);
+        assert_eq!(Planet::of_sector(Sector::SolarCorona), Planet::Tatooine);
+        assert!(
+            Planet::Hoth.surface(),
+            "some of them are fought on the deck"
+        );
+        assert!(!Planet::DeepSpace.surface(), "and some are not");
+        let mut g = flying();
+        g.node.sector = Sector::CometTrail;
+        g.spawn_wave();
+        assert_eq!(g.planet, Planet::Bespin, "the world follows the sector");
+    }
+
+    #[test]
+    fn every_mission_in_the_campaign_can_be_flown() {
+        for index in 0..Mission::CAMPAIGN.len() {
+            let mut g = on_mission(index);
+            let mission = g.mission.expect("the mission is loaded");
+            assert_eq!(g.sector, mission.sector, "{} is in place", mission.name);
+            for i in 0..600 {
+                if g.status != Status::Playing {
+                    break;
+                }
+                if i % 3 == 0 {
+                    g.fire();
+                }
+                if i % 29 == 0 {
+                    g.fire_missiles();
+                }
+                g.move_ship(if i % 7 < 3 { 1 } else { -1 }, 0);
+                g.step();
+            }
+            assert!(
+                (1..W - 1).contains(&g.ship.1),
+                "{} flies without losing the hull off the court",
+                mission.name
+            );
+        }
     }
 }
