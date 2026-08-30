@@ -159,6 +159,10 @@ What is in the buffer, and what the language servers said about it:
 | `region_pos(from, to, mode)` | `getregionpos()` | `region`'s rows as char-offset extents, one per row |
 | `undo_tree()` | `undotree()` | the history as a tree; revision 0 is the self-parented root |
 | `select_kind()` | — | `char`/`line`/`block` for the CURRENT selection; not `visualmode()` |
+| `virtcol_to_char(line, vcol)` | `virtcol2col()` | the inverse of `virtual_column`, sharing its width step |
+| `swap_path()` / `swap_exists()` | `swapname()` | where the swap file would be, and whether it is there |
+| `swap_locked_by()` | — | who holds the swap lock, when another process does |
+| `executable(name)` / `exepath(name)` | `executable()`, `exepath()` | resolution on `PATH` |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:
@@ -186,6 +190,9 @@ would lose information zmax has:
   is vim's, filled by `:grep`/`:make` and walked by `:cnext`; `diagnostics()` is
   the language server's, which vim has no concept of. Reading one when you meant
   the other is silent, so they are named apart.
+- **`virtcol_to_char` is a projection, not a bijection.** Several screen
+  columns share one character: every cell a tab spans answers with that tab's
+  offset, since no character begins inside it.
 - **`undo_tree` reports an AGE, not a timestamp.** vim's `undotree()` gives an
   absolute `time`; zmax's history stores a monotonic `Instant`, which has no
   epoch to convert to, so each revision reports how many seconds ago it was

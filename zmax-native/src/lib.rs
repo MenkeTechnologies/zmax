@@ -627,6 +627,35 @@ pub struct HostApi {
     /// AGE instead of a timestamp -- the honest projection of what is stored.
     pub undo_seconds_ago: extern "C" fn(host: *const HostApi, index: usize) -> usize,
 
+    /// vim `virtcol2col()` — the inverse of [`HostApi::virtual_column`]: the
+    /// char offset at a 0-based SCREEN column on `line`.
+    ///
+    /// Both directions share one width step, so they are exact inverses rather
+    /// than two walks that happen to agree. A screen column landing inside a
+    /// tab or a wide glyph yields that glyph's own offset, since no char begins
+    /// there; past the last glyph it clamps to the line end, as vim does.
+    /// `usize::MAX` when `line` is out of range.
+    pub virtcol_to_char: extern "C" fn(host: *const HostApi, line: usize, vcol: usize) -> usize,
+
+    /// vim `swapname()` — the swap file backing the current buffer, or null
+    /// when swap is off for it. Release with `free_cstring`.
+    pub swap_path: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    /// Whether a swap file EXISTS on disk, which `swap_path` does not answer --
+    /// that names where one would live.
+    pub swap_exists: extern "C" fn(host: *const HostApi) -> c_int,
+
+    /// Who holds the swap lock when another process does, or null when nobody
+    /// does. Release with `free_cstring`.
+    pub swap_locked_by: extern "C" fn(host: *const HostApi) -> *mut c_char,
+
+    /// vim `executable()` — whether a command resolves on PATH.
+    pub executable: extern "C" fn(host: *const HostApi, name: *const c_char) -> c_int,
+
+    /// vim `exepath()` — where a command resolves on PATH, or null. Release
+    /// with `free_cstring`.
+    pub exepath: extern "C" fn(host: *const HostApi, name: *const c_char) -> *mut c_char,
+
     /// The shape of the current selection: `char`, `line` or `block`.
     ///
     /// NOT vim's `visualmode()`, which reports the last visual mode used even
@@ -1498,6 +1527,43 @@ impl Host {
         self.take_string((self.t().select_kind)(self.api))
     }
 
+    /// vim `virtcol2col()` — the char offset at a 0-based screen column on
+    /// `line`, the exact inverse of [`Host::virtual_column`]. `None` when the
+    /// line is out of range.
+    pub fn virtcol_to_char(&self, line: usize, vcol: usize) -> Option<usize> {
+        match (self.t().virtcol_to_char)(self.api, line, vcol) {
+            usize::MAX => None,
+            at => Some(at),
+        }
+    }
+
+    /// vim `swapname()` — the swap file backing the current buffer.
+    pub fn swap_path(&self) -> Option<String> {
+        self.take_string((self.t().swap_path)(self.api))
+    }
+
+    /// Whether a swap file exists on disk, as opposed to merely being
+    /// configured.
+    pub fn swap_exists(&self) -> bool {
+        (self.t().swap_exists)(self.api) != 0
+    }
+
+    /// Who holds the swap lock, when another process does.
+    pub fn swap_locked_by(&self) -> Option<String> {
+        self.take_string((self.t().swap_locked_by)(self.api))
+    }
+
+    /// vim `executable()` — whether a command resolves on PATH.
+    pub fn executable(&self, name: &str) -> bool {
+        CString::new(name).is_ok_and(|name| (self.t().executable)(self.api, name.as_ptr()) != 0)
+    }
+
+    /// vim `exepath()` — where a command resolves on PATH.
+    pub fn exepath(&self, name: &str) -> Option<String> {
+        let name = CString::new(name).ok()?;
+        self.take_string((self.t().exepath)(self.api, name.as_ptr()))
+    }
+
     /// vim `getcompletion({prefix}, "option")` — option names beginning with
     /// `prefix`. Only options that have been set are known.
     pub fn option_completions(&self, prefix: &str) -> Vec<String> {
@@ -2199,6 +2265,39 @@ mod tests {
     extern "C" fn fake_select_kind(_h: *const HostApi) -> *mut c_char {
         reply("block")
     }
+    // Line 0 is "a\tb" at tabstop 4: 'a' occupies cell 0, the tab spans cells
+    // 1..4, and 'b' sits at cell 4. Columns inside the tab have no char of
+    // their own, so they answer with the tab's offset.
+    extern "C" fn fake_virtcol_to_char(_h: *const HostApi, line: usize, vcol: usize) -> usize {
+        if line != 0 {
+            return usize::MAX;
+        }
+        match vcol {
+            0 => 0,
+            1..=3 => 1,
+            4 => 2,
+            _ => 3,
+        }
+    }
+    extern "C" fn fake_swap_path(_h: *const HostApi) -> *mut c_char {
+        reply("/tmp/.main.rs.swp")
+    }
+    extern "C" fn fake_swap_exists(_h: *const HostApi) -> c_int {
+        0
+    }
+    extern "C" fn fake_swap_locked_by(_h: *const HostApi) -> *mut c_char {
+        ptr::null_mut()
+    }
+    extern "C" fn fake_executable(_h: *const HostApi, name: *const c_char) -> c_int {
+        c_int::from(unsafe { CStr::from_ptr(name) }.to_string_lossy() == "rustc")
+    }
+    extern "C" fn fake_exepath(_h: *const HostApi, name: *const c_char) -> *mut c_char {
+        if unsafe { CStr::from_ptr(name) }.to_string_lossy() == "rustc" {
+            reply("/usr/bin/rustc")
+        } else {
+            ptr::null_mut()
+        }
+    }
     extern "C" fn fake_long_word_at_cursor(_h: *const HostApi) -> *mut c_char {
         // The WORD keeps its punctuation; `word_at_cursor` gives "UnixStream".
         reply("UnixStream::connect(path)")
@@ -2585,6 +2684,12 @@ mod tests {
             undo_parent: fake_undo_parent,
             undo_seconds_ago: fake_undo_seconds_ago,
             select_kind: fake_select_kind,
+            virtcol_to_char: fake_virtcol_to_char,
+            swap_path: fake_swap_path,
+            swap_exists: fake_swap_exists,
+            swap_locked_by: fake_swap_locked_by,
+            executable: fake_executable,
+            exepath: fake_exepath,
         }
     }
 
@@ -3406,6 +3511,48 @@ mod tests {
         let host = host(&api);
 
         assert_eq!(host.select_kind().as_deref(), Some("block"));
+    }
+
+    /// A screen column inside a tab belongs to no character, so it answers with
+    /// the tab's own offset rather than skipping past it. Three columns map to
+    /// the one tab, which is what makes this a projection and not a bijection.
+    #[test]
+    fn a_screen_column_inside_a_tab_maps_to_the_tab() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.virtcol_to_char(0, 0), Some(0), "'a'");
+        assert_eq!(host.virtcol_to_char(0, 1), Some(1), "the tab itself");
+        assert_eq!(host.virtcol_to_char(0, 2), Some(1), "inside the tab");
+        assert_eq!(host.virtcol_to_char(0, 3), Some(1), "still inside it");
+        assert_eq!(host.virtcol_to_char(0, 4), Some(2), "'b', past the tab");
+        assert_eq!(host.virtcol_to_char(9, 0), None, "no such line");
+    }
+
+    /// Where the swap file WOULD be and whether one exists are different
+    /// questions; a buffer with swap configured and no file on disk answers
+    /// yes to the first and no to the second.
+    #[test]
+    fn the_swap_path_does_not_imply_a_swap_file() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.swap_path().as_deref(), Some("/tmp/.main.rs.swp"));
+        assert!(!host.swap_exists(), "named, but not on disk");
+        assert_eq!(host.swap_locked_by(), None, "nobody holds it");
+    }
+
+    /// `executable` and `exepath` agree: what resolves has a path, what does
+    /// not has neither.
+    #[test]
+    fn executable_and_exepath_agree() {
+        let api = table();
+        let host = host(&api);
+
+        assert!(host.executable("rustc"));
+        assert_eq!(host.exepath("rustc").as_deref(), Some("/usr/bin/rustc"));
+        assert!(!host.executable("nosuchbinary"));
+        assert_eq!(host.exepath("nosuchbinary"), None);
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

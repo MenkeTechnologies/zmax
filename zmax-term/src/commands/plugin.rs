@@ -1121,29 +1121,76 @@ extern "C" fn host_pid(_host: *const HostApi) -> u32 {
     std::process::id()
 }
 
+/// Advance a screen column by one grapheme: a tab draws to the next stop and a
+/// wide glyph takes two cells. The single place that decides cell width, so
+/// `host_virtual_column` and `host_virtcol_to_char` are exact inverses by
+/// construction rather than by two walks happening to agree.
+fn advance_screen_column(column: usize, grapheme: &str, tab_width: u16) -> usize {
+    column
+        + if grapheme == "\t" {
+            zmax_core::graphemes::tab_width_at(column, tab_width)
+        } else {
+            zmax_core::graphemes::grapheme_width(grapheme)
+        }
+}
+
+/// The 0-based screen column of a char offset within its line.
+fn screen_column_at(text: zmax_core::RopeSlice, at: usize, tab_width: u16) -> usize {
+    use zmax_stdx::rope::RopeSliceExt;
+
+    let start = text.line_to_char(text.char_to_line(at));
+    let mut column = 0usize;
+    for grapheme in text.slice(start..at).graphemes() {
+        column = advance_screen_column(column, &std::borrow::Cow::from(grapheme), tab_width);
+    }
+    column
+}
+
 extern "C" fn host_virtual_column(_host: *const HostApi) -> usize {
     with_cx(|cx| {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let cursor = doc.selection(view.id).primary().cursor(text);
-        let line = text.char_to_line(cursor);
-        let start = text.line_to_char(line);
         // Screen cells, not characters: a tab draws to the next stop and a wide
         // glyph takes two, which is what has to line up with `window_width`.
-        let tab_width = doc.tab_width() as u16;
-        let mut column = 0usize;
-        use zmax_stdx::rope::RopeSliceExt;
-        for grapheme in text.slice(start..cursor).graphemes() {
-            let grapheme = std::borrow::Cow::from(grapheme);
-            column += if grapheme == "\t" {
-                zmax_core::graphemes::tab_width_at(column, tab_width)
-            } else {
-                zmax_core::graphemes::grapheme_width(&grapheme)
-            };
-        }
-        column
+        screen_column_at(text, cursor, doc.tab_width() as u16)
     })
     .unwrap_or(0)
+}
+
+/// vim `virtcol2col()` — the inverse of `virtual_column`: the char offset at a
+/// screen column on a line. Walks with `advance_screen_column`, the same step
+/// the forward direction uses.
+///
+/// A screen column landing INSIDE a tab or a wide glyph returns that glyph's
+/// own offset, since no char begins there.
+extern "C" fn host_virtcol_to_char(_host: *const HostApi, line: usize, vcol: usize) -> usize {
+    use zmax_stdx::rope::RopeSliceExt;
+
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        if line >= text.len_lines() {
+            return usize::MAX;
+        }
+        let tab_width = doc.tab_width() as u16;
+        let start = text.line_to_char(line);
+        let end = zmax_core::line_ending::line_end_char_index(&text, line);
+
+        let mut column = 0usize;
+        let mut at = start;
+        for grapheme in text.slice(start..end).graphemes() {
+            if column >= vcol {
+                return at;
+            }
+            let grapheme = std::borrow::Cow::from(grapheme);
+            column = advance_screen_column(column, &grapheme, tab_width);
+            at += grapheme.chars().count();
+        }
+        // Past the last glyph: the line end, as vim clamps.
+        end
+    })
+    .unwrap_or(usize::MAX)
 }
 
 extern "C" fn host_file_at_cursor(_host: *const HostApi) -> *mut c_char {
@@ -1770,6 +1817,57 @@ extern "C" fn host_select_kind(_host: *const HostApi) -> *mut c_char {
     into_raw_cstring(kind)
 }
 
+/// vim `swapname()` — the swap file backing the current buffer. `None` for a
+/// buffer with swap disabled (`:set noswapfile`) or no path to derive one from.
+extern "C" fn host_swap_path(_host: *const HostApi) -> *mut c_char {
+    into_raw_cstring(
+        with_cx(|cx| {
+            let (_view, doc) = current!(cx.editor);
+            crate::vim_swap::path_for(doc).map(|p| p.to_string_lossy().into_owned())
+        })
+        .flatten(),
+    )
+}
+
+/// Whether a swap file actually EXISTS on disk, which is a different question
+/// from whether one is configured: `swap_path` names where it would be.
+extern "C" fn host_swap_exists(_host: *const HostApi) -> c_int {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        c_int::from(crate::vim_swap::swap_exists(doc))
+    })
+    .unwrap_or(0)
+}
+
+/// Who holds the swap lock, when another process does — what vim's swap dialog
+/// reports as "process ID" / host. `None` when the buffer is not locked.
+extern "C" fn host_swap_locked_by(_host: *const HostApi) -> *mut c_char {
+    into_raw_cstring(
+        with_cx(|cx| {
+            let (_view, doc) = current!(cx.editor);
+            crate::vim_swap::locked_by(doc)
+        })
+        .flatten(),
+    )
+}
+
+/// vim `executable()` — whether a command resolves on PATH.
+extern "C" fn host_executable(_host: *const HostApi, name: *const c_char) -> c_int {
+    let Some(name) = arg_string(name) else {
+        return 0;
+    };
+    c_int::from(zmax_stdx::env::binary_exists(&name))
+}
+
+/// vim `exepath()` — where a command resolves on PATH, or null when it does
+/// not. Release with `free_cstring`.
+extern "C" fn host_exepath(_host: *const HostApi, name: *const c_char) -> *mut c_char {
+    let path = arg_string(name)
+        .and_then(|name| zmax_stdx::env::which(&name).ok())
+        .map(|p| p.to_string_lossy().into_owned());
+    into_raw_cstring(path)
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -1898,6 +1996,12 @@ fn host_api() -> *const HostApi {
             undo_parent: host_undo_parent,
             undo_seconds_ago: host_undo_seconds_ago,
             select_kind: host_select_kind,
+            virtcol_to_char: host_virtcol_to_char,
+            swap_path: host_swap_path,
+            swap_exists: host_swap_exists,
+            swap_locked_by: host_swap_locked_by,
+            executable: host_executable,
+            exepath: host_exepath,
         });
         Box::into_raw(boxed) as usize
     });
