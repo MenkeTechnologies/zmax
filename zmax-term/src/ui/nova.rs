@@ -132,6 +132,12 @@ const SENSE_COST: u32 = 45;
 const SENSE_TICKS: u32 = 90;
 const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
+/// What a pilot can take on foot, how fast his sidearm cycles, how fast a
+/// patrol answers, and how far a blaster bolt carries.
+const PILOT_HEALTH: i32 = 12;
+const BLASTER_CADENCE: u32 = 3;
+const TROOPER_CADENCE: u32 = 22;
+const BOLT_RANGE: u32 = 18;
 /// Ticks between the Alliance cruiser's salvoes, and what they hit for.
 const ALLY_CADENCE: u32 = 18;
 const ALLY_DAMAGE: i32 = 6;
@@ -3029,6 +3035,31 @@ impl DeckSpot {
     }
 }
 
+/// A stormtrooper patrol, or whatever the world has walking about on it.
+#[derive(Clone, Debug)]
+pub struct Trooper {
+    pub pos: (i16, i16),
+    pub hp: i32,
+    pub cooldown: u32,
+}
+
+/// A blaster bolt on foot, from either side.
+#[derive(Clone, Debug)]
+pub struct Bolt {
+    pub pos: (i16, i16),
+    pub dir: (i16, i16),
+    pub friendly: bool,
+    pub life: u32,
+}
+
+/// A block of city, a rock or a stand of trees: something to take cover behind.
+#[derive(Clone, Copy, Debug)]
+pub struct Cover {
+    pub pos: (i16, i16),
+    pub size: (i16, i16),
+    pub tall: bool,
+}
+
 /// What walking into something on the deck did.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DeckAction {
@@ -3058,11 +3089,20 @@ pub struct Deck {
     pub facing: (i16, i16),
     /// Everything worth walking up to.
     pub spots: Vec<(DeckSpot, (i16, i16))>,
+    /// Blocks, rocks and trees: solid, and worth hiding behind.
+    pub cover: Vec<Cover>,
+    /// Imperial patrols on the ground.
+    pub troopers: Vec<Trooper>,
+    /// Blaster fire on foot.
+    pub bolts: Vec<Bolt>,
+    /// What the pilot can take before he goes down.
+    pub health: i32,
+    pub blaster_cooldown: u32,
 }
 
 impl Deck {
-    pub const WIDTH: i16 = 62;
-    pub const HEIGHT: i16 = 16;
+    pub const WIDTH: i16 = 140;
+    pub const HEIGHT: i16 = 44;
     /// How close counts as standing at something, and how far ahead counts as
     /// being in front of you.
     pub const REACH: i16 = 2;
@@ -3103,12 +3143,49 @@ impl Deck {
             let col = 6 + i as i16 * 14 + (rand() % 5) as i16;
             spots.push((spot, (row, col.min(Deck::WIDTH - 4))));
         }
+        // A world is not an empty floor: blocks of city, rock or trees, and
+        // whoever the Empire has walking about.
+        let mut cover = Vec::new();
+        let city = matches!(
+            planet,
+            Planet::Coruscant | Planet::Bespin | Planet::Naboo | Planet::Mandalore
+        );
+        let blocks = if city { 26 } else { 18 };
+        for _ in 0..blocks {
+            let row = 2 + (rand() % (Deck::HEIGHT as u64 - 6)) as i16;
+            let col = 3 + (rand() % (Deck::WIDTH as u64 - 8)) as i16;
+            let size = if city {
+                (2 + (rand() % 4) as i16, 4 + (rand() % 8) as i16)
+            } else {
+                (1 + (rand() % 2) as i16, 1 + (rand() % 3) as i16)
+            };
+            cover.push(Cover {
+                pos: (row, col),
+                size,
+                tall: city,
+            });
+        }
+        let mut troopers = Vec::new();
+        for _ in 0..(6 + (rand() % 6) as usize) {
+            let row = 2 + (rand() % (Deck::HEIGHT as u64 - 6)) as i16;
+            let col = 3 + (rand() % (Deck::WIDTH as u64 - 6)) as i16;
+            troopers.push(Trooper {
+                pos: (row, col),
+                hp: 3,
+                cooldown: (rand() % 30) as u32,
+            });
+        }
         Deck {
             width: Deck::WIDTH,
             height: Deck::HEIGHT,
             pilot: (Deck::HEIGHT - 6, Deck::WIDTH / 2),
             facing: (-1, 0),
             spots,
+            cover,
+            troopers,
+            bolts: Vec::new(),
+            health: PILOT_HEALTH,
+            blaster_cooldown: 0,
         }
     }
 
@@ -3130,10 +3207,23 @@ impl Deck {
         Deck {
             width: Deck::WIDTH,
             height: Deck::HEIGHT,
-            pilot: (12, Deck::WIDTH / 2),
+            pilot: (Deck::HEIGHT - 8, Deck::WIDTH / 2),
             facing: (-1, 0),
             spots,
+            cover: Vec::new(),
+            troopers: Vec::new(),
+            bolts: Vec::new(),
+            health: PILOT_HEALTH,
+            blaster_cooldown: 0,
         }
+    }
+
+    /// Is this cell inside something solid?
+    pub fn blocked(&self, row: i16, col: i16) -> bool {
+        self.cover.iter().any(|block| {
+            (block.pos.0..block.pos.0 + block.size.0).contains(&row)
+                && (block.pos.1..block.pos.1 + block.size.1).contains(&col)
+        })
     }
 
     /// Turn on the spot: `-1` to port, `1` to starboard.
@@ -3148,8 +3238,102 @@ impl Deck {
     /// Walk the way you are facing, or back off it.
     pub fn step(&mut self, ahead: i16) {
         let (dr, dc) = self.facing;
-        self.pilot.0 = (self.pilot.0 + dr * ahead).clamp(1, self.height - 2);
-        self.pilot.1 = (self.pilot.1 + dc * ahead).clamp(1, self.width - 2);
+        let row = (self.pilot.0 + dr * ahead).clamp(1, self.height - 2);
+        let col = (self.pilot.1 + dc * ahead).clamp(1, self.width - 2);
+        if !self.blocked(row, col) {
+            self.pilot = (row, col);
+        }
+    }
+
+    /// Fire the sidearm the way the pilot is looking.
+    pub fn shoot(&mut self) -> bool {
+        if self.blaster_cooldown > 0 {
+            return false;
+        }
+        self.blaster_cooldown = BLASTER_CADENCE;
+        let (dr, dc) = self.facing;
+        self.bolts.push(Bolt {
+            pos: (self.pilot.0 + dr, self.pilot.1 + dc),
+            dir: (dr, dc),
+            friendly: true,
+            life: BOLT_RANGE,
+        });
+        true
+    }
+
+    /// A tick of the firefight: bolts fly, troopers advance and shoot back.
+    pub fn skirmish(&mut self, tick: u32) -> i32 {
+        self.blaster_cooldown = self.blaster_cooldown.saturating_sub(1);
+        let mut damage = 0;
+        let pilot = self.pilot;
+        // Bolts first, so a trooper that just fired does not eat his own shot.
+        let mut kept = Vec::with_capacity(self.bolts.len());
+        'bolt: for mut bolt in std::mem::take(&mut self.bolts) {
+            for _ in 0..2 {
+                bolt.pos.0 += bolt.dir.0;
+                bolt.pos.1 += bolt.dir.1;
+                bolt.life = bolt.life.saturating_sub(1);
+                if bolt.life == 0
+                    || !(0..self.height).contains(&bolt.pos.0)
+                    || !(0..self.width).contains(&bolt.pos.1)
+                    || self.blocked(bolt.pos.0, bolt.pos.1)
+                {
+                    continue 'bolt;
+                }
+                if bolt.friendly {
+                    if let Some(hit) = self
+                        .troopers
+                        .iter_mut()
+                        .find(|t| t.hp > 0 && t.pos == bolt.pos)
+                    {
+                        hit.hp -= 2;
+                        continue 'bolt;
+                    }
+                } else if bolt.pos == pilot {
+                    damage += 1;
+                    continue 'bolt;
+                }
+            }
+            kept.push(bolt);
+        }
+        self.bolts = kept;
+        self.troopers.retain(|t| t.hp > 0);
+        // Then the patrol: close the range, and fire when they have the angle.
+        let mut volley = Vec::new();
+        for trooper in self.troopers.iter_mut() {
+            let (dr, dc) = (pilot.0 - trooper.pos.0, pilot.1 - trooper.pos.1);
+            let range = dr.abs() + dc.abs();
+            if tick.is_multiple_of(3) && range > 4 {
+                let step = if dr.abs() > dc.abs() {
+                    (dr.signum(), 0)
+                } else {
+                    (0, dc.signum())
+                };
+                let next = (trooper.pos.0 + step.0, trooper.pos.1 + step.1);
+                let solid = self.cover.iter().any(|block| {
+                    (block.pos.0..block.pos.0 + block.size.0).contains(&next.0)
+                        && (block.pos.1..block.pos.1 + block.size.1).contains(&next.1)
+                });
+                if !solid {
+                    trooper.pos = next;
+                }
+            }
+            if trooper.cooldown > 0 {
+                trooper.cooldown -= 1;
+                continue;
+            }
+            if range <= 14 && (dr == 0 || dc == 0) {
+                trooper.cooldown = TROOPER_CADENCE;
+                volley.push(Bolt {
+                    pos: trooper.pos,
+                    dir: (dr.signum(), dc.signum()),
+                    friendly: false,
+                    life: BOLT_RANGE,
+                });
+            }
+        }
+        self.bolts.extend(volley);
+        damage
     }
 
     /// Walk a step, staying on the deck.
@@ -3157,8 +3341,11 @@ impl Deck {
         if dc != 0 || dr != 0 {
             self.facing = (dr.signum(), dc.signum());
         }
-        self.pilot.1 = (self.pilot.1 + dc).clamp(1, self.width - 2);
-        self.pilot.0 = (self.pilot.0 + dr).clamp(1, self.height - 2);
+        let col = (self.pilot.1 + dc).clamp(1, self.width - 2);
+        let row = (self.pilot.0 + dr).clamp(1, self.height - 2);
+        if !self.blocked(row, col) {
+            self.pilot = (row, col);
+        }
     }
 
     /// Whatever the pilot is standing at, if anything.
@@ -6201,6 +6388,40 @@ impl Game {
         }
     }
 
+    /// Fire the sidearm, on foot.
+    pub fn shoot(&mut self) -> bool {
+        if matches!(self.status, Status::Hangar | Status::Surface) && !self.shop_open {
+            return self.deck.shoot();
+        }
+        false
+    }
+
+    /// A tick of the ground fight: bolts fly, the patrol closes, and a pilot
+    /// who takes too much of it is carried back to his fighter.
+    pub fn ground_tick(&mut self) {
+        if self.status != Status::Surface || self.shop_open {
+            return;
+        }
+        self.tick = self.tick.wrapping_add(1);
+        let tick = self.tick;
+        let hits = self.deck.skirmish(tick);
+        if hits > 0 {
+            self.deck.health -= hits;
+            if self.deck.health <= 0 {
+                self.deck.health = PILOT_HEALTH;
+                self.lives = self.lives.saturating_sub(1);
+                self.status = Status::Chart;
+                self.say("Down there. They dragged him back to the ship.");
+                return;
+            }
+            self.say("Taking fire on the ground!");
+        }
+        for line in self.chatter.iter_mut() {
+            line.ticks = line.ticks.saturating_sub(1);
+        }
+        self.chatter.retain(|c| c.ticks > 0);
+    }
+
     /// Turn on the spot, for the view out of the pilot's own eyes.
     pub fn turn(&mut self, dir: i16) {
         if matches!(self.status, Status::Hangar | Status::Surface) && !self.shop_open {
@@ -6695,6 +6916,344 @@ impl Default for Game {
     }
 }
 
+/// A single cell of the 3D canvas: what is drawn there, how far away it is, and
+/// in what colour. The depth is what lets a near hull hide a far one.
+#[derive(Clone, Copy)]
+struct Cell {
+    glyph: char,
+    depth: f32,
+    style: zmax_view::graphics::Style,
+}
+
+/// A depth-buffered canvas the size of the viewport. Everything in the
+/// first-person views is drawn into one of these and blitted once, so whatever
+/// is nearest wins every cell.
+struct Canvas {
+    w: i16,
+    h: i16,
+    cells: Vec<Option<Cell>>,
+}
+
+impl Canvas {
+    fn new(w: i16, h: i16) -> Canvas {
+        Canvas {
+            w,
+            h,
+            cells: vec![None; (w.max(1) * h.max(1)) as usize],
+        }
+    }
+
+    /// Draw a cell if nothing nearer is already there.
+    fn plot(&mut self, x: i16, y: i16, depth: f32, glyph: char, style: zmax_view::graphics::Style) {
+        if !(0..self.w).contains(&x) || !(0..self.h).contains(&y) || depth <= 0.0 {
+            return;
+        }
+        let at = (y * self.w + x) as usize;
+        let nearer = match self.cells[at] {
+            Some(cell) => depth < cell.depth,
+            None => true,
+        };
+        if nearer {
+            self.cells[at] = Some(Cell {
+                glyph,
+                depth,
+                style,
+            });
+        }
+    }
+
+    fn blit(&self, surface: &mut Surface, ox: u16, oy: u16) {
+        for y in 0..self.h {
+            for x in 0..self.w {
+                if let Some(cell) = self.cells[(y * self.w + x) as usize] {
+                    surface.set_string(
+                        ox + x as u16,
+                        oy + y as u16,
+                        &cell.glyph.to_string(),
+                        cell.style,
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// A pinhole camera. World axes are x to the right, y up and z forward; `yaw`
+/// turns it about the vertical.
+struct Camera {
+    x: f32,
+    y: f32,
+    z: f32,
+    yaw: f32,
+    focal: f32,
+    w: f32,
+    h: f32,
+}
+
+impl Camera {
+    /// World point to screen cell, with the distance that got it there.
+    fn project(&self, x: f32, y: f32, z: f32) -> Option<(f32, f32, f32)> {
+        let (sin, cos) = self.yaw.sin_cos();
+        let dx = x - self.x;
+        let dz = z - self.z;
+        let right = dx * cos - dz * sin;
+        let ahead = dx * sin + dz * cos;
+        if ahead < 0.7 {
+            return None;
+        }
+        let up = y - self.y;
+        // Terminal cells are about twice as tall as they are wide, so the
+        // vertical axis is squashed to keep things looking square.
+        let sx = self.w / 2.0 + right * self.focal / ahead;
+        let sy = self.h / 2.0 - up * self.focal * 0.5 / ahead;
+        Some((sx, sy, ahead))
+    }
+}
+
+/// One box of a solid model: its centre and its half-extents, in model units.
+/// One box of a solid model: its centre and its half-extents, in model units.
+#[derive(Clone, Copy)]
+pub struct Solid {
+    at: [f32; 3],
+    half: [f32; 3],
+    /// The glyph its faces are drawn with before distance shading.
+    face: char,
+}
+
+impl Solid {
+    pub const fn new(at: [f32; 3], half: [f32; 3], face: char) -> Solid {
+        Solid { at, half, face }
+    }
+}
+
+/// How solid a surface looks at a given distance.
+fn solid_shade(depth: f32, face: char) -> char {
+    match depth {
+        d if d < 4.0 => face,
+        d if d < 9.0 => '▓',
+        d if d < 18.0 => '▒',
+        _ => '░',
+    }
+}
+
+/// Draw one box into the canvas by walking its faces. The sampling step falls
+/// off with distance, so near boxes are solid and far ones are cheap.
+fn draw_solid(
+    canvas: &mut Canvas,
+    cam: &Camera,
+    solid: &Solid,
+    origin: [f32; 3],
+    scale: f32,
+    style: zmax_view::graphics::Style,
+) {
+    let centre = [
+        origin[0] + solid.at[0] * scale,
+        origin[1] + solid.at[1] * scale,
+        origin[2] + solid.at[2] * scale,
+    ];
+    let half = [
+        solid.half[0] * scale,
+        solid.half[1] * scale,
+        solid.half[2] * scale,
+    ];
+    let step = 0.34_f32;
+    // The front face, then the top, then the two sides: enough for a shape to
+    // read as a body rather than an outline.
+    let mut u = -half[0];
+    while u <= half[0] {
+        let mut v = -half[1];
+        while v <= half[1] {
+            for &z in &[centre[2] - half[2], centre[2] + half[2]] {
+                if let Some((sx, sy, depth)) = cam.project(centre[0] + u, centre[1] + v, z) {
+                    canvas.plot(
+                        sx as i16,
+                        sy as i16,
+                        depth,
+                        solid_shade(depth, solid.face),
+                        style,
+                    );
+                }
+            }
+            v += step;
+        }
+        let mut w = -half[2];
+        while w <= half[2] {
+            for &y in &[centre[1] - half[1], centre[1] + half[1]] {
+                if let Some((sx, sy, depth)) = cam.project(centre[0] + u, y, centre[2] + w) {
+                    canvas.plot(sx as i16, sy as i16, depth, solid_shade(depth, '▀'), style);
+                }
+            }
+            w += step;
+        }
+        u += step;
+    }
+    let mut v = -half[1];
+    while v <= half[1] {
+        let mut w = -half[2];
+        while w <= half[2] {
+            for &x in &[centre[0] - half[0], centre[0] + half[0]] {
+                if let Some((sx, sy, depth)) = cam.project(x, centre[1] + v, centre[2] + w) {
+                    canvas.plot(sx as i16, sy as i16, depth, solid_shade(depth, '▓'), style);
+                }
+            }
+            w += step;
+        }
+        v += step;
+    }
+}
+
+/// Draw a whole model: a handful of boxes bolted together.
+fn draw_model(
+    canvas: &mut Canvas,
+    cam: &Camera,
+    model: &[Solid],
+    origin: [f32; 3],
+    scale: f32,
+    style: zmax_view::graphics::Style,
+) {
+    for solid in model {
+        draw_solid(canvas, cam, solid, origin, scale, style);
+    }
+}
+
+/// A flat grid running away from the camera, which is what gives a floor its
+/// perspective.
+fn draw_ground(
+    canvas: &mut Canvas,
+    cam: &Camera,
+    height: f32,
+    extent: f32,
+    step: f32,
+    glyph: char,
+    style: zmax_view::graphics::Style,
+) {
+    let (cx, cz) = (cam.x, cam.z);
+    let mut z = cz - extent;
+    while z <= cz + extent {
+        let mut x = cx - extent;
+        while x <= cx + extent {
+            if let Some((sx, sy, depth)) = cam.project(x, height, z) {
+                canvas.plot(sx as i16, sy as i16, depth + 0.4, glyph, style);
+            }
+            x += step;
+        }
+        z += step;
+    }
+}
+
+/// The camera a walking pilot sees through: eye height, looking the way they
+/// are facing.
+fn walker_camera(deck: &Deck, w: i16, h: i16) -> Camera {
+    let (dr, dc) = deck.facing;
+    Camera {
+        x: deck.pilot.1 as f32,
+        y: 1.1,
+        z: deck.pilot.0 as f32,
+        yaw: (dc as f32).atan2(dr as f32),
+        focal: (w as f32) * 0.55,
+        w: w as f32,
+        h: h as f32,
+    }
+}
+
+/// The camera looking out of a fighter's canopy, up the court.
+fn pilot_camera(ship: (i16, i16), w: i16, h: i16) -> Camera {
+    Camera {
+        x: ship.1 as f32,
+        y: 0.8,
+        z: ship.0 as f32,
+        yaw: std::f32::consts::PI,
+        focal: (w as f32) * 0.7,
+        w: w as f32,
+        h: h as f32,
+    }
+}
+
+/// The fighters, built out of boxes: fuselage, wings, engines and guns.
+static AWING_HULL: [Solid; 3] = [
+    Solid::new([0.0, 0.0, 0.0], [0.35, 0.3, 1.1], '█'),
+    Solid::new([-0.7, 0.0, -0.5], [0.35, 0.15, 0.5], '▓'),
+    Solid::new([0.7, 0.0, -0.5], [0.35, 0.15, 0.5], '▓'),
+];
+static XWING_HULL: [Solid; 5] = [
+    Solid::new([0.0, 0.0, 0.2], [0.3, 0.3, 1.3], '█'),
+    Solid::new([-1.0, 0.45, -0.4], [0.9, 0.08, 0.45], '▓'),
+    Solid::new([1.0, 0.45, -0.4], [0.9, 0.08, 0.45], '▓'),
+    Solid::new([-1.0, -0.45, -0.4], [0.9, 0.08, 0.45], '▓'),
+    Solid::new([1.0, -0.45, -0.4], [0.9, 0.08, 0.45], '▓'),
+];
+static YWING_HULL: [Solid; 4] = [
+    Solid::new([0.0, 0.0, 0.1], [0.3, 0.3, 1.2], '█'),
+    Solid::new([-0.9, 0.1, -0.2], [0.3, 0.3, 0.9], '▓'),
+    Solid::new([0.9, 0.1, -0.2], [0.3, 0.3, 0.9], '▓'),
+    Solid::new([0.0, 0.0, -1.1], [1.1, 0.1, 0.2], '▒'),
+];
+static BWING_HULL: [Solid; 3] = [
+    Solid::new([0.0, 0.0, 0.0], [0.28, 1.4, 0.9], '█'),
+    Solid::new([-0.9, -0.6, -0.2], [0.7, 0.1, 0.4], '▓'),
+    Solid::new([0.9, 0.6, -0.2], [0.7, 0.1, 0.4], '▓'),
+];
+static FREIGHTER_HULL: [Solid; 3] = [
+    Solid::new([0.0, 0.0, 0.0], [1.3, 0.35, 1.3], '█'),
+    Solid::new([0.7, 0.0, 1.0], [0.4, 0.2, 0.7], '▓'),
+    Solid::new([-0.5, 0.45, 0.2], [0.35, 0.25, 0.35], '▒'),
+];
+
+/// The Imperial hulls: ball and panels, or a body and wings.
+static TIE_HULL: [Solid; 3] = [
+    Solid::new([0.0, 0.0, 0.0], [0.45, 0.45, 0.45], '█'),
+    Solid::new([-1.0, 0.0, 0.0], [0.12, 1.0, 0.9], '▓'),
+    Solid::new([1.0, 0.0, 0.0], [0.12, 1.0, 0.9], '▓'),
+];
+static INTERCEPTOR_HULL: [Solid; 3] = [
+    Solid::new([0.0, 0.0, 0.0], [0.4, 0.4, 0.5], '█'),
+    Solid::new([-0.9, 0.2, 0.0], [0.1, 1.1, 0.5], '▓'),
+    Solid::new([0.9, 0.2, 0.0], [0.1, 1.1, 0.5], '▓'),
+];
+static BOMBER_HULL: [Solid; 4] = [
+    Solid::new([-0.35, 0.0, 0.0], [0.4, 0.4, 0.8], '█'),
+    Solid::new([0.35, 0.0, 0.0], [0.4, 0.4, 0.8], '█'),
+    Solid::new([-1.1, 0.0, 0.0], [0.1, 0.9, 0.7], '▓'),
+    Solid::new([1.1, 0.0, 0.0], [0.1, 0.9, 0.7], '▓'),
+];
+static GUNBOAT_HULL: [Solid; 3] = [
+    Solid::new([0.0, 0.0, 0.0], [0.6, 0.5, 1.2], '█'),
+    Solid::new([-0.9, 0.0, -0.3], [0.5, 0.15, 0.6], '▓'),
+    Solid::new([0.9, 0.0, -0.3], [0.5, 0.15, 0.6], '▓'),
+];
+static PLATFORM_HULL: [Solid; 2] = [
+    Solid::new([0.0, 0.0, 0.0], [0.8, 0.8, 0.8], '█'),
+    Solid::new([0.0, 0.8, 0.0], [0.2, 0.5, 0.2], '▓'),
+];
+static PLAIN_HULL: [Solid; 1] = [Solid::new([0.0, 0.0, 0.0], [0.5, 0.5, 0.5], '█')];
+
+impl ShipClass {
+    /// The fighter as a solid, for the views that draw it in three dimensions.
+    pub fn solid(self) -> &'static [Solid] {
+        match self {
+            ShipClass::AWing => &AWING_HULL,
+            ShipClass::XWing => &XWING_HULL,
+            ShipClass::YWing => &YWING_HULL,
+            ShipClass::BWing => &BWING_HULL,
+            ShipClass::Freighter => &FREIGHTER_HULL,
+        }
+    }
+}
+
+impl EnemyKind {
+    /// The Imperial hull as a solid.
+    pub fn solid(self) -> &'static [Solid] {
+        match self {
+            EnemyKind::TieFighter | EnemyKind::TieAdvanced => &TIE_HULL,
+            EnemyKind::TieInterceptor | EnemyKind::TieDefender => &INTERCEPTOR_HULL,
+            EnemyKind::TieBomber => &BOMBER_HULL,
+            EnemyKind::Gunboat => &GUNBOAT_HULL,
+            EnemyKind::GunPlatform => &PLATFORM_HULL,
+            _ => &PLAIN_HULL,
+        }
+    }
+}
+
 /// Which way the fight is watched.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ViewMode {
@@ -6791,8 +7350,10 @@ impl Nova {
     /// Running = a live round or the cleared-wave pause, not paused, and not
     /// sitting with the roster up.
     fn running(&self) -> bool {
-        matches!(self.game.status, Status::Playing | Status::WaveClear)
-            && !self.paused
+        matches!(
+            self.game.status,
+            Status::Playing | Status::WaveClear | Status::Surface
+        ) && !self.paused
             && !self.roster
     }
 
@@ -6837,13 +7398,100 @@ impl Nova {
             Some((x, y, depth))
         };
 
-        // Starfield, streaming out from the vanishing point.
+        // Everything ahead, drawn as solid geometry into a depth buffer: the
+        // nearest hull wins each cell, so ships pass in front of each other.
+        let mut canvas = Canvas::new(glass_w, glass_h);
+        let cam = pilot_camera(g.ship, glass_w, glass_h);
         for star in &g.stars {
-            if let Some((x, y, depth)) = project(star.pos.0, star.pos.1) {
-                let glyph = if depth < 6 { "*" } else { "·" };
-                put(surface, x, y, glyph, star_style);
+            let y = ((star.pos.1 % 7) as f32 - 3.0) * 0.8;
+            if let Some((sx, sy, depth)) = cam.project(star.pos.1 as f32, y, star.pos.0 as f32) {
+                canvas.plot(
+                    sx as i16,
+                    sy as i16,
+                    depth + 30.0,
+                    if depth < 8.0 { '*' } else { '·' },
+                    star_style,
+                );
             }
         }
+        for e in &g.enemies {
+            if e.pos.0 > g.ship.0 {
+                continue;
+            }
+            draw_model(
+                &mut canvas,
+                &cam,
+                e.kind.solid(),
+                [e.pos.1 as f32, 0.0, e.pos.0 as f32],
+                1.0,
+                enemy_style,
+            );
+        }
+        for (index, (r, c)) in g.wing_cells() {
+            draw_model(
+                &mut canvas,
+                &cam,
+                g.squad[index].class.solid(),
+                [c as f32, -0.4, r as f32],
+                1.0,
+                header_style,
+            );
+        }
+        if let Some(cap) = &g.capital {
+            // The capital as stacked plating: one slab per row of hull.
+            for dr in 0..cap.kind.depth() {
+                let span = cap.kind.span(dr) as f32;
+                let slab = Solid::new([0.0, 0.0, 0.0], [span, 0.6, 0.5], '█');
+                draw_solid(
+                    &mut canvas,
+                    &cam,
+                    &slab,
+                    [cap.pos.1 as f32, 1.5, (cap.pos.0 + dr) as f32],
+                    1.0,
+                    boss_style,
+                );
+            }
+            for part in &cap.parts {
+                if part.hp <= 0 {
+                    continue;
+                }
+                let (r, c) = cap.part_cell(part);
+                let tower = Solid::new([0.0, 0.0, 0.0], [0.6, 0.8, 0.6], '▓');
+                draw_solid(
+                    &mut canvas,
+                    &cam,
+                    &tower,
+                    [c as f32, 2.6, r as f32],
+                    1.0,
+                    header_style,
+                );
+            }
+        }
+        if let Some(ally) = &g.ally {
+            for dr in 0..ally.kind.depth() {
+                let span = ally.kind.span(dr) as f32;
+                let slab = Solid::new([0.0, 0.0, 0.0], [span, 0.5, 0.5], '▓');
+                draw_solid(
+                    &mut canvas,
+                    &cam,
+                    &slab,
+                    [ally.pos.1 as f32, -1.6, (ally.pos.0 + dr) as f32],
+                    1.0,
+                    header_style,
+                );
+            }
+        }
+        for s in &g.enemy_shots {
+            if let Some((sx, sy, depth)) = cam.project(s.pos.1 as f32, 0.0, s.pos.0 as f32) {
+                canvas.plot(sx as i16, sy as i16, depth, '!', enemy_style);
+            }
+        }
+        for s in &g.shots {
+            if let Some((sx, sy, depth)) = cam.project(s.pos.1 as f32, 0.0, s.pos.0 as f32) {
+                canvas.plot(sx as i16, sy as i16, depth, '|', shot_style);
+            }
+        }
+        canvas.blit(surface, ox, oy);
         // The capital ship: a wall of hull hanging over the horizon.
         if let Some(cap) = &g.capital {
             for dr in 0..cap.kind.depth() {
@@ -6866,49 +7514,8 @@ impl Nova {
                 }
             }
         }
-        // Contacts, biggest when they are closest. Everything in front of the
-        // hull is drawn; anything behind it goes on the rear-view strip.
-        let mut behind = 0;
-        for e in &g.enemies {
-            if e.pos.0 > g.ship.0 {
-                behind += 1;
-                continue;
-            }
-            let Some((x, y, depth)) = project(e.pos.0, e.pos.1) else {
-                continue;
-            };
-            if depth < 6 {
-                // Close enough to see the hull, and it is drawn twice as wide.
-                for (i, glyph) in e.kind.sprite().chars().enumerate() {
-                    if glyph == ' ' {
-                        continue;
-                    }
-                    for k in 0..2 {
-                        put(
-                            surface,
-                            x + (i as i16 - 1) * 2 + k,
-                            y,
-                            &glyph.to_string(),
-                            enemy_style,
-                        );
-                    }
-                }
-            } else if depth < 12 {
-                for (i, glyph) in e.kind.sprite().chars().enumerate() {
-                    if glyph != ' ' {
-                        put(
-                            surface,
-                            x + i as i16 - 1,
-                            y,
-                            &glyph.to_string(),
-                            enemy_style,
-                        );
-                    }
-                }
-            } else {
-                put(surface, x, y, depth_shade(depth), enemy_style);
-            }
-        }
+        // What is behind you goes on the rear-view strip rather than the glass.
+        let behind = g.enemies.iter().filter(|e| e.pos.0 > g.ship.0).count();
         // Fire, ours and theirs.
         for s in &g.enemy_shots {
             if let Some((x, y, _)) = project(s.pos.0, s.pos.1) {
@@ -7502,10 +8109,19 @@ impl Nova {
             "walk ←/→/↑/↓ · Enter uses it · w fighter · f formation · o first person · t roster",
             dim,
         );
-        // Deck plating and walls.
-        for r in 0..deck.height {
-            for c in 0..deck.width {
+        // The deck is bigger than any window, so the view follows the pilot.
+        let view_w = (area.width as i16 - 4).clamp(20, deck.width);
+        let view_h = (area.height as i16 - 8).clamp(8, deck.height);
+        let cam_c = (deck.pilot.1 - view_w / 2).clamp(0, deck.width - view_w);
+        let cam_r = (deck.pilot.0 - view_h / 2).clamp(0, deck.height - view_h);
+        let on_view = |r: i16, c: i16| {
+            (cam_r..cam_r + view_h).contains(&r) && (cam_c..cam_c + view_w).contains(&c)
+        };
+        let at = |r: i16, c: i16| ((c - cam_c) as u16, (r - cam_r) as u16);
+        for r in cam_r..cam_r + view_h {
+            for c in cam_c..cam_c + view_w {
                 let edge = r == 0 || r == deck.height - 1 || c == 0 || c == deck.width - 1;
+                let (vx, vy) = at(r, c);
                 // Deck plating in a hangar; the ground itself on a world.
                 let glyph = if edge {
                     "▒"
@@ -7520,7 +8136,44 @@ impl Nova {
                 } else {
                     " "
                 };
-                surface.set_string(ox + c as u16, oy + r as u16, glyph, dim);
+                surface.set_string(ox + vx, oy + vy, glyph, dim);
+            }
+        }
+        // Cover: blocks of city, rock or trees.
+        for block in &deck.cover {
+            for r in block.pos.0..block.pos.0 + block.size.0 {
+                for c in block.pos.1..block.pos.1 + block.size.1 {
+                    if on_view(r, c) {
+                        let (vx, vy) = at(r, c);
+                        surface.set_string(
+                            ox + vx,
+                            oy + vy,
+                            if block.tall { "▓" } else { "▒" },
+                            text,
+                        );
+                    }
+                }
+            }
+        }
+        for trooper in &deck.troopers {
+            if on_view(trooper.pos.0, trooper.pos.1) {
+                let (vx, vy) = at(trooper.pos.0, trooper.pos.1);
+                surface.set_string(ox + vx, oy + vy, "Ω", theme.get("error"));
+            }
+        }
+        for bolt in &deck.bolts {
+            if on_view(bolt.pos.0, bolt.pos.1) {
+                let (vx, vy) = at(bolt.pos.0, bolt.pos.1);
+                surface.set_string(
+                    ox + vx,
+                    oy + vy,
+                    if bolt.friendly { "-" } else { "=" },
+                    if bolt.friendly {
+                        header
+                    } else {
+                        theme.get("error")
+                    },
+                );
             }
         }
         // Everything worth walking up to.
@@ -7536,10 +8189,12 @@ impl Nova {
                     let sprite = wing.map_or(["   ", "   "], |w| w.class.sprite());
                     for (row, line) in sprite.iter().enumerate() {
                         for (i, glyph) in line.chars().enumerate() {
-                            if glyph != ' ' {
+                            let (r, c) = (pos.0 + row as i16, pos.1 + i as i16 - 1);
+                            if glyph != ' ' && on_view(r, c) {
+                                let (vx, vy) = at(r, c);
                                 surface.set_string(
-                                    ox + (pos.1 + i as i16 - 1) as u16,
-                                    oy + (pos.0 + row as i16) as u16,
+                                    ox + vx,
+                                    oy + vy,
                                     &glyph.to_string(),
                                     if *index == g.active {
                                         ship_style
@@ -7550,10 +8205,11 @@ impl Nova {
                             }
                         }
                     }
-                    if let Some(wing) = wing {
+                    if let Some(wing) = wing.filter(|_| on_view(pos.0 + 2, pos.1)) {
+                        let (vx, vy) = at(pos.0 + 2, (pos.1 - 2).max(0));
                         surface.set_string(
-                            ox + (pos.1 - 2).max(0) as u16,
-                            oy + (pos.0 + 2) as u16,
+                            ox + vx,
+                            oy + vy,
                             &format!("{} {}", wing.name, if wing.alive { "" } else { "(down)" }),
                             if *index == g.active { header } else { dim },
                         );
@@ -7571,13 +8227,9 @@ impl Nova {
             }
         }
         // The pilot.
-        surface.set_string(
-            ox + deck.pilot.1 as u16,
-            oy + deck.pilot.0 as u16,
-            "Å",
-            header,
-        );
-        let foot = oy + deck.height as u16 + 1;
+        let (px, py) = at(deck.pilot.0, deck.pilot.1);
+        surface.set_string(ox + px, oy + py, "Å", header);
+        let foot = oy + view_h as u16 + 1;
         let standing = match deck.at_hand() {
             Some(DeckSpot::Bay(i)) => {
                 let wing = &g.squad[i];
@@ -7596,6 +8248,19 @@ impl Nova {
             None => "Walk up to a bay or a station.".to_string(),
         };
         surface.set_string(ox, foot, &standing, text);
+        if g.status == Status::Surface {
+            surface.set_string(
+                ox,
+                foot + 1,
+                &format!(
+                    "HEALTH {}{}   patrol {}   SPC fires the blaster",
+                    "▮".repeat(deck.health.max(0) as usize),
+                    "▯".repeat((PILOT_HEALTH - deck.health.max(0)) as usize),
+                    deck.troopers.len()
+                ),
+                text,
+            );
+        }
         if let Some(line) = g.chatter.first() {
             surface.set_string(ox, foot + 1, &line.line, header);
         }
@@ -7612,32 +8277,124 @@ impl Nova {
         let deck = &g.deck;
         let ox = area.x + 2;
         let oy = area.y + 3;
-        let w = (area.width as i16 - 6).clamp(24, 110);
-        let h = (area.height as i16 - 8).clamp(10, 34);
-        let centre = w / 2;
-        let horizon = h / 2;
-        let put = |surface: &mut Surface, x: i16, y: i16, glyph: &str, style| {
-            if (0..w).contains(&x) && (0..h).contains(&y) {
-                surface.set_string(ox + x as u16, oy + y as u16, glyph, style);
-            }
+        let w = (area.width as i16 - 6).clamp(24, 120);
+        let h = (area.height as i16 - 8).clamp(10, 40);
+        let mut canvas = Canvas::new(w, h);
+        let cam = walker_camera(deck, w, h);
+
+        // The deck itself, and the roof over it when there is one.
+        let ground = if g.status == Status::Surface {
+            g.planet.shade().chars().next().unwrap_or('·')
+        } else {
+            '·'
         };
-        // The camera: where the pilot is looking, and the axis across it.
-        let (fr, fc) = deck.facing;
-        let (rr, rc) = (-fc, fr);
-        // A cell's place in the view: how far ahead, how far across, and how
-        // big it should be drawn at that distance.
-        let project = |pos: (i16, i16)| -> Option<(i16, i16, i16, i16)> {
-            let (dr, dc) = (pos.0 - deck.pilot.0, pos.1 - deck.pilot.1);
-            let forward = dr * fr + dc * fc;
-            if forward <= 0 {
-                return None;
+        draw_ground(&mut canvas, &cam, 0.0, 26.0, 1.0, ground, dim);
+        if g.status != Status::Surface {
+            draw_ground(&mut canvas, &cam, 4.5, 20.0, 2.0, '╤', dim);
+        }
+
+        // Cover first: blocks of city or rock, drawn as solid volumes.
+        for block in &deck.cover {
+            let centre = [
+                block.pos.1 as f32 + block.size.1 as f32 / 2.0,
+                if block.tall { 1.6 } else { 0.4 },
+                block.pos.0 as f32 + block.size.0 as f32 / 2.0,
+            ];
+            let solid = Solid::new(
+                [0.0, 0.0, 0.0],
+                [
+                    block.size.1 as f32 / 2.0,
+                    if block.tall { 2.2 } else { 0.7 },
+                    block.size.0 as f32 / 2.0,
+                ],
+                '█',
+            );
+            draw_solid(&mut canvas, &cam, &solid, centre, 1.0, text);
+        }
+        for trooper in &deck.troopers {
+            let body = Solid::new([0.0, 0.0, 0.0], [0.28, 0.75, 0.28], '█');
+            draw_solid(
+                &mut canvas,
+                &cam,
+                &body,
+                [trooper.pos.1 as f32, 0.75, trooper.pos.0 as f32],
+                1.0,
+                theme.get("error"),
+            );
+        }
+        for bolt in &deck.bolts {
+            if let Some((sx, sy, depth)) = cam.project(bolt.pos.1 as f32, 0.9, bolt.pos.0 as f32) {
+                canvas.plot(
+                    sx as i16,
+                    sy as i16,
+                    depth,
+                    if bolt.friendly { '-' } else { '=' },
+                    if bolt.friendly {
+                        header
+                    } else {
+                        theme.get("error")
+                    },
+                );
             }
-            let across = dr * rr + dc * rc;
-            let scale = ((h * 2) / (forward + 1)).clamp(1, h / 2);
-            let x = centre + across * scale / 2;
-            let y = horizon + (h - horizon) / (forward + 1);
-            Some((x, y, forward, scale))
-        };
+        }
+        // Everything standing on it, as solid geometry.
+        for (spot, pos) in &deck.spots {
+            let origin = [pos.1 as f32, 0.9, pos.0 as f32];
+            match spot {
+                DeckSpot::Bay(_) | DeckSpot::ParkedShip => {
+                    let i = match spot {
+                        DeckSpot::Bay(index) => *index,
+                        _ => g.active,
+                    };
+                    let Some(wing) = g.squad.get(i) else {
+                        continue;
+                    };
+                    let style = if i == g.active { ship_style } else { text };
+                    draw_model(&mut canvas, &cam, wing.class.solid(), origin, 1.1, style);
+                }
+                _ => {
+                    // A console: a lit slab with a screen on top of it.
+                    let body = Solid::new([0.0, -0.3, 0.0], [0.8, 0.5, 0.8], '█');
+                    let screen = Solid::new([0.0, 0.5, 0.0], [0.6, 0.3, 0.15], '▓');
+                    let style = if Some(*spot) == deck.at_hand() {
+                        header
+                    } else {
+                        text
+                    };
+                    draw_solid(&mut canvas, &cam, &body, origin, 1.0, style);
+                    draw_solid(&mut canvas, &cam, &screen, origin, 1.0, style);
+                }
+            }
+        }
+        canvas.blit(surface, ox, oy);
+
+        // Labels over the geometry, so you know what you are looking at.
+        for (spot, pos) in &deck.spots {
+            let label = match spot {
+                DeckSpot::Bay(i) => match g.squad.get(*i) {
+                    Some(wing) => format!("{} · {}", wing.name, wing.class.name()),
+                    None => continue,
+                },
+                DeckSpot::ParkedShip => format!("{} · ready", g.class.name()),
+                other => other.name().to_string(),
+            };
+            if let Some((sx, sy, depth)) = cam.project(pos.1 as f32, 2.0, pos.0 as f32) {
+                if depth < 18.0 {
+                    let x = (sx as i16 - label.chars().count() as i16 / 2).clamp(0, w - 1);
+                    let y = (sy as i16).clamp(0, h - 1);
+                    surface.set_string(
+                        ox + x as u16,
+                        oy + y as u16,
+                        &label,
+                        if Some(*spot) == deck.at_hand() {
+                            header
+                        } else {
+                            dim
+                        },
+                    );
+                }
+            }
+        }
 
         surface.set_string(
             ox,
@@ -7661,138 +8418,14 @@ impl Nova {
         surface.set_string(
             ox,
             area.y + 1,
-            "↑/↓ walk · ←/→ turn · Enter uses what is in front of you · o top-down",
+            "↑/↓ walk · ←/→ turn · SPC blaster · Enter uses what is ahead · o top-down",
             dim,
         );
-
-        // The world: a floor running away to the horizon, and a roof over the
-        // hangar or open sky over a world.
-        let floor_glyph = if g.status == Status::Surface {
-            g.planet.shade()
-        } else {
-            "▒"
-        };
-        for depth in 1..14 {
-            let y = horizon + (h - horizon) / (depth + 1);
-            let span = ((h * 2) / (depth + 1)).clamp(2, w / 2);
-            for x in (centre - span)..=(centre + span) {
-                put(surface, x, y, "─", dim);
-            }
-            if g.status != Status::Surface {
-                let ceiling = horizon - (horizon - 1) / (depth + 1);
-                for x in ((centre - span)..=(centre + span)).step_by(6) {
-                    put(surface, x, ceiling, "╤", dim);
-                }
-            }
-        }
-        for lane in -4..=4 {
-            for depth in 1..14 {
-                let y = horizon + (h - horizon) / (depth + 1);
-                let scale = ((h * 2) / (depth + 1)).clamp(1, h / 2);
-                let x = centre + lane * scale;
-                put(surface, x, y, floor_glyph, dim);
-            }
-        }
-        for x in 0..w {
-            put(surface, x, h - 1, "▁", dim);
-        }
-
-        // Everything on the deck, drawn back to front so the near things win.
-        let ahead = deck.at_hand();
-        let mut drawn: Vec<(i16, DeckSpot, (i16, i16))> = deck
-            .spots
-            .iter()
-            .filter_map(|(spot, pos)| project(*pos).map(|(_, _, d, _)| (d, *spot, *pos)))
-            .collect();
-        drawn.sort_by(|a, b| b.0.cmp(&a.0));
-        for (_, spot, pos) in drawn {
-            let Some((x, y, forward, scale)) = project(pos) else {
-                continue;
-            };
-            if forward > 24 {
-                continue;
-            }
-            match spot {
-                DeckSpot::Bay(_) | DeckSpot::ParkedShip => {
-                    let i = match spot {
-                        DeckSpot::Bay(index) => index,
-                        _ => g.active,
-                    };
-                    let Some(wing) = g.squad.get(i) else {
-                        continue;
-                    };
-                    let style = if i == g.active { ship_style } else { text };
-                    // Close up the fighter is drawn from its full model; further
-                    // off it falls back to the three-cell hull, and further
-                    // still to a shaded block.
-                    let cell_w = (scale / 4).max(1);
-                    let cell_h = (scale / 6).max(1);
-                    if forward <= 8 {
-                        let model = wing.class.model();
-                        for (row, line) in model.iter().enumerate() {
-                            for (col, glyph) in line.chars().enumerate() {
-                                if glyph == ' ' {
-                                    continue;
-                                }
-                                for gx in 0..cell_w {
-                                    for gy in 0..cell_h {
-                                        let sx = x + (col as i16 - 3) * cell_w + gx;
-                                        let sy = y - (4 - row as i16) * cell_h + gy;
-                                        put(surface, sx, sy, &glyph.to_string(), style);
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        let shade = depth_shade(forward);
-                        for (row, line) in wing.class.sprite().iter().enumerate() {
-                            for (col, glyph) in line.chars().enumerate() {
-                                if glyph == ' ' {
-                                    continue;
-                                }
-                                let sx = x + (col as i16 - 1) * cell_w;
-                                let sy = y - (2 - row as i16) * cell_h;
-                                put(surface, sx, sy, shade, style);
-                            }
-                        }
-                    }
-                    let label = format!("{} · {}", wing.name, wing.class.name());
-                    put(
-                        surface,
-                        x - label.chars().count() as i16 / 2,
-                        y + 1,
-                        &label,
-                        if Some(spot) == ahead { header } else { dim },
-                    );
-                }
-                _ => {
-                    // A station is a lit console: a slab that grows as you
-                    // walk up to it.
-                    let cell_w = (scale / 2).max(1);
-                    let style = if Some(spot) == ahead { header } else { text };
-                    for gx in 0..cell_w {
-                        put(surface, x - cell_w / 2 + gx, y, spot.glyph(), style);
-                        if scale > 6 {
-                            put(surface, x - cell_w / 2 + gx, y - 1, "▔", dim);
-                        }
-                    }
-                    let label = spot.name();
-                    put(
-                        surface,
-                        x - label.chars().count() as i16 / 2,
-                        y + 1,
-                        label,
-                        dim,
-                    );
-                }
-            }
-        }
-
         let foot = oy + h as u16;
         surface.set_string(
             ox,
             foot,
-            &match ahead {
+            &match deck.at_hand() {
                 Some(DeckSpot::Bay(i)) => format!(
                     "In front of you: {} — {} · {} L{} · shields {}/{} · {}",
                     g.squad[i].name,
@@ -8194,8 +8827,17 @@ impl Component for Nova {
                         self.game.walk(0, 1);
                     }
                 }
-                key!(Enter) | key!(' ') => {
+                key!(Enter) => {
                     self.game.interact();
+                }
+                key!(' ') | key!('f') => {
+                    // On a world the sidearm comes out; on the deck it is just
+                    // another way of using what is in front of you.
+                    if self.game.status == Status::Surface {
+                        self.game.shoot();
+                    } else {
+                        self.game.interact();
+                    }
                 }
                 key!('w') => {
                     self.game.cycle_active();
@@ -8294,7 +8936,11 @@ impl Component for Nova {
         if self.running() {
             match self.last {
                 Some(t) if now.duration_since(t) >= self.interval => {
-                    self.game.step();
+                    if self.game.status == Status::Surface {
+                        self.game.ground_tick();
+                    } else {
+                        self.game.step();
+                    }
                     self.last = Some(now);
                 }
                 None => self.last = Some(now),
@@ -11870,5 +12516,126 @@ mod model_tests {
         assert_eq!(depth_shade(5), "▓");
         assert_eq!(depth_shade(10), "▒");
         assert_eq!(depth_shade(20), "░", "and far off it is barely there");
+    }
+}
+
+#[cfg(test)]
+mod ground_tests {
+    use super::tests::flying;
+    use super::*;
+
+    fn planetside(planet: Planet) -> Game {
+        let mut g = flying();
+        g.status = Status::Surface;
+        g.planet = planet;
+        g.deck = Deck::surface(planet, 21);
+        g
+    }
+
+    #[test]
+    fn a_world_is_big_and_has_things_on_it() {
+        let g = planetside(Planet::Coruscant);
+        assert!(Deck::WIDTH >= 120 && Deck::HEIGHT >= 40, "worlds are large");
+        assert!(!g.deck.cover.is_empty(), "with blocks to hide behind");
+        assert!(!g.deck.troopers.is_empty(), "and a patrol on them");
+        let city = g.deck.cover.iter().filter(|c| c.tall).count();
+        assert!(city > 0, "a city world is built up");
+        let wild = planetside(Planet::Hoth);
+        assert!(
+            wild.deck.cover.iter().all(|c| !c.tall),
+            "and the wilderness is not"
+        );
+    }
+
+    #[test]
+    fn cover_is_solid_and_stops_a_pilot_walking_through_it() {
+        let mut g = planetside(Planet::Bespin);
+        let block = g.deck.cover[0];
+        let inside = (block.pos.0, block.pos.1);
+        assert!(g.deck.blocked(inside.0, inside.1), "the block is solid");
+        g.deck.pilot = (inside.0, inside.1 - 1);
+        g.deck.facing = (0, 1);
+        let stood = g.deck.pilot;
+        g.step_ahead(1);
+        assert_eq!(g.deck.pilot, stood, "and you cannot walk into it");
+    }
+
+    #[test]
+    fn the_blaster_fires_where_the_pilot_looks_and_drops_a_trooper() {
+        let mut g = planetside(Planet::Tatooine);
+        g.deck.troopers.clear();
+        g.deck.pilot = (20, 20);
+        g.deck.facing = (0, 1);
+        g.deck.cover.clear();
+        g.deck.troopers.push(Trooper {
+            pos: (20, 26),
+            hp: 3,
+            cooldown: 99,
+        });
+        assert!(g.shoot(), "the sidearm fires");
+        assert!(!g.deck.bolts.is_empty(), "a bolt is in the air");
+        assert!(!g.shoot(), "and it cycles before the next one");
+        for tick in 0..4 {
+            g.deck.skirmish(tick);
+        }
+        assert_eq!(g.deck.troopers[0].hp, 1, "one bolt takes two off him");
+        assert!(g.shoot(), "the sidearm has cycled");
+        for tick in 0..6 {
+            g.deck.skirmish(tick);
+        }
+        assert!(g.deck.troopers.is_empty(), "and the second puts him down");
+    }
+
+    #[test]
+    fn a_patrol_closes_and_shoots_back() {
+        let mut g = planetside(Planet::Jakku);
+        g.deck.cover.clear();
+        g.deck.bolts.clear();
+        g.deck.pilot = (20, 20);
+        g.deck.troopers = vec![Trooper {
+            pos: (20, 30),
+            hp: 3,
+            cooldown: 0,
+        }];
+        let start = g.deck.troopers[0].pos;
+        let mut fired = false;
+        for tick in 0..12 {
+            g.deck.skirmish(tick);
+            fired |= g.deck.bolts.iter().any(|b| !b.friendly);
+        }
+        assert!(fired, "they shoot back");
+        assert_ne!(g.deck.troopers[0].pos, start, "and they close the range");
+    }
+
+    #[test]
+    fn taking_too_much_of_it_ends_the_walkabout() {
+        let mut g = planetside(Planet::Mustafar);
+        g.deck.troopers.clear();
+        g.deck.cover.clear();
+        g.deck.health = 1;
+        g.deck.bolts = vec![Bolt {
+            pos: (g.deck.pilot.0 - 1, g.deck.pilot.1),
+            dir: (1, 0),
+            friendly: false,
+            life: 4,
+        }];
+        let lives = g.lives;
+        for _ in 0..4 {
+            g.ground_tick();
+        }
+        assert_eq!(g.status, Status::Chart, "he is carried back to the ship");
+        assert_eq!(g.lives, lives - 1, "and it costs");
+        assert_eq!(g.deck.health, PILOT_HEALTH, "patched up for next time");
+    }
+
+    #[test]
+    fn nothing_shoots_on_the_hangar_deck() {
+        let mut g = flying();
+        g.status = Status::Hangar;
+        g.deck = Deck::new(2);
+        assert!(g.deck.troopers.is_empty(), "the yard is friendly");
+        assert!(g.deck.cover.is_empty(), "and clear to walk");
+        g.ground_tick();
+        assert_eq!(g.status, Status::Hangar, "and the tick does nothing there");
     }
 }
