@@ -132,6 +132,8 @@ const SENSE_COST: u32 = 45;
 const SENSE_TICKS: u32 = 90;
 const PULL_COST: u32 = 30;
 const GUIDED_COST: u32 = 60;
+/// What a win on the Boonta course is worth, before placing takes its cut.
+const POD_PURSE: u32 = 2_500;
 /// Probe droids the Empire keeps drifting across a galaxy.
 const PROBE_COUNT: usize = 4;
 /// The score that gets a bounty posted on you, and what his ship is worth.
@@ -1533,6 +1535,8 @@ pub enum Status {
     Chart,
     /// Down on a world, out of the cockpit and on foot.
     Surface,
+    /// On the starting grid, and then round the canyon.
+    Podracing,
     /// The war is won: the ceremony at the base.
     Ceremony,
     Lost,
@@ -1703,10 +1707,13 @@ pub enum TerrainKind {
     Trench,
     /// The forest floor: trunks everywhere and barely a lane between them.
     Forest,
+    /// A station's interior: lanes of bore with walls between them, and the odd
+    /// one bricked up at the far end.
+    Corridor,
 }
 
 impl TerrainKind {
-    pub const ALL: [TerrainKind; 11] = [
+    pub const ALL: [TerrainKind; 12] = [
         TerrainKind::Open,
         TerrainKind::Canyon,
         TerrainKind::Cave,
@@ -1718,6 +1725,7 @@ impl TerrainKind {
         TerrainKind::Reef,
         TerrainKind::Trench,
         TerrainKind::Forest,
+        TerrainKind::Corridor,
     ];
 
     pub fn name(self) -> &'static str {
@@ -1733,6 +1741,7 @@ impl TerrainKind {
             TerrainKind::Reef => "reef",
             TerrainKind::Trench => "trench",
             TerrainKind::Forest => "forest",
+            TerrainKind::Corridor => "corridor",
         }
     }
 
@@ -1749,6 +1758,7 @@ impl TerrainKind {
             TerrainKind::Reef => "columns wall to wall",
             TerrainKind::Trench => "one lane between two armoured walls",
             TerrainKind::Forest => "trunks everywhere; fly it at speed and see",
+            TerrainKind::Corridor => "lanes of station interior, one of them walled off",
         }
     }
 
@@ -1763,6 +1773,7 @@ impl TerrainKind {
             TerrainKind::Gates | TerrainKind::Spine | TerrainKind::Maze => (W - 6, W - 2),
             TerrainKind::Trench => (18, 22),
             TerrainKind::Forest => (W - 10, W - 4),
+            TerrainKind::Corridor => (Corridor::bore().1 - Corridor::bore().0, W - 4),
         }
     }
 
@@ -1777,6 +1788,7 @@ impl TerrainKind {
             TerrainKind::Maze => 0,
             TerrainKind::Trench => 1,
             TerrainKind::Forest => 2,
+            TerrainKind::Corridor => 0,
         }
     }
 
@@ -1795,6 +1807,7 @@ impl TerrainKind {
     /// 1-in-N odds a generated row grows a rock column in the channel.
     fn pillar_chance(self) -> u64 {
         match self {
+            TerrainKind::Corridor => 0,
             TerrainKind::Forest => 2,
             TerrainKind::Reef => 2,
             TerrainKind::Pillars => 4,
@@ -1831,6 +1844,8 @@ pub struct Terrain {
     width: i16,
     drift: i16,
     squeeze: i16,
+    /// The station interior, for the maps that are flown inside one.
+    corridor: Corridor,
     /// Rows generated so far, which is what paces gates and maze walls.
     phase: u32,
     rng: u64,
@@ -1846,6 +1861,7 @@ impl Terrain {
             width: max,
             drift: 1,
             squeeze: -1,
+            corridor: Corridor::new(seed),
             phase: 0,
             rng: seed | 1,
             //
@@ -1913,6 +1929,7 @@ impl Terrain {
                     pillars: Vec::new(),
                 };
             }
+            TerrainKind::Corridor => return self.corridor.generate(),
             _ => {}
         }
         let (min, max) = self.kind.width_range();
@@ -3039,6 +3056,8 @@ pub enum DeckSpot {
     Settlement,
     /// An outpost with a droid and a power cell.
     Outpost,
+    /// A starting grid, and a pod somebody will lend you for a cut.
+    StartingGrid,
     /// Ruins older than the war.
     Ruins,
     /// A detention block with one of yours in it.
@@ -3063,6 +3082,7 @@ impl DeckSpot {
             DeckSpot::SurfaceWreck => "wreck",
             DeckSpot::Settlement => "settlement",
             DeckSpot::Outpost => "outpost",
+            DeckSpot::StartingGrid => "starting grid",
             DeckSpot::Ruins => "ruins",
             DeckSpot::Detention => "detention block",
             DeckSpot::HiringTable => "hiring table",
@@ -3083,6 +3103,7 @@ impl DeckSpot {
             DeckSpot::SurfaceWreck => "⌗",
             DeckSpot::Settlement => "⌸",
             DeckSpot::Outpost => "⌺",
+            DeckSpot::StartingGrid => "⌾",
             DeckSpot::Ruins => "⍟",
             DeckSpot::Detention => "⊟",
             DeckSpot::HiringTable => "⌷",
@@ -3563,6 +3584,7 @@ pub struct Cover {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DeckAction {
     Boarded(usize),
+    Raced,
     Freed,
     Hired,
     Gambled,
@@ -3632,6 +3654,7 @@ impl Deck {
         let mut spots = vec![(DeckSpot::ParkedShip, (Deck::HEIGHT - 4, Deck::WIDTH / 2))];
         let stock: &[DeckSpot] = match planet {
             Planet::Tatooine | Planet::Jakku | Planet::Mandalore => &[
+                DeckSpot::StartingGrid,
                 DeckSpot::Cantina,
                 DeckSpot::SurfaceWreck,
                 DeckSpot::Settlement,
@@ -4378,6 +4401,10 @@ pub enum Objective {
     Walkers { count: usize },
     /// Down the trench and put one in the port.
     CoreRun,
+    /// Into the station, kill the core, and be out before it goes.
+    ReactorRun,
+    /// Hold the base until this many transports are off the deck.
+    Hold { transports: usize },
 }
 
 impl Objective {
@@ -4388,6 +4415,10 @@ impl Objective {
             Objective::Survive { ticks } => format!("hold out for {}s", ticks / 14),
             Objective::Walkers { count } => format!("bring down {count} walkers"),
             Objective::CoreRun => "one shot down the shaft".to_string(),
+            Objective::ReactorRun => "kill the core and get out".to_string(),
+            Objective::Hold { transports } => {
+                format!("get {transports} transports off the deck")
+            }
         }
     }
 }
@@ -4407,7 +4438,7 @@ pub struct Mission {
 
 impl Mission {
     /// The campaign, flown in this order.
-    pub const CAMPAIGN: [Mission; 8] = [
+    pub const CAMPAIGN: [Mission; 10] = [
         Mission {
             name: "Tatooine Patrol",
             briefing: "A patrol out of the twin suns. Warm the cannons up on it.",
@@ -4454,6 +4485,15 @@ impl Mission {
             boss: None,
         },
         Mission {
+            name: "Echo Base",
+            briefing: "They are through the shield. Hold the line until the convoy is out.",
+            sector: Sector::AsteroidBelt,
+            terrain: TerrainKind::Open,
+            objective: Objective::Hold { transports: 3 },
+            capital: None,
+            boss: None,
+        },
+        Mission {
             name: "Evacuation of Hoth",
             briefing: "Transports are lifting off. Keep them alive until they jump.",
             sector: Sector::AsteroidBelt,
@@ -4470,6 +4510,15 @@ impl Mission {
             objective: Objective::Destroy,
             capital: None,
             boss: Some(BossKind::AceTie),
+        },
+        Mission {
+            name: "The Second Station",
+            briefing: "Inside, down the shafts, kill the core and be out before it goes.",
+            sector: Sector::DebrisRing,
+            terrain: TerrainKind::Corridor,
+            objective: Objective::ReactorRun,
+            capital: None,
+            boss: None,
         },
         Mission {
             name: "Battle of Endor",
@@ -4786,6 +4835,15 @@ pub struct Game {
     pub boss: Option<Boss>,
     /// The capital ship holding this system, if one does.
     pub capital: Option<Capital>,
+    /// The race being run, if the pilot has taken somebody's pod out.
+    pub race: Option<Podrace>,
+    /// The base being held, and the assault coming at it.
+    pub base: Option<Base>,
+    pub assault: Option<Assault>,
+    /// The station core, on the missions that are flown inside one, and how
+    /// far back out of the interior the hull has got.
+    pub reactor: Option<Reactor>,
+    pub rows_out: i16,
     /// The Alliance cruiser fighting alongside, if the fleet came out.
     pub ally: Option<Capital>,
     pub shots: Vec<Shot>,
@@ -4896,6 +4954,11 @@ impl Game {
             enemies: Vec::new(),
             boss: None,
             capital: None,
+            race: None,
+            base: None,
+            assault: None,
+            reactor: None,
+            rows_out: 0,
             ally: None,
             shots: Vec::new(),
             enemy_shots: Vec::new(),
@@ -4979,6 +5042,7 @@ impl Game {
         self.shop_open = false;
         self.mission = None;
         self.campaign_at = 0;
+        self.race = None;
         self.hunter = None;
         self.hunted = 0;
         self.probes.clear();
@@ -6366,6 +6430,9 @@ impl Game {
         if self.hit_capital(shot) {
             hit = true;
         }
+        if self.hit_reactor(shot) {
+            hit = true;
+        }
         if self.hit_debris((r, c), shot.damage) {
             hit = true;
         }
@@ -6728,6 +6795,11 @@ impl Game {
             self.add_score(bounty);
             self.gain_xp(bounty / 2);
         }
+        if self.base.as_ref().is_some_and(|base| base.fallen) {
+            self.say("The core is gone. Everybody out.");
+            self.status = Status::Lost;
+            return;
+        }
         if self.lives == 0 {
             self.status = Status::Lost;
             return;
@@ -6744,6 +6816,11 @@ impl Game {
         let done = match self.objective {
             Objective::Destroy => swept,
             Objective::CoreRun => self.capital.is_none(),
+            Objective::ReactorRun => Reactor::clear_of_it(self.rows_out),
+            Objective::Hold { transports } => self
+                .base
+                .as_ref()
+                .is_some_and(|base| base.launched >= transports),
             Objective::Survive { .. } => self.objective_ticks == 0,
             Objective::Walkers { .. } => {
                 !self.walkers.is_empty() && self.walkers.iter().all(|w| w.down)
@@ -6938,7 +7015,7 @@ impl Game {
         self.terrain = Terrain::new(self.node.terrain, seed);
         self.turrets.clear();
         self.hazards.clear();
-        if self.node.terrain != TerrainKind::Open {
+        if !matches!(self.node.terrain, TerrainKind::Open | TerrainKind::Corridor) {
             for _ in 0..TURRETS_PER_MAP {
                 if let Some(turret) = self.turret_on_the_rock() {
                     self.turrets.push(turret);
@@ -7105,6 +7182,61 @@ impl Game {
         if burn {
             self.damage_ship(1);
         }
+    }
+
+    /// Put a shot into the station's reactor chamber: the regulators shield the
+    /// core, and the outer ring shields the inner one.
+    fn hit_reactor(&mut self, shot: &Shot) -> bool {
+        let Some(mut reactor) = self.reactor.take() else {
+            return false;
+        };
+        let (r, c) = shot.pos;
+        let mut struck = false;
+        let mut downed = 0;
+        for index in 0..reactor.regulators.len() {
+            let cell = reactor.regulator_cell(&reactor.regulators[index]);
+            if (r - cell.0).abs() > shot.splash || (c - cell.1).abs() > 1 + shot.half_width {
+                continue;
+            }
+            struck = true;
+            if shot.ion {
+                reactor.regulators[index].ion = reactor.regulators[index].ion.max(ION_STUN);
+                continue;
+            }
+            if reactor.hit_regulator(index, shot.damage) {
+                downed += 1;
+            }
+        }
+        if !struck && reactor.covers(r, c) {
+            struck = true;
+            if !shot.ion && reactor.hit(shot.damage) {
+                self.say("The core is going. Get out, all of you.");
+            }
+        }
+        self.reactor = Some(reactor);
+        for _ in 0..downed {
+            self.award(400);
+        }
+        struck
+    }
+
+    /// Work the collapse: the fire comes up the shafts faster than a hull flies,
+    /// so the only margin is the head start.
+    fn advance_reactor(&mut self) {
+        let Some(mut reactor) = self.reactor.take() else {
+            return;
+        };
+        let state = reactor.collapse_tick();
+        if reactor.running() && self.tick.is_multiple_of(SCROLL_CADENCE) {
+            self.rows_out += 1;
+        }
+        if matches!(state, Collapse::Blown) || reactor.overtaken(self.rows_out) {
+            self.say("It caught us.");
+            self.reactor = Some(reactor);
+            self.damage_ship(PILOT_HEALTH as u32);
+            return;
+        }
+        self.reactor = Some(reactor);
     }
 
     /// Chew on the wall turret at a cell, if there is one.
@@ -7850,6 +7982,13 @@ impl Game {
                 }
                 DeckAction::Gambled
             }
+            DeckSpot::StartingGrid => {
+                let seed = self.rand();
+                self.race = Some(Podrace::new(seed));
+                self.status = Status::Podracing;
+                self.say("They will lend you a pod for a cut of the purse.");
+                DeckAction::Raced
+            }
             DeckSpot::Ruins => {
                 // Older than the war, and there is something in them.
                 self.force = FORCE_MAX;
@@ -7913,7 +8052,20 @@ impl Game {
         self.transports.clear();
         self.walkers.clear();
         self.objective_ticks = 0;
+        self.reactor = None;
+        self.rows_out = 0;
+        self.base = None;
+        self.assault = None;
         match self.objective {
+            Objective::Hold { .. } => {
+                let armour = self.wave_armour();
+                let seed = self.rand();
+                self.base = Some(Base::new(armour));
+                self.assault = Some(Assault::new(seed, armour));
+            }
+            Objective::ReactorRun => {
+                self.reactor = Some(Reactor::new(self.wave_armour()));
+            }
             Objective::Survive { ticks } => self.objective_ticks = ticks,
             Objective::Escort { needed } => {
                 for i in 0..needed + 1 {
@@ -7984,6 +8136,22 @@ impl Game {
         if away > 0 {
             self.say("Transport away. Keep the rest of them alive.");
         }
+    }
+
+    /// Work the base and the assault on it together: the base's own guns answer
+    /// without you, and every transport that gets off the deck is the mission.
+    fn advance_assault(&mut self) {
+        let (Some(mut base), Some(mut assault)) = (self.base.take(), self.assault.take()) else {
+            return;
+        };
+        let away = assault.step(&mut base, self.tick);
+        for transport in away {
+            self.transports.push(transport);
+            self.add_score(500);
+            self.say("Transport away. That is another one clear.");
+        }
+        self.base = Some(base);
+        self.assault = Some(assault);
     }
 
     /// Walk the walkers up the court and let them fire.
@@ -8247,9 +8415,11 @@ impl Game {
                 self.advance_enemies();
                 self.advance_boss();
                 self.advance_capital();
+                self.advance_reactor();
                 self.advance_ally();
                 self.advance_transports();
                 self.advance_walkers();
+                self.advance_assault();
                 self.advance_wings();
                 self.advance_shots();
                 self.advance_enemy_shots();
@@ -8258,6 +8428,24 @@ impl Game {
                 self.advance_debris();
                 self.advance_powerups();
                 self.check_end();
+            }
+            Status::Podracing => {
+                let Some(mut race) = self.race.take() else {
+                    self.status = Status::Surface;
+                    return;
+                };
+                race.step();
+                if race.over() {
+                    // The purse pays out by where you finished, and last place
+                    // pays for the pod you bent.
+                    let place = race.standing();
+                    let purse = POD_PURSE.saturating_sub(place.saturating_sub(1) * POD_PURSE / 4);
+                    self.credits += purse;
+                    self.say(&format!("Finished {place}. Purse {purse}."));
+                    self.status = Status::Surface;
+                } else {
+                    self.race = Some(race);
+                }
             }
             Status::WaveClear => {
                 self.intermission = self.intermission.saturating_sub(1);
@@ -8948,7 +9136,7 @@ impl Nova {
     fn running(&self) -> bool {
         matches!(
             self.game.status,
-            Status::Playing | Status::WaveClear | Status::Surface
+            Status::Playing | Status::WaveClear | Status::Surface | Status::Podracing
         ) && !self.paused
             && !self.roster
     }
@@ -9359,6 +9547,82 @@ impl Nova {
             header,
         );
         surface.set_string(ox, y + 2, "n flies another war · q stands down", text);
+    }
+
+    /// The canyon from above, with the pod in the middle of it: the track
+    /// scrolls past rather than the pod moving up the screen.
+    fn render_race(&self, area: Rect, surface: &mut Surface, ctx: &Context) {
+        let theme = &ctx.editor.theme;
+        let header = theme.get("ui.text.focus");
+        let text = theme.get("ui.text");
+        let dim = theme.get("ui.linenr");
+        let rock = theme.get("ui.linenr");
+        let rival_style = theme.get("error");
+        let Some(race) = &self.game.race else {
+            return;
+        };
+        let ox = area.x + 2;
+        let oy = area.y + 3;
+        let view = (area.height as i16 - 8).clamp(10, 34);
+        let here = race.pod.row() as i16;
+        surface.set_string(
+            ox,
+            area.y,
+            &format!(
+                "BOONTA COURSE — lap {}/{}   place {} of {}   heat {}   engines {}",
+                race.pod.laps + 1,
+                POD_LAPS,
+                race.standing(),
+                race.field(),
+                "▰".repeat((race.pod.heat as usize / 12).min(8)),
+                race.pod.damage
+            ),
+            header,
+        );
+        surface.set_string(
+            ox,
+            area.y + 1,
+            "←/→ steer · ↑/↓ throttle · SPC boost · r weld · p pause · q quit",
+            dim,
+        );
+        for line in 0..view {
+            // The pod sits a third of the way up the view, so there is canyon
+            // ahead of it to read.
+            let row = (here + line - view / 3).rem_euclid(race.rows.len() as i16);
+            let PodRow { open } = race.rows[row as usize];
+            for col in 0..W {
+                let glyph = if col < open.0 || col > open.1 {
+                    "▓"
+                } else {
+                    " "
+                };
+                if glyph != " " {
+                    surface.set_string(ox + col as u16, oy + line as u16, glyph, rock);
+                }
+            }
+            for rival in race.field_pods() {
+                if rival.row() as i16 == row {
+                    surface.set_string(
+                        ox + rival.col as u16,
+                        oy + line as u16,
+                        if rival.wrecked() { "✖" } else { "≡" },
+                        rival_style,
+                    );
+                }
+            }
+            if row == here {
+                surface.set_string(ox + race.pod.col as u16, oy + line as u16, "◆", header);
+            }
+        }
+        surface.set_string(
+            ox,
+            oy + view as u16 + 1,
+            &format!(
+                "{} — throttle {}   speed {}",
+                race.pod.name, race.pod.throttle, race.pod.speed
+            ),
+            text,
+        );
     }
 
     /// The pause panel: what the mission wants, what is in the racks, and every
@@ -10493,6 +10757,41 @@ impl Component for Nova {
                     _ => {}
                 }
             }
+            Status::Podracing => match key {
+                key!(Left) | key!('h') => {
+                    if let Some(race) = self.game.race.as_mut() {
+                        race.steer(-1);
+                    }
+                }
+                key!(Right) | key!('l') => {
+                    if let Some(race) = self.game.race.as_mut() {
+                        race.steer(1);
+                    }
+                }
+                key!(Up) | key!('k') => {
+                    if let Some(race) = self.game.race.as_mut() {
+                        race.throttle(1);
+                    }
+                }
+                key!(Down) | key!('j') => {
+                    if let Some(race) = self.game.race.as_mut() {
+                        race.throttle(-1);
+                    }
+                }
+                key!(' ') | key!('f') => {
+                    if let Some(race) = self.game.race.as_mut() {
+                        race.boost();
+                    }
+                }
+                key!('r') => {
+                    if let Some(race) = self.game.race.as_mut() {
+                        race.repair();
+                    }
+                }
+                key!('p') => self.paused = !self.paused,
+                key!('n') => self.restart(),
+                _ => {}
+            },
             Status::Chart => match key {
                 key!(Left) | key!('h') => self.game.steer_chart(-1, 0),
                 key!(Right) | key!('l') => self.game.steer_chart(1, 0),
@@ -10730,6 +11029,10 @@ impl Component for Nova {
                 self.render_select(area, surface, ctx);
                 return;
             }
+            Status::Podracing => {
+                self.render_race(area, surface, ctx);
+                return;
+            }
             Status::Hangar | Status::Surface => {
                 if self.game.shop_open {
                     self.render_hangar(area, surface, ctx);
@@ -10835,7 +11138,31 @@ impl Component for Nova {
         );
         // The boss bar takes the fourth line while a boss is up; otherwise the
         // pilot's progress does.
-        if let Some(cap) = &g.capital {
+        if let (Some(base), Some(assault)) = (&g.base, &g.assault) {
+            surface.set_string(
+                ox,
+                area.y + 3,
+                &format!("{}   {}", base.hud(), assault.hud()),
+                boss_style,
+            );
+        } else if let Some(reactor) = &g.reactor {
+            surface.set_string(
+                ox,
+                area.y + 3,
+                &format!(
+                    "REACTOR  regulators {}  {}  out {}/{}",
+                    reactor.regulators_standing(),
+                    if reactor.vulnerable() {
+                        "CORE EXPOSED"
+                    } else {
+                        "shielded"
+                    },
+                    g.rows_out,
+                    ESCAPE_RUN
+                ),
+                boss_style,
+            );
+        } else if let Some(cap) = &g.capital {
             let width = 20i32;
             let filled = (cap.hp.max(0) * width / cap.max_hp.max(1)) as usize;
             surface.set_string(
@@ -11230,6 +11557,7 @@ impl Component for Nova {
             | Status::Hangar
             | Status::Chart
             | Status::Surface
+            | Status::Podracing
             | Status::Ceremony => String::new(),
         };
         surface.set_string(ox, status_y, &status, text_style);
@@ -13655,6 +13983,14 @@ mod campaign_tests {
     use super::tests::flying;
     use super::*;
 
+    /// The campaign mission with this name, whatever number it ends up being.
+    fn mission_number(name: &str) -> usize {
+        Mission::CAMPAIGN
+            .iter()
+            .position(|mission| mission.name == name)
+            .unwrap_or_else(|| panic!("the campaign flies {name}"))
+    }
+
     fn on_mission(index: usize) -> Game {
         let mut g = Game::new(6);
         g.start_campaign(ShipClass::XWing, Difficulty::Normal);
@@ -13687,7 +14023,7 @@ mod campaign_tests {
 
     #[test]
     fn yavin_is_a_trench_run_at_a_station() {
-        let g = on_mission(3);
+        let g = on_mission(mission_number("Battle of Yavin"));
         assert_eq!(g.mission.unwrap().name, "Battle of Yavin");
         assert_eq!(g.objective, Objective::CoreRun, "one shot down the shaft");
         assert_eq!(g.node.terrain, TerrainKind::Trench);
@@ -13700,7 +14036,7 @@ mod campaign_tests {
 
     #[test]
     fn hoth_puts_walkers_on_the_deck_and_only_cables_stop_them() {
-        let mut g = on_mission(4);
+        let mut g = on_mission(mission_number("Battle of Hoth"));
         assert_eq!(g.objective, Objective::Walkers { count: 3 });
         assert_eq!(g.walkers.len(), 3, "three of them on the ridge");
         let pos = g.walkers[0].pos;
@@ -13721,7 +14057,7 @@ mod campaign_tests {
 
     #[test]
     fn the_evacuation_is_won_by_transports_that_get_away() {
-        let mut g = on_mission(5);
+        let mut g = on_mission(mission_number("Evacuation of Hoth"));
         assert!(matches!(g.objective, Objective::Escort { .. }));
         assert!(g.transports.len() >= 4, "the convoy is on the deck");
         for transport in g.transports.iter_mut() {
@@ -13735,7 +14071,7 @@ mod campaign_tests {
 
     #[test]
     fn a_transport_under_fire_can_be_lost() {
-        let mut g = on_mission(5);
+        let mut g = on_mission(mission_number("Evacuation of Hoth"));
         let pos = g.transports[0].pos;
         g.transports[0].hp = 2;
         g.enemy_shots = vec![Shot::enemy((pos.0, pos.1 + 1), 0, 1)];
@@ -13750,7 +14086,7 @@ mod campaign_tests {
 
     #[test]
     fn the_kessel_run_is_a_hold_out() {
-        let mut g = on_mission(1);
+        let mut g = on_mission(mission_number("The Kessel Run"));
         assert!(matches!(g.objective, Objective::Survive { .. }));
         assert!(g.objective_ticks > 0, "with a clock on it");
         g.objective_ticks = 0;
@@ -15626,6 +15962,2052 @@ mod probe_tests {
         assert!(
             g.chatter.iter().any(|c| c.line.contains("waiting")),
             "somebody says so"
+        );
+    }
+}
+/// Lanes the interior splits into, how wide one of them is, and the pitch
+/// between their centres. Three lanes is the fewest that makes a junction a
+/// real choice — two would only ever be "the other one".
+const CORRIDOR_LANES: usize = 3;
+const CORRIDOR_LANE: i16 = 5;
+const CORRIDOR_PITCH: i16 = 22;
+/// Rows in one corridor block, and how many of them stand open. The open rows
+/// are the junction: the only place a hull may change lane, which is what turns
+/// a dead end into a mistake made several rows earlier rather than bad luck.
+const CORRIDOR_PERIOD: u32 = 10;
+const CORRIDOR_JUNCTION: u32 = 3;
+/// 1-in-N odds a block plugs one of its lanes. A plugged lane is not lethal —
+/// the hull is shoved out of it — but the shoving costs the rows that the
+/// collapse is counting.
+const DEAD_END_ODDS: u64 = 3;
+
+/// Rows of core, and its half-width. It is the widest single target in the
+/// game: at this range there is no missing it, only reaching it.
+const CORE_DEPTH: i16 = 5;
+const CORE_SPAN: i16 = 9;
+/// Hull the core carries before the campaign's armour scaling, and what one
+/// power regulator takes.
+const CORE_HULL: i32 = 200;
+const REGULATOR_HP: i32 = 34;
+/// Rings of regulators standing between a shot and the core. The outer ring
+/// screens the inner one, so the chamber has to be taken apart from the outside
+/// in rather than sprayed.
+const REGULATOR_RINGS: u8 = 2;
+/// Ticks between the core breaking and the chain reaction reaching the
+/// corridors. The fuse is the whole margin the mission gives you, and it is
+/// sized against the arithmetic of the run: the hull covers a row every
+/// `SCROLL_CADENCE` ticks and the fireball covers one every
+/// `COLLAPSE_CADENCE`, so the fire is the faster of the two and only the head
+/// start keeps it behind. Flown clean the shaft ends about thirty ticks ahead
+/// of it; two rows lost in a dead end is most of that gone.
+const COLLAPSE_FUSE: u32 = 110;
+const COLLAPSE_CADENCE: u32 = 3;
+/// Rows of corridor between the reactor chamber and open sky.
+const ESCAPE_RUN: i16 = 48;
+
+/// One block of the station's interior: which lane, if any, this block has
+/// plugged, and how far through the block the generator is.
+///
+/// The interior is a `TerrainRow` like any other map — one open span with rock
+/// standing inside it — so it scrolls, carves and shoves exactly as the rock
+/// does. The difference is that the rock inside the span is arranged into
+/// walls rather than scattered, which is what makes it read as passages.
+#[derive(Clone, Debug)]
+pub struct Corridor {
+    /// Rows generated so far, which is what paces junctions and dead ends.
+    phase: u32,
+    /// The lane this block has walled off at its far end, if it walled one.
+    plugged: Option<usize>,
+    rng: u64,
+}
+
+impl Corridor {
+    pub fn new(seed: u64) -> Corridor {
+        Corridor {
+            phase: 0,
+            plugged: None,
+            rng: seed | 1,
+        }
+    }
+
+    fn rand(&mut self) -> u64 {
+        self.rng = self
+            .rng
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        self.rng >> 33
+    }
+
+    /// The columns one lane runs between, inclusive. Lane zero is portside.
+    pub fn lane(index: usize) -> (i16, i16) {
+        let centre = W / 2 + (index as i16 - CORRIDOR_LANES as i16 / 2) * CORRIDOR_PITCH;
+        (centre - CORRIDOR_LANE / 2, centre + CORRIDOR_LANE / 2)
+    }
+
+    /// The full span the lanes cover, walls included.
+    pub fn bore() -> (i16, i16) {
+        (
+            Self::lane(0).0.max(1),
+            Self::lane(CORRIDOR_LANES - 1).1.min(W - 2),
+        )
+    }
+
+    /// Whether the row about to be generated is part of an open junction.
+    pub fn at_junction(&self) -> bool {
+        self.phase % CORRIDOR_PERIOD < CORRIDOR_JUNCTION
+    }
+
+    /// Walk the interior one row on.
+    ///
+    /// A block opens with its junction rows — every lane connected, the one
+    /// chance to pick — then closes into walled passages, one of which may be
+    /// bricked up at the far end. The choice is made at the top of the block so
+    /// that a pilot who reads the chamber ahead can commit early, and a pilot
+    /// who does not is still in the wrong lane when the wall arrives.
+    pub fn generate(&mut self) -> TerrainRow {
+        let bore = Self::bore();
+        if self.at_junction() {
+            if self.phase % CORRIDOR_PERIOD == 0 {
+                self.plugged = match self.rand().is_multiple_of(DEAD_END_ODDS) {
+                    true => Some((self.rand() % CORRIDOR_LANES as u64) as usize),
+                    false => None,
+                };
+            }
+            self.phase = self.phase.wrapping_add(1);
+            return TerrainRow {
+                open: bore,
+                pillars: Vec::new(),
+            };
+        }
+        // Rock everywhere inside the bore that is not a lane, plus the far wall
+        // of whichever lane this block has plugged.
+        let plugged = self.plugged;
+        let lanes: Vec<(i16, i16)> = (0..CORRIDOR_LANES)
+            .filter(|i| Some(*i) != plugged || !self.dead_end_reached())
+            .map(Self::lane)
+            .collect();
+        let pillars = (bore.0..=bore.1)
+            .filter(|col| !lanes.iter().any(|(l, r)| (l..=r).contains(&col)))
+            .collect();
+        self.phase = self.phase.wrapping_add(1);
+        TerrainRow {
+            open: bore,
+            pillars,
+        }
+    }
+
+    /// A plugged lane only bricks up over the last rows of its block, so the
+    /// wall is visible for a moment before it has to be answered.
+    fn dead_end_reached(&self) -> bool {
+        self.phase % CORRIDOR_PERIOD >= CORRIDOR_PERIOD - 2
+    }
+}
+
+/// One power regulator feeding the core.
+///
+/// They sit in rings, and a ring is only reachable once the ring outside it is
+/// gone — the same rule the shield generators put on a capital hull, applied
+/// twice over so the chamber is a sequence rather than a scrum.
+#[derive(Clone, Debug)]
+pub struct Regulator {
+    /// Which ring it belongs to; zero is the outermost and is always exposed.
+    pub ring: u8,
+    /// Offset from the core's anchor, as `(row, column)`.
+    pub offset: (i16, i16),
+    pub hp: i32,
+    pub max_hp: i32,
+    /// Ticks this regulator is still ion-scrambled for.
+    pub ion: u32,
+}
+
+impl Regulator {
+    fn new(ring: u8, offset: (i16, i16), armour: i32) -> Regulator {
+        let hp = REGULATOR_HP + armour * 4;
+        Regulator {
+            ring,
+            offset,
+            hp,
+            max_hp: hp,
+            ion: 0,
+        }
+    }
+
+    /// A scrambled regulator holds nothing off the core until it comes back.
+    pub fn live(&self) -> bool {
+        self.hp > 0 && self.ion == 0
+    }
+}
+
+/// What the chain reaction is doing this tick.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Collapse {
+    /// The core is intact; there is nothing coming up the shaft.
+    Stable,
+    /// The core is broken and the reaction is still building. This many ticks
+    /// of head start are left before it starts moving.
+    Building { fuse: u32 },
+    /// The fireball is in the corridors, this many rows out from the chamber.
+    Running { front: i16 },
+    /// It reached open sky. Anything still in the shaft went with it.
+    Blown,
+}
+
+/// The main reactor at the bottom of the station: the core, the regulators
+/// screening it, and the countdown that starts the moment it goes.
+///
+/// The fight is deliberately the reverse of a capital run. There is no hull to
+/// grind down — the core dies to one clean salvo — so all the difficulty lives
+/// in getting to it through the rings and, having got to it, in leaving.
+#[derive(Clone, Debug)]
+pub struct Reactor {
+    /// Anchor: the top row of the core and the column it is centred on.
+    pub pos: (i16, i16),
+    pub hp: i32,
+    pub max_hp: i32,
+    pub regulators: Vec<Regulator>,
+    /// Ticks left before the reaction reaches the corridors; `None` while the
+    /// core still stands.
+    pub fuse: Option<u32>,
+    /// Rows of corridor the fireball has swallowed. Only counts once the fuse
+    /// is out.
+    pub front: i16,
+    tick: u32,
+}
+
+impl Reactor {
+    /// `armour` is the campaign's wave scaling, applied the way a capital ship
+    /// applies it: to the pieces, not to the core, because the core is meant to
+    /// fall to one salvo however late in the war it is met.
+    pub fn new(armour: i32) -> Reactor {
+        let hp = CORE_HULL + armour * 8;
+        let mut regulators = Vec::new();
+        // The outer ring stands across the mouth of the chamber, the inner one
+        // hugs the core itself.
+        for dx in [-14, -7, 7, 14] {
+            regulators.push(Regulator::new(0, (0, dx), armour));
+        }
+        for dx in [-5, 5] {
+            regulators.push(Regulator::new(1, (2, dx), armour));
+        }
+        Reactor {
+            pos: (1, W / 2),
+            hp,
+            max_hp: hp,
+            regulators,
+            fuse: None,
+            front: 0,
+            tick: 0,
+        }
+    }
+
+    /// Regulators still holding the core shut, scrambled ones included: an ion
+    /// bolt buys a window, it does not clear the chamber.
+    pub fn regulators_standing(&self) -> usize {
+        self.regulators.iter().filter(|r| r.hp > 0).count()
+    }
+
+    /// Can the core be hurt at all?
+    pub fn vulnerable(&self) -> bool {
+        self.regulators.iter().all(|r| !r.live())
+    }
+
+    /// Whether a ring is reachable yet. Ring zero always is; anything deeper
+    /// waits for everything outside it to come down.
+    pub fn exposed(&self, ring: u8) -> bool {
+        !self.regulators.iter().any(|r| r.ring < ring && r.live())
+    }
+
+    /// The absolute cell a regulator sits in.
+    pub fn regulator_cell(&self, reg: &Regulator) -> (i16, i16) {
+        (self.pos.0 + reg.offset.0, self.pos.1 + reg.offset.1)
+    }
+
+    /// Is this cell the core?
+    pub fn covers(&self, row: i16, col: i16) -> bool {
+        let dr = row - self.pos.0;
+        (0..CORE_DEPTH).contains(&dr) && (col - self.pos.1).abs() <= CORE_SPAN
+    }
+
+    /// Put damage into one regulator. A shot at a screened ring simply does not
+    /// land, which is what stops a wide salvo skipping the sequence.
+    pub fn hit_regulator(&mut self, index: usize, damage: i32) -> bool {
+        let Some(ring) = self.regulators.get(index).map(|r| r.ring) else {
+            return false;
+        };
+        if !self.exposed(ring) {
+            return false;
+        }
+        let reg = &mut self.regulators[index];
+        if reg.hp <= 0 {
+            return false;
+        }
+        reg.hp -= damage;
+        true
+    }
+
+    /// Put damage into the core, and start the countdown if that finished it.
+    /// Returns whether the shot did anything at all.
+    pub fn hit(&mut self, damage: i32) -> bool {
+        if !self.vulnerable() || self.hp <= 0 {
+            return false;
+        }
+        self.hp -= damage;
+        if self.hp <= 0 {
+            self.hp = 0;
+            self.fuse = Some(COLLAPSE_FUSE);
+        }
+        true
+    }
+
+    /// Advance the chain reaction one tick and say where it has got to.
+    ///
+    /// The fuse burns first and the fireball moves after, so the run out is a
+    /// fixed head start followed by a fixed chase — no scaling, no difficulty
+    /// dial. Either the hull is quick enough or it is not.
+    pub fn collapse_tick(&mut self) -> Collapse {
+        let Some(fuse) = self.fuse else {
+            return Collapse::Stable;
+        };
+        if fuse > 0 {
+            self.fuse = Some(fuse - 1);
+            return Collapse::Building { fuse: fuse - 1 };
+        }
+        self.tick = self.tick.wrapping_add(1);
+        if self.tick.is_multiple_of(COLLAPSE_CADENCE) {
+            self.front += 1;
+        }
+        match self.front >= ESCAPE_RUN {
+            true => Collapse::Blown,
+            false => Collapse::Running { front: self.front },
+        }
+    }
+
+    /// Is the fireball in the corridors yet, or still building in the chamber?
+    pub fn running(&self) -> bool {
+        self.fuse == Some(0)
+    }
+
+    /// Has the fireball caught a hull that is this many rows out of the
+    /// chamber? A hull that never left is caught the moment it starts moving.
+    pub fn overtaken(&self, rows_out: i16) -> bool {
+        self.running() && self.front >= rows_out
+    }
+
+    /// Has a hull this many rows out made it into open sky?
+    pub fn clear_of_it(rows_out: i16) -> bool {
+        rows_out >= ESCAPE_RUN
+    }
+}
+
+#[cfg(test)]
+mod reactor_tests {
+    use super::*;
+
+    /// A reactor with its outer ring already broken open, which is where most
+    /// of the interesting rules start.
+    fn outer_ring_down() -> Reactor {
+        let mut reactor = Reactor::new(0);
+        for reg in reactor.regulators.iter_mut() {
+            if reg.ring == 0 {
+                reg.hp = 0;
+            }
+        }
+        reactor
+    }
+
+    /// Knock the whole chamber out and put one in the core.
+    fn blown() -> Reactor {
+        let mut reactor = outer_ring_down();
+        for reg in reactor.regulators.iter_mut() {
+            reg.hp = 0;
+        }
+        reactor.hit(reactor.max_hp);
+        reactor
+    }
+
+    #[test]
+    fn the_core_cannot_be_hurt_while_a_regulator_stands() {
+        let mut reactor = Reactor::new(0);
+        let before = reactor.hp;
+        assert!(!reactor.vulnerable(), "the chamber is shut");
+        assert!(!reactor.hit(999), "and a salvo into it does nothing");
+        assert_eq!(reactor.hp, before, "the core is untouched");
+        assert!(reactor.fuse.is_none(), "with no countdown running");
+    }
+
+    #[test]
+    fn the_inner_ring_is_screened_until_the_outer_one_falls() {
+        let mut reactor = Reactor::new(0);
+        let inner = reactor
+            .regulators
+            .iter()
+            .position(|r| r.ring == 1)
+            .expect("the chamber has a second ring");
+        assert!(
+            !reactor.hit_regulator(inner, 999),
+            "nothing reaches the inner ring through the outer one"
+        );
+        assert!(reactor.exposed(0), "the outer ring is always reachable");
+        assert!(!reactor.exposed(1), "the inner one is not, yet");
+        let mut reactor = outer_ring_down();
+        assert!(reactor.exposed(1), "with the outer ring gone it opens");
+        assert!(
+            reactor.hit_regulator(inner, REGULATOR_HP),
+            "and the shot lands"
+        );
+    }
+
+    #[test]
+    fn knocking_every_regulator_out_opens_the_core() {
+        let mut reactor = outer_ring_down();
+        assert!(!reactor.vulnerable(), "the inner ring still holds it shut");
+        assert_eq!(
+            reactor.regulators_standing(),
+            REGULATOR_RINGS as usize,
+            "two of them left"
+        );
+        for i in 0..reactor.regulators.len() {
+            reactor.hit_regulator(i, REGULATOR_HP);
+        }
+        assert_eq!(reactor.regulators_standing(), 0, "the chamber is stripped");
+        assert!(reactor.vulnerable(), "and the core is open");
+        let before = reactor.hp;
+        assert!(reactor.hit(20), "a salvo lands now");
+        assert!(reactor.hp < before, "and burns the core down");
+    }
+
+    #[test]
+    fn an_ion_scrambled_regulator_opens_the_core_without_breaking_it() {
+        let mut reactor = Reactor::new(0);
+        for reg in reactor.regulators.iter_mut() {
+            reg.ion = ION_STUN;
+        }
+        assert!(reactor.vulnerable(), "a scrambled ring holds nothing off");
+        assert!(
+            reactor.regulators_standing() > 0,
+            "but the regulators are still standing"
+        );
+        assert!(reactor.hit(10), "so the window is real while it lasts");
+    }
+
+    #[test]
+    fn the_shot_that_finishes_the_core_starts_the_collapse() {
+        let mut reactor = blown();
+        assert_eq!(reactor.hp, 0, "the core is gone");
+        assert_eq!(
+            reactor.fuse,
+            Some(COLLAPSE_FUSE),
+            "and the reaction is building"
+        );
+        assert!(!reactor.hit(10), "there is nothing left to shoot");
+    }
+
+    #[test]
+    fn the_collapse_sits_on_its_fuse_before_it_moves() {
+        let mut stable = Reactor::new(0);
+        assert_eq!(
+            stable.collapse_tick(),
+            Collapse::Stable,
+            "an intact core is not counting anything down"
+        );
+        let mut reactor = blown();
+        for _ in 0..COLLAPSE_FUSE {
+            assert!(
+                matches!(reactor.collapse_tick(), Collapse::Building { .. }),
+                "the reaction is still building"
+            );
+        }
+        assert_eq!(reactor.front, 0, "and the corridors are still clear");
+    }
+
+    #[test]
+    fn the_fireball_walks_up_the_shaft_a_row_at_a_time() {
+        let mut reactor = blown();
+        for _ in 0..COLLAPSE_FUSE {
+            reactor.collapse_tick();
+        }
+        for _ in 0..COLLAPSE_CADENCE * 4 {
+            reactor.collapse_tick();
+        }
+        assert_eq!(reactor.front, 4, "one row per cadence, no faster");
+        assert!(
+            matches!(reactor.collapse_tick(), Collapse::Running { .. }),
+            "and it is still short of the sky"
+        );
+    }
+
+    #[test]
+    fn a_pilot_who_lingers_is_caught_by_the_collapse() {
+        let mut reactor = blown();
+        let rows_out = 5;
+        let mut ticks = 0;
+        while !reactor.overtaken(rows_out) {
+            reactor.collapse_tick();
+            ticks += 1;
+            assert!(ticks < 10_000, "the collapse has to arrive eventually");
+        }
+        assert!(
+            ticks > COLLAPSE_FUSE,
+            "he got the head start the fuse promised"
+        );
+        assert!(
+            reactor.front >= rows_out,
+            "and then the shaft closed over him"
+        );
+    }
+
+    #[test]
+    fn getting_out_ahead_of_it_is_the_win() {
+        let mut reactor = blown();
+        let mut rows_out: i16 = 0;
+        let mut ticks: u32 = 0;
+        let mut state = Collapse::Stable;
+        while !Reactor::clear_of_it(rows_out) {
+            state = reactor.collapse_tick();
+            ticks += 1;
+            // The hull covers ground on the scroll, the same as it does flying
+            // in; the fireball is quicker and only the fuse holds it off.
+            if ticks.is_multiple_of(SCROLL_CADENCE) {
+                rows_out += 1;
+            }
+            assert!(
+                !reactor.overtaken(rows_out),
+                "nothing catches a hull that never stops"
+            );
+        }
+        assert_eq!(rows_out, ESCAPE_RUN, "the whole shaft, flown out");
+        assert!(
+            !matches!(state, Collapse::Blown),
+            "and into open sky before the station goes"
+        );
+        assert!(
+            reactor.front < rows_out,
+            "with the fire still behind him at the mouth"
+        );
+    }
+
+    #[test]
+    fn the_corridors_branch_at_a_junction_and_wall_up_between_them() {
+        let mut corridor = Corridor::new(9);
+        let rows: Vec<TerrainRow> = (0..CORRIDOR_PERIOD * 4)
+            .map(|_| corridor.generate())
+            .collect();
+        let junction = rows
+            .iter()
+            .find(|r| r.pillars.is_empty())
+            .expect("every block opens with a junction");
+        assert_eq!(
+            junction.open,
+            Corridor::bore(),
+            "wall to wall, lane to lane"
+        );
+        let passage = rows
+            .iter()
+            .find(|r| !r.pillars.is_empty())
+            .expect("and then closes into passages");
+        for lane in 0..CORRIDOR_LANES {
+            let (left, right) = Corridor::lane(lane);
+            assert!(
+                (left..=right).all(|col| !passage.solid(col)),
+                "lane {lane} stays flyable"
+            );
+        }
+        let (_, wall) = Corridor::lane(0);
+        assert!(
+            passage.solid(wall + 1),
+            "with rock standing between the lanes"
+        );
+    }
+
+    #[test]
+    fn a_dead_end_bricks_one_lane_up_at_the_far_wall() {
+        // Walk enough blocks that the odds have to have plugged one somewhere.
+        let mut corridor = Corridor::new(3);
+        let mut plugged = 0;
+        for _ in 0..CORRIDOR_PERIOD * 20 {
+            let row = corridor.generate();
+            let shut = (0..CORRIDOR_LANES)
+                .filter(|&lane| {
+                    let (left, right) = Corridor::lane(lane);
+                    (left..=right).all(|col| row.solid(col))
+                })
+                .count();
+            assert!(shut < CORRIDOR_LANES, "never every lane at once");
+            plugged += shut;
+        }
+        assert!(plugged > 0, "some blocks end in a wall");
+    }
+}
+// court constants (`W`, `H`), `Walker`, `Trooper`/`GroundKind` and `Transport`
+// exactly as they stand rather than growing parallel copies of them.
+// ---------------------------------------------------------------------------
+
+/// Hit points the shield generator and the power core stand up with before the
+/// mission's armour is counted. The generator is the softer of the two on
+/// purpose: the Empire is meant to get the shield down and then have to come
+/// through the wall for the reactor, rather than the two falling together.
+const GENERATOR_HP: i32 = 40;
+const CORE_HP: i32 = 60;
+/// Emplacements ringing the base, and what one of them can take before its crew
+/// is off the gun.
+const BASE_TURRETS: usize = 4;
+const BASE_TURRET_HP: i32 = 12;
+/// Ticks between rounds from one emplacement, and the beat each gun along the
+/// line is offset by. Staggering them keeps the wall firing continuously
+/// instead of going quiet between four simultaneous volleys.
+const BASE_TURRET_CADENCE: u32 = 9;
+const BASE_TURRET_STAGGER: u32 = 2;
+/// What one round does. These are the base's turbolasers on a planetary power
+/// feed, not the cannons bolted to a fighter, so they mark walker armour that a
+/// snubfighter cannot — the cable is the quick way down, not the only one.
+const BASE_TURRET_DAMAGE: i32 = 4;
+/// How far out a gun crew will engage, in cells.
+const BASE_TURRET_REACH: i16 = 14;
+/// The row the base itself stands on, and the row an attacker has to reach
+/// before it is close enough to shoot at the base rather than walk at it.
+const BASE_ROW: i16 = H - 2;
+const BASE_LINE: i16 = H - 6;
+/// The ridge the assault comes over, and the row a dropship puts a squad down
+/// on: far enough out that the walk in is the fight.
+const ASSAULT_RIDGE: i16 = 2;
+const DROPSHIP_ROW: i16 = 4;
+/// Ticks the hangar doors take to cycle, and how many transports are waiting on
+/// the deck. A launch is the only thing that scores here, so the doors are the
+/// clock the whole mission is really run against.
+const HANGAR_CADENCE: u32 = 120;
+const BASE_TRANSPORTS: usize = 5;
+/// Ticks the planetary ion cannon takes to charge. It is deliberately rare: one
+/// shot removes whatever it is pointed at, so it has to be the thing you are
+/// waiting for rather than the thing you rely on.
+const ION_CANNON_CADENCE: u32 = 340;
+/// Ticks between walker steps at the opening stage, and the floor that
+/// escalation may shorten it to.
+const ASSAULT_STEP: u32 = 8;
+const ASSAULT_STEP_FLOOR: u32 = 3;
+/// Ticks between trooper steps. Men on foot cross the snow faster than a
+/// walker does, which is what makes ignoring them expensive.
+const TROOPER_PACE: u32 = 5;
+/// Ticks between dropships at the opening stage, the floor escalation may
+/// shorten it to, and how many it takes off each stage climbed.
+const DROPSHIP_CADENCE: u32 = 90;
+const DROPSHIP_FLOOR: u32 = 30;
+const DROPSHIP_STEP_UP: u32 = 15;
+/// Troopers one dropship puts on the snow, and how many are inbound in all.
+const DROPSHIP_SQUAD: usize = 3;
+const ASSAULT_DROPSHIPS: usize = 4;
+/// Walkers that come over the ridge.
+const ASSAULT_WALKERS: usize = 3;
+/// Ticks per stage of escalation, and the most stages it climbs through. The
+/// assault getting worse on a clock is what stops a stable turret line from
+/// turning the mission into an idle wait.
+const ESCALATION_TICKS: u32 = 600;
+const MAX_ESCALATION: u32 = 4;
+/// What a walker's shelling takes off the base each time it fires from the
+/// line, before escalation adds to it.
+const WALKER_SIEGE_DAMAGE: i32 = 3;
+
+/// One round leaving a base emplacement. The base fires without the squadron,
+/// so its fire is settled as a resolved round rather than pushed through the
+/// player's shot pipeline — nothing about it has to be dodged or drawn.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct BaseBolt {
+    /// The cell the gun that fired it stands in.
+    pub from: (i16, i16),
+    pub damage: i32,
+    /// How far out this crew will engage.
+    pub reach: i16,
+}
+
+/// One emplacement on the base perimeter.
+#[derive(Clone, Debug)]
+pub struct BaseTurret {
+    pub pos: (i16, i16),
+    pub hp: i32,
+    pub max_hp: i32,
+}
+
+impl BaseTurret {
+    /// A gun with its crew still on it.
+    pub fn live(&self) -> bool {
+        self.hp > 0
+    }
+}
+
+/// The base being held: a shield generator, the reactor it is protecting, the
+/// hangar the transports are lifting out of and the guns on the wall.
+///
+/// It is modelled the way `Capital` is — one hull with destructible parts
+/// bolted to it — because the fight is the same shape from the other side: the
+/// shield has to come off before the thing that matters can be touched.
+#[derive(Clone, Debug)]
+pub struct Base {
+    /// The shield generator. While it stands nothing reaches the core.
+    pub generator: i32,
+    pub max_generator: i32,
+    /// The power core. Losing it is losing the base.
+    pub core: i32,
+    pub max_core: i32,
+    /// The guns on the perimeter, which fire on their own.
+    pub turrets: Vec<BaseTurret>,
+    /// The column the hangar doors open on.
+    pub hangar: i16,
+    /// Transports still on the deck, and transports that got off it.
+    pub docked: usize,
+    pub launched: usize,
+    /// Ticks until the doors have cycled and the next one can go.
+    pub doors: u32,
+    /// Ticks until the planetary ion cannon has charge for another shot.
+    pub ion_charge: u32,
+    /// Hull a transport lifts with, scaled by what the mission is throwing.
+    transport_hp: i32,
+    /// True once the core is gone, which stops everything the base does.
+    pub fallen: bool,
+}
+
+impl Base {
+    /// Stand a base up. `armour` is the mission's armour figure, the same one
+    /// walkers and capital emplacements are scaled by, so a late mission does
+    /// not hand the Empire a base built for the first one.
+    pub fn new(armour: i32) -> Base {
+        let generator = GENERATOR_HP + armour * 6;
+        let core = CORE_HP + armour * 10;
+        let mut turrets = Vec::with_capacity(BASE_TURRETS);
+        for i in 0..BASE_TURRETS {
+            // Spread evenly along the wall so no approach is unwatched.
+            let col = W / (BASE_TURRETS as i16 + 1) * (i as i16 + 1);
+            let hp = BASE_TURRET_HP + armour * 3;
+            turrets.push(BaseTurret {
+                pos: (BASE_ROW, col),
+                hp,
+                max_hp: hp,
+            });
+        }
+        Base {
+            generator,
+            max_generator: generator,
+            core,
+            max_core: core,
+            turrets,
+            hangar: W / 2,
+            docked: BASE_TRANSPORTS,
+            launched: 0,
+            // The evacuation is already under way when the mission opens, so
+            // the first transport does not wait on a door cycle.
+            doors: 0,
+            ion_charge: ION_CANNON_CADENCE,
+            transport_hp: 18 + armour * 3,
+            fallen: false,
+        }
+    }
+
+    /// The shield is up for exactly as long as the generator is standing.
+    pub fn shielded(&self) -> bool {
+        self.generator > 0 && !self.fallen
+    }
+
+    /// Emplacements still crewed.
+    pub fn guns_left(&self) -> usize {
+        self.turrets.iter().filter(|t| t.live()).count()
+    }
+
+    /// Fire into the base. While the generator stands the shield takes all of
+    /// it and the reactor is never touched; once the generator is down there is
+    /// nothing left between the Empire and the core.
+    pub fn hit(&mut self, damage: i32) {
+        if damage <= 0 || self.fallen {
+            return;
+        }
+        if self.shielded() {
+            self.generator = (self.generator - damage).max(0);
+            return;
+        }
+        self.core = (self.core - damage).max(0);
+        if self.core == 0 {
+            self.fallen = true;
+        }
+    }
+
+    /// The battery firing itself. Nobody in the squadron aims these: each gun
+    /// is on its own beat of the same clock, so the wall answers continuously
+    /// for as long as it has crews on it.
+    pub fn turret_volley(&self, tick: u32) -> Vec<BaseBolt> {
+        if self.fallen {
+            return Vec::new();
+        }
+        let mut volley = Vec::new();
+        for (i, turret) in self.turrets.iter().enumerate() {
+            if !turret.live() {
+                continue;
+            }
+            let beat = tick.wrapping_add(i as u32 * BASE_TURRET_STAGGER);
+            if !beat.is_multiple_of(BASE_TURRET_CADENCE) {
+                continue;
+            }
+            volley.push(BaseBolt {
+                from: turret.pos,
+                damage: BASE_TURRET_DAMAGE,
+                reach: BASE_TURRET_REACH,
+            });
+        }
+        volley
+    }
+
+    /// Get one off the deck. It only goes when the doors have finished cycling,
+    /// which is what paces the whole mission — every launch is a win banked,
+    /// and there is a fixed number of them to be had.
+    pub fn launch_transport(&mut self) -> Option<Transport> {
+        if self.fallen || self.docked == 0 || self.doors > 0 {
+            return None;
+        }
+        self.doors = HANGAR_CADENCE;
+        self.docked -= 1;
+        self.launched += 1;
+        Some(Transport {
+            pos: (BASE_ROW - 1, self.hangar),
+            hp: self.transport_hp,
+            away: false,
+        })
+    }
+
+    /// Spend the ion cannon's charge, if it has one. It is a separate call from
+    /// the shot itself so the gun is never wasted on an empty field.
+    pub fn fire_ion(&mut self) -> bool {
+        if self.fallen || self.ion_charge > 0 {
+            return false;
+        }
+        self.ion_charge = ION_CANNON_CADENCE;
+        true
+    }
+
+    /// The base's own clocks, which run whether or not anybody is defending it.
+    fn wind_clocks(&mut self) {
+        self.doors = self.doors.saturating_sub(1);
+        self.ion_charge = self.ion_charge.saturating_sub(1);
+    }
+
+    /// One line for the display: what is left of the shield and the core, and
+    /// how much of the convoy is away.
+    pub fn hud(&self) -> String {
+        format!(
+            "SHIELD {} {}/{}   CORE {}/{}   GUNS {}   AWAY {}/{}",
+            if self.shielded() { "up" } else { "down" },
+            self.generator,
+            self.max_generator,
+            self.core,
+            self.max_core,
+            self.guns_left(),
+            self.launched,
+            self.launched + self.docked
+        )
+    }
+}
+
+/// The Imperial ground assault: what came over the ridge, what is still being
+/// dropped on the snow behind it, and how far the whole thing has escalated.
+///
+/// The assault owns the attackers rather than the `Game` so a base defence can
+/// be stepped and tested on its own, the way the star chart and the deck are.
+#[derive(Clone, Debug)]
+pub struct Assault {
+    /// Walkers coming down on the base line. They are the same hulls Hoth
+    /// puts on the deck, cables and all.
+    pub walkers: Vec<Walker>,
+    /// Everything the dropships have landed and not lost.
+    pub troopers: Vec<Trooper>,
+    /// Dropships still inbound.
+    pub dropships: usize,
+    /// Troopers landed over the whole assault, kept because the live count
+    /// falls as the turrets work and the display wants the pressure, not the
+    /// survivors.
+    pub landed: usize,
+    /// How far the assault has escalated. Every stage shortens the cadences it
+    /// owns, so a stable turret line still loses ground eventually.
+    pub stage: u32,
+    /// Ticks the assault has been running.
+    pub elapsed: u32,
+    /// Attackers the ion cannon has taken off the field.
+    pub ion_kills: u32,
+    /// Armour the wave was raised with, so reinforcements match what walked in.
+    armour: i32,
+    rng: u64,
+}
+
+impl Assault {
+    /// Raise an assault against a base. `seed` keeps the drops deterministic,
+    /// the same as every other generated thing in the game.
+    pub fn new(seed: u64, armour: i32) -> Assault {
+        let mut walkers = Vec::with_capacity(ASSAULT_WALKERS);
+        for i in 0..ASSAULT_WALKERS {
+            let col = (12 + i as i16 * 18).min(W - 6);
+            walkers.push(Walker::new((ASSAULT_RIDGE, col), armour));
+        }
+        Assault {
+            walkers,
+            troopers: Vec::new(),
+            dropships: ASSAULT_DROPSHIPS,
+            landed: 0,
+            stage: 0,
+            elapsed: 0,
+            ion_kills: 0,
+            armour,
+            rng: seed | 1,
+        }
+    }
+
+    /// The same LCG PRNG the snake port uses.
+    fn rand(&mut self) -> u64 {
+        self.rng = self
+            .rng
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        self.rng >> 33
+    }
+
+    /// Walkers still on their feet.
+    pub fn walkers_standing(&self) -> usize {
+        self.walkers.iter().filter(|w| !w.down && w.hp > 0).count()
+    }
+
+    /// Ticks between walker steps at the current stage.
+    fn pace(&self) -> u32 {
+        ASSAULT_STEP
+            .saturating_sub(self.stage)
+            .max(ASSAULT_STEP_FLOOR)
+    }
+
+    /// One tick of the whole engagement: the assault walks in, the base answers
+    /// with its own guns, the ion cannon takes whatever it has charge for, and
+    /// anything that gets off the deck is handed back to the caller to fly.
+    pub fn step(&mut self, base: &mut Base, tick: u32) -> Vec<Transport> {
+        let mut away = Vec::new();
+        if base.fallen {
+            return away;
+        }
+        self.elapsed = self.elapsed.saturating_add(1);
+        self.stage = (self.elapsed / ESCALATION_TICKS).min(MAX_ESCALATION);
+        base.wind_clocks();
+        self.advance_walkers(base, tick);
+        self.land_dropship(tick);
+        self.advance_troopers(base, tick);
+        self.answer_with_turrets(base, tick);
+        self.answer_with_ion(base);
+        if let Some(transport) = base.launch_transport() {
+            away.push(transport);
+        }
+        away
+    }
+
+    /// Walk the walkers down onto the base line; once they are on it they stop
+    /// walking and start shelling, which is the clock the defence is under.
+    fn advance_walkers(&mut self, base: &mut Base, tick: u32) {
+        let pace = self.pace();
+        let stage = self.stage;
+        let mut shells = 0;
+        for walker in self.walkers.iter_mut() {
+            if walker.down || walker.hp <= 0 {
+                continue;
+            }
+            if walker.pos.0 < BASE_LINE {
+                if tick.is_multiple_of(pace) {
+                    walker.pos.0 += 1;
+                }
+                continue;
+            }
+            if walker.cooldown > 0 {
+                walker.cooldown -= 1;
+                continue;
+            }
+            walker.cooldown = WALKER_CADENCE.saturating_sub(stage * 4).max(8);
+            shells += 1;
+        }
+        for _ in 0..shells {
+            base.hit(WALKER_SIEGE_DAMAGE + stage as i32);
+        }
+    }
+
+    /// Put the next dropship's squad on the snow. Later stages send them in
+    /// faster, and from the third stage there is a scout walker in the hold.
+    fn land_dropship(&mut self, tick: u32) {
+        if self.dropships == 0 {
+            return;
+        }
+        let cadence = DROPSHIP_CADENCE
+            .saturating_sub(self.stage * DROPSHIP_STEP_UP)
+            .max(DROPSHIP_FLOOR);
+        if !tick.is_multiple_of(cadence) {
+            return;
+        }
+        self.dropships -= 1;
+        let col = (self.rand() % (W as u64 - 8)) as i16 + 4;
+        for i in 0..DROPSHIP_SQUAD {
+            let pos = (DROPSHIP_ROW, (col + i as i16 * 2).min(W - 2));
+            self.troopers
+                .push(Trooper::new(GroundKind::Trooper, pos, TROOPER_CADENCE));
+            self.landed += 1;
+        }
+        if self.stage >= 2 {
+            self.troopers.push(Trooper::new(
+                GroundKind::Scout,
+                (DROPSHIP_ROW, col),
+                SCOUT_CADENCE,
+            ));
+            self.landed += 1;
+        }
+    }
+
+    /// Men on foot cross faster than the walkers do and shoot at the base once
+    /// they are up against it.
+    fn advance_troopers(&mut self, base: &mut Base, tick: u32) {
+        let stage = self.stage;
+        let mut rounds = 0;
+        for trooper in self.troopers.iter_mut() {
+            if trooper.hp <= 0 {
+                continue;
+            }
+            if trooper.pos.0 < BASE_LINE + 1 {
+                if tick.is_multiple_of(TROOPER_PACE) {
+                    trooper.pos.0 += 1;
+                }
+                continue;
+            }
+            if trooper.cooldown > 0 {
+                trooper.cooldown -= 1;
+                continue;
+            }
+            trooper.cooldown = TROOPER_CADENCE;
+            rounds += trooper.kind.damage() + stage as i32;
+        }
+        base.hit(rounds);
+    }
+
+    /// The wall answering. Each round goes into the nearest thing that gun can
+    /// reach, which is why leaving the perimeter guns to be shot off matters.
+    fn answer_with_turrets(&mut self, base: &Base, tick: u32) {
+        for bolt in base.turret_volley(tick) {
+            self.take_bolt(bolt);
+        }
+        self.troopers.retain(|t| t.hp > 0);
+    }
+
+    /// Settle one round of turret fire.
+    fn take_bolt(&mut self, bolt: BaseBolt) {
+        let mut pick: Option<(i16, bool, usize)> = None;
+        for (i, walker) in self.walkers.iter().enumerate() {
+            if walker.down || walker.hp <= 0 {
+                continue;
+            }
+            if let Some(range) = reach_to(bolt.from, walker.pos, bolt.reach) {
+                // A walker beats a trooper at the same range: it is the thing
+                // that will still be standing in a minute.
+                if pick.is_none_or(|(best, _, _)| range < best) {
+                    pick = Some((range, true, i));
+                }
+            }
+        }
+        for (i, trooper) in self.troopers.iter().enumerate() {
+            if trooper.hp <= 0 {
+                continue;
+            }
+            if let Some(range) = reach_to(bolt.from, trooper.pos, bolt.reach) {
+                if pick.is_none_or(|(best, _, _)| range < best) {
+                    pick = Some((range, false, i));
+                }
+            }
+        }
+        let Some((_, is_walker, index)) = pick else {
+            return;
+        };
+        if is_walker {
+            let walker = &mut self.walkers[index];
+            walker.hp -= bolt.damage;
+            if walker.hp <= 0 {
+                walker.hp = 0;
+                walker.down = true;
+            }
+        } else {
+            self.troopers[index].hp -= bolt.damage;
+        }
+    }
+
+    /// The planetary gun. It charges for a long time and it does not need a
+    /// second shot, so it always answers the heaviest thing on the field.
+    fn answer_with_ion(&mut self, base: &mut Base) {
+        let walker = self.leading_walker();
+        if walker.is_none() && self.leading_trooper().is_none() {
+            return;
+        }
+        if !base.fire_ion() {
+            return;
+        }
+        self.ion_kills += 1;
+        if let Some(index) = walker {
+            let walker = &mut self.walkers[index];
+            walker.hp = 0;
+            walker.down = true;
+            return;
+        }
+        if let Some(index) = self.leading_trooper() {
+            self.troopers[index].hp = 0;
+            self.troopers.retain(|t| t.hp > 0);
+        }
+    }
+
+    /// The standing walker closest to the base, which is the one that matters.
+    fn leading_walker(&self) -> Option<usize> {
+        self.walkers
+            .iter()
+            .enumerate()
+            .filter(|(_, w)| !w.down && w.hp > 0)
+            .max_by_key(|(_, w)| w.pos.0)
+            .map(|(i, _)| i)
+    }
+
+    /// The same, for whoever is on foot.
+    fn leading_trooper(&self) -> Option<usize> {
+        self.troopers
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| t.hp > 0)
+            .max_by_key(|(_, t)| t.pos.0)
+            .map(|(i, _)| i)
+    }
+
+    /// Whether there is anything left to hold the line against.
+    pub fn spent(&self) -> bool {
+        self.dropships == 0 && self.walkers_standing() == 0 && self.troopers.is_empty()
+    }
+
+    /// One line for the display, alongside the base's own.
+    pub fn hud(&self) -> String {
+        format!(
+            "WALKERS {}   TROOPS {}   DROPS {}   STAGE {}",
+            self.walkers_standing(),
+            self.troopers.len(),
+            self.dropships,
+            self.stage
+        )
+    }
+}
+
+/// Range between two cells, in the square metric a gun crew thinks in, or
+/// `None` when it is past what they will engage.
+fn reach_to(from: (i16, i16), to: (i16, i16), reach: i16) -> Option<i16> {
+    let range = (from.0 - to.0).abs().max((from.1 - to.1).abs());
+    if range <= reach {
+        Some(range)
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod base_tests {
+    use super::*;
+
+    /// A base with the guns taken off it, for tests that want to watch one
+    /// mechanism without the wall shooting the subject first.
+    fn quiet_base() -> Base {
+        let mut base = Base::new(0);
+        for turret in base.turrets.iter_mut() {
+            turret.hp = 0;
+        }
+        base
+    }
+
+    /// One walker, nothing else, so a test can watch exactly what kills it.
+    fn lone_walker(assault: &mut Assault) {
+        assault.walkers.truncate(1);
+        assault.troopers.clear();
+        assault.dropships = 0;
+    }
+
+    #[test]
+    fn the_shield_holds_everything_off_the_core_while_the_generator_stands() {
+        let mut base = Base::new(0);
+        assert!(base.shielded(), "the shield is up when the base is raised");
+        let core = base.core;
+        base.hit(10);
+        base.hit(10);
+        assert_eq!(base.core, core, "nothing reaches the reactor through it");
+        assert_eq!(
+            base.generator,
+            base.max_generator - 20,
+            "the generator wears"
+        );
+        assert!(base.shielded(), "and it is still standing");
+        assert!(!base.fallen, "so the base is still held");
+    }
+
+    #[test]
+    fn once_the_generator_is_down_the_core_takes_every_round() {
+        let mut base = Base::new(0);
+        base.hit(base.max_generator);
+        assert!(
+            !base.shielded(),
+            "the generator is gone and the shield with it"
+        );
+        assert_eq!(base.core, base.max_core, "but the core is untouched so far");
+        base.hit(7);
+        assert_eq!(base.core, base.max_core - 7, "now it is taking it directly");
+    }
+
+    #[test]
+    fn the_turrets_fire_themselves_on_their_own_staggered_cadence() {
+        let base = Base::new(0);
+        assert_eq!(base.guns_left(), BASE_TURRETS, "every gun is crewed");
+        let fired: usize = (0..BASE_TURRET_CADENCE)
+            .map(|tick| base.turret_volley(tick).len())
+            .sum();
+        assert_eq!(
+            fired, BASE_TURRETS,
+            "each gun gets exactly one round off per cadence"
+        );
+        assert!(
+            base.turret_volley(1).is_empty(),
+            "and they are staggered, not fired together"
+        );
+        let mut silenced = Base::new(0);
+        silenced.turrets[0].hp = 0;
+        let after: usize = (0..BASE_TURRET_CADENCE)
+            .map(|tick| silenced.turret_volley(tick).len())
+            .sum();
+        assert_eq!(after, BASE_TURRETS - 1, "a gun that is off is a round lost");
+    }
+
+    #[test]
+    fn walkers_advance_on_the_line_and_turret_fire_stops_them_short_of_it() {
+        let mut base = Base::new(0);
+        let mut assault = Assault::new(7, 0);
+        lone_walker(&mut assault);
+        let opened = assault.walkers[0].pos.0;
+        for tick in 0..40 {
+            assault.step(&mut base, tick);
+        }
+        assert!(
+            assault.walkers[0].pos.0 > opened,
+            "it comes over the ridge under its own power"
+        );
+        for tick in 40..500 {
+            assault.step(&mut base, tick);
+        }
+        assert!(assault.walkers[0].down, "the wall brings it down");
+        assert!(
+            assault.walkers[0].pos.0 < BASE_ROW,
+            "and it never reached the wall"
+        );
+        assert_eq!(assault.walkers_standing(), 0, "nothing is left walking");
+    }
+
+    #[test]
+    fn a_walker_that_reaches_the_line_shells_the_shield_down() {
+        let mut base = quiet_base();
+        let mut assault = Assault::new(11, 0);
+        lone_walker(&mut assault);
+        // Put it on the line rather than waiting out the walk in.
+        assault.walkers[0].pos.0 = BASE_LINE;
+        assault.walkers[0].cooldown = 0;
+        let generator = base.generator;
+        for tick in 0..(WALKER_CADENCE * 3) {
+            assault.step(&mut base, tick);
+        }
+        assert!(
+            base.generator < generator,
+            "the shelling tells on the shield"
+        );
+        assert_eq!(
+            assault.walkers[0].pos.0, BASE_LINE,
+            "it stops on the line to do it"
+        );
+    }
+
+    #[test]
+    fn every_transport_off_the_deck_is_one_more_win_and_the_doors_pace_them() {
+        let mut base = Base::new(0);
+        assert!(
+            base.launch_transport().is_some(),
+            "the first one is already lifting"
+        );
+        assert_eq!(base.launched, 1, "and it counts");
+        assert!(
+            base.launch_transport().is_none(),
+            "the next waits on the doors"
+        );
+        for _ in 0..HANGAR_CADENCE {
+            base.wind_clocks();
+        }
+        let second = base.launch_transport().expect("the doors have cycled");
+        assert!(!second.away, "it still has to fly the court");
+        assert_eq!(base.launched, 2, "two away");
+        assert_eq!(base.docked, BASE_TRANSPORTS - 2, "and the deck is emptying");
+        while base.launch_transport().is_some() || base.docked > 0 {
+            base.wind_clocks();
+        }
+        assert_eq!(
+            base.launched, BASE_TRANSPORTS,
+            "the deck empties in the end"
+        );
+    }
+
+    #[test]
+    fn the_ion_cannon_fires_rarely_and_takes_whatever_it_is_pointed_at() {
+        let mut base = quiet_base();
+        let mut assault = Assault::new(3, 0);
+        lone_walker(&mut assault);
+        for tick in 0..(ION_CANNON_CADENCE - 1) {
+            assault.step(&mut base, tick);
+        }
+        assert_eq!(assault.ion_kills, 0, "it is still charging");
+        assert!(!assault.walkers[0].down, "so the walker is still coming");
+        assault.step(&mut base, ION_CANNON_CADENCE - 1);
+        assert_eq!(assault.ion_kills, 1, "then it lets go once");
+        assert!(assault.walkers[0].down, "and one shot is all it needs");
+        assert_eq!(
+            base.ion_charge, ION_CANNON_CADENCE,
+            "after which it is charging again"
+        );
+    }
+
+    #[test]
+    fn dropships_keep_landing_troopers_and_the_assault_escalates_on_a_clock() {
+        let mut base = quiet_base();
+        let mut assault = Assault::new(5, 0);
+        assault.walkers.clear();
+        for tick in 0..(DROPSHIP_CADENCE * 2) {
+            assault.step(&mut base, tick);
+        }
+        assert!(assault.dropships < ASSAULT_DROPSHIPS, "they are coming in");
+        assert!(
+            assault.landed >= DROPSHIP_SQUAD,
+            "with a squad apiece on the snow"
+        );
+        assert_eq!(assault.stage, 0, "the opening stage is the gentle one");
+        for tick in 0..(ESCALATION_TICKS * 2) {
+            // Hold the shield up by hand: what is under test is the clock the
+            // assault escalates on, not how long the generator lasts.
+            base.generator = base.max_generator;
+            assault.step(&mut base, tick);
+        }
+        assert!(assault.stage >= 1, "it gets worse the longer you hold");
+        assert!(
+            assault.pace() < ASSAULT_STEP,
+            "and everything Imperial moves faster for it"
+        );
+    }
+
+    #[test]
+    fn troopers_that_reach_the_wall_shoot_at_the_base() {
+        let mut base = quiet_base();
+        let mut assault = Assault::new(9, 0);
+        assault.walkers.clear();
+        assault.dropships = 0;
+        assault
+            .troopers
+            .push(Trooper::new(GroundKind::Trooper, (BASE_LINE + 1, W / 2), 0));
+        let generator = base.generator;
+        for tick in 0..(TROOPER_CADENCE * 2) {
+            assault.step(&mut base, tick);
+        }
+        assert!(base.generator < generator, "men on foot wear it down too");
+    }
+
+    #[test]
+    fn the_base_falls_when_the_core_is_gone_and_a_fallen_base_does_nothing() {
+        let mut base = Base::new(0);
+        base.hit(base.max_generator);
+        base.hit(base.max_core);
+        assert!(base.fallen, "the reactor is gone and so is the base");
+        assert_eq!(base.core, 0, "with nothing left of it");
+        assert!(
+            base.turret_volley(0).is_empty(),
+            "the guns stop with everything else"
+        );
+        assert!(base.launch_transport().is_none(), "nothing else lifts");
+        assert!(!base.fire_ion(), "and the cannon has nobody to fire it");
+        let mut assault = Assault::new(13, 0);
+        let elapsed = assault.elapsed;
+        assault.step(&mut base, 0);
+        assert_eq!(assault.elapsed, elapsed, "the engagement is over");
+    }
+}
+
+/// Rows in one circuit of the canyon.
+const POD_TRACK_ROWS: usize = 240;
+/// Laps the Boonta Eve is run over.
+const POD_LAPS: u32 = 3;
+/// Paces to a track row. Speed is counted in paces rather than whole rows so
+/// the throttle has somewhere to sit between crawling and flat out.
+const POD_PACE: u32 = 4;
+/// Paces in one circuit, which is what a lap is measured against.
+const POD_LAP_PACES: u32 = POD_TRACK_ROWS as u32 * POD_PACE;
+/// Narrowest and widest the canyon gets, in columns.
+const POD_TRACK_MIN: i16 = 12;
+const POD_TRACK_MAX: i16 = 34;
+/// Columns the canyon centre shifts when it shifts, and how many rows it holds
+/// a line for first. It moves in steps rather than every row because a pod at
+/// speed climbs three rows a tick: a canyon that wandered every row would slide
+/// out from under it faster than anybody could steer.
+const POD_WANDER: i16 = 1;
+const POD_WANDER_PERIOD: usize = 3;
+/// Rows at the end of the circuit spent easing back onto the start line, so a
+/// lap joins up instead of stepping sideways as it wraps.
+const POD_BLEND: usize = 16;
+/// Paces per tick at the stop, and what one notch of throttle is worth.
+const POD_MAX_THROTTLE: i16 = 12;
+const POD_THROTTLE_STEP: i16 = 1;
+/// Paces per tick the engines gain or shed chasing the throttle.
+const POD_ACCEL: i16 = 1;
+/// Columns one pull on the steering takes.
+const POD_STEER: i16 = 1;
+/// Columns a rival can pull across in a tick. It is more than yours because the
+/// field drives the line rather than fighting for it.
+const POD_AI_STEER: i16 = 2;
+/// Paces per tick a lit boost adds, how long one burn runs, and what it puts
+/// into the engines every tick it is lit.
+const POD_BOOST_SPEED: i16 = 5;
+const POD_BOOST_TICKS: u32 = 24;
+const POD_BOOST_HEAT: u32 = 7;
+/// Heat the engines shed per tick with the boost out.
+const POD_COOL_RATE: u32 = 3;
+/// Where the temperature gauge ends, and what every tick spent pegged against
+/// it burns out of the engine.
+const POD_HEAT_LIMIT: u32 = 100;
+const POD_OVERHEAT_DAMAGE: i32 = 1;
+/// What the engines take before they let go.
+const POD_ENGINE_HP: i32 = 24;
+/// What the rock and another pod cost you, and what a knock divides your speed
+/// by.
+const POD_WALL_DAMAGE: i32 = 3;
+const POD_RIVAL_DAMAGE: i32 = 2;
+const POD_SCRAPE_DIVISOR: i16 = 2;
+/// The throttle has to be down this far before you can get a hand back into the
+/// engine at all.
+const POD_REPAIR_THROTTLE: i16 = 4;
+/// Ticks a weld takes to set, what one puts back, and the heat that comes out
+/// of the block with it.
+const POD_REPAIR_TICKS: u32 = 30;
+const POD_REPAIR_AMOUNT: i32 = 4;
+const POD_REPAIR_VENT: u32 = 20;
+/// Pods on the grid besides yours.
+const POD_RIVALS: usize = 5;
+/// Columns between the lines the field likes to sit on, either side of the
+/// middle. The outermost has to still clear the rock where the canyon is at
+/// its narrowest, or a rival would simply drive into it there.
+const POD_LINE_STEP: i16 = 2;
+/// Rows ahead a rival reads the canyon at.
+const POD_LOOKAHEAD: u32 = 3;
+/// How close two pods have to be, in rows and columns, to touch.
+const POD_TOUCH_ROWS: u32 = 1;
+const POD_TOUCH_COLS: i16 = 2;
+/// 1-in-N odds a rival that is behind you lights its boost on a given tick.
+const POD_BOOST_ODDS: u64 = 40;
+/// The field you are up against.
+const POD_NAMES: [&str; POD_RIVALS] = [
+    "Sebulba",
+    "Gasgano",
+    "Ody Mandrell",
+    "Teemto Pagalies",
+    "Ben Quadinaros",
+];
+
+/// One row of the canyon: the rock either side, and the lane between it.
+#[derive(Clone, Copy, Debug)]
+pub struct PodRow {
+    /// Leftmost and rightmost drivable columns, inclusive.
+    pub open: (i16, i16),
+}
+
+/// One pod on the circuit, yours or a rival's. Everything on the track obeys
+/// the same rules, so the field and the player share this.
+#[derive(Clone, Debug)]
+pub struct Pod {
+    pub name: &'static str,
+    /// Column the pod is running, across the canyon.
+    pub col: i16,
+    /// Paces covered on this lap.
+    pub paced: u32,
+    pub laps: u32,
+    /// Paces per tick right now.
+    pub speed: i16,
+    pub throttle: i16,
+    pub heat: u32,
+    /// Ticks the boost is still lit for.
+    pub boost: u32,
+    /// What the engines have taken; at `POD_ENGINE_HP` they are gone.
+    pub damage: i32,
+    /// The place it took, once it has crossed for the last time.
+    pub place: Option<u32>,
+    /// The throttle a rival dares carry, and the lane it likes to sit in as an
+    /// offset from the middle of the canyon. Neither is read on your own pod.
+    nerve: i16,
+    line: i16,
+    rng: u64,
+}
+
+impl Pod {
+    fn new(name: &'static str, col: i16, nerve: i16, line: i16, seed: u64) -> Pod {
+        Pod {
+            name,
+            col,
+            paced: 0,
+            laps: 0,
+            speed: 0,
+            throttle: 0,
+            heat: 0,
+            boost: 0,
+            damage: 0,
+            place: None,
+            nerve,
+            line,
+            rng: seed | 1,
+        }
+    }
+
+    fn rand(&mut self) -> u64 {
+        self.rng = self
+            .rng
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        self.rng >> 33
+    }
+
+    /// Which row of the circuit the pod is on.
+    pub fn row(&self) -> usize {
+        (self.paced / POD_PACE) as usize % POD_TRACK_ROWS
+    }
+
+    /// How far round the whole race it is, so two pods on different laps can be
+    /// compared with one subtraction.
+    pub fn progress(&self) -> u32 {
+        self.laps * POD_LAP_PACES + self.paced
+    }
+
+    pub fn wrecked(&self) -> bool {
+        self.damage >= POD_ENGINE_HP
+    }
+}
+
+/// The Boonta Eve: a canyon circuit, your pod, and a field that would rather
+/// you did not finish it. Pure logic, like the rest of the court.
+#[derive(Clone, Debug)]
+pub struct Podrace {
+    /// The canyon, one entry per track row; row zero is the start line.
+    pub rows: Vec<PodRow>,
+    pub pod: Pod,
+    pub rivals: Vec<Pod>,
+    /// Ticks the race has run.
+    pub tick: u32,
+    /// Ticks before the engine can be reached into again.
+    pub repair_cooldown: u32,
+    /// Places handed out so far, which is what the next finisher takes.
+    pub finished: u32,
+}
+
+impl Podrace {
+    /// Lay out a circuit and put the field on the line.
+    pub fn new(seed: u64) -> Podrace {
+        let rows = Podrace::lay_track(seed);
+        let mut rng = seed | 1;
+        let mut rand = move || {
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            rng >> 33
+        };
+        let start = rows[0].open;
+        // Six abreast across the start line, spaced by whatever room it has.
+        let centre = (start.0 + start.1) / 2;
+        let gap = ((start.1 - start.0) / (POD_RIVALS as i16 + 2)).max(1);
+        let lane = |i: i16| centre + (i - POD_RIVALS as i16 / 2) * gap;
+        let mut rivals = Vec::with_capacity(POD_RIVALS);
+        for (i, name) in POD_NAMES.iter().enumerate() {
+            // Nobody in the field runs quite the same throttle or sits on quite
+            // the same line, so they string out instead of moving as a block.
+            let nerve = POD_MAX_THROTTLE - (rand() % 3) as i16;
+            let line = (i as i16 - POD_RIVALS as i16 / 2) * POD_LINE_STEP;
+            let seat = lane(i as i16 + 1).clamp(start.0 + 1, start.1 - 1);
+            rivals.push(Pod::new(
+                name,
+                seat,
+                nerve,
+                line,
+                seed ^ (i as u64 + 1) << 17,
+            ));
+        }
+        Podrace {
+            rows,
+            pod: Pod::new(
+                "your pod",
+                lane(0).clamp(start.0 + 1, start.1 - 1),
+                POD_MAX_THROTTLE,
+                0,
+                seed,
+            ),
+            rivals,
+            tick: 0,
+            repair_cooldown: 0,
+            finished: 0,
+        }
+    }
+
+    /// Walk a closed canyon out row by row: the centre holds a line for a few
+    /// rows then steps, and the width breathes between the two limits.
+    fn lay_track(seed: u64) -> Vec<PodRow> {
+        let mut rng = seed | 1;
+        let mut rand = move || {
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            rng >> 33
+        };
+        let mut centre = W / 2;
+        let mut width = POD_TRACK_MAX;
+        let mut drift = 1;
+        let mut squeeze = -1;
+        let mut rows = Vec::with_capacity(POD_TRACK_ROWS);
+        for row in 0..POD_TRACK_ROWS {
+            if row.is_multiple_of(POD_WANDER_PERIOD) {
+                if rand().is_multiple_of(3) {
+                    drift = -drift;
+                }
+                centre = (centre + drift * POD_WANDER)
+                    .clamp(POD_TRACK_MAX / 2 + 2, W - POD_TRACK_MAX / 2 - 2);
+                width = (width + squeeze).clamp(POD_TRACK_MIN, POD_TRACK_MAX);
+                if width == POD_TRACK_MIN || width == POD_TRACK_MAX {
+                    squeeze = -squeeze;
+                }
+            }
+            let half = width / 2;
+            rows.push(PodRow {
+                open: ((centre - half).max(1), (centre + half).min(W - 2)),
+            });
+        }
+        // The circuit is closed: the last rows are dragged back onto the start
+        // line so a lap joins up rather than stepping sideways as it wraps.
+        let start = rows[0].open;
+        for i in 0..POD_BLEND {
+            let at = POD_TRACK_ROWS - POD_BLEND + i;
+            let weight = i as i16 + 1;
+            let ease = |now: i16, want: i16| now + (want - now) * weight / POD_BLEND as i16;
+            rows[at].open = (
+                ease(rows[at].open.0, start.0),
+                ease(rows[at].open.1, start.1),
+            );
+        }
+        rows
+    }
+
+    /// Pull the steering: `-1` to port, `1` to starboard. It will happily point
+    /// you at the rock — what that costs is settled on the next tick.
+    pub fn steer(&mut self, dir: i16) {
+        if self.over() {
+            return;
+        }
+        self.pod.col = (self.pod.col + dir.signum() * POD_STEER).clamp(1, W - 2);
+    }
+
+    /// Open or close the throttle by `notches`.
+    pub fn throttle(&mut self, notches: i16) {
+        if self.over() {
+            return;
+        }
+        self.pod.throttle =
+            (self.pod.throttle + notches * POD_THROTTLE_STEP).clamp(0, POD_MAX_THROTTLE);
+    }
+
+    /// Light the boost. It runs for a fixed burn and puts heat into the engines
+    /// every tick of it; a gauge already pegged will not take another.
+    pub fn boost(&mut self) -> bool {
+        if self.over() || self.pod.heat >= POD_HEAT_LIMIT {
+            return false;
+        }
+        self.pod.boost = POD_BOOST_TICKS;
+        true
+    }
+
+    /// Reach back into the engine. It cannot be done flat out: you need a hand
+    /// off the steering and the throttle down before you can get at the block.
+    pub fn repair(&mut self) -> bool {
+        if self.over()
+            || self.pod.throttle > POD_REPAIR_THROTTLE
+            || self.repair_cooldown > 0
+            || self.pod.damage == 0
+        {
+            return false;
+        }
+        self.pod.damage = (self.pod.damage - POD_REPAIR_AMOUNT).max(0);
+        self.pod.heat = self.pod.heat.saturating_sub(POD_REPAIR_VENT);
+        self.repair_cooldown = POD_REPAIR_TICKS;
+        true
+    }
+
+    /// One tick of a single pod: the engines chase the throttle, the boost adds
+    /// what it adds and heats what it heats, and the rock takes its cut.
+    fn advance(rows: &[PodRow], pod: &mut Pod) {
+        if pod.place.is_some() {
+            return;
+        }
+        if pod.wrecked() {
+            pod.speed = 0;
+            pod.boost = 0;
+            return;
+        }
+        // A burnt engine will not pull what a whole one will, so damage bites
+        // on the top end rather than stopping you dead.
+        let ceiling = pod.throttle * (POD_ENGINE_HP - pod.damage) as i16 / POD_ENGINE_HP as i16;
+        pod.speed += (ceiling - pod.speed).signum() * POD_ACCEL;
+        pod.speed = pod.speed.clamp(0, POD_MAX_THROTTLE);
+        let mut lit = pod.boost > 0;
+        if lit {
+            pod.boost -= 1;
+            pod.heat += POD_BOOST_HEAT;
+        } else {
+            pod.heat = pod.heat.saturating_sub(POD_COOL_RATE);
+        }
+        if pod.heat >= POD_HEAT_LIMIT {
+            // Past the gauge the engines start cooking themselves, and the burn
+            // cuts out until they have come back down.
+            pod.heat = POD_HEAT_LIMIT;
+            pod.damage += POD_OVERHEAT_DAMAGE;
+            pod.boost = 0;
+            lit = false;
+        }
+        let step = pod.speed + if lit { POD_BOOST_SPEED } else { 0 };
+        // A pace at a time rather than the whole step at once: at this speed a
+        // pod would otherwise pass clean through a pinch in the canyon.
+        for _ in 0..step {
+            pod.paced += 1;
+            if pod.paced >= POD_LAP_PACES {
+                pod.paced -= POD_LAP_PACES;
+                pod.laps += 1;
+            }
+            let open = rows[pod.row()].open;
+            if pod.col < open.0 || pod.col > open.1 {
+                pod.damage += POD_WALL_DAMAGE;
+                pod.speed /= POD_SCRAPE_DIVISOR;
+                pod.col = pod.col.clamp(open.0, open.1);
+                pod.boost = 0;
+                break;
+            }
+        }
+    }
+
+    /// The field's driving: read the canyon a few rows on, hold the lane it
+    /// likes across the middle of it, and risk the engines when it is behind.
+    fn drive_field(&mut self) {
+        let lead = self.pod.progress();
+        for rival in self.rivals.iter_mut() {
+            if rival.place.is_some() || rival.wrecked() {
+                continue;
+            }
+            let ahead = (rival.paced / POD_PACE + POD_LOOKAHEAD) as usize % POD_TRACK_ROWS;
+            let open = self.rows[ahead].open;
+            let want = ((open.0 + open.1) / 2 + rival.line).clamp(open.0 + 1, open.1 - 1);
+            rival.col += (want - rival.col).clamp(-POD_AI_STEER, POD_AI_STEER);
+            rival.throttle = rival.nerve;
+            if rival.boost == 0
+                && rival.heat * 2 < POD_HEAT_LIMIT
+                && rival.progress() < lead
+                && rival.rand().is_multiple_of(POD_BOOST_ODDS)
+            {
+                rival.boost = POD_BOOST_TICKS;
+            }
+        }
+    }
+
+    /// Pods that end the tick in the same piece of canyon trade paint: both are
+    /// marked, both lose what they were carrying, and both are shoved off the
+    /// line. Only your own contacts are settled — the field is not racing
+    /// itself.
+    fn jostle(&mut self) {
+        for i in 0..self.rivals.len() {
+            let rival = &self.rivals[i];
+            if rival.place.is_some() || self.pod.place.is_some() {
+                continue;
+            }
+            let apart = self.pod.progress().abs_diff(rival.progress());
+            if apart > POD_TOUCH_ROWS * POD_PACE
+                || (self.pod.col - rival.col).abs() > POD_TOUCH_COLS
+            {
+                continue;
+            }
+            // Whoever is to port goes further to port; a dead heat sends you
+            // left and him right so they never sit on top of each other.
+            let away = match (self.pod.col - rival.col).signum() {
+                0 => -1,
+                sign => sign,
+            };
+            self.pod.damage += POD_RIVAL_DAMAGE;
+            self.pod.speed /= POD_SCRAPE_DIVISOR;
+            self.pod.col = (self.pod.col + away).clamp(1, W - 2);
+            let rival = &mut self.rivals[i];
+            rival.damage += POD_RIVAL_DAMAGE;
+            rival.speed /= POD_SCRAPE_DIVISOR;
+            rival.col = (rival.col - away).clamp(1, W - 2);
+        }
+    }
+
+    /// Hand a place to whoever has run the laps out, furthest past the line
+    /// first, so a tick that finishes two pods still separates them.
+    fn check_line(&mut self) {
+        let mut crossed: Vec<(u32, Option<usize>)> = Vec::new();
+        if self.pod.laps >= POD_LAPS && self.pod.place.is_none() {
+            crossed.push((self.pod.progress(), None));
+        }
+        for (i, rival) in self.rivals.iter().enumerate() {
+            if rival.laps >= POD_LAPS && rival.place.is_none() {
+                crossed.push((rival.progress(), Some(i)));
+            }
+        }
+        crossed.sort_by_key(|(paced, _)| std::cmp::Reverse(*paced));
+        for (_, who) in crossed {
+            self.finished += 1;
+            match who {
+                None => self.pod.place = Some(self.finished),
+                Some(i) => self.rivals[i].place = Some(self.finished),
+            }
+        }
+    }
+
+    /// Advance one tick of the race.
+    pub fn step(&mut self) {
+        if self.over() {
+            return;
+        }
+        self.tick = self.tick.wrapping_add(1);
+        self.repair_cooldown = self.repair_cooldown.saturating_sub(1);
+        self.drive_field();
+        Podrace::advance(&self.rows, &mut self.pod);
+        for rival in self.rivals.iter_mut() {
+            Podrace::advance(&self.rows, rival);
+        }
+        self.jostle();
+        self.check_line();
+    }
+
+    /// Where your pod is running: `1` for the lead, `field()` for last. A pod
+    /// that has crossed keeps the place it took.
+    pub fn standing(&self) -> u32 {
+        if let Some(place) = self.pod.place {
+            return place;
+        }
+        let mine = self.pod.progress();
+        1 + self
+            .rivals
+            .iter()
+            .filter(|r| r.place.is_some() || r.progress() > mine)
+            .count() as u32
+    }
+
+    /// How many pods started, which is what a placing is out of.
+    /// Every rival still on the course, for the view that draws them.
+    pub fn field_pods(&self) -> &[Pod] {
+        &self.rivals
+    }
+
+    pub fn field(&self) -> usize {
+        self.rivals.len() + 1
+    }
+
+    /// The race is done with you once you have a place or the engines have gone;
+    /// what the rest of the field does after that is nothing to do with you.
+    pub fn over(&self) -> bool {
+        self.pod.place.is_some() || self.pod.wrecked()
+    }
+}
+
+#[cfg(test)]
+mod podrace_tests {
+    use super::*;
+
+    /// A pod on the line with the throttle open, a few ticks into its run.
+    fn running(seed: u64) -> Podrace {
+        let mut race = Podrace::new(seed);
+        race.throttle(POD_MAX_THROTTLE);
+        for _ in 0..8 {
+            race.step();
+        }
+        race
+    }
+
+    #[test]
+    fn the_circuit_stays_inside_the_rock_and_joins_up_at_the_line() {
+        let race = Podrace::new(29);
+        assert_eq!(
+            race.rows.len(),
+            POD_TRACK_ROWS,
+            "a full circuit is laid out"
+        );
+        for row in &race.rows {
+            assert!(
+                row.open.0 >= 1 && row.open.1 <= W - 2,
+                "the canyon stays on the court"
+            );
+            assert!(
+                row.open.1 - row.open.0 >= POD_TRACK_MIN - 2,
+                "and never pinches shut"
+            );
+        }
+        let (first, last) = (race.rows[0].open, race.rows[POD_TRACK_ROWS - 1].open);
+        assert_eq!(first, last, "and the last row lines up with the start line");
+    }
+
+    #[test]
+    fn a_racer_that_clips_a_canyon_wall_loses_the_engine() {
+        let mut race = running(7);
+        let wall = race.rows[race.pod.row()].open.0;
+        // Well outside it, so the row it climbs into next is rock too.
+        for _ in 0..W {
+            if race.pod.col + 3 < wall {
+                break;
+            }
+            race.steer(-1);
+        }
+        let (speed, damage) = (race.pod.speed, race.pod.damage);
+        assert!(speed > 0, "the pod is running before it touches anything");
+        race.step();
+        assert!(
+            race.pod.damage > damage,
+            "the rock takes a piece of the engine"
+        );
+        assert!(race.pod.speed < speed, "and the speed out of it");
+        assert!(
+            race.pod.col >= race.rows[race.pod.row()].open.0,
+            "and it is shoved back into the lane"
+        );
+    }
+
+    #[test]
+    fn the_boost_builds_heat_and_cooking_the_engines_burns_them_out() {
+        let mut race = Podrace::new(11);
+        race.throttle(POD_MAX_THROTTLE);
+        assert!(race.boost(), "the boost lights");
+        let cold = race.pod.heat;
+        race.step();
+        assert!(race.pod.heat > cold, "and it puts heat into the engines");
+        let mut peak = race.pod.heat;
+        for _ in 0..200 {
+            race.boost();
+            race.step();
+            peak = peak.max(race.pod.heat);
+        }
+        assert_eq!(peak, POD_HEAT_LIMIT, "held on, the gauge pegs");
+        assert!(race.pod.damage > 0, "and past it the engines cook");
+        assert!(
+            !race.boost() || race.pod.heat < POD_HEAT_LIMIT,
+            "a pegged gauge will not take another burn"
+        );
+    }
+
+    #[test]
+    fn the_engine_cannot_be_reached_into_at_full_throttle() {
+        let mut race = Podrace::new(3);
+        race.pod.damage = POD_ENGINE_HP / 2;
+        race.throttle(POD_MAX_THROTTLE);
+        assert!(!race.repair(), "there is no getting at it flat out");
+        race.throttle(-POD_MAX_THROTTLE);
+        let hurt = race.pod.damage;
+        assert!(race.repair(), "throttled back you can reach the block");
+        assert!(race.pod.damage < hurt, "and put some of it back");
+        assert!(!race.repair(), "but only as fast as the weld sets");
+        for _ in 0..POD_REPAIR_TICKS {
+            race.step();
+        }
+        assert!(race.repair(), "and again once it has");
+    }
+
+    #[test]
+    fn the_field_drives_the_canyon_rather_than_the_walls() {
+        let mut race = Podrace::new(5);
+        let start: Vec<u32> = race.rivals.iter().map(|r| r.progress()).collect();
+        for _ in 0..60 {
+            race.step();
+        }
+        assert!(
+            race.rivals
+                .iter()
+                .zip(&start)
+                .all(|(rival, was)| rival.progress() > *was),
+            "the whole field is running"
+        );
+        assert!(
+            race.rivals.iter().all(|rival| !rival.wrecked()),
+            "and none of them has driven itself into the rock"
+        );
+        let paces: Vec<u32> = race.rivals.iter().map(|r| r.progress()).collect();
+        assert!(
+            paces.iter().min() != paces.iter().max(),
+            "they run at different paces, so the field strings out"
+        );
+    }
+
+    #[test]
+    fn a_lap_is_counted_as_the_pod_comes_past_the_line() {
+        let mut race = Podrace::new(9);
+        let start = race.rows[0].open;
+        race.pod.col = (start.0 + start.1) / 2;
+        race.pod.paced = POD_LAP_PACES - 2;
+        race.pod.throttle = POD_MAX_THROTTLE;
+        race.pod.speed = 4;
+        let laps = race.pod.laps;
+        race.step();
+        assert_eq!(race.pod.laps, laps + 1, "past the line and onto the next");
+        assert!(
+            race.pod.paced < POD_LAP_PACES,
+            "with the count starting again"
+        );
+    }
+
+    #[test]
+    fn running_the_laps_out_takes_the_flag_and_a_place() {
+        let mut race = Podrace::new(13);
+        let start = race.rows[0].open;
+        race.pod.col = (start.0 + start.1) / 2;
+        race.pod.laps = POD_LAPS - 1;
+        race.pod.paced = POD_LAP_PACES - 2;
+        race.pod.throttle = POD_MAX_THROTTLE;
+        race.pod.speed = 4;
+        race.step();
+        assert_eq!(race.pod.place, Some(1), "first past the post");
+        assert!(race.over(), "and the race is done with you");
+        assert_eq!(race.standing(), 1, "the place stands after the flag");
+        assert_eq!(
+            race.field(),
+            POD_RIVALS + 1,
+            "out of the field that started"
+        );
+    }
+
+    #[test]
+    fn two_pods_in_one_lane_trade_paint_and_come_apart() {
+        let mut race = running(17);
+        // Drop into his lane at his pace: there is not room for both.
+        let rival = race.rivals[0].clone();
+        race.pod.paced = rival.paced;
+        race.pod.laps = rival.laps;
+        race.pod.col = rival.col;
+        race.pod.speed = rival.speed;
+        let (mine, his) = (race.pod.damage, rival.damage);
+        race.step();
+        assert!(race.pod.damage > mine, "you come out of it marked");
+        assert!(race.rivals[0].damage > his, "and so does he");
+        assert_ne!(
+            race.pod.col, race.rivals[0].col,
+            "and the two are shoved apart"
+        );
+    }
+
+    #[test]
+    fn the_standing_counts_whoever_is_up_the_road() {
+        let mut race = Podrace::new(23);
+        assert_eq!(race.standing(), 1, "off the line nobody is ahead");
+        race.rivals[0].laps = 1;
+        race.rivals[1].laps = 1;
+        assert_eq!(race.standing(), 3, "two up the road puts you third");
+        race.rivals[2].place = Some(1);
+        assert_eq!(
+            race.standing(),
+            4,
+            "and one already home is ahead of you whatever the count says"
         );
     }
 }
