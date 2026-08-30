@@ -601,6 +601,38 @@ pub struct HostApi {
     /// when there is no editor context. Release with `free_cstring`.
     pub region_pos:
         extern "C" fn(host: *const HostApi, from: usize, to: usize, mode: u8) -> *mut c_char,
+
+    /// vim `undotree().seq_last` — how many revisions the undo history holds.
+    /// Revision 0 is the empty root, so this is always at least 1.
+    pub undo_count: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `undotree().seq_cur` — the revision the buffer is showing.
+    pub undo_current: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// vim `undotree().save_last` — the revision that matches the file on disk.
+    pub undo_saved: extern "C" fn(host: *const HostApi) -> usize,
+
+    /// The parent of a revision, which is what makes the history a TREE rather
+    /// than a list: undoing and then editing again branches instead of
+    /// discarding. Revision 0 is the root and is its OWN parent, so walking
+    /// parents terminates on `i == parent(i)` rather than on a sentinel.
+    /// `usize::MAX` past the end.
+    pub undo_parent: extern "C" fn(host: *const HostApi, index: usize) -> usize,
+
+    /// How many seconds ago a revision was committed, or `usize::MAX` past the
+    /// end.
+    ///
+    /// vim's `undotree()` reports an absolute `time`. zmax's history stores a
+    /// monotonic `Instant`, which has no epoch to convert to, so this reports
+    /// AGE instead of a timestamp -- the honest projection of what is stored.
+    pub undo_seconds_ago: extern "C" fn(host: *const HostApi, index: usize) -> usize,
+
+    /// The shape of the current selection: `char`, `line` or `block`.
+    ///
+    /// NOT vim's `visualmode()`, which reports the last visual mode used even
+    /// after leaving it; zmax does not retain that, so this describes the
+    /// selection that exists NOW. Release with `free_cstring`.
+    pub select_kind: extern "C" fn(host: *const HostApi) -> *mut c_char,
 }
 
 /// What a plugin returns from its [`InitFn`]. The strings must have `'static`
@@ -1439,6 +1471,33 @@ impl Host {
             .unwrap_or_default()
     }
 
+    /// vim `undotree()` — the undo history as `(parent, seconds ago)` per
+    /// revision, oldest first, plus which revision is showing and which matches
+    /// the file on disk.
+    ///
+    /// Revision 0 is the empty root and is its own parent, so a walk up the
+    /// parents stops when `parent == index` rather than at a sentinel.
+    pub fn undo_tree(&self) -> UndoTree {
+        let count = (self.t().undo_count)(self.api);
+        UndoTree {
+            revisions: (0..count)
+                .map(|i| UndoRevision {
+                    parent: (self.t().undo_parent)(self.api, i),
+                    seconds_ago: (self.t().undo_seconds_ago)(self.api, i),
+                })
+                .collect(),
+            current: (self.t().undo_current)(self.api),
+            saved: (self.t().undo_saved)(self.api),
+        }
+    }
+
+    /// The shape of the current selection: `char`, `line` or `block`.
+    ///
+    /// Not vim's `visualmode()` — see [`HostApi::select_kind`].
+    pub fn select_kind(&self) -> Option<String> {
+        self.take_string((self.t().select_kind)(self.api))
+    }
+
     /// vim `getcompletion({prefix}, "option")` — option names beginning with
     /// `prefix`. Only options that have been set are known.
     pub fn option_completions(&self, prefix: &str) -> Vec<String> {
@@ -1481,6 +1540,53 @@ pub struct QfItem {
     pub line: usize,
     pub col: usize,
     pub text: String,
+}
+
+/// One revision of the undo history.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UndoRevision {
+    /// The revision this one was made from. The root is its own parent.
+    pub parent: usize,
+    /// How long ago it was committed. vim reports an absolute time; zmax stores
+    /// a monotonic instant, so this is an age.
+    pub seconds_ago: usize,
+}
+
+/// vim `undotree()` — the undo history, which is a tree because undoing and
+/// then editing again branches rather than discarding the old future.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UndoTree {
+    /// Every revision, indexed by revision id. Index 0 is the empty root.
+    pub revisions: Vec<UndoRevision>,
+    /// The revision the buffer is showing.
+    pub current: usize,
+    /// The revision matching the file on disk.
+    pub saved: usize,
+}
+
+impl UndoTree {
+    /// Whether the buffer matches what is on disk.
+    pub fn is_saved(&self) -> bool {
+        self.current == self.saved
+    }
+
+    /// The chain of revisions from `index` up to the root, root last.
+    ///
+    /// Terminates on the root being its own parent, so it never loops even if
+    /// the history is malformed.
+    pub fn ancestry(&self, index: usize) -> Vec<usize> {
+        let mut chain = Vec::new();
+        let mut at = index;
+        while at < self.revisions.len() {
+            chain.push(at);
+            let parent = self.revisions[at].parent;
+            if parent == at {
+                break;
+            }
+            at = parent;
+        }
+        chain
+    }
 }
 
 /// One tag-stack frame: the file and char offset a tag jump started from.
@@ -2071,6 +2177,28 @@ mod tests {
             _ => ptr::null_mut(),
         }
     }
+    // A BRANCHED history: 2 and 3 are both children of 1, which is what
+    // undoing and then editing again produces. Root 0 is its own parent.
+    const UNDO: [(usize, usize); 4] = [(0, 300), (0, 120), (1, 10), (1, 5)];
+
+    extern "C" fn fake_undo_count(_h: *const HostApi) -> usize {
+        UNDO.len()
+    }
+    extern "C" fn fake_undo_current(_h: *const HostApi) -> usize {
+        3
+    }
+    extern "C" fn fake_undo_saved(_h: *const HostApi) -> usize {
+        1
+    }
+    extern "C" fn fake_undo_parent(_h: *const HostApi, i: usize) -> usize {
+        UNDO.get(i).map_or(usize::MAX, |(parent, _)| *parent)
+    }
+    extern "C" fn fake_undo_seconds_ago(_h: *const HostApi, i: usize) -> usize {
+        UNDO.get(i).map_or(usize::MAX, |(_, age)| *age)
+    }
+    extern "C" fn fake_select_kind(_h: *const HostApi) -> *mut c_char {
+        reply("block")
+    }
     extern "C" fn fake_long_word_at_cursor(_h: *const HostApi) -> *mut c_char {
         // The WORD keeps its punctuation; `word_at_cursor` gives "UnixStream".
         reply("UnixStream::connect(path)")
@@ -2451,6 +2579,12 @@ mod tests {
             tag_stack_path: fake_tag_stack_path,
             tag_stack_pos: fake_tag_stack_pos,
             region_pos: fake_region_pos,
+            undo_count: fake_undo_count,
+            undo_current: fake_undo_current,
+            undo_saved: fake_undo_saved,
+            undo_parent: fake_undo_parent,
+            undo_seconds_ago: fake_undo_seconds_ago,
+            select_kind: fake_select_kind,
         }
     }
 
@@ -3229,6 +3363,49 @@ mod tests {
             host.region_pos(3, 8, RegionMode::Charwise),
             [(3, 5), (10, 12)]
         );
+    }
+
+    /// The undo history is a TREE, not a list: undoing and then editing again
+    /// branches. Two revisions sharing a parent is the shape that proves it,
+    /// and a flat list could not represent it.
+    #[test]
+    fn the_undo_history_branches() {
+        let api = table();
+        let host = host(&api);
+        let tree = host.undo_tree();
+
+        assert_eq!(tree.revisions.len(), 4);
+        assert_eq!(
+            tree.revisions[2].parent, tree.revisions[3].parent,
+            "two children of one revision -- a branch"
+        );
+        assert!(!tree.is_saved(), "showing 3, saved 1");
+        assert_eq!(tree.revisions[3].seconds_ago, 5, "newest is youngest");
+    }
+
+    /// Walking parents terminates because the root is its own parent, so the
+    /// loop needs no sentinel and cannot spin on a malformed history.
+    #[test]
+    fn undo_ancestry_stops_at_the_self_parented_root() {
+        let api = table();
+        let host = host(&api);
+        let tree = host.undo_tree();
+
+        assert_eq!(tree.revisions[0].parent, 0, "root is its own parent");
+        assert_eq!(tree.ancestry(2), vec![2, 1, 0]);
+        assert_eq!(tree.ancestry(0), vec![0], "the root alone");
+        assert!(tree.ancestry(99).is_empty(), "no such revision");
+    }
+
+    /// `select_kind` describes the selection that exists now. It is
+    /// deliberately not vim's `visualmode()`, which remembers the last mode
+    /// after leaving it -- zmax keeps no such memory.
+    #[test]
+    fn select_kind_describes_the_current_selection() {
+        let api = table();
+        let host = host(&api);
+
+        assert_eq!(host.select_kind().as_deref(), Some("block"));
     }
 
     /// A diagnostic arrives as one value: where, what, and how bad.

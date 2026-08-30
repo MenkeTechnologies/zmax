@@ -157,6 +157,8 @@ What is in the buffer, and what the language servers said about it:
 | `loclist()` | `getloclist()` | per-window, so it follows the focus |
 | `tag_stack()` | `gettagstack()` | where tag jumps started, oldest first; what `CTRL-T` unwinds |
 | `region_pos(from, to, mode)` | `getregionpos()` | `region`'s rows as char-offset extents, one per row |
+| `undo_tree()` | `undotree()` | the history as a tree; revision 0 is the self-parented root |
+| `select_kind()` | — | `char`/`line`/`block` for the CURRENT selection; not `visualmode()` |
 
 Positions here are **char** offsets. A language server counts bytes, which is
 the same split vim has between `col()` and `charcol()`, so there is a bridge:
@@ -184,6 +186,13 @@ would lose information zmax has:
   is vim's, filled by `:grep`/`:make` and walked by `:cnext`; `diagnostics()` is
   the language server's, which vim has no concept of. Reading one when you meant
   the other is silent, so they are named apart.
+- **`undo_tree` reports an AGE, not a timestamp.** vim's `undotree()` gives an
+  absolute `time`; zmax's history stores a monotonic `Instant`, which has no
+  epoch to convert to, so each revision reports how many seconds ago it was
+  committed.
+- **`select_kind` is not `visualmode()`.** vim remembers the last visual mode
+  after leaving it; zmax keeps no such memory, so this describes the selection
+  that exists now rather than inventing a remembered one.
 - **Quickfix line/column are 1-based**, unlike the char offsets everywhere else
   here, because an entry can name a file that is not open and so has no offset.
 - **A blockwise `region` can be shorter than its row span.** A row whose text

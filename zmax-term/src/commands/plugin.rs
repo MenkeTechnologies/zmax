@@ -1712,6 +1712,64 @@ extern "C" fn host_region_pos(
     into_raw_cstring(rows.flatten())
 }
 
+/// The undo history is a tree: undoing and editing again branches rather than
+/// discarding the old future, which is why these report a parent per revision
+/// instead of a flat list. `undo_tree_snapshot` reads through the `Cell` by
+/// take/set without disturbing the stored history.
+fn undo_snapshot() -> Option<zmax_view::document::UndoTreeSnapshot> {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.undo_tree_snapshot()
+    })
+}
+
+extern "C" fn host_undo_count(_host: *const HostApi) -> usize {
+    undo_snapshot().map_or(0, |t| t.nodes.len())
+}
+
+extern "C" fn host_undo_current(_host: *const HostApi) -> usize {
+    undo_snapshot().map_or(0, |t| t.current)
+}
+
+extern "C" fn host_undo_saved(_host: *const HostApi) -> usize {
+    undo_snapshot().map_or(0, |t| t.saved)
+}
+
+extern "C" fn host_undo_parent(_host: *const HostApi, index: usize) -> usize {
+    undo_snapshot()
+        .and_then(|t| t.nodes.get(index).map(|(parent, _at)| *parent))
+        .unwrap_or(usize::MAX)
+}
+
+extern "C" fn host_undo_seconds_ago(_host: *const HostApi, index: usize) -> usize {
+    // vim reports an absolute time; a monotonic Instant has no epoch, so the
+    // age is what can honestly be derived from it.
+    undo_snapshot()
+        .and_then(|t| {
+            t.nodes
+                .get(index)
+                .map(|(_parent, at)| at.elapsed().as_secs() as usize)
+        })
+        .unwrap_or(usize::MAX)
+}
+
+/// The shape of the CURRENT selection. Not vim's `visualmode()`, which reports
+/// the last visual mode even after leaving it -- zmax keeps no such memory, so
+/// reporting one would be an invention.
+extern "C" fn host_select_kind(_host: *const HostApi) -> *mut c_char {
+    let kind = with_cx(|cx| {
+        if cx.editor.block.is_some() {
+            "block"
+        } else if cx.editor.visual_line.is_some() {
+            "line"
+        } else {
+            "char"
+        }
+        .to_string()
+    });
+    into_raw_cstring(kind)
+}
+
 extern "C" fn host_free_cstring(_host: *const HostApi, s: *mut c_char) {
     if !s.is_null() {
         // Reclaim ownership of a string we handed out via `into_raw`.
@@ -1834,6 +1892,12 @@ fn host_api() -> *const HostApi {
             tag_stack_path: host_tag_stack_path,
             tag_stack_pos: host_tag_stack_pos,
             region_pos: host_region_pos,
+            undo_count: host_undo_count,
+            undo_current: host_undo_current,
+            undo_saved: host_undo_saved,
+            undo_parent: host_undo_parent,
+            undo_seconds_ago: host_undo_seconds_ago,
+            select_kind: host_select_kind,
         });
         Box::into_raw(boxed) as usize
     });
