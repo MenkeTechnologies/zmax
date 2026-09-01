@@ -1344,6 +1344,7 @@ impl MappableCommand {
         yank_main_selection_to_clipboard, "Yank main selection to clipboard",
         yank_joined_to_primary_clipboard, "Join and yank selections to primary clipboard",
         yank_main_selection_to_primary_clipboard, "Yank main selection to primary clipboard",
+        yank_to_tmux_buffer, "Yank selections into a new tmux paste buffer",
         replace_with_yanked, "Replace with yanked text",
         replace_selections_with_clipboard, "Replace selections by clipboard content",
         replace_selections_with_primary_clipboard, "Replace selections by primary clipboard",
@@ -1442,6 +1443,9 @@ impl MappableCommand {
         paste_clipboard_before, "Paste clipboard before selections",
         paste_primary_clipboard_after, "Paste primary clipboard after selections",
         paste_primary_clipboard_before, "Paste primary clipboard before selections",
+        paste_tmux_buffer_after, "Paste the newest tmux paste buffer after selections",
+        paste_tmux_buffer_before, "Paste the newest tmux paste buffer before selections",
+        tmux_buffer_picker, "Pick a tmux paste buffer and paste it after selections",
         indent, "Indent selection",
         unindent, "Unindent selection",
         indent_including_blank, "Indent selection, empty lines included (kakoune A->)",
@@ -38035,6 +38039,107 @@ fn yank_to_clipboard(cx: &mut Context) {
 fn yank_to_primary_clipboard(cx: &mut Context) {
     yank_impl(cx.editor, Some('*'));
     exit_select_mode(cx);
+}
+
+/// Yank the selections into a NEW tmux paste buffer (`tmux load-buffer`).
+///
+/// tmux buffers are a store of their own, separate from the system clipboard
+/// and from zmax's registers: this reaches every pane of the session (`prefix
+/// ]`) without disturbing what was last copied in another app.
+fn yank_to_tmux_buffer(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let selections = doc.selection(view.id);
+    let count = selections.len();
+    let joined = selections
+        .fragments(text)
+        .collect::<Vec<_>>()
+        .join(doc.line_ending.as_str());
+
+    match zmax_view::clipboard::tmux_buffer_set(&joined) {
+        Ok(()) => cx.editor.set_status(format!(
+            "yanked {count} selection{} to a tmux buffer",
+            if count == 1 { "" } else { "s" }
+        )),
+        Err(err) => cx.editor.set_error(format!("tmux buffer: {err}")),
+    }
+    exit_select_mode(cx);
+}
+
+/// Paste a tmux paste buffer (`None` = the newest) at `pos`.
+fn paste_tmux_buffer_impl(cx: &mut Context, name: Option<&str>, pos: Paste) {
+    let count = cx.count();
+    match zmax_view::clipboard::tmux_buffer_get(name) {
+        Ok(contents) => {
+            let (view, doc) = current!(cx.editor);
+            paste_impl(
+                &[contents],
+                doc,
+                view,
+                pos,
+                count,
+                cx.editor.mode,
+                CursorRest::OnText,
+            );
+        }
+        Err(err) => cx.editor.set_error(format!("tmux buffer: {err}")),
+    }
+}
+
+fn paste_tmux_buffer_after(cx: &mut Context) {
+    paste_tmux_buffer_impl(cx, None, Paste::After);
+}
+
+fn paste_tmux_buffer_before(cx: &mut Context) {
+    paste_tmux_buffer_impl(cx, None, Paste::Before);
+}
+
+/// Fuzzy-pick one of the session's tmux paste buffers (`tmux list-buffers`,
+/// newest first) and paste it after the selections.
+fn tmux_buffer_picker(cx: &mut Context) {
+    struct BufMeta {
+        name: String,
+        sample: String,
+    }
+
+    let items: Vec<BufMeta> = match zmax_view::clipboard::tmux_buffers() {
+        Ok(buffers) => buffers
+            .into_iter()
+            .map(|(name, sample)| BufMeta { name, sample })
+            .collect(),
+        Err(err) => {
+            cx.editor.set_error(format!("tmux buffer: {err}"));
+            return;
+        }
+    };
+    if items.is_empty() {
+        cx.editor.set_error("no tmux paste buffers");
+        return;
+    }
+
+    let columns = [
+        ui::PickerColumn::new("buffer", |m: &BufMeta, _: &()| m.name.as_str().into()),
+        ui::PickerColumn::new("contents", |m: &BufMeta, _: &()| m.sample.as_str().into()),
+    ];
+
+    let picker = Picker::new(columns, 1, items, (), |cx, meta, _action| {
+        match zmax_view::clipboard::tmux_buffer_get(Some(&meta.name)) {
+            Ok(contents) => {
+                let (view, doc) = current!(cx.editor);
+                paste_impl(
+                    &[contents],
+                    doc,
+                    view,
+                    Paste::After,
+                    1,
+                    cx.editor.mode,
+                    CursorRest::OnText,
+                );
+            }
+            Err(err) => cx.editor.set_error(format!("tmux buffer: {err}")),
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 fn yank_impl(editor: &mut Editor, register: Option<char>) {

@@ -32,9 +32,13 @@ pub enum ClipboardError {
 type Result<T> = std::result::Result<T, ClipboardError>;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use external::ClipboardProvider;
+pub use external::{
+    tmux_available, tmux_buffer_get, tmux_buffer_set, tmux_buffers, ClipboardProvider,
+};
 #[cfg(target_arch = "wasm32")]
-pub use noop::ClipboardProvider;
+pub use noop::{
+    tmux_available, tmux_buffer_get, tmux_buffer_set, tmux_buffers, ClipboardProvider,
+};
 
 // Clipboard not supported for wasm
 #[cfg(target_arch = "wasm32")]
@@ -60,6 +64,22 @@ mod noop {
         pub fn set_contents(&self, _content: &str, _clipboard_type: ClipboardType) -> Result<()> {
             Ok(())
         }
+    }
+
+    pub fn tmux_available() -> bool {
+        false
+    }
+
+    pub fn tmux_buffers() -> Result<Vec<(String, String)>> {
+        Ok(Vec::new())
+    }
+
+    pub fn tmux_buffer_get(_name: Option<&str>) -> Result<String> {
+        Err(ClipboardError::ReadingNotSupported)
+    }
+
+    pub fn tmux_buffer_set(_content: &str) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -417,6 +437,62 @@ mod external {
         TERMUX,
         yank => "termux-clipboard-get";
         paste => "termux-clipboard-set";
+    }
+
+    /// tmux's own paste buffers, reachable independently of which provider the
+    /// system clipboard resolved to. They are a SEPARATE store from the system
+    /// clipboard — that is the point: copy stays inside the tmux session (and
+    /// its other panes), and a paste from here is unaffected by whatever was
+    /// last copied in another app.
+    pub fn tmux_available() -> bool {
+        use zmax_stdx::env::{binary_exists, env_var_is_set};
+        env_var_is_set("TMUX") && binary_exists("tmux")
+    }
+
+    /// `tmux list-buffers`, newest first: `(name, one-line sample)` per buffer.
+    pub fn tmux_buffers() -> Result<Vec<(String, String)>> {
+        let cmd = Command {
+            command: Cow::Borrowed("tmux"),
+            args: Cow::Owned(vec![
+                Cow::Borrowed("list-buffers"),
+                Cow::Borrowed("-F"),
+                Cow::Borrowed("#{buffer_name}\t#{buffer_sample}"),
+            ]),
+        };
+        let out = execute_command(&cmd, None, true)?.ok_or(ClipboardError::MissingStdout)?;
+        Ok(out
+            .lines()
+            .filter_map(|line| {
+                let (name, sample) = line.split_once('\t')?;
+                Some((name.to_string(), sample.to_string()))
+            })
+            .collect())
+    }
+
+    /// `tmux save-buffer`: the contents of `name`, or of the newest buffer.
+    pub fn tmux_buffer_get(name: Option<&str>) -> Result<String> {
+        let mut args = vec![Cow::Borrowed("save-buffer")];
+        if let Some(name) = name {
+            args.push(Cow::Borrowed("-b"));
+            args.push(Cow::Owned(name.to_string()));
+        }
+        args.push(Cow::Borrowed("-"));
+        let cmd = Command {
+            command: Cow::Borrowed("tmux"),
+            args: Cow::Owned(args),
+        };
+        execute_command(&cmd, None, true)?.ok_or(ClipboardError::MissingStdout)
+    }
+
+    /// `tmux load-buffer`: push `content` as the newest buffer. Deliberately
+    /// WITHOUT `-w` — this command exists to reach the tmux buffers only, so it
+    /// must not also overwrite the system clipboard.
+    pub fn tmux_buffer_set(content: &str) -> Result<()> {
+        let cmd = Command {
+            command: Cow::Borrowed("tmux"),
+            args: Cow::Owned(vec![Cow::Borrowed("load-buffer"), Cow::Borrowed("-")]),
+        };
+        execute_command(&cmd, Some(content), false).map(|_| ())
     }
 
     fn execute_command(

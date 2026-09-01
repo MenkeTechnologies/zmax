@@ -4441,6 +4441,29 @@ pub(crate) fn editor_menu_entries(
         }),
     ];
 
+    // tmux paste buffers: a third store next to the register and the system
+    // clipboard, offered only inside a tmux session (`prefix ]` pastes them in
+    // any pane). Copying here does not touch the system clipboard.
+    if zmax_view::clipboard::tmux_available() {
+        let tmux = vec![
+            Entry::item("Copy to tmux Buffer", |co, cx| {
+                run_editor_command(co, cx, |c| ctx_copy(c, &MC::yank_to_tmux_buffer))
+            }),
+            Entry::item("Paste Newest tmux Buffer", |co, cx| {
+                run_editor_command(co, cx, |c| {
+                    MC::paste_tmux_buffer_after.execute(c);
+                })
+            }),
+            Entry::item("Paste tmux Buffer…", |co, cx| {
+                run_editor_command(co, cx, |c| {
+                    MC::tmux_buffer_picker.execute(c);
+                })
+            }),
+        ];
+        e.push(Entry::sep());
+        e.push(Entry::sub("tmux Buffers", tmux));
+    }
+
     if let Some(path) = path {
         let dir = path
             .parent()
