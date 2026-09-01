@@ -438,6 +438,152 @@ pub fn dap_toggle_breakpoint_impl(cx: &mut Context, path: PathBuf, line: usize) 
     }
 }
 
+/// IntelliJ "Toggle Temporary Line Breakpoint" (`Ctrl-Alt-Shift-F8`), gdb
+/// `tbreak`: a breakpoint that removes itself the first time it is hit.
+///
+/// DAP has no one-shot breakpoint, so the line is recorded in
+/// `editor.temporary_breakpoints` and dropped by the `stopped` handler
+/// (`zmax_view::handlers::dap::clear_temporary_breakpoint`). Distinct from
+/// `gud_tbreak`, which types a `tbreak` line at a GUD comint gdb session and
+/// never touches the DAP breakpoint list or the gutter. Toggling a
+/// temporary breakpoint off, or replacing it with a normal one, clears the mark
+/// too, so a line is never left marked without a breakpoint on it.
+pub fn dap_toggle_temporary_breakpoint(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+
+    let Some(path) = doc.path().map(ToOwned::to_owned) else {
+        cx.editor
+            .set_error("Can't set breakpoint: document has no path");
+        return;
+    };
+
+    let text = doc.text().slice(..);
+    let line = doc.selection(view.id).primary().cursor_line(text);
+    let existed = cx
+        .editor
+        .breakpoints
+        .get(&path)
+        .is_some_and(|bps| bps.iter().any(|b| b.line == line));
+
+    dap_toggle_breakpoint_impl(cx, path.clone(), line);
+
+    let key = (path, line);
+    if existed {
+        cx.editor.temporary_breakpoints.remove(&key);
+        cx.editor.set_status("breakpoint removed");
+    } else {
+        cx.editor.temporary_breakpoints.insert(key);
+        cx.editor
+            .set_status("temporary breakpoint set (clears on first hit)");
+    }
+}
+
+/// IntelliJ "Show Execution Point" (`Alt-F10`): jump the editor back to where
+/// the program is actually stopped -- the TOP frame of the current thread, not
+/// whichever frame `dap_switch_stack_frame` last selected.
+pub fn dap_show_execution_point(cx: &mut Context) {
+    // Reported rather than silently ignored, matching the evaluate commands
+    // below (the `debugger!` macro returns without a word).
+    let Some(debugger) = cx.editor.debug_adapters.get_active_client_mut() else {
+        cx.editor.set_error("Debugger is not running");
+        return;
+    };
+    let Some(thread_id) = debugger.thread_id else {
+        cx.editor.set_error("No thread is currently active");
+        return;
+    };
+    let Some(frame) = debugger
+        .stack_frames
+        .get(&thread_id)
+        .and_then(|frames| frames.first())
+        .cloned()
+    else {
+        cx.editor.set_error("No stopped stack frame");
+        return;
+    };
+    debugger.active_frame = Some(0);
+    jump_to_stack_frame(cx.editor, &frame);
+}
+
+/// Evaluate `expr` in the selected frame and show the adapter's answer in a
+/// popup. Shared by Evaluate Expression and Quick Evaluate.
+fn dap_eval_popup(cx: &mut Context, expr: String) {
+    let Some(debugger) = cx.editor.debug_adapters.get_active_client() else {
+        cx.editor.set_error("Debugger is not running");
+        return;
+    };
+    // The SELECTED frame, so evaluation follows the frame the user is reading
+    // (IntelliJ evaluates in the frame the Frames pane has focused).
+    let frame_id = selected_frame(debugger, false).map(|f| f.id);
+    match block_on(debugger.eval(expr.clone(), frame_id)) {
+        Ok(resp) => {
+            let ty = resp
+                .ty
+                .as_deref()
+                .map(|t| format!(" : {t}"))
+                .unwrap_or_default();
+            show_gdb_popup(cx, "dap-evaluate", format!("{expr}{ty}\n{}\n", resp.result));
+        }
+        Err(err) => cx.editor.set_error(format!("evaluate: {err}")),
+    }
+}
+
+/// IntelliJ "Evaluate Expression" (`Alt-F8`): prompt for an expression and show
+/// its value in the selected frame.
+pub fn dap_evaluate_expression(cx: &mut Context) {
+    if cx.editor.debug_adapters.get_active_client().is_none() {
+        cx.editor.set_error("Debugger is not running");
+        return;
+    }
+    let prompt = Prompt::new(
+        "evaluate:".into(),
+        None,
+        ui::completers::none,
+        move |cx, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let expr = input.trim();
+            if expr.is_empty() {
+                return;
+            }
+            let mut cx = Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            dap_eval_popup(&mut cx, expr.to_string());
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// IntelliJ "Quick Evaluate Expression" (`Ctrl-Alt-F8`): evaluate what is
+/// already under the caret -- the selection when there is one, otherwise the
+/// word -- with no prompt. The GUD analogue over a comint gdb session is
+/// `gud_print`; this one goes through DAP `evaluate`.
+pub fn dap_quick_evaluate(cx: &mut Context) {
+    let expr = {
+        let (view, doc) = current_ref!(cx.editor);
+        let range = doc.selection(view.id).primary();
+        let selected = doc.text().slice(..).slice(range.from()..range.to()).to_string();
+        if selected.trim().is_empty() || range.len() <= 1 {
+            crate::commands::typed::word_under_cursor(cx.editor)
+        } else {
+            selected
+        }
+    };
+    let expr = expr.trim().to_string();
+    if expr.is_empty() {
+        cx.editor.set_error("Nothing under the cursor to evaluate");
+        return;
+    }
+    dap_eval_popup(cx, expr);
+}
+
 /// Emacs `gud-remove` (`C-x C-a C-d`): sends `clear %f:%l`, an unconditional
 /// remove. Unlike `dap_toggle_breakpoint` this never sets a breakpoint, so on a
 /// line that has none it is a no-op.

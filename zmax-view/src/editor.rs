@@ -2191,6 +2191,10 @@ pub struct Editor {
 
     pub debug_adapters: dap::registry::Registry,
     pub breakpoints: HashMap<PathBuf, Vec<Breakpoint>>,
+    /// Lines whose breakpoint is TEMPORARY (IntelliJ "Toggle Temporary Line
+    /// Breakpoint", gdb `tbreak`): the adapter knows nothing about them, so the
+    /// entry is removed here the first time the program stops on that line.
+    pub temporary_breakpoints: HashSet<(PathBuf, usize)>,
 
     /// vim global marks (`A`-`Z`) and numbered file marks (`0`-`9`), keyed by
     /// mark char. Unlike buffer-local `a`-`z` marks these persist across buffer
@@ -2691,6 +2695,7 @@ impl Editor {
             vim_insert_collapse: false,
             vim_insert_collapse_pos: None,
             breakpoints: HashMap::new(),
+            temporary_breakpoints: HashSet::new(),
             quickfix: Vec::new(),
             quickfix_idx: None,
             quickfix_stack: Vec::new(),

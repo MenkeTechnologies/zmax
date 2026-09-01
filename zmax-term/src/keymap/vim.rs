@@ -2296,6 +2296,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "d" => dap_launch,                 // SPC d d : start debugging
                 "b" => dap_toggle_breakpoint,      // SPC d b : toggle breakpoint
                 "B" => dap_breakpoints_picker,     // SPC d B : view all breakpoints (JetBrains View Breakpoints)
+                "t" => dap_toggle_temporary_breakpoint, // SPC d t : one-shot breakpoint (JetBrains Toggle Temporary Line Breakpoint)
+                "x" => dap_show_execution_point,   // SPC d x : back to where the program is stopped (JetBrains Alt-F10)
+                "e" => dap_evaluate_expression,    // SPC d e : evaluate an expression (JetBrains Alt-F8)
+                "E" => dap_quick_evaluate,         // SPC d E : evaluate the selection/word (JetBrains Ctrl-Alt-F8)
                 "c" => dap_continue,               // SPC d c : continue
                 "C" => dap_run_to_cursor,          // SPC d C : run to cursor (JetBrains Run To Cursor)
                 "i" => dap_step_in,                // SPC d i : step in

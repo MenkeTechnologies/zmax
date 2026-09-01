@@ -116,6 +116,56 @@ pub fn jump_to_stack_frame(editor: &mut Editor, frame: &zmax_dap::StackFrame) {
     align_view(doc, view, Align::Center);
 }
 
+/// Clear the TEMPORARY breakpoint the program just stopped on, if the stop was
+/// on one (IntelliJ "Toggle Temporary Line Breakpoint", gdb `tbreak`): the
+/// adapter has no notion of one-shot breakpoints, so the entry is dropped here
+/// and the new list pushed back to the adapter. Called on every `stopped`.
+pub fn clear_temporary_breakpoint(editor: &mut Editor, id: dap::registry::DebugAdapterId) {
+    if editor.temporary_breakpoints.is_empty() {
+        return;
+    }
+    let Some(debugger) = editor.debug_adapters.get_client_mut(id) else {
+        return;
+    };
+    let Some(thread_id) = debugger.thread_id else {
+        return;
+    };
+    // Frame 0 of the stopped thread is where execution actually is.
+    let Some(frame) = debugger
+        .stack_frames
+        .get(&thread_id)
+        .and_then(|frames| frames.first())
+    else {
+        return;
+    };
+    let Some(zmax_dap::Source {
+        path: Some(ref path),
+        ..
+    }) = frame.source
+    else {
+        return;
+    };
+    // DAP lines are 1-based; breakpoints are stored 0-based.
+    let key = (path.clone(), frame.line.saturating_sub(1));
+    if !editor.temporary_breakpoints.remove(&key) {
+        return;
+    }
+    let (path, line) = key;
+    let Some(breakpoints) = editor.breakpoints.get_mut(&path) else {
+        return;
+    };
+    let Some(pos) = breakpoints.iter().position(|b| b.line == line) else {
+        return;
+    };
+    breakpoints.remove(pos);
+    let mut breakpoints = breakpoints.clone();
+    if let Some(debugger) = editor.debug_adapters.get_client_mut(id) {
+        if let Err(err) = breakpoints_changed(debugger, path, &mut breakpoints) {
+            log::warn!("failed to clear temporary breakpoint: {err}");
+        }
+    }
+}
+
 pub fn breakpoints_changed(
     debugger: &mut dap::Client,
     path: PathBuf,
@@ -244,6 +294,7 @@ impl Editor {
                         }
 
                         self.set_status(status);
+                        clear_temporary_breakpoint(self, id);
                     }
                     Event::Continued(events::ContinuedBody { thread_id, .. }) => {
                         let debugger = match self.debug_adapters.get_client_mut(id) {

@@ -1963,6 +1963,10 @@
 | `dap_terminate` | End debug session | **spacemacs, hybrid** — normal: `` <space>dq ``, select: `` <space>dq ``<br>**helix** — normal: `` <space>Gt ``, select: `` <space>Gt `` |
 | `dap_edit_condition` | Edit breakpoint condition on current line | **helix** — normal: `` <space>G<C-c> ``, select: `` <space>G<C-c> `` |
 | `dap_breakpoints_picker` | View all breakpoints in a picker (JetBrains View Breakpoints) | **spacemacs, hybrid** — normal: `` <space>dB ``, select: `` <space>dB `` |
+| `dap_toggle_temporary_breakpoint` | Toggle a breakpoint that clears on its first hit (JetBrains Toggle Temporary Line Breakpoint, gdb tbreak) | **spacemacs, hybrid** — normal: `` <space>dt ``, select: `` <space>dt `` |
+| `dap_show_execution_point` | Jump to where the program is stopped (JetBrains Show Execution Point, Alt F10) | **spacemacs, hybrid** — normal: `` <space>dx ``, select: `` <space>dx `` |
+| `dap_evaluate_expression` | Evaluate an expression in the selected frame (JetBrains Evaluate Expression, Alt F8) | **spacemacs, hybrid** — normal: `` <space>de ``, select: `` <space>de `` |
+| `dap_quick_evaluate` | Evaluate the selection or word at the cursor (JetBrains Quick Evaluate, Ctrl Alt F8) | **spacemacs, hybrid** — normal: `` <space>dE ``, select: `` <space>dE `` |
 | `dap_edit_log` | Edit breakpoint log message on current line | **helix** — normal: `` <space>G<C-l> ``, select: `` <space>G<C-l> `` |
 | `dap_switch_thread` | Switch current thread | **spacemacs, hybrid** — normal: `` <space>dgt ``, select: `` <space>dgt ``<br>**helix** — normal: `` <space>Gst ``, select: `` <space>Gst `` |
 | `dap_switch_stack_frame` | Switch stack frame | **spacemacs, hybrid** — normal: `` <space>dgf ``, select: `` <space>dgf ``<br>**helix** — normal: `` <space>Gsf ``, select: `` <space>Gsf `` |
