@@ -23321,6 +23321,97 @@ fn paste_primary_clipboard_before(
     Ok(())
 }
 
+/// `:tmux-buffer-yank` — the selections into a new tmux paste buffer. The tmux
+/// buffers are their own store: this leaves the system clipboard alone.
+fn yank_to_tmux_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let selections = doc.selection(view.id);
+    let count = selections.len();
+    let joined = selections
+        .fragments(text)
+        .collect::<Vec<_>>()
+        .join(doc.line_ending.as_str());
+    zmax_view::clipboard::tmux_buffer_set(&joined)?;
+    cx.editor.set_status(format!(
+        "yanked {count} selection{} to a tmux buffer",
+        if count == 1 { "" } else { "s" }
+    ));
+    Ok(())
+}
+
+/// `:tmux-buffer-paste-after`/`-before` — the newest tmux paste buffer, or the
+/// one named by the argument (`tmux list-buffers` names them).
+fn paste_tmux_buffer_at(
+    cx: &mut compositor::Context,
+    args: &Args,
+    pos: Paste,
+) -> anyhow::Result<()> {
+    let name = args.first().map(|s| s.to_string());
+    let contents = zmax_view::clipboard::tmux_buffer_get(name.as_deref())?;
+    let mode = cx.editor.mode;
+    let (view, doc) = current!(cx.editor);
+    paste_impl(&[contents], doc, view, pos, 1, mode, CursorRest::OnText);
+    Ok(())
+}
+
+fn paste_tmux_buffer_after(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    paste_tmux_buffer_at(cx, &args, Paste::After)
+}
+
+fn paste_tmux_buffer_before(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    paste_tmux_buffer_at(cx, &args, Paste::Before)
+}
+
+/// `:tmux-buffers` — list the session's paste buffers in the status bar.
+fn show_tmux_buffers(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let buffers = zmax_view::clipboard::tmux_buffers()?;
+    if buffers.is_empty() {
+        cx.editor.set_status("no tmux paste buffers");
+    } else {
+        cx.editor.set_status(
+            buffers
+                .iter()
+                .map(|(name, sample)| format!("{name}: {sample}"))
+                .collect::<Vec<_>>()
+                .join(" | "),
+        );
+    }
+    Ok(())
+}
+
 fn replace_selections_with_clipboard(
     cx: &mut compositor::Context,
     _args: Args,
@@ -61626,6 +61717,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Replace selections with content of system primary clipboard.",
         fun: replace_selections_with_primary_clipboard,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tmux-buffer-yank",
+        aliases: &[],
+        doc: "Yank selections into a new tmux paste buffer (leaves the system clipboard alone).",
+        fun: yank_to_tmux_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tmux-buffer-paste-after",
+        aliases: &[],
+        doc: "Paste a tmux paste buffer (newest, or the named one) after selections.",
+        fun: paste_tmux_buffer_after,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tmux-buffer-paste-before",
+        aliases: &[],
+        doc: "Paste a tmux paste buffer (newest, or the named one) before selections.",
+        fun: paste_tmux_buffer_before,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tmux-buffers",
+        aliases: &[],
+        doc: "List the session's tmux paste buffers in the status bar.",
+        fun: show_tmux_buffers,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
