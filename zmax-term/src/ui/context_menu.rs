@@ -202,6 +202,39 @@ impl ContextMenu {
         }
     }
 
+    /// Move the highlight to the row under (x, y), opening a hovered submenu.
+    ///
+    /// Hovering a SEPARATOR must change nothing. Truncating the open path
+    /// before knowing the row is selectable was the bug: it closed the hovered
+    /// submenu while `sel` kept the index it held INSIDE that submenu, so
+    /// passing the cursor over a divider highlighted whatever root row happened
+    /// to share that index -- usually the first one.
+    fn hover(&mut self, x: u16, y: u16) {
+        let Some((depth, idx)) = self.hit(x, y) else {
+            return;
+        };
+        if !self.selectable_at(depth, idx) {
+            return;
+        }
+        self.open.truncate(depth);
+        self.sel = idx;
+        // Auto-open a hovered submenu (JetBrains behavior).
+        if matches!(self.deepest().get(idx), Some(Entry::Sub { .. })) {
+            self.open.push(idx);
+            self.sel = self.first_selectable(&self.open.clone());
+        }
+    }
+
+    /// Whether row `idx` of the panel at `depth` is a real target (an item or a
+    /// submenu, never a separator). Reads the list the panel WOULD show, so it
+    /// can be asked before `self.open` is changed.
+    fn selectable_at(&self, depth: usize, idx: usize) -> bool {
+        let path: Vec<usize> = self.open.iter().copied().take(depth).collect();
+        self.list_at(&path)
+            .get(idx)
+            .is_some_and(Entry::is_selectable)
+    }
+
     /// Panel + content-row index under screen point (x, y), if any.
     fn hit(&self, x: u16, y: u16) -> Option<(usize, usize)> {
         for panel in &self.panels {
@@ -270,37 +303,19 @@ impl Component for ContextMenu {
             },
             Event::Mouse(ev) => match ev.kind {
                 MouseEventKind::Down(MouseButton::Left) => match self.hit(ev.column, ev.row) {
-                    Some((depth, idx)) => {
+                    // A separator is not a target: leave the open path and the
+                    // selection exactly as they were rather than collapsing to
+                    // this panel (see the `Moved` arm).
+                    Some((depth, idx)) if self.selectable_at(depth, idx) => {
                         self.open.truncate(depth);
-                        if self
-                            .list_at(&self.open)
-                            .get(idx)
-                            .is_some_and(Entry::is_selectable)
-                        {
-                            self.sel = idx;
-                            self.choose(idx)
-                        } else {
-                            EventResult::Consumed(None)
-                        }
+                        self.sel = idx;
+                        self.choose(idx)
                     }
+                    Some(_) => EventResult::Consumed(None),
                     None => EventResult::Consumed(Some(Self::close())),
                 },
                 MouseEventKind::Moved => {
-                    if let Some((depth, idx)) = self.hit(ev.column, ev.row) {
-                        self.open.truncate(depth);
-                        if self
-                            .list_at(&self.open)
-                            .get(idx)
-                            .is_some_and(Entry::is_selectable)
-                        {
-                            self.sel = idx;
-                            // Auto-open a hovered submenu (JetBrains behavior).
-                            if matches!(self.deepest().get(idx), Some(Entry::Sub { .. })) {
-                                self.open.push(idx);
-                                self.sel = self.first_selectable(&self.open.clone());
-                            }
-                        }
-                    }
+                    self.hover(ev.column, ev.row);
                     EventResult::Consumed(None)
                 }
                 MouseEventKind::ScrollDown => {
@@ -446,5 +461,93 @@ impl Component for ContextMenu {
 
     fn id(&self) -> Option<&'static str> {
         Some(ID)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A menu of [item, sep, sub, item] with its panels placed by hand: the
+    /// root at (0,0) 20x6 (border + 4 rows), the submenu to its right, so
+    /// `hit` resolves rows without a render pass.
+    fn menu() -> ContextMenu {
+        let mut m = ContextMenu::new(
+            0,
+            0,
+            vec![
+                Entry::item("first", |_, _| {}),
+                Entry::sep(),
+                Entry::sub(
+                    "sub",
+                    vec![
+                        Entry::item("child a", |_, _| {}),
+                        Entry::item("child b", |_, _| {}),
+                    ],
+                ),
+                Entry::item("last", |_, _| {}),
+            ],
+        );
+        m.panels = vec![
+            Panel {
+                rect: Rect::new(0, 0, 20, 6),
+                depth: 0,
+            },
+            Panel {
+                rect: Rect::new(20, 2, 20, 4),
+                depth: 1,
+            },
+        ];
+        m
+    }
+
+    /// Row `idx` of the root panel in screen coordinates (row 0 is the border).
+    fn root_row(idx: u16) -> u16 {
+        idx + 1
+    }
+
+    #[test]
+    fn hovering_a_separator_leaves_the_open_submenu_alone() {
+        let mut m = menu();
+
+        // Hover the submenu row: it opens, and the highlight moves inside it.
+        m.hover(5, root_row(2));
+        assert_eq!(m.open, vec![2]);
+        assert_eq!(m.sel, 0);
+
+        // Sliding over the separator must not close the submenu, and must not
+        // move the highlight onto the root's first row.
+        m.hover(5, root_row(1));
+        assert_eq!(m.open, vec![2], "separator closed the open submenu");
+        assert_eq!(m.sel, 0);
+
+        // A real row still takes the highlight and closes the submenu.
+        m.hover(5, root_row(3));
+        assert!(m.open.is_empty());
+        assert_eq!(m.sel, 3);
+    }
+
+    #[test]
+    fn hovering_a_submenu_row_selects_its_first_child() {
+        let mut m = menu();
+        m.hover(5, root_row(2));
+        assert_eq!(m.open, vec![2]);
+
+        // Second child of the open submenu (its panel starts at y = 2).
+        m.hover(25, 4);
+        assert_eq!(m.open, vec![2]);
+        assert_eq!(m.sel, 1);
+    }
+
+    #[test]
+    fn hovering_a_border_or_outside_changes_nothing() {
+        let mut m = menu();
+        m.hover(5, root_row(3));
+        assert_eq!(m.sel, 3);
+
+        m.hover(5, 0); // top border
+        assert_eq!(m.sel, 3);
+        m.hover(100, 100); // outside every panel
+        assert_eq!(m.sel, 3);
     }
 }
