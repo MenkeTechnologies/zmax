@@ -341,7 +341,7 @@
 | verilog | ✓ | ✓ |  |  |  | `verible-verilog-ls` |
 | vhdl | ✓ |  |  |  |  | `vhdl_ls` |
 | vhs | ✓ |  |  |  |  |  |
-| vim | ✓ |  |  |  | ✓ |  |
+| vim | ✓ |  |  |  | ✓ | `vim-language-server` |
 | vue | ✓ | ✓ | ✓ |  |  | `vue-language-server` |
 | wast | ✓ |  |  |  |  |  |
 | wat | ✓ |  |  |  |  | `wat_server` |

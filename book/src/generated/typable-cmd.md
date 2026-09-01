@@ -250,13 +250,13 @@
 | `:unicode-fonts-char` | Report a character's codepoint, Unicode block and display width. |
 | `:terminal`, `:term` | Open an integrated terminal (PTY shell) running $SHELL. |
 | `:ide`, `:workbench` | Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2). |
-| `:diff`, `:gdiff` | Open a read-only side-by-side diff of the buffer vs. its git HEAD version. |
+| `:diff`, `:gdiff` | With no argument, a side-by-side diff of the buffer vs. its git HEAD version; with OLD NEW [SWITCHES], the differences between two files in diff-mode (emacs diff). |
 | `:diff-buffer-with-file` | Show a unified diff of the buffer's contents vs. its file on disk (emacs diff-buffer-with-file). |
 | `:reveal`, `:open-repo` | Open this repository's homepage (GitHub/GitLab/Bitbucket/…) in the browser. |
 | `:compare-ref`, `:compare-branch` | Diff the buffer against its version at a git ref (JetBrains Compare with Branch). |
 | `:merge`, `:resolve` | Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view. |
 | `:magit`, `:git`, `:gst` | Open the Magit-style git status (stage/unstage/discard/commit changes by section). |
-| `:hex`, `:hexview`, `:hexedit` | Open a read-only xxd-style hex viewer of a file's raw bytes (optional path; defaults to the buffer's file). |
+| `:hex`, `:hexview`, `:hexedit` | Open the xxd-style hex editor on a file's raw bytes (optional path; defaults to the buffer's file). Nav mode; i/R edits, Tab switches column, C-s writes the bytes back. |
 | `:snippets`, `:snip` | Open the user snippet library editor (create/edit/delete reusable snippets). |
 | `:org-cycle`, `:org-fold` | Toggle a fold over the current org heading's subtree (TAB-style outline cycling). |
 | `:org-todo` | Cycle the current org heading's TODO keyword: none -> TODO -> DONE -> none. |
@@ -314,8 +314,147 @@
 | `:argdo` | Run an Ex command on each file in the argument list (vim :argdo). |
 | `:all`, `:sall` | Open a window for each file in the argument list (vim :all / :sall). |
 | `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
-| `:projectile-test-project`, `:test-project` | Run the project's test command in the project root (projectile projectile-test-project, spacemacs SPC p T). |
-| `:projectile-invalidate-cache` | Invalidate the project file cache so the next find-file re-scans (projectile-invalidate-cache, spacemacs SPC p I). |
+| `:projectile-test-project`, `:test-project` | Run the project's test command in the project root (projectile-test-project, C-c p c t, spacemacs SPC p T). |
+| `:projectile-find-file` | Jump to a project file (projectile-find-file, C-c p f). |
+| `:projectile-find-file-all` | Jump to any project file, ignore rules included (projectile-find-file-all). |
+| `:projectile-find-test-file` | Jump to a project test file (projectile-find-test-file, C-c p T). |
+| `:projectile-find-changed-file` | Jump to a file changed in this project (projectile-find-changed-file, C-c p C). |
+| `:projectile-find-other-file` | Switch to the file with the same name and a different extension (projectile-find-other-file, C-c p a). |
+| `:projectile-find-dir` | Jump to a project directory (projectile-find-dir, C-c p d). |
+| `:projectile-find-file-in-directory` | Jump to a file in any directory, project or not (projectile-find-file-in-directory, C-c p l). |
+| `:projectile-find-file-in-known-projects` | Jump to a file in any known project (projectile-find-file-in-known-projects, C-c p F). |
+| `:projectile-kill-buffers` | Close this project's buffers (projectile-kill-buffers, C-c p k). |
+| `:projectile-save-project-buffers` | Save this project's modified buffers (projectile-save-project-buffers, C-c p S). |
+| `:projectile-next-project-buffer` | Switch to the next buffer of this project (projectile-next-project-buffer). |
+| `:projectile-previous-project-buffer` | Switch to the previous buffer of this project (projectile-previous-project-buffer). |
+| `:projectile-toggle-project-read-only` | Make every buffer of this project read-only, or writable again (projectile-toggle-project-read-only). |
+| `:projectile-configure-project` | Run the project's configure command (projectile-configure-project, C-c p c o). |
+| `:projectile-compile-project` | Run the project's compile command (projectile-compile-project, C-c p c c). |
+| `:projectile-install-project` | Run the project's install command (projectile-install-project, C-c p c i). |
+| `:projectile-package-project` | Run the project's package command (projectile-package-project, C-c p c p). |
+| `:projectile-run-project` | Run the project's run command (projectile-run-project, C-c p c r). |
+| `:projectile-repeat-last-command` | Re-run the last project command (projectile-repeat-last-command). |
+| `:projectile-discard-command-cache` | Forget this project's remembered lifecycle commands (projectile-discard-command-cache). |
+| `:projectile-run-shell-command-in-root` | Run a shell command in the project root (projectile-run-shell-command-in-root, C-c p !). |
+| `:projectile-configure-subproject` | Run the configure command of the nearest subproject (projectile-configure-subproject, C-c p c m o). |
+| `:projectile-compile-subproject` | Run the compile command of the nearest subproject (projectile-compile-subproject, C-c p c m c). |
+| `:projectile-test-subproject` | Run the test command of the nearest subproject (projectile-test-subproject, C-c p c m t). |
+| `:projectile-install-subproject` | Run the install command of the nearest subproject (projectile-install-subproject, C-c p c m i). |
+| `:projectile-package-subproject` | Run the package command of the nearest subproject (projectile-package-subproject, C-c p c m p). |
+| `:projectile-run-subproject` | Run the run command of the nearest subproject (projectile-run-subproject, C-c p c m r). |
+| `:projectile-find-file-in-subproject` | Jump to a file in one of this project's subprojects (projectile-find-file-in-subproject, C-c p c m f). |
+| `:projectile-replace` | Replace a literal string across the project's files (projectile-replace, C-c p r). |
+| `:projectile-replace-regexp` | Replace a regexp across the project's files (projectile-replace-regexp). |
+| `:projectile-replace-undo` | Revert the last project-wide replace (projectile-replace-undo, C-c p u). |
+| `:projectile-search` | Search the project (projectile-search, C-c p s s). |
+| `:projectile-grep` | Search the project, the grep backend's name for it (projectile-grep, C-c p s g). |
+| `:projectile-ag` | Search the project, the ag backend's name for it (projectile-ag, C-c p s a). |
+| `:projectile-ripgrep` | Search the project, the ripgrep backend's name for it (projectile-ripgrep, C-c p s r). |
+| `:projectile-find-references` | Find textual references to a symbol across the project (projectile-find-references, C-c p ?). |
+| `:projectile-multi-occur` | List every matching line of the project's open buffers (projectile-multi-occur, C-c p o). |
+| `:projectile-todos` | Collect the project's TODO-style annotations (projectile-todos, C-c p s t). |
+| `:projectile-run` | Open a terminal in the project root (projectile-run, C-c p x r). |
+| `:projectile-run-shell` | Open a shell in the project root (projectile-run-shell, C-c p x s). |
+| `:projectile-run-term` | Open a terminal in the project root (projectile-run-term, C-c p x t). |
+| `:projectile-run-vterm` | Open a terminal in the project root (projectile-run-vterm, C-c p x v). |
+| `:projectile-run-eat` | Open a terminal in the project root (projectile-run-eat, C-c p x x). |
+| `:projectile-run-ghostel` | Open a terminal in the project root (projectile-run-ghostel, C-c p x G). |
+| `:projectile-run-eshell` | Open the shell in the project root (projectile-run-eshell, C-c p x e). |
+| `:projectile-run-ielm` | Open the elisp REPL for this project (projectile-run-ielm, C-c p x i). |
+| `:projectile-run-gdb` | Run gdb in the project root (projectile-run-gdb, C-c p x g). |
+| `:projectile-run-command-in-root` | Run a zmax command with the project root as the working directory (projectile-run-command-in-root). |
+| `:projectile-run-async-shell-command-in-root` | Run a shell command in the project root without blocking (projectile-run-async-shell-command-in-root, C-c p &). |
+| `:projectile-invalidate-cache-all` | Invalidate every project's file cache (projectile-invalidate-cache-all). |
+| `:projectile-discard-root-cache` | Forget the cached project-root answers (projectile-discard-root-cache). |
+| `:projectile-purge-file-from-cache` | Drop a file from this project's file cache (projectile-purge-file-from-cache). |
+| `:projectile-purge-dir-from-cache` | Drop a directory's files from this project's cache (projectile-purge-dir-from-cache). |
+| `:projectile-cache-current-file` | Add the current file to this project's cache (projectile-cache-current-file, C-c p z). |
+| `:projectile-index-project-async` | Index a project's files into the cache in the background (projectile-index-project-async). |
+| `:projectile-switch-sibling-project` | Switch to a project beside this one (projectile-switch-sibling-project, C-c p n p). |
+| `:projectile-find-file-in-sibling-projects` | Jump to a file in this project or one beside it (projectile-find-file-in-sibling-projects, C-c p n f). |
+| `:projectile-search-in-sibling-projects` | Search this project and the ones beside it (projectile-search-in-sibling-projects, C-c p n s). |
+| `:projectile-switch-to-buffer-in-sibling-projects` | Switch to a buffer of this project or one beside it (projectile-switch-to-buffer-in-sibling-projects, C-c p n b). |
+| `:projectile-multi-occur-in-sibling-projects` | List matching lines across the buffers of this project and the ones beside it (projectile-multi-occur-in-sibling-projects, C-c p n o). |
+| `:projectile-todos-in-sibling-projects` | Collect TODO-style annotations across this project and the ones beside it (projectile-todos-in-sibling-projects, C-c p n t). |
+| `:projectile-switch-worktree` | Switch to another checkout of this repository (projectile-switch-worktree, C-c p W). |
+| `:projectile-bookmark-set` | Set a bookmark scoped to this project (projectile-bookmark-set, C-c p B s). |
+| `:projectile-bookmark-jump` | Jump to a bookmark of this project (projectile-bookmark-jump, C-c p B j). |
+| `:projectile-bookmark-delete` | Delete a bookmark of this project (projectile-bookmark-delete, C-c p B d). |
+| `:projectile-switch-to-buffer` | Switch to a buffer of this project (projectile-switch-to-buffer, C-c p b). |
+| `:projectile-project-buffers-other-buffer` | Switch to the previously selected project buffer (projectile-project-buffers-other-buffer, C-c p ESC). |
+| `:projectile-dired` | Open Dired at the project root (projectile-dired, C-c p D). |
+| `:projectile-switch-project` | Switch to a known project (projectile-switch-project, C-c p p). |
+| `:projectile-toggle-between-implementation-and-test` | Switch between a file and its test (projectile-toggle-between-implementation-and-test, C-c p t). |
+| `:projectile-other-window-command` | Display the next command's buffer in another window (projectile-other-window-command, C-c p 4 4). |
+| `:projectile-other-frame-command` | Display the next command's buffer in another frame (projectile-other-frame-command, C-c p 5 5). |
+| `:projectile-find-file-other-window` | Jump to a project file in another window (projectile-find-file-other-window, C-c p 4 f). |
+| `:projectile-find-file-other-frame` | Jump to a project file in another frame (projectile-find-file-other-frame, C-c p 5 f). |
+| `:projectile-find-dir-other-window` | Jump to a project directory in another window (projectile-find-dir-other-window, C-c p 4 d). |
+| `:projectile-find-dir-other-frame` | Jump to a project directory in another frame (projectile-find-dir-other-frame, C-c p 5 d). |
+| `:projectile-find-other-file-other-window` | Switch to the same-named file in another window (projectile-find-other-file-other-window, C-c p 4 a). |
+| `:projectile-find-other-file-other-frame` | Switch to the same-named file in another frame (projectile-find-other-file-other-frame, C-c p 5 a). |
+| `:projectile-switch-to-buffer-other-window` | Switch to a project buffer in another window (projectile-switch-to-buffer-other-window, C-c p 4 b). |
+| `:projectile-switch-to-buffer-other-frame` | Switch to a project buffer in another frame (projectile-switch-to-buffer-other-frame, C-c p 5 b). |
+| `:projectile-dired-other-window` | Open Dired at the project root in another window (projectile-dired-other-window, C-c p 4 D). |
+| `:projectile-dired-other-frame` | Open Dired at the project root in another frame (projectile-dired-other-frame, C-c p 5 D). |
+| `:projectile-switch-project-other-window` | Switch to a known project in another window (projectile-switch-project-other-window, C-c p 4 p). |
+| `:projectile-switch-project-other-frame` | Switch to a known project in another frame (projectile-switch-project-other-frame, C-c p 5 p). |
+| `:projectile-find-implementation-or-test-other-window` | Open the file's test (or implementation) in another window (projectile-find-implementation-or-test-other-window, C-c p 4 t). |
+| `:projectile-find-implementation-or-test-other-frame` | Open the file's test (or implementation) in another frame (projectile-find-implementation-or-test-other-frame, C-c p 5 t). |
+| `:projectile-run-vterm-other-window` | Open a project terminal in another window (projectile-run-vterm-other-window, C-c p x 4 v). |
+| `:projectile-run-eat-other-window` | Open a project terminal in another window (projectile-run-eat-other-window, C-c p x 4 x). |
+| `:projectile-run-ghostel-other-window` | Open a project terminal in another window (projectile-run-ghostel-other-window, C-c p x 4 G). |
+| `:projectile-run-task` | Run one of this project's named tasks (projectile-run-task, C-c p c x). |
+| `:projectile-repeat-last-task` | Re-run the last task (projectile-repeat-last-task, C-c p c X). |
+| `:projectile-run-test-at-point` | Run the test around the cursor (projectile-run-test-at-point, C-c p c .). |
+| `:projectile-session-save` | Save this project's windows as its session (projectile-session-save, C-c p w s). |
+| `:projectile-session-restore` | Reopen a project's saved session (projectile-session-restore, C-c p w r). |
+| `:projectile-session-forget` | Delete a project's saved session (projectile-session-forget, C-c p w f). |
+| `:projectile-session-save-all` | Save the session of every open project (projectile-session-save-all, C-c p w S). |
+| `:projectile-session-restore-all` | Reopen every saved project session (projectile-session-restore-all, C-c p w R). |
+| `:projectile-session-switch-to-buffer` | Switch to a buffer of this project's session (projectile-session-switch-to-buffer, C-c p w b). |
+| `:projectile-version` | Report the projectile surface this port implements (projectile-version). |
+| `:projectile-edit-dir-locals` | Edit the project's .dir-locals.el (projectile-edit-dir-locals, C-c p E). |
+| `:projectile-dashboard` | Summarise the project — type, files, commands, tasks, siblings (projectile-dashboard, C-c p P). |
+| `:projectile-doctor` | Diagnose projectile's view of this project (projectile-doctor, C-c p H). |
+| `:projectile-report-copy` | Copy the current report buffer to the yank register (projectile-report-copy). |
+| `:projectile-dispatch` | Show the projectile command menu for this project (projectile-dispatch, C-c p m). |
+| `:projectile-recentf` | Jump to a recently visited file of this project (projectile-recentf, C-c p e). |
+| `:projectile-ibuffer` | List this project's buffers (projectile-ibuffer, C-c p I). |
+| `:projectile-vc` | Open the VC view at the project root (projectile-vc, C-c p v). |
+| `:projectile-display-buffer` | Show a project buffer in another window without selecting it (projectile-display-buffer, C-c p 4 C-o). |
+| `:projectile-read-buffer-to-switch` | Report the project buffers the switch commands offer (projectile-read-buffer-to-switch). |
+| `:projectile-reset-known-projects` | Forget the known projects and rediscover them (projectile-reset-known-projects). |
+| `:projectile-find-file-dwim` | Jump to the project file named at the cursor, or pick one (projectile-find-file-dwim, C-c p g). |
+| `:projectile-find-file-dwim-other-window` | As projectile-find-file-dwim, in another window (C-c p 4 g). |
+| `:projectile-find-file-dwim-other-frame` | As projectile-find-file-dwim, in another frame (C-c p 5 g). |
+| `:projectile-find-file-of-kind` | Jump to a project file of a chosen kind — test, impl or an extension (projectile-find-file-of-kind, C-c p j). |
+| `:projectile-find-file-of-kind-other-window` | As projectile-find-file-of-kind, in another window (C-c p 4 j). |
+| `:projectile-find-file-of-kind-other-frame` | As projectile-find-file-of-kind, in another frame (C-c p 5 j). |
+| `:projectile-find-related-file` | Open the current file's related file (projectile-find-related-file). |
+| `:projectile-toggle-related-file` | Jump between the current file and its related file (projectile-toggle-related-file, C-c p J). |
+| `:projectile-replace-review` | Review a literal project-wide replacement before applying it (projectile-replace-review, C-c p R). |
+| `:projectile-replace-regexp-review` | Review a regexp project-wide replacement before applying it (projectile-replace-regexp-review). |
+| `:projectile-search-review` | Search the project and review the matches (projectile-search-review, C-c p s R). |
+| `:projectile-search-regexp-review` | Search the project with a regexp and review the matches (projectile-search-regexp-review, C-c p s X). |
+| `:projectile-search--to-replace` | Hand a search to the reviewable replace (projectile-search--to-replace). |
+| `:projectile-dispatch--args` | Report or set the dispatch switches --regexp / --case-sensitive (projectile-dispatch--args). |
+| `:projectile-dispatch-search-review` | Reviewable search honouring the dispatch switches (projectile-dispatch-search-review). |
+| `:projectile-dispatch-replace-review` | Reviewable replace honouring the dispatch switches (projectile-dispatch-replace-review). |
+| `:projectile-dispatch-search-siblings` | Sibling-project search honouring the dispatch switches (projectile-dispatch-search-siblings). |
+| `:projectile-switch-open-project` | Switch to a project that currently has buffers open (projectile-switch-open-project, C-c p q). |
+| `:projectile-add-known-project` | Add a directory to the known projects (projectile-add-known-project, C-c p A). Defaults to the current project. |
+| `:projectile-remove-known-project` | Remove a project from the known projects (projectile-remove-known-project). |
+| `:projectile-remove-current-project-from-known-projects` | Remove the current project from the known projects (projectile-remove-current-project-from-known-projects). |
+| `:projectile-clear-known-projects` | Forget every known project (projectile-clear-known-projects). |
+| `:projectile-cleanup-known-projects` | Drop known projects whose directory is gone (projectile-cleanup-known-projects). |
+| `:projectile-forget-projects-under` | Forget every known project under a directory (projectile-forget-projects-under). |
+| `:projectile-discover-projects-in-directory` | Find the projects under a directory and remember them (projectile-discover-projects-in-directory); optional second argument is the depth. |
+| `:projectile-discover-projects-in-search-path` | Find projects in projectile-project-search-path / $ZMAX_PROJECT_SEARCH_PATH and remember them (projectile-discover-projects-in-search-path). |
+| `:projectile-switch-to-most-recent-project` | Switch to the most recently visited other project (projectile-switch-to-most-recent-project). |
+| `:projectile-add-and-switch-project` | Remember a project directory and switch to it (projectile-add-and-switch-project). |
+| `:projectile-project-info` | Report the current project's name, type and root (projectile-project-info). |
+| `:projectile-invalidate-cache` | Invalidate the project file cache so the next find-file re-scans (projectile-invalidate-cache, C-c p i, spacemacs SPC p I). |
 | `:dotnet-build` | Build a project or solution, collecting its errors (dotnet.el dotnet-build, spacemacs SPC m p b). |
 | `:dotnet-clean` | Clean the .NET build output (dotnet.el dotnet-clean, spacemacs SPC m p c). |
 | `:dotnet-publish` | Publish a .NET project for deployment (dotnet.el dotnet-publish, spacemacs SPC m p p). |
@@ -682,6 +821,9 @@
 | `:write-buffer-close`, `:wbc` | Write changes to disk and closes the buffer. Accepts an optional path (:write-buffer-close some/path.txt) |
 | `:write-buffer-close!`, `:wbc!` | Force write changes to disk creating necessary subdirectories and closes the buffer. Accepts an optional path (:write-buffer-close! some/path.txt) |
 | `:new`, `:n`, `:enew` | Create a new scratch buffer. |
+| `:erase-buffer`, `:clear-buffer` | Empty the current buffer, drop its undo history and make it unnamed (ne Clear). |
+| `:erase-buffer!`, `:clear-buffer!` | Empty the current buffer even when it has unsaved changes (ne Clear, confirmed). |
+| `:replace-with-file` | Replace the current buffer's contents with the given file, keeping its name (vile e!). |
 | `:Scratch`, `:scratch` | Open a new scratch buffer, optionally with a language (SPC b S). |
 | `:RevealInFinder`, `:reveal-in-finder` | Reveal the current file in the OS file manager (JetBrains Reveal in Finder). |
 | `:compose-mail`, `:mail`, `:compose` | Open a message-mode mail draft (emacs compose-mail, C-x m). :compose-mail [to] [subject...] |
@@ -911,6 +1053,7 @@
 | `:filter`, `:keep-lines`, `:delete-non-matching-lines` | Keep only the selected lines matching a regex (Emacs keep-lines; in-buffer grep). |
 | `:reject`, `:remove-lines`, `:flush-lines`, `:delete-matching-lines` | Drop the selected lines matching a regex (Emacs flush-lines; in-buffer grep -v). |
 | `:count-matches`, `:count-regex`, `:how-many` | Report how many regex matches (and matching lines) are in the selection (Emacs how-many). |
+| `:count-non-matches`, `:count-non-regex`, `:how-many-not` | Report how many lines of the selection do not match a regex (mg count-non-matches). |
 | `:copy-matching-lines`, `:copy-lines-matching` | Copy lines matching a regex (region, or point to end) to the kill ring (Emacs copy-matching-lines). |
 | `:kill-matching-lines`, `:kill-lines-matching` | Delete lines matching a regex (region, or point to end) and save them to the kill ring (Emacs kill-matching-lines). |
 | `:uniq-count`, `:frequency` | Collapse the selected lines to `count line`, sorted by frequency (uniq -c | sort -rn). |
@@ -1045,6 +1188,10 @@
 | `:primary-clipboard-paste-after` | Paste primary clipboard after selections. |
 | `:primary-clipboard-paste-before` | Paste primary clipboard before selections. |
 | `:primary-clipboard-paste-replace` | Replace selections with content of system primary clipboard. |
+| `:tmux-buffer-yank` | Yank selections into a new tmux paste buffer (leaves the system clipboard alone). |
+| `:tmux-buffer-paste-after` | Paste a tmux paste buffer (newest, or the named one) after selections. |
+| `:tmux-buffer-paste-before` | Paste a tmux paste buffer (newest, or the named one) before selections. |
+| `:tmux-buffers` | List the session's tmux paste buffers in the status bar. |
 | `:show-clipboard-provider` | Show clipboard provider name in status bar. |
 | `:change-current-directory`, `:cd`, `:chdir`, `:lcd`, `:lchdir`, `:tcd`, `:tchdir` | Change the current working directory. |
 | `:show-directory-stack` | Show the directory stack as a <space> delimited string. |
@@ -1058,8 +1205,10 @@
 | `:checktime`, `:checkt` | Reload loaded buffers that changed on disk (vim :checktime). |
 | `:filetype`, `:filet` | Report the buffer's detected language / accept on|off|detect|plugin|indent (vim :filetype). |
 | `:scriptnames`, `:scr` | List the sourced config files (vim :scriptnames). |
-| `:wshada`, `:wsh`, `:wsha`, `:wshad` | Write the registers and every buffer's marks to the shada state file (nvim :wshada; zmax's own line format, not nvim's msgpack). |
-| `:rshada`, `:rsh`, `:rsha`, `:rshad` | Read the registers and marks back from the shada state file (nvim :rshada). |
+| `:wshada`, `:wsh`, `:wsha`, `:wshad` | Write the registers, histories, marks and jumplist to the shada file, merging with what it already holds (nvim :wshada; nvim's msgpack ShaDa format). |
+| `:wshada!`, `:wsh!`, `:wsha!`, `:wshad!` | Write the shada file without reading the old one first (nvim :wshada!). |
+| `:rshada`, `:rsh`, `:rsha`, `:rshad` | Read the registers, histories and marks back from the shada file, keeping what is already set (nvim :rshada). |
+| `:rshada!`, `:rsh!`, `:rsha!`, `:rshad!` | Read the shada file, overwriting registers, histories and marks that are already set (nvim :rshada!). |
 | `:syncbind`, `:sync`, `:syncb`, `:syncbi`, `:syncbin` | Scroll the 'scrollbind' (follow-mode) windows back into step with this one (vim :syncbind). |
 | `:uptime`, `:upt`, `:uptim` | Show how long this editor process has been running (nvim :uptime). |
 | `:mksession`, `:mks` | Write a session file (cwd + buffers) that :source restores (vim :mksession). |
@@ -1244,19 +1393,19 @@
 | `:print`, `:p` | Display the selected lines (or current line) in a scratch buffer (vim :print). |
 | `:number`, `:nu`, `:#` | Like :print, with line numbers (vim :number / :#). |
 | `:list`, `:l` | Like :print, marking each line end with $ (vim :list). |
-| `:print-line-number`, `:=` | Echo the last line number of the buffer (vim :=). |
+| `:print-line-number`, `:=` | Echo the line number of {line}, or of the buffer's last line (vim/nvi :=). |
 | `:version`, `:ver` | Show the zmax version and compiled feature summary (vim :version). |
 | `:intro`, `:int` | Show the introductory message (vim :intro). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
 | `:redrawtabline` | Redraw the tab line (vim :redrawtabline; approximated by a full redraw). |
 | `:silent`, `:sil` | Run {cmd} silently (vim :silent[!]); message suppression is best-effort. |
 | `:unsilent` | Run {cmd} with messages shown (vim :unsilent). |
-| `:verbose`, `:verb` | Run {cmd} verbosely, optional leading count (vim :verbose). |
+| `:verbose`, `:verb` | Run {cmd} with 'verbose' set to the leading count (default 1) and restore it after (vim :verbose). |
 | `:noautocmd`, `:noa` | Run {cmd} without triggering autocommands (vim :noautocmd). |
 | `:sandbox`, `:san` | Run {cmd} in the sandbox (vim :sandbox; best-effort). |
 | `:confirm`, `:conf` | Run {cmd} confirming risky actions (vim :confirm; best-effort). |
-| `:browse`, `:bro` | Run {cmd}, picking its file with the file picker when none is given (vim :browse). |
-| `:hide`, `:hid` | Run {cmd} keeping the current buffer hidden (vim :hide). |
+| `:browse`, `:bro` | Open the current directory in Dired for :edit/:split/:vsplit/:tabedit/:tabnew, else run {cmd} (vim :browse). |
+| `:hide`, `:hid` | Quit the current window, keeping its buffer loaded; with {cmd}, run it with 'hidden' set (vim :hide). |
 | `:vertical`, `:vert` | Run {cmd} with vertical split placement (vim :vertical; best-effort). |
 | `:horizontal`, `:hor` | Run {cmd} with horizontal split placement (vim :horizontal). |
 | `:tab` | Run {cmd} opening its window in a new tab (vim :tab; best-effort placement). |
@@ -1278,7 +1427,7 @@
 | `:set-language`, `:lang`, `:setf`, `:setfiletype` | Set the language of current buffer (show current language if no value specified). |
 | `:lpr-buffer`, `:print-buffer` | Print the whole buffer via the external lpr spooler (emacs lpr-buffer). |
 | `:lpr-region`, `:print-region` | Print the selected region via the external lpr spooler (emacs lpr-region). |
-| `:dictionary-search`, `:dictionary` | Look up a word (or the word at point) with the external dict client (emacs dictionary-search). |
+| `:dictionary-search`, `:dictionary`, `:define-word`, `:define-word-at-point` | Show the definitions of a word (or the word at point) from wordnik.com; --dict uses the local dict client (emacs dictionary-search, spacemacs SPC x w d). |
 | `:denote`, `:denote-create-note` | Create a timestamped IDENTIFIER--title__keywords.org note in ~/Documents/notes and open it (denote). |
 | `:denote-link`, `:denote-insert-link` | Insert an org [[denote:ID][title]] link to a note; with no argument, list the notes (denote-link). |
 | `:calendar-hebrew-list-yahrzeits`, `:list-yahrzeit-dates` | List a Hebrew death date's yahrzeit Gregorian dates over N years (emacs calendar-hebrew-list-yahrzeits). |
@@ -1333,7 +1482,7 @@
 | `:dsplit`, `:dsp` | Split the window and jump to the first #define of a macro (vim :dsplit). |
 | `:ilist`, `:il` | List every line containing an identifier in a scratch buffer (vim :ilist). |
 | `:digraphs`, `:dig` | List the digraph table in a scratch buffer (vim :digraphs). |
-| `:z` | Print a window of lines from the cursor into a scratch buffer (vim :z). |
+| `:z` | Print a window of lines into a scratch buffer; :{line}z{-+.=^}{count} places it (nvi :z). |
 | `:checkpath`, `:checkp` | List the files #included by this buffer that are not found in 'path' (:checkpath! lists all). |
 | `:checkpath!` | List every file #included by this buffer, with where it resolved to in 'path'. |
 | `:vertical`, `:vert`, `:verti`, `:vertic`, `:vertica` | Run {cmd}; a window it opens is split vertically (vim :vertical). |
@@ -1478,6 +1627,7 @@
 | `:set-right-margin` | Re-fill the region to N columns narrower than text-width (emacs set-right-margin). |
 | `:write-region` | Write the region (or whole buffer) to a file, overwriting it (emacs write-region). |
 | `:append-to-file` | Append the region (or whole buffer) to the end of a file (emacs append-to-file). |
+| `:prepend-to-file` | Write the region (or whole buffer) at the beginning of a file (nano prepend). |
 | `:set-justification-left` | Flush the region's lines to the left margin (emacs set-justification-left). |
 | `:set-justification-right` | Right-justify the region's lines to the fill width (emacs set-justification-right). |
 | `:set-justification-center` | Centre the region's lines within the fill width (emacs set-justification-center). |
@@ -1525,6 +1675,9 @@
 | `:transpose-chars` | Transpose the two characters around the cursor. |
 | `:duplicate-line`, `:dup` | Duplicate the current line below. |
 | `:delete-trailing-whitespace`, `:dtw` | Delete trailing whitespace from every line in the buffer. |
+| `:epub-read`, `:nov` | Show an EPUB as reflowable text, in spine order; defaults to the file this buffer visits (spacemacs epub layer). |
+| `:web-beautify`, `:web-beautify-js`, `:web-beautify-css`, `:web-beautify-html` | Beautify the selection (or the buffer) with js-beautify; the flavour follows the language unless one is given. |
+| `:csv-sort-fields`, `:csv-sort-numeric-fields` | Sort the selected CSV/TSV lines by field N, counting from 1 (csv-mode csv-sort-fields). |
 | `:sort` | Sort ranges in selection. |
 | `:insert-char` | Insert the character a code point names, e.g. 263A or #x2318, optionally N times (emacs insert-char). |
 | `:rectangle-number-lines` | Number the lines of the selected rectangle, optionally from N with a format (emacs rectangle-number-lines). |
@@ -1671,8 +1824,8 @@
 | `:slack-quit` | Close the Slack session (emacs-slack slack-ws-close). |
 | `:sudo-edit` | Open a file with elevated privileges, reading it through sudo when it is root-only: :sudo-edit [file] (spacemacs SPC f E). |
 | `:sudo-write` | Write the current buffer to a root-owned file through sudo tee: :sudo-write [file]. |
-| `:regenerate-tags`, `:projectile-regenerate-tags` | Rebuild the project's TAGS file with `ctags -Re` and visit it (projectile-regenerate-tags, SPC p G). |
-| `:syntime` | Profile syntax highlighting: :syntime on|off|clear|report. |
+| `:regenerate-tags`, `:projectile-regenerate-tags` | Rebuild the project's tag index and visit it; takes the generator command, remembered per project (projectile-regenerate-tags, SPC p G). |
+| `:syntime`, `:synti`, `:syntim` | Profile syntax highlighting: :syntime on|off|clear|report. |
 | `:move`, `:mv` | Move the current buffer and its corresponding file to a different path |
 | `:move!`, `:mv!` | Move the current buffer and its corresponding file to a different path creating necessary subdirectories |
 | `:delete-file`, `:remove-file` | Delete the current buffer's file from disk and close the buffer (vim-eunuch :Delete). |
