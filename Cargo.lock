@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "arblang"
-version = "0.1.8"
+version = "0.1.16"
 dependencies = [
  "ansi-to-tui",
  "base64 0.22.1",
@@ -392,7 +392,7 @@ dependencies = [
 
 [[package]]
 name = "awkrs"
-version = "0.5.1"
+version = "0.5.5"
 dependencies = [
  "bincode",
  "chrono",
@@ -2172,7 +2172,7 @@ checksum = "252afb9ae5eaa683babdc6a068b3f5726eb19e05070c731f9b2a23a7c3e8ed34"
 
 [[package]]
 name = "elisprs"
-version = "0.1.9"
+version = "0.1.15"
 dependencies = [
  "bincode",
  "fancy-regex 0.16.2",
@@ -2706,9 +2706,9 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
 name = "fusevm"
-version = "0.23.0"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58da58ba19922dcf6cad30d6073793cfec1eaead1b5725c4115b3142061792b4"
+checksum = "765a6e513525559e24870c5bf83dcf452c823636a03dfe65ef72fc323699ad7e"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -2721,6 +2721,7 @@ dependencies = [
  "cranelift-object",
  "glob",
  "libc",
+ "rkyv 0.7.46",
  "serde",
  "sha2 0.10.9",
  "tracing",
@@ -5095,15 +5096,6 @@ dependencies = [
 
 [[package]]
 name = "lru"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "234cf4f4a04dc1f57e24b96cc0cd600cf2af460d4161ac5ecdd0af8e1f3b2a38"
-dependencies = [
- "hashbrown 0.15.5",
-]
-
-[[package]]
-name = "lru"
 version = "0.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b7919ef39"
@@ -5533,7 +5525,7 @@ dependencies = [
 
 [[package]]
 name = "node-js"
-version = "0.1.2"
+version = "0.1.10"
 dependencies = [
  "aes",
  "argon2",
@@ -5788,9 +5780,9 @@ dependencies = [
 
 [[package]]
 name = "num-modular"
-version = "0.5.1"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64a5fe11d4135c3bcdf3a95b18b194afa9608a5f6ff034f5d857bc9a27fb0119"
+checksum = "17bb261bf36fa7d83f4c294f834e91256769097b3cb505d44831e0a179ac647f"
 dependencies = [
  "num-bigint",
  "num-integer",
@@ -5799,13 +5791,13 @@ dependencies = [
 
 [[package]]
 name = "num-prime"
-version = "0.4.4"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e238432a7881ec7164503ccc516c014bf009be7984cde1ba56837862543bdec3"
+checksum = "b285c575532a33ef6fdd3a57640d0b1c70e6ca48644d6df7bbd4b7a0cfbbb12d"
 dependencies = [
  "bitvec",
  "either",
- "lru 0.12.5",
+ "lru 0.16.4",
  "num-bigint",
  "num-integer",
  "num-modular",
@@ -6404,7 +6396,7 @@ dependencies = [
 
 [[package]]
 name = "phplang"
-version = "0.2.1"
+version = "0.2.9"
 dependencies = [
  "base64 0.22.1",
  "bigdecimal",
@@ -6796,7 +6788,7 @@ checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
 
 [[package]]
 name = "pythonrs"
-version = "0.1.3"
+version = "0.1.9"
 dependencies = [
  "bincode",
  "blake2",
@@ -7451,7 +7443,7 @@ dependencies = [
 
 [[package]]
 name = "rlang"
-version = "0.1.2"
+version = "0.1.6"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -7532,7 +7524,7 @@ dependencies = [
 
 [[package]]
 name = "rubylang"
-version = "0.1.6"
+version = "0.1.13"
 dependencies = [
  "bincode",
  "corosensei",
@@ -8613,7 +8605,7 @@ dependencies = [
 
 [[package]]
 name = "strykelang"
-version = "0.17.49"
+version = "0.17.54"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -9026,7 +9018,7 @@ checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
 
 [[package]]
 name = "tclrs"
-version = "0.4.1"
+version = "0.4.8"
 dependencies = [
  "fusevm",
  "libc",
@@ -10082,7 +10074,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vimlrs"
-version = "0.2.5"
+version = "0.2.13"
 dependencies = [
  "bincode",
  "clap",
@@ -10799,7 +10791,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "ropey",
  "toml 1.1.4+spec-1.1.0",
@@ -10982,7 +10974,7 @@ checksum = "34b31d188d9d685a4f9c7b46d6e36631b07058d2cfe190267adce54dc230bf12"
 
 [[package]]
 name = "zmax-core"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -11019,7 +11011,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-dap"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "anyhow",
  "futures-executor",
@@ -11039,7 +11031,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-dap-types"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "serde",
  "serde_json",
@@ -11047,7 +11039,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-event"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "anyhow",
  "foldhash 0.2.0",
@@ -11061,7 +11053,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-loader"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "anyhow",
  "cc",
@@ -11083,7 +11075,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-lsp"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -11117,15 +11109,15 @@ dependencies = [
 
 [[package]]
 name = "zmax-native"
-version = "0.4.69"
+version = "0.4.70"
 
 [[package]]
 name = "zmax-parsec"
-version = "0.4.69"
+version = "0.4.70"
 
 [[package]]
 name = "zmax-stdx"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "bitflags 2.13.1",
  "dunce",
@@ -11146,7 +11138,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-term"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "age",
  "anyhow",
@@ -11224,7 +11216,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-tui"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "arrayvec",
  "bitflags 2.13.1",
@@ -11241,7 +11233,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-vcs"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -11257,7 +11249,7 @@ dependencies = [
 
 [[package]]
 name = "zmax-view"
-version = "0.4.69"
+version = "0.4.70"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -11302,7 +11294,7 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[package]]
 name = "znative"
-version = "0.12.39"
+version = "0.12.57"
 
 [[package]]
 name = "zopfli"
@@ -11318,7 +11310,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs"
-version = "0.12.39"
+version = "0.12.57"
 dependencies = [
  "atty",
  "bincode",
@@ -11371,7 +11363,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs-daemon"
-version = "0.12.39"
+version = "0.12.57"
 dependencies = [
  "atty",
  "axum",
