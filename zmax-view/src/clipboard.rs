@@ -118,10 +118,17 @@ mod external {
         fn default() -> Self {
             use zmax_stdx::env::{binary_exists, env_var_is_set};
 
-            if env_var_is_set("TMUX") && binary_exists("tmux") {
-                Self::Tmux
-            } else if binary_exists("pbcopy") && binary_exists("pbpaste") {
+            // The pasteboard comes FIRST, ahead of tmux. `tmux save-buffer -`
+            // reads tmux's own paste buffer, which is a different store from
+            // the macOS pasteboard: a copy made outside tmux (Cmd-C in any
+            // other app) never reaches a tmux buffer, so a tmux-provider read
+            // returns whatever stale buffer tmux last recorded instead of what
+            // was copied. pbcopy/pbpaste reach the real pasteboard from inside
+            // tmux, so there is no reason to prefer tmux when they exist.
+            if binary_exists("pbcopy") && binary_exists("pbpaste") {
                 Self::Pasteboard
+            } else if env_var_is_set("TMUX") && binary_exists("tmux") {
+                Self::Tmux
             } else {
                 #[cfg(feature = "term")]
                 return Self::Termcode;
@@ -143,10 +150,12 @@ mod external {
                     .is_some()
             }
 
+            // As on macOS, tmux ranks BELOW every provider that talks to a real
+            // system clipboard (see the comment there): tmux's paste buffer
+            // misses anything copied outside tmux. It stays as the fallback for
+            // a session with no display server, where it is the only route.
             if binary_exists("termux-clipboard-set") && binary_exists("termux-clipboard-get") {
                 Self::Termux
-            } else if env_var_is_set("TMUX") && binary_exists("tmux") {
-                Self::Tmux
             } else if env_var_is_set("WEZTERM_UNIX_SOCKET") && binary_exists("wezterm") {
                 Self::Termcode
             } else if env_var_is_set("WAYLAND_DISPLAY")
@@ -164,6 +173,8 @@ mod external {
                 Self::XSel
             } else if binary_exists("win32yank.exe") {
                 Self::Win32Yank
+            } else if env_var_is_set("TMUX") && binary_exists("tmux") {
+                Self::Tmux
             } else if cfg!(feature = "term") {
                 Self::Termcode
             } else {
