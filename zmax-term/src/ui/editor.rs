@@ -4284,6 +4284,33 @@ fn ctx_spawn(program: &str, args: &[&str]) {
         .spawn();
 }
 
+/// The context menu's Copy: yank the selection with `cmd`, or the WHOLE BUFFER
+/// when nothing is selected, without moving the caret.
+///
+/// What counts as "nothing selected": a resting caret in this editor is a
+/// ONE-CHARACTER range, not an empty one, so `Range::is_empty` would call every
+/// caret a selection and the whole-buffer branch would never run. A real
+/// selection is Select mode, more than one range, or a primary range spanning
+/// more than one character.
+fn ctx_copy(c: &mut crate::commands::Context, cmd: &crate::commands::MappableCommand) {
+    let (has_selection, saved, view_id) = {
+        let (view, doc) = zmax_view::current_ref!(c.editor);
+        let sel = doc.selection(view.id);
+        let has =
+            c.editor.mode() == Mode::Select || sel.len() > 1 || sel.primary().len() > 1;
+        (has, sel.clone(), view.id)
+    };
+    if has_selection {
+        cmd.execute(c);
+    } else {
+        // Nothing selected: copy the whole buffer, then put the caret back.
+        // Copying must not move the user's cursor.
+        crate::commands::MappableCommand::select_all.execute(c);
+        cmd.execute(c);
+        doc_mut!(c.editor).set_selection(view_id, saved);
+    }
+}
+
 /// The JetBrains in-editor context menu (right-click on editor text). Actions map
 /// to real zmax commands; the Run/Debug + Open In/Git/Gist groups appear only
 /// for a file backed by a path.
@@ -4300,34 +4327,21 @@ pub(crate) fn editor_menu_entries(
             })
         }),
         Entry::sep(),
+        // Copy/Paste come in pairs: the plain entries use the editor's own
+        // register (vim `y`/`p`), the "System Clipboard" ones the `+` register
+        // (`<space>y`/`<space>p`). Both destinations are reachable by mouse.
         Entry::item_key("Copy", "y", |co, cx| {
-            run_editor_command(co, cx, |c| {
-                // What counts as "nothing selected": a resting caret in this
-                // editor is a ONE-CHARACTER range, not an empty one, so
-                // `Range::is_empty` would call every caret a selection and the
-                // whole-buffer branch would never run. A real selection is
-                // Select mode, more than one range, or a primary range
-                // spanning more than one character.
-                let (has_selection, saved, view_id) = {
-                    let (view, doc) = zmax_view::current_ref!(c.editor);
-                    let sel = doc.selection(view.id);
-                    let has = c.editor.mode() == Mode::Select
-                        || sel.len() > 1
-                        || sel.primary().len() > 1;
-                    (has, sel.clone(), view.id)
-                };
-                if has_selection {
-                    MC::yank_to_clipboard.execute(c);
-                } else {
-                    // Nothing selected: copy the whole buffer, then put the
-                    // caret back. Copying must not move the user's cursor.
-                    MC::select_all.execute(c);
-                    MC::yank_to_clipboard.execute(c);
-                    doc_mut!(c.editor).set_selection(view_id, saved);
-                }
-            })
+            run_editor_command(co, cx, |c| ctx_copy(c, &MC::yank))
+        }),
+        Entry::item_key("Copy to System Clipboard", "␣y", |co, cx| {
+            run_editor_command(co, cx, |c| ctx_copy(c, &MC::yank_to_clipboard))
         }),
         Entry::item_key("Paste", "p", |co, cx| {
+            run_editor_command(co, cx, |c| {
+                MC::paste_after.execute(c);
+            })
+        }),
+        Entry::item_key("Paste from System Clipboard", "␣p", |co, cx| {
             run_editor_command(co, cx, |c| {
                 MC::paste_clipboard_after.execute(c);
             })
