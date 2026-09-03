@@ -133,6 +133,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space f O", "Files", ":RevealInFinder"),       // SPC f O : reveal current file in Finder
     ("space b S", "Buffers", ":Scratch"),            // SPC b S : new scratch buffer (JetBrains Scratch File)
     ("space j R", "Jump", ":RecentLocations"),       // SPC j R : Recent Locations (JetBrains Recent Locations)
+    ("space j C", "Jump", "recent_changes_picker"), // SPC j C : Recent Changes (JetBrains Alt-Shift-C)
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", "calc_dispatch"), // SPC a c : calc-dispatch (open the RPN calculator)
@@ -2389,6 +2390,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "j" => focus_jumplist_panel,       // SPC W j : Jumplist tool window
                 "u" => focus_recent_panel,         // SPC W u : Recent Files tool window
                 "d" => focus_todo_panel,           // SPC W d : TODO tool window
+                // JetBrains Stretch to … (Ctrl-Alt-Shift-arrow): resize the
+                // drawers from the keyboard, same clamps as the seam drags.
+                "left" => stretch_tool_window_left,   // SPC W <left>  : narrow the left drawer
+                "right" => stretch_tool_window_right, // SPC W <right> : widen the left drawer
+                "up" => stretch_tool_window_up,       // SPC W <up>    : grow the bottom drawer
+                "down" => stretch_tool_window_down,   // SPC W <down>  : shrink the bottom drawer
             },
             "p" => { "Project"
                 "f" => file_picker,                // SPC p f

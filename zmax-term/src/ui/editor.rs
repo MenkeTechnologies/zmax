@@ -691,6 +691,15 @@ impl EditorView {
         }
     }
 
+    /// JetBrains "Stretch to …": resize the workbench drawers from the
+    /// keyboard. False when there is no visible workbench to resize.
+    pub fn stretch_ide(&mut self, dir: crate::ui::StretchDir) -> bool {
+        match &mut self.ide {
+            Some(ide) => ide.stretch(dir, 4),
+            None => false,
+        }
+    }
+
     /// Attach a running command to the IDE Run tool window (opens + focuses it).
     pub fn set_run(&mut self, run: crate::ui::run::Run) {
         self.ide_or_create().set_run(run);

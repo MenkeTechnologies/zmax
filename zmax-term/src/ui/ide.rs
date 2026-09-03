@@ -264,6 +264,15 @@ struct ProblemRow {
 /// 0=section header, 1=stack frame, 2=variable, 3=breakpoint.
 type DapLine = (u8, String, Option<(PathBuf, usize)>);
 
+/// Which workbench edge a `stretch` moves (JetBrains Stretch to …).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum StretchDir {
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
 pub struct Ide {
     project: FileTree,
     focus: Focus,
@@ -797,6 +806,40 @@ impl Ide {
         if let Some(r) = &self.run {
             crate::ui::run::stop(r);
         }
+    }
+
+    /// JetBrains "Stretch to Left/Right/Top/Bottom" (`Ctrl-Alt-Shift-arrow`):
+    /// resize the workbench drawers from the keyboard, the same geometry the
+    /// seam drags change.
+    ///
+    /// Left/Right move the vertical seam (the left drawer's width); Up/Bottom
+    /// move the horizontal one (the bottom drawer's height). The bounds are the
+    /// drag handlers' own clamps, so keyboard and mouse cannot reach different
+    /// layouts. Returns false when the workbench is hidden, so the caller can
+    /// say why nothing moved.
+    pub fn stretch(&mut self, dir: StretchDir, step: u16) -> bool {
+        if !self.visible {
+            return false;
+        }
+        match dir {
+            StretchDir::Left => {
+                self.left_width = self.left_width.saturating_sub(step).clamp(14, 80);
+                self.left_collapsed = false;
+            }
+            StretchDir::Right => {
+                self.left_width = self.left_width.saturating_add(step).clamp(14, 80);
+                self.left_collapsed = false;
+            }
+            // "Top" grows the bottom drawer upward; "Bottom" shrinks it back
+            // down, matching which edge the drawer's top seam is dragged to.
+            StretchDir::Top => {
+                self.bottom_height = self.bottom_height.saturating_add(step).clamp(3, 40)
+            }
+            StretchDir::Bottom => {
+                self.bottom_height = self.bottom_height.saturating_sub(step).clamp(3, 40)
+            }
+        }
+        true
     }
 
     /// Toggle a panel's fold state (context-menu "Fold"): project / structure /

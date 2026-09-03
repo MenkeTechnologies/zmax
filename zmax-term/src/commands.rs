@@ -1815,6 +1815,11 @@ impl MappableCommand {
         focus_structure, "Focus the structure/symbol outline panel",
         hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
         jump_to_last_tool_window, "Toggle focus between the editor and the last tool window (JetBrains F12)",
+        stretch_tool_window_left, "Narrow the workbench's left drawer (JetBrains Stretch to Left)",
+        stretch_tool_window_right, "Widen the workbench's left drawer (JetBrains Stretch to Right)",
+        stretch_tool_window_up, "Grow the workbench's bottom drawer (JetBrains Stretch to Top)",
+        stretch_tool_window_down, "Shrink the workbench's bottom drawer (JetBrains Stretch to Bottom)",
+        recent_changes_picker, "Files this project changed most recently, newest first (JetBrains Recent Changes)",
         focus_bookmarks, "Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks)",
         focus_marks_panel, "Focus the Marks tool window",
         focus_registers_panel, "Focus the Registers tool window",
@@ -50688,6 +50693,87 @@ fn hide_active_tool_window(cx: &mut Context) {
             view.hide_active_tool_window();
         }
     }));
+}
+
+/// JetBrains "Stretch to Left/Right/Top/Bottom" (`Ctrl-Alt-Shift-arrow`): resize
+/// the workbench drawers without reaching for the seam.
+fn stretch_ide(cx: &mut Context, dir: crate::ui::StretchDir) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let moved = compositor
+            .find::<crate::ui::EditorView>()
+            .is_some_and(|view| view.stretch_ide(dir));
+        if !moved {
+            cx.editor
+                .set_error("No workbench to stretch (open it with :ide)");
+        }
+    }));
+}
+
+fn stretch_tool_window_left(cx: &mut Context) {
+    stretch_ide(cx, crate::ui::StretchDir::Left);
+}
+
+fn stretch_tool_window_right(cx: &mut Context) {
+    stretch_ide(cx, crate::ui::StretchDir::Right);
+}
+
+fn stretch_tool_window_up(cx: &mut Context) {
+    stretch_ide(cx, crate::ui::StretchDir::Top);
+}
+
+fn stretch_tool_window_down(cx: &mut Context) {
+    stretch_ide(cx, crate::ui::StretchDir::Bottom);
+}
+
+/// JetBrains Recent Changes (`Alt-Shift-C`): the files this project changed most
+/// recently, newest first, from the Local History store — so it covers saves
+/// that never reached a commit, which is the point of the IDE's version.
+///
+/// `:LocalHistory` is the per-file view of the same store; this is the
+/// project-wide one. Selecting a row opens the file itself (its current
+/// contents); the preview shows the snapshot that was taken at that time.
+fn recent_changes_picker(cx: &mut Context) {
+    struct Change {
+        when: String,
+        file: PathBuf,
+        snapshot: PathBuf,
+    }
+
+    const LIMIT: usize = 200;
+    let cwd = zmax_stdx::env::current_working_dir();
+    let items: Vec<Change> = crate::local_history::recent(LIMIT)
+        .into_iter()
+        .map(|(ts, file, snapshot)| Change {
+            when: crate::recent_files::humanize_age(crate::recent_files::age_since(ts)),
+            file,
+            snapshot,
+        })
+        .collect();
+    if items.is_empty() {
+        cx.editor
+            .set_status("no local history yet — snapshots are taken on save");
+        return;
+    }
+
+    let columns = [
+        ui::PickerColumn::new("when", |c: &Change, _: &PathBuf| c.when.as_str().into()),
+        ui::PickerColumn::new("file", |c: &Change, cwd: &PathBuf| {
+            c.file
+                .strip_prefix(cwd)
+                .unwrap_or(&c.file)
+                .display()
+                .to_string()
+                .into()
+        }),
+    ];
+    let picker = Picker::new(columns, 1, items, cwd, |cx, change: &Change, action| {
+        if let Err(e) = cx.editor.open(&change.file, action) {
+            cx.editor
+                .set_error(format!("unable to open \"{}\": {e}", change.file.display()));
+        }
+    })
+    .with_preview(|_editor, change: &Change| Some((change.snapshot.as_path().into(), None)));
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// JetBrains "Jump to Last Tool Window" (F12): toggle focus between the editor
