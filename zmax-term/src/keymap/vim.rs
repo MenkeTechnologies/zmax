@@ -1993,6 +1993,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => marks_picker,                           // SPC f b : go to file bookmarks (marks)
                 "r" => frecent_file_picker,                    // SPC f r : recent files (z frecency)
                 "u" => reopen_last_closed,                     // SPC f u : reopen last closed file
+                "n" => new_file_in_directory,                  // SPC f n : create a file beside this one (JetBrains New in This Directory)
                 "t" => file_explorer,                          // SPC f t
                 "d" => file_explorer_in_current_buffer_directory, // SPC f d
                 "j" => file_explorer_in_current_buffer_directory, // SPC f j : dired
@@ -2248,6 +2249,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "P" => global_search,              // SPC s P : search in a project
                 "d" => global_search,              // SPC s d : search current directory
                 "c" => clear_search_highlight,     // SPC s c : clear persistent search highlight
+                "u" => highlight_usages_in_file,   // SPC s u : highlight every usage of the symbol at the caret (JetBrains Ctrl-Shift-F7)
                 // uppercase variants are the "with default input" forms: seeded
                 // with the symbol under the cursor.
                 "D" => global_search_symbol,       // SPC s D : search current directory (default input)
@@ -2406,6 +2408,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "c" => run_active_config,          // SPC p c : compile project (run active config)
                 "u" => run_active_config,          // SPC p u : run project (run active config)
                 "i" => run_config_manager,         // SPC p i : install project (manage run/build targets)
+                "B" => build_project,              // SPC p B : build with the project's own build tool (JetBrains Ctrl-F9)
+                // `SPC p R` is already Replace in Path in the extra-bindings table,
+                // and that table wins, so rebuild takes `C` for "clean build".
+                "C" => rebuild_project,            // SPC p C : clean and build (JetBrains Rebuild, Ctrl-Shift-F9)
             },
             "e" => { "Errors"
                 "l" => diagnostics_picker,             // SPC e l

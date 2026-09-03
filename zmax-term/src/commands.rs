@@ -2535,6 +2535,10 @@ impl MappableCommand {
         dabbrev_completion, "List the buffer words that could expand the word before point (emacs dabbrev-completion)",
         copy_reference, "Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference)",
         error_description, "Show the full text of the diagnostic under the cursor (JetBrains Error Description)",
+        highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
+        build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
+        rebuild_project, "Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)",
+        new_file_in_directory, "Create a file next to the current one and open it (JetBrains New in This Directory)",
         find_sibling_file, "Open a sibling of this file: header/source, test/impl, style/template (emacs find-sibling-file, JetBrains Related File)",
         navigation_bar, "Jump to an enclosing function/class from the breadcrumb trail (JetBrains Navigation Bar)",
         select_in, "Select this file in another view: project tree, dired, terminal (JetBrains Select In)",
@@ -66791,6 +66795,171 @@ fn dabbrev_completion(cx: &mut Context) {
 
 /// The focused file's path relative to the workspace root (or its full path when
 /// it lives outside the workspace).
+/// JetBrains Highlight Usages in File (`Ctrl-Shift-F7`): highlight every
+/// occurrence of the symbol at the caret in this buffer. Pressing it again on
+/// the same symbol clears the highlight (IntelliJ clears with `Esc`; a toggle
+/// keeps one binding doing both).
+///
+/// The highlight is a hi-lock pattern, so it uses the same machinery — and the
+/// same `:hi-lock-*` commands — as `:highlight-regexp`, and `hi_lock_mode`
+/// hides the whole set.
+fn highlight_usages_in_file(cx: &mut Context) {
+    let word = typed::word_under_cursor(cx.editor);
+    let word = word.trim();
+    if word.is_empty() {
+        cx.editor.set_error("No symbol at the caret");
+        return;
+    }
+    let Some(regexp) = crate::hi_lock::symbol_regexp(word) else {
+        cx.editor
+            .set_error(format!("Cannot build a symbol pattern for `{word}`"));
+        return;
+    };
+    if crate::hi_lock::remove(&regexp) {
+        cx.editor.set_status(format!("Unhighlighted {word}"));
+        return;
+    }
+    match crate::hi_lock::add(&regexp, false) {
+        Ok(()) => {
+            let count = {
+                let text = doc!(cx.editor).text().to_string();
+                crate::hi_lock::with_patterns(|pats| {
+                    crate::hi_lock::viewport_matches(&text, pats).len()
+                })
+            };
+            cx.editor.set_status(match count {
+                1 => format!("Highlighted 1 usage of {word}"),
+                n => format!("Highlighted {n} usages of {word}"),
+            });
+        }
+        Err(err) => cx.editor.set_error(format!("highlight-usages: {err}")),
+    }
+}
+
+/// The build and rebuild command lines for the project rooted at `root`, chosen
+/// from the build-system marker files it contains (JetBrains Build Project runs
+/// the project's own build; it never asks which one).
+///
+/// Order is most-specific first: a Gradle or Maven project that also carries a
+/// `Makefile` is still built by Gradle or Maven. `None` when nothing is
+/// recognised — the caller then says so rather than guessing.
+fn project_build_commands(root: &std::path::Path) -> Option<(String, String)> {
+    let has = |name: &str| root.join(name).exists();
+    let pair = |build: &str, rebuild: &str| Some((build.to_string(), rebuild.to_string()));
+
+    if has("gradlew") {
+        return pair("./gradlew build", "./gradlew clean build");
+    }
+    if has("build.gradle") || has("build.gradle.kts") {
+        return pair("gradle build", "gradle clean build");
+    }
+    if has("pom.xml") {
+        return pair("mvn compile", "mvn clean compile");
+    }
+    if has("Cargo.toml") {
+        return pair("cargo build", "cargo clean && cargo build");
+    }
+    if has("go.mod") {
+        return pair("go build ./...", "go clean -cache && go build ./...");
+    }
+    if has("CMakeLists.txt") {
+        return pair("cmake --build build", "cmake --build build --clean-first");
+    }
+    if has("meson.build") {
+        return pair("meson compile -C build", "meson compile -C build --clean");
+    }
+    if has("package.json") {
+        return pair("npm run build", "npm run build");
+    }
+    if has("Makefile") || has("makefile") || has("GNUmakefile") {
+        return pair("make", "make clean && make");
+    }
+    None
+}
+
+/// Run one of [`project_build_commands`] through the compilation machinery, so
+/// the output lands in the same place `:compile` puts it and `:next-error`
+/// walks the errors.
+fn run_project_build(cx: &mut Context, rebuild: bool) {
+    let root = zmax_loader::find_workspace().0;
+    let Some((build, clean_build)) = project_build_commands(&root) else {
+        cx.editor.set_error(format!(
+            "No build system found in {} (looked for gradle, maven, cargo, go, cmake, meson, npm, make)",
+            root.display()
+        ));
+        return;
+    };
+    let command = if rebuild { clean_build } else { build };
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    if let Err(e) = typed::run_compile_command(&mut bridge, &command) {
+        bridge.editor.set_error(e.to_string());
+    }
+}
+
+/// JetBrains Build Project (`Ctrl-F9`).
+fn build_project(cx: &mut Context) {
+    run_project_build(cx, false);
+}
+
+/// JetBrains Rebuild Project (`Ctrl-Shift-F9`): the same build preceded by the
+/// build tool's clean step.
+fn rebuild_project(cx: &mut Context) {
+    run_project_build(cx, true);
+}
+
+/// JetBrains New in This Directory (`Ctrl-Alt-Insert`): prompt for a name,
+/// create the file NEXT TO the current buffer's file, and open it.
+///
+/// Unlike `:new` (a scratch buffer) and `:edit` (opens a buffer whose file need
+/// not exist), the file is created on disk right away, the way the IDE's New
+/// File does, so it shows up in the project tree without saving first. Missing
+/// parent directories in a name like `sub/thing.rs` are created too.
+fn new_file_in_directory(cx: &mut Context) {
+    let dir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+    let prompt = ui::Prompt::new(
+        format!("new file in {}: ", dir.display()).into(),
+        None,
+        ui::completers::none,
+        move |cx, input: &str, event: ui::PromptEvent| {
+            if event != ui::PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            if name.is_empty() {
+                return;
+            }
+            let path = dir.join(name);
+            if path.exists() {
+                cx.editor
+                    .set_error(format!("{} already exists", path.display()));
+                return;
+            }
+            if let Some(parent) = path.parent() {
+                if let Err(e) = std::fs::create_dir_all(parent) {
+                    cx.editor.set_error(format!("new file: {e}"));
+                    return;
+                }
+            }
+            if let Err(e) = std::fs::write(&path, "") {
+                cx.editor.set_error(format!("new file: {e}"));
+                return;
+            }
+            match cx.editor.open(&path, Action::Replace) {
+                Ok(_) => cx.editor.set_status(format!("Created {}", path.display())),
+                Err(e) => cx.editor.set_error(format!("new file: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
 fn workspace_relative_path(editor: &Editor) -> Option<String> {
     let path = doc!(editor).path()?.to_path_buf();
     let root = zmax_loader::find_workspace().0;
@@ -83169,5 +83338,60 @@ mod font_lock_keyword_scope_tests {
         assert!(font_lock_forget_keyword(r"\bFIXME\b", None, buffer));
         assert!(FONT_LOCK_KEYWORDS.lock().unwrap().is_empty());
         assert!(!font_lock_forget_keyword(r"\bFIXME\b", None, buffer));
+    }
+}
+
+#[cfg(test)]
+mod project_build_tests {
+    use super::project_build_commands;
+
+    /// A throwaway project root carrying the given marker files.
+    fn root_with(tag: &str, markers: &[&str]) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!("zmax_build_{}_{tag}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        for m in markers {
+            std::fs::write(root.join(m), "").unwrap();
+        }
+        root
+    }
+
+    #[test]
+    fn detects_each_build_system() {
+        for (marker, build) in [
+            ("gradlew", "./gradlew build"),
+            ("build.gradle", "gradle build"),
+            ("pom.xml", "mvn compile"),
+            ("Cargo.toml", "cargo build"),
+            ("go.mod", "go build ./..."),
+            ("CMakeLists.txt", "cmake --build build"),
+            ("meson.build", "meson compile -C build"),
+            ("package.json", "npm run build"),
+            ("Makefile", "make"),
+        ] {
+            let root = root_with(marker, &[marker]);
+            let (got, _) = project_build_commands(&root)
+                .unwrap_or_else(|| panic!("{marker} was not recognised"));
+            assert_eq!(got, build, "wrong build command for {marker}");
+            let _ = std::fs::remove_dir_all(&root);
+        }
+    }
+
+    #[test]
+    fn the_specific_build_system_wins_over_make() {
+        // A Gradle or Cargo project that also ships a Makefile is still built
+        // by its real build tool — the order of the checks is the contract.
+        let root = root_with("mixed", &["Makefile", "Cargo.toml", "package.json"]);
+        let (build, rebuild) = project_build_commands(&root).unwrap();
+        assert_eq!(build, "cargo build");
+        assert_eq!(rebuild, "cargo clean && cargo build");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn an_unrecognised_root_is_none() {
+        let root = root_with("bare", &["README.md"]);
+        assert!(project_build_commands(&root).is_none());
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

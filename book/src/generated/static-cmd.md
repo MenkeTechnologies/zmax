@@ -2144,6 +2144,10 @@
 | `dabbrev_completion` | List the buffer words that could expand the word before point (emacs dabbrev-completion) | **spacemacs, hybrid** — normal: `` <A-C-/> `` |
 | `copy_reference` | Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference) |  |
 | `error_description` | Show the full text of the diagnostic under the cursor (JetBrains Error Description) |  |
+| `highlight_usages_in_file` | Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7) | **spacemacs, hybrid** — normal: `` <space>su ``, select: `` <space>su `` |
+| `build_project` | Build the project with its own build tool (JetBrains Build Project, Ctrl F9) | **spacemacs, hybrid** — normal: `` <space>pB ``, select: `` <space>pB `` |
+| `rebuild_project` | Clean and build the project (JetBrains Rebuild, Ctrl Shift F9) | **spacemacs, hybrid** — normal: `` <space>pC ``, select: `` <space>pC `` |
+| `new_file_in_directory` | Create a file next to the current one and open it (JetBrains New in This Directory) | **spacemacs, hybrid** — normal: `` <space>fn ``, select: `` <space>fn `` |
 | `find_sibling_file` | Open a sibling of this file: header/source, test/impl, style/template (emacs find-sibling-file, JetBrains Related File) |  |
 | `navigation_bar` | Jump to an enclosing function/class from the breadcrumb trail (JetBrains Navigation Bar) |  |
 | `select_in` | Select this file in another view: project tree, dired, terminal (JetBrains Select In) |  |
