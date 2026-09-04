@@ -164,19 +164,18 @@ const STAGGER_TICKS: u32 = 18;
 /// What a Force shove costs, and how far it throws somebody.
 const PUSH_COST: u32 = 25;
 const PUSH_REACH: i16 = 4;
-/// What a sabre does, how fast it cuts and how far it reaches; how fast a scout
-/// walker and a duellist work; and what a speeder costs you if you hit a tree.
-const SABRE_DAMAGE: i32 = 6;
-const SABRE_CADENCE: u32 = 4;
+/// How far a sabre reaches; how fast a scout walker and a duellist work; and
+/// what a speeder costs you if you hit a tree. What a sabre does and how fast
+/// it cuts are per-blade now, in `SideArm::damage` and `SideArm::cadence`.
 const SABRE_REACH: i16 = 2;
 const SCOUT_CADENCE: u32 = 30;
 const DUEL_CADENCE: u32 = 10;
 const SPEEDER_PACE: i16 = 3;
 const SPEEDER_CRASH: i32 = 3;
-/// What a pilot can take on foot, how fast his sidearm cycles, how fast a
-/// patrol answers, and how far a blaster bolt carries.
+/// What a pilot can take on foot, how fast a patrol answers, and how far a
+/// blaster bolt carries. The cycle of the sidearm itself is per-weapon, in
+/// `SideArm::cadence`.
 const PILOT_HEALTH: i32 = 12;
-const BLASTER_CADENCE: u32 = 3;
 const TROOPER_CADENCE: u32 = 22;
 const BOLT_RANGE: u32 = 18;
 /// Ticks between the Alliance cruiser's salvoes, and what they hit for.
@@ -8922,7 +8921,7 @@ fn draw_horizon(
         for x in 0..canvas.w {
             let hash = (x as u32).wrapping_mul(73_856_093) ^ (y as u32).wrapping_mul(19_349_663);
             let density = if band > 5 { 11 } else { 23 };
-            if hash % density == 0 {
+            if hash.is_multiple_of(density) {
                 canvas.plot(x, y, 900.0, glyph, style);
             }
         }
@@ -11057,7 +11056,9 @@ impl Component for Nova {
                 key!('w') => {
                     self.game.cycle_active();
                 }
-                key!('f') => {
+                // Formation is 'g' here as it is in the flight keymap: 'f' is fire,
+                // and this arm never ran while it was spelled 'f'.
+                key!('g') => {
                     self.game.cycle_formation();
                 }
                 key!('n') => self.restart(),
@@ -15280,9 +15281,9 @@ mod sabre_tests {
         g.deck.troopers = vec![Trooper::new(GroundKind::Trooper, (20, 42), 0)];
         assert!(g.force_push(), "the Force answers");
         assert!(g.force < FORCE_MAX, "and it costs");
-        match g.deck.troopers.first() {
-            Some(trooper) => assert!(trooper.pos.1 > 42, "he is thrown back"),
-            None => {} // Thrown hard enough to finish him, which is fine.
+        // No trooper left means he was thrown hard enough to finish him, which is fine.
+        if let Some(trooper) = g.deck.troopers.first() {
+            assert!(trooper.pos.1 > 42, "he is thrown back");
         }
         g.force = 0;
         assert!(!g.force_push(), "an empty pilot shoves nothing");
@@ -15704,11 +15705,7 @@ mod frontier_life_tests {
     fn the_wilds_have_something_living_in_them() {
         let mut kinds = std::collections::HashSet::new();
         for seed in 1..40 {
-            for (_, trooper) in Deck::surface(Planet::Hoth, seed)
-                .troopers
-                .iter()
-                .enumerate()
-            {
+            for trooper in Deck::surface(Planet::Hoth, seed).troopers.iter() {
                 kinds.insert(trooper.kind);
             }
         }
@@ -16261,7 +16258,7 @@ impl Corridor {
     pub fn generate(&mut self) -> TerrainRow {
         let bore = Self::bore();
         if self.at_junction() {
-            if self.phase % CORRIDOR_PERIOD == 0 {
+            if self.phase.is_multiple_of(CORRIDOR_PERIOD) {
                 self.plugged = match self.rand().is_multiple_of(DEAD_END_ODDS) {
                     true => Some((self.rand() % CORRIDOR_LANES as u64) as usize),
                     false => None,
@@ -16376,12 +16373,15 @@ impl Reactor {
         let hp = CORE_HULL + armour * 8;
         let mut regulators = Vec::new();
         // The outer ring stands across the mouth of the chamber, the inner one
-        // hugs the core itself.
-        for dx in [-14, -7, 7, 14] {
-            regulators.push(Regulator::new(0, (0, dx), armour));
-        }
-        for dx in [-5, 5] {
-            regulators.push(Regulator::new(1, (2, dx), armour));
+        // hugs the core itself. Read out of one table so the ring count the
+        // chamber is built with is the `REGULATOR_RINGS` the rest of the file
+        // reasons about.
+        const RINGS: [(i16, &[i16]); REGULATOR_RINGS as usize] =
+            [(0, &[-14, -7, 7, 14]), (2, &[-5, 5])];
+        for (ring, (row, columns)) in RINGS.iter().enumerate() {
+            for dx in *columns {
+                regulators.push(Regulator::new(ring as u8, (*row, *dx), armour));
+            }
         }
         Reactor {
             pos: (1, W / 2),
@@ -17021,8 +17021,6 @@ pub struct Assault {
     pub elapsed: u32,
     /// Attackers the ion cannon has taken off the field.
     pub ion_kills: u32,
-    /// Armour the wave was raised with, so reinforcements match what walked in.
-    armour: i32,
     rng: u64,
 }
 
@@ -17043,7 +17041,6 @@ impl Assault {
             stage: 0,
             elapsed: 0,
             ion_kills: 0,
-            armour,
             rng: seed | 1,
         }
     }
