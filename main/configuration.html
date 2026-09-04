@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-61af2c6f.js";
+            window.path_to_searchindex_js = "searchindex-92b8ed50.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -223,7 +223,7 @@ Its settings will be merged with the configuration directory and the built-in co
 <h2 id="keymap-presets"><a class="header" href="#keymap-presets">Keymap presets</a></h2>
 <p>Zmax ships the keybinding presets below. Select one with the top-level <code>keymap</code>
 key (or switch at runtime with <code>:keymap &lt;name&gt;</code>, or in Preferences ▸ Keymap):</p>
-<pre><code class="language-toml">keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "kakoune" | "micro" | "nano" | "emacs" | "cua"
+<pre><code class="language-toml">keymap = "spacemacs"   # "spacemacs" (default) | "hybrid" | "vim" | "helix" | "kakoune" | "micro" | "nano" | "emacs" | "cua"
 </code></pre>
 <div class="table-wrapper">
 <table>
@@ -232,6 +232,7 @@ key (or switch at runtime with <code>:keymap &lt;name&gt;</code>, or in Preferen
 </thead>
 <tbody>
 <tr><td><code>spacemacs</code> <em>(default)</em></td><td>Normal</td><td>vim/evil keys + the <code>SPC</code> leader <strong>and</strong> the Emacs <code>C-x</code> prefix; both open a which-key popup.</td></tr>
+<tr><td><code>hybrid</code></td><td>Normal</td><td>Spacemacs’s hybrid editing style (<code>SPC t E h</code>): the spacemacs keymap with an <em>emacs</em> insert state — every emacs chord while inserting, <code>ESC</code> back to normal.</td></tr>
 <tr><td><code>vim</code></td><td>Normal</td><td>pure vim — no <code>SPC</code> leader and no which-key popup; <code>C-x</code> is <code>decrement</code>.</td></tr>
 <tr><td><code>helix</code></td><td>Normal</td><td>the original selection-first keymap with its <code>SPC</code> leader.</td></tr>
 <tr><td><code>nano</code></td><td>Insert</td><td>nano’s classic help-bar scheme (<code>^O</code> write out, <code>^W</code> where is, <code>^K</code> cut, <code>^U</code> paste, <code>^G</code> help, <code>^X</code> exit) plus its meta chords.</td></tr>
