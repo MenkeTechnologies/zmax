@@ -72,7 +72,10 @@ pub(crate) fn add_known_project(
         None => project_root(),
     };
     if !root.is_dir() {
-        anyhow::bail!("projectile-add-known-project: {} is not a directory", root.display());
+        anyhow::bail!(
+            "projectile-add-known-project: {} is not a directory",
+            root.display()
+        );
     }
     let root = std::fs::canonicalize(&root).unwrap_or(root);
     if remember(&root) {
@@ -127,7 +130,8 @@ pub(crate) fn remove_current_project(
         cx.editor
             .set_status(format!("Removed {root} from known projects"));
     } else {
-        cx.editor.set_error(format!("{root} is not a known project"));
+        cx.editor
+            .set_error(format!("{root} is not a known project"));
     }
     Ok(())
 }
@@ -282,9 +286,9 @@ pub(crate) fn discover_projects_in_directory(
 /// defcustom, so the elisp global is read first; `ZMAX_PROJECT_SEARCH_PATH` (a
 /// `:`-separated list) is the shell-side way to set it.
 pub(crate) fn project_search_path() -> Vec<PathBuf> {
-    if let Some(paths) = crate::commands::scripting::elisp_global_string_list(
-        "projectile-project-search-path",
-    ) {
+    if let Some(paths) =
+        crate::commands::scripting::elisp_global_string_list("projectile-project-search-path")
+    {
         if !paths.is_empty() {
             return paths.iter().map(|p| expand_home(p)).collect();
         }
@@ -327,8 +331,9 @@ pub(crate) fn discover_projects_in_search_path(
             }
         }
     }
-    cx.editor
-        .set_status(format!("Found {found} project(s) in the search path, {added} new"));
+    cx.editor.set_status(format!(
+        "Found {found} project(s) in the search path, {added} new"
+    ));
     Ok(())
 }
 
@@ -1767,7 +1772,9 @@ pub(crate) fn project_type_of(root: &Path) -> Option<&'static ProjectType> {
 /// when no registered type's markers are there, which is what projectile calls
 /// a project it has no table row for.
 pub(crate) fn project_type(root: &Path) -> &'static str {
-    project_type_of(root).map(|kind| kind.name).unwrap_or("generic")
+    project_type_of(root)
+        .map(|kind| kind.name)
+        .unwrap_or("generic")
 }
 
 /// The lifecycle phases projectile runs external commands for.
@@ -2017,9 +2024,8 @@ pub(crate) fn discard_command_cache(
     rows.retain(|(r, _, _)| *r != root);
     let dropped = before - rows.len();
     write_command_cache(&rows)?;
-    cx.editor.set_status(format!(
-        "Discarded {dropped} cached command(s) for {root}"
-    ));
+    cx.editor
+        .set_status(format!("Discarded {dropped} cached command(s) for {root}"));
     Ok(())
 }
 
@@ -2077,7 +2083,12 @@ fn subproject_lifecycle(
     let file = zmax_view::doc!(cx.editor)
         .path()
         .map(|p| p.to_path_buf())
-        .ok_or_else(|| anyhow::anyhow!("projectile-{}-subproject: the buffer is not visiting a file", phase.name()))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "projectile-{}-subproject: the buffer is not visiting a file",
+                phase.name()
+            )
+        })?;
     let sub = nearest_subproject(&file, &root).ok_or_else(|| {
         anyhow::anyhow!(
             "projectile-{}-subproject: {} is not inside a subproject",
@@ -2211,7 +2222,9 @@ pub(crate) fn is_test_file(root: &Path, path: &Path) -> bool {
     let stem = name.split('.').next().unwrap_or(name);
     if let Some(kind) = project_type_of(root) {
         if kind.test_prefix.is_some_and(|p| stem.starts_with(p))
-            || kind.test_suffix.is_some_and(|s| stem.ends_with(s) || name.contains(s))
+            || kind
+                .test_suffix
+                .is_some_and(|s| stem.ends_with(s) || name.contains(s))
         {
             return true;
         }
@@ -2360,7 +2373,9 @@ pub(crate) fn purge_file_from_cache(
             .path()
             .map(|p| p.to_path_buf())
             .ok_or_else(|| {
-                anyhow::anyhow!("projectile-purge-file-from-cache: the buffer is not visiting a file")
+                anyhow::anyhow!(
+                    "projectile-purge-file-from-cache: the buffer is not visiting a file"
+                )
             })?,
     };
     let purged = FILE_CACHE
@@ -2596,7 +2611,11 @@ pub(crate) fn find_other_file(
     let Some(here) = here else {
         anyhow::bail!("projectile-find-other-file: the buffer is not visiting a file");
     };
-    let Some(stem) = here.file_stem().and_then(|s| s.to_str()).map(str::to_string) else {
+    let Some(stem) = here
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .map(str::to_string)
+    else {
         anyhow::bail!("projectile-find-other-file: no file name to match");
     };
     let root = project_root();
@@ -3169,8 +3188,10 @@ pub(crate) fn replace_undo(
         }
     }
     crate::commands::reload_docs_for_paths(cx.editor, &restored);
-    cx.editor
-        .set_status(format!("Reverted the replace in {} file(s)", restored.len()));
+    cx.editor.set_status(format!(
+        "Reverted the replace in {} file(s)",
+        restored.len()
+    ));
     Ok(())
 }
 
@@ -3247,11 +3268,8 @@ pub(crate) fn find_references(
             let (view, doc) = zmax_view::current_ref!(cx.editor);
             let text = doc.text().slice(..);
             let range = doc.selection(view.id).primary();
-            let (from, to) = crate::commands::expand_bare_cursor_to_word(
-                text,
-                range.from(),
-                range.to(),
-            );
+            let (from, to) =
+                crate::commands::expand_bare_cursor_to_word(text, range.from(), range.to());
             text.slice(from..to).to_string().trim().to_string()
         }
     };
@@ -3540,9 +3558,7 @@ pub(crate) fn switch_sibling_project(
     }
     match args.first() {
         Some(dir) => crate::commands::project_switch_to(cx, expand_home(dir)),
-        None if siblings.len() == 1 => {
-            crate::commands::project_switch_to(cx, siblings[0].clone())
-        }
+        None if siblings.len() == 1 => crate::commands::project_switch_to(cx, siblings[0].clone()),
         None => cx.editor.set_status(format!(
             "Sibling projects: {} — :projectile-switch-sibling-project <root>",
             siblings
@@ -3599,7 +3615,11 @@ pub(crate) fn search_in_sibling_projects(
         .collect();
     // One ripgrep over every root, into the compilation list the project search
     // already uses.
-    let command = format!("rg --line-number --no-heading -e {} {}", shell_quote(&pattern), dirs.join(" "));
+    let command = format!(
+        "rg --line-number --no-heading -e {} {}",
+        shell_quote(&pattern),
+        dirs.join(" ")
+    );
     crate::commands::typed::run_compile_command(cx, &command)
 }
 
@@ -3651,7 +3671,8 @@ pub(crate) fn switch_to_buffer_in_sibling_projects(
                         .map(|doc| doc.display_name().into_owned())
                 })
                 .collect();
-            cx.editor.set_status(format!("Buffers: {}", names.join(", ")));
+            cx.editor
+                .set_status(format!("Buffers: {}", names.join(", ")));
             Ok(())
         }
     }
@@ -4122,8 +4143,7 @@ macro_rules! display_variant {
             if event != PromptEvent::Validate {
                 return Ok(());
             }
-            cx.editor.pending_display =
-                Some(zmax_view::editor::DisplayTarget::$target);
+            cx.editor.pending_display = Some(zmax_view::editor::DisplayTarget::$target);
             let result = $base(cx, args, event);
             if result.is_err() {
                 // Nothing was displayed, so the override must not linger for
@@ -4894,7 +4914,8 @@ pub(crate) fn dispatch(
         "Find      :projectile-find-file  -dir  -test-file  -other-file  -changed-file".to_string(),
         "Buffers   :projectile-switch-to-buffer  -kill-buffers  -save-project-buffers".to_string(),
         "Search    :projectile-search  -find-references  -multi-occur  -todos".to_string(),
-        "Replace   :projectile-replace  -replace-regexp  -replace-review  -replace-undo".to_string(),
+        "Replace   :projectile-replace  -replace-regexp  -replace-review  -replace-undo"
+            .to_string(),
         "Build     :projectile-compile-project  -test-project  -run-project  -run-task".to_string(),
         "Projects  :projectile-switch-project  -switch-open-project  -switch-sibling-project"
             .to_string(),
@@ -5095,7 +5116,10 @@ pub(crate) fn find_file_dwim(
 fn files_of_kind(root: &Path, kind: &str) -> Vec<PathBuf> {
     let files = cached_project_files(root);
     match kind {
-        "test" => files.into_iter().filter(|f| is_test_file(root, f)).collect(),
+        "test" => files
+            .into_iter()
+            .filter(|f| is_test_file(root, f))
+            .collect(),
         "impl" | "implementation" => files
             .into_iter()
             .filter(|f| !is_test_file(root, f))
@@ -5192,7 +5216,11 @@ mod tests {
         assert_eq!(kind.compile, Some("cargo build"));
         assert_eq!(kind.test, Some("cargo test"));
         assert_eq!(kind.run, Some("cargo run"));
-        assert_eq!(PROJECT_TYPES.len(), 97, "every registered type is in the table");
+        assert_eq!(
+            PROJECT_TYPES.len(),
+            97,
+            "every registered type is in the table"
+        );
     }
 
     /// A `?*.ext` marker is projectile's wildcard: any file with that extension

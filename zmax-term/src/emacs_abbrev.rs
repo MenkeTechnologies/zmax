@@ -102,7 +102,10 @@ fn format_mode_line(mode: &str, name: &str, expansion: &str) -> String {
 }
 
 /// The global table's rows, and the mode-local tables keyed by mode name.
-type AbbrevTables = (Vec<(String, String)>, HashMap<String, HashMap<String, String>>);
+type AbbrevTables = (
+    Vec<(String, String)>,
+    HashMap<String, HashMap<String, String>>,
+);
 
 /// Everything in the store: the global table's rows and the mode-local tables.
 /// Emacs keeps both in one abbrev file (`write-abbrev-file` writes a
@@ -490,9 +493,7 @@ mod tests {
         // Hermetic: the store is pointed at a temp file first, so persisting a
         // mode abbrev here cannot touch the user's `abbrevs` file. Names are
         // unique to this test to survive the shared process-global map.
-        set_store_path_for_tests(
-            std::env::temp_dir().join("zmax-abbrev-mode-tables-test-store"),
-        );
+        set_store_path_for_tests(std::env::temp_dir().join("zmax-abbrev-mode-tables-test-store"));
         define_mode("mtl_rust", "mtl_only", "rust-only");
         define_mode("mtl_rust", "mtl_two", "rust-two");
         // Resolvable only within its own mode.

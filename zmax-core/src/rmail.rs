@@ -1358,8 +1358,12 @@ Subject: Hello
 Hi there.
 ",
         );
-        let (to, subj, body) =
-            resend_fields_to(mb.current().unwrap(), "bob@example.com", "me@here", 1_767_225_600);
+        let (to, subj, body) = resend_fields_to(
+            mb.current().unwrap(),
+            "bob@example.com",
+            "me@here",
+            1_767_225_600,
+        );
 
         // No recipient on the draft's own To: line — Rmail prompts for it.
         assert_eq!(to, "");
@@ -1371,8 +1375,7 @@ Hi there.
         assert_eq!(lines[1], "Resent-Date: Thu, 01 Jan 2026 00:00:00 +0000");
         assert_eq!(lines[2], "Resent-To: bob@example.com");
         assert!(
-            lines[3].starts_with("Resent-Message-ID: <1767225600.")
-                && lines[3].ends_with('>'),
+            lines[3].starts_with("Resent-Message-ID: <1767225600.") && lines[3].ends_with('>'),
             "{}",
             lines[3]
         );

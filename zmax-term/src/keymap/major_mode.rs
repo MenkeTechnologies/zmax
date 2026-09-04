@@ -516,18 +516,15 @@ pub fn unset_user_binding(modes: &[Mode], major_mode: &str, chord: &str) {
 pub fn remove_user_binding(modes: &[Mode], major_mode: &str, chord: &str) -> bool {
     let mut bindings = USER_BINDINGS.lock().unwrap();
     let before = bindings.len();
-    bindings.retain(|b| {
-        !(modes.contains(&b.mode) && b.major_mode == major_mode && b.chord == chord)
-    });
+    bindings
+        .retain(|b| !(modes.contains(&b.mode) && b.major_mode == major_mode && b.chord == chord));
     bindings.len() != before
 }
 
 fn write_user_binding(modes: &[Mode], major_mode: &str, chord: &str, command: Option<String>) {
     let mut bindings = USER_BINDINGS.lock().unwrap();
     for mode in modes {
-        bindings.retain(|b| {
-            !(b.mode == *mode && b.major_mode == major_mode && b.chord == chord)
-        });
+        bindings.retain(|b| !(b.mode == *mode && b.major_mode == major_mode && b.chord == chord));
         bindings.push(UserBinding {
             mode: *mode,
             major_mode: major_mode.to_string(),
@@ -583,9 +580,9 @@ pub fn overlay(language: &str, mode: Mode) -> Option<Cow<'static, KeyTrie>> {
     if user.is_empty() {
         return base.map(Cow::Borrowed);
     }
-    let mut trie = base.cloned().unwrap_or_else(|| {
-        KeyTrie::Node(KeyTrieNode::new("Local", Default::default()))
-    });
+    let mut trie = base
+        .cloned()
+        .unwrap_or_else(|| KeyTrie::Node(KeyTrieNode::new("Local", Default::default())));
     if let KeyTrie::Node(root) = &mut trie {
         for b in &user {
             // An unset chord is bound to `no_op`: it swallows the key so the
@@ -895,9 +892,8 @@ mod tests {
             assert_eq!(cmd_at(&trie, key).as_deref(), Some(name));
         }
         // Scoped to the mode: a rust buffer keeps the base `n`.
-        let mut keymaps = Keymaps::new(Box::new(arc_swap::access::Constant(
-            preset("vim").unwrap(),
-        )));
+        let mut keymaps =
+            Keymaps::new(Box::new(arc_swap::access::Constant(preset("vim").unwrap())));
         let n = "n".parse::<KeyEvent>().unwrap();
         assert_eq!(
             keymaps.get_with_language(Mode::Normal, n, Some("minibuffer-inactive")),

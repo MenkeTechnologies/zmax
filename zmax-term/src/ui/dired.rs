@@ -152,7 +152,10 @@ enum Pending {
     /// `dired-do-find-regexp` / `dired-do-isearch`: search the targets' contents
     /// and show the hits. `regexp` is false for the LITERAL read (`M-s a C-s`,
     /// `dired-do-isearch`), which passes `multi-isearch-files` a plain string.
-    FindRegexp { targets: Vec<String>, regexp: bool },
+    FindRegexp {
+        targets: Vec<String>,
+        regexp: bool,
+    },
     /// First leg of a `% R`/`% C`/`% H`/`% S`/`% Y` regexp file op: read the
     /// match regexp; the second leg reads the replacement.
     RegexpOpPattern(RegexpKind, Vec<String>),
@@ -4287,14 +4290,7 @@ mod isearch_tests {
         // Everything the `regex` crate cannot express is refused outright — a
         // backreference above all, which a finite automaton cannot support.
         for pat in [
-            r"\(a\)\1",
-            r"\s_",
-            r"\s(",
-            r"\.\s.",
-            r"\cg",
-            r"\Cg",
-            r"\s",
-            r"foo\",
+            r"\(a\)\1", r"\s_", r"\s(", r"\.\s.", r"\cg", r"\Cg", r"\s", r"foo\",
         ] {
             assert_eq!(emacs_regexp_to_rust(pat), None, "{pat} must be refused");
         }
@@ -4302,7 +4298,10 @@ mod isearch_tests {
         // And the refusal is what the caller sees: no matcher, so the search
         // reports a bad pattern instead of matching the wrong text.
         assert!(Dired::isearch_matcher(r"\(a\)\1", true).is_none());
-        assert!(Dired::isearch_matcher(r"\(a\)\1", false).is_some(), "literal");
+        assert!(
+            Dired::isearch_matcher(r"\(a\)\1", false).is_some(),
+            "literal"
+        );
     }
 
     /// `M-s a C-s` is `dired-do-isearch`, a LITERAL search over the marked files;
@@ -4318,12 +4317,18 @@ mod isearch_tests {
         d.begin_contents_search(false);
         let inp = d.input.take().unwrap();
         assert_eq!(inp.prompt, "Search marked files: ");
-        assert!(matches!(inp.action, Pending::FindRegexp { regexp: false, .. }));
+        assert!(matches!(
+            inp.action,
+            Pending::FindRegexp { regexp: false, .. }
+        ));
 
         d.begin_contents_search(true);
         let inp = d.input.take().unwrap();
         assert_eq!(inp.prompt, "Search marked files (regexp): ");
-        assert!(matches!(inp.action, Pending::FindRegexp { regexp: true, .. }));
+        assert!(matches!(
+            inp.action,
+            Pending::FindRegexp { regexp: true, .. }
+        ));
 
         // The literal read reaches grep as FIXED STRINGS. Backslash-quoting the
         // pattern would not do: grep's default BRE reads `\+`/`\?`/`\|` as

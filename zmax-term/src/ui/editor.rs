@@ -4311,9 +4311,8 @@ pub(crate) fn editor_menu_entries(
                 let (has_selection, saved, view_id) = {
                     let (view, doc) = zmax_view::current_ref!(c.editor);
                     let sel = doc.selection(view.id);
-                    let has = c.editor.mode() == Mode::Select
-                        || sel.len() > 1
-                        || sel.primary().len() > 1;
+                    let has =
+                        c.editor.mode() == Mode::Select || sel.len() > 1 || sel.primary().len() > 1;
                     (has, sel.clone(), view.id)
                 };
                 if has_selection {

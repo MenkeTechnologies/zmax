@@ -247,12 +247,7 @@ fn defined_macros(lines: &[&str]) -> Vec<(usize, String)> {
 /// Whether `name` is defined for a directive on line `before`: the `hide-ifdef-env`
 /// wins (that is the environment the user typed, and `hide-ifdef-undef` must be
 /// able to mask a file `#define`), otherwise the file's own `#define`s decide.
-fn is_defined(
-    defines: &[(usize, String)],
-    env: &HideIfdefEnv,
-    before: usize,
-    name: &str,
-) -> bool {
+fn is_defined(defines: &[(usize, String)], env: &HideIfdefEnv, before: usize, name: &str) -> bool {
     if let Some(verdict) = env.defined(name) {
         return verdict;
     }
@@ -360,8 +355,14 @@ pub fn conditional_branches_with_env(lines: &[&str], env: &HideIfdefEnv) -> Vec<
         // Close the branch this directive ends, if any.
         if matches!(directive, Directive::Else | Directive::Endif) {
             if let Some((open_line, open_kw, open_cond, earlier_taken)) = stack.pop() {
-                let taken =
-                    branch_verdict(&open_kw, &open_cond, open_line, earlier_taken, &defines, env);
+                let taken = branch_verdict(
+                    &open_kw,
+                    &open_cond,
+                    open_line,
+                    earlier_taken,
+                    &defines,
+                    env,
+                );
                 out.push(Branch {
                     start: open_line + 1,
                     end: i,
@@ -385,7 +386,14 @@ pub fn conditional_branches_with_env(lines: &[&str], env: &HideIfdefEnv) -> Vec<
     }
     // Unterminated conditionals run to the end of the file.
     while let Some((open_line, open_kw, open_cond, earlier_taken)) = stack.pop() {
-        let taken = branch_verdict(&open_kw, &open_cond, open_line, earlier_taken, &defines, env);
+        let taken = branch_verdict(
+            &open_kw,
+            &open_cond,
+            open_line,
+            earlier_taken,
+            &defines,
+            env,
+        );
         out.push(Branch {
             start: open_line + 1,
             end: lines.len(),
@@ -431,10 +439,7 @@ pub fn dead_branches(lines: &[&str]) -> Vec<std::ops::Range<usize>> {
 /// evaluates against ("Assume that defined symbols have been added to
 /// `hide-ifdef-env'", hideif.el:2685-2688). An empty `env` decides nothing, so
 /// this reproduces [`dead_branches`] exactly.
-pub fn dead_branches_with_env(
-    lines: &[&str],
-    env: &HideIfdefEnv,
-) -> Vec<std::ops::Range<usize>> {
+pub fn dead_branches_with_env(lines: &[&str], env: &HideIfdefEnv) -> Vec<std::ops::Range<usize>> {
     conditional_branches_with_env(lines, env)
         .into_iter()
         .filter(|b| b.taken == Some(false) && b.start < b.end)
@@ -1233,10 +1238,7 @@ mod tests {
     #[test]
     fn cwarn_reference_ignores_and_and_compound_assignment() {
         for src in ["void f(int a && b);", "void f(int a &= b);"] {
-            assert!(
-                cwarn_scan_lang(&[src], CWarnLang::Cpp).is_empty(),
-                "{src}"
-            );
+            assert!(cwarn_scan_lang(&[src], CWarnLang::Cpp).is_empty(), "{src}");
         }
     }
 

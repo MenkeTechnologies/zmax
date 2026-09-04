@@ -177,11 +177,7 @@ pub fn sessions() -> Vec<(PathBuf, std::time::SystemTime)> {
     };
     let mut out: Vec<(PathBuf, std::time::SystemTime)> = entries
         .flatten()
-        .filter(|e| {
-            e.file_name()
-                .to_string_lossy()
-                .starts_with(".saves-")
-        })
+        .filter(|e| e.file_name().to_string_lossy().starts_with(".saves-"))
         .filter_map(|e| {
             let modified = e.metadata().ok()?.modified().ok()?;
             Some((e.path(), modified))
@@ -220,7 +216,9 @@ pub fn parse_session(text: &str) -> Vec<(PathBuf, PathBuf)> {
                 .and_then(|n| n.strip_suffix(".swp"))
                 .unwrap_or(&name)
                 .to_string();
-            swap.parent().unwrap_or(std::path::Path::new(".")).join(inner)
+            swap.parent()
+                .unwrap_or(std::path::Path::new("."))
+                .join(inner)
         } else {
             PathBuf::from(file)
         };
@@ -722,7 +720,10 @@ mod tests {
         let pairs = super::parse_session("\n/w/.scratch.swp\n");
         assert_eq!(
             pairs,
-            vec![(PathBuf::from("/w/scratch"), PathBuf::from("/w/.scratch.swp"))]
+            vec![(
+                PathBuf::from("/w/scratch"),
+                PathBuf::from("/w/.scratch.swp")
+            )]
         );
 
         // A truncated trailing pair is a corrupt list file, not an entry.

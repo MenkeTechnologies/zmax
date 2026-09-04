@@ -3827,7 +3827,10 @@ mod tests {
         crate::commands::typed::vim_opt_store("digraph", "off".to_string());
         let mut p = prompt_at("a", 0, 0);
         p.cursor = 1;
-        assert!(!p.arm_digraph(), "with 'nodigraph' <BS> is an ordinary delete");
+        assert!(
+            !p.arm_digraph(),
+            "with 'nodigraph' <BS> is an ordinary delete"
+        );
         assert_eq!(p.digraph_pending, None);
 
         crate::commands::typed::vim_opt_store("digraph", "on".to_string());

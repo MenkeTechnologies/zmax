@@ -169,7 +169,6 @@ fn push_class_char(out: &mut String, c: char) {
     }
 }
 
-
 /// vim "magic level" — controls how much of the pattern is special without a
 /// backslash. Switchable mid-pattern via `\v` `\m` `\M` `\V`.
 #[allow(clippy::enum_variant_names)] // Very/Magic/No/VeryNo mirror vim \v \m \M \V
@@ -335,7 +334,10 @@ mod tests {
                 assert!(re.is_match(&c.to_string()), "`[{body}]` should match {c:?}");
             }
             for c in no {
-                assert!(!re.is_match(&c.to_string()), "`[{body}]` should not match {c:?}");
+                assert!(
+                    !re.is_match(&c.to_string()),
+                    "`[{body}]` should not match {c:?}"
+                );
             }
         };
 

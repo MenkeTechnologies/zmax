@@ -4333,10 +4333,7 @@ impl Editor {
             scroll_bar: crate::view::scroll_bar_side(),
             // Carried forward, like the name: the override belongs to the frame,
             // not to whatever was live when it was parked.
-            tab_bar: self
-                .frames
-                .get(self.current_frame)
-                .and_then(|f| f.tab_bar),
+            tab_bar: self.frames.get(self.current_frame).and_then(|f| f.tab_bar),
         }
     }
 

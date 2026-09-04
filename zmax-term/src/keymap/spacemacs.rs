@@ -780,7 +780,6 @@ pub(super) const PROJECTILE_MAP: &[(&str, &str, &str)] = &[
     ("C-c p z", "Projectile", ":projectile-cache-current-file"),
 ];
 
-
 /// Spacemacs's own overrides of an evil (vim) binding — chords where Spacemacs
 /// deliberately rebinds a key the vim base already owns, so the two presets
 /// differ. Format: (chord, submap-label, command). Applied to **Normal mode
@@ -993,7 +992,11 @@ mod tests {
             ("C-c p w s", "projectile-session-save"),
             ("C-c p x 4 v", "projectile-run-vterm-other-window"),
         ] {
-            assert_eq!(cmd(&km, Mode::Normal, chord).as_deref(), Some(want), "{chord}");
+            assert_eq!(
+                cmd(&km, Mode::Normal, chord).as_deref(),
+                Some(want),
+                "{chord}"
+            );
         }
         // The whole map is there, not a sample of it.
         assert_eq!(

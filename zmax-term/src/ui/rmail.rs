@@ -32,8 +32,8 @@
 
 use std::path::PathBuf;
 
-use tui::buffer::Buffer as Surface;
 use crate::ui::PromptEvent;
+use tui::buffer::Buffer as Surface;
 use zmax_core::rmail::{forward_fields, reply_fields, resend_fields_to, Mailbox};
 use zmax_view::graphics::Rect;
 

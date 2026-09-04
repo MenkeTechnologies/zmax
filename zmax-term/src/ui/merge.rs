@@ -2413,7 +2413,10 @@ mod tests {
             rows.iter().all(|row| row.kind == RowKind::Unchanged),
             "same words, different line breaks: no difference, got {rows:?}"
         );
-        assert!(compute_blocks(&rows).is_empty(), "and so no difference block");
+        assert!(
+            compute_blocks(&rows).is_empty(),
+            "and so no difference block"
+        );
 
         // One side holding the same words on fewer lines is still no difference.
         let rows = align_wordwise("a b c", "a\nb\nc");

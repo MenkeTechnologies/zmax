@@ -266,8 +266,7 @@ impl Review {
                 };
                 let keep = matches!(what, Asking::KeepMatches);
                 let before = self.matches.len();
-                self.matches
-                    .retain(|m| re.is_match(&m.text) == keep);
+                self.matches.retain(|m| re.is_match(&m.text) == keep);
                 self.selected = self.selected.min(self.matches.len().saturating_sub(1));
                 self.status = format!("{} match(es) removed", before - self.matches.len());
             }
@@ -299,7 +298,9 @@ pub fn scan(
     word: bool,
 ) -> Vec<Match> {
     let mut cmd = std::process::Command::new("rg");
-    cmd.arg("--line-number").arg("--no-heading").arg("--color=never");
+    cmd.arg("--line-number")
+        .arg("--no-heading")
+        .arg("--color=never");
     if !regexp {
         cmd.arg("-F");
     }
@@ -453,7 +454,9 @@ impl Component for Review {
                             {
                                 let (view, doc) = zmax_view::current!(cx.editor);
                                 let text = doc.text();
-                                let line = line.saturating_sub(1).min(text.len_lines().saturating_sub(1));
+                                let line = line
+                                    .saturating_sub(1)
+                                    .min(text.len_lines().saturating_sub(1));
                                 let pos = text.line_to_char(line);
                                 doc.set_selection(view.id, zmax_core::Selection::point(pos));
                             }
@@ -483,7 +486,11 @@ impl Component for Review {
                 self.pattern,
                 replacement,
                 if self.regexp { "regexp " } else { "literal " },
-                if self.case_sensitive { "case " } else { "nocase " },
+                if self.case_sensitive {
+                    "case "
+                } else {
+                    "nocase "
+                },
                 if self.word { "word" } else { "any" },
                 self.enabled_count(),
                 self.matches.len()
@@ -492,7 +499,11 @@ impl Component for Review {
                 " Search  {}   [{}{}{}]  {} match(es)",
                 self.pattern,
                 if self.regexp { "regexp " } else { "literal " },
-                if self.case_sensitive { "case " } else { "nocase " },
+                if self.case_sensitive {
+                    "case "
+                } else {
+                    "nocase "
+                },
                 if self.word { "word" } else { "any" },
                 self.matches.len()
             ),
@@ -571,9 +582,8 @@ impl Review {
         let (files, total, changed, undo) = self.apply();
         crate::commands::projectile::record_replace_undo(undo);
         crate::commands::reload_docs_for_paths(cx.editor, &changed);
-        cx.editor.set_status(format!(
-            "Replaced {total} occurrence(s) in {files} file(s)"
-        ));
+        cx.editor
+            .set_status(format!("Replaced {total} occurrence(s) in {files} file(s)"));
         EventResult::Consumed(Some(pop))
     }
 }

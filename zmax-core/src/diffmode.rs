@@ -1288,11 +1288,17 @@ diff --git a/README.md b/README.md
         assert_eq!(runs.len(), 1, "{runs:?}");
         let (del, add) = &runs[0];
         assert_eq!(
-            flat[del.clone()].iter().map(|l| &l.text).collect::<Vec<_>>(),
+            flat[del.clone()]
+                .iter()
+                .map(|l| &l.text)
+                .collect::<Vec<_>>(),
             vec!["-old"]
         );
         assert_eq!(
-            flat[add.clone()].iter().map(|l| &l.text).collect::<Vec<_>>(),
+            flat[add.clone()]
+                .iter()
+                .map(|l| &l.text)
+                .collect::<Vec<_>>(),
             vec!["+new"]
         );
     }
