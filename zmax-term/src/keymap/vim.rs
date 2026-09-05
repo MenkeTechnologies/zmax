@@ -2300,6 +2300,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => dap_toggle_breakpoint,      // SPC d b : toggle breakpoint
                 "B" => dap_breakpoints_picker,     // SPC d B : view all breakpoints (JetBrains View Breakpoints)
                 "t" => dap_toggle_temporary_breakpoint, // SPC d t : one-shot breakpoint (JetBrains Toggle Temporary Line Breakpoint)
+                "a" => dap_attach_to_process,      // SPC d a : attach the debugger to a running process (JetBrains Ctrl-Alt-F5)
                 "x" => dap_show_execution_point,   // SPC d x : back to where the program is stopped (JetBrains Alt-F10)
                 "e" => dap_evaluate_expression,    // SPC d e : evaluate an expression (JetBrains Alt-F8)
                 "E" => dap_quick_evaluate,         // SPC d E : evaluate the selection/word (JetBrains Ctrl-Alt-F8)
@@ -2568,6 +2569,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "g" => generate_code,              // SPC l g : generate code — getters/constructors/impls (JetBrains Generate)
                 "k" => hover,                      // SPC l k : hover
                 "q" => peek_definition,            // SPC l q : peek definition in a popup (JetBrains Quick Definition)
+                "Q" => context_info,               // SPC l Q : the declarations enclosing the caret (JetBrains Alt-Q)
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format
                 // --- layouts (named window configurations) ---

@@ -2360,6 +2360,7 @@ impl MappableCommand {
         dap_edit_condition, "Edit breakpoint condition on current line",
         dap_breakpoints_picker, "View all breakpoints in a picker (JetBrains View Breakpoints)",
         dap_toggle_temporary_breakpoint, "Toggle a breakpoint that clears on its first hit (JetBrains Toggle Temporary Line Breakpoint, gdb tbreak)",
+        dap_attach_to_process, "Attach the debugger to a running process (JetBrains Attach to Process, Ctrl Alt F5)",
         dap_show_execution_point, "Jump to where the program is stopped (JetBrains Show Execution Point, Alt F10)",
         dap_evaluate_expression, "Evaluate an expression in the selected frame (JetBrains Evaluate Expression, Alt F8)",
         dap_quick_evaluate, "Evaluate the selection or word at the cursor (JetBrains Quick Evaluate, Ctrl Alt F8)",
@@ -2540,6 +2541,7 @@ impl MappableCommand {
         dabbrev_completion, "List the buffer words that could expand the word before point (emacs dabbrev-completion)",
         copy_reference, "Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference)",
         error_description, "Show the full text of the diagnostic under the cursor (JetBrains Error Description)",
+        context_info, "Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
         rebuild_project, "Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)",
@@ -67078,6 +67080,48 @@ fn copy_reference(cx: &mut Context) {
     let _ = cx.editor.registers.write('+', vec![reference.clone()]);
     cx.editor
         .set_status(format!("Copied reference: {reference}"));
+}
+
+/// JetBrains "Show Element at Caret" / Context Info (`Alt-Q`): the declarations
+/// the caret sits inside, outermost first, each with the source line it opens
+/// on. It answers "which function am I in" when the opening line has scrolled
+/// away — the same question the structure panel's breadcrumb answers, in a
+/// popup at the caret.
+///
+/// The chain comes from the tree-sitter tags the structure panel is built from
+/// (`syntax::document_outline`), so it needs no language server.
+fn context_info(cx: &mut Context) {
+    let body = {
+        let loader = cx.editor.syn_loader.load();
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let mut chain: Vec<(usize, String)> = crate::commands::syntax::document_outline(doc, &loader)
+            .into_iter()
+            .filter(|item| (item.start..=item.end).contains(&cursor))
+            .map(|item| {
+                let line = text.char_to_line(item.start);
+                let src = text.line(line).to_string().trim_end().to_string();
+                (line, format!("{}  {}", item.kind, src.trim_start()))
+            })
+            .collect();
+        // Outermost first, so the innermost declaration — the one usually
+        // wanted — ends up closest to the caret at the bottom of the popup.
+        chain.sort_by_key(|(line, _)| *line);
+        chain
+            .into_iter()
+            .map(|(line, label)| format!("{}: {label}", line + 1))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    if body.is_empty() {
+        cx.editor
+            .set_error("context-info: the caret is not inside a declaration");
+        return;
+    }
+    let contents = ui::Text::new(body);
+    let popup = ui::Popup::new("context-info", contents);
+    cx.replace_or_push_layer("context-info", popup);
 }
 
 /// JetBrains Error Description (`Cmd-F1`): show the full text of the diagnostic

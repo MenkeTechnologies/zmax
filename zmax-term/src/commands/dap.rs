@@ -438,6 +438,145 @@ pub fn dap_toggle_breakpoint_impl(cx: &mut Context, path: PathBuf, line: usize) 
     }
 }
 
+/// One line of `ps`: a running process to attach the debugger to.
+#[derive(Clone)]
+struct ProcRow {
+    pid: String,
+    command: String,
+}
+
+/// The running processes, newest (highest pid) first. `ps` is asked for just
+/// the pid and the full command line; a row without both is skipped rather than
+/// guessed at.
+fn running_processes() -> Vec<ProcRow> {
+    let Ok(out) = std::process::Command::new("ps")
+        .args(["-Ao", "pid=,args="])
+        .output()
+    else {
+        return Vec::new();
+    };
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut rows: Vec<ProcRow> = text
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim_start();
+            let (pid, command) = line.split_once(char::is_whitespace)?;
+            pid.parse::<u32>().ok()?;
+            Some(ProcRow {
+                pid: pid.to_string(),
+                command: command.trim().to_string(),
+            })
+        })
+        .collect();
+    rows.sort_by_key(|r| std::cmp::Reverse(r.pid.parse::<u32>().unwrap_or(0)));
+    rows
+}
+
+/// Push a component built at callback time. A picker's own callback has no
+/// compositor handle, so a follow-up layer goes through the job queue — the
+/// same route `debug_parameter_prompt` uses to chain its prompts.
+fn push_layer_later(
+    jobs: &mut Jobs,
+    build: impl FnOnce() -> Box<dyn crate::compositor::Component> + Send + 'static,
+) {
+    jobs.callback(async move {
+        let call: Callback = Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                compositor.push(build());
+            },
+        ));
+        Ok(call)
+    });
+}
+
+/// Start `template` with `pid` as its first parameter, prompting for whatever
+/// parameters the template declares beyond it.
+fn attach_with_pid(cx: &mut compositor::Context, template: DebugTemplate, pid: String) {
+    let params = vec![pid];
+    if params.len() < template.completion.len() {
+        let completion = template.completion.clone();
+        let name = template.name.clone();
+        push_layer_later(cx.jobs, move || {
+            Box::new(debug_parameter_prompt(completion, name, params))
+        });
+        return;
+    }
+    let args: Vec<std::borrow::Cow<str>> = params.iter().map(|p| p.as_str().into()).collect();
+    if let Err(err) = dap_start_impl(cx, Some(&template.name), None, Some(args)) {
+        cx.editor.set_error(err.to_string());
+    }
+}
+
+/// Pick a running process and attach `template` to it.
+fn attach_process_picker(cx: &mut compositor::Context, template: DebugTemplate) {
+    let rows = running_processes();
+    if rows.is_empty() {
+        cx.editor.set_error("attach: `ps` listed no processes");
+        return;
+    }
+    push_layer_later(cx.jobs, move || {
+        let columns = [
+            ui::PickerColumn::new("pid", |r: &ProcRow, _: &()| r.pid.as_str().into()),
+            ui::PickerColumn::new("command", |r: &ProcRow, _: &()| r.command.as_str().into()),
+        ];
+        let picker = Picker::new(columns, 1, rows, (), move |cx, row: &ProcRow, _action| {
+            attach_with_pid(cx, template.clone(), row.pid.clone());
+        });
+        Box::new(overlaid(picker))
+    });
+}
+
+/// IntelliJ "Attach to Process" (`Ctrl-Alt-F5`): pick a running process and
+/// attach this language's debug adapter to it.
+///
+/// The pid is handed to the template as its FIRST parameter, which is how the
+/// shipped attach templates are written (`"pid": "{0}"`); any further parameters
+/// the template declares are prompted for as usual. A language whose debugger
+/// config has no `request = "attach"` template says so — there is nothing
+/// sensible to guess.
+pub fn dap_attach_to_process(cx: &mut Context) {
+    let templates: Vec<DebugTemplate> = {
+        let doc = doc!(cx.editor);
+        let Some(config) = doc
+            .language_config()
+            .and_then(|config| config.debugger.as_ref())
+        else {
+            cx.editor
+                .set_error("No debug adapter available for this language");
+            return;
+        };
+        config
+            .templates
+            .iter()
+            .filter(|t| t.request == "attach")
+            .cloned()
+            .collect()
+    };
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    match templates.len() {
+        0 => bridge
+            .editor
+            .set_error("No attach debug config for this language"),
+        1 => attach_process_picker(&mut bridge, templates[0].clone()),
+        // More than one attach template (a local attach and a gdbserver one,
+        // say): choose which, then the process.
+        _ => push_layer_later(bridge.jobs, move || {
+            let columns = [ui::PickerColumn::new(
+                "attach config",
+                |t: &DebugTemplate, _: &()| t.name.as_str().into(),
+            )];
+            let picker = Picker::new(columns, 0, templates, (), |cx, template, _action| {
+                attach_process_picker(cx, template.clone());
+            });
+            Box::new(overlaid(picker))
+        }),
+    }
+}
+
 /// IntelliJ "Toggle Temporary Line Breakpoint" (`Ctrl-Alt-Shift-F8`), gdb
 /// `tbreak`: a breakpoint that removes itself the first time it is hit.
 ///

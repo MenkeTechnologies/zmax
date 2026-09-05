@@ -1424,6 +1424,11 @@
 | `focus_structure` | Focus the structure/symbol outline panel | **spacemacs, hybrid** — normal: `` <space>Wo ``, `` <space>Ws ``, select: `` <space>Wo ``, `` <space>Ws `` |
 | `hide_active_tool_window` | Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc) | **spacemacs, hybrid** — normal: `` <space>Wq ``, select: `` <space>Wq `` |
 | `jump_to_last_tool_window` | Toggle focus between the editor and the last tool window (JetBrains F12) | **spacemacs, hybrid** — normal: `` <space>W<tab> ``, select: `` <space>W<tab> `` |
+| `stretch_tool_window_left` | Narrow the workbench's left drawer (JetBrains Stretch to Left) | **spacemacs, hybrid** — normal: `` <space>W<left> ``, select: `` <space>W<left> `` |
+| `stretch_tool_window_right` | Widen the workbench's left drawer (JetBrains Stretch to Right) | **spacemacs, hybrid** — normal: `` <space>W<right> ``, select: `` <space>W<right> `` |
+| `stretch_tool_window_up` | Grow the workbench's bottom drawer (JetBrains Stretch to Top) | **spacemacs, hybrid** — normal: `` <space>W<up> ``, select: `` <space>W<up> `` |
+| `stretch_tool_window_down` | Shrink the workbench's bottom drawer (JetBrains Stretch to Bottom) | **spacemacs, hybrid** — normal: `` <space>W<down> ``, select: `` <space>W<down> `` |
+| `recent_changes_picker` | Files this project changed most recently, newest first (JetBrains Recent Changes) | **spacemacs, hybrid** — normal: `` <space>jC ``, select: `` <space>jC `` |
 | `focus_bookmarks` | Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks) | **spacemacs, hybrid** — normal: `` <space>Wb ``, select: `` <space>Wb `` |
 | `focus_marks_panel` | Focus the Marks tool window | **spacemacs, hybrid** — normal: `` <space>Wk ``, select: `` <space>Wk `` |
 | `focus_registers_panel` | Focus the Registers tool window | **spacemacs, hybrid** — normal: `` <space>WR ``, select: `` <space>WR `` |
@@ -1964,6 +1969,7 @@
 | `dap_edit_condition` | Edit breakpoint condition on current line | **helix** — normal: `` <space>G<C-c> ``, select: `` <space>G<C-c> `` |
 | `dap_breakpoints_picker` | View all breakpoints in a picker (JetBrains View Breakpoints) | **spacemacs, hybrid** — normal: `` <space>dB ``, select: `` <space>dB `` |
 | `dap_toggle_temporary_breakpoint` | Toggle a breakpoint that clears on its first hit (JetBrains Toggle Temporary Line Breakpoint, gdb tbreak) | **spacemacs, hybrid** — normal: `` <space>dt ``, select: `` <space>dt `` |
+| `dap_attach_to_process` | Attach the debugger to a running process (JetBrains Attach to Process, Ctrl Alt F5) | **spacemacs, hybrid** — normal: `` <space>da ``, select: `` <space>da `` |
 | `dap_show_execution_point` | Jump to where the program is stopped (JetBrains Show Execution Point, Alt F10) | **spacemacs, hybrid** — normal: `` <space>dx ``, select: `` <space>dx `` |
 | `dap_evaluate_expression` | Evaluate an expression in the selected frame (JetBrains Evaluate Expression, Alt F8) | **spacemacs, hybrid** — normal: `` <space>de ``, select: `` <space>de `` |
 | `dap_quick_evaluate` | Evaluate the selection or word at the cursor (JetBrains Quick Evaluate, Ctrl Alt F8) | **spacemacs, hybrid** — normal: `` <space>dE ``, select: `` <space>dE `` |
@@ -2144,6 +2150,7 @@
 | `dabbrev_completion` | List the buffer words that could expand the word before point (emacs dabbrev-completion) | **spacemacs, hybrid** — normal: `` <A-C-/> `` |
 | `copy_reference` | Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference) |  |
 | `error_description` | Show the full text of the diagnostic under the cursor (JetBrains Error Description) |  |
+| `context_info` | Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q) | **spacemacs, hybrid** — normal: `` <space>lQ ``, select: `` <space>lQ `` |
 | `highlight_usages_in_file` | Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7) | **spacemacs, hybrid** — normal: `` <space>su ``, select: `` <space>su `` |
 | `build_project` | Build the project with its own build tool (JetBrains Build Project, Ctrl F9) | **spacemacs, hybrid** — normal: `` <space>pB ``, select: `` <space>pB `` |
 | `rebuild_project` | Clean and build the project (JetBrains Rebuild, Ctrl Shift F9) | **spacemacs, hybrid** — normal: `` <space>pC ``, select: `` <space>pC `` |
