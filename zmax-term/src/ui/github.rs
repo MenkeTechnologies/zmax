@@ -2999,6 +2999,12 @@ impl Component for GithubLog {
 
 // ── text page ────────────────────────────────────────────────────────────────
 
+/// The work a text page runs on its first render: it either produces the styled
+/// lines or the message to show in their place. Boxed because it is handed over
+/// to the worker thread, and named because the spelled-out type is what
+/// `clippy::type_complexity` refuses in the field below.
+type PendingFetch = Box<dyn FnOnce() -> Result<Vec<TextLine>, String> + Send>;
+
 /// A scrollable, pre-styled text page: release notes, a commit diff, or one
 /// file's patch. Content is either supplied up front ([`GithubText::ready`]) or
 /// fetched on first render ([`GithubText::fetch`]).
@@ -3008,7 +3014,7 @@ pub struct GithubText {
     lines: Vec<TextLine>,
     error: Option<String>,
     /// The fetch to run on first render, if the content wasn't ready.
-    pending: Option<Box<dyn FnOnce() -> Result<Vec<TextLine>, String> + Send>>,
+    pending: Option<PendingFetch>,
     req: Option<u64>,
     scroll: usize,
     hscroll: usize,

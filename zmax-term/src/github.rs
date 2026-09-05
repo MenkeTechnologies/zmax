@@ -554,7 +554,7 @@ impl Run {
 
     /// Wall-clock duration; still ticking while the run is in flight.
     pub fn duration(&self) -> String {
-        let end = (self.status == "completed").then(|| self.updated_at.as_str());
+        let end = (self.status == "completed").then_some(self.updated_at.as_str());
         elapsed(&self.started_at, end)
     }
 

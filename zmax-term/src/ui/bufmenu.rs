@@ -153,7 +153,7 @@ fn buried_focus_stamp(
 /// Which arm of `Buffer-menu-bury`'s `cond` (buff-menu.el:739-749) ran, so the
 /// key handler can do the editor half and echo the matching message.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Buried {
+enum BuryOutcome {
     /// `((null buffer))` (buff-menu.el:739): point was not on a buffer line, so
     /// nothing happened and nothing was echoed.
     NoBuffer,
@@ -425,9 +425,10 @@ impl BufferMenu {
     /// `list-buffers--refresh` (buff-menu.el:827-833), which keeps a buffer when
     /// `(and (or show-internal (not (string= (substring name 0 1) " ")) file)
     /// (or file show-non-file))`:
-    ///   * the `I` flag off hides an internal buffer *unless it visits a file*,
-    ///     which is why `has_file` short-circuits the internal test as well;
-    ///   * the `T` flag on (`show-non-file` nil) keeps only file-visiting ones.
+    /// * the `I` flag off hides an internal buffer *unless it visits a file*,
+    ///   which is why `has_file` short-circuits the internal test as well;
+    /// * the `T` flag on (`show-non-file` nil) keeps only file-visiting ones.
+    ///
     /// zmax's notion of "internal" is [`zmax_core::buffer_menu::is_internal_name`]
     /// — the space-prefixed names Emacs means plus the `*…*` special buffers,
     /// which is where zmax puts the scratch/message buffers Emacs names that way.
@@ -513,18 +514,18 @@ impl BufferMenu {
     ///     (buff-menu.el:747-749).
     ///
     /// `live` is the caller's `buffer-live-p` answer for the buffer on this line.
-    fn bury_row(&mut self, live: bool) -> Buried {
+    fn bury_row(&mut self, live: bool) -> BuryOutcome {
         let Some(key) = self.menu.current_key() else {
-            return Buried::NoBuffer;
+            return BuryOutcome::NoBuffer;
         };
         if live {
             match self.menu.bury_current() {
-                Some(buried) => Buried::Buried(buried),
-                None => Buried::NoBuffer,
+                Some(buried) => BuryOutcome::Buried(buried),
+                None => BuryOutcome::NoBuffer,
             }
         } else {
             self.delete_row(key);
-            Buried::Dead(key)
+            BuryOutcome::Dead(key)
         }
     }
 
@@ -807,7 +808,7 @@ impl Component for BufferMenu {
                     .and_then(|k| self.doc_for(k))
                     .is_some_and(|id| cx.editor.document(id).is_some());
                 match self.bury_row(live) {
-                    Buried::Buried(buried) => {
+                    BuryOutcome::Buried(buried) => {
                         if let Some(id) = self.doc_for(buried) {
                             let stamp = buried_focus_stamp(
                                 cx.editor
@@ -824,12 +825,12 @@ impl Component for BufferMenu {
                     }
                     // buff-menu.el:749 — the row is gone, and nothing is buried;
                     // its stale document id goes with it.
-                    Buried::Dead(dead) => {
+                    BuryOutcome::Dead(dead) => {
                         self.ids.remove(&dead);
                         self.status = "Buffer is dead; removing from list.".to_string();
                     }
                     // buff-menu.el:739 — point is not on a buffer line: no echo.
-                    Buried::NoBuffer => {}
+                    BuryOutcome::NoBuffer => {}
                 }
             }
 
@@ -1265,7 +1266,7 @@ mod tests {
         m.menu.move_selection(1); // point on "b"
         m.menu.set_mark(2, Mark::Delete);
 
-        assert_eq!(m.bury_row(true), Buried::Buried(2));
+        assert_eq!(m.bury_row(true), BuryOutcome::Buried(2));
         assert_eq!(names(&m), ["a", "c", "b"], "buried to the bottom, not swapped");
         assert_eq!(m.menu.selected(), 1, "save-excursion: point does not move");
         assert_eq!(
@@ -1282,7 +1283,7 @@ mod tests {
         // Burying the bottom row leaves the order alone — deleting the last
         // entry and re-printing it at point-max puts it back where it was.
         m.menu.goto_last();
-        assert_eq!(m.bury_row(true), Buried::Buried(2));
+        assert_eq!(m.bury_row(true), BuryOutcome::Buried(2));
         assert_eq!(names(&m), ["a", "c", "b"]);
         assert_eq!(m.menu.selected(), 2);
     }
@@ -1301,7 +1302,7 @@ mod tests {
         m.menu.move_selection(1); // point on "b"
         m.menu.set_mark(2, Mark::Delete);
 
-        assert_eq!(m.bury_row(false), Buried::Dead(2));
+        assert_eq!(m.bury_row(false), BuryOutcome::Dead(2));
         assert_eq!(names(&m), ["a", "c"], "the dead buffer is gone, not sunk");
         assert_eq!(m.menu.selected(), 1, "point stays put; the next row moved up");
         assert_eq!(m.menu.current_key(), Some(3));
@@ -1313,7 +1314,7 @@ mod tests {
 
         // Point on no buffer line at all: the first cond arm, which does nothing.
         let mut empty = menu(Vec::new());
-        assert_eq!(empty.bury_row(true), Buried::NoBuffer);
+        assert_eq!(empty.bury_row(true), BuryOutcome::NoBuffer);
         assert!(empty.menu.is_empty());
     }
 
