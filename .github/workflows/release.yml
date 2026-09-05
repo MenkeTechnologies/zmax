@@ -73,15 +73,21 @@ jobs:
       # picks the runner's native arm64 clang and then hands it x86_64 assembly:
       # "unrecognized instruction mnemonic" on every x86_64_*.s, and the release's
       # Intel binary never gets built (v0.4.51). Point the C compiler at the
-      # x86_64 slice of the universal SDK. Rust-side C builds go through cc-rs,
-      # which already passes -arch itself, so the repeated flag changes nothing
-      # there. The crate's own cross guard is lifted by the `force-cross` feature
-      # zmax-term names in its manifest.
+      # x86_64 slice of the universal SDK. The crate's own cross guard is lifted
+      # by the `force-cross` feature zmax-term names in its manifest.
+      #
+      # The variables are *target-scoped* (`CC_<target>` / `CFLAGS_<target>`, the
+      # form cc-rs and gmp-mpfr-sys's configure both read). A bare `CC`/`CFLAGS`
+      # also reaches the compilation of every *build script*, which is built for
+      # the host: cc-rs then produced x86_64 objects for an arm64 host binary and
+      # the link died with "ignoring file libzstd_sys-….rlib: found architecture
+      # 'x86_64', required architecture 'arm64'" while building zshrs's build
+      # script, so the Intel target failed in v0.4.73 and v0.4.74.
       - name: Cross-compile setup (x86_64 macOS on the arm64 runner)
         if: matrix.target == 'x86_64-apple-darwin'
         run: |
-          echo "CC=clang" >> "$GITHUB_ENV"
-          echo "CFLAGS=-arch x86_64" >> "$GITHUB_ENV"
+          echo "CC_x86_64_apple_darwin=clang" >> "$GITHUB_ENV"
+          echo "CFLAGS_x86_64_apple_darwin=-arch x86_64" >> "$GITHUB_ENV"
 
       # No actions/setup-python step on purpose: zmax depends on pythonrs with
       # `default-features = false`, so nothing in the build links pyo3/libpython.
@@ -155,14 +161,23 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      # Create the release, or upload into the one that is already there. A
+      # re-run of a tag whose first attempt published (v0.4.73, run
+      # 33992519828) used to die on "a release with the same tag name already
+      # exists", taking the Homebrew tap update down with it — so a re-run to
+      # pick up a target that failed the first time could never succeed.
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
-            --generate-notes \
-            artifacts/*.tar.gz
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" --clobber artifacts/*.tar.gz
+          else
+            gh release create "${{ github.ref_name }}" \
+              --title "${{ github.ref_name }}" \
+              --generate-notes \
+              artifacts/*.tar.gz
+          fi
 
   homebrew:
     name: Update Homebrew tap
