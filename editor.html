@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-f7c686e8.js";
+            window.path_to_searchindex_js = "searchindex-287eead0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -328,9 +328,9 @@ workspace-diagnostics = ["warning", "error"]
 </thead>
 <tbody>
 <tr><td><code>powerline</code></td><td>Draw the frame-wide powerline bar; <code>false</code> gives every window its own status line built from the keys below</td><td><code>true</code></td></tr>
-<tr><td><code>left</code></td><td>A list of elements aligned to the left of the statusline</td><td><code>["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]</code></td></tr>
+<tr><td><code>left</code></td><td>A list of elements aligned to the left of the statusline</td><td><code>["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator", "busy"]</code></td></tr>
 <tr><td><code>center</code></td><td>A list of elements aligned to the middle of the statusline</td><td><code>[]</code></td></tr>
-<tr><td><code>right</code></td><td>A list of elements aligned to the right of the statusline</td><td><code>["diagnostics", "selections", "register", "position", "file-encoding"]</code></td></tr>
+<tr><td><code>right</code></td><td>A list of elements aligned to the right of the statusline</td><td><code>["diagnostics", "ci-status", "trailing-whitespace", "mixed-indent", "selections", "register", "file-type", "file-encoding", "file-format-icon", "position", "position-percentage"]</code></td></tr>
 <tr><td><code>separator</code></td><td>The character used to separate elements in the statusline</td><td><code>"│"</code></td></tr>
 <tr><td><code>mode.normal</code></td><td>The text shown in the <code>mode</code> element for normal mode</td><td><code>"NOR"</code></td></tr>
 <tr><td><code>mode.insert</code></td><td>The text shown in the <code>mode</code> element for insert mode</td><td><code>"INS"</code></td></tr>
@@ -358,6 +358,7 @@ workspace-diagnostics = ["warning", "error"]
 <tr><td><code>file-line-ending</code></td><td>The file line endings (CRLF or LF)</td></tr>
 <tr><td><code>file-indent-style</code></td><td>The file indentation style</td></tr>
 <tr><td><code>read-only-indicator</code></td><td>An indicator that shows <code>[readonly]</code> when a file cannot be written</td></tr>
+<tr><td><code>busy</code></td><td>vim <code>'busy'</code>: shows <code>[busy]</code> while the buffer’s <code>:setlocal busy</code> count is above zero, and nothing otherwise</td></tr>
 <tr><td><code>total-line-numbers</code></td><td>The total line numbers of the opened file</td></tr>
 <tr><td><code>file-type</code></td><td>The type of the opened file</td></tr>
 <tr><td><code>diagnostics</code></td><td>The number of warnings and/or errors</td></tr>
