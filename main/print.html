@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d8fc0944.js";
+            window.path_to_searchindex_js = "searchindex-7a6ff158.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -5051,6 +5051,11 @@ without scrolling.</p>
 <tr><td><code>focus_structure</code></td><td>Focus the structure/symbol outline panel</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code>, select: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code></td></tr>
 <tr><td><code>hide_active_tool_window</code></td><td>Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wq</code>, select: <code>&lt;space&gt;Wq</code></td></tr>
 <tr><td><code>jump_to_last_tool_window</code></td><td>Toggle focus between the editor and the last tool window (JetBrains F12)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;tab&gt;</code>, select: <code>&lt;space&gt;W&lt;tab&gt;</code></td></tr>
+<tr><td><code>stretch_tool_window_left</code></td><td>Narrow the workbench’s left drawer (JetBrains Stretch to Left)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;left&gt;</code>, select: <code>&lt;space&gt;W&lt;left&gt;</code></td></tr>
+<tr><td><code>stretch_tool_window_right</code></td><td>Widen the workbench’s left drawer (JetBrains Stretch to Right)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;right&gt;</code>, select: <code>&lt;space&gt;W&lt;right&gt;</code></td></tr>
+<tr><td><code>stretch_tool_window_up</code></td><td>Grow the workbench’s bottom drawer (JetBrains Stretch to Top)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;up&gt;</code>, select: <code>&lt;space&gt;W&lt;up&gt;</code></td></tr>
+<tr><td><code>stretch_tool_window_down</code></td><td>Shrink the workbench’s bottom drawer (JetBrains Stretch to Bottom)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;down&gt;</code>, select: <code>&lt;space&gt;W&lt;down&gt;</code></td></tr>
+<tr><td><code>recent_changes_picker</code></td><td>Files this project changed most recently, newest first (JetBrains Recent Changes)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;jC</code>, select: <code>&lt;space&gt;jC</code></td></tr>
 <tr><td><code>focus_bookmarks</code></td><td>Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wb</code>, select: <code>&lt;space&gt;Wb</code></td></tr>
 <tr><td><code>focus_marks_panel</code></td><td>Focus the Marks tool window</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wk</code>, select: <code>&lt;space&gt;Wk</code></td></tr>
 <tr><td><code>focus_registers_panel</code></td><td>Focus the Registers tool window</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;WR</code>, select: <code>&lt;space&gt;WR</code></td></tr>
@@ -5590,6 +5595,11 @@ without scrolling.</p>
 <tr><td><code>dap_terminate</code></td><td>End debug session</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dq</code>, select: <code>&lt;space&gt;dq</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;Gt</code>, select: <code>&lt;space&gt;Gt</code></td></tr>
 <tr><td><code>dap_edit_condition</code></td><td>Edit breakpoint condition on current line</td><td><strong>helix</strong> — normal: <code>&lt;space&gt;G&lt;C-c&gt;</code>, select: <code>&lt;space&gt;G&lt;C-c&gt;</code></td></tr>
 <tr><td><code>dap_breakpoints_picker</code></td><td>View all breakpoints in a picker (JetBrains View Breakpoints)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dB</code>, select: <code>&lt;space&gt;dB</code></td></tr>
+<tr><td><code>dap_toggle_temporary_breakpoint</code></td><td>Toggle a breakpoint that clears on its first hit (JetBrains Toggle Temporary Line Breakpoint, gdb tbreak)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dt</code>, select: <code>&lt;space&gt;dt</code></td></tr>
+<tr><td><code>dap_attach_to_process</code></td><td>Attach the debugger to a running process (JetBrains Attach to Process, Ctrl Alt F5)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;da</code>, select: <code>&lt;space&gt;da</code></td></tr>
+<tr><td><code>dap_show_execution_point</code></td><td>Jump to where the program is stopped (JetBrains Show Execution Point, Alt F10)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dx</code>, select: <code>&lt;space&gt;dx</code></td></tr>
+<tr><td><code>dap_evaluate_expression</code></td><td>Evaluate an expression in the selected frame (JetBrains Evaluate Expression, Alt F8)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;de</code>, select: <code>&lt;space&gt;de</code></td></tr>
+<tr><td><code>dap_quick_evaluate</code></td><td>Evaluate the selection or word at the cursor (JetBrains Quick Evaluate, Ctrl Alt F8)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dE</code>, select: <code>&lt;space&gt;dE</code></td></tr>
 <tr><td><code>dap_edit_log</code></td><td>Edit breakpoint log message on current line</td><td><strong>helix</strong> — normal: <code>&lt;space&gt;G&lt;C-l&gt;</code>, select: <code>&lt;space&gt;G&lt;C-l&gt;</code></td></tr>
 <tr><td><code>dap_switch_thread</code></td><td>Switch current thread</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dgt</code>, select: <code>&lt;space&gt;dgt</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;Gst</code>, select: <code>&lt;space&gt;Gst</code></td></tr>
 <tr><td><code>dap_switch_stack_frame</code></td><td>Switch stack frame</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dgf</code>, select: <code>&lt;space&gt;dgf</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;Gsf</code>, select: <code>&lt;space&gt;Gsf</code></td></tr>
@@ -5767,6 +5777,11 @@ without scrolling.</p>
 <tr><td><code>dabbrev_completion</code></td><td>List the buffer words that could expand the word before point (emacs dabbrev-completion)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;A-C-/&gt;</code></td></tr>
 <tr><td><code>copy_reference</code></td><td>Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference)</td><td></td></tr>
 <tr><td><code>error_description</code></td><td>Show the full text of the diagnostic under the cursor (JetBrains Error Description)</td><td></td></tr>
+<tr><td><code>context_info</code></td><td>Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lQ</code>, select: <code>&lt;space&gt;lQ</code></td></tr>
+<tr><td><code>highlight_usages_in_file</code></td><td>Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;su</code>, select: <code>&lt;space&gt;su</code></td></tr>
+<tr><td><code>build_project</code></td><td>Build the project with its own build tool (JetBrains Build Project, Ctrl F9)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pB</code>, select: <code>&lt;space&gt;pB</code></td></tr>
+<tr><td><code>rebuild_project</code></td><td>Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pC</code>, select: <code>&lt;space&gt;pC</code></td></tr>
+<tr><td><code>new_file_in_directory</code></td><td>Create a file next to the current one and open it (JetBrains New in This Directory)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fn</code>, select: <code>&lt;space&gt;fn</code></td></tr>
 <tr><td><code>find_sibling_file</code></td><td>Open a sibling of this file: header/source, test/impl, style/template (emacs find-sibling-file, JetBrains Related File)</td><td></td></tr>
 <tr><td><code>navigation_bar</code></td><td>Jump to an enclosing function/class from the breadcrumb trail (JetBrains Navigation Bar)</td><td></td></tr>
 <tr><td><code>select_in</code></td><td>Select this file in another view: project tree, dired, terminal (JetBrains Select In)</td><td></td></tr>
