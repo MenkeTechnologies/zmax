@@ -2693,7 +2693,7 @@ const TOPICS: &[(&str, &str)] = &[
     (
         "Languages: what is supported",
         "zmax parses 361 languages with tree-sitter and ships a default language\n\
-      server for 206 of them, so most files work with nothing installed but the\n\
+      server for 207 of them, so most files work with nothing installed but the\n\
       server itself.\n\n\
       346 have syntax highlighting\n\
       150 have tree-sitter textobjects — the m menu's function, class and\n\
@@ -2775,7 +2775,8 @@ const TOPICS: &[(&str, &str)] = &[
       tsx (typescript-language-server) turtle (turtle-language-server)\n\
       typescript (typescript-language-server) typespec (tsp-server)\n\
       typst (tinymist) v (v-analyzer) vala (vala-language-server)\n\
-      verilog (verible-verilog-ls) vhdl (vhdl_ls) vue (vue-language-server)\n\
+      verilog (verible-verilog-ls) vhdl (vhdl_ls) vim (vim-language-server)\n\
+      vue (vue-language-server)\n\
       wat (wat_server) wgsl (wgsl-analyzer) wikitext (wikitext-lsp)\n\
       woodpecker-ci (yaml-language-server) yaml (yaml-language-server)\n\
       yang (yang-language-server) yara (yls) zig (zls)",

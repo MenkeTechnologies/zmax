@@ -32855,10 +32855,18 @@ fn ex_version(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    // Derived from `ReplLang::ALL` -- the one registry of embedded languages --
+    // so this cannot drift from what is compiled in the way a literal list did:
+    // it still read "elisp, vimscript, awk, zsh, stryke" at 0.4.72, long after
+    // ruby, php, python, node, arb, tcl and r had joined them.
     let scripting = if cfg!(feature = "scripting") {
-        "elisp, vimscript, awk, zsh, stryke"
+        crate::ui::repl::ReplLang::ALL
+            .iter()
+            .map(|l| l.label())
+            .collect::<Vec<_>>()
+            .join(", ")
     } else {
-        "disabled (built without the `scripting` feature)"
+        "disabled (built without the `scripting` feature)".to_string()
     };
     let content = format!(
         "zmax {ver}\n\n\

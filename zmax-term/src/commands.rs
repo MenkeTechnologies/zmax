@@ -20602,8 +20602,10 @@ const LAYERS: &[(&str, &str, &str)] = &[
      "SPC g tree: status (SPC g s), blame (SPC g b), file history (SPC g t), per-file dispatch (SPC g f m), view file at a rev (SPC g f f)."),
     ("diff-merge", "Buffer-vs-HEAD diff (:diff) and 3-pane conflict resolver (:merge)",
      "diff3 base pane; ]n/[n jump between conflict markers; ediff over files/buffers (SPC D ...)."),
-    ("scripting", "Five embedded interpreters: elisp, vimscript, awk, zsh, stryke",
-     "Pure-Rust, compiled in. :elisp/:vim/:awk/:zsh/:stryke evaluate against the live buffer. init.el and init.vim are sourced at startup."),
+    // Named individually rather than counted: a numeral here went stale the moment
+    // the sixth interpreter landed, and stayed wrong through seven more.
+    ("scripting", "Embedded interpreters: elisp, vimscript, stryke, awk, zsh, node, ruby, php, python, arb, tcl, r",
+     "Pure-Rust, compiled in. :elisp/:vim/:stryke/:awk/:zsh/:node/:ruby/:php/:python/:arb/:tcl/:rlang evaluate against the live buffer. init.el and init.vim are sourced at startup."),
     ("repl", "Interactive REPL fronting all embedded languages (SPC a r / :repl)", ""),
     ("org", "Org-mode: outline folding, TODO cycling, capture, date-aware agenda", ""),
     ("snippets", "Snippet library (:snippets) with per-language triggers and tab stops", ""),

@@ -350,6 +350,17 @@ Features:
 
 Commands:
 
+* **tmux paste buffers** are reachable as a third store next to the registers and
+  the system clipboard. `:tmux-buffer-yank` puts the selections in a NEW tmux
+  buffer without touching the system clipboard, `:tmux-buffer-paste-after` and
+  `:tmux-buffer-paste-before` paste the newest one (or a named one), and
+  `:tmux-buffers` lists the session's buffers. The same four are bindable as the
+  static commands `yank_to_tmux_buffer`, `paste_tmux_buffer_after`,
+  `paste_tmux_buffer_before` and `tmux_buffer_picker`, and appear under **tmux
+  Buffers** in the right-click menu when a tmux session is detected. Being
+  session-scoped, they survive a stray copy in another application — which the
+  `+` register does not. Outside tmux the commands report an error and the menu
+  entry is absent.
 * `:encrypt` / `:decrypt` (`:age-encrypt` / `:age-decrypt`) — age passphrase
   encryption of the primary selection (or the whole buffer when the selection is
   empty), in place. Prompts for the passphrase behind a masked prompt with no
@@ -437,6 +448,41 @@ Commands:
 
 Usability improvements:
 
+* **The right-click menu reaches the editor's own register, not just the system
+  clipboard.** Copy and Paste were both wired to `+`, so the vim `y`/`p` register
+  had no mouse route at all. There are now four entries: Copy / Paste on the
+  editor register (hints `y` / `p`) and Copy to System Clipboard / Paste from
+  System Clipboard on `+` (hints `␣y` / `␣p`). Both Copy entries share the
+  whole-buffer-when-nothing-is-selected behaviour and the caret restore.
+* `ps-print-buffer-with-faces` and its region, spool and despool siblings now
+  emit the buffer's face colours rather than the plain text the non-`-with-faces`
+  commands emit. Each run of like-styled text carries its foreground and its
+  bold/italic/underline/strikeout bits into the PostScript, the way
+  `ps-screen-to-bit-face` reduces a face (ps-print.el:6305-6314). Face
+  *backgrounds* stay unpainted because `ps-use-face-background` defaults to nil
+  (ps-print.el:3166-3172), so the output matches what Emacs itself produces on
+  the default setting.
+* `font-lock-add-keywords` keywords now follow the scope they were added with. A
+  keyword added for a major mode paints only in buffers of that mode and one
+  added with a nil mode only in the buffer it was added in, re-scoped on every
+  buffer switch the way `font-lock-set-defaults` re-applies them
+  (font-lock.el:1914-1929). Hi-Lock, which does the painting, has a single global
+  pattern set, so without the re-scope every keyword painted everywhere.
+* **The Buffer Menu takes a prefix argument and its listing toggles.** `C-u`,
+  `M--` and digits build an argument inside the overlay with the same 4^n
+  semantics `universal-argument` uses everywhere else — the menu consumes its own
+  keys, so the global prefix commands never run while it is up. `T` and `F` now
+  *set* the internal-buffer and files-only filters from that argument rather than
+  always flipping them, per simple.el's convention, and each echoes which buffers
+  the listing now keeps. `~` burying a row sinks it to the bottom of the list, or
+  removes the row outright when the buffer is dead (buff-menu.el:739-749).
+* **Image buffers crop, cut and animate.** `i c` and `i x` open a rectangle
+  session over the image — arrows nudge, `RET` applies — cropping to the
+  rectangle or filling it with `image-cut-color`, through ImageMagick the way
+  `image-crop--crop-image-1` does (image-crop.el:294-399). `image-toggle-animation`
+  plays a multi-frame image and stops on the frame it reached, keeping `:index`
+  across the stop the way image-mode.el:1105-1126 does; looping is off, matching
+  `image-animate-loop`'s nil default.
 * **The tab bar is on whenever more than one buffer is open**, and it is now
   vim-airline's tabline: the buffers as powerline pills, the current one in the
   accent colour, a `[+]` on the modified ones, `‹` and `…` where the row runs out
@@ -485,6 +531,10 @@ Usability improvements:
 
 Fixes:
 
+* Hovering a divider in the right-click menu no longer moves the highlight off
+  the item under the pointer. A divider is not selectable, so the row it sits on
+  had no entry to highlight and the previous highlight was cleared instead of
+  kept.
 * The `:tutor` banner spells zmax. The ASCII art at the top of `runtime/tutor`
   was still the six-letter figlet of the old name, so the first thing the
   tutorial showed was the wrong editor.
