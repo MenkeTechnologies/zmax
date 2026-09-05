@@ -18,7 +18,8 @@
 //!           `Buffer-menu-2-window`)
 //!   C-o   — display it in another window, staying in the menu
 //!           (`Buffer-menu-switch-other-window`)
-//!   b     — bury the buffer at point (`Buffer-menu-bury`)
+//!   b     — bury the buffer at point, sinking its row to the bottom of the
+//!           list; a dead buffer's row is dropped instead (`Buffer-menu-bury`)
 //!   v     — select the buffer at point plus all `>`-marked ones (`Buffer-menu-select`)
 //!   m     — mark for display/selection `>` (`Buffer-menu-mark`)
 //!   d     — flag for deletion `D` and advance (`Buffer-menu-delete`);
@@ -34,6 +35,9 @@
 //!           (`Buffer-menu-visit-tags-table`)
 //!   T     — toggle showing only file-visiting buffers (`Buffer-menu-toggle-files-only`)
 //!   I     — toggle showing internal buffers (`Buffer-menu-toggle-internal`)
+//!   C-u   — a prefix argument for `T` / `I` (`universal-argument`): a positive
+//!           one turns the listing ON rather than toggling it, a zero or
+//!           negative one turns it off
 //!   2     — this buffer in one window, the previously-current one in the other
 //!           (`Buffer-menu-2-window`)
 //!   M-DEL — remove one mark character from every buffer, RET = all of them
@@ -57,7 +61,10 @@
 
 use tui::buffer::Buffer as Surface;
 use zmax_core::buffer_menu::{BufferMenu as BufferMenuModel, BufferRow, Mark};
-use zmax_view::{editor::Action, graphics::Rect, DocumentId, Editor};
+use zmax_view::{
+    editor::{Action, PrefixArg},
+    graphics::Rect, DocumentId, Editor,
+};
 
 use crate::{
     alt,
@@ -101,6 +108,10 @@ pub struct BufferMenu {
     width_delta: [isize; COLUMNS.len()],
     /// `M-DEL`: the next key names the mark character to remove everywhere.
     pending_unmark: bool,
+    /// The prefix argument `C-u` is building, consumed by the next command that
+    /// reads one (`T` / `I`, whose `interactive "P"` at buff-menu.el:386,397 is
+    /// what makes them argument-aware).
+    prefix: Option<Prefix>,
     /// The **bs** customization group when the menu was opened by `bs-show`;
     /// `None` for the plain `C-x C-b` Buffer Menu, which shows every column and
     /// filters nothing.
@@ -139,6 +150,91 @@ fn buried_focus_stamp(
         .or(Some(oldest))
 }
 
+/// Which arm of `Buffer-menu-bury`'s `cond` (buff-menu.el:739-749) ran, so the
+/// key handler can do the editor half and echo the matching message.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Buried {
+    /// `((null buffer))` (buff-menu.el:739): point was not on a buffer line, so
+    /// nothing happened and nothing was echoed.
+    NoBuffer,
+    /// The live-buffer arm (buff-menu.el:740-746): the row was deleted and
+    /// re-printed at the end of the list, and "Buffer buried." was echoed.
+    Buried(u64),
+    /// The dead-buffer arm (buff-menu.el:747-749): the row was deleted outright
+    /// — a dead buffer is *removed from the list*, not sunk to the bottom.
+    Dead(u64),
+}
+
+/// The prefix argument `C-u` is building inside this overlay.
+///
+/// The *value* semantics are [`zmax_view::editor::PrefixArg`] — the same type the
+/// global `universal-argument` command builds, so `C-u` means 4^n, `M--` means -1
+/// and a digit folds in the same way here as everywhere else. Only the
+/// accumulation is local: the Buffer Menu is a modal overlay that consumes keys
+/// in its own `handle_event`, so the global prefix commands never run while it is
+/// up and there is nothing to read out of `Editor::prefix_arg`.
+///
+/// The one thing the shared type has no room for is `closed`: simple.el:5518 has
+/// a `C-u` typed *after* the digits or minus sign end the argument, so the next
+/// digit is a command again rather than more of the number.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Prefix {
+    arg: PrefixArg,
+    closed: bool,
+}
+
+impl Prefix {
+    /// A fresh argument from the first `C-u` — emacs's bare `C-u`, i.e. 4.
+    fn new() -> Self {
+        Prefix {
+            arg: PrefixArg::Universal(1),
+            closed: false,
+        }
+    }
+
+    /// Another `C-u`: before any digit or minus sign it multiplies by 4
+    /// (simple.el:5520-5521); after one it ends the argument (simple.el:5518).
+    fn more(&mut self) {
+        match self.arg {
+            PrefixArg::Universal(n) => self.arg = PrefixArg::Universal(n.saturating_add(1)),
+            _ => self.closed = true,
+        }
+    }
+
+    /// A digit belongs to the argument while it is open (`digit-argument`).
+    fn push_digit(&mut self, d: u32) {
+        self.arg = self.arg.push_digit(d);
+    }
+
+    /// `-` before any digit (`negative-argument`, simple.el:5476-5486). Only
+    /// meaningful on a bare `C-u`; once digits are in, the sign is already set.
+    fn negate(&mut self) -> bool {
+        if matches!(self.arg, PrefixArg::Universal(_)) {
+            self.arg = PrefixArg::Negative;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// The echo-area readout while the argument is being typed —
+    /// `universal-argument--description` (simple.el:5455-5466), which shows
+    /// `C-u`, `C-u -` or `C-u <digits>`.
+    fn description(self) -> String {
+        match self.arg {
+            PrefixArg::Universal(n) => {
+                let mut out = String::from("C-u");
+                for _ in 1..n {
+                    out.push_str(" C-u");
+                }
+                out
+            }
+            PrefixArg::Negative => "C-u -".to_string(),
+            PrefixArg::Numeric(v) => format!("C-u {v}"),
+        }
+    }
+}
+
 impl BufferMenu {
     /// Open the Buffer Menu, snapshotting the editor's current buffers.
     pub fn new(editor: &Editor) -> Self {
@@ -152,6 +248,7 @@ impl BufferMenu {
             sort: None,
             width_delta: [0; COLUMNS.len()],
             pending_unmark: false,
+            prefix: None,
             bs: None,
             scroll: 0,
             viewport: 1,
@@ -299,19 +396,8 @@ impl BufferMenu {
         let mut rows = Vec::new();
         let mut ids = std::collections::BTreeMap::new();
         for doc in editor.documents() {
-            if self.files_only && doc.path().is_none() {
-                continue;
-            }
             let name = doc.display_name().into_owned();
-            if !self.show_internal
-                && doc.path().is_none()
-                && zmax_core::buffer_menu::is_internal_name(&name)
-            {
-                continue;
-            }
-            // `bs-dont-show-regexp` / `bs-must-always-show-regexp`, the filters
-            // that make `bs-show` a *customizable* buffer list.
-            if self.bs.as_ref().is_some_and(|bs| !bs.shows(&name)) {
+            if !self.lists_buffer(&name, doc.path().is_some()) {
                 continue;
             }
             let key = doc_key(doc.id());
@@ -333,6 +419,29 @@ impl BufferMenu {
         self.apply_sort(&mut rows);
         self.ids = ids;
         self.menu.set_rows(rows);
+    }
+
+    /// Whether a buffer belongs in the listing — the `when` clause of
+    /// `list-buffers--refresh` (buff-menu.el:827-833), which keeps a buffer when
+    /// `(and (or show-internal (not (string= (substring name 0 1) " ")) file)
+    /// (or file show-non-file))`:
+    ///   * the `I` flag off hides an internal buffer *unless it visits a file*,
+    ///     which is why `has_file` short-circuits the internal test as well;
+    ///   * the `T` flag on (`show-non-file` nil) keeps only file-visiting ones.
+    /// zmax's notion of "internal" is [`zmax_core::buffer_menu::is_internal_name`]
+    /// — the space-prefixed names Emacs means plus the `*…*` special buffers,
+    /// which is where zmax puts the scratch/message buffers Emacs names that way.
+    /// Pure — unit tested.
+    fn lists_buffer(&self, name: &str, has_file: bool) -> bool {
+        if self.files_only && !has_file {
+            return false;
+        }
+        if !self.show_internal && !has_file && zmax_core::buffer_menu::is_internal_name(name) {
+            return false;
+        }
+        // `bs-dont-show-regexp` / `bs-must-always-show-regexp`, the filters
+        // that make `bs-show` a *customizable* buffer list.
+        !self.bs.as_ref().is_some_and(|bs| !bs.shows(name))
     }
 
     /// `tabulated-list-sort`: order `rows` by the sort column, if one is set —
@@ -374,6 +483,95 @@ impl BufferMenu {
             }
         }
         n
+    }
+
+    /// `tabulated-list-delete-entry`: drop the row for `key` from the listing.
+    /// Point stays at the same index, so the row that followed moves up under
+    /// it — the model clamps only when the list got shorter than point.
+    fn delete_row(&mut self, key: u64) {
+        let rows: Vec<BufferRow> = self
+            .menu
+            .rows()
+            .iter()
+            .filter(|r| r.key != key)
+            .cloned()
+            .collect();
+        self.menu.set_rows(rows);
+    }
+
+    /// `Buffer-menu-bury` (`b`, buff-menu.el:735-749) — the listing half, without
+    /// the editor.
+    ///
+    /// The `cond` there has three arms, and only one of them sinks the row:
+    ///   * no buffer on this line → nothing at all (buff-menu.el:739);
+    ///   * a live buffer → the entry is deleted and re-printed at `point-max`,
+    ///     i.e. moved to the BOTTOM of the list (buff-menu.el:740-746). The
+    ///     `save-excursion` around it leaves point where it was, so point ends up
+    ///     on the row that moved up into that slot;
+    ///   * a dead buffer → the entry is deleted and NOT re-printed: a killed
+    ///     buffer is removed from the listing rather than buried
+    ///     (buff-menu.el:747-749).
+    ///
+    /// `live` is the caller's `buffer-live-p` answer for the buffer on this line.
+    fn bury_row(&mut self, live: bool) -> Buried {
+        let Some(key) = self.menu.current_key() else {
+            return Buried::NoBuffer;
+        };
+        if live {
+            match self.menu.bury_current() {
+                Some(buried) => Buried::Buried(buried),
+                None => Buried::NoBuffer,
+            }
+        } else {
+            self.delete_row(key);
+            Buried::Dead(key)
+        }
+    }
+
+    /// `Buffer-menu--selection-message` (buff-menu.el:377-380): what the `T` / `I`
+    /// toggles echo, chosen by the two flags in that order — files-only wins over
+    /// show-internal.
+    fn selection_message(&self) -> &'static str {
+        if self.files_only {
+            "Showing only file-visiting buffers."
+        } else if self.show_internal {
+            "Showing all buffers."
+        } else {
+            "Showing all buffers except internal ones."
+        }
+    }
+
+    /// The `(cond ((not arg) (not FLAG)) ((> (prefix-numeric-value arg) 0) t))`
+    /// both toggles share (buff-menu.el:388-389 and 399-400): no prefix argument
+    /// flips the flag, a positive one sets it, and a zero or negative one clears
+    /// it — the `cond` falling off its end yields nil.
+    fn toggled(flag: bool, arg: Option<i64>) -> bool {
+        match arg {
+            None => !flag,
+            Some(n) => n > 0,
+        }
+    }
+
+    /// `Buffer-menu-toggle-internal` (`I`, buff-menu.el:393-402): flip whether
+    /// internal buffers are listed, echo the selection message and re-render.
+    /// Internal means a name Emacs hides from `list-buffers` by default — the
+    /// filter `refresh` applies through
+    /// [`zmax_core::buffer_menu::is_internal_name`], mirroring
+    /// `list-buffers--refresh`'s `(or show-internal (not (string= (substring name
+    /// 0 1) " ")) file)` (buff-menu.el:829-831): a file-visiting buffer is listed
+    /// either way.
+    fn toggle_internal(&mut self, arg: Option<i64>, editor: &Editor) {
+        self.show_internal = Self::toggled(self.show_internal, arg);
+        self.refresh(editor);
+        self.status = self.selection_message().to_string();
+    }
+
+    /// `Buffer-menu-toggle-files-only` (`T`, buff-menu.el:382-391): the same
+    /// shape over the file-visiting filter, and the same echoed message.
+    fn toggle_files_only(&mut self, arg: Option<i64>, editor: &Editor) {
+        self.files_only = Self::toggled(self.files_only, arg);
+        self.refresh(editor);
+        self.status = self.selection_message().to_string();
     }
 
     /// The document id under point, if any.
@@ -504,6 +702,43 @@ impl Component for BufferMenu {
             return EventResult::Consumed(None);
         }
 
+        // `C-u` (`universal-argument`) starts a prefix argument, and a further
+        // `C-u` multiplies it by 4 (simple.el:5519-5521).
+        if key == ctrl!('u') {
+            let arg = match self.prefix {
+                Some(mut arg) => {
+                    arg.more();
+                    arg
+                }
+                None => Prefix::new(),
+            };
+            self.prefix = Some(arg);
+            self.status = arg.description();
+            return EventResult::Consumed(None);
+        }
+        // While one is being typed, digits and a leading `-` belong to the
+        // argument rather than to the Buffer Menu map — `universal-argument-map`
+        // binds them to `digit-argument` / `negative-argument`
+        // (simple.el:5474-5509). Any other key ends the argument and is handled
+        // below with it in hand.
+        if let Some(mut arg) = self.prefix.filter(|arg| !arg.closed) {
+            let digit = key.char().and_then(|c| c.to_digit(10));
+            if let Some(d) = digit {
+                arg.push_digit(d);
+                self.prefix = Some(arg);
+                self.status = arg.description();
+                return EventResult::Consumed(None);
+            }
+            if key.char() == Some('-') && arg.negate() {
+                self.prefix = Some(arg);
+                self.status = arg.description();
+                return EventResult::Consumed(None);
+            }
+        }
+        // `interactive "P"`: the argument the next command sees, `None` when no
+        // `C-u` preceded it.
+        let arg = self.prefix.take().map(|p| p.arg.value());
+
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
@@ -553,27 +788,48 @@ impl Component for BufferMenu {
                     return EventResult::Consumed(Some(cb));
                 }
             }
-            // b (`Buffer-menu-bury`): sink the buffer at point to the bottom of
-            // the list AND call `bury-buffer` on it, which moves it to the end
-            // of the global buffer list (buf-menu.el). zmax's most-recently-used
-            // order is `Document::focused_at` (`BufferSortKey::LastUsed`,
-            // zmax-view/src/editor.rs), so the global half is a demotion of that
-            // stamp; without it the buffer switcher still offered the buried
-            // buffer first. Emacs echoes "Buffer buried." for the live buffer.
+            // b (`Buffer-menu-bury`, buff-menu.el:735-749): sink the buffer at
+            // point to the bottom of the list ([`BufferMenu::bury_row`]) AND call
+            // `bury-buffer` on it (buff-menu.el:741), which puts it at the end of
+            // the global buffer list — with an explicit buffer argument that is
+            // all `bury-buffer` does, no window is touched (window.el:5089-5119).
+            // zmax's most-recently-used order is `Document::focused_at`
+            // (`BufferSortKey::LastUsed`, zmax-view/src/editor.rs), so the global
+            // half is a demotion of that stamp; without it the buffer switcher
+            // still offered the buried buffer first.
             key!('b') => {
-                if let Some(key) = self.menu.bury_current() {
-                    if let Some(id) = self.doc_for(key) {
-                        let stamp = buried_focus_stamp(
-                            cx.editor
-                                .documents()
-                                .filter(|doc| doc.id() != id)
-                                .map(|doc| doc.focused_at),
-                        );
-                        if let (Some(stamp), Some(doc)) = (stamp, cx.editor.document_mut(id)) {
-                            doc.focused_at = stamp;
+                // `buffer-live-p` on this line's buffer: the row survives a kill
+                // that happened elsewhere while the menu was up, so a row can
+                // name a document the editor no longer holds.
+                let live = self
+                    .menu
+                    .current_key()
+                    .and_then(|k| self.doc_for(k))
+                    .is_some_and(|id| cx.editor.document(id).is_some());
+                match self.bury_row(live) {
+                    Buried::Buried(buried) => {
+                        if let Some(id) = self.doc_for(buried) {
+                            let stamp = buried_focus_stamp(
+                                cx.editor
+                                    .documents()
+                                    .filter(|doc| doc.id() != id)
+                                    .map(|doc| doc.focused_at),
+                            );
+                            if let (Some(stamp), Some(doc)) = (stamp, cx.editor.document_mut(id)) {
+                                doc.focused_at = stamp;
+                            }
                         }
+                        // buff-menu.el:746.
+                        self.status = "Buffer buried.".to_string();
                     }
-                    self.status = "Buffer buried.".to_string();
+                    // buff-menu.el:749 — the row is gone, and nothing is buried;
+                    // its stale document id goes with it.
+                    Buried::Dead(dead) => {
+                        self.ids.remove(&dead);
+                        self.status = "Buffer is dead; removing from list.".to_string();
+                    }
+                    // buff-menu.el:739 — point is not on a buffer line: no echo.
+                    Buried::NoBuffer => {}
                 }
             }
 
@@ -619,17 +875,12 @@ impl Component for BufferMenu {
             // tags table from now on.
             key!('t') => self.visit_tags_table(),
 
-            // Display.
-            key!('T') => {
-                self.files_only = !self.files_only;
-                self.refresh(cx.editor);
-            }
-            // I (`Buffer-menu-toggle-internal`): reveal/hide internal (`*…*` /
-            // space-prefixed) buffers.
-            key!('I') => {
-                self.show_internal = !self.show_internal;
-                self.refresh(cx.editor);
-            }
+            // Display. Both toggles take a prefix argument (`interactive "P"`),
+            // and both echo `Buffer-menu--selection-message` before reverting.
+            key!('T') => self.toggle_files_only(arg, cx.editor),
+            // I (`Buffer-menu-toggle-internal`, buff-menu.el:393-402):
+            // reveal/hide internal (`*…*` / space-prefixed) buffers.
+            key!('I') => self.toggle_internal(arg, cx.editor),
             key!('g') | key!('R') => self.refresh(cx.editor),
 
             // ---- tabulated-list-mode column commands ----
@@ -799,6 +1050,7 @@ mod tests {
             sort: None,
             width_delta: [0; COLUMNS.len()],
             pending_unmark: false,
+            prefix: None,
             bs: None,
             scroll: 0,
             viewport: 10,
@@ -991,5 +1243,186 @@ mod tests {
 
         // The only buffer has nothing to sink below, so its stamp is left alone.
         assert_eq!(buried_focus_stamp(std::iter::empty()), None);
+    }
+
+    /// The names in display order, for the reordering assertions below.
+    fn names(m: &BufferMenu) -> Vec<String> {
+        m.menu.rows().iter().map(|r| r.name.clone()).collect()
+    }
+
+    /// `Buffer-menu-bury`'s live-buffer arm (buff-menu.el:740-746) deletes this
+    /// line's entry and re-prints it at `point-max` — the row goes to the BOTTOM
+    /// of the listing, not one step down — and the whole reorder happens inside a
+    /// `save-excursion`, so point keeps its position and the row that followed
+    /// moves up under it.
+    #[test]
+    fn bury_sinks_the_row_at_point_to_the_bottom_of_the_list() {
+        let mut m = menu(vec![
+            row(1, "a", 1, "Text"),
+            row(2, "b", 2, "Text"),
+            row(3, "c", 3, "Text"),
+        ]);
+        m.menu.move_selection(1); // point on "b"
+        m.menu.set_mark(2, Mark::Delete);
+
+        assert_eq!(m.bury_row(true), Buried::Buried(2));
+        assert_eq!(names(&m), ["a", "c", "b"], "buried to the bottom, not swapped");
+        assert_eq!(m.menu.selected(), 1, "save-excursion: point does not move");
+        assert_eq!(
+            m.menu.current_key(),
+            Some(3),
+            "so point now sits on the row that moved up"
+        );
+        assert_eq!(
+            m.menu.mark_of(2),
+            Mark::Delete,
+            "the `D` flag rides with the buffer, not the line"
+        );
+
+        // Burying the bottom row leaves the order alone — deleting the last
+        // entry and re-printing it at point-max puts it back where it was.
+        m.menu.goto_last();
+        assert_eq!(m.bury_row(true), Buried::Buried(2));
+        assert_eq!(names(&m), ["a", "c", "b"]);
+        assert_eq!(m.menu.selected(), 2);
+    }
+
+    /// The other two arms of the same `cond`: a DEAD buffer's entry is deleted
+    /// and NOT re-printed — it is removed from the list rather than buried
+    /// (buff-menu.el:747-749) — and with no buffer on the line nothing happens at
+    /// all (buff-menu.el:739), which is what keeps `b` silent on an empty menu.
+    #[test]
+    fn burying_a_dead_buffer_removes_its_row_instead() {
+        let mut m = menu(vec![
+            row(1, "a", 1, "Text"),
+            row(2, "b", 2, "Text"),
+            row(3, "c", 3, "Text"),
+        ]);
+        m.menu.move_selection(1); // point on "b"
+        m.menu.set_mark(2, Mark::Delete);
+
+        assert_eq!(m.bury_row(false), Buried::Dead(2));
+        assert_eq!(names(&m), ["a", "c"], "the dead buffer is gone, not sunk");
+        assert_eq!(m.menu.selected(), 1, "point stays put; the next row moved up");
+        assert_eq!(m.menu.current_key(), Some(3));
+        assert_eq!(
+            m.menu.mark_of(2),
+            Mark::None,
+            "and its flag went with the row"
+        );
+
+        // Point on no buffer line at all: the first cond arm, which does nothing.
+        let mut empty = menu(Vec::new());
+        assert_eq!(empty.bury_row(true), Buried::NoBuffer);
+        assert!(empty.menu.is_empty());
+    }
+
+    /// `Buffer-menu-toggle-internal` (`I`) flips exactly one term of the listing
+    /// predicate: with `Buffer-menu-show-internal` nil an internal buffer is
+    /// dropped, and with it non-nil everything is listed
+    /// (buff-menu.el:398-400 over the `(or show-internal (not (string= (substring
+    /// name 0 1) " ")) file)` test at buff-menu.el:829-831). A file-visiting
+    /// buffer is listed either way — that trailing `file` is why the toggle can
+    /// never hide a file.
+    #[test]
+    fn toggle_internal_flips_which_buffers_the_listing_keeps() {
+        let mut m = menu(Vec::new());
+        assert!(!m.show_internal, "internal buffers are hidden by default");
+        assert!(m.lists_buffer("main.rs", true));
+        assert!(m.lists_buffer("untitled", false), "an ordinary name is listed");
+        assert!(!m.lists_buffer(" *hidden*", false), "a space-prefixed name is internal");
+        assert!(!m.lists_buffer("*Messages*", false));
+        assert!(
+            m.lists_buffer(" *hidden*", true),
+            "…unless it visits a file (the `file` arm of the `or`)"
+        );
+
+        m.show_internal = BufferMenu::toggled(m.show_internal, None);
+        assert!(m.show_internal);
+        assert!(m.lists_buffer(" *hidden*", false));
+        assert!(m.lists_buffer("*Messages*", false));
+        assert!(m.lists_buffer("untitled", false));
+
+        // The `T` filter is the other, independent term (buff-menu.el:833,
+        // `(or file show-non-file)`): it drops non-file buffers even while the
+        // internal ones are being shown.
+        m.files_only = true;
+        assert!(!m.lists_buffer("*Messages*", false));
+        assert!(!m.lists_buffer("untitled", false));
+        assert!(m.lists_buffer("main.rs", true));
+    }
+
+    /// The prefix argument does NOT toggle: `(cond ((not arg) (not FLAG))
+    /// ((> (prefix-numeric-value arg) 0) t))` sets the flag on a positive
+    /// argument and — by falling off the end of the `cond` to nil — clears it on
+    /// zero or a negative one (buff-menu.el:388-389, 399-400). Repeating `C-u I`
+    /// therefore keeps internal buffers shown, unlike a bare `I`.
+    #[test]
+    fn a_prefix_argument_sets_the_toggle_rather_than_flipping_it() {
+        assert!(BufferMenu::toggled(false, None), "no argument flips");
+        assert!(!BufferMenu::toggled(true, None));
+
+        assert!(BufferMenu::toggled(false, Some(4)), "C-u sets");
+        assert!(BufferMenu::toggled(true, Some(4)), "and keeps it set");
+        assert!(!BufferMenu::toggled(true, Some(0)), "C-u 0 clears");
+        assert!(!BufferMenu::toggled(true, Some(-1)), "C-u - clears");
+        assert!(!BufferMenu::toggled(false, Some(-2)));
+    }
+
+    /// `Buffer-menu--selection-message` (buff-menu.el:377-380) is a `cond`, so
+    /// the files-only branch shadows the show-internal one: a listing that is
+    /// both says only that it is file-visiting.
+    #[test]
+    fn the_toggles_echo_which_buffers_are_being_shown() {
+        let mut m = menu(Vec::new());
+        assert_eq!(
+            m.selection_message(),
+            "Showing all buffers except internal ones."
+        );
+        m.show_internal = true;
+        assert_eq!(m.selection_message(), "Showing all buffers.");
+        m.files_only = true;
+        assert_eq!(m.selection_message(), "Showing only file-visiting buffers.");
+        m.show_internal = false;
+        assert_eq!(m.selection_message(), "Showing only file-visiting buffers.");
+    }
+
+    /// The argument `C-u` hands the toggles, per `universal-argument`
+    /// (simple.el:5515-5524): bare it is 4, repeating it multiplies by 4, digits
+    /// after it make up the number, and a `C-u` following the digits ends the
+    /// argument rather than multiplying what was typed.
+    #[test]
+    fn the_prefix_argument_is_built_the_way_universal_argument_builds_it() {
+        let mut bare = Prefix::new();
+        assert_eq!(bare.arg.value(), 4);
+        assert_eq!(bare.description(), "C-u");
+        bare.more();
+        assert_eq!(bare.arg.value(), 16, "each C-u multiplies by 4");
+        assert_eq!(bare.description(), "C-u C-u");
+
+        let mut digits = Prefix::new();
+        digits.push_digit(1);
+        digits.push_digit(2);
+        assert_eq!(digits.arg.value(), 12, "the digits, not the 4");
+        assert_eq!(digits.description(), "C-u 12");
+        digits.more();
+        assert_eq!(digits.arg.value(), 12, "a later C-u ends it, not x4");
+        assert!(digits.closed);
+
+        // A minus sign before the digits makes it negative, which is the
+        // argument that CLEARS the flag instead of setting it.
+        let mut negative = Prefix::new();
+        assert!(negative.negate(), "`-` on a bare C-u is negative-argument");
+        assert!(negative.arg.value() < 0);
+        assert_eq!(negative.description(), "C-u -");
+        negative.push_digit(3);
+        assert_eq!(negative.arg.value(), -3, "the digit keeps the minus sign");
+        assert_eq!(negative.description(), "C-u -3");
+        assert!(!BufferMenu::toggled(true, Some(negative.arg.value())));
+
+        // Once digits are in, a `-` is no longer negative-argument.
+        let mut late = Prefix::new();
+        late.push_digit(5);
+        assert!(!late.negate(), "a `-` after digits is not a sign");
     }
 }

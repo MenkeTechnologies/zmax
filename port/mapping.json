@@ -10828,7 +10828,7 @@
   "evidence": [
    "static:kmacro_menu_edit_column"
   ],
-  "note": "emacs kmacro-menu-edit-column"
+  "note": "kmacro-menu-edit-column (kmacro.el:2016-2036) dispatches on the column at point: Position, Counter and Format are minibuffer edits, Formatted is refused as underived, and Keys call-interactively's kmacro-menu-edit-keys -- i.e. RET on Keys opens *Edit Macro* rather than editing in place. The Keys arm was the one that did not match."
  },
  {
   "spec_id": "emacs.command.kmacro_menu_edit_counter",
@@ -10852,7 +10852,7 @@
   "evidence": [
    "static:kmacro_menu_edit_keys"
   ],
-  "note": "emacs kmacro-menu-edit-keys"
+  "note": "kmacro-menu-edit-keys edits the keys 'via edmacro-mode' (kmacro.el:1994-2014): it calls edit-kbd-macro and visits *Edit Macro*. This used to open an in-place minibuffer edit of the Keys column instead -- the command existed, so the evidence resolved, but the behaviour was a different one. Now all three entry points (the menu component's own `e`, this command, and kmacro-menu-edit-column on Keys) open the buffer, and C-c C-c installs back into the ring slot the macro came from with its counter and format kept (kmacro.el:2010-2012), moving register @ only when that slot is the head."
  },
  {
   "spec_id": "emacs.command.kmacro_menu_edit_position",
@@ -13271,7 +13271,7 @@
   "evidence": [
    "static:project_eshell"
   ],
-  "note": "opens an M-x shell-style comint buffer on $SHELL (not Emacs eshell); runs in the editor working directory."
+  "note": "Partial: a comint buffer on $SHELL, not emacs's own eshell. The project root half is now right -- project.el:1664 binds default-directory to (project-root (project-current t)) around the shell call, and this used to call comint_shell unchanged, so it was M-x shell under another name and the child inherited zmax's cwd. Uses the document's workspace_root, not the process-wide one, because project-current resolves from the buffer's default-directory."
  },
  {
   "spec_id": "emacs.command.project_find_dir",
@@ -56161,7 +56161,7 @@
   "evidence": [
    "typable:set"
   ],
-  "note": "ported: :set digraph enables {char1}<BS>{char2} digraph entry in insert mode (a<BS>: -> \u00e4), using the built-in DIGRAPHS table; <BS> arms, next char combines, pending cleared on Esc. (C-k digraph entry works regardless.)"
+  "note": ":set digraph enables {char1}<BS>{char2} entry in BOTH modes vim has it in. Insert mode was already there (commands.rs delete_char_backward arms, insert_char combines); the command line was not, so a<BS>: in a : prompt deleted the a and inserted :. digraph.txt:94 settles that it applies there too -- <Esc> leaves digraph entry in 'Insert mode or Command-line mode'. The pending char1 lives on the Prompt, not the Editor, so abandoning a command line cannot leave a digraph armed for the next thing typed."
  },
  {
   "spec_id": "neovim.option.directory",

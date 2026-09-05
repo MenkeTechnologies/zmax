@@ -364,6 +364,13 @@ impl MappableCommand {
         // a `DocumentId`; this is the last point before the next frame where an
         // `Editor` is in reach. A no-op unless cwarn-mode is on somewhere.
         cwarn_note_languages(cx.editor);
+        // `font-lock-add-keywords` keywords are scoped to a major mode (or to a
+        // single buffer), while Hi-Lock — what paints them — has one global
+        // pattern set. Re-scoping here is what makes a buffer switch swap the
+        // keywords over, the way `font-lock-set-defaults` does when font-lock
+        // starts in a buffer (font-lock.el:1914-1929). A relaxed load unless a
+        // keyword exists.
+        sync_font_lock_keywords(cx.editor);
     }
 
     pub fn name(&self) -> &str {
@@ -2278,12 +2285,12 @@ impl MappableCommand {
         c_set_style, "Report the C indentation style (emacs c-set-style)",
         ps_print_buffer, "Print the buffer as PostScript via lpr (emacs ps-print-buffer)",
         ps_print_region, "Print the region as PostScript via lpr (emacs ps-print-region)",
-        ps_print_buffer_with_faces, "Print the buffer as PostScript (plain, no faces) (emacs ps-print-buffer-with-faces)",
-        ps_print_region_with_faces, "Print the region as PostScript (plain, no faces) (emacs ps-print-region-with-faces)",
+        ps_print_buffer_with_faces, "Print the buffer as PostScript with its face colours (emacs ps-print-buffer-with-faces)",
+        ps_print_region_with_faces, "Print the region as PostScript with its face colours (emacs ps-print-region-with-faces)",
         ps_spool_buffer, "Spool the buffer as PostScript for later printing (emacs ps-spool-buffer)",
         ps_spool_region, "Spool the region as PostScript for later printing (emacs ps-spool-region)",
-        ps_spool_buffer_with_faces, "Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces)",
-        ps_spool_region_with_faces, "Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces)",
+        ps_spool_buffer_with_faces, "Spool the buffer as PostScript with its face colours (emacs ps-spool-buffer-with-faces)",
+        ps_spool_region_with_faces, "Spool the region as PostScript with its face colours (emacs ps-spool-region-with-faces)",
         ps_despool, "Print the accumulated PostScript spool via lpr (emacs ps-despool)",
         handwrite, "Print the buffer as PostScript in a handwriting style via lpr (emacs handwrite)",
         pr_interface, "Open the printing package's front-end for the print commands (emacs pr-interface)",
@@ -42000,6 +42007,407 @@ fn ps_build(cx: &mut Context, region_only: bool) -> String {
     )
 }
 
+/// The face attributes ps-print carries into the PostScript for one run of text.
+/// `ps-screen-to-bit-face` (ps-print.el:6305-6314) reduces a face to exactly
+/// this: an effect bitmap — bold 1, italic 2, underline 4, strikeout 8 — plus
+/// the face's foreground colour.
+///
+/// The background colour is deliberately not kept: `ps-use-face-background`
+/// defaults to nil, "never use face background color" (ps-print.el:3166-3172),
+/// and `ps-face-background` (ps-print.el:6172-6191) returns nil for every face
+/// on that default — so Emacs's own `-with-faces` output paints no background
+/// boxes either.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct PsFace {
+    /// The face's foreground, or `None` for "the default foreground", which is
+    /// what `ps-set-color` substitutes (`(or color ps-default-foreground)`,
+    /// ps-print.el:5969-5974).
+    fg: Option<(u8, u8, u8)>,
+    bold: bool,
+    italic: bool,
+    underline: bool,
+    strikeout: bool,
+}
+
+/// A run of text that shares one face, within one printed line — the unit
+/// `ps-plot-with-face` (ps-print.el:6227-6248) plots.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct PsRun {
+    text: String,
+    face: PsFace,
+}
+
+/// Page geometry for the with-faces printer. The same numbers
+/// `zmax_core::ps_print::to_postscript` lays out with (zmax-core/src/ps_print.rs:80-84),
+/// so `ps-print-buffer` and `ps-print-buffer-with-faces` put the same character
+/// in the same place and differ only in colour and font, which is exactly how
+/// the two differ in Emacs ("Like `ps-print-buffer', but includes font, color,
+/// and underline information in the generated image", ps-print.el:3471-3474).
+const PS_FACE_FONT_SIZE: f64 = 10.0;
+const PS_FACE_LINES_PER_PAGE: usize = 66;
+const PS_FACE_LEFT: f64 = 72.0;
+const PS_FACE_TOP: f64 = 720.0;
+const PS_FACE_HEADER_Y: f64 = 756.0;
+/// Courier is a monospaced font whose advance width is 600/1000 em, so a
+/// character is 0.6 × the point size wide. Used to place a run after the one
+/// before it and to size the underline/strikeout rules.
+const PS_FACE_CHAR_WIDTH: f64 = 0.6;
+
+/// The RGB of an xterm-256 palette entry: the 16 system colours, then the
+/// 6×6×6 colour cube on the levels 0/95/135/175/215/255, then the 24 greys
+/// (8 + 10n). Needed because a theme may name a colour by palette index, while
+/// PostScript's `setrgbcolor` only takes components — the same reduction
+/// `ps-color-scale` performs on Emacs's side (ps-print.el:3838-3841).
+fn ps_indexed_rgb(index: u8) -> (u8, u8, u8) {
+    const BASE16: [(u8, u8, u8); 16] = [
+        (0, 0, 0),
+        (128, 0, 0),
+        (0, 128, 0),
+        (128, 128, 0),
+        (0, 0, 128),
+        (128, 0, 128),
+        (0, 128, 128),
+        (192, 192, 192),
+        (128, 128, 128),
+        (255, 0, 0),
+        (0, 255, 0),
+        (255, 255, 0),
+        (0, 0, 255),
+        (255, 0, 255),
+        (0, 255, 255),
+        (255, 255, 255),
+    ];
+    const CUBE: [u8; 6] = [0, 95, 135, 175, 215, 255];
+    match index {
+        0..=15 => BASE16[index as usize],
+        16..=231 => {
+            let i = index as usize - 16;
+            (CUBE[i / 36], CUBE[(i / 6) % 6], CUBE[i % 6])
+        }
+        _ => {
+            let level = 8 + 10 * (index as u16 - 232);
+            (level as u8, level as u8, level as u8)
+        }
+    }
+}
+
+/// A theme colour as RGB. `Color::Reset` is "whatever the frame's default is",
+/// which has no printable value — the caller substitutes the default foreground
+/// the way `ps-set-color` does (ps-print.el:5969-5974). The named colours are
+/// their ANSI palette slots: zmax maps `Gray` to bright black and `LightGray` to
+/// plain white (zmax-view/src/graphics.rs:409-417), so they are looked up at
+/// those indices rather than by name.
+fn ps_color_rgb(color: zmax_view::theme::Color) -> Option<(u8, u8, u8)> {
+    use zmax_view::theme::Color;
+    let index = match color {
+        Color::Reset => return None,
+        Color::Rgb(r, g, b) => return Some((r, g, b)),
+        Color::Indexed(i) => i,
+        Color::Black => 0,
+        Color::Red => 1,
+        Color::Green => 2,
+        Color::Yellow => 3,
+        Color::Blue => 4,
+        Color::Magenta => 5,
+        Color::Cyan => 6,
+        Color::LightGray => 7,
+        Color::Gray => 8,
+        Color::LightRed => 9,
+        Color::LightGreen => 10,
+        Color::LightYellow => 11,
+        Color::LightBlue => 12,
+        Color::LightMagenta => 13,
+        Color::LightCyan => 14,
+        Color::White => 15,
+    };
+    Some(ps_indexed_rgb(index))
+}
+
+/// Reduce a rendered style to the face attributes ps-print prints, which is what
+/// `ps-screen-to-bit-face` does with an Emacs face (ps-print.el:6305-6314):
+/// bold, italic, underline and strikeout as bits, plus the foreground colour.
+fn ps_face_from_style(style: &Style) -> PsFace {
+    use zmax_view::graphics::UnderlineStyle;
+    use zmax_view::theme::Modifier;
+    PsFace {
+        fg: style.fg.and_then(ps_color_rgb),
+        bold: style.add_modifier.contains(Modifier::BOLD),
+        italic: style.add_modifier.contains(Modifier::ITALIC),
+        // `Reset` is "no underline", the value a patch uses to take one away.
+        underline: style
+            .underline_style
+            .is_some_and(|u| u != UnderlineStyle::Reset),
+        strikeout: style.add_modifier.contains(Modifier::CROSSED_OUT),
+    }
+}
+
+/// The ps-print effect integer for a face: bold 1, italic 2, underline 4,
+/// strikeout 8 (`ps-screen-to-bit-face`, ps-print.el:6307-6310, and the setters
+/// `ps-set-face-bold` / `-italic` / `-underline`, ps-print.el:6261-6268). The low
+/// two bits choose the font, the rest are the effects `ps-plot-region` emits as
+/// `N EF` (ps-print.el:6018-6025, `(ash effect -2)` at ps-print.el:6247).
+fn ps_face_effect_bits(face: &PsFace) -> u32 {
+    (if face.bold { 1 } else { 0 })
+        | (if face.italic { 2 } else { 0 })
+        | (if face.underline { 4 } else { 0 })
+        | (if face.strikeout { 8 } else { 0 })
+}
+
+/// The PostScript font for an effect bitmap. `ps-plot-with-face` picks the face's
+/// font with `(aref ps-font-type (logand effect 3))` over
+/// `ps-font-type = [nil bold italic bold-italic]` (ps-print.el:6224, 6245) — so
+/// only the bold and italic bits change the font, and the four combinations are
+/// the four faces of the body font. The body font here is Courier, the font
+/// zmax's plain ps-print output sets (zmax-core/src/ps_print.rs:97).
+fn ps_font_for_effect(effect: u32) -> &'static str {
+    match effect & 3 {
+        1 => "Courier-Bold",
+        2 => "Courier-Oblique",
+        3 => "Courier-BoldOblique",
+        _ => "Courier",
+    }
+}
+
+/// A `setrgbcolor` operand list. `ps-color-scale` scales each component into
+/// the `[0, 1]` interval PostScript wants (ps-print.el:3838-3841).
+fn ps_setrgbcolor(rgb: (u8, u8, u8)) -> String {
+    format!(
+        "{:.3} {:.3} {:.3} setrgbcolor",
+        rgb.0 as f64 / 255.0,
+        rgb.1 as f64 / 255.0,
+        rgb.2 as f64 / 255.0
+    )
+}
+
+/// Split face-tagged text into printed lines. Newlines end a line and are not
+/// themselves printed; a single trailing newline does not add a final empty
+/// line, matching the pagination of the plain printer
+/// (zmax-core/src/ps_print.rs:63-72).
+fn ps_runs_into_lines(runs: &[PsRun]) -> Vec<Vec<PsRun>> {
+    let mut lines: Vec<Vec<PsRun>> = vec![Vec::new()];
+    for run in runs {
+        for (i, part) in run.text.split('\n').enumerate() {
+            if i > 0 {
+                lines.push(Vec::new());
+            }
+            if !part.is_empty() {
+                lines.last_mut().expect("a line is always open").push(PsRun {
+                    text: part.to_string(),
+                    face: run.face,
+                });
+            }
+        }
+    }
+    if lines.len() > 1 && lines.last().is_some_and(|l| l.is_empty()) {
+        lines.pop();
+    }
+    lines
+}
+
+/// Build the PostScript for text that carries faces — the difference between
+/// `ps-print-buffer` and `ps-print-buffer-with-faces`, which is "font, color,
+/// and underline information in the generated image" (ps-print.el:3471-3474).
+///
+/// The emission follows `ps-plot-region`: the font is set only when it changes
+/// from the current one (ps-print.el:5998-5999) and the foreground only when it
+/// differs from the current colour (ps-print.el:6012-6013), which is why a run
+/// of same-faced text costs one `moveto`/`show` and nothing else. A face with no
+/// foreground of its own prints in `default_fg`, standing in for
+/// `ps-default-foreground` (ps-print.el:5969-5974).
+///
+/// Underline and strikeout are drawn as rules under and through the run, because
+/// they are effects rather than font choices (`(ash effect -2)`, ps-print.el:6247);
+/// bold and italic instead select the Courier face [`ps_font_for_effect`] returns.
+fn ps_faces_postscript(lines: &[Vec<PsRun>], title: &str, default_fg: (u8, u8, u8)) -> String {
+    use zmax_core::ps_print::escape_ps;
+
+    let size = PS_FACE_FONT_SIZE;
+    let leading = size * 1.2;
+    let advance = size * PS_FACE_CHAR_WIDTH;
+    let pages: Vec<&[Vec<PsRun>]> = if lines.is_empty() {
+        vec![&[][..]]
+    } else {
+        lines.chunks(PS_FACE_LINES_PER_PAGE).collect()
+    };
+    let total = pages.len();
+    let title = escape_ps(title);
+
+    let mut out = String::new();
+    out.push_str("%!PS-Adobe-3.0\n");
+    out.push_str("%%Creator: zmax ps-print with faces\n");
+    out.push_str(&format!("%%Pages: {total}\n"));
+    out.push_str("%%DocumentData: Clean7Bit\n");
+    out.push_str("%%EndComments\n");
+
+    for (i, page) in pages.iter().enumerate() {
+        let number = i + 1;
+        out.push_str(&format!("%%Page: {number} {number}\n"));
+        // The header is the plain printer's, in the default foreground.
+        let mut font = "Courier";
+        let mut color = default_fg;
+        out.push_str(&format!("/{font} findfont {size} scalefont setfont\n"));
+        out.push_str(&format!("{}\n", ps_setrgbcolor(color)));
+        out.push_str(&format!(
+            "{PS_FACE_LEFT} {PS_FACE_HEADER_Y} moveto ({title}) show\n"
+        ));
+        out.push_str(&format!(
+            "{} {PS_FACE_HEADER_Y} moveto (page {number}/{total}) show\n",
+            PS_FACE_LEFT + 396.0
+        ));
+
+        let mut y = PS_FACE_TOP;
+        for line in page.iter() {
+            let mut x = PS_FACE_LEFT;
+            for run in line {
+                let width = run.text.chars().count() as f64 * advance;
+                let effect = ps_face_effect_bits(&run.face);
+                let run_font = ps_font_for_effect(effect);
+                if run_font != font {
+                    font = run_font;
+                    out.push_str(&format!("/{font} findfont {size} scalefont setfont\n"));
+                }
+                let run_color = run.face.fg.unwrap_or(default_fg);
+                if run_color != color {
+                    color = run_color;
+                    out.push_str(&format!("{}\n", ps_setrgbcolor(color)));
+                }
+                out.push_str(&format!(
+                    "{x:.1} {y:.1} moveto ({}) show\n",
+                    escape_ps(&run.text)
+                ));
+                if run.face.underline {
+                    let uy = y - 0.2 * size;
+                    out.push_str(&format!(
+                        "{x:.1} {uy:.1} moveto {:.1} {uy:.1} lineto stroke\n",
+                        x + width
+                    ));
+                }
+                if run.face.strikeout {
+                    let sy = y + 0.3 * size;
+                    out.push_str(&format!(
+                        "{x:.1} {sy:.1} moveto {:.1} {sy:.1} lineto stroke\n",
+                        x + width
+                    ));
+                }
+                x += width;
+            }
+            y -= leading;
+        }
+        out.push_str("showpage\n");
+    }
+    out.push_str("%%EOF\n");
+    out
+}
+
+/// The page header text and the colour a face without a foreground prints in:
+/// the buffer name, and `ui.text`'s foreground standing in for
+/// `ps-default-foreground` (ps-print.el:5969-5974). Black when the theme names
+/// no text colour, because the paper is white.
+fn ps_face_title_and_default_fg(editor: &Editor) -> (String, (u8, u8, u8)) {
+    let title = doc!(editor).display_name().into_owned();
+    let default_fg = editor
+        .theme
+        .get("ui.text")
+        .fg
+        .and_then(ps_color_rgb)
+        .unwrap_or((0, 0, 0));
+    (title, default_fg)
+}
+
+/// Collect `chars` of the current buffer as face-tagged runs, by walking the
+/// same syntax highlighter the screen is drawn from
+/// (`zmax-term/src/ui/document.rs:567-581`) and folding each event's highlights
+/// into a [`Style`] through the active theme.
+///
+/// This is the port of `ps-generate-postscript-with-faces1`
+/// (ps-print.el:6317-6347), which walks the text looking at the `face` character
+/// property and plots each same-face stretch with `ps-plot-with-face`. Emacs
+/// forces the fontification first (`font-lock-ensure`, ps-print.el:6368); the
+/// highlighter here is built over the printed range, which is the same
+/// guarantee — the whole range is highlighted, not just what is on screen.
+fn ps_face_runs(editor: &Editor, chars: std::ops::Range<usize>) -> Vec<PsRun> {
+    use zmax_core::syntax::HighlightEvent;
+
+    let (_view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    let from = chars.start.min(text.len_chars());
+    let to = chars.end.min(text.len_chars()).max(from);
+    if from == to {
+        return Vec::new();
+    }
+    let theme = &editor.theme;
+    let loader = editor.syn_loader.load();
+
+    // Byte range of the printed text; the highlighter works in bytes.
+    let from_byte = text.char_to_byte(from);
+    let to_byte = text.char_to_byte(to);
+
+    let mut spans: Vec<(usize, usize, Style)> = Vec::new();
+    let mut style = Style::default();
+    let mut start = from_byte;
+    if let Some(syntax) = doc.syntax() {
+        let mut highlighter =
+            syntax.highlighter(text, &loader, from_byte as u32..to_byte as u32);
+        loop {
+            let next = highlighter.next_event_offset();
+            if next == u32::MAX {
+                break;
+            }
+            let next = (next as usize).clamp(from_byte, to_byte);
+            if next >= to_byte {
+                break;
+            }
+            if next > start {
+                spans.push((start, next, style));
+                start = next;
+            }
+            let (event, highlights) = highlighter.advance();
+            // `Refresh` restarts from the base style, `Push` layers on top of
+            // what is already active (ui/document.rs:572-581). The base is left
+            // empty here rather than being `ui.text`, because a run with no
+            // foreground of its own is printed in `default_fg`, which *is*
+            // `ui.text` (see `ps_face_title_and_default_fg`).
+            let base = match event {
+                HighlightEvent::Refresh => Style::default(),
+                HighlightEvent::Push => style,
+            };
+            style = highlights.fold(base, |acc, highlight| acc.patch(theme.highlight(highlight)));
+        }
+    }
+    spans.push((start, to_byte, style));
+
+    spans
+        .into_iter()
+        .filter_map(|(s, e, style)| {
+            // Byte offsets from the highlighter can land inside a character;
+            // `byte_to_char` rounds to the character that contains them.
+            let (s, e) = (text.byte_to_char(s), text.byte_to_char(e));
+            (e > s).then(|| PsRun {
+                text: text.slice(s..e).to_string(),
+                face: ps_face_from_style(&style),
+            })
+        })
+        .collect()
+}
+
+/// Build the with-faces PostScript for the buffer, or for the primary selection
+/// when `region_only` (an empty selection falls back to the whole buffer, as the
+/// plain [`ps_build`] does).
+fn ps_build_with_faces(cx: &mut Context, region_only: bool) -> String {
+    let chars = {
+        let (view, doc) = current_ref!(cx.editor);
+        let range = doc.selection(view.id).primary();
+        if region_only && range.from() != range.to() {
+            range.from()..range.to()
+        } else {
+            0..doc.text().len_chars()
+        }
+    };
+    let (title, default_fg) = ps_face_title_and_default_fg(cx.editor);
+    let runs = ps_face_runs(cx.editor, chars);
+    ps_faces_postscript(&ps_runs_into_lines(&runs), &title, default_fg)
+}
+
 /// Pipe a PostScript document to the `lpr` printer spooler.
 fn ps_lpr(editor: &mut Editor, ps: &str) {
     let mut child = match std::process::Command::new("lpr")
@@ -42025,7 +42433,20 @@ fn ps_lpr(editor: &mut Editor, ps: &str) {
 
 fn ps_spool(cx: &mut Context, region_only: bool) {
     let ps = ps_build(cx, region_only);
-    PS_SPOOL.with(|s| s.borrow_mut().push_str(&ps));
+    ps_spool_append(cx, &ps);
+}
+
+/// `ps-spool-*-with-faces`: the same spool, filled with the face-carrying
+/// PostScript (ps-print.el:3509-3517, 3531-3539).
+fn ps_spool_with_faces(cx: &mut Context, region_only: bool) {
+    let ps = ps_build_with_faces(cx, region_only);
+    ps_spool_append(cx, &ps);
+}
+
+/// Append a rendered document to the `*PostScript*` spool and show the spool,
+/// the tail every `ps-spool-*` command shares.
+fn ps_spool_append(cx: &mut Context, ps: &str) {
+    PS_SPOOL.with(|s| s.borrow_mut().push_str(ps));
     let spool = PS_SPOOL.with(|s| s.borrow().clone());
     let n = spool.len();
     show_text_in_scratch(cx.editor, &spool);
@@ -42045,15 +42466,18 @@ fn ps_print_region(cx: &mut Context) {
     let ps = ps_build(cx, true);
     ps_lpr(cx.editor, &ps);
 }
-/// Emacs `ps-print-buffer-with-faces` (partial): zmax's PostScript is plain
-/// monospace with no face colours, so this matches `ps-print-buffer`.
+/// Emacs `ps-print-buffer-with-faces`: "Like `ps-print-buffer', but includes
+/// font, color, and underline information in the generated image"
+/// (ps-print.el:3470-3476) — the buffer printed in the faces it is highlighted
+/// with, through `lpr`.
 fn ps_print_buffer_with_faces(cx: &mut Context) {
-    let ps = ps_build(cx, false);
+    let ps = ps_build_with_faces(cx, false);
     ps_lpr(cx.editor, &ps);
 }
-/// Emacs `ps-print-region-with-faces` (partial): plain PostScript, no faces.
+/// Emacs `ps-print-region-with-faces` (ps-print.el:3488-3494): the region, in
+/// the faces it is highlighted with.
 fn ps_print_region_with_faces(cx: &mut Context) {
-    let ps = ps_build(cx, true);
+    let ps = ps_build_with_faces(cx, true);
     ps_lpr(cx.editor, &ps);
 }
 /// Emacs `ps-spool-buffer`: render the buffer to PostScript and append it to the
@@ -42065,13 +42489,15 @@ fn ps_spool_buffer(cx: &mut Context) {
 fn ps_spool_region(cx: &mut Context) {
     ps_spool(cx, true);
 }
-/// Emacs `ps-spool-buffer-with-faces` (partial): plain PostScript, no faces.
+/// Emacs `ps-spool-buffer-with-faces` (ps-print.el:3509-3517): spool the buffer
+/// in its faces; `ps-despool` prints what has been spooled.
 fn ps_spool_buffer_with_faces(cx: &mut Context) {
-    ps_spool(cx, false);
+    ps_spool_with_faces(cx, false);
 }
-/// Emacs `ps-spool-region-with-faces` (partial): plain PostScript, no faces.
+/// Emacs `ps-spool-region-with-faces` (ps-print.el:3531-3539): spool the region
+/// in its faces.
 fn ps_spool_region_with_faces(cx: &mut Context) {
-    ps_spool(cx, true);
+    ps_spool_with_faces(cx, true);
 }
 /// Emacs `ps-despool`: send everything accumulated by `ps-spool-*` to `lpr`,
 /// then empty the spool.
@@ -52397,6 +52823,34 @@ where
                         return;
                     }
                     f(cx, input);
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Like [`prompt_then_cx`], but the empty answer is passed through instead of
+/// cancelling. For prompts where `RET` on an empty line is itself the answer —
+/// the MODE argument of `font-lock-add-keywords`, where nil means "the current
+/// buffer" (font-lock.el:718-719).
+fn prompt_then_cx_allow_empty<F>(cx: &mut crate::compositor::Context, label: &'static str, f: F)
+where
+    F: Fn(&mut crate::compositor::Context, &str) + Send + 'static,
+{
+    // The `Prompt` is not `Send`, so build it inside the compositor callback.
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                label.into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    f(cx, input.trim());
                 },
             );
             compositor.push(Box::new(prompt));
@@ -72721,34 +73175,240 @@ fn align_unhighlight_rule(cx: &mut Context) {
         .set_status(format!("align rule highlighting off ({n} cleared)"));
 }
 
-/// Emacs `font-lock-add-keywords`: add a regexp to the set that is highlighted on
-/// top of the syntax highlighting. zmax paints it through Hi-Lock, which is the
-/// same overlay mechanism, but the keyword is not scoped to a major mode and the
-/// face is chosen by the highlight's index rather than named.
-fn font_lock_add_keywords(cx: &mut Context) {
-    prompt_then(
-        cx,
-        "Font-lock keyword (regexp): ",
-        |cx, input| match crate::hi_lock::add(input, false) {
-            Ok(()) => cx
-                .editor
-                .set_status(format!("font-lock keyword added: {input}")),
-            Err(e) => cx.editor.set_error(format!("font-lock-add-keywords: {e}")),
-        },
+/// One entry of Emacs's `font-lock-keywords-alist` as zmax keeps it: the regexp
+/// to highlight plus the MODE it was added for.
+///
+/// `font-lock-add-keywords` takes MODE first (font-lock.el:715). A mode symbol
+/// files the keywords under that mode in `font-lock-keywords-alist`
+/// (font-lock.el:755-763), which `font-lock-set-defaults` picks up with
+/// `(assq major-mode font-lock-keywords-alist)` (font-lock.el:1928) — so the
+/// keyword is live exactly in buffers whose major mode *is* that mode. A nil
+/// MODE instead edits the current buffer's own `font-lock-keywords`
+/// (font-lock.el:767-797), which is why `origin` records the buffer it was
+/// added in.
+struct FontLockKeyword {
+    /// The regexp the keyword highlights (zmax's stand-in for a KEYWORDS list).
+    regexp: String,
+    /// MODE: `None` is Emacs's nil, "this buffer only" (font-lock.el:718-719).
+    mode: Option<String>,
+    /// The buffer the keyword was added in — only consulted when `mode` is nil.
+    origin: DocumentId,
+}
+
+/// Every `font-lock-add-keywords` keyword, of every scope: zmax's
+/// `font-lock-keywords-alist` (font-lock.el:536-549) plus the nil-MODE
+/// buffer-local entries.
+static FONT_LOCK_KEYWORDS: Lazy<std::sync::Mutex<Vec<FontLockKeyword>>> =
+    Lazy::new(|| std::sync::Mutex::new(Vec::new()));
+
+/// The regexps [`sync_font_lock_keywords`] has handed to Hi-Lock for the buffer
+/// currently on screen. Hi-Lock's pattern set is process-global (hi_lock.rs:5-8)
+/// while font-lock keywords are per mode / per buffer, so the scoping is done by
+/// installing and withdrawing patterns as the current buffer changes. Only the
+/// patterns *this* module installed are ever withdrawn — a regexp that
+/// `highlight-regexp` already owns is left to it.
+static FONT_LOCK_INSTALLED: Lazy<std::sync::Mutex<std::collections::HashSet<String>>> =
+    Lazy::new(|| std::sync::Mutex::new(std::collections::HashSet::new()));
+
+/// Whether any font-lock keyword exists (or is still installed), so the
+/// per-command [`sync_font_lock_keywords`] costs one relaxed load rather than
+/// two mutexes when nobody has ever called `font-lock-add-keywords`.
+static FONT_LOCK_ANY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Does a keyword added for `keyword_mode` apply to a buffer whose major mode is
+/// `buffer_mode`? `same_buffer` says whether that buffer is the one the keyword
+/// was added in, which is what decides a nil-MODE keyword.
+///
+/// Emacs selects a mode's keywords with `(assq major-mode
+/// font-lock-keywords-alist)` (font-lock.el:1928) — an `eq` on the mode symbol,
+/// so the match is exact and does *not* reach modes derived from MODE
+/// ("The above procedure will only add the keywords for C mode, not for modes
+/// derived from C mode", font-lock.el:735-737). A nil MODE adds the keywords
+/// "for the current buffer" (font-lock.el:718-719) and so never reaches another
+/// buffer.
+fn font_lock_scope_applies(
+    keyword_mode: Option<&str>,
+    buffer_mode: Option<&str>,
+    same_buffer: bool,
+) -> bool {
+    match keyword_mode {
+        Some(mode) => buffer_mode == Some(mode),
+        None => same_buffer,
+    }
+}
+
+/// Read the MODE argument of `font-lock-add-keywords` / `font-lock-remove-keywords`
+/// from the prompt. An empty answer — or a literal `nil`, the symbol Emacs takes
+/// there — is the nil MODE, "the current buffer only" (font-lock.el:718-719,
+/// 844-846).
+///
+/// A mode symbol is matched against [`Document::major_mode`], which names modes
+/// the way zmax does (`c`, `rust`, `outline`), so the Emacs mode-symbol suffixes
+/// are trimmed: `c-mode` and the tree-sitter variant `c-ts-mode` both name
+/// zmax's `c`.
+fn font_lock_mode_arg(input: &str) -> Option<String> {
+    let mode = input.trim();
+    if mode.is_empty() || mode == "nil" {
+        return None;
+    }
+    let mode = mode.strip_suffix("-mode").unwrap_or(mode);
+    let mode = mode.strip_suffix("-ts").unwrap_or(mode);
+    if mode.is_empty() {
+        return None;
+    }
+    Some(mode.to_string())
+}
+
+/// Bring Hi-Lock's pattern set in line with the font-lock keywords that are in
+/// scope for the *current* buffer — the work `font-lock-set-defaults` does when
+/// font-lock is turned on in a buffer (font-lock.el:1914-1929). Called after
+/// every command (so a buffer switch re-scopes) and straight after a keyword is
+/// added or removed.
+pub(crate) fn sync_font_lock_keywords(editor: &Editor) {
+    if !FONT_LOCK_ANY.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    let (Ok(keywords), Ok(mut installed)) =
+        (FONT_LOCK_KEYWORDS.lock(), FONT_LOCK_INSTALLED.lock())
+    else {
+        return;
+    };
+    let doc = doc!(editor);
+    let buffer_mode = doc.major_mode();
+    let buffer = doc.id();
+    let desired: std::collections::HashSet<String> = keywords
+        .iter()
+        .filter(|kw| font_lock_scope_applies(kw.mode.as_deref(), buffer_mode, kw.origin == buffer))
+        .map(|kw| kw.regexp.clone())
+        .collect();
+
+    // Withdraw what this buffer is not in scope for.
+    for stale in installed
+        .difference(&desired)
+        .cloned()
+        .collect::<Vec<String>>()
+    {
+        crate::hi_lock::remove(&stale);
+        installed.remove(&stale);
+    }
+    // Install what it is.
+    let already = crate::hi_lock::sources();
+    for wanted in desired {
+        if installed.contains(&wanted) || already.contains(&wanted) {
+            continue;
+        }
+        if crate::hi_lock::add(&wanted, false).is_ok() {
+            installed.insert(wanted);
+        }
+    }
+    FONT_LOCK_ANY.store(
+        !keywords.is_empty() || !installed.is_empty(),
+        std::sync::atomic::Ordering::Relaxed,
     );
 }
 
+/// Add `regexp` to the keyword list for `mode` (`None` = the `origin` buffer
+/// only), ignoring an exact duplicate the way `font-lock-add-keywords` avoids
+/// them (font-lock.el:787 `(font-lock-remove-keywords nil keywords) ;to avoid
+/// duplicates`).
+fn font_lock_remember_keyword(regexp: &str, mode: Option<&str>, origin: DocumentId) {
+    let Ok(mut keywords) = FONT_LOCK_KEYWORDS.lock() else {
+        return;
+    };
+    let duplicate = keywords
+        .iter()
+        .any(|kw| kw.regexp == regexp && kw.mode.as_deref() == mode && kw.origin == origin);
+    if !duplicate {
+        keywords.push(FontLockKeyword {
+            regexp: regexp.to_string(),
+            mode: mode.map(str::to_string),
+            origin,
+        });
+    }
+    FONT_LOCK_ANY.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Drop `regexp` from the keyword list for `mode` (`None` = the `origin` buffer
+/// only) — `font-lock-remove-keywords`, which is scoped by MODE exactly as the
+/// add is (font-lock.el:841-889). Returns whether an entry went away.
+fn font_lock_forget_keyword(regexp: &str, mode: Option<&str>, origin: DocumentId) -> bool {
+    let Ok(mut keywords) = FONT_LOCK_KEYWORDS.lock() else {
+        return false;
+    };
+    let before = keywords.len();
+    keywords.retain(|kw| {
+        !(kw.regexp == regexp
+            && kw.mode.as_deref() == mode
+            && (mode.is_some() || kw.origin == origin))
+    });
+    keywords.len() != before
+}
+
+/// Emacs `font-lock-add-keywords`: add a regexp to the set that is highlighted
+/// on top of the syntax highlighting, scoped to a major mode.
+///
+/// The MODE argument comes first in Emacs (font-lock.el:715); the prompts ask
+/// for the regexp and then for MODE, where `RET` is Emacs's nil — "highlighting
+/// keywords are added for the current buffer" (font-lock.el:718-719). A named
+/// mode files the keyword under that mode (font-lock.el:755-763) and it lights
+/// up in every buffer whose major mode matches, and only there
+/// (font-lock.el:1928).
+///
+/// zmax paints the keyword through Hi-Lock, the same overlay mechanism; the face
+/// is still chosen by the highlight's index rather than named, because the
+/// palette lives in the renderer's `HI_LOCK_SCOPES` rather than in the keyword.
+fn font_lock_add_keywords(cx: &mut Context) {
+    prompt_then(cx, "Font-lock keyword (regexp): ", |cx, input| {
+        let regexp = input.to_string();
+        // Reject a bad regexp here rather than at the point some later buffer
+        // happens to come into scope.
+        if let Err(e) = regex::Regex::new(&regexp) {
+            cx.editor.set_error(format!("font-lock-add-keywords: {e}"));
+            return;
+        }
+        let origin = doc!(cx.editor).id();
+        prompt_then_cx_allow_empty(
+            cx,
+            "Major mode (RET for this buffer only): ",
+            move |cx, answer| {
+                let mode = font_lock_mode_arg(answer);
+                font_lock_remember_keyword(&regexp, mode.as_deref(), origin);
+                sync_font_lock_keywords(cx.editor);
+                let scope = match &mode {
+                    Some(mode) => format!("in {mode}-mode buffers"),
+                    None => "in this buffer".to_string(),
+                };
+                cx.editor
+                    .set_status(format!("font-lock keyword added {scope}: {regexp}"));
+            },
+        );
+    });
+}
+
 /// Emacs `font-lock-remove-keywords`: take a regexp back out of the highlighted
-/// set.
+/// set. MODE is asked for exactly as `font-lock-add-keywords` asks, and removes
+/// from the same place the add put it: a named mode drops the mode's entry
+/// (font-lock.el:855-889), `RET` (nil MODE) drops the entry added for this
+/// buffer (font-lock.el:844-846, 890-900).
 fn font_lock_remove_keywords(cx: &mut Context) {
     prompt_then(cx, "Remove font-lock keyword (regexp): ", |cx, input| {
-        if crate::hi_lock::remove(input) {
-            cx.editor
-                .set_status(format!("font-lock keyword removed: {input}"));
-        } else {
-            cx.editor
-                .set_error(format!("font-lock-remove-keywords: no keyword {input}"));
-        }
+        let regexp = input.to_string();
+        let origin = doc!(cx.editor).id();
+        prompt_then_cx_allow_empty(
+            cx,
+            "Major mode (RET for this buffer only): ",
+            move |cx, answer| {
+                let mode = font_lock_mode_arg(answer);
+                if font_lock_forget_keyword(&regexp, mode.as_deref(), origin) {
+                    sync_font_lock_keywords(cx.editor);
+                    cx.editor
+                        .set_status(format!("font-lock keyword removed: {regexp}"));
+                } else {
+                    cx.editor
+                        .set_error(format!("font-lock-remove-keywords: no keyword {regexp}"));
+                }
+            },
+        );
     });
 }
 
@@ -82404,5 +83064,99 @@ mod digraph_lookup_tests {
         assert_eq!(digraph_lookup('a', ':'), Some('ä'));
         assert_eq!(digraph_lookup(':', 'a'), Some('ä'));
         assert_eq!(digraph_lookup('z', 'q'), None);
+    }
+}
+
+#[cfg(test)]
+mod font_lock_keyword_scope_tests {
+    use super::*;
+
+    /// `font-lock-add-keywords MODE KEYWORDS` files the keywords under MODE in
+    /// `font-lock-keywords-alist` (font-lock.el:755-763) and
+    /// `font-lock-set-defaults` picks them up with `(assq major-mode
+    /// font-lock-keywords-alist)` (font-lock.el:1928) — an `eq` on the mode
+    /// symbol. So the keyword is live in buffers of that mode and nowhere else,
+    /// and explicitly not in modes *derived* from it: "The above procedure will
+    /// only add the keywords for C mode, not for modes derived from C mode"
+    /// (font-lock.el:735-737).
+    #[test]
+    fn mode_scoped_keyword_is_live_only_in_that_mode() {
+        assert!(font_lock_scope_applies(Some("c"), Some("c"), true));
+        // Same mode, different buffer: still live — the alist is global.
+        assert!(font_lock_scope_applies(Some("c"), Some("c"), false));
+        // Another mode, including one that would be "derived" (c -> cpp).
+        assert!(!font_lock_scope_applies(Some("c"), Some("cpp"), true));
+        assert!(!font_lock_scope_applies(Some("c"), Some("rust"), false));
+        // A buffer with no major mode at all (scratch) matches no mode symbol.
+        assert!(!font_lock_scope_applies(Some("c"), None, true));
+    }
+
+    /// With MODE nil, "highlighting keywords are added for the current buffer"
+    /// (font-lock.el:718-719) — the nil branch edits the buffer-local
+    /// `font-lock-keywords` (font-lock.el:767-797), so the keyword follows the
+    /// buffer, never the mode. Before this scoping existed the regexp was
+    /// painted in every buffer.
+    #[test]
+    fn nil_mode_keyword_is_live_only_in_the_buffer_it_was_added_in() {
+        assert!(font_lock_scope_applies(None, Some("c"), true));
+        assert!(font_lock_scope_applies(None, None, true));
+        // Another buffer, whatever its mode.
+        assert!(!font_lock_scope_applies(None, Some("c"), false));
+        assert!(!font_lock_scope_applies(None, None, false));
+    }
+
+    /// The MODE prompt answer. Emacs takes a mode *symbol* (`c-mode`) or nil
+    /// (font-lock.el:718-719, 844-846); zmax's `Document::major_mode` names the
+    /// mode without the suffix (`c`), so both spellings — and the tree-sitter
+    /// `c-ts-mode` Emacs 31 also offers — have to land on the same scope.
+    #[test]
+    fn mode_argument_accepts_emacs_symbols_and_nil() {
+        assert_eq!(font_lock_mode_arg("c-mode").as_deref(), Some("c"));
+        assert_eq!(font_lock_mode_arg("c-ts-mode").as_deref(), Some("c"));
+        assert_eq!(font_lock_mode_arg("  rust-mode  ").as_deref(), Some("rust"));
+        assert_eq!(font_lock_mode_arg("outline").as_deref(), Some("outline"));
+        // The nil MODE: an empty answer (RET) or the symbol itself.
+        assert_eq!(font_lock_mode_arg(""), None);
+        assert_eq!(font_lock_mode_arg("   "), None);
+        assert_eq!(font_lock_mode_arg("nil"), None);
+        // `-mode` alone would strip to nothing; that is the nil answer, not a
+        // keyword scoped to the empty mode name.
+        assert_eq!(font_lock_mode_arg("-mode"), None);
+    }
+
+    /// `font-lock-remove-keywords MODE KEYWORDS` removes from the same place the
+    /// add put it: a mode symbol drops the entry out of that mode's
+    /// `font-lock-keywords-alist` cell (font-lock.el:855-889), nil drops the
+    /// current buffer's entry (font-lock.el:890-900). Removing with the wrong
+    /// MODE must not take the other scope's keyword away.
+    #[test]
+    fn remove_is_scoped_the_same_way_the_add_was() {
+        // Uses the process-global keyword list; run in isolation.
+        FONT_LOCK_KEYWORDS.lock().unwrap().clear();
+        let buffer = DocumentId::default();
+        font_lock_remember_keyword(r"\bFIXME\b", Some("c"), buffer);
+        font_lock_remember_keyword(r"\bFIXME\b", None, buffer);
+        assert_eq!(FONT_LOCK_KEYWORDS.lock().unwrap().len(), 2);
+
+        // The add ignores an exact duplicate, as font-lock.el:787 does.
+        font_lock_remember_keyword(r"\bFIXME\b", Some("c"), buffer);
+        assert_eq!(FONT_LOCK_KEYWORDS.lock().unwrap().len(), 2);
+
+        // A mode nobody added the keyword for removes nothing.
+        assert!(!font_lock_forget_keyword(r"\bFIXME\b", Some("rust"), buffer));
+        assert_eq!(FONT_LOCK_KEYWORDS.lock().unwrap().len(), 2);
+
+        // Removing for `c` leaves the buffer-local entry standing.
+        assert!(font_lock_forget_keyword(r"\bFIXME\b", Some("c"), buffer));
+        {
+            let keywords = FONT_LOCK_KEYWORDS.lock().unwrap();
+            assert_eq!(keywords.len(), 1);
+            assert_eq!(keywords[0].mode, None);
+        }
+
+        // And the nil-MODE removal takes that one.
+        assert!(font_lock_forget_keyword(r"\bFIXME\b", None, buffer));
+        assert!(FONT_LOCK_KEYWORDS.lock().unwrap().is_empty());
+        assert!(!font_lock_forget_keyword(r"\bFIXME\b", None, buffer));
     }
 }
