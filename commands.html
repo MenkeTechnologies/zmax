@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-287eead0.js";
+            window.path_to_searchindex_js = "searchindex-f0cfa0fe.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6ab6793f.js"></script>
+        <script src="toc-0da97fe6.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -451,6 +451,7 @@
 <tr><td><code>:compare-ref</code>, <code>:compare-branch</code></td><td>Diff the buffer against its version at a git ref (JetBrains Compare with Branch).</td></tr>
 <tr><td><code>:merge</code>, <code>:resolve</code></td><td>Resolve the buffer’s git merge conflicts in a 3-pane (ours/result/theirs) view.</td></tr>
 <tr><td><code>:magit</code>, <code>:git</code>, <code>:gst</code></td><td>Open the Magit-style git status (stage/unstage/discard/commit changes by section).</td></tr>
+<tr><td><code>:github</code>, <code>:gh</code>, <code>:hub</code></td><td>Open the GitHub browser: CI runs with jobs/steps/logs, workflows, PRs, issues, releases, branches, commits and notifications. Optional argument picks the starting tab.</td></tr>
 <tr><td><code>:hex</code>, <code>:hexview</code>, <code>:hexedit</code></td><td>Open the xxd-style hex editor on a file’s raw bytes (optional path; defaults to the buffer’s file). Nav mode; i/R edits, Tab switches column, C-s writes the bytes back.</td></tr>
 <tr><td><code>:snippets</code>, <code>:snip</code></td><td>Open the user snippet library editor (create/edit/delete reusable snippets).</td></tr>
 <tr><td><code>:org-cycle</code>, <code>:org-fold</code></td><td>Toggle a fold over the current org heading’s subtree (TAB-style outline cycling).</td></tr>
@@ -2926,6 +2927,7 @@
 <tr><td><code>git_diff</code></td><td>Open side-by-side diff vs HEAD</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;v=</code>, <code>&lt;space&gt;g=</code>, <code>&lt;space&gt;Dfv</code>, <code>&lt;space&gt;gfd</code>, select: <code>&lt;C-x&gt;v=</code>, <code>&lt;space&gt;g=</code>, <code>&lt;space&gt;Dfv</code>, <code>&lt;space&gt;gfd</code>, insert: <code>&lt;C-x&gt;v=</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;v=</code>, <code>&lt;space&gt;g=</code>, <code>&lt;space&gt;Dfv</code>, <code>&lt;space&gt;gfd</code>, select: <code>&lt;C-x&gt;v=</code>, <code>&lt;space&gt;g=</code>, <code>&lt;space&gt;Dfv</code>, <code>&lt;space&gt;gfd</code></td></tr>
 <tr><td><code>resolve_conflicts</code></td><td>Resolve merge conflicts (3-way)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code>, select: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code></td></tr>
 <tr><td><code>git_status</code></td><td>Magit status</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, select: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, insert: <code>&lt;C-x&gt;vd</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, select: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code></td></tr>
+<tr><td><code>github_browser</code></td><td>GitHub browser (CI runs, PRs, issues, releases)</td><td></td></tr>
 <tr><td><code>git_push</code></td><td>Push the current branch to its remote (SPC g P)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, insert: <code>&lt;C-x&gt;vP</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code></td></tr>
 <tr><td><code>git_pull</code></td><td>Fast-forward pull from upstream (SPC g u)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, insert: <code>&lt;C-x&gt;v+</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code></td></tr>
 <tr><td><code>git_fetch</code></td><td>Fetch all remotes (SPC g F)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gF</code>, select: <code>&lt;space&gt;gF</code></td></tr>
@@ -3999,12 +4001,12 @@
 <tr><td><code>c_set_style</code></td><td>Report the C indentation style (emacs c-set-style)</td><td></td></tr>
 <tr><td><code>ps_print_buffer</code></td><td>Print the buffer as PostScript via lpr (emacs ps-print-buffer)</td><td></td></tr>
 <tr><td><code>ps_print_region</code></td><td>Print the region as PostScript via lpr (emacs ps-print-region)</td><td></td></tr>
-<tr><td><code>ps_print_buffer_with_faces</code></td><td>Print the buffer as PostScript (plain, no faces) (emacs ps-print-buffer-with-faces)</td><td></td></tr>
-<tr><td><code>ps_print_region_with_faces</code></td><td>Print the region as PostScript (plain, no faces) (emacs ps-print-region-with-faces)</td><td></td></tr>
+<tr><td><code>ps_print_buffer_with_faces</code></td><td>Print the buffer as PostScript with its face colours (emacs ps-print-buffer-with-faces)</td><td></td></tr>
+<tr><td><code>ps_print_region_with_faces</code></td><td>Print the region as PostScript with its face colours (emacs ps-print-region-with-faces)</td><td></td></tr>
 <tr><td><code>ps_spool_buffer</code></td><td>Spool the buffer as PostScript for later printing (emacs ps-spool-buffer)</td><td></td></tr>
 <tr><td><code>ps_spool_region</code></td><td>Spool the region as PostScript for later printing (emacs ps-spool-region)</td><td></td></tr>
-<tr><td><code>ps_spool_buffer_with_faces</code></td><td>Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces)</td><td></td></tr>
-<tr><td><code>ps_spool_region_with_faces</code></td><td>Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces)</td><td></td></tr>
+<tr><td><code>ps_spool_buffer_with_faces</code></td><td>Spool the buffer as PostScript with its face colours (emacs ps-spool-buffer-with-faces)</td><td></td></tr>
+<tr><td><code>ps_spool_region_with_faces</code></td><td>Spool the region as PostScript with its face colours (emacs ps-spool-region-with-faces)</td><td></td></tr>
 <tr><td><code>ps_despool</code></td><td>Print the accumulated PostScript spool via lpr (emacs ps-despool)</td><td></td></tr>
 <tr><td><code>handwrite</code></td><td>Print the buffer as PostScript in a handwriting style via lpr (emacs handwrite)</td><td></td></tr>
 <tr><td><code>pr_interface</code></td><td>Open the printing package’s front-end for the print commands (emacs pr-interface)</td><td></td></tr>
@@ -4623,7 +4625,7 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="command-line.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="github.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -4637,7 +4639,7 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="command-line.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="github.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
