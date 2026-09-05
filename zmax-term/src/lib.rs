@@ -51,6 +51,7 @@ pub mod filesets;
 // the external `fzf` binary (see `Application::run_fzf`).
 #[cfg(feature = "scripting")]
 pub mod fzf_arb;
+pub mod github;
 pub mod gnus;
 pub mod gud;
 pub mod harpoon;

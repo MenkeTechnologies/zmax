@@ -199,6 +199,12 @@ leaving the editor:
   resolver with a diff3 base pane; `]n`/`[n` jump between conflict markers.
 - **Magit-style git** — interactive rebase, per-hunk staging, and branch/stash
   menus.
+- **GitHub browser** (`:github`) — the whole forge in nine tabs: CI runs with
+  their jobs, steps and foldable logs (rerun, rerun-failed, cancel, dispatch,
+  8-second auto-refresh while a pipeline is live), workflows, pull requests with
+  checks and diffs, issues, releases, branches, commits and your notification
+  inbox. Authenticates through the `gh` CLI when it is installed, else through
+  `$GITHUB_TOKEN`.
 - **Org-mode** — outline folding, `TODO` state cycling, capture, and a
   date-aware agenda.
 - **Transform library** — 200+ selection-transform `:` commands: JSON/CSV/TOML

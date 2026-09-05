@@ -1212,6 +1212,7 @@ impl MappableCommand {
         git_diff, "Open side-by-side diff vs HEAD",
         resolve_conflicts, "Resolve merge conflicts (3-way)",
         git_status, "Magit status",
+        github_browser, "GitHub browser (CI runs, PRs, issues, releases)",
         git_push, "Push the current branch to its remote (SPC g P)",
         git_pull, "Fast-forward pull from upstream (SPC g u)",
         git_fetch, "Fetch all remotes (SPC g F)",
@@ -50724,6 +50725,12 @@ fn resolve_conflicts(cx: &mut Context) {
 /// Static-command mirror of the `:magit` / `:git` typable command.
 fn git_status(cx: &mut Context) {
     typed::open_magit(cx.editor, cx.jobs);
+}
+
+/// Open the GitHub browser on the CI runs of the focused buffer's repo.
+/// Static-command mirror of the `:github` / `:gh` typable command.
+fn github_browser(cx: &mut Context) {
+    typed::open_github(cx.editor, cx.jobs, crate::ui::github::Tab::Runs);
 }
 
 /// Run `git <args>` in the workspace root, returning the trimmed output (or stderr on failure).

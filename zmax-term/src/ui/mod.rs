@@ -40,6 +40,7 @@ pub mod flappy;
 pub mod frogger;
 pub mod galaga;
 pub mod gdb;
+pub mod github;
 pub mod gnus;
 pub mod gomoku;
 pub mod hangman;
@@ -726,6 +727,14 @@ pub mod completers {
         names.dedup();
 
         fuzzy_match(input, names, false)
+            .into_iter()
+            .map(|(name, _)| ((0..), name.into()))
+            .collect()
+    }
+
+    /// Completes the `:github` tab argument (repo, runs, workflows, …).
+    pub fn github_tab(_editor: &Editor, input: &str) -> Vec<Completion> {
+        fuzzy_match(input, crate::ui::github::Tab::names(), false)
             .into_iter()
             .map(|(name, _)| ((0..), name.into()))
             .collect()

@@ -14,6 +14,7 @@
   - [Jumplist](./jumplist.md)
   - [Keymap](./keymap.md)
   - [Command line](./command-line.md)
+  - [GitHub browser](./github.md)
   - [Commands](./commands.md)
   - [Embedded scripting](./scripting.md)
   - [Language servers](./lsp.md)

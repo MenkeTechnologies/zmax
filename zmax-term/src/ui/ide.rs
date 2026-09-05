@@ -1348,7 +1348,7 @@ impl Ide {
             },
             BottomTab::Ci => crate::ci::snapshot()
                 .get(self.aux_sel)
-                .map(|r| IdeAction::OpenUrl(r.url.clone()))
+                .map(|r| IdeAction::OpenUrl(r.html_url.clone()))
                 .unwrap_or(IdeAction::None),
             _ => IdeAction::None,
         }
@@ -1975,7 +1975,7 @@ impl Ide {
                     let runs = crate::ci::snapshot();
                     if let Some(r) = runs.get(idx) {
                         self.aux_sel = idx;
-                        return IdeAction::OpenUrl(r.url.clone());
+                        return IdeAction::OpenUrl(r.html_url.clone());
                     }
                     return IdeAction::None;
                 }

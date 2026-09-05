@@ -256,6 +256,7 @@
 | `:compare-ref`, `:compare-branch` | Diff the buffer against its version at a git ref (JetBrains Compare with Branch). |
 | `:merge`, `:resolve` | Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view. |
 | `:magit`, `:git`, `:gst` | Open the Magit-style git status (stage/unstage/discard/commit changes by section). |
+| `:github`, `:gh`, `:hub` | Open the GitHub browser: CI runs with jobs/steps/logs, workflows, PRs, issues, releases, branches, commits and notifications. Optional argument picks the starting tab. |
 | `:hex`, `:hexview`, `:hexedit` | Open the xxd-style hex editor on a file's raw bytes (optional path; defaults to the buffer's file). Nav mode; i/R edits, Tab switches column, C-s writes the bytes back. |
 | `:snippets`, `:snip` | Open the user snippet library editor (create/edit/delete reusable snippets). |
 | `:org-cycle`, `:org-fold` | Toggle a fold over the current org heading's subtree (TAB-style outline cycling). |

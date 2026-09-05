@@ -192,6 +192,23 @@ Changes in zmax.
 
 Features:
 
+* **A GitHub browser** — `:github` (`:gh`, `:hub`) opens the whole forge for the
+  repository the buffer lives in, in nine tabs: Repo, Runs, Workflows, PRs,
+  Issues, Releases, Branches, Commits and the notification Inbox. The CI half is
+  the point: the Runs tab filters by branch, status and workflow, `a` polls every
+  eight seconds so a live pipeline updates in place, and `R` / `F` / `X` / `D`
+  re-run it, re-run only its failed jobs, cancel it or delete it. `Enter` on a run
+  shows every job with its steps, timings and uploaded artifacts; `Enter` on a job
+  downloads its log into a viewer that folds the runner's `##[group]` sections
+  (`z` / `Z`), toggles timestamps (`t`), narrows to errors and warnings (`E`) and
+  filters (`/`). Workflows dispatch (`d`) and enable/disable (`e`); pull requests
+  show their checks, changed files with real diffs, reviews and comments, and can
+  be commented on, closed, checked out (`gh pr checkout`) or merged; issues and
+  the inbox get the same treatment. Requests go through the `gh` CLI when it is
+  installed — inheriting its credentials — and fall back to the REST API directly
+  with `$GITHUB_TOKEN` / `$GH_TOKEN`; both transports read `$GH_HOST`. Everything is
+  fetched off the UI thread, and a reply that a newer request has superseded is
+  discarded rather than drawn.
 * **The fzf.vim commands no longer need fzf, or a fork.** `:Files`, `:Rg`,
   `:GFiles`, `:Buffers`, `:BLines`, `:Maps`, `:Colors` and the rest used to hand
   the terminal to the external `fzf` binary. The picker is now `arb --fzf` —

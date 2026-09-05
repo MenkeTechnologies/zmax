@@ -8552,6 +8552,58 @@ pub(crate) fn open_magit(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
     }
 }
 
+/// `:github` / `:gh` / `:hub` — open the GitHub browser over the repository the
+/// focused buffer lives in: CI runs (jobs, steps and logs), workflows, pull
+/// requests, issues, releases, branches, commits and the notification inbox.
+///
+/// The optional argument picks the starting tab (`runs`, `prs`, `issues`, …);
+/// without one the browser opens on the CI runs.
+fn github(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tab = match args.first() {
+        Some(name) => match crate::ui::github::Tab::from_name(name) {
+            Some(tab) => tab,
+            None => {
+                cx.editor
+                    .set_error(format!("no such github tab: {name}"));
+                return Ok(());
+            }
+        },
+        None => crate::ui::github::Tab::Runs,
+    };
+    open_github(cx.editor, cx.jobs, tab);
+    Ok(())
+}
+
+/// Shared implementation behind `:github` and the `github_browser` static
+/// command: open the browser on the repo derived from the focused file's
+/// directory (falling back to the cwd), starting on `tab`.
+pub(crate) fn open_github(
+    editor: &mut Editor,
+    jobs: &mut crate::job::Jobs,
+    tab: crate::ui::github::Tab,
+) {
+    let start = doc!(editor)
+        .path()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
+    match crate::ui::github::GithubBrowser::new(&start, tab) {
+        Ok(view) => {
+            let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut Compositor| {
+                    compositor.push(Box::new(view));
+                },
+            ));
+            jobs.callback(async move { Ok(call) });
+        }
+        Err(e) => editor.set_error(format!("github: {e}")),
+    }
+}
+
 /// `:hex` — open a read-only, full-screen `xxd`-style hex viewer of a file's raw
 /// bytes (offset gutter, 16 hex bytes per row grouped 8 + 8, and an ASCII
 /// gutter). With no argument the focused document's file is shown; with an
@@ -51440,6 +51492,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "github",
+        aliases: &["gh", "hub"],
+        doc: "Open the GitHub browser: CI runs with jobs/steps/logs, workflows, PRs, issues, releases, branches, commits and notifications. Optional argument picks the starting tab.",
+        fun: github,
+        completer: CommandCompleter::positional(&[completers::github_tab]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

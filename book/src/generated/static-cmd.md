@@ -821,6 +821,7 @@
 | `git_diff` | Open side-by-side diff vs HEAD | **spacemacs** — normal: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, select: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, insert: `` <C-x>v= ``<br>**hybrid** — normal: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, select: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd `` |
 | `resolve_conflicts` | Resolve merge conflicts (3-way) | **spacemacs, hybrid** — normal: `` <space>gm ``, `` <space>gcr ``, select: `` <space>gm ``, `` <space>gcr `` |
 | `git_status` | Magit status | **spacemacs** — normal: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, select: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, insert: `` <C-x>vd ``<br>**hybrid** — normal: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, select: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv `` |
+| `github_browser` | GitHub browser (CI runs, PRs, issues, releases) |  |
 | `git_push` | Push the current branch to its remote (SPC g P) | **spacemacs** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP ``, insert: `` <C-x>vP ``<br>**hybrid** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP `` |
 | `git_pull` | Fast-forward pull from upstream (SPC g u) | **spacemacs** — normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu ``, insert: `` <C-x>v+ ``<br>**hybrid** — normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu `` |
 | `git_fetch` | Fetch all remotes (SPC g F) | **spacemacs, hybrid** — normal: `` <space>gF ``, select: `` <space>gF `` |
@@ -1894,12 +1895,12 @@
 | `c_set_style` | Report the C indentation style (emacs c-set-style) |  |
 | `ps_print_buffer` | Print the buffer as PostScript via lpr (emacs ps-print-buffer) |  |
 | `ps_print_region` | Print the region as PostScript via lpr (emacs ps-print-region) |  |
-| `ps_print_buffer_with_faces` | Print the buffer as PostScript (plain, no faces) (emacs ps-print-buffer-with-faces) |  |
-| `ps_print_region_with_faces` | Print the region as PostScript (plain, no faces) (emacs ps-print-region-with-faces) |  |
+| `ps_print_buffer_with_faces` | Print the buffer as PostScript with its face colours (emacs ps-print-buffer-with-faces) |  |
+| `ps_print_region_with_faces` | Print the region as PostScript with its face colours (emacs ps-print-region-with-faces) |  |
 | `ps_spool_buffer` | Spool the buffer as PostScript for later printing (emacs ps-spool-buffer) |  |
 | `ps_spool_region` | Spool the region as PostScript for later printing (emacs ps-spool-region) |  |
-| `ps_spool_buffer_with_faces` | Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces) |  |
-| `ps_spool_region_with_faces` | Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces) |  |
+| `ps_spool_buffer_with_faces` | Spool the buffer as PostScript with its face colours (emacs ps-spool-buffer-with-faces) |  |
+| `ps_spool_region_with_faces` | Spool the region as PostScript with its face colours (emacs ps-spool-region-with-faces) |  |
 | `ps_despool` | Print the accumulated PostScript spool via lpr (emacs ps-despool) |  |
 | `handwrite` | Print the buffer as PostScript in a handwriting style via lpr (emacs handwrite) |  |
 | `pr_interface` | Open the printing package's front-end for the print commands (emacs pr-interface) |  |
