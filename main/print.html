@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-8f286eed.js";
+            window.path_to_searchindex_js = "searchindex-f0cfa0fe.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6ab6793f.js"></script>
+        <script src="toc-0da97fe6.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1625,6 +1625,84 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <p>When providing multiple values to <code>:toggle-option</code> there should be no duplicates. <code>:toggle-option indent-heuristic hybrid simple tree-sitter simple</code> for example would only toggle between “hybrid” and “tree-sitter” values.</p>
 <p><code>:lsp-workspace-command</code> works similarly to <code>:toggle-option</code>. The first argument (if present) is parsed according to normal rules. The rest of the line is parsed as JSON values. Unlike <code>:toggle-option</code>, string arguments for a command must be quoted. For example <code>:lsp-workspace-command lsp.Command "foo" "bar"</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="github-browser-1"><a href="#github-browser-1" class="header">GitHub browser</a></h1>
+<h2 id="github-browser"><a class="header" href="#github-browser">GitHub browser</a></h2>
+<p><code>:github</code> (aliases <code>:gh</code>, <code>:hub</code>) opens a full-screen browser over the GitHub
+repository the focused buffer lives in — the <code>origin</code> remote decides which one.
+An optional argument picks the starting tab, e.g. <code>:github prs</code>; without one the
+browser opens on the CI runs.</p>
+<p>Requests go through the <code>gh</code> CLI when it is installed, so the browser inherits
+whatever <code>gh auth</code> is logged into. Without <code>gh</code> it talks to the REST API
+directly, authenticated with <code>$GITHUB_TOKEN</code> or <code>$GH_TOKEN</code>. Both transports
+read <code>$GH_HOST</code>, so a non-default instance needs only the variable <code>gh</code> itself
+uses — and unauthenticated, at GitHub’s 60-requests-per-hour public
+rate, if neither is set. Every request runs off the UI thread; the API budget
+left is shown in the top-right corner.</p>
+<h3 id="tabs"><a class="header" href="#tabs">Tabs</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Tab</th><th>Shows</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Repo</td><td>Description, default branch, language, licence, stars, forks, topics</td></tr>
+<tr><td>2</td><td>Runs</td><td>Workflow runs — the CI pipelines — filtered by branch, status and workflow</td></tr>
+<tr><td>3</td><td>Workflows</td><td>The repository’s workflows, with dispatch and enable/disable</td></tr>
+<tr><td>4</td><td>PRs</td><td>Pull requests: checks, changed files, reviews, comments</td></tr>
+<tr><td>5</td><td>Issues</td><td>Issues and their comment threads</td></tr>
+<tr><td>6</td><td>Releases</td><td>Releases, their notes and their assets</td></tr>
+<tr><td>7</td><td>Branches</td><td>Branches, protection state and tip commit</td></tr>
+<tr><td>8</td><td>Commits</td><td>Recent commits, each opening its full diff</td></tr>
+<tr><td>9</td><td>Inbox</td><td>Your notification inbox</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>1</code>–<code>9</code> jump straight to a tab; <code>Tab</code> / <code>Shift-Tab</code> (or <code>h</code> / <code>l</code>) cycle.</p>
+<h3 id="keys"><a class="header" href="#keys">Keys</a></h3>
+<p>Everywhere: <code>j</code>/<code>k</code> move, <code>C-d</code>/<code>C-u</code> page, <code>g</code>/<code>G</code> jump to top/bottom, <code>Enter</code>
+opens, <code>o</code> opens the row in a browser, <code>y</code> copies its URL to the kill ring, <code>/</code>
+filters the list, <code>r</code> refreshes the tab, <code>A</code> refreshes everything, <code>q</code> closes.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tab</th><th>Key</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr><td>Runs</td><td><code>R</code> / <code>F</code></td><td>Re-run the whole run / only its failed jobs</td></tr>
+<tr><td>Runs</td><td><code>X</code> / <code>D</code></td><td>Cancel the run / delete it (press <code>D</code> twice)</td></tr>
+<tr><td>Runs</td><td><code>b</code> / <code>S</code> / <code>w</code></td><td>Filter by branch / cycle the status filter / clear the workflow filter</td></tr>
+<tr><td>Runs</td><td><code>a</code></td><td>Auto-refresh every 8 seconds</td></tr>
+<tr><td>Workflows</td><td><code>d</code> / <code>e</code></td><td>Dispatch the workflow against a ref / enable or disable it</td></tr>
+<tr><td>PRs, Issues</td><td><code>c</code> / <code>s</code></td><td>Comment / close or reopen</td></tr>
+<tr><td>PRs</td><td><code>C</code> / <code>M</code></td><td><code>gh pr checkout</code> it / merge it (press <code>M</code> twice)</td></tr>
+<tr><td>Inbox</td><td><code>m</code> / <code>M</code></td><td>Mark the notification read / mark them all read</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="runs-jobs-and-logs"><a class="header" href="#runs-jobs-and-logs">Runs, jobs and logs</a></h3>
+<p><code>Enter</code> on a run opens it: every job with its steps, each with its own status
+glyph and duration, plus the artifacts the run uploaded. A run that is still
+going polls on its own until it finishes; <code>a</code> toggles that for a run that has
+already completed. <code>R</code>, <code>F</code> and <code>X</code> work here too.</p>
+<p><code>Enter</code> on a job (or on any of its steps) downloads that job’s log:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Enter</code> / <code>Tab</code></td><td>Fold or unfold the <code>##[group]</code> section under the cursor</td></tr>
+<tr><td><code>z</code> / <code>Z</code></td><td>Fold every group / unfold them all</td></tr>
+<tr><td><code>t</code></td><td>Show or hide the runner’s per-line timestamps</td></tr>
+<tr><td><code>E</code></td><td>Narrow to the error and warning lines</td></tr>
+<tr><td><code>/</code></td><td>Filter to lines containing a string</td></tr>
+<tr><td><code>h</code> / <code>l</code></td><td>Pan left and right</td></tr>
+</tbody>
+</table>
+</div>
+<p>The header counts the log’s errors and warnings, so a failed job says why
+without scrolling.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="commands"><a class="header" href="#commands">Commands</a></h1>
 <ul>
 <li><a href="#typable-commands">Typable commands</a></li>
@@ -1894,6 +1972,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:compare-ref</code>, <code>:compare-branch</code></td><td>Diff the buffer against its version at a git ref (JetBrains Compare with Branch).</td></tr>
 <tr><td><code>:merge</code>, <code>:resolve</code></td><td>Resolve the buffer’s git merge conflicts in a 3-pane (ours/result/theirs) view.</td></tr>
 <tr><td><code>:magit</code>, <code>:git</code>, <code>:gst</code></td><td>Open the Magit-style git status (stage/unstage/discard/commit changes by section).</td></tr>
+<tr><td><code>:github</code>, <code>:gh</code>, <code>:hub</code></td><td>Open the GitHub browser: CI runs with jobs/steps/logs, workflows, PRs, issues, releases, branches, commits and notifications. Optional argument picks the starting tab.</td></tr>
 <tr><td><code>:hex</code>, <code>:hexview</code>, <code>:hexedit</code></td><td>Open the xxd-style hex editor on a file’s raw bytes (optional path; defaults to the buffer’s file). Nav mode; i/R edits, Tab switches column, C-s writes the bytes back.</td></tr>
 <tr><td><code>:snippets</code>, <code>:snip</code></td><td>Open the user snippet library editor (create/edit/delete reusable snippets).</td></tr>
 <tr><td><code>:org-cycle</code>, <code>:org-fold</code></td><td>Toggle a fold over the current org heading’s subtree (TAB-style outline cycling).</td></tr>
@@ -4369,6 +4448,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>git_diff</code></td><td>Open side-by-side diff vs HEAD</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;v=</code>, <code>&lt;space&gt;g=</code>, <code>&lt;space&gt;Dfv</code>, <code>&lt;space&gt;gfd</code>, select: <code>&lt;C-x&gt;v=</code>, <code>&lt;space&gt;g=</code>, <code>&lt;space&gt;Dfv</code>, <code>&lt;space&gt;gfd</code>, insert: <code>&lt;C-x&gt;v=</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;v=</code>, <code>&lt;space&gt;g=</code>, <code>&lt;space&gt;Dfv</code>, <code>&lt;space&gt;gfd</code>, select: <code>&lt;C-x&gt;v=</code>, <code>&lt;space&gt;g=</code>, <code>&lt;space&gt;Dfv</code>, <code>&lt;space&gt;gfd</code></td></tr>
 <tr><td><code>resolve_conflicts</code></td><td>Resolve merge conflicts (3-way)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code>, select: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code></td></tr>
 <tr><td><code>git_status</code></td><td>Magit status</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, select: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, insert: <code>&lt;C-x&gt;vd</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, select: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code></td></tr>
+<tr><td><code>github_browser</code></td><td>GitHub browser (CI runs, PRs, issues, releases)</td><td></td></tr>
 <tr><td><code>git_push</code></td><td>Push the current branch to its remote (SPC g P)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, insert: <code>&lt;C-x&gt;vP</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code></td></tr>
 <tr><td><code>git_pull</code></td><td>Fast-forward pull from upstream (SPC g u)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, insert: <code>&lt;C-x&gt;v+</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code></td></tr>
 <tr><td><code>git_fetch</code></td><td>Fetch all remotes (SPC g F)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gF</code>, select: <code>&lt;space&gt;gF</code></td></tr>
@@ -5442,12 +5522,12 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>c_set_style</code></td><td>Report the C indentation style (emacs c-set-style)</td><td></td></tr>
 <tr><td><code>ps_print_buffer</code></td><td>Print the buffer as PostScript via lpr (emacs ps-print-buffer)</td><td></td></tr>
 <tr><td><code>ps_print_region</code></td><td>Print the region as PostScript via lpr (emacs ps-print-region)</td><td></td></tr>
-<tr><td><code>ps_print_buffer_with_faces</code></td><td>Print the buffer as PostScript (plain, no faces) (emacs ps-print-buffer-with-faces)</td><td></td></tr>
-<tr><td><code>ps_print_region_with_faces</code></td><td>Print the region as PostScript (plain, no faces) (emacs ps-print-region-with-faces)</td><td></td></tr>
+<tr><td><code>ps_print_buffer_with_faces</code></td><td>Print the buffer as PostScript with its face colours (emacs ps-print-buffer-with-faces)</td><td></td></tr>
+<tr><td><code>ps_print_region_with_faces</code></td><td>Print the region as PostScript with its face colours (emacs ps-print-region-with-faces)</td><td></td></tr>
 <tr><td><code>ps_spool_buffer</code></td><td>Spool the buffer as PostScript for later printing (emacs ps-spool-buffer)</td><td></td></tr>
 <tr><td><code>ps_spool_region</code></td><td>Spool the region as PostScript for later printing (emacs ps-spool-region)</td><td></td></tr>
-<tr><td><code>ps_spool_buffer_with_faces</code></td><td>Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces)</td><td></td></tr>
-<tr><td><code>ps_spool_region_with_faces</code></td><td>Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces)</td><td></td></tr>
+<tr><td><code>ps_spool_buffer_with_faces</code></td><td>Spool the buffer as PostScript with its face colours (emacs ps-spool-buffer-with-faces)</td><td></td></tr>
+<tr><td><code>ps_spool_region_with_faces</code></td><td>Spool the region as PostScript with its face colours (emacs ps-spool-region-with-faces)</td><td></td></tr>
 <tr><td><code>ps_despool</code></td><td>Print the accumulated PostScript spool via lpr (emacs ps-despool)</td><td></td></tr>
 <tr><td><code>handwrite</code></td><td>Print the buffer as PostScript in a handwriting style via lpr (emacs handwrite)</td><td></td></tr>
 <tr><td><code>pr_interface</code></td><td>Open the printing package’s front-end for the print commands (emacs pr-interface)</td><td></td></tr>
