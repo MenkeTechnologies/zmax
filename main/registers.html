@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-9ae047cf.js";
+            window.path_to_searchindex_js = "searchindex-287eead0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -187,6 +187,7 @@
 <li><a href="#user-defined-registers">User-defined registers</a></li>
 <li><a href="#default-registers">Default registers</a></li>
 <li><a href="#special-registers">Special registers</a></li>
+<li><a href="#tmux-paste-buffers">tmux paste buffers</a></li>
 </ul>
 <p>In Zmax, registers are storage locations for text and other data, such as the
 result of a search. Registers can be used to cut, copy, and paste text, similar
@@ -244,6 +245,28 @@ These registers are used as defaults:</p>
 are joined with newlines. Pasting from these registers will paste multiple
 selections if the clipboard was last yanked to by the Zmax session. Otherwise
 the clipboard contents are pasted as one selection.</p>
+<h3 id="tmux-paste-buffers"><a class="header" href="#tmux-paste-buffers">tmux paste buffers</a></h3>
+<p>Inside a tmux session the paste buffers are a third store, next to the registers
+and the system clipboard. They are shared with every pane of the session (<code>prefix ]</code> pastes them) and are untouched by what other applications copy, so they are
+the place to park text that should survive a stray Cmd-C elsewhere.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:tmux-buffer-yank</code></td><td>Yank the selections into a NEW tmux buffer. The system clipboard is left alone.</td></tr>
+<tr><td><code>:tmux-buffer-paste-after [name]</code></td><td>Paste the newest tmux buffer, or the named one, after the selections.</td></tr>
+<tr><td><code>:tmux-buffer-paste-before [name]</code></td><td>The same, before the selections.</td></tr>
+<tr><td><code>:tmux-buffers</code></td><td>List the session’s buffers (name and sample) in the status bar.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The same actions are bindable as the static commands <code>yank_to_tmux_buffer</code>,
+<code>paste_tmux_buffer_after</code>, <code>paste_tmux_buffer_before</code>, and
+<code>tmux_buffer_picker</code> (a fuzzy picker over the buffers, newest first), and appear
+under <strong>tmux Buffers</strong> in the editor’s right-click menu when a tmux session is
+detected. Outside tmux the commands report an error and the menu entry is absent.</p>
 
                     </main>
 
