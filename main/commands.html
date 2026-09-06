@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-31b8cd61.js";
+            window.path_to_searchindex_js = "searchindex-a039806b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -989,6 +989,8 @@
 <tr><td><code>:buffer-close!</code>, <code>:bc!</code>, <code>:bclose!</code></td><td>Close the current buffer forcefully, ignoring unsaved changes.</td></tr>
 <tr><td><code>:buffer-close-others</code>, <code>:bco</code>, <code>:bcloseother</code></td><td>Close all buffers but the currently focused one.</td></tr>
 <tr><td><code>:buffer-close-others!</code>, <code>:bco!</code>, <code>:bcloseother!</code></td><td>Force close all buffers but the currently focused one.</td></tr>
+<tr><td><code>:buffer-close-unmodified</code>, <code>:bcu</code></td><td>Close every buffer with no unsaved changes, keeping pinned ones.</td></tr>
+<tr><td><code>:pin-tab</code>, <code>:pin</code></td><td>Pin or unpin this buffer, keeping it out of the bulk buffer closes.</td></tr>
 <tr><td><code>:buffer-close-all</code>, <code>:bca</code>, <code>:bcloseall</code></td><td>Close all buffers without quitting.</td></tr>
 <tr><td><code>:buffer-close-all!</code>, <code>:bca!</code>, <code>:bcloseall!</code></td><td>Force close all buffers ignoring unsaved changes without quitting.</td></tr>
 <tr><td><code>:buffer-next</code>, <code>:bn</code>, <code>:bnext</code></td><td>Goto next buffer.</td></tr>
@@ -4258,6 +4260,7 @@
 <tr><td><code>error_description</code></td><td>Show the full text of the diagnostic under the cursor (JetBrains Error Description)</td><td></td></tr>
 <tr><td><code>context_info</code></td><td>Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lQ</code>, select: <code>&lt;space&gt;lQ</code></td></tr>
 <tr><td><code>local_history_revert</code></td><td>Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fV</code>, select: <code>&lt;space&gt;fV</code></td></tr>
+<tr><td><code>pin_tab</code></td><td>Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bt</code>, select: <code>&lt;space&gt;bt</code></td></tr>
 <tr><td><code>new_file_from_template</code></td><td>Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fN</code>, select: <code>&lt;space&gt;fN</code></td></tr>
 <tr><td><code>highlight_usages_in_file</code></td><td>Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;su</code>, select: <code>&lt;space&gt;su</code></td></tr>
 <tr><td><code>build_project</code></td><td>Build the project with its own build tool (JetBrains Build Project, Ctrl F9)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pB</code>, select: <code>&lt;space&gt;pB</code></td></tr>
