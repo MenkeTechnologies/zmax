@@ -3183,7 +3183,14 @@ impl EditorView {
                 (
                     doc.id(),
                     format!(
-                        " {} {}{} ",
+                        " {}{} {}{} ",
+                        // A pinned buffer (IntelliJ Pin Tab) carries a pin, so
+                        // the bar shows what the bulk closes will spare.
+                        if editor.pinned_buffers.contains(&doc.id()) {
+                            "\u{f08d} "
+                        } else {
+                            ""
+                        },
                         super::icons::file_icon(fname),
                         fname,
                         if doc.is_modified() { "[+]" } else { "" }

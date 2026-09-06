@@ -2152,6 +2152,7 @@
 | `error_description` | Show the full text of the diagnostic under the cursor (JetBrains Error Description) |  |
 | `context_info` | Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q) | **spacemacs, hybrid** — normal: `` <space>lQ ``, select: `` <space>lQ `` |
 | `local_history_revert` | Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert) | **spacemacs, hybrid** — normal: `` <space>fV ``, select: `` <space>fV `` |
+| `pin_tab` | Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab) | **spacemacs, hybrid** — normal: `` <space>bt ``, select: `` <space>bt `` |
 | `new_file_from_template` | Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template) | **spacemacs, hybrid** — normal: `` <space>fN ``, select: `` <space>fN `` |
 | `highlight_usages_in_file` | Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7) | **spacemacs, hybrid** — normal: `` <space>su ``, select: `` <space>su `` |
 | `build_project` | Build the project with its own build tool (JetBrains Build Project, Ctrl F9) | **spacemacs, hybrid** — normal: `` <space>pB ``, select: `` <space>pB `` |

@@ -6155,6 +6155,14 @@ fn force_buffer_close(
     buffer_close_by_ids_impl(cx, &document_ids, true)
 }
 
+/// The buffers a bulk close may take: everything but the PINNED ones
+/// (IntelliJ's Pin Tab keeps a tab out of Close Others / Close All).
+fn drop_pinned(editor: &Editor, ids: Vec<DocumentId>) -> Vec<DocumentId> {
+    ids.into_iter()
+        .filter(|id| !editor.pinned_buffers.contains(id))
+        .collect()
+}
+
 fn buffer_gather_others_impl(editor: &mut Editor, skip_visible: bool) -> Vec<DocumentId> {
     if skip_visible {
         let visible_document_ids = editor
@@ -6186,7 +6194,8 @@ fn buffer_close_others(
         return Ok(());
     }
 
-    let document_ids = buffer_gather_others_impl(cx.editor, args.has_flag("skip-visible"));
+    let others = buffer_gather_others_impl(cx.editor, args.has_flag("skip-visible"));
+    let document_ids = drop_pinned(cx.editor, others);
     buffer_close_by_ids_impl(cx, &document_ids, false)
 }
 
@@ -6199,12 +6208,68 @@ fn force_buffer_close_others(
         return Ok(());
     }
 
-    let document_ids = buffer_gather_others_impl(cx.editor, args.has_flag("skip-visible"));
+    let others = buffer_gather_others_impl(cx.editor, args.has_flag("skip-visible"));
+    let document_ids = drop_pinned(cx.editor, others);
     buffer_close_by_ids_impl(cx, &document_ids, true)
 }
 
 fn buffer_gather_all_impl(editor: &mut Editor) -> Vec<DocumentId> {
-    editor.documents().map(|doc| doc.id()).collect()
+    drop_pinned(editor, editor.documents().map(|doc| doc.id()).collect())
+}
+
+/// The buffers with nothing unsaved in them, pins excepted (IntelliJ "Close
+/// Unmodified Tabs"). The current buffer counts like any other: an untouched
+/// file you are looking at is still an unmodified tab.
+fn buffer_gather_unmodified_impl(editor: &mut Editor) -> Vec<DocumentId> {
+    drop_pinned(
+        editor,
+        editor
+            .documents()
+            .filter(|doc| !doc.is_modified())
+            .map(|doc| doc.id())
+            .collect(),
+    )
+}
+
+fn buffer_close_unmodified(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let document_ids = buffer_gather_unmodified_impl(cx.editor);
+    buffer_close_by_ids_impl(cx, &document_ids, false)
+}
+
+/// `:pin-tab` — IntelliJ "Pin Tab": keep this buffer out of the bulk closes.
+/// Toggles, and says which way it went, since the bar's marker is easy to miss
+/// on a long buffer line.
+fn pin_tab(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    pin_tab_current(cx)
+}
+
+/// The body of `:pin-tab`, shared with the static command of the same name.
+pub(crate) fn pin_tab_current(cx: &mut compositor::Context) -> anyhow::Result<()> {
+    let id = doc!(cx.editor).id();
+    let name = doc!(cx.editor).display_name().into_owned();
+    if cx.editor.pinned_buffers.remove(&id) {
+        cx.editor.set_status(format!("unpinned {name}"));
+    } else {
+        cx.editor.pinned_buffers.insert(id);
+        cx.editor.set_status(format!("pinned {name}"));
+    }
+    Ok(())
 }
 
 fn buffer_close_all(
@@ -57428,6 +57493,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: force_buffer_close_others,
         completer: CommandCompleter::none(),
         signature: BUFFER_CLOSE_OTHERS_SIGNATURE,
+    },
+    TypableCommand {
+        name: "buffer-close-unmodified",
+        aliases: &["bcu"],
+        doc: "Close every buffer with no unsaved changes, keeping pinned ones.",
+        fun: buffer_close_unmodified,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pin-tab",
+        aliases: &["pin"],
+        doc: "Pin or unpin this buffer, keeping it out of the bulk buffer closes.",
+        fun: pin_tab,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "buffer-close-all",

@@ -2042,6 +2042,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // (`< a` unindents a text object) and `SPC b s` is already
                 // Scratch, so they live under `SPC b o`/`O` (order) and
                 // `SPC b o <key>` instead of shadowing either.
+                "t" => pin_tab,                  // SPC b t : pin/unpin this tab, keeping it out of the bulk closes (JetBrains Pin Tab)
                 ">" => buffer_move_right,
                 "<" => buffer_move_left,
                 "o" => { "Order buffers"

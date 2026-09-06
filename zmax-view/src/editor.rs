@@ -2167,6 +2167,11 @@ pub struct Editor {
     /// [`Editor::ordered_document_ids`], which reconciles it with `documents`
     /// so a stale or missing entry can never hide a buffer.
     pub buffer_order: Vec<DocumentId>,
+    /// Buffers pinned to the buffer line (IntelliJ "Pin Tab"): they are kept
+    /// out of the bulk closes (`:buffer-close-others`, `:buffer-close-all`,
+    /// `:buffer-close-unmodified`) and marked in the bar. Closing one directly
+    /// still works — pinning guards against the sweep, not against intent.
+    pub pinned_buffers: HashSet<DocumentId>,
 
     // We Flatten<> to resolve the inner DocumentSavedEventFuture. For that we need a stream of streams, hence the Once<>.
     // https://stackoverflow.com/a/66875668
@@ -2674,6 +2679,7 @@ impl Editor {
             next_document_id: DocumentId::default(),
             documents: BTreeMap::new(),
             buffer_order: Vec::new(),
+            pinned_buffers: HashSet::new(),
             saves: HashMap::new(),
             save_queue: SelectAll::new(),
             write_count: 0,
@@ -3421,6 +3427,7 @@ impl Editor {
                     let id = doc.id;
                     self.documents.remove(&id);
                     self.buffer_order.retain(|&buf| buf != id);
+                    self.pinned_buffers.remove(&id);
 
                     // Remove the scratch buffer from any jumplists
                     for (view, _) in self.tree.views_mut() {
@@ -3776,6 +3783,7 @@ impl Editor {
 
         let doc = self.documents.remove(&doc_id).unwrap();
         self.buffer_order.retain(|&buf| buf != doc_id);
+        self.pinned_buffers.remove(&doc_id);
 
         // If the document we removed was visible in all views, we will have no more views. We don't
         // want to close the editor just for a simple buffer close, so we need to create a new view

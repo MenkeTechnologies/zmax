@@ -2543,6 +2543,7 @@ impl MappableCommand {
         error_description, "Show the full text of the diagnostic under the cursor (JetBrains Error Description)",
         context_info, "Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)",
         local_history_revert, "Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert)",
+        pin_tab, "Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab)",
         new_file_from_template, "Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
@@ -67082,6 +67083,20 @@ fn copy_reference(cx: &mut Context) {
     let _ = cx.editor.registers.write('+', vec![reference.clone()]);
     cx.editor
         .set_status(format!("Copied reference: {reference}"));
+}
+
+/// JetBrains "Pin Tab": keep this buffer out of `:buffer-close-others`,
+/// `:buffer-close-all` and `:buffer-close-unmodified`. Static-command mirror of
+/// `:pin-tab`, so it can be bound to a key.
+fn pin_tab(cx: &mut Context) {
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    if let Err(e) = typed::pin_tab_current(&mut bridge) {
+        bridge.editor.set_error(e.to_string());
+    }
 }
 
 /// JetBrains Local History "Revert": put the buffer back to one of its
