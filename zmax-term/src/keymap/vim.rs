@@ -129,6 +129,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g I", "Git", "toggle_inline_blame"),     // SPC g I : toggle GitLens-style inline blame
     ("space g B", "Git", "toggle_blame_annotate"),   // SPC g B : toggle blame annotate gutter (JetBrains Annotate)
     ("space f H", "Files", ":LocalHistory"),         // SPC f H : Local History snapshots for this file
+    ("space f V", "Files", "local_history_revert"),  // SPC f V : revert this buffer to a Local History snapshot (JetBrains Local History Revert; `f R` is already :move)
     ("space f E", "Files", ":sudo-edit"),            // SPC f E : open the file with elevated privileges
     ("space f O", "Files", ":RevealInFinder"),       // SPC f O : reveal current file in Finder
     ("space b S", "Buffers", ":Scratch"),            // SPC b S : new scratch buffer (JetBrains Scratch File)
@@ -1995,6 +1996,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "r" => frecent_file_picker,                    // SPC f r : recent files (z frecency)
                 "u" => reopen_last_closed,                     // SPC f u : reopen last closed file
                 "n" => new_file_in_directory,                  // SPC f n : create a file beside this one (JetBrains New in This Directory)
+                "N" => new_file_from_template,                  // SPC f N : create a file from a ~/.zmax/file-templates template (JetBrains New File from Template)
                 "t" => file_explorer,                          // SPC f t
                 "d" => file_explorer_in_current_buffer_directory, // SPC f d
                 "j" => file_explorer_in_current_buffer_directory, // SPC f j : dired

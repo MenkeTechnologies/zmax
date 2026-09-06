@@ -2542,6 +2542,8 @@ impl MappableCommand {
         copy_reference, "Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference)",
         error_description, "Show the full text of the diagnostic under the cursor (JetBrains Error Description)",
         context_info, "Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)",
+        local_history_revert, "Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert)",
+        new_file_from_template, "Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
         rebuild_project, "Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)",
@@ -67082,6 +67084,219 @@ fn copy_reference(cx: &mut Context) {
         .set_status(format!("Copied reference: {reference}"));
 }
 
+/// JetBrains Local History "Revert": put the buffer back to one of its
+/// snapshots, picked from the same store `:LocalHistory` lists.
+///
+/// The snapshot is applied as an ordinary edit — a rope diff against the
+/// current text — NOT written over the file, so `u` undoes the revert and the
+/// change goes through the normal save path. `:LocalHistory` opens a snapshot
+/// read-only in its own buffer; this is the other half of the IDE's dialog.
+fn local_history_revert(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("local-history: the buffer is not visiting a file");
+        return;
+    };
+    let snaps = crate::local_history::snapshots(&path);
+    if snaps.is_empty() {
+        cx.editor
+            .set_status("no local history yet — snapshots are taken on save");
+        return;
+    }
+
+    struct Snap {
+        when: String,
+        path: PathBuf,
+    }
+    let items: Vec<Snap> = snaps
+        .into_iter()
+        .map(|(ts, path)| Snap {
+            when: crate::recent_files::humanize_age(crate::recent_files::age_since(ts)),
+            path,
+        })
+        .collect();
+    let columns = [
+        ui::PickerColumn::new("when", |s: &Snap, _: &()| s.when.as_str().into()),
+        ui::PickerColumn::new("snapshot", |s: &Snap, _: &()| {
+            s.path.display().to_string().into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, items, (), |cx, snap: &Snap, _action| {
+        let text = match std::fs::read_to_string(&snap.path) {
+            Ok(text) => text,
+            Err(e) => {
+                cx.editor.set_error(format!("local-history: {e}"));
+                return;
+            }
+        };
+        let (view, doc) = current!(cx.editor);
+        let before = doc.text().clone();
+        let after = Rope::from_str(&text);
+        if after == before {
+            cx.editor
+                .set_status("local-history: the buffer already matches that snapshot");
+            return;
+        }
+        let tx = zmax_core::diff::compare_ropes(&before, &after);
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+        cx.editor
+            .set_status("local-history: reverted (undo to come back)");
+    })
+    .with_preview(|_editor, snap: &Snap| Some((snap.path.as_path().into(), None)));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// The directory holding the file templates (JetBrains File and Code Templates).
+fn file_template_dir() -> PathBuf {
+    zmax_loader::config_dir().join("file-templates")
+}
+
+/// Expand a file template's placeholders. The names are JetBrains':
+/// `${NAME}` — the new file's stem, `${FILE_NAME}` — its full name,
+/// `${DATE}` / `${YEAR}` — today, `${USER}` — the login name.
+///
+/// An unknown `${...}` is left standing rather than blanked: a template for a
+/// language that uses that syntax itself (shell, Make) must survive being
+/// copied. Pure — unit tested.
+fn expand_file_template(body: &str, file_name: &str, date: &str, year: &str, user: &str) -> String {
+    let stem = file_name
+        .rsplit_once('.')
+        .map(|(stem, _)| stem)
+        .unwrap_or(file_name);
+    body.replace("${NAME}", stem)
+        .replace("${FILE_NAME}", file_name)
+        .replace("${DATE}", date)
+        .replace("${YEAR}", year)
+        .replace("${USER}", user)
+}
+
+/// JetBrains "New File from Template": pick one of the templates in
+/// `~/.zmax/file-templates`, name the file, and open it with the template's
+/// body expanded.
+///
+/// The template's own extension is the default for the new file, so a
+/// `module.rs` template offers `something.rs`. `new_file_in_directory` is the
+/// empty-file version of the same gesture.
+fn new_file_from_template(cx: &mut Context) {
+    let dir = file_template_dir();
+    let mut templates: Vec<PathBuf> = std::fs::read_dir(&dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_file())
+        .collect();
+    templates.sort();
+    if templates.is_empty() {
+        cx.editor.set_error(format!(
+            "no file templates in {} — put one there first",
+            dir.display()
+        ));
+        return;
+    }
+
+    let target_dir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+
+    let columns = [ui::PickerColumn::new("template", |t: &PathBuf, _: &()| {
+        t.file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+            .into()
+    })];
+    let picker = Picker::new(
+        columns,
+        0,
+        templates,
+        (),
+        move |cx, template: &PathBuf, _action| {
+            let template = template.clone();
+            let dir = target_dir.clone();
+            let suffix = template
+                .extension()
+                .map(|e| format!(".{}", e.to_string_lossy()))
+                .unwrap_or_default();
+            // The Prompt is not Send, so it is BUILT inside the compositor
+            // callback; only the paths cross the job boundary.
+            cx.jobs.callback(async move {
+                let call: crate::job::Callback = crate::job::Callback::EditorCompositor(
+                    Box::new(move |_editor, compositor: &mut Compositor| {
+                    let prompt = ui::Prompt::new(
+                        format!("new file in {}: ", dir.display()).into(),
+                        None,
+                        ui::completers::none,
+                        move |cx, input: &str, event: ui::PromptEvent| {
+                            if event != ui::PromptEvent::Validate {
+                                return;
+                            }
+                            let mut name = input.trim().to_string();
+                            if name.is_empty() {
+                                return;
+                            }
+                            // A name with no extension takes the template's.
+                            if !name.contains('.') {
+                                name.push_str(&suffix);
+                            }
+                            let path = dir.join(&name);
+                            if path.exists() {
+                                cx.editor
+                                    .set_error(format!("{} already exists", path.display()));
+                                return;
+                            }
+                            let body = match std::fs::read_to_string(&template) {
+                                Ok(body) => body,
+                                Err(e) => {
+                                    cx.editor.set_error(format!("new file: {e}"));
+                                    return;
+                                }
+                            };
+                            let now = time::OffsetDateTime::now_local()
+                                .unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+                            let date = format!(
+                                "{:04}-{:02}-{:02}",
+                                now.year(),
+                                now.month() as u8,
+                                now.day()
+                            );
+                            let user = std::env::var("USER")
+                                .or_else(|_| std::env::var("USERNAME"))
+                                .unwrap_or_default();
+                            let body = expand_file_template(
+                                &body,
+                                &name,
+                                &date,
+                                &now.year().to_string(),
+                                &user,
+                            );
+                            if let Some(parent) = path.parent() {
+                                if let Err(e) = std::fs::create_dir_all(parent) {
+                                    cx.editor.set_error(format!("new file: {e}"));
+                                    return;
+                                }
+                            }
+                            if let Err(e) = std::fs::write(&path, body) {
+                                cx.editor.set_error(format!("new file: {e}"));
+                                return;
+                            }
+                            match cx.editor.open(&path, Action::Replace) {
+                                Ok(_) => cx.editor.set_status(format!("Created {}", path.display())),
+                                Err(e) => cx.editor.set_error(format!("new file: {e}")),
+                            }
+                        },
+                    );
+                        compositor.push(Box::new(prompt));
+                    }),
+                );
+                Ok(call)
+            });
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// JetBrains "Show Element at Caret" / Context Info (`Alt-Q`): the declarations
 /// the caret sits inside, outermost first, each with the source line it opens
 /// on. It answers "which function am I in" when the opening line has scrolled
@@ -83523,5 +83738,28 @@ mod project_build_tests {
         let root = root_with("bare", &["README.md"]);
         assert!(project_build_commands(&root).is_none());
         let _ = std::fs::remove_dir_all(&root);
+    }
+}
+
+#[cfg(test)]
+mod file_template_tests {
+    use super::expand_file_template;
+
+    #[test]
+    fn placeholders_expand_and_unknown_ones_survive() {
+        let body = "// ${FILE_NAME} — ${DATE}\nmod ${NAME}; // (c) ${YEAR} ${USER}\nBAR=${HOME}\n";
+        let out = expand_file_template(body, "widget.rs", "2026-09-05", "2026", "someone");
+        assert_eq!(
+            out,
+            "// widget.rs — 2026-09-05\nmod widget; // (c) 2026 someone\nBAR=${HOME}\n"
+        );
+    }
+
+    #[test]
+    fn a_name_without_an_extension_is_its_own_stem() {
+        assert_eq!(
+            expand_file_template("${NAME}/${FILE_NAME}", "Makefile", "", "", ""),
+            "Makefile/Makefile"
+        );
     }
 }
