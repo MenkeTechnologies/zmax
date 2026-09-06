@@ -700,6 +700,13 @@ impl EditorView {
         }
     }
 
+    /// Re-root the workbench's project tree (JetBrains "Open Recent").
+    pub fn set_project_root(&mut self, root: std::path::PathBuf) {
+        if let Some(ide) = self.ide.as_mut() {
+            ide.set_project_root(root);
+        }
+    }
+
     /// Attach a running command to the IDE Run tool window (opens + focuses it).
     pub fn set_run(&mut self, run: crate::ui::run::Run) {
         self.ide_or_create().set_run(run);

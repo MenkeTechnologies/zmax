@@ -219,6 +219,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x d w", "Text",    ":delete-trailing-whitespace"),           // SPC x d w
     ("space x l d", "Text",    ":duplicate-line"),                       // SPC x l d
     ("space x o",   "Text",    "select_all_occurrences"),               // SPC x o : select all occurrences of selection (JetBrains Select All Occurrences)
+    ("space x i t", "Text",    "convert_indents_to_tabs"),              // SPC x i t : leading indent to tabs (JetBrains Convert Indents to Tabs)
+    ("space x i s", "Text",    "convert_indents_to_spaces"),            // SPC x i s : leading indent to spaces (JetBrains Convert Indents to Spaces)
     // vis binds this to CTRL-X, which is vim's `decrement` here, so it sits next
     // to the other occurrence commands instead.
     ("space x n",   "Text",    "skip_selection_to_next_match"),         // SPC x n : skip this occurrence, select the next (vis C-x)
@@ -2425,6 +2427,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // `SPC p R` is already Replace in Path in the extra-bindings table,
                 // and that table wins, so rebuild takes `C` for "clean build".
                 "C" => rebuild_project,            // SPC p C : clean and build (JetBrains Rebuild, Ctrl-Shift-F9)
+                "l" => recent_projects_picker,     // SPC p l : switch to another project (JetBrains Open Recent)
             },
             "e" => { "Errors"
                 "l" => diagnostics_picker,             // SPC e l
@@ -2569,6 +2572,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "r" => rename_symbol,              // SPC l r : rename symbol
                 "a" => code_action,                // SPC l a : code action
                 "O" => organize_imports,           // SPC l O : optimize/organize imports (JetBrains Ctrl-Alt-O)
+                "c" => code_cleanup,               // SPC l c : apply the server's fix-all source actions (JetBrains Code Cleanup)
                 "i" => implement_methods,          // SPC l i : implement interface/trait members (JetBrains Ctrl-I)
                 "v" => override_methods,           // SPC l v : override inherited members (JetBrains Ctrl-O)
                 "g" => generate_code,              // SPC l g : generate code — getters/constructors/impls (JetBrains Generate)

@@ -2155,6 +2155,10 @@
 | `pin_tab` | Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab) | **spacemacs, hybrid** — normal: `` <space>bt ``, select: `` <space>bt `` |
 | `git_history_for_selection` | Commits that touched the selected lines (JetBrains Show History for Selection) | **spacemacs, hybrid** — normal: `` <space>gfL ``, select: `` <space>gfL `` |
 | `git_compare_with_branch` | Diff this file against a branch you pick (JetBrains Compare with Branch) | **spacemacs, hybrid** — normal: `` <space>gC ``, select: `` <space>gC `` |
+| `code_cleanup` | Apply every fix-all source action the server offers (JetBrains Code Cleanup) | **spacemacs, hybrid** — normal: `` <space>lc ``, select: `` <space>lc `` |
+| `recent_projects_picker` | Switch to a project zmax has state for (JetBrains Open Recent) | **spacemacs, hybrid** — normal: `` <space>pl ``, select: `` <space>pl `` |
+| `convert_indents_to_spaces` | Convert leading tabs in the selection to spaces (JetBrains Convert Indents to Spaces) | **spacemacs, hybrid** — normal: `` <space>xis ``, select: `` <space>xis `` |
+| `convert_indents_to_tabs` | Convert leading indent spaces in the selection to tabs (JetBrains Convert Indents to Tabs) | **spacemacs, hybrid** — normal: `` <space>xit ``, select: `` <space>xit `` |
 | `new_file_from_template` | Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template) | **spacemacs, hybrid** — normal: `` <space>fN ``, select: `` <space>fN `` |
 | `highlight_usages_in_file` | Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7) | **spacemacs, hybrid** — normal: `` <space>su ``, select: `` <space>su `` |
 | `build_project` | Build the project with its own build tool (JetBrains Build Project, Ctrl F9) | **spacemacs, hybrid** — normal: `` <space>pB ``, select: `` <space>pB `` |

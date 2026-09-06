@@ -2546,6 +2546,10 @@ impl MappableCommand {
         pin_tab, "Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab)",
         git_history_for_selection, "Commits that touched the selected lines (JetBrains Show History for Selection)",
         git_compare_with_branch, "Diff this file against a branch you pick (JetBrains Compare with Branch)",
+        code_cleanup, "Apply every fix-all source action the server offers (JetBrains Code Cleanup)",
+        recent_projects_picker, "Switch to a project zmax has state for (JetBrains Open Recent)",
+        convert_indents_to_spaces, "Convert leading tabs in the selection to spaces (JetBrains Convert Indents to Spaces)",
+        convert_indents_to_tabs, "Convert leading indent spaces in the selection to tabs (JetBrains Convert Indents to Tabs)",
         new_file_from_template, "Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
@@ -67093,6 +67097,143 @@ fn copy_reference(cx: &mut Context) {
         .set_status(format!("Copied reference: {reference}"));
 }
 
+/// JetBrains "Code Cleanup": apply the language server's `source.fixAll`
+/// actions to the buffer — the batch fixes a server is willing to make without
+/// being asked one by one (clippy's machine-applicable suggestions,
+/// eslint --fix, gofmt-style rewrites).
+///
+/// `code_action` offers everything at the caret and lets you choose;
+/// `organize_imports` pins `source.organizeImports`. This pins the other
+/// whole-file source action, so the three cover IntelliJ's Code menu between
+/// them.
+fn code_cleanup(cx: &mut Context) {
+    lsp::code_action_filtered(
+        cx,
+        Some(vec![zmax_lsp::lsp::CodeActionKind::new("source.fixAll")]),
+        None,
+        "No fix-all action available in this buffer",
+    );
+}
+
+/// JetBrains "Open Recent": switch to another project zmax already has state
+/// for, newest first.
+///
+/// Switching means changing the working directory — which is what the file
+/// picker, project tree, run configs, Local History and the git commands all
+/// resolve against — and then opening that project's tree, the same landing
+/// place the IDE's Open Recent gives you.
+fn recent_projects_picker(cx: &mut Context) {
+    let projects = crate::run_config::recent_projects();
+    if projects.is_empty() {
+        cx.editor.set_status("no other projects yet");
+        return;
+    }
+    let columns = [PickerColumn::new("project", |p: &PathBuf, _: &()| {
+        p.display().to_string().into()
+    })];
+    let picker = Picker::new(columns, 0, projects, (), |cx, path: &PathBuf, _action| {
+        // `set_current_working_dir` does the `chdir` AND updates the cached
+        // cwd everything else reads, so it is the only call needed.
+        if let Err(e) = zmax_stdx::env::set_current_working_dir(path) {
+            cx.editor.set_error(format!("open project: {e}"));
+            return;
+        }
+        cx.editor
+            .set_status(format!("project: {}", path.display()));
+        // The workbench tree keeps the old root otherwise, which would say one
+        // project while every path-resolving command means another.
+        let root = path.clone();
+        cx.jobs.callback(async move {
+            let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+                move |_editor, compositor: &mut Compositor| {
+                    if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                        view.set_project_root(root);
+                    }
+                },
+            ));
+            Ok(call)
+        });
+        crate::commands::typed::run_command_line(cx, "file-explorer");
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Rewrite the LEADING whitespace of `line`: tabs to `width` spaces, or every
+/// `width` spaces back to a tab. Only the indent is touched — a tab inside a
+/// string or a table of aligned trailing comments is left exactly as it is,
+/// which is what IntelliJ's Convert Indents does. Pure — unit tested.
+fn convert_indent(line: &str, width: usize, to_tabs: bool) -> String {
+    let indent_len = line.len() - line.trim_start_matches([' ', '\t']).len();
+    let (indent, rest) = line.split_at(indent_len);
+    if to_tabs {
+        // Count the indent in columns first, so a mixed indent converts as it
+        // renders rather than character by character.
+        let columns: usize = indent
+            .chars()
+            .map(|c| if c == '\t' { width.max(1) } else { 1 })
+            .sum();
+        let tabs = columns / width.max(1);
+        let spaces = columns % width.max(1);
+        format!("{}{}{}", "\t".repeat(tabs), " ".repeat(spaces), rest)
+    } else {
+        format!("{}{}", indent.replace('\t', &" ".repeat(width.max(1))), rest)
+    }
+}
+
+/// Apply [`convert_indent`] over every line the selections touch (the whole
+/// buffer when nothing is selected, as IntelliJ does on a bare caret).
+fn convert_indents_impl(cx: &mut Context, to_tabs: bool) {
+    let (view, doc) = current!(cx.editor);
+    let width = doc.tab_width();
+    let text = doc.text().clone();
+    let slice = text.slice(..);
+    let selection = doc.selection(view.id);
+    let whole_buffer = selection.len() == 1 && selection.primary().len() <= 1;
+    let mut lines: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
+    if whole_buffer {
+        lines.extend(0..slice.len_lines());
+    } else {
+        for range in selection.ranges() {
+            let (from, to) = range.line_range(slice);
+            lines.extend(from..=to);
+        }
+    }
+
+    let mut changes = Vec::new();
+    for line in lines {
+        if line >= slice.len_lines() {
+            continue;
+        }
+        let start = slice.line_to_char(line);
+        let content = slice.line(line).to_string();
+        let stripped = content.trim_end_matches(['\n', '\r']);
+        let converted = convert_indent(stripped, width, to_tabs);
+        if converted != stripped {
+            changes.push((start, start + stripped.chars().count(), Some(converted.into())));
+        }
+    }
+    if changes.is_empty() {
+        cx.editor.set_status("indents already converted");
+        return;
+    }
+    let count = changes.len();
+    let tx = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!(
+        "converted the indent of {count} line{}",
+        if count == 1 { "" } else { "s" }
+    ));
+}
+
+fn convert_indents_to_spaces(cx: &mut Context) {
+    convert_indents_impl(cx, false);
+}
+
+fn convert_indents_to_tabs(cx: &mut Context) {
+    convert_indents_impl(cx, true);
+}
+
 /// JetBrains VCS "Show History for Selection": the commits that touched the
 /// SELECTED LINES, with the diff each one made to them — `git log -L a,b:file`.
 ///
@@ -83856,5 +83997,32 @@ mod file_template_tests {
             expand_file_template("${NAME}/${FILE_NAME}", "Makefile", "", "", ""),
             "Makefile/Makefile"
         );
+    }
+}
+
+#[cfg(test)]
+mod convert_indent_tests {
+    use super::convert_indent;
+
+    #[test]
+    fn tabs_become_spaces_only_in_the_indent() {
+        assert_eq!(convert_indent("\tfoo\tbar", 4, false), "    foo\tbar");
+        assert_eq!(convert_indent("\t\tx", 2, false), "    x");
+        assert_eq!(convert_indent("no indent", 4, false), "no indent");
+    }
+
+    #[test]
+    fn spaces_become_tabs_by_column_count() {
+        assert_eq!(convert_indent("    foo", 4, true), "\tfoo");
+        assert_eq!(convert_indent("      foo", 4, true), "\t  foo");
+        // A mixed indent converts as it renders: tab + 4 spaces at width 4 is
+        // eight columns, so two tabs.
+        assert_eq!(convert_indent("\t    foo", 4, true), "\t\tfoo");
+    }
+
+    #[test]
+    fn a_blank_line_and_an_empty_line_survive() {
+        assert_eq!(convert_indent("", 4, true), "");
+        assert_eq!(convert_indent("    ", 4, true), "\t");
     }
 }

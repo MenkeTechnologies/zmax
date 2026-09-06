@@ -780,7 +780,7 @@ pub fn push_members_down(cx: &mut Context) {
 /// contains one of the (lowercase) substrings — and a *single* surviving action
 /// is applied directly without a menu (used to pin a specific refactoring like
 /// Extract Method). `empty_msg` is shown when no matching action is found.
-fn code_action_filtered(
+pub(crate) fn code_action_filtered(
     cx: &mut Context,
     only: Option<Vec<CodeActionKind>>,
     title_filter: Option<&'static [&'static str]>,

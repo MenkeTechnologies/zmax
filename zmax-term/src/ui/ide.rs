@@ -842,6 +842,14 @@ impl Ide {
         true
     }
 
+    /// Point the project tree at a different root (JetBrains "Open Recent"
+    /// switches the whole workbench, not just the working directory). The tree
+    /// is rebuilt, so its expansion state deliberately does not carry over — it
+    /// belonged to the old project.
+    pub fn set_project_root(&mut self, root: std::path::PathBuf) {
+        self.project = FileTree::new(root);
+    }
+
     /// Toggle a panel's fold state (context-menu "Fold"): project / structure /
     /// problems (bottom drawer) / minimap.
     pub fn toggle_fold_panel(&mut self, which: &str) {

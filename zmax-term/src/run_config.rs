@@ -51,6 +51,54 @@ fn b64_url(input: &[u8]) -> String {
     out
 }
 
+/// Decode a [`b64_url`] string back to bytes. `None` on a character outside the
+/// alphabet or a truncated group — a stray directory under `projects/` should be
+/// skipped, not guessed at.
+fn b64_url_decode(input: &str) -> Option<Vec<u8>> {
+    const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut bits = 0u32;
+    let mut nbits = 0u32;
+    let mut out = Vec::with_capacity(input.len() / 4 * 3);
+    for c in input.bytes() {
+        let v = A.iter().position(|&a| a == c)? as u32;
+        bits = (bits << 6) | v;
+        nbits += 6;
+        if nbits >= 8 {
+            nbits -= 8;
+            out.push((bits >> nbits) as u8);
+        }
+    }
+    Some(out)
+}
+
+/// The projects zmax has state for, newest first: the roots encoded in the
+/// `projects/<name>-<b64(path)>` directory names, ordered by the state
+/// directory's mtime. A root that no longer exists on disk is dropped — the
+/// state directory outlives a deleted checkout.
+pub fn recent_projects() -> Vec<PathBuf> {
+    let mut rows: Vec<(std::time::SystemTime, PathBuf)> =
+        std::fs::read_dir(zmax_loader::config_dir().join("projects"))
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter_map(|entry| {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                let (_, key) = name.rsplit_once('-')?;
+                let path = PathBuf::from(String::from_utf8(b64_url_decode(key)?).ok()?);
+                if !path.is_dir() {
+                    return None;
+                }
+                let when = entry
+                    .metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::UNIX_EPOCH);
+                Some((when, path))
+            })
+            .collect();
+    rows.sort_by(|a, b| b.0.cmp(&a.0));
+    rows.into_iter().map(|(_, path)| path).collect()
+}
+
 /// The per-project state directory under the global config dir — where all
 /// project-specific files live so the project tree isn't polluted with a
 /// `.zmax/`. Named `<project>-<base64(full path)>` so it's readable AND unique
@@ -130,5 +178,27 @@ pub fn resolve_dir(dir: &str) -> PathBuf {
         } else {
             root.join(p)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{b64_url, b64_url_decode};
+
+    #[test]
+    fn the_project_key_round_trips() {
+        for path in ["/Users/someone/code/zmax", "/tmp/a", "/x/caf\u{e9}", "/"] {
+            let key = b64_url(path.as_bytes());
+            assert_eq!(
+                b64_url_decode(&key).and_then(|b| String::from_utf8(b).ok()),
+                Some(path.to_string()),
+                "key {key} did not decode back to {path}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_key_with_a_foreign_character_decodes_to_nothing() {
+        assert!(b64_url_decode("abc*def").is_none());
     }
 }
