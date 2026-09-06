@@ -2544,6 +2544,8 @@ impl MappableCommand {
         context_info, "Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)",
         local_history_revert, "Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert)",
         pin_tab, "Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab)",
+        git_history_for_selection, "Commits that touched the selected lines (JetBrains Show History for Selection)",
+        git_compare_with_branch, "Diff this file against a branch you pick (JetBrains Compare with Branch)",
         new_file_from_template, "Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
@@ -33596,9 +33598,11 @@ fn harpoon_remove(cx: &mut Context) {
 }
 
 /// Pick a local git branch and check it out (magit `b`), reloading open buffers.
-pub(crate) fn git_branch_picker(cx: &mut Context) {
+/// The repository's local branch names, newest listing order as git gives them.
+/// Shared by the checkout picker and Compare with Branch.
+fn git_branch_names() -> Vec<String> {
     let dir = std::env::current_dir().unwrap_or_default();
-    let branches: Vec<String> = std::process::Command::new("git")
+    std::process::Command::new("git")
         .arg("-C")
         .arg(&dir)
         .args(["for-each-ref", "--format=%(refname:short)", "refs/heads/"])
@@ -33612,7 +33616,11 @@ pub(crate) fn git_branch_picker(cx: &mut Context) {
                 .filter(|s| !s.is_empty())
                 .collect()
         })
-        .unwrap_or_default();
+        .unwrap_or_default()
+}
+
+pub(crate) fn git_branch_picker(cx: &mut Context) {
+    let branches: Vec<String> = git_branch_names();
     if branches.is_empty() {
         cx.editor.set_status("No git branches");
         return;
@@ -67083,6 +67091,78 @@ fn copy_reference(cx: &mut Context) {
     let _ = cx.editor.registers.write('+', vec![reference.clone()]);
     cx.editor
         .set_status(format!("Copied reference: {reference}"));
+}
+
+/// JetBrains VCS "Show History for Selection": the commits that touched the
+/// SELECTED LINES, with the diff each one made to them — `git log -L a,b:file`.
+///
+/// Narrower than `git_file_log_picker` (fzf.vim `:BCommits`), which lists every
+/// commit that touched the file at all. Git follows the range across renames
+/// and rewrites, so this answers "who last changed these five lines" without
+/// reading the whole file's history.
+fn git_history_for_selection(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Current buffer has no path");
+        return;
+    };
+    let (first, last) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        (
+            text.char_to_line(range.from()) + 1,
+            text.char_to_line(range.to().saturating_sub(1).max(range.from())) + 1,
+        )
+    };
+    // `-L` wants the path relative to the repo, and a `start,end:file` argument.
+    let root = zmax_loader::find_workspace().0;
+    let rel = path.strip_prefix(&root).unwrap_or(&path).display().to_string();
+    let range = format!("{first},{last}:{rel}");
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    git_output_to_scratch_cx(
+        &mut bridge,
+        &["log", "-L", &range],
+        &format!("no commits touched lines {first}-{last}"),
+    );
+}
+
+/// JetBrains VCS "Compare with Branch": pick a branch, then diff THIS FILE
+/// against it (`git diff <branch> -- file`).
+///
+/// The branch picker is the same list `git_branch_picker` checks out from, but
+/// picking here diffs instead of switching — the point is to read the other
+/// branch's version without leaving this one.
+fn git_compare_with_branch(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Current buffer has no path");
+        return;
+    };
+    let branches = git_branch_names();
+    if branches.is_empty() {
+        cx.editor.set_status("No git branches");
+        return;
+    }
+    let columns = [PickerColumn::new("branch", |b: &String, _: &()| {
+        b.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, branches, (), move |cx, branch: &String, _action| {
+        let root = zmax_loader::find_workspace().0;
+        let rel = path
+            .strip_prefix(&root)
+            .unwrap_or(&path)
+            .display()
+            .to_string();
+        git_output_to_scratch_cx(
+            cx,
+            &["diff", branch, "--", &rel],
+            &format!("{rel} is identical on {branch}"),
+        );
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// JetBrains "Pin Tab": keep this buffer out of `:buffer-close-others`,

@@ -128,6 +128,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b r", "Buffers", "recent_files_switcher"), // SPC b r : Recent Files switcher (JetBrains Recent Files)
     ("space g I", "Git", "toggle_inline_blame"),     // SPC g I : toggle GitLens-style inline blame
     ("space g B", "Git", "toggle_blame_annotate"),   // SPC g B : toggle blame annotate gutter (JetBrains Annotate)
+    ("space g f L", "Git", "git_history_for_selection"), // SPC g f L : commits touching the SELECTED LINES (JetBrains Show History for Selection)
+    ("space g C", "Git", "git_compare_with_branch"),   // SPC g C : diff this file against a branch (JetBrains Compare with Branch)
     ("space f H", "Files", ":LocalHistory"),         // SPC f H : Local History snapshots for this file
     ("space f V", "Files", "local_history_revert"),  // SPC f V : revert this buffer to a Local History snapshot (JetBrains Local History Revert; `f R` is already :move)
     ("space f E", "Files", ":sudo-edit"),            // SPC f E : open the file with elevated privileges
