@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ba074d61.js";
+            window.path_to_searchindex_js = "searchindex-1a2f7c86.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2913,6 +2913,7 @@ without scrolling.</p>
 <tr><td><code>:primary-clipboard-paste-after</code></td><td>Paste primary clipboard after selections.</td></tr>
 <tr><td><code>:primary-clipboard-paste-before</code></td><td>Paste primary clipboard before selections.</td></tr>
 <tr><td><code>:primary-clipboard-paste-replace</code></td><td>Replace selections with content of system primary clipboard.</td></tr>
+<tr><td><code>:compare-directories</code>, <code>:diffdirs</code></td><td>Recursively diff two directories into a scratch buffer.</td></tr>
 <tr><td><code>:tmux-buffer-yank</code></td><td>Yank selections into a new tmux paste buffer (leaves the system clipboard alone).</td></tr>
 <tr><td><code>:tmux-buffer-paste-after</code></td><td>Paste a tmux paste buffer (newest, or the named one) after selections.</td></tr>
 <tr><td><code>:tmux-buffer-paste-before</code></td><td>Paste a tmux paste buffer (newest, or the named one) before selections.</td></tr>
@@ -5043,7 +5044,9 @@ without scrolling.</p>
 <tr><td><code>shell_backward_command</code></td><td>Move backward over a shell command on the input line (emacs shell-backward-command)</td><td></td></tr>
 <tr><td><code>run_config_manager</code></td><td>Manage run/debug configurations</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code>, select: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code></td></tr>
 <tr><td><code>run_active_config</code></td><td>Run the active run configuration</td><td><strong>spacemacs</strong> — normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, select: <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-c&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, select: <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code><br><strong>vim</strong> — normal: <code>&lt;F5&gt;</code></td></tr>
+<tr><td><code>stop_run</code></td><td>Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;px</code>, select: <code>&lt;space&gt;px</code></td></tr>
 <tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code>, select: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code></td></tr>
+<tr><td><code>open_log_file</code></td><td>Open zmax’s own log file (JetBrains Show Log)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;hL</code>, select: <code>&lt;space&gt;hL</code></td></tr>
 <tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-r&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code></td></tr>
 <tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, insert: <code>&lt;C-x&gt;`</code><br><strong>hybrid</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code></td></tr>
 <tr><td><code>run_prev_error</code></td><td>Jump to the previous file:line in the run output</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;A-g&gt;p</code>, <code>&lt;space&gt;Rp</code>, <code>&lt;A-g&gt;&lt;A-p&gt;</code>, select: <code>&lt;space&gt;Rp</code></td></tr>
