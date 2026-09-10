@@ -432,6 +432,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
 
     // Help.
     ("space h d T", "Help", ":describe-theme"),             // SPC h d T : describe a theme
+    ("space h L", "Help", "open_log_file"),          // SPC h L : open zmax's log file (JetBrains Show Log)
     // SPC h d P : describe-package — emacs's `C-h P`, which asks for a package
     // name and prints that package's version, home page, keywords and
     // dependencies. It pointed at `package_search`, the picker over the
@@ -2422,6 +2423,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "'" => terminal,                   // SPC p ' : open a shell in the project root
                 "c" => run_active_config,          // SPC p c : compile project (run active config)
                 "u" => run_active_config,          // SPC p u : run project (run active config)
+                "x" => stop_run,                   // SPC p x : stop the running process (JetBrains Stop, Ctrl-F2; `p k` is taken)
                 "i" => run_config_manager,         // SPC p i : install project (manage run/build targets)
                 "B" => build_project,              // SPC p B : build with the project's own build tool (JetBrains Ctrl-F9)
                 // `SPC p R` is already Replace in Path in the extra-bindings table,

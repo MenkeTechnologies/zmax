@@ -1805,7 +1805,9 @@ impl MappableCommand {
         shell_backward_command, "Move backward over a shell command on the input line (emacs shell-backward-command)",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
+        stop_run, "Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2)",
         clear_run_output, "Clear the Run tool window output",
+        open_log_file, "Open zmax's own log file (JetBrains Show Log)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
         run_prev_error, "Jump to the previous file:line in the run output",
@@ -67095,6 +67097,39 @@ fn copy_reference(cx: &mut Context) {
     let _ = cx.editor.registers.write('+', vec![reference.clone()]);
     cx.editor
         .set_status(format!("Copied reference: {reference}"));
+}
+
+/// JetBrains "Stop" (`Ctrl-F2`): SIGTERM whatever the Run tool window is
+/// running. The toolbar has had a Stop button since the workbench landed; this
+/// is the same action reachable from the keyboard, and a no-op when nothing is
+/// running.
+fn stop_run(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.stop_active_run();
+        }
+    }));
+}
+
+/// JetBrains Help → "Show Log": open zmax's own log file, the one `--log`
+/// points at (`~/.zmax/zmax.log` by default).
+///
+/// It is opened as an ordinary buffer, so the usual motions, search and
+/// `:reload` work on it — and because zmax logs rather than printing to the
+/// terminal, this is where a failed language server or debug adapter explains
+/// itself.
+fn open_log_file(cx: &mut Context) {
+    let path = zmax_loader::log_file();
+    match cx.editor.open(&path, Action::Replace) {
+        Ok(_) => {
+            // Land at the end: the interesting line is the last one written.
+            goto_last_line(cx);
+            cx.editor.set_status(format!("log: {}", path.display()));
+        }
+        Err(e) => cx
+            .editor
+            .set_error(format!("could not open {}: {e}", path.display())),
+    }
 }
 
 /// JetBrains "Code Cleanup": apply the language server's `source.fixAll`

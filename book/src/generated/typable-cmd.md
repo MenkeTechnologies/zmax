@@ -1191,6 +1191,7 @@
 | `:primary-clipboard-paste-after` | Paste primary clipboard after selections. |
 | `:primary-clipboard-paste-before` | Paste primary clipboard before selections. |
 | `:primary-clipboard-paste-replace` | Replace selections with content of system primary clipboard. |
+| `:compare-directories`, `:diffdirs` | Recursively diff two directories into a scratch buffer. |
 | `:tmux-buffer-yank` | Yank selections into a new tmux paste buffer (leaves the system clipboard alone). |
 | `:tmux-buffer-paste-after` | Paste a tmux paste buffer (newest, or the named one) after selections. |
 | `:tmux-buffer-paste-before` | Paste a tmux paste buffer (newest, or the named one) before selections. |

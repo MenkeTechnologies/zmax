@@ -23438,6 +23438,66 @@ fn paste_primary_clipboard_before(
     Ok(())
 }
 
+/// `:compare-directories A B` — IntelliJ "Compare Directories": a recursive
+/// diff of two trees in a scratch buffer.
+///
+/// `:diff` compares this buffer against git; this compares two directories that
+/// need not be in a repository at all, which is what the IDE's Compare
+/// Directories does. `diff -ru` is the portable spelling (BSD and GNU both take
+/// it) and its unified hunks read the same as every other diff zmax shows.
+fn compare_directories(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (Some(left), Some(right)) = (args.first(), args.get(1)) else {
+        bail!("compare-directories: needs two directories");
+    };
+    let left = zmax_stdx::path::expand_tilde(std::path::Path::new(&*left)).into_owned();
+    let right = zmax_stdx::path::expand_tilde(std::path::Path::new(&*right)).into_owned();
+    for dir in [&left, &right] {
+        if !dir.is_dir() {
+            bail!("compare-directories: {} is not a directory", dir.display());
+        }
+    }
+    sandbox_check("shell command")?;
+    let out = std::process::Command::new("diff")
+        .arg("-r")
+        .arg("-u")
+        .arg(&left)
+        .arg(&right)
+        .output()
+        .map_err(|e| anyhow::anyhow!("compare-directories: {e}"))?;
+    // `diff` exits 1 when the trees differ, which is the interesting case, and
+    // 2 on a real error; only the latter is a failure here.
+    if out.status.code() == Some(2) {
+        bail!(
+            "compare-directories: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    let body = String::from_utf8_lossy(&out.stdout);
+    if body.trim().is_empty() {
+        cx.editor.set_status(format!(
+            "{} and {} are identical",
+            left.display(),
+            right.display()
+        ));
+        return Ok(());
+    }
+    crate::commands::show_text_in_scratch(cx.editor, &body);
+    cx.editor.set_status(format!(
+        "diff -ru {} {}",
+        left.display(),
+        right.display()
+    ));
+    Ok(())
+}
+
 /// `:tmux-buffer-yank` — the selections into a new tmux paste buffer. The tmux
 /// buffers are their own store: this leaves the system clipboard alone.
 fn yank_to_tmux_buffer(
@@ -61878,6 +61938,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "compare-directories",
+        aliases: &["diffdirs"],
+        doc: "Recursively diff two directories into a scratch buffer.",
+        fun: compare_directories,
+        completer: CommandCompleter::positional(&[completers::directory, completers::directory]),
+        signature: Signature {
+            positionals: (2, Some(2)),
             ..Signature::DEFAULT
         },
     },
