@@ -23457,8 +23457,8 @@ fn compare_directories(
     let (Some(left), Some(right)) = (args.first(), args.get(1)) else {
         bail!("compare-directories: needs two directories");
     };
-    let left = zmax_stdx::path::expand_tilde(std::path::Path::new(&*left)).into_owned();
-    let right = zmax_stdx::path::expand_tilde(std::path::Path::new(&*right)).into_owned();
+    let left = zmax_stdx::path::expand_tilde(std::path::Path::new(left)).into_owned();
+    let right = zmax_stdx::path::expand_tilde(std::path::Path::new(right)).into_owned();
     for dir in [&left, &right] {
         if !dir.is_dir() {
             bail!("compare-directories: {} is not a directory", dir.display());
