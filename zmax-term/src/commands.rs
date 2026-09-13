@@ -1808,6 +1808,7 @@ impl MappableCommand {
         stop_run, "Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2)",
         clear_run_output, "Clear the Run tool window output",
         open_log_file, "Open zmax's own log file (JetBrains Show Log)",
+        global_search_masked, "Search the project, restricted to a file glob (JetBrains Find in Path file mask)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
         run_prev_error, "Jump to the previous file:line in the run output",
@@ -12146,7 +12147,7 @@ fn copy_indent(cx: &mut Context) {
 fn set_numbered_bookmark(cx: &mut Context) {
     cx.editor.autoinfo = Some(Info::new(
         "Set bookmark",
-        &[("0-9", "remember this line in that slot")],
+        &[("0-9 a-z", "remember this line in that slot")],
     ));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
@@ -12158,13 +12159,16 @@ fn set_numbered_bookmark(cx: &mut Context) {
         let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
         let id = doc.id();
         let replaced = crate::numbered_bookmarks::set(id, slot, line);
+        // Report the KEY the bookmark answers to, not its slot index: with the
+        // mnemonic letters those differ (`a` is slot 10).
+        let key = crate::numbered_bookmarks::char_of(slot).unwrap_or('?');
         cx.editor.set_status(match replaced {
             Some(old) => format!(
-                "bookmark {slot} moved from line {} to {}",
+                "bookmark {key} moved from line {} to {}",
                 old + 1,
                 line + 1
             ),
-            None => format!("bookmark {slot} set at line {}", line + 1),
+            None => format!("bookmark {key} set at line {}", line + 1),
         });
     })
 }
@@ -12177,7 +12181,14 @@ fn goto_numbered_bookmark(cx: &mut Context) {
     };
     let labels: Vec<(String, String)> = rows
         .iter()
-        .map(|(slot, line)| (slot.to_string(), format!("line {}", line + 1)))
+        .map(|(slot, line)| {
+            (
+                crate::numbered_bookmarks::char_of(*slot)
+                    .unwrap_or('?')
+                    .to_string(),
+                format!("line {}", line + 1),
+            )
+        })
         .collect();
     cx.editor.autoinfo = Some(Info::new(
         "Go to bookmark",
@@ -12193,7 +12204,8 @@ fn goto_numbered_bookmark(cx: &mut Context) {
         };
         let (view, doc) = current!(cx.editor);
         let Some(line) = crate::numbered_bookmarks::get(doc.id(), slot) else {
-            cx.editor.set_error(format!("bookmark {slot} is not set"));
+            let key = crate::numbered_bookmarks::char_of(slot).unwrap_or('?');
+            cx.editor.set_error(format!("bookmark {key} is not set"));
             return;
         };
         let text = doc.text().slice(..);
@@ -12211,17 +12223,18 @@ fn goto_numbered_bookmark(cx: &mut Context) {
 
 /// ne `UnsetBookmark`: forget one of the document's numbered slots.
 fn unset_numbered_bookmark(cx: &mut Context) {
-    cx.editor.autoinfo = Some(Info::new("Unset bookmark", &[("0-9", "forget that slot")]));
+    cx.editor.autoinfo = Some(Info::new("Unset bookmark", &[("0-9 a-z", "forget that slot")]));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         let Some(slot) = event.char().and_then(crate::numbered_bookmarks::slot_of) else {
             return;
         };
         let id = doc!(cx.editor).id();
+        let key = crate::numbered_bookmarks::char_of(slot).unwrap_or('?');
         if crate::numbered_bookmarks::unset(id, slot) {
-            cx.editor.set_status(format!("bookmark {slot} unset"));
+            cx.editor.set_status(format!("bookmark {key} unset"));
         } else {
-            cx.editor.set_error(format!("bookmark {slot} is not set"));
+            cx.editor.set_error(format!("bookmark {key} is not set"));
         }
     })
 }
@@ -23593,6 +23606,59 @@ fn global_search_symbol(cx: &mut Context) {
 }
 
 fn global_search_seeded(cx: &mut Context, seed: Option<String>) {
+    global_search_seeded_masked(cx, seed, None)
+}
+
+/// JetBrains Find in Path's "File mask": run the same project search, but only
+/// over the files whose names match a glob like `*.rs` or `test_*`.
+///
+/// The mask goes to the walker as an `ignore` override rather than filtering
+/// results afterwards, so the unmatched files are never opened at all — which
+/// is the point of a mask on a large tree.
+fn global_search_masked(cx: &mut Context) {
+    let prompt = ui::Prompt::new(
+        "file mask (e.g. *.rs): ".into(),
+        None,
+        ui::completers::none,
+        move |cx, input: &str, event: ui::PromptEvent| {
+            if event != ui::PromptEvent::Validate {
+                return;
+            }
+            let mask = input.trim().to_string();
+            if mask.is_empty() {
+                return;
+            }
+            // The picker is built where the compositor is reachable, the same
+            // route `:oldfiles` takes.
+            cx.jobs.callback(async move {
+                let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+                    move |editor: &mut Editor, compositor: &mut Compositor| {
+                        compositor.push(build_global_search_picker(editor, None, Some(mask), None));
+                    },
+                ));
+                Ok(call)
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+fn global_search_seeded_masked(cx: &mut Context, seed: Option<String>, mask: Option<String>) {
+    let picker = build_global_search_picker(cx.editor, seed, mask, cx.register);
+    cx.push_layer(picker);
+}
+
+/// Build the project-search picker. Takes only the editor, so it can be built
+/// either from a command or from inside a compositor callback.
+fn build_global_search_picker(
+    editor: &mut Editor,
+    seed: Option<String>,
+    mask: Option<String>,
+    // The register the search string is remembered in — `cx.register` at the
+    // call site, which a compositor callback has no access to.
+    register: Option<char>,
+) -> Box<dyn Component> {
+
     #[derive(Debug)]
     struct FileResult<'a> {
         path: Cow<'a, Path>,
@@ -23616,13 +23682,17 @@ fn global_search_seeded(cx: &mut Context, seed: Option<String>) {
         smart_case: bool,
         file_picker_config: zmax_view::editor::FilePickerConfig,
         style: PathStyleConfig,
+        /// JetBrains Find in Path's "File mask": when set, only files matching
+        /// this glob are walked at all.
+        mask: Option<String>,
     }
 
-    let config = cx.editor.config();
+    let config = editor.config();
     let config = GlobalSearchConfig {
         smart_case: config.search.smart_case,
         file_picker_config: config.file_picker.clone(),
-        style: PathStyleConfig::new(&cx.editor.theme),
+        style: PathStyleConfig::new(&editor.theme),
+        mask,
     };
 
     let columns = [
@@ -23673,6 +23743,21 @@ fn global_search_seeded(cx: &mut Context, seed: Option<String>) {
         let absolute_root = search_root
             .canonicalize()
             .unwrap_or_else(|_| search_root.clone());
+        // The file mask, as an `ignore` override set: an unparsable glob is
+        // reported rather than silently searching everything.
+        let overrides = match config.mask.as_deref() {
+            Some(mask) => {
+                let mut builder = ignore::overrides::OverrideBuilder::new(&search_root);
+                match builder.add(mask).and_then(|b| b.build()) {
+                    Ok(overrides) => overrides,
+                    Err(err) => {
+                        let err = format!("bad file mask `{mask}`: {err}");
+                        return async move { Err(anyhow::anyhow!(err)) }.boxed();
+                    }
+                }
+            }
+            None => ignore::overrides::Override::empty(),
+        };
 
         let injector = injector.clone();
         async move {
@@ -23694,6 +23779,7 @@ fn global_search_seeded(cx: &mut Context, seed: Option<String>) {
                 })
                 .add_custom_ignore_filename(zmax_loader::config_dir().join("ignore"))
                 .add_custom_ignore_filename(".zmax/ignore")
+                .overrides(overrides)
                 .build_parallel()
                 .run(|| {
                     let mut searcher = searcher.clone();
@@ -23761,8 +23847,8 @@ fn global_search_seeded(cx: &mut Context, seed: Option<String>) {
         .boxed()
     };
 
-    let reg = cx.register.unwrap_or('/');
-    cx.editor.registers.last_search_register = reg;
+    let reg = register.unwrap_or('/');
+    editor.registers.last_search_register = reg;
 
     let picker = Picker::new(
         columns,
@@ -23816,12 +23902,12 @@ fn global_search_seeded(cx: &mut Context, seed: Option<String>) {
     )
     .with_history_register(Some(reg));
     let picker = match seed {
-        Some(q) if !q.is_empty() => picker.with_query(q, cx.editor),
+        Some(q) if !q.is_empty() => picker.with_query(q, editor),
         _ => picker,
     };
     let picker = picker.with_dynamic_query(get_files, Some(275));
 
-    cx.push_layer(Box::new(overlaid(picker)));
+    Box::new(overlaid(picker))
 }
 
 enum Extend {

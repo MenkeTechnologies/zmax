@@ -15,11 +15,16 @@ use std::sync::Mutex;
 
 use zmax_view::DocumentId;
 
-/// The slots, keyed by document. Ten per document, as both editors offer.
+/// The slots, keyed by document. The ten ne/mcedit digits, plus the letters
+/// IntelliJ's mnemonic bookmarks add on top of them.
 static SLOTS: Mutex<Option<HashMap<DocumentId, HashMap<u8, usize>>>> = Mutex::new(None);
 
-/// The digits a bookmark can live under.
-pub const SLOT_DIGITS: &str = "0123456789";
+/// The characters a bookmark can live under: ne and mcedit's ten digits, then
+/// the letters of IntelliJ's "Toggle Bookmark with Mnemonic" (`Ctrl-F11`).
+///
+/// The digits come FIRST and keep slot numbers 0–9, so every position ne and
+/// mcedit could address still answers to the same key and the same slot.
+pub const SLOT_DIGITS: &str = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 fn with<R>(f: impl FnOnce(&mut HashMap<DocumentId, HashMap<u8, usize>>) -> R) -> R {
     let mut guard = match SLOTS.lock() {
@@ -62,16 +67,47 @@ pub fn forget(doc: DocumentId) {
     with(|slots| slots.remove(&doc));
 }
 
-/// Parse a bookmark digit from a typed key.
+/// The key a slot answers to — the inverse of [`slot_of`], for listings.
+pub fn char_of(slot: u8) -> Option<char> {
+    SLOT_DIGITS.chars().nth(usize::from(slot))
+}
+
+/// Parse a bookmark key (digit or letter) from a typed key. A capital is taken
+/// as its lowercase, so Shift does not silently address a different slot.
 pub fn slot_of(ch: char) -> Option<u8> {
+    let ch = ch.to_ascii_lowercase();
     SLOT_DIGITS
         .find(ch)
-        .map(|index| u8::try_from(index).expect("ten slots fit in a u8"))
+        .map(|index| u8::try_from(index).expect("thirty-six slots fit in a u8"))
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    /// The digits keep the slots ne and mcedit gave them, and the mnemonic
+    /// letters continue from there — so an old binding addresses the old slot.
+    #[test]
+    fn digits_keep_their_slots_and_letters_follow() {
+        assert_eq!(slot_of('0'), Some(0));
+        assert_eq!(slot_of('9'), Some(9));
+        assert_eq!(slot_of('a'), Some(10));
+        assert_eq!(slot_of('z'), Some(35));
+        // A capital addresses the same slot as its lowercase, so Shift cannot
+        // silently land on a different bookmark.
+        assert_eq!(slot_of('A'), slot_of('a'));
+        assert_eq!(slot_of('-'), None);
+        assert_eq!(slot_of(' '), None);
+    }
+
+    #[test]
+    fn every_slot_reports_the_key_it_answers_to() {
+        for ch in SLOT_DIGITS.chars() {
+            let slot = slot_of(ch).expect("every slot char parses");
+            assert_eq!(char_of(slot), Some(ch));
+        }
+        assert_eq!(char_of(36), None);
+    }
 
     /// `DocumentId` has no public constructor, so every test here addresses the
     /// same id in one process-wide store — which means they must not run at the
@@ -116,11 +152,16 @@ mod test {
         assert!(list(doc).is_empty());
     }
 
+    /// Was `only_the_ten_digits_are_slots`, pinning `slot_of('a') == None`.
+    /// The letters are slots now (IntelliJ's mnemonic bookmarks), so what this
+    /// pins is the boundary that still holds: nothing OUTSIDE `0-9a-z` is one.
     #[test]
-    fn only_the_ten_digits_are_slots() {
+    fn only_digits_and_letters_are_slots() {
         assert_eq!(slot_of('0'), Some(0));
         assert_eq!(slot_of('9'), Some(9));
-        assert_eq!(slot_of('a'), None);
+        assert_eq!(slot_of('a'), Some(10));
         assert_eq!(slot_of(' '), None);
+        assert_eq!(slot_of('-'), None);
+        assert_eq!(slot_of('\u{e9}'), None);
     }
 }

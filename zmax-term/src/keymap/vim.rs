@@ -122,6 +122,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space m = =", "Format", ":format"),            // SPC m = = : format the buffer
     ("space p r", "Projects", ":project-replace"),   // SPC p r : Replace in Path (JetBrains)
     ("space r t", "Bookmarks", "bookmark_toggle"),   // SPC r t : toggle bookmark (JetBrains F11)
+    ("space r m", "Bookmarks", "set_numbered_bookmark"),   // SPC r m : set a slot bookmark, 0-9 or a-z (JetBrains Toggle Bookmark with Mnemonic)
+    ("space r b", "Bookmarks", "goto_numbered_bookmark"),  // SPC r b : jump to a slot bookmark (JetBrains Go to Bookmark)
+    ("space r d", "Bookmarks", "unset_numbered_bookmark"), // SPC r d : forget a slot bookmark
     ("space r n", "Bookmarks", "bookmark_next"),     // SPC r n : next bookmark
     ("space r N", "Bookmarks", "bookmark_prev"),     // SPC r N : previous bookmark
     ("space r j", "Bookmarks", "bookmark_jump"),     // SPC r j : jump to a bookmark (picker)
@@ -2258,6 +2261,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "P" => global_search,              // SPC s P : search in a project
                 "d" => global_search,              // SPC s d : search current directory
                 "c" => clear_search_highlight,     // SPC s c : clear persistent search highlight
+                "m" => global_search_masked,       // SPC s m : project search restricted to a file glob (JetBrains Find in Path file mask)
                 "u" => highlight_usages_in_file,   // SPC s u : highlight every usage of the symbol at the caret (JetBrains Ctrl-Shift-F7)
                 // uppercase variants are the "with default input" forms: seeded
                 // with the symbol under the cursor.

@@ -280,9 +280,10 @@ const TOPICS: &[(&str, &str)] = &[
     ),
     (
         "Bookmarks & marks",
-        "Numbered bookmarks (ne / mcedit): ten per document, holding a line.\n\
-      Bind or run set_numbered_bookmark, then press 0–9; goto_numbered_bookmark\n\
-      returns to one and pushes the jumplist, so C-o comes back.\n\n\
+        "Numbered bookmarks (ne / mcedit): per-document slots holding a line.\n\
+      Bind or run set_numbered_bookmark, then press 0–9 or a–z (the letters are\n\
+      IntelliJ's mnemonic bookmarks); goto_numbered_bookmark returns to one and\n\
+      pushes the jumplist, so C-o comes back.\n\n\
       vim marks: m{a-z} sets, '{a-z} jumps, :marks lists, :delmarks removes.\n\
       Emacs bookmarks are the named, saved kind — see the bookmark_* commands.",
     ),
