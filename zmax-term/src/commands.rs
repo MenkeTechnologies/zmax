@@ -1605,6 +1605,8 @@ impl MappableCommand {
         hsplit, "Horizontal bottom split",
         hsplit_new, "Horizontal bottom split scratch buffer",
         vsplit, "Vertical right split",
+        split_right_and_move, "Split right and move this buffer into it, leaving the old group behind (JetBrains Split and Move Right)",
+        split_down_and_move, "Split down and move this buffer into it, leaving the old group behind (JetBrains Split and Move Down)",
         vsplit_new, "Vertical right split scratch buffer",
         wclose, "Close window",
         wonly, "Close windows except current",
@@ -43882,6 +43884,40 @@ fn vsplit(cx: &mut Context) {
 
 fn vsplit_new(cx: &mut Context) {
     cx.editor.new_file(Action::VerticalSplit);
+}
+
+/// JetBrains "Split and Move Right"/"Split and Move Down": open a split showing
+/// THIS buffer and leave the old group showing something else.
+///
+/// Plain `vsplit`/`hsplit` leave the same buffer in both groups, which is the
+/// one thing the IDE's action is defined not to do: the file MOVES. The old
+/// view is sent back to the buffer it was on before (`goto_previous_buffer`),
+/// unless this is the only buffer open — then there is nothing to move away
+/// from and the split is an ordinary one.
+fn split_and_move(cx: &mut Context, action: Action) {
+    if cx.editor.documents.len() < 2 {
+        split(cx.editor, action);
+        cx.editor
+            .set_status("split (only one buffer open, so nothing moved)");
+        return;
+    }
+    let origin = view!(cx.editor).id;
+    split(cx.editor, action);
+    let moved_to = view!(cx.editor).id;
+
+    // Back to the old group, step it off this buffer, then return: the file is
+    // now in the new split only.
+    cx.editor.focus(origin);
+    goto_previous_buffer(cx);
+    cx.editor.focus(moved_to);
+}
+
+fn split_right_and_move(cx: &mut Context) {
+    split_and_move(cx, Action::VerticalSplit);
+}
+
+fn split_down_and_move(cx: &mut Context) {
+    split_and_move(cx, Action::HorizontalSplit);
 }
 
 /// SPC b N i : clone the current buffer into a new split. zmax views share their underlying

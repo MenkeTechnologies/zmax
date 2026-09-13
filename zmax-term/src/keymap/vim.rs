@@ -2217,6 +2217,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "S" => hsplit,                 // SPC w . S : horizontal split + focus
                     "v" => vsplit,                 // SPC w . v : vertical split
                     "V" => vsplit,                 // SPC w . V : vertical split + focus
+                    "t" => split_right_and_move,   // SPC w . t : split right and MOVE this buffer there (JetBrains Split and Move Right; `m` is maximize)
+                    "T" => split_down_and_move,    // SPC w . T : split down and MOVE this buffer there (JetBrains Split and Move Down)
                     "r" => rotate_view,            // SPC w . r : rotate windows forward
                     "R" => rotate_view_reverse,    // SPC w . R : rotate windows backward
                     "w" => rotate_view,            // SPC w . w : focus other window
