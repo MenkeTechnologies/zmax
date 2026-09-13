@@ -138,9 +138,9 @@
 | `save_as_prompt` | Prompt for a name and write the buffer to it (micro/mcedit/ne SaveAs) |  |
 | `select_first_last_chars` | Keep the first and last character of each selection (kakoune A-S) | **kakoune** — normal: `` <A-S> `` |
 | `copy_indent` | Copy the main selection's indent to the other selected lines (kakoune A-&) | **kakoune** — normal: `` <A-&> `` |
-| `set_numbered_bookmark` | Set a numbered bookmark on this line (ne SetBookmark) |  |
-| `goto_numbered_bookmark` | Jump to a numbered bookmark (ne GotoBookmark) |  |
-| `unset_numbered_bookmark` | Forget a numbered bookmark (ne UnsetBookmark) |  |
+| `set_numbered_bookmark` | Set a numbered bookmark on this line (ne SetBookmark) | **spacemacs, hybrid** — normal: `` <space>rm ``, select: `` <space>rm `` |
+| `goto_numbered_bookmark` | Jump to a numbered bookmark (ne GotoBookmark) | **spacemacs, hybrid** — normal: `` <space>rb ``, select: `` <space>rb `` |
+| `unset_numbered_bookmark` | Forget a numbered bookmark (ne UnsetBookmark) | **spacemacs, hybrid** — normal: `` <space>rd ``, select: `` <space>rd `` |
 | `undo_selection_change` | Undo the last selection change (kakoune A-u) | **kakoune** — normal: `` <A-u> `` |
 | `redo_selection_change` | Redo a selection change (kakoune A-U) | **kakoune** — normal: `` <A-U> `` |
 | `save_selections_to_register` | Save selections to a register (kakoune Z) | **kakoune** — normal: `` Z ``, `` <A-Z> ``, select: `` Z `` |
@@ -709,7 +709,7 @@
 | `buffer_picker` | Open buffer picker | **spacemacs, hybrid** — normal: `` <C-x>b ``, `` <space>bb ``, `` <space>lb ``, `` <space>lt ``, `` <space>pb ``, `` <space>b.b ``, select: `` <C-x>b ``, `` <space>bb ``, `` <space>lb ``, `` <space>lt ``, `` <space>pb ``, `` <space>b.b ``, insert: `` <C-x>b ``<br>**helix** — normal: `` <space>b ``, select: `` <space>b ``<br>**emacs** — normal: `` <C-x>b ``, insert: `` <C-x>b ``<br>**cua** — normal: `` <C-x>b ``, select: `` <C-X>b ``, insert: `` <C-x>b `` |
 | `jumplist_picker` | Open jumplist picker | **spacemacs, hybrid** — normal: `` <space>jj ``, select: `` <space>jj ``<br>**helix** — normal: `` <space>j ``, select: `` <space>j `` |
 | `register_picker` | Browse registers and paste the chosen one | **spacemacs, hybrid** — normal: `` <space>re ``, `` <space>rr ``, `` <space>ry ``, select: `` <space>re ``, `` <space>rr ``, `` <space>ry `` |
-| `marks_picker` | Fuzzy-pick a vim mark and jump to it (:Marks) | **spacemacs, hybrid** — normal: `` <space>fb ``, `` <space>rm ``, select: `` <space>fb ``, `` <space>rm `` |
+| `marks_picker` | Fuzzy-pick a vim mark and jump to it (:Marks) | **spacemacs, hybrid** — normal: `` <space>fb ``, select: `` <space>fb `` |
 | `buffer_line_picker` | Fuzzy-search lines in the current buffer (:BLines) | **spacemacs, hybrid** — normal: `` <space>sL ``, select: `` <space>sL `` |
 | `command_history_picker` | Fuzzy-pick and run a past command line (:History:) | **spacemacs** — normal: `` <space>r: ``, `` <C-x><esc><esc> ``, select: `` <space>r: ``, `` <C-x><esc><esc> ``, insert: `` <C-x><esc><esc> ``<br>**hybrid** — normal: `` <space>r: ``, `` <C-x><esc><esc> ``, select: `` <space>r: ``, `` <C-x><esc><esc> `` |
 | `cmdline_window` | Edit the command-line history in a buffer; <CR> runs the line (vim q:) |  |
@@ -1417,6 +1417,7 @@
 | `stop_run` | Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2) | **spacemacs, hybrid** — normal: `` <space>px ``, select: `` <space>px `` |
 | `clear_run_output` | Clear the Run tool window output | **spacemacs, hybrid** — normal: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck ``, select: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck `` |
 | `open_log_file` | Open zmax's own log file (JetBrains Show Log) | **spacemacs, hybrid** — normal: `` <space>hL ``, select: `` <space>hL `` |
+| `global_search_masked` | Search the project, restricted to a file glob (JetBrains Find in Path file mask) | **spacemacs, hybrid** — normal: `` <space>sm ``, select: `` <space>sm `` |
 | `rerun_last_run` | Re-run the last command in the Run console | **spacemacs** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> ``<br>**hybrid** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> `` |
 | `run_next_error` | Jump to the next file:line in the run output | **spacemacs** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` ``<br>**hybrid** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn `` |
 | `run_prev_error` | Jump to the previous file:line in the run output | **spacemacs, hybrid** — normal: `` <A-g>p ``, `` <space>Rp ``, `` <A-g><A-p> ``, select: `` <space>Rp `` |
