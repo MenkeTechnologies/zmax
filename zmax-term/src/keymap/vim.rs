@@ -2012,6 +2012,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "u" => reopen_last_closed,                     // SPC f u : reopen last closed file
                 "n" => new_file_in_directory,                  // SPC f n : create a file beside this one (JetBrains New in This Directory)
                 "N" => new_file_from_template,                  // SPC f N : create a file from a ~/.zmax/file-templates template (JetBrains New File from Template)
+                "T" => save_file_as_template,                   // SPC f T : save this buffer as a file template (JetBrains Save File as Template)
                 "t" => file_explorer,                          // SPC f t
                 "d" => file_explorer_in_current_buffer_directory, // SPC f d
                 "j" => file_explorer_in_current_buffer_directory, // SPC f j : dired
@@ -2466,6 +2467,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => toggle_block_comments,      // SPC c b
                 "p" => toggle_comments,            // SPC c p : comment paragraph
                 "h" => fold_comments,              // SPC c h : hide comments (fold comment blocks)
+                "S" => save_selection_as_snippet,  // SPC c S : save the selection as a snippet (JetBrains Save as Live Template)
                 "R" => fold_custom_regions,        // SPC c R : fold every //region / <editor-fold> block (JetBrains Collapse Custom Regions)
                 "D" => fold_doc_comments,          // SPC c D : fold the doc comments only (JetBrains Collapse Doc Comments)
                 "E" => unfold_doc_comments,        // SPC c E : open the doc-comment folds (JetBrains Expand Doc Comments)
@@ -2606,6 +2608,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "g" => generate_code,              // SPC l g : generate code — getters/constructors/impls (JetBrains Generate)
                 "k" => hover,                      // SPC l k : hover
                 "q" => peek_definition,            // SPC l q : peek definition in a popup (JetBrains Quick Definition)
+                "y" => peek_type_definition,       // SPC l y : peek the TYPE definition, mirroring gy (JetBrains Quick Type Definition)
                 "Q" => context_info,               // SPC l Q : the declarations enclosing the caret (JetBrains Alt-Q)
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format

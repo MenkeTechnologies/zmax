@@ -1164,6 +1164,7 @@ impl MappableCommand {
         preview_tjump, "Show the tag under the cursor in the preview window, listing ambiguous matches (vim CTRL-W g })",
         tag_pop, "Jump back to the position the last tag jump started from (vim CTRL-T, :pop)",
         peek_definition, "Peek the definition in a popup without navigating (JetBrains Quick Definition)",
+        peek_type_definition, "Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition)",
         goto_declaration, "Goto declaration",
         add_newline_above, "Add newline above",
         add_newline_below, "Add newline below",
@@ -2570,6 +2571,8 @@ impl MappableCommand {
         recent_projects_picker, "Switch to a project zmax has state for (JetBrains Open Recent)",
         convert_indents_to_spaces, "Convert leading tabs in the selection to spaces (JetBrains Convert Indents to Spaces)",
         convert_indents_to_tabs, "Convert leading indent spaces in the selection to tabs (JetBrains Convert Indents to Tabs)",
+        save_selection_as_snippet, "Save the selection as a snippet under a trigger you type (JetBrains Save as Live Template)",
+        save_file_as_template, "Save this buffer into the file-template directory (JetBrains Save File as Template)",
         new_file_from_template, "Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
@@ -68400,6 +68403,116 @@ fn expand_file_template(body: &str, file_name: &str, date: &str, year: &str, use
 /// The template's own extension is the default for the new file, so a
 /// `module.rs` template offers `something.rs`. `new_file_in_directory` is the
 /// empty-file version of the same gesture.
+/// JetBrains "Save as Live Template…" (`SaveAsTemplate`): turn the selection
+/// into a snippet in the user library, under a trigger you type.
+///
+/// The body is the selected text with `$` escaped (`\$`), since the snippet
+/// engine reads `$1`/`${1:…}` as tabstops and a selection lifted out of shell
+/// or Perl is full of dollars that are not placeholders. Edit the snippet in
+/// `:snippets` afterwards to add tabstops deliberately.
+fn save_selection_as_snippet(cx: &mut Context) {
+    let (body, lang) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let body = doc
+            .selection(view.id)
+            .primary()
+            .fragment(text)
+            .to_string();
+        let lang = doc.language_name().map(ToOwned::to_owned);
+        (body, lang)
+    };
+    if body.trim().is_empty() {
+        cx.editor.set_error("select the text to save as a snippet");
+        return;
+    }
+    let escaped = body.replace('$', "\\$");
+    ui::prompt(
+        cx,
+        "snippet trigger: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let trigger = input.trim();
+            if trigger.is_empty() {
+                cx.editor.set_error("a snippet needs a trigger word");
+                return;
+            }
+            let mut store = crate::snippet_store::load();
+            let scope = lang.clone().unwrap_or_else(|| "*".to_string());
+            // Re-saving a trigger in the same scope replaces it, as the IDE
+            // does when you reuse an abbreviation.
+            store
+                .snippets
+                .retain(|s| !(s.trigger == trigger && s.scope == scope));
+            store.snippets.push(crate::snippet_store::UserSnippet {
+                trigger: trigger.to_string(),
+                scope: scope.clone(),
+                description: format!("saved from a selection ({scope})"),
+                body: escaped.clone(),
+            });
+            crate::snippet_store::save(&store);
+            cx.editor
+                .set_status(format!("saved snippet '{trigger}' for {scope}"));
+        },
+    );
+}
+
+/// JetBrains "Save File as Template…" (`SaveFileAsTemplate`): copy this buffer
+/// into the file-template directory, so `new_file_from_template` offers it.
+///
+/// The buffer's text is used rather than the file on disk, so a template can
+/// be shaped in the editor and saved without writing the original first.
+fn save_file_as_template(cx: &mut Context) {
+    let (text, default_name) = {
+        let doc = doc!(cx.editor);
+        let name = doc
+            .path()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        (doc.text().to_string(), name)
+    };
+    let dir = file_template_dir();
+    ui::prompt(
+        cx,
+        format!("template name ({default_name}): ").into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = if input.trim().is_empty() {
+                default_name.clone()
+            } else {
+                input.trim().to_string()
+            };
+            if name.is_empty() {
+                cx.editor.set_error("the template needs a name");
+                return;
+            }
+            // A name is a file name, never a path: a template that escaped the
+            // directory would not be offered and could overwrite anything.
+            let name = name.replace(['/', '\\'], "-");
+            if let Err(e) = std::fs::create_dir_all(&dir) {
+                cx.editor.set_error(format!("{}: {e}", dir.display()));
+                return;
+            }
+            let path = dir.join(&name);
+            match std::fs::write(&path, &text) {
+                Ok(()) => cx
+                    .editor
+                    .set_status(format!("saved template {}", path.display())),
+                Err(e) => cx.editor.set_error(format!("{}: {e}", path.display())),
+            }
+        },
+    );
+}
+
 fn new_file_from_template(cx: &mut Context) {
     let dir = file_template_dir();
     let mut templates: Vec<PathBuf> = std::fs::read_dir(&dir)

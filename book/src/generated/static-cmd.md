@@ -773,6 +773,7 @@
 | `preview_tjump` | Show the tag under the cursor in the preview window, listing ambiguous matches (vim CTRL-W g }) | **spacemacs, hybrid** — normal: `` <C-w>g} ``, `` <space>wg} ``, select: `` <space>wg} ``<br>**vim** — normal: `` <C-w>g} `` |
 | `tag_pop` | Jump back to the position the last tag jump started from (vim CTRL-T, :pop) | **spacemacs, hybrid, vim** — normal: `` <C-t> `` |
 | `peek_definition` | Peek the definition in a popup without navigating (JetBrains Quick Definition) | **spacemacs, hybrid** — normal: `` <space>lq ``, select: `` <space>lq `` |
+| `peek_type_definition` | Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition) | **spacemacs, hybrid** — normal: `` <space>ly ``, select: `` <space>ly `` |
 | `goto_declaration` | Goto declaration | **spacemacs, hybrid** — normal: `` gD ``, `` <C-w>i ``, `` <space>gD ``, `` <space>wi ``, `` <C-w><C-i> ``, `` <space>w<C-i> ``, select: `` <space>gD ``, `` <space>wi ``, `` <space>w<C-i> ``<br>**vim** — normal: `` gD ``, `` <C-w>i ``, `` <C-w><C-i> ``<br>**helix, kakoune** — normal: `` gD ``, select: `` gD `` |
 | `add_newline_above` | Add newline above | **helix** — normal: `` [<space> ``, select: `` [<space> ``<br>**kakoune** — normal: `` <A-O> ``, `` [<space> ``, select: `` [<space> `` |
 | `add_newline_below` | Add newline below | **helix** — normal: `` ]<space> ``, select: `` ]<space> ``<br>**kakoune** — normal: `` <A-o> ``, `` ]<space> ``, select: `` ]<space> `` |
@@ -2179,6 +2180,8 @@
 | `recent_projects_picker` | Switch to a project zmax has state for (JetBrains Open Recent) | **spacemacs, hybrid** — normal: `` <space>pl ``, select: `` <space>pl `` |
 | `convert_indents_to_spaces` | Convert leading tabs in the selection to spaces (JetBrains Convert Indents to Spaces) | **spacemacs, hybrid** — normal: `` <space>xis ``, select: `` <space>xis `` |
 | `convert_indents_to_tabs` | Convert leading indent spaces in the selection to tabs (JetBrains Convert Indents to Tabs) | **spacemacs, hybrid** — normal: `` <space>xit ``, select: `` <space>xit `` |
+| `save_selection_as_snippet` | Save the selection as a snippet under a trigger you type (JetBrains Save as Live Template) | **spacemacs, hybrid** — normal: `` <space>cS ``, select: `` <space>cS `` |
+| `save_file_as_template` | Save this buffer into the file-template directory (JetBrains Save File as Template) |  |
 | `new_file_from_template` | Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template) | **spacemacs, hybrid** — normal: `` <space>fN ``, select: `` <space>fN `` |
 | `highlight_usages_in_file` | Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7) | **spacemacs, hybrid** — normal: `` <space>su ``, select: `` <space>su `` |
 | `build_project` | Build the project with its own build tool (JetBrains Build Project, Ctrl F9) | **spacemacs, hybrid** — normal: `` <space>pB ``, select: `` <space>pB `` |

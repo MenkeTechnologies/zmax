@@ -1277,21 +1277,45 @@ pub fn goto_definition(cx: &mut Context) {
     );
 }
 
+/// JetBrains "Quick Type Definition" (`QuickTypeDefinition`): the same popup as
+/// [`peek_definition`], but over the TYPE of the symbol under the cursor.
+pub fn peek_type_definition(cx: &mut Context) {
+    peek_impl(cx, LanguageServerFeature::GotoTypeDefinition, true);
+}
+
 /// JetBrains "Quick Definition" (Cmd+Shift+I): peek the definition of the symbol
 /// under the cursor — the target file's lines around the definition — in a popup,
 /// without navigating away from the current buffer.
 pub fn peek_definition(cx: &mut Context) {
+    peek_impl(cx, LanguageServerFeature::GotoDefinition, false);
+}
+
+/// The body of the two peek commands: ask every server that offers `feature`
+/// where the symbol goes, then show the first answer's surroundings in a hover
+/// popup. `type_def` picks which request is sent; everything else is shared,
+/// so the two popups look and behave identically.
+fn peek_impl(cx: &mut Context, feature: LanguageServerFeature, type_def: bool) {
     use crate::ui::lsp::hover::Hover;
 
     let (view, doc) = current_ref!(cx.editor);
     let mut futures: FuturesUnordered<_> = doc
-        .language_servers_with_feature(LanguageServerFeature::GotoDefinition)
+        .language_servers_with_feature(feature)
         .map(|language_server| {
             let offset_encoding = language_server.offset_encoding();
             let pos = doc.position(view.id, offset_encoding);
-            let future = language_server
-                .goto_definition(doc.identifier(), pos, None)
-                .unwrap();
+            // The two requests are distinct future types, so they are boxed
+            // to share one stream.
+            let future = if type_def {
+                language_server
+                    .goto_type_definition(doc.identifier(), pos, None)
+                    .unwrap()
+                    .boxed()
+            } else {
+                language_server
+                    .goto_definition(doc.identifier(), pos, None)
+                    .unwrap()
+                    .boxed()
+            };
             async move { anyhow::Ok((future.await?, offset_encoding)) }
         })
         .collect();
@@ -1320,7 +1344,11 @@ pub fn peek_definition(cx: &mut Context) {
         }
         let call = move |editor: &mut Editor, compositor: &mut Compositor| {
             let Some(location) = locations.into_iter().next() else {
-                editor.set_status("No definition found.");
+                editor.set_status(if type_def {
+                    "No type definition found."
+                } else {
+                    "No definition found."
+                });
                 return;
             };
             let Some(path) = location.uri.as_path() else {
