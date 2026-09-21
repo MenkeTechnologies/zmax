@@ -2467,6 +2467,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "p" => toggle_comments,            // SPC c p : comment paragraph
                 "h" => fold_comments,              // SPC c h : hide comments (fold comment blocks)
                 "R" => fold_custom_regions,        // SPC c R : fold every //region / <editor-fold> block (JetBrains Collapse Custom Regions)
+                "D" => fold_doc_comments,          // SPC c D : fold the doc comments only (JetBrains Collapse Doc Comments)
+                "E" => unfold_doc_comments,        // SPC c E : open the doc-comment folds (JetBrains Expand Doc Comments)
                 "t" => comment_to_line,            // SPC c t : comment/uncomment to a prompted line
                 "y" => [yank, toggle_comments],    // SPC c y : comment and yank
                 "d" => wclose,                     // SPC c d : close compilation window

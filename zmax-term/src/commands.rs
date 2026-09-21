@@ -408,6 +408,8 @@ impl MappableCommand {
         buffer_sort_by_relative_path, "Sort the buffer line by relative path (AstroNvim SPC b s r)",
         buffer_sort_by_number, "Sort the buffer line by buffer number (AstroNvim SPC b s i)",
         buffer_sort_by_last_used, "Sort the buffer line by last use (AstroNvim SPC b s m)",
+        fold_doc_comments, "Fold the doc comments, leaving other comments alone (JetBrains Collapse Doc Comments)",
+        unfold_doc_comments, "Open the doc-comment folds (JetBrains Expand Doc Comments)",
         fold_custom_regions, "Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions)",
         goto_custom_region, "Jump to a //region or <editor-fold> block by name (JetBrains Custom Folding)",
         fold_comments, "Fold multi-line comment blocks (SPC c h)",
@@ -59302,6 +59304,88 @@ fn fold_comments(cx: &mut Context) {
         .set_status(format!("folded {count} comment block(s)"));
 }
 
+/// The inclusive line ranges of the doc-comment blocks in `lines` — JetBrains
+/// "Collapse Doc Comments" / "Expand Doc Comments". Pure, unit tested.
+///
+/// A doc comment is a run of `///`, `//!`, `##` or `--|` lines, or a block that
+/// opens with `/**` (but not `/**/`) and runs to the line holding its `*/`.
+/// Plain comments are left alone: that is what separates this from
+/// `fold_comments`, which folds every comment block in the buffer.
+fn doc_comment_runs(lines: &[String]) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let t = lines[i].trim_start();
+        if t.starts_with("/**") && !t.starts_with("/**/") {
+            // Block form: to the line that closes it, or the end of the buffer.
+            let mut j = i;
+            if !t[3..].contains("*/") {
+                while j + 1 < lines.len() && !lines[j].contains("*/") {
+                    j += 1;
+                }
+            }
+            if j > i {
+                out.push((i, j));
+            }
+            i = j + 1;
+            continue;
+        }
+        if is_doc_line(t) {
+            let start = i;
+            while i + 1 < lines.len() && is_doc_line(lines[i + 1].trim_start()) {
+                i += 1;
+            }
+            // A one-line doc comment has nothing to fold away.
+            if i > start {
+                out.push((start, i));
+            }
+        }
+        i += 1;
+    }
+    out
+}
+
+/// Whether a trimmed line opens a line-form doc comment.
+fn is_doc_line(t: &str) -> bool {
+    t.starts_with("///") || t.starts_with("//!") || t.starts_with("##") || t.starts_with("--|")
+}
+
+/// JetBrains "Collapse Doc Comments" (`CollapseDocComments`): fold the doc
+/// comments and nothing else.
+fn fold_doc_comments(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let runs = doc_comment_runs(&buffer_lines(doc));
+    if runs.is_empty() {
+        cx.editor.set_status("no doc comments to fold");
+        return;
+    }
+    let n = doc.text().len_lines();
+    let count = runs.len();
+    for (start, end) in runs {
+        doc.folds_mut().create(start, end);
+    }
+    doc.folds_mut().clamp(n.saturating_sub(1));
+    let _ = view;
+    cx.editor
+        .set_status(format!("folded {count} doc comment(s)"));
+}
+
+/// JetBrains "Expand Doc Comments" (`ExpandDocComments`): open the doc-comment
+/// folds, leaving every other fold as it is.
+fn unfold_doc_comments(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let runs = doc_comment_runs(&buffer_lines(doc));
+    let mut opened = 0;
+    for (start, _) in runs {
+        if doc.folds_mut().open(start) {
+            opened += 1;
+        }
+    }
+    let _ = view;
+    cx.editor
+        .set_status(format!("opened {opened} doc comment fold(s)"));
+}
+
 /// A custom folding region: its name and the inclusive line range it spans.
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct CustomRegion {
@@ -63618,6 +63702,25 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn doc_comment_runs_takes_doc_comments_only() {
+        let src = lines(&[
+            "/// one",
+            "/// two",
+            "fn a() {}",
+            "// a plain comment",
+            "// another plain line",
+            "/**",
+            " * block doc",
+            " */",
+            "fn b() {}",
+            "/// a lone doc line",
+        ]);
+        // The plain comment block is left for `fold_comments`; a single doc
+        // line has nothing to fold.
+        assert_eq!(doc_comment_runs(&src), vec![(0, 1), (5, 7)]);
     }
 
     #[test]

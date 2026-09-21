@@ -17,6 +17,8 @@
 | `buffer_sort_by_relative_path` | Sort the buffer line by relative path (AstroNvim SPC b s r) | **spacemacs, hybrid** — normal: `` <space>bor ``, select: `` <space>bor `` |
 | `buffer_sort_by_number` | Sort the buffer line by buffer number (AstroNvim SPC b s i) | **spacemacs, hybrid** — normal: `` <space>boi ``, select: `` <space>boi `` |
 | `buffer_sort_by_last_used` | Sort the buffer line by last use (AstroNvim SPC b s m) | **spacemacs, hybrid** — normal: `` <space>bom ``, select: `` <space>bom `` |
+| `fold_doc_comments` | Fold the doc comments, leaving other comments alone (JetBrains Collapse Doc Comments) | **spacemacs, hybrid** — normal: `` <space>cD ``, select: `` <space>cD `` |
+| `unfold_doc_comments` | Open the doc-comment folds (JetBrains Expand Doc Comments) | **spacemacs, hybrid** — normal: `` <space>cE ``, select: `` <space>cE `` |
 | `fold_custom_regions` | Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions) | **spacemacs, hybrid** — normal: `` <space>cR ``, select: `` <space>cR `` |
 | `goto_custom_region` | Jump to a //region or <editor-fold> block by name (JetBrains Custom Folding) | **spacemacs, hybrid** — normal: `` <space>jr ``, select: `` <space>jr `` |
 | `fold_comments` | Fold multi-line comment blocks (SPC c h) | **spacemacs, hybrid** — normal: `` <space>ch ``, select: `` <space>ch `` |
