@@ -174,6 +174,8 @@
 | `extend_search_prev_vim` | vim N (visual): extend to the reverse match | **spacemacs, hybrid, vim** — select: `` N `` |
 | `add_selection_to_next_match` | Add the next occurrence of the selection as a new cursor | **micro** — normal: `` <A-n> ``, insert: `` <A-n> `` |
 | `skip_selection_to_next_match` | Skip this occurrence and select the next one (vis C-x) | **spacemacs, hybrid** — normal: `` <space>xn ``, select: `` <space>xn `` |
+| `select_next_occurrence` | Add a cursor on the next occurrence of the selection (JetBrains Add Selection for Next Occurrence) | **spacemacs, hybrid** — normal: `` <space>sn ``, select: `` <space>sn `` |
+| `unselect_previous_occurrence` | Drop the cursor added last by select_next_occurrence (JetBrains Unselect Occurrence) | **spacemacs, hybrid** — normal: `` <space>sN ``, select: `` <space>sN `` |
 | `select_all_occurrences` | Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences) | **spacemacs, hybrid** — normal: `` <space>xo ``, select: `` <space>xo `` |
 | `toggle_find_in_selection` | Confine search to the selected region, or lift it (JetBrains Search in Selection Only) | **spacemacs, hybrid** — normal: `` <space>si ``, select: `` <space>si `` |
 | `search_selection` | Use current selection as search pattern | **helix, kakoune** — normal: `` <A-*> ``, select: `` <A-*> `` |

@@ -2265,6 +2265,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "p" => global_search,              // SPC s p
                 "j" => symbol_picker,              // SPC s j
                 "e" => select_references_to_symbol_under_cursor, // SPC s e : edit occurrences
+                "n" => select_next_occurrence,     // SPC s n : add a cursor on the next occurrence (JetBrains Add Selection for Next Occurrence)
+                "N" => unselect_previous_occurrence, // SPC s N : drop the cursor added last (JetBrains Unselect Occurrence)
                 "C" => add_carets_to_line_ends,    // SPC s C : a cursor at the end of every selected line (JetBrains Add Carets to Ends of Selected Lines)
                 "h" => select_references_to_symbol_under_cursor, // SPC s h : highlight symbol
                 "S" => workspace_symbol_picker,

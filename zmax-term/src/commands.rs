@@ -565,6 +565,8 @@ impl MappableCommand {
         extend_search_prev_vim, "vim N (visual): extend to the reverse match",
         add_selection_to_next_match, "Add the next occurrence of the selection as a new cursor",
         skip_selection_to_next_match, "Skip this occurrence and select the next one (vis C-x)",
+        select_next_occurrence, "Add a cursor on the next occurrence of the selection (JetBrains Add Selection for Next Occurrence)",
+        unselect_previous_occurrence, "Drop the cursor added last by select_next_occurrence (JetBrains Unselect Occurrence)",
         select_all_occurrences, "Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences)",
         toggle_find_in_selection, "Confine search to the selected region, or lift it (JetBrains Search in Selection Only)",
         search_selection, "Use current selection as search pattern",
@@ -12210,6 +12212,83 @@ fn select_all_occurrences(cx: &mut Context) {
     doc.set_selection(view.id, Selection::new(ranges, primary_index));
     cx.editor
         .set_status(format!("{count} occurrences selected"));
+}
+
+/// The occurrences of the primary selection's text, as char ranges. Shared by
+/// the three incremental occurrence commands.
+fn occurrences_of_primary(cx: &mut Context) -> Option<(Vec<(usize, usize)>, Range)> {
+    let (view, doc) = current_ref!(cx.editor);
+    let slice = doc.text().slice(..);
+    let primary = doc.selection(view.id).primary();
+    let needle: String = slice.slice(primary.from()..primary.to()).chunks().collect();
+    if needle.is_empty() {
+        return None;
+    }
+    let haystack: String = slice.chunks().collect();
+    Some((find_all_ranges(&haystack, &needle), primary))
+}
+
+/// JetBrains "Add Selection for Next Occurrence" (`SelectNextOccurrence`,
+/// Ctrl-G / Alt-J): put another cursor on the next occurrence of what is
+/// selected, leaving the ones already there.
+///
+/// This is the incremental half of `select_all_occurrences`: the IDE's
+/// workflow is to take occurrences one at a time and stop when the next one is
+/// wrong. The search wraps, and an occurrence already selected is skipped, so
+/// repeating the command walks the buffer instead of sticking.
+fn select_next_occurrence(cx: &mut Context) {
+    let Some((found, _)) = occurrences_of_primary(cx) else {
+        cx.editor
+            .set_error("select text first (Add Selection for Next Occurrence)");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id).clone();
+    let taken: Vec<(usize, usize)> = selection.iter().map(|r| (r.from(), r.to())).collect();
+    let after = selection.primary().to();
+    // The first untaken occurrence after the primary, wrapping to the top.
+    let next = found
+        .iter()
+        .copied()
+        .find(|(s, e)| *s >= after && !taken.contains(&(*s, *e)))
+        .or_else(|| {
+            found
+                .iter()
+                .copied()
+                .find(|(s, e)| !taken.contains(&(*s, *e)))
+        });
+    match next {
+        Some((s, e)) => {
+            let mut ranges: SmallVec<[Range; 1]> = selection.ranges().into();
+            ranges.push(Range::new(s, e));
+            let primary_index = ranges.len() - 1;
+            let count = ranges.len();
+            doc.set_selection(view.id, Selection::new(ranges, primary_index));
+            cx.editor
+                .set_status(format!("{count} occurrence(s) selected"));
+        }
+        None => cx.editor.set_status("no further occurrences"),
+    }
+}
+
+/// JetBrains "Unselect Occurrence" (`UnselectPreviousOccurrence`,
+/// Ctrl-Shift-G / Alt-Shift-J): drop the cursor added last, undoing one step of
+/// [`select_next_occurrence`]. The last remaining selection is kept — the IDE
+/// leaves you with a cursor, not with none.
+fn unselect_previous_occurrence(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id).clone();
+    if selection.len() < 2 {
+        cx.editor.set_status("only one selection left");
+        return;
+    }
+    let mut ranges: SmallVec<[Range; 1]> = selection.ranges().into();
+    ranges.remove(selection.primary_index().min(ranges.len() - 1));
+    let primary_index = ranges.len() - 1;
+    let count = ranges.len();
+    doc.set_selection(view.id, Selection::new(ranges, primary_index));
+    cx.editor
+        .set_status(format!("{count} occurrence(s) selected"));
 }
 
 fn select_regex(cx: &mut Context) {

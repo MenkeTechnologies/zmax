@@ -2723,3 +2723,57 @@ async fn find_in_selection_confines_the_search_and_its_wrap() -> anyhow::Result<
     .await?;
     Ok(())
 }
+
+/// JetBrains "Add Selection for Next Occurrence" / "Unselect Occurrence"
+/// (`SPC s n` / `SPC s N`): cursors are taken one at a time and given back in
+/// the same order, and the buffer is never edited by the walk.
+#[tokio::test(flavor = "multi_thread")]
+async fn select_next_occurrence_adds_and_unselects_one_at_a_time() -> anyhow::Result<()> {
+    // "aa xx aa xx aa xx aa" — four occurrences of "aa".
+    let mut app = preset_app("spacemacs")
+        .with_input_text(&format!("#[a|]#{}", &AA[1..]))
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            // Select the first "aa" and take the next occurrence. The
+            // selection has to stay live: `<esc>` would collapse it to one
+            // character, and the needle would be "a".
+            (
+                Some("vl<space>sn"),
+                Some(&|app| {
+                    let (view, doc) = zmax_view::current_ref!(app.editor);
+                    assert_eq!(doc.selection(view.id).len(), 2, "a second cursor was added");
+                }),
+            ),
+            (
+                Some("<space>sn"),
+                Some(&|app| {
+                    let (view, doc) = zmax_view::current_ref!(app.editor);
+                    let sel = doc.selection(view.id);
+                    assert_eq!(sel.len(), 3, "and a third");
+                    // Every cursor covers the same text.
+                    let text = doc.text().slice(..);
+                    for range in sel.iter() {
+                        assert_eq!(range.fragment(text), "aa");
+                    }
+                }),
+            ),
+            (
+                Some("<space>sN"),
+                Some(&|app| {
+                    let (view, doc) = zmax_view::current_ref!(app.editor);
+                    assert_eq!(
+                        doc.selection(view.id).len(),
+                        2,
+                        "unselect gave the last one back"
+                    );
+                    assert_eq!(buffer(app), AA, "the walk edited nothing");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
