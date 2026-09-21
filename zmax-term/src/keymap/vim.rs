@@ -2272,6 +2272,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "c" => clear_search_highlight,     // SPC s c : clear persistent search highlight
                 "m" => global_search_masked,       // SPC s m : project search restricted to a file glob (JetBrains Find in Path file mask)
                 "u" => highlight_usages_in_file,   // SPC s u : highlight every usage of the symbol at the caret (JetBrains Ctrl-Shift-F7)
+                "i" => toggle_find_in_selection,   // SPC s i : confine / unconfine search to the selection (JetBrains Search in Selection Only)
                 // uppercase variants are the "with default input" forms: seeded
                 // with the symbol under the cursor.
                 "D" => global_search_symbol,       // SPC s D : search current directory (default input)

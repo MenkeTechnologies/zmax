@@ -2659,3 +2659,67 @@ async fn vim_argglobal_arglocal_dispatch() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// JetBrains "Search in Selection Only" (`SPC s i`): while it is armed, `n`
+/// wraps inside the region instead of walking out of it.
+///
+/// In "aa xx aa xx aa xx aa" the matches are at 0, 6, 12 and 18. With the first
+/// half selected, the cycle must be 0 -> 6 -> 0, never reaching 12.
+#[tokio::test(flavor = "multi_thread")]
+async fn find_in_selection_confines_the_search_and_its_wrap() -> anyhow::Result<()> {
+    // The `SPC` leader belongs to the spacemacs preset; in the `vim` preset
+    // `SPC s i` is three ordinary normal-mode keys.
+    let mut app = preset_app("spacemacs")
+        .with_input_text(&format!("#[a|]#{}", &AA[1..]))
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            // Select "aa xx aa" (offsets 0..8), arm the scope, then collapse the
+            // selection back to the first match so the search starts there.
+            (
+                Some("v7l<space>si"),
+                Some(&|app| {
+                    assert_eq!(buffer(app), AA, "the chords edited nothing");
+                    assert_eq!(
+                        app.editor.get_status().map(|(m, _)| m.to_string()),
+                        Some("search scope: this selection (1 line(s))".to_string()),
+                        "the scope was armed"
+                    );
+                }),
+            ),
+            (
+                Some("<esc>gg"),
+                Some(&|app| {
+                    assert_eq!(primary_from(app), 0, "back at the top of the buffer");
+                }),
+            ),
+            (
+                Some("/aa<ret>"),
+                Some(&|app| {
+                    assert_eq!(primary_from(app), 6, "first match inside the scope");
+                }),
+            ),
+            (
+                Some("n"),
+                Some(&|app| {
+                    assert_eq!(
+                        primary_from(app),
+                        0,
+                        "n wrapped inside the scope instead of going to 12"
+                    );
+                }),
+            ),
+            // Lifting the scope puts the whole buffer back in play.
+            (
+                Some("<space>sin"),
+                Some(&|app| {
+                    assert_eq!(primary_from(app), 6, "unscoped n walks on");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -564,6 +564,7 @@ impl MappableCommand {
         add_selection_to_next_match, "Add the next occurrence of the selection as a new cursor",
         skip_selection_to_next_match, "Skip this occurrence and select the next one (vis C-x)",
         select_all_occurrences, "Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences)",
+        toggle_find_in_selection, "Confine search to the selected region, or lift it (JetBrains Search in Selection Only)",
         search_selection, "Use current selection as search pattern",
         search_selection_detect_word_boundaries, "Use current selection as the search pattern, automatically wrapping with `\\b` on word boundaries",
         make_search_word_bounded, "Modify current search to make it word bounded",
@@ -12502,6 +12503,7 @@ fn search_impl(
     show_warnings: bool,
 ) -> Option<(usize, usize)> {
     let (view, doc) = current!(editor);
+    let doc_id = doc.id();
     let text = doc.text().slice(..);
     let selection = doc.selection(view.id);
 
@@ -12524,23 +12526,35 @@ fn search_impl(
     // it out, we need to add it back to the position of the selection.
     let doc = doc!(editor).text().slice(..);
 
+    // JetBrains "Search in Selection Only": while a scope is armed, the search
+    // window is the scope instead of the whole buffer — the wrap included, so
+    // `n` cycles inside the region rather than escaping it. Unarmed, the bounds
+    // are the buffer's own and every search behaves exactly as before.
+    let scoped = find_in_selection_bytes(doc_id, doc);
+    let (lo, hi) = scoped.unwrap_or((0, doc.len_bytes()));
+    let start = start.clamp(lo, hi);
+
     // use find_at to find the next match after the cursor, loop around the end
     // Careful, `Regex` uses `bytes` as offsets, not character indices!
     let mut mat = match direction {
-        Direction::Forward => regex.find(doc.regex_input_at_bytes(start..)),
-        Direction::Backward => regex.find_iter(doc.regex_input_at_bytes(..start)).last(),
+        Direction::Forward => regex.find(doc.regex_input_at_bytes(start..hi)),
+        Direction::Backward => regex.find_iter(doc.regex_input_at_bytes(lo..start)).last(),
     };
 
     if mat.is_none() {
         if wrap_around {
             mat = match direction {
-                Direction::Forward => regex.find(doc.regex_input()),
-                Direction::Backward => regex.find_iter(doc.regex_input_at_bytes(start..)).last(),
+                Direction::Forward => regex.find(doc.regex_input_at_bytes(lo..hi)),
+                Direction::Backward => regex.find_iter(doc.regex_input_at_bytes(start..hi)).last(),
             };
         }
         if show_warnings {
             if wrap_around && mat.is_some() {
-                editor.set_status("Wrapped around document");
+                editor.set_status(if scoped.is_some() {
+                    "Wrapped around the selection"
+                } else {
+                    "Wrapped around document"
+                });
             } else {
                 editor.set_error("No more matches");
             }
@@ -12603,6 +12617,62 @@ fn search_impl(
         return Some((start, end));
     };
     None
+}
+
+/// The region JetBrains "Search in Selection Only" (`ToggleFindInSelection`)
+/// confines the search to: the document it was armed in and the char range it
+/// covered. `None` means the whole buffer, which is the default.
+static FIND_IN_SELECTION: Lazy<std::sync::Mutex<Option<(DocumentId, usize, usize)>>> =
+    Lazy::new(|| std::sync::Mutex::new(None));
+
+/// The armed scope as a byte range of `text`, if it belongs to `doc_id`.
+///
+/// The scope is held in char positions and converted per search, so edits that
+/// change byte lengths inside it do not drift it. Switching buffers leaves the
+/// scope in place but unused — it applies to the document it was taken in, the
+/// way the IDE's find bar belongs to one editor tab.
+fn find_in_selection_bytes(doc_id: DocumentId, text: RopeSlice) -> Option<(usize, usize)> {
+    let (id, from, to) = (*FIND_IN_SELECTION.lock().unwrap())?;
+    if id != doc_id {
+        return None;
+    }
+    let len = text.len_chars();
+    let (from, to) = (from.min(len), to.min(len));
+    (from < to).then(|| (text.char_to_byte(from), text.char_to_byte(to)))
+}
+
+/// JetBrains "Search in Selection Only" (`ToggleFindInSelection`): confine
+/// `/`, `n` and `N` to the region under the selection, or lift the confinement.
+///
+/// The region is taken once, when the toggle goes on — searching moves the
+/// selection, so reading it live would shrink the scope to the last match after
+/// the first `n`.
+fn toggle_find_in_selection(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let doc_id = doc.id();
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id);
+    let from = selection.iter().map(|r| r.from()).min().unwrap_or(0);
+    let to = selection.iter().map(|r| r.to()).max().unwrap_or(0);
+
+    let mut guard = FIND_IN_SELECTION.lock().unwrap();
+    if guard.is_some() {
+        *guard = None;
+        drop(guard);
+        cx.editor.set_status("search scope: the whole buffer");
+        return;
+    }
+    if to <= from {
+        drop(guard);
+        cx.editor
+            .set_error("select the region to search in first");
+        return;
+    }
+    *guard = Some((doc_id, from, to));
+    drop(guard);
+    let lines = text.char_to_line(to.saturating_sub(1)) - text.char_to_line(from) + 1;
+    cx.editor
+        .set_status(format!("search scope: this selection ({lines} line(s))"));
 }
 
 fn search_completions(cx: &mut Context, reg: Option<char>) -> Vec<String> {

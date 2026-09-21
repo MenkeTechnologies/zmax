@@ -173,6 +173,7 @@
 | `add_selection_to_next_match` | Add the next occurrence of the selection as a new cursor | **micro** — normal: `` <A-n> ``, insert: `` <A-n> `` |
 | `skip_selection_to_next_match` | Skip this occurrence and select the next one (vis C-x) | **spacemacs, hybrid** — normal: `` <space>xn ``, select: `` <space>xn `` |
 | `select_all_occurrences` | Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences) | **spacemacs, hybrid** — normal: `` <space>xo ``, select: `` <space>xo `` |
+| `toggle_find_in_selection` | Confine search to the selected region, or lift it (JetBrains Search in Selection Only) | **spacemacs, hybrid** — normal: `` <space>si ``, select: `` <space>si `` |
 | `search_selection` | Use current selection as search pattern | **helix, kakoune** — normal: `` <A-*> ``, select: `` <A-*> `` |
 | `search_selection_detect_word_boundaries` | Use current selection as the search pattern, automatically wrapping with `\b` on word boundaries | **helix, kakoune** — normal: `` * ``, select: `` * `` |
 | `make_search_word_bounded` | Modify current search to make it word bounded |  |
