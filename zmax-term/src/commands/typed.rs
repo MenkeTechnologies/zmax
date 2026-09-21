@@ -24514,6 +24514,119 @@ fn sticky_lines_limit_cmd(
     Ok(())
 }
 
+/// `:git-clone URL [DIR]` — JetBrains "Get from Version Control…"
+/// (`Vcs.VcsClone`): clone a repository and open it as the workspace.
+///
+/// The clone runs to completion before the editor moves, so a failure leaves
+/// you where you were with git's own message; on success the working
+/// directory changes to the clone, which is what "get from version control"
+/// means in the IDE — you end up in the project.
+fn git_clone(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let url = args.first().context("usage: :git-clone URL [DIR]")?;
+    let into = args.get(1).map(|s| s.to_string()).unwrap_or_else(|| {
+        // git's own default: the last path segment, without `.git`.
+        url.trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or("repo")
+            .trim_end_matches(".git")
+            .to_string()
+    });
+    cx.editor.set_status(format!("cloning {url}…"));
+    let out = std::process::Command::new("git")
+        .args(["clone", url, &into])
+        .output()
+        .map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!("git clone: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    let dir = std::path::PathBuf::from(&into);
+    let dir = dir.canonicalize().unwrap_or(dir);
+    zmax_stdx::env::set_current_working_dir(&dir)?;
+    cx.editor.set_status(format!("cloned into {}", dir.display()));
+    Ok(())
+}
+
+/// `:prune-empty-dirs [DIR]` — JetBrains "Prune Empty Directories"
+/// (`PruneEmptyDirectories`): delete the directories under `DIR` (the
+/// workspace root by default) that hold no files at any depth.
+///
+/// `.git` and its contents are never touched — an empty directory inside it
+/// is git's own bookkeeping — and the root itself is never removed.
+fn prune_empty_dirs(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    /// Remove `dir` if it ends up empty, after pruning its children. Returns
+    /// the number of directories removed below and including it.
+    fn prune(dir: &std::path::Path, depth: usize, removed: &mut Vec<std::path::PathBuf>) -> bool {
+        const MAX_DEPTH: usize = 32;
+        if depth > MAX_DEPTH {
+            return false;
+        }
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return false;
+        };
+        let mut empty = true;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name();
+            if name == std::ffi::OsStr::new(".git") {
+                empty = false;
+                continue;
+            }
+            match entry.file_type() {
+                Ok(t) if t.is_dir() => {
+                    if !prune(&path, depth + 1, removed) {
+                        empty = false;
+                    }
+                }
+                _ => empty = false,
+            }
+        }
+        if empty && std::fs::remove_dir(dir).is_ok() {
+            removed.push(dir.to_path_buf());
+            return true;
+        }
+        false
+    }
+
+    let root = match args.first() {
+        Some(dir) => std::path::PathBuf::from(dir),
+        None => zmax_loader::find_workspace().0,
+    };
+    if !root.is_dir() {
+        bail!("{} is not a directory", root.display());
+    }
+    let mut removed = Vec::new();
+    // The root itself stays: only what is under it is pruned.
+    if let Ok(entries) = std::fs::read_dir(&root) {
+        for entry in entries.flatten() {
+            if entry.file_type().map(|t| t.is_dir()).unwrap_or(false)
+                && entry.file_name() != std::ffi::OsStr::new(".git")
+            {
+                prune(&entry.path(), 0, &mut removed);
+            }
+        }
+    }
+    cx.editor.set_status(match removed.len() {
+        0 => "no empty directories to prune".to_string(),
+        n => format!("pruned {n} empty director{}", if n == 1 { "y" } else { "ies" }),
+    });
+    Ok(())
+}
+
 /// `:toggle-file-readonly` — JetBrains "Toggle Read-Only Attribute"
 /// (`ToggleReadOnlyAttribute`, its synonyms "Make File Writable" / "Make File
 /// Read-Only"): flip the write bits on the FILE, not just the buffer flag.
@@ -63183,6 +63296,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines).",
         fun: sticky_lines_limit_cmd,
         completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "git-clone",
+        aliases: &["clone"],
+        doc: "Clone a repository and open it as the workspace (JetBrains Get from Version Control).",
+        fun: git_clone,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "prune-empty-dirs",
+        aliases: &["prune-empty-directories"],
+        doc: "Delete directories that hold no files at any depth (JetBrains Prune Empty Directories).",
+        fun: prune_empty_dirs,
+        completer: CommandCompleter::all(completers::directory),
         signature: Signature {
             positionals: (0, Some(1)),
             ..Signature::DEFAULT

@@ -1958,6 +1958,60 @@ pub fn hover(cx: &mut Context) {
     });
 }
 
+/// JetBrains "Copy Quick Doc" (`QuickDocCopy`): the hover documentation for
+/// the symbol under the cursor, into the clipboard register instead of a
+/// popup — for pasting into a review comment or a commit message.
+pub fn copy_quick_doc(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    if doc
+        .language_servers_with_feature(LanguageServerFeature::Hover)
+        .count()
+        == 0
+    {
+        cx.editor
+            .set_error("No configured language server supports hover");
+        return;
+    }
+    let mut seen = HashSet::new();
+    let mut futures: FuturesUnordered<_> = doc
+        .language_servers_with_feature(LanguageServerFeature::Hover)
+        .filter(|ls| seen.insert(ls.id()))
+        .map(|language_server| {
+            let pos = doc.position(view.id, language_server.offset_encoding());
+            let request = language_server
+                .text_document_hover(doc.identifier(), pos, None)
+                .unwrap();
+            async move { anyhow::Ok(request.await?) }
+        })
+        .collect();
+
+    cx.jobs.callback(async move {
+        let mut bodies: Vec<String> = Vec::new();
+        while let Some(response) = futures.next().await {
+            match response {
+                Ok(Some(hover)) => bodies.push(crate::ui::lsp::hover::hover_contents_to_string(
+                    hover.contents,
+                )),
+                Ok(None) => {}
+                Err(err) => log::error!("Error requesting hover: {err}"),
+            }
+        }
+        let call = move |editor: &mut Editor, _compositor: &mut Compositor| {
+            // Several servers can answer; keep them all, separated, rather
+            // than picking one arbitrarily.
+            let doc_text = bodies.join("\n\n");
+            if doc_text.trim().is_empty() {
+                editor.set_status("No documentation to copy.");
+                return;
+            }
+            let lines = doc_text.lines().count();
+            let _ = editor.registers.write('+', vec![doc_text]);
+            editor.set_status(format!("copied {lines} line(s) of documentation"));
+        };
+        Ok(Callback::EditorCompositor(Box::new(call)))
+    });
+}
+
 pub fn rename_symbol(cx: &mut Context) {
     fn get_prefill_from_word_boundary(editor: &Editor) -> String {
         let (view, doc) = current_ref!(editor);

@@ -1238,6 +1238,8 @@
 | `:vc-root-version-diff`, `:vc-root-diff` | Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff). |
 | `:vc-revision-other-window` | Show a past revision of the current file, default HEAD (emacs vc-revision-other-window). |
 | `:sticky-lines`, `:sticky-context` | Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines). |
+| `:git-clone`, `:clone` | Clone a repository and open it as the workspace (JetBrains Get from Version Control). |
+| `:prune-empty-dirs`, `:prune-empty-directories` | Delete directories that hold no files at any depth (JetBrains Prune Empty Directories). |
 | `:toggle-file-readonly`, `:make-writable`, `:make-read-only` | Flip the file's write permission on disk (JetBrains Toggle Read-Only Attribute). |
 | `:shelve`, `:shelve-changes` | Put the working tree's diff aside as a named patch and restore the tree (JetBrains Shelve Changes). |
 | `:unshelve`, `:unshelve-changes` | Apply a shelf entry back onto the tree, or list the shelf (JetBrains Unshelve). |

@@ -2276,6 +2276,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "c" => clear_search_highlight,     // SPC s c : clear persistent search highlight
                 "m" => global_search_masked,       // SPC s m : project search restricted to a file glob (JetBrains Find in Path file mask)
                 "u" => highlight_usages_in_file,   // SPC s u : highlight every usage of the symbol at the caret (JetBrains Ctrl-Shift-F7)
+                "T" => analyze_stack_trace,        // SPC s T : jump into a pasted stack trace (JetBrains Analyze Stack Trace)
                 ">" => goto_next_usage,            // SPC s > : jump to the next usage of the symbol (JetBrains F3; `j` is the symbol picker)
                 "<" => goto_prev_usage,            // SPC s < : jump to the previous usage (JetBrains Shift-F3)
                 "i" => toggle_find_in_selection,   // SPC s i : confine / unconfine search to the selection (JetBrains Search in Selection Only)
@@ -2614,6 +2615,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "g" => generate_code,              // SPC l g : generate code — getters/constructors/impls (JetBrains Generate)
                 "k" => hover,                      // SPC l k : hover
                 "q" => peek_definition,            // SPC l q : peek definition in a popup (JetBrains Quick Definition)
+                "Y" => copy_quick_doc,             // SPC l Y : copy the hover documentation (JetBrains Copy Quick Doc)
                 "y" => peek_type_definition,       // SPC l y : peek the TYPE definition, mirroring gy (JetBrains Quick Type Definition)
                 "Q" => context_info,               // SPC l Q : the declarations enclosing the caret (JetBrains Alt-Q)
                 "s" => signature_help,             // SPC l s : signature help

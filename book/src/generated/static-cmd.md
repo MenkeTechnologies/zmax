@@ -777,6 +777,7 @@
 | `tag_pop` | Jump back to the position the last tag jump started from (vim CTRL-T, :pop) | **spacemacs, hybrid, vim** — normal: `` <C-t> `` |
 | `peek_definition` | Peek the definition in a popup without navigating (JetBrains Quick Definition) | **spacemacs, hybrid** — normal: `` <space>lq ``, select: `` <space>lq `` |
 | `peek_type_definition` | Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition) | **spacemacs, hybrid** — normal: `` <space>ly ``, select: `` <space>ly `` |
+| `copy_quick_doc` | Copy the symbol's hover documentation to the clipboard (JetBrains Copy Quick Doc) | **spacemacs, hybrid** — normal: `` <space>lY ``, select: `` <space>lY `` |
 | `goto_declaration` | Goto declaration | **spacemacs, hybrid** — normal: `` gD ``, `` <C-w>i ``, `` <space>gD ``, `` <space>wi ``, `` <C-w><C-i> ``, `` <space>w<C-i> ``, select: `` <space>gD ``, `` <space>wi ``, `` <space>w<C-i> ``<br>**vim** — normal: `` gD ``, `` <C-w>i ``, `` <C-w><C-i> ``<br>**helix, kakoune** — normal: `` gD ``, select: `` gD `` |
 | `add_newline_above` | Add newline above | **helix** — normal: `` [<space> ``, select: `` [<space> ``<br>**kakoune** — normal: `` <A-O> ``, `` [<space> ``, select: `` [<space> `` |
 | `add_newline_below` | Add newline below | **helix** — normal: `` ]<space> ``, select: `` ]<space> ``<br>**kakoune** — normal: `` <A-o> ``, `` ]<space> ``, select: `` ]<space> `` |
@@ -2188,6 +2189,7 @@
 | `save_selection_as_snippet` | Save the selection as a snippet under a trigger you type (JetBrains Save as Live Template) | **spacemacs, hybrid** — normal: `` <space>cS ``, select: `` <space>cS `` |
 | `save_file_as_template` | Save this buffer into the file-template directory (JetBrains Save File as Template) |  |
 | `new_file_from_template` | Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template) | **spacemacs, hybrid** — normal: `` <space>fN ``, select: `` <space>fN `` |
+| `analyze_stack_trace` | Turn a pasted stack trace into a jumpable list of frames (JetBrains Analyze Stack Trace) | **spacemacs, hybrid** — normal: `` <space>sT ``, select: `` <space>sT `` |
 | `goto_next_usage` | Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage) | **spacemacs, hybrid** — normal: `` <space>s<gt> ``, select: `` <space>s<gt> `` |
 | `goto_prev_usage` | Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage) | **spacemacs, hybrid** — normal: `` <space>s<lt> ``, select: `` <space>s<lt> `` |
 | `highlight_usages_in_file` | Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7) | **spacemacs, hybrid** — normal: `` <space>su ``, select: `` <space>su `` |

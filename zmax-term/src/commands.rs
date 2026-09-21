@@ -1168,6 +1168,7 @@ impl MappableCommand {
         tag_pop, "Jump back to the position the last tag jump started from (vim CTRL-T, :pop)",
         peek_definition, "Peek the definition in a popup without navigating (JetBrains Quick Definition)",
         peek_type_definition, "Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition)",
+        copy_quick_doc, "Copy the symbol's hover documentation to the clipboard (JetBrains Copy Quick Doc)",
         goto_declaration, "Goto declaration",
         add_newline_above, "Add newline above",
         add_newline_below, "Add newline below",
@@ -2579,6 +2580,7 @@ impl MappableCommand {
         save_selection_as_snippet, "Save the selection as a snippet under a trigger you type (JetBrains Save as Live Template)",
         save_file_as_template, "Save this buffer into the file-template directory (JetBrains Save File as Template)",
         new_file_from_template, "Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)",
+        analyze_stack_trace, "Turn a pasted stack trace into a jumpable list of frames (JetBrains Analyze Stack Trace)",
         goto_next_usage, "Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage)",
         goto_prev_usage, "Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
@@ -63957,6 +63959,40 @@ mod insert_generator_tests {
     }
 
     #[test]
+    fn stack_trace_frames_reads_the_common_runtimes() {
+        let trace = "\
+Exception in thread \"main\" java.lang.NullPointerException
+\tat com.example.Service.handle(Service.java:42)
+  File \"app/main.py\", line 17, in handler
+    at fn (/app/index.js:8:9)
+thread 'main' panicked at src/main.rs:12:5:
+no frame here";
+        let frames = stack_trace_frames(trace);
+        let got: Vec<(&str, usize)> = frames
+            .iter()
+            .map(|f| (f.file.as_str(), f.line))
+            .collect();
+        assert_eq!(
+            got,
+            vec![
+                ("Service.java", 42),
+                ("app/main.py", 17),
+                ("/app/index.js", 8),
+                ("src/main.rs", 12),
+            ]
+        );
+    }
+
+    #[test]
+    fn path_line_in_needs_a_file_looking_path() {
+        // A bare word with a number after a colon is not a frame.
+        assert_eq!(path_line_in("note: 42 things"), None);
+        assert_eq!(path_line_in("10:30 meeting"), None);
+        let f = path_line_in("   at src/lib.rs:7:1").unwrap();
+        assert_eq!((f.file.as_str(), f.line), ("src/lib.rs", 7));
+    }
+
+    #[test]
     fn outside_bracket_or_quote_leaves_the_innermost_one() {
         let rope = Rope::from_str("f(a, g(b), \"x)y\")");
         let text = rope.slice(..);
@@ -68001,6 +68037,151 @@ fn dabbrev_completion(cx: &mut Context) {
 /// The highlight is a hi-lock pattern, so it uses the same machinery — and the
 /// same `:hi-lock-*` commands — as `:highlight-regexp`, and `hi_lock_mode`
 /// hides the whole set.
+/// A frame parsed out of a stack trace: the file it names, the line, and the
+/// text the line was found in.
+#[derive(Debug, PartialEq, Eq, Clone)]
+struct StackFrame {
+    file: String,
+    line: usize,
+    text: String,
+}
+
+/// The frames in `text`, in the shapes the common runtimes print. Pure — unit
+/// tested.
+///
+/// * Java/Kotlin: `at pkg.Class.method(File.java:42)`
+/// * Rust/Go/C: `at src/main.rs:42:7`, `\tfile.go:42 +0x1f`
+/// * Python: `File "app/main.py", line 42, in handler`
+/// * Node/JS: `at fn (/app/index.js:42:9)`
+///
+/// The file is kept as written, since a stack trace names paths relative to a
+/// root the editor cannot know; opening resolves it against the workspace.
+fn stack_trace_frames(text: &str) -> Vec<StackFrame> {
+    let mut out = Vec::new();
+    for raw in text.lines() {
+        let line = raw.trim();
+        // Python's form names the file in quotes and the line after a comma.
+        if let Some(rest) = line.strip_prefix("File \"") {
+            if let Some((file, after)) = rest.split_once('"') {
+                if let Some(num) = after
+                    .trim_start()
+                    .strip_prefix(", line ")
+                    .and_then(|n| n.split(|c: char| !c.is_ascii_digit()).next())
+                    .and_then(|n| n.parse().ok())
+                {
+                    out.push(StackFrame {
+                        file: file.to_string(),
+                        line: num,
+                        text: line.to_string(),
+                    });
+                    continue;
+                }
+            }
+        }
+        // Everything else is `<path>:<line>` somewhere in the line, optionally
+        // inside parentheses and optionally followed by `:<column>`.
+        if let Some(frame) = path_line_in(line) {
+            out.push(frame);
+        }
+    }
+    out
+}
+
+/// The first `<path>:<line>` in `line`, if there is one. Pure — unit tested.
+fn path_line_in(line: &str) -> Option<StackFrame> {
+    // Work through the colons in order and take the FIRST one followed by
+    // digits whose head ends in something file-shaped. Taking the last would
+    // read the column of `src/main.rs:12:5` as the line; a Windows drive
+    // letter (`C:\src\x.rs:12`) is skipped for free, since `\` is not a digit.
+    let bytes: Vec<char> = line.chars().collect();
+    for (i, c) in bytes.iter().enumerate() {
+        if *c != ':' {
+            continue;
+        }
+        let digits: String = bytes[i + 1..]
+            .iter()
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
+        if digits.is_empty() {
+            continue;
+        }
+        let head: String = bytes[..i].iter().collect();
+        // The path is the tail of the head, up to the last separator that is
+        // not part of a path: a space, a tab, `(` or `at `.
+        let file = head
+            .rsplit(|c: char| c.is_whitespace() || c == '(' || c == '[')
+            .next()
+            .unwrap_or("")
+            .trim_end_matches(&['"', '\''][..])
+            .to_string();
+        if file.is_empty() || !file.contains('.') {
+            continue;
+        }
+        if let Ok(n) = digits.parse::<usize>() {
+            return Some(StackFrame {
+                file,
+                line: n,
+                text: line.to_string(),
+            });
+        }
+    }
+    None
+}
+
+/// JetBrains "Analyze Stack Trace or Thread Dump…" (`Unscramble`): turn a
+/// pasted stack trace into a list of frames you can jump into.
+///
+/// The trace is read from the selection when there is one, else from the whole
+/// buffer — a trace is usually pasted into a scratch first. Picking a frame
+/// opens the file at the line, resolving a relative path against the workspace
+/// root, which is what makes a trace copied out of CI navigable here.
+fn analyze_stack_trace(cx: &mut Context) {
+    let text = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let primary = doc.selection(view.id).primary();
+        if primary.len() > 1 {
+            primary.fragment(slice).to_string()
+        } else {
+            doc.text().to_string()
+        }
+    };
+    let frames = stack_trace_frames(&text);
+    if frames.is_empty() {
+        cx.editor
+            .set_status("no file:line frames found in the stack trace");
+        return;
+    }
+    let root = zmax_loader::find_workspace().0;
+    let columns = [
+        PickerColumn::new("file", |f: &StackFrame, _: &()| f.file.as_str().into()),
+        PickerColumn::new("line", |f: &StackFrame, _: &()| f.line.to_string().into()),
+        PickerColumn::new("frame", |f: &StackFrame, _: &()| f.text.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, frames, (), move |cx, frame: &StackFrame, action| {
+        let path = std::path::Path::new(&frame.file);
+        let candidate = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            root.join(path)
+        };
+        match cx.editor.open(&candidate, action) {
+            Ok(_) => {
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text();
+                let line = frame.line.saturating_sub(1).min(text.len_lines() - 1);
+                let pos = text.line_to_char(line);
+                doc.set_selection(view.id, Selection::point(pos));
+                align_view(doc, view, Align::Center);
+            }
+            Err(e) => cx
+                .editor
+                .set_error(format!("{}: {e}", candidate.display())),
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// JetBrains "Next / Previous Highlighted Usage" (`GotoNextElementUnderCaret\
 /// Usage`, F3 / Shift-F3): jump between the occurrences of the symbol the
 /// caret is on, without leaving the file or touching the search register.
