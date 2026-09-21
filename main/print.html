@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-558e8821.js";
+            window.path_to_searchindex_js = "searchindex-37c50a21.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2953,6 +2953,7 @@ without scrolling.</p>
 <tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
 <tr><td><code>:vc-root-version-diff</code>, <code>:vc-root-diff</code></td><td>Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).</td></tr>
 <tr><td><code>:vc-revision-other-window</code></td><td>Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).</td></tr>
+<tr><td><code>:sticky-lines</code>, <code>:sticky-context</code></td><td>Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines).</td></tr>
 <tr><td><code>:toggle-file-readonly</code>, <code>:make-writable</code>, <code>:make-read-only</code></td><td>Flip the file’s write permission on disk (JetBrains Toggle Read-Only Attribute).</td></tr>
 <tr><td><code>:shelve</code>, <code>:shelve-changes</code></td><td>Put the working tree’s diff aside as a named patch and restore the tree (JetBrains Shelve Changes).</td></tr>
 <tr><td><code>:unshelve</code>, <code>:unshelve-changes</code></td><td>Apply a shelf entry back onto the tree, or list the shelf (JetBrains Unshelve).</td></tr>
@@ -3932,6 +3933,7 @@ without scrolling.</p>
 <tr><td><code>toggle_line_numbers</code></td><td>Toggle the line-numbers gutter (IntelliJ View &gt; Show Line Numbers)</td><td></td></tr>
 <tr><td><code>power_save_mode</code></td><td>Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;zp</code>, select: <code>&lt;space&gt;zp</code></td></tr>
 <tr><td><code>distraction_free_mode</code></td><td>Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;zd</code>, select: <code>&lt;space&gt;zd</code></td></tr>
+<tr><td><code>toggle_sticky_lines</code></td><td>Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)</td><td></td></tr>
 <tr><td><code>toggle_indent_guides</code></td><td>Toggle indentation guides (IntelliJ View &gt; Show Indent Guides)</td><td></td></tr>
 <tr><td><code>toggle_inlay_hints</code></td><td>Toggle display of LSP inlay hints (IntelliJ View &gt; Inlay Hints)</td><td></td></tr>
 <tr><td><code>toggle_auto_highlight</code></td><td>Toggle automatic symbol-under-cursor highlight (SPC t h a)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;tha</code>, select: <code>&lt;space&gt;tha</code></td></tr>
@@ -9532,7 +9534,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>574</strong> (5.8%)</li>
 <li>Absent: <strong>378</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2548 static commands, 3150 typable <code>:</code> commands, 4649 default keybindings</li>
+<li>zmax source surface: 2549 static commands, 3152 typable <code>:</code> commands, 4649 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
