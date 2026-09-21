@@ -2369,6 +2369,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "8" => goto_window_8,
             "9" => goto_window_9,
             "S" => settings_page,                  // SPC S : Preferences → Settings tab
+            "`" => quick_switch_scheme,            // SPC ` : switch theme / keymap / language from one popup (JetBrains Quick Switch Scheme, Ctrl-`)
             "," => preferences,                    // SPC , : open the unified Preferences window
             // Spacemacs `SPC z` is the zoom prefix; both scaling maps are
             // transient states (sticky), so `+`/`-`/`0` keep repeating.

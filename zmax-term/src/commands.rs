@@ -1122,6 +1122,7 @@ impl MappableCommand {
         unicode_picker, "Fuzzy-pick a character/digraph and insert it (helm-unicode)",
         git_file_log_picker, "Commit log for the current file (:BCommits)",
         git_repo_log_picker, "Commit log for the whole repo (:Commits)",
+        quick_switch_scheme, "Switch the theme, keymap preset or language from one popup (JetBrains Quick Switch Scheme)",
         theme_picker, "Open fuzzy theme picker with live preview",
         wrap_sexp, "Wrap the selection in parentheses",
         symbol_picker, "Open symbol picker",
@@ -40115,6 +40116,99 @@ fn unicode_picker(cx: &mut Context) {
 
 /// Fuzzy theme picker with live preview, like vim/fzf.vim `:Colors`. Bound to `SPC T c`.
 /// Moving the highlight previews the theme live; Enter commits, Esc reverts.
+/// JetBrains "Quick Switch Scheme…" (`QuickChangeScheme`, Ctrl-`): one popup
+/// over the schemes the editor can switch, each opening its own picker.
+///
+/// The IDE lists colour scheme, keymap, code style and so on; the three that
+/// mean anything here are the theme, the keymap preset and the buffer's
+/// language.
+fn quick_switch_scheme(cx: &mut Context) {
+    #[derive(Clone)]
+    struct Scheme {
+        what: &'static str,
+        current: String,
+    }
+    let schemes = vec![
+        Scheme {
+            what: "Color scheme",
+            current: cx.editor.theme.name().to_string(),
+        },
+        Scheme {
+            what: "Keymap",
+            current: String::new(),
+        },
+        Scheme {
+            what: "Language",
+            current: doc!(cx.editor)
+                .language_name()
+                .unwrap_or("text")
+                .to_string(),
+        },
+    ];
+    let columns = [
+        PickerColumn::new("scheme", |s: &Scheme, _: &()| s.what.into()),
+        PickerColumn::new("current", |s: &Scheme, _: &()| s.current.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, schemes, (), |cx, scheme: &Scheme, _action| {
+        // A picker's callback carries the compositor context; the pickers it
+        // opens are ordinary commands, which take the editor one.
+        let mut ecx = typed::editor_context(cx);
+        match scheme.what {
+            "Color scheme" => theme_picker(&mut ecx),
+            "Keymap" => keymap_preset_picker(&mut ecx),
+            _ => language_scheme_picker(&mut ecx),
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// The keymap-preset half of [`quick_switch_scheme`]: every preset `:keymap`
+/// accepts, applied through the same config event so there is one code path.
+fn keymap_preset_picker(cx: &mut Context) {
+    let presets: Vec<String> = crate::keymap::PRESETS
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect();
+    let columns = [PickerColumn::new("keymap", |p: &String, _: &()| {
+        p.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, presets, (), |cx, preset: &String, _action| {
+        if cx
+            .editor
+            .config_events
+            .0
+            .send(zmax_view::editor::ConfigEvent::SetKeymap(preset.clone()))
+            .is_err()
+        {
+            cx.editor.set_error("could not switch the keymap");
+        } else {
+            cx.editor.set_status(format!("keymap: {preset}"));
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// The language half of [`quick_switch_scheme`]: set the buffer's language,
+/// which is the "code style" question in a terminal editor.
+fn language_scheme_picker(cx: &mut Context) {
+    let loader: &zmax_core::syntax::Loader = &cx.editor.syn_loader.load();
+    let mut languages: Vec<String> = loader
+        .language_configs()
+        .map(|c| c.language_id.clone())
+        .collect();
+    languages.sort();
+    languages.dedup();
+    let columns = [PickerColumn::new("language", |l: &String, _: &()| {
+        l.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, languages, (), |cx, lang: &String, _action| {
+        // `:set-language` does the whole job — language, indent detection and
+        // the language-server refresh — so it is run rather than reimplemented.
+        typed::run_command_line(cx, &format!("set-language {lang}"));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 fn theme_picker(cx: &mut Context) {
     let current = cx.editor.theme.name().to_string();
     let themes = crate::commands::typed::all_theme_names();

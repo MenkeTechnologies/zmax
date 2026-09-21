@@ -71628,7 +71628,7 @@ fn ex_toggle_debug_on_error(
 /// vim `:help` / `:h`: open the inline Help browser.
 /// Build a `commands::Context` from a typable's compositor context, for calling
 /// static commands that only touch the editor (no layer/callback side effects).
-fn editor_context<'a>(cx: &'a mut compositor::Context) -> super::Context<'a> {
+pub(crate) fn editor_context<'a>(cx: &'a mut compositor::Context) -> super::Context<'a> {
     super::Context {
         editor: cx.editor,
         count: None,

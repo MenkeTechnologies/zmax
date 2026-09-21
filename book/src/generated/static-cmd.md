@@ -731,6 +731,7 @@
 | `unicode_picker` | Fuzzy-pick a character/digraph and insert it (helm-unicode) | **spacemacs** — normal: `` <space>iu ``, `` <C-x>8<ret> ``, select: `` <space>iu ``, `` <C-x>8<ret> ``, insert: `` <C-x>8<ret> ``<br>**hybrid** — normal: `` <space>iu ``, `` <C-x>8<ret> ``, select: `` <space>iu ``, `` <C-x>8<ret> `` |
 | `git_file_log_picker` | Commit log for the current file (:BCommits) | **spacemacs, hybrid** — normal: `` <space>gt ``, `` <space>gfl ``, select: `` <space>gt ``, `` <space>gfl `` |
 | `git_repo_log_picker` | Commit log for the whole repo (:Commits) | **spacemacs, hybrid** — normal: `` <space>gL ``, select: `` <space>gL `` |
+| `quick_switch_scheme` | Switch the theme, keymap preset or language from one popup (JetBrains Quick Switch Scheme) | **spacemacs, hybrid** — normal: `` <space>` ``, select: `` <space>` `` |
 | `theme_picker` | Open fuzzy theme picker with live preview | **spacemacs, hybrid** — normal: `` <space>Tc ``, select: `` <space>Tc `` |
 | `wrap_sexp` | Wrap the selection in parentheses | **spacemacs, hybrid** — normal: `` <space>kw ``, select: `` <space>kw `` |
 | `symbol_picker` | Open symbol picker | **spacemacs, hybrid** — normal: `` gO ``, `` <space>ji ``, `` <space>pg ``, `` <space>sj ``, select: `` <space>ji ``, `` <space>pg ``, `` <space>sj ``<br>**vim** — normal: `` gO `` |
