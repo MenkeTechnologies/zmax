@@ -189,6 +189,12 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b X", "Buffers", ":buffer-close!"),    // SPC b X : FORCE kill buffer (discard unsaved)
     ("space b K", "Buffers", ":buffer-close-all!"), // SPC b K : FORCE kill ALL buffers
     ("space b D", "Buffers", ":buffer-close-others"), // SPC b C-d / others
+    // JetBrains Close Tabs to the Left / to the Right / All Read-Only Tabs.
+    // Under `SPC b C` ("close") because the plain letters are taken: `SPC b d`
+    // is kill-buffer and `SPC b D` is close-others.
+    ("space b C l", "Buffers", ":buffer-close-left"),     // SPC b C l : close the tabs left of this one
+    ("space b C r", "Buffers", ":buffer-close-right"),    // SPC b C r : close the tabs right of this one
+    ("space b C o", "Buffers", ":buffer-close-readonly"), // SPC b C o : close every read-only tab
     ("space b . C-d", "Buffers", "bury_buffer"),   // SPC b . C-d : bury current buffer
     ("space b R", "Buffers", ":reload"),           // SPC b R : revert
     ("space b N n", "Buffers", ":new"),            // SPC b N n : new buffer, current window
@@ -1744,6 +1750,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-u"     => upcase_word,            // M-u upcase-word
         "A-@"     => mark_word,              // M-@ mark-word
         "A-y"     => yank_pop,               // M-y yank-pop
+        "A-Y"     => paste_from_history,     // M-Y : pick a kill-ring entry and paste it (JetBrains Paste from History)
         "A-z"     => zap_to_char,            // M-z zap-to-char
         "A-="     => count_selection,        // M-= count-words-region
         "A-'"     => expand_abbrev,          // M-' expand-abbrev
@@ -2371,6 +2378,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "q" => exit_transient_state,       // SPC z f q : leave the transient state
                 },
                 "z" => toggle_ide,                     // SPC z z : toggle IDE workbench (Zen / focus mode)
+                "d" => distraction_free_mode,          // SPC z d : text only — no tab bar, gutter or status line (JetBrains Distraction Free Mode)
+                "p" => power_save_mode,                // SPC z p : stop background analysis (JetBrains Power Save Mode)
             },
             "H" => { "Harpoon"
                 "a" => harpoon_add,                // SPC H a : pin current file
@@ -2455,6 +2464,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => toggle_block_comments,      // SPC c b
                 "p" => toggle_comments,            // SPC c p : comment paragraph
                 "h" => fold_comments,              // SPC c h : hide comments (fold comment blocks)
+                "R" => fold_custom_regions,        // SPC c R : fold every //region / <editor-fold> block (JetBrains Collapse Custom Regions)
                 "t" => comment_to_line,            // SPC c t : comment/uncomment to a prompted line
                 "y" => [yank, toggle_comments],    // SPC c y : comment and yank
                 "d" => wclose,                     // SPC c d : close compilation window
@@ -2488,6 +2498,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "=" => format_selections,          // SPC j = : format region/buffer
                 "+" => format_selections,          // SPC j + : format region/buffer (alt)
                 "(" => goto_prev_unmatched_paren,  // SPC j ( : jump to first unbalanced paren
+                "r" => goto_custom_region,         // SPC j r : jump to a //region block by name (JetBrains Custom Folding)
                 "D" => file_explorer_in_current_buffer_directory, // SPC j D : current directory listing
                 "U" => goto_file,                  // SPC j U : select URL and follow
                 "s" => paredit_split,              // SPC j s : split sexp/string at point
@@ -2560,6 +2571,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "L" => copy_remote_url,        // SPC g l L : copy link to selected lines
                     "C" => copy_remote_url,        // SPC g l C : copy link at a commit
                     "P" => copy_remote_url,        // SPC g l P : copy permalink to lines
+                },
+                "Y" => { "Yank (git)"
+                    "b" => copy_branch_name,       // SPC g Y b : yank the branch name (JetBrains Copy Branch Name)
+                    "r" => copy_revision_number,   // SPC g Y r : yank this line's commit (JetBrains Copy Revision Number)
                 },
                 "c" => { "Conflict"
                     // o/t/b (single resolve) come from the pre-existing :conflict-*

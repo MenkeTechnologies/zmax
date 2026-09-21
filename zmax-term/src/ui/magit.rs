@@ -16,7 +16,7 @@
 //! stage, `u` unstage, `X` discard (press twice to confirm), `S` stage-all, `U`
 //! unstage-all, `c` commit (multi-line message buffer), `a` amend the last
 //! commit, `Enter` visit the file (a conflict row opens the `:merge` resolver),
-//! `P` push, `F` fetch, `p` pull, `R` pick the remote those three target, `!`
+//! `P` push, `f` force push (press twice; `--force-with-lease`), `F` fetch, `p` pull, `R` pick the remote those three target, `!`
 //! (Emacs `vc-edit-next-command`) open the next git command for editing before
 //! it runs, `l` open the commit log, `g` refresh, `q`/`Esc` close.
 //!
@@ -534,6 +534,10 @@ pub struct MagitStatus {
     viewport: usize,
     /// Set after one `X` press; a second `X` confirms the destructive discard.
     pending_discard: bool,
+    /// Set after one `f` press; a second `f` confirms the force push. Rewriting
+    /// a published branch is the other move in here you cannot undo, so it
+    /// confirms exactly the way `X` does.
+    pending_force_push: bool,
     /// `(behind, ahead)` vs the configured upstream, or `None` when there is no
     /// upstream (shown in the header).
     upstream: Option<(usize, usize)>,
@@ -580,6 +584,7 @@ impl MagitStatus {
             scroll: 0,
             viewport: 1,
             pending_discard: false,
+            pending_force_push: false,
             upstream: None,
             expanded: HashSet::new(),
             diffs: HashMap::new(),
@@ -986,6 +991,19 @@ impl MagitStatus {
         let args = self.remote_args(op);
         let argv: Vec<&str> = args.iter().map(String::as_str).collect();
         self.remote_op(cx, op, &argv);
+    }
+
+    /// JetBrains "Force Push" (`Vcs.Push.Force`): push over a rewritten branch.
+    ///
+    /// `--force-with-lease`, never a bare `--force`: the lease makes git refuse
+    /// when the remote moved since the last fetch, so a rebase of your own work
+    /// goes through and someone else's push is not overwritten. The IDE's own
+    /// Force Push sends the same flag.
+    fn force_push(&mut self, cx: &mut Context) {
+        let mut args = self.remote_args("push");
+        args.insert(1, "--force-with-lease".to_string());
+        let argv: Vec<&str> = args.iter().map(String::as_str).collect();
+        self.remote_op(cx, "force push", &argv);
     }
 
     /// Record the remote chosen in the [`MagitRemote`] picker; subsequent
@@ -1582,6 +1600,11 @@ impl Component for MagitStatus {
             self.pending_discard = false;
         }
 
+        // Same for the force push: anything but a second `f` calls it off.
+        if key != key!('f') && self.pending_force_push {
+            self.pending_force_push = false;
+        }
+
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
@@ -1631,6 +1654,16 @@ impl Component for MagitStatus {
             key!('a') => return EventResult::Consumed(Some(self.commit_callback(true))),
             key!('l') => return EventResult::Consumed(Some(self.log_callback())),
             key!('P') => self.remote_op_named(cx, "push"),
+            key!('f') => {
+                if self.pending_force_push {
+                    self.pending_force_push = false;
+                    self.force_push(cx);
+                } else {
+                    self.pending_force_push = true;
+                    cx.editor
+                        .set_status("press f again to force push (--force-with-lease)");
+                }
+            }
             key!('F') => self.remote_op_named(cx, "fetch"),
             key!('p') => self.remote_op_named(cx, "pull"),
             key!('R') => return EventResult::Consumed(Some(self.remote_callback())),
@@ -1698,7 +1731,7 @@ impl Component for MagitStatus {
             );
         } else {
             let hint =
-                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  c commit  a amend  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
+                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  c commit  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -2798,6 +2831,39 @@ impl MagitLog {
     }
 }
 
+impl MagitLog {
+    /// JetBrains "Cherry-Pick" (`Vcs.ApplySelectedChanges`): replay the
+    /// selected commit onto the current branch.
+    ///
+    /// `-x` records the origin in the message, the way `git cherry-pick -x`
+    /// documents a backport; a conflict leaves the pick in progress so the
+    /// usual conflict keys (`SPC g c …`) resolve it and `git cherry-pick
+    /// --continue` finishes.
+    fn cherry_pick(&mut self, cx: &mut Context) {
+        let Some(entry) = self.entries.get(self.selected) else {
+            return;
+        };
+        let sha = entry.sha.clone();
+        let out = Command::new("git")
+            .arg("-C")
+            .arg(&self.repo_dir)
+            .args(["cherry-pick", "-x", &sha])
+            .output();
+        match out {
+            Ok(out) if out.status.success() => {
+                crate::commands::reload_all_open_docs(cx.editor);
+                cx.editor.set_status(format!("cherry-picked {sha}"));
+            }
+            Ok(out) => {
+                let msg = String::from_utf8_lossy(&out.stderr);
+                cx.editor
+                    .set_error(format!("cherry-pick {sha}: {}", condense(msg.trim())));
+            }
+            Err(e) => cx.editor.set_error(format!("cherry-pick: {e}")),
+        }
+    }
+}
+
 impl Component for MagitLog {
     fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let key = match event {
@@ -2823,6 +2889,8 @@ impl Component for MagitLog {
                     return EventResult::Consumed(Some(cb));
                 }
             }
+            // `A` is magit's own apply/cherry-pick key.
+            key!('A') => self.cherry_pick(cx),
             // `log-view-toggle-entry-display`: short form <-> full entry.
             key!(Tab) => {
                 if let Some(status) = self.toggle_entry_display() {
@@ -2855,7 +2923,7 @@ impl Component for MagitLog {
 
         let title = " Magit log";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d show diff  Tab long form  r rebase  q back";
+        let hint = "j/k move  Enter/d show diff  Tab long form  A cherry-pick  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -6049,6 +6117,7 @@ stash@{1}: On feature: experiment
             scroll: 0,
             viewport: 10,
             pending_discard: false,
+            pending_force_push: false,
             upstream: None,
             expanded: HashSet::new(),
             diffs: HashMap::new(),

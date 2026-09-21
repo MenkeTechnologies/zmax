@@ -408,6 +408,8 @@ impl MappableCommand {
         buffer_sort_by_relative_path, "Sort the buffer line by relative path (AstroNvim SPC b s r)",
         buffer_sort_by_number, "Sort the buffer line by buffer number (AstroNvim SPC b s i)",
         buffer_sort_by_last_used, "Sort the buffer line by last use (AstroNvim SPC b s m)",
+        fold_custom_regions, "Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions)",
+        goto_custom_region, "Jump to a //region or <editor-fold> block by name (JetBrains Custom Folding)",
         fold_comments, "Fold multi-line comment blocks (SPC c h)",
         move_visual_line_up, "Move up",
         move_visual_line_down, "Move down",
@@ -679,6 +681,8 @@ impl MappableCommand {
         toggle_soft_wrap, "Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap)",
         toggle_whitespace_render, "Toggle rendering of whitespace characters (IntelliJ View > Show Whitespaces)",
         toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
+        power_save_mode, "Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode)",
+        distraction_free_mode, "Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
         toggle_auto_highlight, "Toggle automatic symbol-under-cursor highlight (SPC t h a)",
@@ -1362,6 +1366,7 @@ impl MappableCommand {
         paste_before_cursor_after, "Paste before selection, cursor after the pasted text (vim gP)",
         paste_before, "Paste before selection",
         yank_from_kill_ring, "Yank the latest kill-ring entry (emacs C-y)",
+        paste_from_history, "Pick an entry from the kill ring and paste it (JetBrains Paste from History)",
         yank_pop, "Replace the just-yanked text with the next kill-ring entry (emacs M-y)",
         set_mark_command, "Set mark and activate region, pushing to the mark ring (emacs C-SPC)",
         pop_to_mark, "Jump to the top of the mark ring, rotating it (emacs C-x C-SPC)",
@@ -1752,6 +1757,8 @@ impl MappableCommand {
         file_info, "Show file name and cursor position (CTRL-G)",
         document_stats, "Show document line/word/char counts (g CTRL-G)",
         git_blame_line, "Show git blame for the current line (g b)",
+        copy_branch_name, "Yank the current git branch name to the clipboard (JetBrains Copy Branch Name)",
+        copy_revision_number, "Yank the commit that last touched this line to the clipboard (JetBrains Copy Revision Number)",
         toggle_inline_blame, "Toggle GitLens-style inline blame on the current line",
         toggle_blame_annotate, "Toggle the git-blame annotate gutter column (SPC g B)",
         git_branch_picker, "Pick a git branch and check it out",
@@ -4461,6 +4468,58 @@ fn copy_remote_url(cx: &mut Context) {
         }
         Err(e) => cx.editor.set_error(e),
     }
+}
+
+/// JetBrains "Copy Branch Name" (`Vcs.CopyCurrentBranchName`): the checked-out
+/// branch of the repository the buffer lives in, into the clipboard register.
+/// A detached HEAD has no branch name, so the short sha is copied instead —
+/// the thing you would paste in either case.
+fn copy_branch_name(cx: &mut Context) {
+    let dir = repo_dir_of_current_buffer(cx);
+    let branch = git_out(&dir, &["symbolic-ref", "--short", "HEAD"])
+        .or_else(|| git_out(&dir, &["rev-parse", "--short", "HEAD"]));
+    match branch {
+        Some(branch) => {
+            let _ = cx.editor.registers.write('+', vec![branch.clone()]);
+            cx.editor.set_status(format!("Yanked branch name: {branch}"));
+        }
+        None => cx.editor.set_error("not in a git repository"),
+    }
+}
+
+/// JetBrains "Copy Revision Number" (`Vcs.CopyRevisionNumberAction`): the
+/// commit that last touched the line under the cursor — the one the blame
+/// gutter names — into the clipboard register.
+///
+/// An uncommitted line has no revision to copy; the IDE's action is only
+/// offered on committed history, so say so rather than copying HEAD, which
+/// would be a different commit than the one the line came from.
+fn copy_revision_number(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some(path) = doc.path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let text = doc.text().slice(..);
+    let line = text.char_to_line(doc.selection(view.id).primary().cursor(text)) + 1;
+    match crate::blame::line_sha(&path, line) {
+        Some(sha) => {
+            let _ = cx.editor.registers.write('+', vec![sha.clone()]);
+            cx.editor.set_status(format!("Yanked revision: {sha}"));
+        }
+        None => cx
+            .editor
+            .set_error("no committed revision for this line (uncommitted, or not in a git repository)"),
+    }
+}
+
+/// The directory git commands about "this buffer" should run in: the buffer's
+/// own directory when it is visiting a file, else the working directory.
+fn repo_dir_of_current_buffer(cx: &mut Context) -> std::path::PathBuf {
+    doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
 }
 
 /// Open a URL in the OS default browser (detached; output suppressed).
@@ -17138,6 +17197,95 @@ fn toggle_fringe(cx: &mut Context) {
     cx.editor.set_status(format!(
         "fringe: {}",
         if shown { "shown" } else { "hidden" }
+    ));
+}
+
+/// What [`power_save_mode`] switched off, so the second toggle puts back what
+/// was on rather than turning everything on.
+static SAVED_POWER_SAVE: once_cell::sync::Lazy<
+    std::sync::Mutex<Option<(bool, bool, bool, bool, bool)>>,
+> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
+
+/// JetBrains "Power Save Mode" (`TogglePowerSave`): stop the work that happens
+/// while you are not asking for anything — the background analysis the IDE
+/// names, which here is auto-completion, inlay hints, signature-help popups
+/// and the document-highlight pass that marks every use of the symbol at the
+/// cursor.
+///
+/// Nothing on-demand is touched: `gd`, hovers, diagnostics already received,
+/// formatting and the language servers themselves keep working, exactly as
+/// they do in the IDE with power save on.
+fn power_save_mode(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let mut saved = SAVED_POWER_SAVE.lock().unwrap();
+        match saved.take() {
+            Some((completion, hints, signature, highlight, word_cursor)) => {
+                c.auto_completion = completion;
+                c.lsp.display_inlay_hints = hints;
+                c.lsp.auto_signature_help = signature;
+                c.lsp.auto_document_highlight = highlight;
+                c.highlight_word_under_cursor = word_cursor;
+            }
+            None => {
+                *saved = Some((
+                    c.auto_completion,
+                    c.lsp.display_inlay_hints,
+                    c.lsp.auto_signature_help,
+                    c.lsp.auto_document_highlight,
+                    c.highlight_word_under_cursor,
+                ));
+                c.auto_completion = false;
+                c.lsp.display_inlay_hints = false;
+                c.lsp.auto_signature_help = false;
+                c.lsp.auto_document_highlight = false;
+                c.highlight_word_under_cursor = false;
+                on = true;
+            }
+        }
+    });
+    cx.editor
+        .set_status(format!("power save mode: {}", if on { "on" } else { "off" }));
+}
+
+/// What [`distraction_free_mode`] hid, for the same reason as
+/// [`SAVED_POWER_SAVE`].
+static SAVED_DISTRACTION_FREE: once_cell::sync::Lazy<
+    std::sync::Mutex<Option<(Vec<zmax_view::editor::GutterType>, zmax_view::editor::BufferLine, bool)>>,
+> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
+
+/// JetBrains "Distraction Free Mode" (`ToggleDistractionFreeMode`): the text
+/// and nothing else — no tab bar, no gutter, no status line.
+///
+/// This is not `toggle_ide` (Zen), which only takes the workbench drawers
+/// down and leaves the editor's own chrome up; the IDE's two modes differ the
+/// same way.
+fn distraction_free_mode(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let mut saved = SAVED_DISTRACTION_FREE.lock().unwrap();
+        match saved.take() {
+            Some((gutters, bufferline, statusline)) => {
+                c.gutters.layout = gutters;
+                c.bufferline = bufferline;
+                c.render_statusline = statusline;
+            }
+            None => {
+                *saved = Some((
+                    c.gutters.layout.clone(),
+                    c.bufferline.clone(),
+                    c.render_statusline,
+                ));
+                c.gutters.layout.clear();
+                c.bufferline = zmax_view::editor::BufferLine::Never;
+                c.render_statusline = false;
+                on = true;
+            }
+        }
+    });
+    cx.editor.set_status(format!(
+        "distraction free mode: {}",
+        if on { "on" } else { "off" }
     ));
 }
 
@@ -38628,6 +38776,48 @@ fn yank_from_kill_ring(cx: &mut Context) {
     crate::emacs_kill::begin_yank(sel);
 }
 
+/// JetBrains "Paste from History" (`PasteMultiple`, Cmd-Shift-V): paste an
+/// entry you pick out of the kill ring rather than the newest one.
+///
+/// Emacs reaches the same ring by yanking and then cycling with `M-y`; this is
+/// the IDE's way round — choose first, paste once — over the same ring, so the
+/// two stay in step.
+fn paste_from_history(cx: &mut Context) {
+    let entries = crate::emacs_kill::entries();
+    if entries.is_empty() {
+        cx.editor.set_error("Kill ring is empty");
+        return;
+    }
+    let columns = [ui::PickerColumn::new("paste", |e: &String, _: &()| {
+        // One row per entry, so a multi-line kill is shown with its newlines
+        // and tabs made visible, as the isearch kill-ring picker does.
+        e.replace('\n', "⏎").replace('\t', "⇥").into()
+    })];
+    let picker = Picker::new(columns, 0, entries, (), |cx, entry: &String, _action| {
+        let mode = cx.editor.mode;
+        let (view, doc) = current!(cx.editor);
+        paste_impl(
+            &[entry.clone()],
+            doc,
+            view,
+            Paste::Before,
+            1,
+            mode,
+            CursorRest::OnText,
+        );
+        let sel: Vec<(usize, usize)> = doc
+            .selection(view.id)
+            .iter()
+            .map(|r| (r.anchor, r.head))
+            .collect();
+        // Leave the ring positioned on what was pasted, so `M-y` cycles on
+        // from here exactly as it would after a plain yank.
+        crate::emacs_kill::begin_yank(sel);
+    });
+    cx.editor.set_status("Paste from history:");
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// Emacs `yank-pop` (M-y): replace the just-yanked text with the next-older
 /// kill-ring entry, cycling. Only fires while the live selection still covers
 /// the previous yank (our stand-in for emacs's last-command-was-yank check).
@@ -58869,6 +59059,135 @@ fn fold_comments(cx: &mut Context) {
         .set_status(format!("folded {count} comment block(s)"));
 }
 
+/// A custom folding region: its name and the inclusive line range it spans.
+#[derive(Debug, PartialEq, Eq, Clone)]
+struct CustomRegion {
+    name: String,
+    start: usize,
+    end: usize,
+}
+
+/// The custom folding regions of `lines`, in the two shapes JetBrains defines
+/// (IDE docs "Code folding": custom regions). Pure — unit tested.
+///
+/// * `//region NAME` … `//endregion` — the shape the IDE inserts, in any
+///   language, with or without the space after the comment token.
+/// * `// <editor-fold desc="NAME">` … `// </editor-fold>` — the older NetBeans
+///   shape the IDE still folds.
+///
+/// A marker only counts when nothing but comment punctuation precedes it on
+/// the line and the word ends there, so prose like `// regions are folded`
+/// opens nothing. Nesting is handled with a stack, so an inner region closes
+/// against its own opener; an unclosed opener yields no region, as in the IDE.
+fn custom_regions(lines: &[String]) -> Vec<CustomRegion> {
+    /// Everything before a marker must be comment syntax, not code or prose.
+    fn only_comment_punctuation(prefix: &str) -> bool {
+        prefix
+            .chars()
+            .all(|c| c.is_whitespace() || "/#-;%*!<>=".contains(c))
+    }
+    /// Where `word` starts on this line, if it is there as a marker.
+    fn marker_at(line: &str, lower: &str, word: &str) -> Option<usize> {
+        let at = lower.find(word)?;
+        let after = &lower[at + word.len()..];
+        let ends = after.is_empty() || after.starts_with(|c: char| c.is_whitespace());
+        (ends && only_comment_punctuation(&line[..at])).then_some(at)
+    }
+
+    let mut open: Vec<(String, usize)> = Vec::new();
+    let mut out: Vec<CustomRegion> = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        let t = line.trim_end();
+        let lower = t.to_ascii_lowercase();
+        // Closers first: `endregion` also contains `region`.
+        if marker_at(t, &lower, "endregion").is_some()
+            || lower.contains("</editor-fold")
+                && only_comment_punctuation(&t[..lower.find("</editor-fold").unwrap_or(0)])
+        {
+            if let Some((name, start)) = open.pop() {
+                out.push(CustomRegion { name, start, end: i });
+            }
+            continue;
+        }
+        if let Some(at) = lower.find("<editor-fold") {
+            if only_comment_punctuation(&t[..at]) {
+                let name = editor_fold_desc(&t[at..]).unwrap_or_default();
+                open.push((name, i));
+                continue;
+            }
+        }
+        if let Some(at) = marker_at(t, &lower, "region") {
+            open.push((t[at + "region".len()..].trim().to_string(), i));
+        }
+    }
+    out.sort_by_key(|r| r.start);
+    out
+}
+
+/// The `desc="…"` (or `defaultstate`-style single-quoted) text of an
+/// `<editor-fold>` tag, if it carries one. Pure — unit tested.
+fn editor_fold_desc(tag: &str) -> Option<String> {
+    let at = tag.find("desc")?;
+    let rest = tag[at + 4..].trim_start().strip_prefix('=')?.trim_start();
+    let quote = rest.chars().next().filter(|c| *c == '"' || *c == '\'')?;
+    let rest = &rest[quote.len_utf8()..];
+    let end = rest.find(quote)?;
+    Some(rest[..end].to_string())
+}
+
+/// JetBrains "Collapse/Expand Custom Regions": fold every `//region` /
+/// `<editor-fold>` block in the buffer.
+fn fold_custom_regions(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let regions = custom_regions(&buffer_lines(doc));
+    if regions.is_empty() {
+        cx.editor
+            .set_status("no custom folding regions in this buffer");
+        return;
+    }
+    let n = doc.text().len_lines();
+    let count = regions.len();
+    for region in regions {
+        doc.folds_mut().create(region.start, region.end);
+    }
+    doc.folds_mut().clamp(n.saturating_sub(1));
+    let _ = view;
+    cx.editor
+        .set_status(format!("folded {count} custom region(s)"));
+}
+
+/// JetBrains "Custom Folding…" (`GotoCustomRegion`, Cmd-Alt-period): pick a
+/// custom region by name and jump to its opening line.
+fn goto_custom_region(cx: &mut Context) {
+    let doc = doc!(cx.editor);
+    let regions = custom_regions(&buffer_lines(doc));
+    if regions.is_empty() {
+        cx.editor
+            .set_status("no custom folding regions in this buffer");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("region", |r: &CustomRegion, _: &()| {
+            if r.name.is_empty() {
+                "(unnamed)".into()
+            } else {
+                r.name.as_str().into()
+            }
+        }),
+        PickerColumn::new("line", |r: &CustomRegion, _: &()| {
+            (r.start + 1).to_string().into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, regions, (), |cx, region: &CustomRegion, _action| {
+        let line = region.start;
+        let (view, doc) = current!(cx.editor);
+        let pos = doc.text().line_to_char(line.min(doc.text().len_lines() - 1));
+        doc.set_selection(view.id, Selection::point(pos));
+        align_view(doc, view, Align::Center);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// Candidate counterpart file names for impl<->test toggling. If `name` looks
 /// like a test file, returns the implementation name; otherwise returns common
 /// test-file names. Pure (tested).
@@ -63056,6 +63375,64 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn custom_regions_reads_both_jetbrains_shapes() {
+        let src = lines(&[
+            "fn main() {",
+            "    //region setup",
+            "    let a = 1;",
+            "    //endregion",
+            "    // <editor-fold desc=\"teardown\">",
+            "    drop(a);",
+            "    // </editor-fold>",
+            "}",
+        ]);
+        let regions = custom_regions(&src);
+        assert_eq!(regions.len(), 2);
+        assert_eq!(regions[0].name, "setup");
+        assert_eq!((regions[0].start, regions[0].end), (1, 3));
+        assert_eq!(regions[1].name, "teardown");
+        assert_eq!((regions[1].start, regions[1].end), (4, 6));
+    }
+
+    #[test]
+    fn custom_regions_nest_and_ignore_unclosed() {
+        let regions = custom_regions(&lines(&[
+            "# region outer",
+            "# region inner",
+            "# endregion",
+            "# endregion",
+            "# region never closed",
+        ]));
+        // The inner region closes against its own opener, and the dangling
+        // opener folds nothing.
+        assert_eq!(
+            regions,
+            vec![
+                CustomRegion { name: "outer".into(), start: 0, end: 3 },
+                CustomRegion { name: "inner".into(), start: 1, end: 2 },
+            ]
+        );
+    }
+
+    #[test]
+    fn custom_regions_do_not_fire_on_a_word_starting_with_region() {
+        assert!(custom_regions(&lines(&["// regions are folded", "// endregionally"])).is_empty());
+    }
+
+    #[test]
+    fn editor_fold_desc_reads_either_quote_or_none() {
+        assert_eq!(
+            editor_fold_desc("<editor-fold desc=\"helpers\">"),
+            Some("helpers".to_string())
+        );
+        assert_eq!(
+            editor_fold_desc("<editor-fold defaultstate=\"collapsed\" desc='io'>"),
+            Some("io".to_string())
+        );
+        assert_eq!(editor_fold_desc("<editor-fold>"), None);
     }
 
     #[test]

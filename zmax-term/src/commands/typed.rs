@@ -6244,6 +6244,77 @@ fn buffer_close_unmodified(
     buffer_close_by_ids_impl(cx, &document_ids, false)
 }
 
+/// The buffers before or after the current one in bufferline order, pins
+/// excepted (IntelliJ "Close Tabs to the Left" / "Close Tabs to the Right").
+///
+/// `Editor::documents` is a `BTreeMap` keyed by `DocumentId`, so it yields
+/// buffers in the order they were opened — the order the bufferline draws them
+/// in, which is what the IDE's "left" and "right" refer to.
+fn buffer_gather_side_impl(editor: &mut Editor, to_the_right: bool) -> Vec<DocumentId> {
+    let current = doc!(editor).id();
+    let ids: Vec<DocumentId> = editor.documents().map(|doc| doc.id()).collect();
+    let Some(at) = ids.iter().position(|id| *id == current) else {
+        return Vec::new();
+    };
+    let side = if to_the_right {
+        ids[at + 1..].to_vec()
+    } else {
+        ids[..at].to_vec()
+    };
+    drop_pinned(editor, side)
+}
+
+fn buffer_close_left(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let document_ids = buffer_gather_side_impl(cx.editor, false);
+    buffer_close_by_ids_impl(cx, &document_ids, false)
+}
+
+fn buffer_close_right(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let document_ids = buffer_gather_side_impl(cx.editor, true);
+    buffer_close_by_ids_impl(cx, &document_ids, false)
+}
+
+/// The read-only buffers, pins excepted (IntelliJ "Close All Read-Only Tabs").
+/// `readonly` is the vim flag `:set readonly` sets and `detect_readonly` picks
+/// up from file permissions, so this takes the tabs you cannot type into.
+fn buffer_gather_readonly_impl(editor: &mut Editor) -> Vec<DocumentId> {
+    let ids = editor
+        .documents()
+        .filter(|doc| doc.readonly)
+        .map(|doc| doc.id())
+        .collect();
+    drop_pinned(editor, ids)
+}
+
+fn buffer_close_readonly(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let document_ids = buffer_gather_readonly_impl(cx.editor);
+    buffer_close_by_ids_impl(cx, &document_ids, false)
+}
+
 /// `:pin-tab` — IntelliJ "Pin Tab": keep this buffer out of the bulk closes.
 /// Toggles, and says which way it went, since the bar's marker is easy to miss
 /// on a long buffer line.
@@ -24076,6 +24147,124 @@ pub(crate) fn git_on_current_file(
             String::from_utf8_lossy(&out.stderr).trim()
         );
     }
+}
+
+/// `git diff` of the whole working tree, staged changes included — the same
+/// set the IDE's "Create Patch from Local Changes" collects.
+fn local_changes_patch(dir: &std::path::Path) -> anyhow::Result<String> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["diff", "HEAD"])
+        .output()
+        .map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!("git diff: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+/// `:create-patch [file]` — JetBrains "Create Patch from Local Changes"
+/// (`ChangesView.CreatePatch`): the working tree's diff, written to `file` when
+/// one is named and shown in a scratch buffer when it is not.
+fn create_patch(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let patch = local_changes_patch(&git_dir_for_current(cx))?;
+    if patch.is_empty() {
+        cx.editor.set_status("no local changes to put in a patch");
+        return Ok(());
+    }
+    match args.first() {
+        Some(path) => {
+            std::fs::write(path, &patch).map_err(|e| anyhow!("{path}: {e}"))?;
+            cx.editor
+                .set_status(format!("wrote {} bytes to {path}", patch.len()));
+        }
+        None => {
+            super::show_text_in_scratch(cx.editor, &patch);
+            cx.editor.set_status("patch from local changes");
+        }
+    }
+    Ok(())
+}
+
+/// `:copy-patch` — JetBrains "Copy as Patch to Clipboard"
+/// (`ChangesView.CreatePatchToClipboard`).
+fn copy_patch(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let patch = local_changes_patch(&git_dir_for_current(cx))?;
+    if patch.is_empty() {
+        cx.editor.set_status("no local changes to copy as a patch");
+        return Ok(());
+    }
+    let len = patch.len();
+    cx.editor.registers.write('+', vec![patch])?;
+    cx.editor
+        .set_status(format!("copied a {len}-byte patch to the clipboard"));
+    Ok(())
+}
+
+/// `:apply-patch` — JetBrains "Apply Patch from Clipboard"
+/// (`ChangesView.ApplyPatchFromClipboard`): feed the clipboard to `git apply`
+/// and reload what it touched.
+///
+/// The patch goes in on stdin, so nothing is written to a temp file and a
+/// patch that fails to apply leaves the tree exactly as it was — `git apply`
+/// is all-or-nothing by default.
+fn apply_patch_from_clipboard(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let patch = cx
+        .editor
+        .registers
+        .read('+', cx.editor)
+        .map(|values| values.collect::<Vec<_>>().join(""))
+        .unwrap_or_default();
+    if patch.trim().is_empty() {
+        bail!("the clipboard holds no patch");
+    }
+    let dir = git_dir_for_current(cx);
+    let mut child = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(["apply", "-"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| anyhow!("git: {e}"))?;
+    {
+        use std::io::Write;
+        let stdin = child.stdin.as_mut().context("git apply: no stdin")?;
+        stdin.write_all(patch.as_bytes())?;
+        if !patch.ends_with('\n') {
+            stdin.write_all(b"\n")?;
+        }
+    }
+    let out = child.wait_with_output().map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!("git apply: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    reload_open_docs(cx);
+    cx.editor.set_status("applied the clipboard patch");
+    Ok(())
 }
 
 /// The directory to run git in for the current buffer (its parent, else cwd).
@@ -57566,6 +57755,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "buffer-close-left",
+        aliases: &["bcl"],
+        doc: "Close the buffers left of this one in the bufferline, keeping pinned ones (JetBrains Close Tabs to the Left).",
+        fun: buffer_close_left,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "buffer-close-right",
+        aliases: &["bcr"],
+        doc: "Close the buffers right of this one in the bufferline, keeping pinned ones (JetBrains Close Tabs to the Right).",
+        fun: buffer_close_right,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "buffer-close-readonly",
+        aliases: &["bcro"],
+        doc: "Close every read-only buffer, keeping pinned ones (JetBrains Close All Read-Only Tabs).",
+        fun: buffer_close_readonly,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "pin-tab",
         aliases: &["pin"],
         doc: "Pin or unpin this buffer, keeping it out of the bulk buffer closes.",
@@ -62347,6 +62569,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "create-patch",
+        aliases: &["patch-create"],
+        doc: "Write the working tree's diff to a file, or show it in a scratch buffer (JetBrains Create Patch from Local Changes).",
+        fun: create_patch,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "copy-patch",
+        aliases: &["patch-copy"],
+        doc: "Copy the working tree's diff to the clipboard (JetBrains Copy as Patch to Clipboard).",
+        fun: copy_patch,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "apply-patch",
+        aliases: &["patch-apply"],
+        doc: "Apply the patch on the clipboard with git apply (JetBrains Apply Patch from Clipboard).",
+        fun: apply_patch_from_clipboard,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

@@ -22,6 +22,9 @@ static CACHE: Mutex<Option<HashMap<PathBuf, Vec<BlameLine>>>> = Mutex::new(None)
 /// One blamed line's commit metadata.
 #[derive(Clone)]
 struct BlameLine {
+    /// The commit the line came from, as `git blame --porcelain` reports it.
+    /// All-zero for a line that is not committed yet.
+    sha: String,
     author: String,
     time: i64,
     summary: String,
@@ -116,6 +119,15 @@ pub fn line_blame(path: &Path, line: usize) -> Option<String> {
     })
 }
 
+/// The commit sha of `line` (1-based) in `path` — what JetBrains "Copy
+/// Revision Number" copies. `None` outside a git repo, past the end of the
+/// file, or on a line that has not been committed yet.
+pub fn line_sha(path: &Path, line: usize) -> Option<String> {
+    let lines = blame_lines(path);
+    let b = lines.get(line.saturating_sub(1))?;
+    (!b.uncommitted).then(|| b.sha.clone())
+}
+
 /// Cached structured blame for `path`, computing on first use.
 fn blame_lines(path: &Path) -> Vec<BlameLine> {
     let Ok(mut guard) = CACHE.lock() else {
@@ -155,6 +167,7 @@ fn compute(path: &Path) -> Option<Vec<BlameLine>> {
             let uncommitted = author == "Not Committed Yet" || sha.starts_with("00000000");
             meta.insert(sha.clone(), (author.clone(), time, summary.clone()));
             lines.push(BlameLine {
+                sha: sha.clone(),
                 author: author.clone(),
                 time,
                 summary: summary.clone(),

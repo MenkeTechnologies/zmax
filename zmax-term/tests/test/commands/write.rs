@@ -1027,3 +1027,98 @@ async fn test_move_file_when_given_dir_only() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// JetBrains "Close Tabs to the Left" / "Close Tabs to the Right": the side is
+/// decided by bufferline order (the order the buffers were opened), and a
+/// pinned tab survives both, exactly as it survives Close Others.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_buffer_close_left_and_right() -> anyhow::Result<()> {
+    let first = tempfile::NamedTempFile::new()?;
+    let second = tempfile::NamedTempFile::new()?;
+    let third = tempfile::NamedTempFile::new()?;
+    let third_path = third.path().to_path_buf();
+
+    // Opened in this order, so this is bufferline order too; the focus lands on
+    // the last one.
+    let mut app = helpers::AppBuilder::new()
+        .with_file(first.path(), None)
+        .with_file(second.path(), None)
+        .with_file(third.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                None,
+                Some(&|app| {
+                    assert_eq!(3, app.editor.documents().count());
+                }),
+            ),
+            // Pin the third, step back to the second, and close to the left:
+            // only the first is left of it, so only the first goes.
+            (Some(":pin<minus>tab<ret>"), None),
+            (Some(":buffer<minus>previous<ret>"), None),
+            (
+                Some(":buffer<minus>close<minus>left<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "error: {:?}", app.editor.get_status());
+                    assert_eq!(2, app.editor.documents().count());
+                }),
+            ),
+            // The only tab to the right is the pinned one, so closing right
+            // takes nothing.
+            (
+                Some(":buffer<minus>close<minus>right<ret>"),
+                Some(&move |app: &Application| {
+                    assert_eq!(2, app.editor.documents().count());
+                    assert!(app.editor.document_by_path(&third_path).is_some());
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// JetBrains "Close All Read-Only Tabs": a buffer whose file is read-only is
+/// flagged by `detect_readonly` on open, and that flag is the only thing that
+/// decides which tabs go.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_buffer_close_readonly() -> anyhow::Result<()> {
+    let writable = tempfile::NamedTempFile::new()?;
+    let locked = helpers::new_readonly_tempfile()?;
+    let writable_path = writable.path().to_path_buf();
+
+    let mut app = helpers::AppBuilder::new()
+        .with_file(writable.path(), None)
+        .with_file(locked.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                None,
+                Some(&|app| {
+                    assert_eq!(2, app.editor.documents().count());
+                    assert_eq!(1, app.editor.documents().filter(|d| d.readonly).count());
+                }),
+            ),
+            (
+                Some(":buffer<minus>close<minus>readonly<ret>"),
+                Some(&move |app: &Application| {
+                    assert!(!app.editor.is_err(), "error: {:?}", app.editor.get_status());
+                    assert_eq!(1, app.editor.documents().count());
+                    assert!(app.editor.document_by_path(&writable_path).is_some());
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+
+    Ok(())
+}
