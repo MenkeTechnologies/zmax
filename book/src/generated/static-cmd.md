@@ -1445,6 +1445,7 @@
 | `toggle_auto_reveal` | Toggle always-select-opened-file (autoscroll from source) | **spacemacs, hybrid** — normal: `` <space>pV ``, select: `` <space>pV `` |
 | `focus_file_tree` | Focus the project file tree panel | **spacemacs, hybrid** — normal: `` <space>Wp ``, `` <space>Wt ``, select: `` <space>Wp ``, `` <space>Wt `` |
 | `focus_structure` | Focus the structure/symbol outline panel | **spacemacs, hybrid** — normal: `` <space>Wo ``, `` <space>Ws ``, select: `` <space>Wo ``, `` <space>Ws `` |
+| `restore_default_layout` | Put the workbench drawers back to their default layout (JetBrains Restore Default Layout) |  |
 | `hide_side_windows` | Fold the workbench's left column away (JetBrains Hide Side Tool Windows) | **spacemacs, hybrid** — normal: `` <space>WS ``, select: `` <space>WS `` |
 | `hide_bottom_windows` | Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows) | **spacemacs, hybrid** — normal: `` <space>WB ``, select: `` <space>WB `` |
 | `hide_active_tool_window` | Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc) | **spacemacs, hybrid** — normal: `` <space>Wq ``, select: `` <space>Wq `` |

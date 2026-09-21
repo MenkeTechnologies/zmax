@@ -1836,6 +1836,7 @@ impl MappableCommand {
         toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
         focus_file_tree, "Focus the project file tree panel",
         focus_structure, "Focus the structure/symbol outline panel",
+        restore_default_layout, "Put the workbench drawers back to their default layout (JetBrains Restore Default Layout)",
         hide_side_windows, "Fold the workbench's left column away (JetBrains Hide Side Tool Windows)",
         hide_bottom_windows, "Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows)",
         hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
@@ -51459,6 +51460,22 @@ fn toggle_ide(cx: &mut Context) {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
             view.toggle_ide();
         }
+    }));
+}
+
+/// JetBrains "Restore Default Layout" (`Runner.RestoreLayout`): the workbench
+/// drawers back to their starting widths, folds and splits. Which buffers are
+/// open is not touched — this is a layout reset, not a session reset.
+fn restore_default_layout(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let restored = compositor
+            .find::<crate::ui::EditorView>()
+            .is_some_and(|view| view.restore_ide_layout());
+        cx.editor.set_status(if restored {
+            "workbench layout restored"
+        } else {
+            "no workbench to restore"
+        });
     }));
 }
 

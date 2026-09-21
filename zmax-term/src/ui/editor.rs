@@ -691,6 +691,18 @@ impl EditorView {
         }
     }
 
+    /// JetBrains "Restore Default Layout" (`Runner.RestoreLayout`). False when
+    /// there is no workbench to restore.
+    pub fn restore_ide_layout(&mut self) -> bool {
+        match self.ide.as_mut() {
+            Some(ide) => {
+                ide.restore_default_layout();
+                true
+            }
+            None => false,
+        }
+    }
+
     /// JetBrains "Hide Side Tool Windows" (`HideSideWindows`): fold the left
     /// column away, or bring it back. `None` when there is no workbench.
     pub fn toggle_side_windows(&mut self) -> Option<bool> {

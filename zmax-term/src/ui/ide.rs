@@ -736,6 +736,22 @@ impl Ide {
         self.bottom_zoom
     }
 
+    /// JetBrains "Restore Default Layout" (`Runner.RestoreLayout`): put the
+    /// drawers back where they start — widths, folds, splits and the bottom
+    /// zoom — without closing the workbench or touching which buffer is open.
+    pub fn restore_default_layout(&mut self) {
+        let fresh = Ide::new();
+        self.left_width = fresh.left_width;
+        self.left_collapsed = fresh.left_collapsed;
+        self.fold_project = fresh.fold_project;
+        self.fold_structure = fresh.fold_structure;
+        self.fold_problems = fresh.fold_problems;
+        self.fold_minimap = fresh.fold_minimap;
+        self.bottom_height = fresh.bottom_height;
+        self.bottom_zoom = fresh.bottom_zoom;
+        self.bottom_splits = fresh.bottom_splits;
+    }
+
     /// JetBrains "Hide Side Tool Windows" (`HideSideWindows`): collapse the
     /// left column, or bring it back. Returns the new state (true = hidden).
     ///

@@ -2903,6 +2903,55 @@ impl MagitLog {
         cx.editor.set_status(format!("history up to {sha}"));
     }
 
+    /// JetBrains "Revert Selected Changes" (`Vcs.RevertSelectedChanges`):
+    /// commit the inverse of the selected commit.
+    ///
+    /// `--no-edit` keeps git's generated message, so the revert lands without
+    /// opening an editor over this one; a conflict leaves the revert in
+    /// progress for the usual conflict keys, as a cherry-pick does.
+    fn revert_commit(&mut self, cx: &mut Context) {
+        let Some(entry) = self.entries.get(self.selected) else {
+            return;
+        };
+        let sha = entry.sha.clone();
+        let out = Command::new("git")
+            .arg("-C")
+            .arg(&self.repo_dir)
+            .args(["revert", "--no-edit", &sha])
+            .output();
+        match out {
+            Ok(out) if out.status.success() => {
+                crate::commands::reload_all_open_docs(cx.editor);
+                cx.editor.set_status(format!("reverted {sha}"));
+            }
+            Ok(out) => {
+                let msg = String::from_utf8_lossy(&out.stderr);
+                cx.editor
+                    .set_error(format!("revert {sha}: {}", condense(msg.trim())));
+            }
+            Err(e) => cx.editor.set_error(format!("revert: {e}")),
+        }
+    }
+
+    /// JetBrains "Compare with Local" (`Vcs.ShowDiffWithLocal`): what the
+    /// working tree has that the selected commit did not — the diff from that
+    /// commit to now, which is the question you ask when a bug appeared
+    /// somewhere after it.
+    fn compare_with_local(&self, cx: &mut Context) {
+        let Some(entry) = self.entries.get(self.selected) else {
+            return;
+        };
+        let sha = entry.sha.clone();
+        let out = git_output(&self.repo_dir, &["diff", &sha]).unwrap_or_default();
+        if out.trim().is_empty() {
+            cx.editor
+                .set_status(format!("the working tree matches {sha}"));
+            return;
+        }
+        crate::commands::show_text_in_scratch(cx.editor, &out);
+        cx.editor.set_status(format!("{sha} vs the working tree"));
+    }
+
     /// JetBrains "Cherry-Pick" (`Vcs.ApplySelectedChanges`): replay the
     /// selected commit onto the current branch.
     ///
@@ -2963,6 +3012,8 @@ impl Component for MagitLog {
             // `A` is magit's own apply/cherry-pick key.
             key!('A') => self.cherry_pick(cx),
             key!('y') => self.copy_commit_subject(cx),
+            key!('R') => self.revert_commit(cx),
+            key!('c') => self.compare_with_local(cx),
             key!('f') => self.show_affected_files(cx),
             key!('h') => self.history_up_to_here(cx),
             // `log-view-toggle-entry-display`: short form <-> full entry.
@@ -2997,7 +3048,7 @@ impl Component for MagitLog {
 
         let title = " Magit log";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  Tab long form  y subject  f files  h history  A cherry-pick  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  Tab long  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
