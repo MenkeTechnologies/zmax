@@ -736,6 +736,13 @@ impl Ide {
         self.bottom_zoom
     }
 
+    /// JetBrains "File Details" (`ViewInplaceComments`): show or hide the file
+    /// sizes in the project tree. Returns the new state.
+    pub fn toggle_file_details(&mut self) -> bool {
+        self.visible = true;
+        self.project.toggle_details()
+    }
+
     /// JetBrains "Restore Default Layout" (`Runner.RestoreLayout`): put the
     /// drawers back where they start — widths, folds, splits and the bottom
     /// zoom — without closing the workbench or touching which buffer is open.

@@ -28,6 +28,9 @@ struct Row {
 }
 
 pub struct FileTree {
+    /// JetBrains "File Details" (`ViewInplaceComments`): show each file's size
+    /// beside its name. Off by default, as in the IDE.
+    details: bool,
     root: PathBuf,
     expanded: HashSet<PathBuf>,
     rows: Vec<Row>,
@@ -53,6 +56,7 @@ pub struct FileTree {
 impl FileTree {
     pub fn new(root: PathBuf) -> Self {
         let mut tree = Self {
+            details: false,
             root: root.clone(),
             expanded: HashSet::new(),
             rows: Vec::new(),
@@ -533,6 +537,13 @@ impl FileTree {
     }
 
     /// Render just the tree rows into `area` (the Ide draws the drawer header above this).
+    /// JetBrains "File Details" (`ViewInplaceComments`): show or hide each
+    /// file's size beside its name. Returns the new state.
+    pub fn toggle_details(&mut self) -> bool {
+        self.details = !self.details;
+        self.details
+    }
+
     pub fn render(
         &mut self,
         area: Rect,
@@ -640,7 +651,46 @@ impl FileTree {
             };
             let style = if row.is_dir { dir_style } else { base };
             surface.set_stringn(area.x, y, &text, area.width as usize, style);
+            // File Details: the size, right-aligned at the edge of the panel.
+            // Directories have no meaningful size, and a name that already
+            // fills the panel keeps it rather than being overdrawn.
+            if self.details && !row.is_dir {
+                if let Ok(meta) = std::fs::metadata(&row.path) {
+                    let size = human_size(meta.len());
+                    let width = size.chars().count() as u16;
+                    let name_end = area.x + text.chars().count() as u16;
+                    if area.width > width + 1 && area.x + area.width - width > name_end + 1 {
+                        surface.set_stringn(
+                            area.x + area.width - width,
+                            y,
+                            &size,
+                            width as usize,
+                            theme.get("ui.linenr"),
+                        );
+                    }
+                }
+            }
         }
+    }
+}
+
+/// A file size as the project tree shows it: three significant digits and a
+/// unit, so the column stays narrow and the numbers line up. Pure — unit
+/// tested.
+pub fn human_size(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "K", "M", "G", "T"];
+    let mut size = bytes as f64;
+    let mut unit = 0;
+    while size >= 1024.0 && unit + 1 < UNITS.len() {
+        size /= 1024.0;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{bytes}{}", UNITS[0])
+    } else if size < 10.0 {
+        format!("{size:.1}{}", UNITS[unit])
+    } else {
+        format!("{size:.0}{}", UNITS[unit])
     }
 }
 
@@ -829,5 +879,18 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn human_size_keeps_three_significant_digits() {
+        assert_eq!(human_size(0), "0B");
+        assert_eq!(human_size(512), "512B");
+        assert_eq!(human_size(1024), "1.0K");
+        assert_eq!(human_size(1536), "1.5K");
+        assert_eq!(human_size(20 * 1024), "20K");
+        assert_eq!(human_size(3 * 1024 * 1024), "3.0M");
+        // The unit ladder stops at T rather than running off the end.
+        assert_eq!(human_size(5 * 1024u64.pow(4)), "5.0T");
+        assert_eq!(human_size(9999 * 1024u64.pow(4)), "9999T");
     }
 }

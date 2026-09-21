@@ -1238,6 +1238,7 @@
 | `:vc-root-version-diff`, `:vc-root-diff` | Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff). |
 | `:vc-revision-other-window` | Show a past revision of the current file, default HEAD (emacs vc-revision-other-window). |
 | `:sticky-lines`, `:sticky-context` | Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines). |
+| `:diagnostics-severity`, `:error-highlighting` | The lowest diagnostic severity the editor draws: error, warning, info, hint, off (JetBrains Error Highlighting). |
 | `:changelist`, `:cl` | Put this file in a named changelist, or report which one holds it (JetBrains changelists). |
 | `:changelists`, `:cls` | List every changelist and the files in it (JetBrains Changes view). |
 | `:changelist-commit`, `:cl-commit` | Commit only the files in a changelist (JetBrains Commit changelist). |

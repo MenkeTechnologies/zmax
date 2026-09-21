@@ -1846,6 +1846,7 @@ impl MappableCommand {
         toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
         focus_file_tree, "Focus the project file tree panel",
         focus_structure, "Focus the structure/symbol outline panel",
+        toggle_file_details, "Show or hide file sizes in the project tree (JetBrains File Details)",
         restore_default_layout, "Put the workbench drawers back to their default layout (JetBrains Restore Default Layout)",
         hide_side_windows, "Fold the workbench's left column away (JetBrains Hide Side Tool Windows)",
         hide_bottom_windows, "Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows)",
@@ -16916,7 +16917,7 @@ fn layout_load(cx: &mut Context) {
 // takes effect immediately — honest because every toggle has a visible effect.
 // ---------------------------------------------------------------------------
 
-fn edit_live_config(cx: &mut Context, f: impl FnOnce(&mut zmax_view::editor::Config)) {
+pub(crate) fn edit_live_config(cx: &mut Context, f: impl FnOnce(&mut zmax_view::editor::Config)) {
     let old = (*cx.editor.config()).clone();
     let mut config = old.clone();
     f(&mut config);
@@ -52109,6 +52110,23 @@ fn toggle_ide(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, _cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
             view.toggle_ide();
+        }
+    }));
+}
+
+/// JetBrains "File Details" (`ViewInplaceComments`): the size of each file
+/// beside its name in the project tree.
+fn toggle_file_details(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let state = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.toggle_file_details());
+        match state {
+            Some(on) => cx.editor.set_status(format!(
+                "file details: {}",
+                if on { "on" } else { "off" }
+            )),
+            None => cx.editor.set_status("no project tree to annotate"),
         }
     }));
 }

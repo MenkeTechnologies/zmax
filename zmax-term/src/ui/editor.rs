@@ -704,6 +704,11 @@ impl EditorView {
         }
     }
 
+    /// JetBrains "File Details": show or hide file sizes in the project tree.
+    pub fn toggle_file_details(&mut self) -> Option<bool> {
+        self.ide.as_mut().map(|ide| ide.toggle_file_details())
+    }
+
     /// JetBrains "Restore Default Layout" (`Runner.RestoreLayout`). False when
     /// there is no workbench to restore.
     pub fn restore_ide_layout(&mut self) -> bool {

@@ -24557,6 +24557,75 @@ fn current_repo_relative(cx: &compositor::Context, root: &std::path::Path) -> an
     Ok(rel.to_string_lossy().replace('\\', "/"))
 }
 
+/// Parse a severity name for `:diagnostics-severity`. Pure — unit tested.
+///
+/// `off` is not a severity but the fourth thing the IDE's "Error Highlighting"
+/// slider can be set to, so it is accepted here and reported as `None`.
+pub(crate) fn parse_diagnostic_severity(
+    name: &str,
+) -> Option<Option<zmax_view::editor::Severity>> {
+    use zmax_view::editor::Severity;
+    match name.trim().to_ascii_lowercase().as_str() {
+        "off" | "none" | "disable" | "disabled" => Some(None),
+        "error" | "errors" => Some(Some(Severity::Error)),
+        "warning" | "warnings" | "warn" => Some(Some(Severity::Warning)),
+        "info" | "information" => Some(Some(Severity::Info)),
+        "hint" | "hints" | "all" => Some(Some(Severity::Hint)),
+        _ => None,
+    }
+}
+
+/// `:diagnostics-severity [LEVEL]` — JetBrains "Error Highlighting"
+/// (`ChangeInspectionProfile`): the lowest severity the editor draws.
+///
+/// `error` shows only errors, `warning` errors and warnings, and so on down to
+/// `hint` (everything); `off` stops drawing diagnostics without stopping the
+/// language servers, which keep answering `gd`, hover and rename. With no
+/// argument it reports the current level.
+fn diagnostics_severity(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    use zmax_view::annotations::diagnostics::DiagnosticFilter;
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let describe = |filter: &DiagnosticFilter| match filter {
+        DiagnosticFilter::Disable => "off".to_string(),
+        DiagnosticFilter::Enable(severity) => format!("{severity:?}").to_lowercase(),
+    };
+    let Some(name) = args.first() else {
+        let config = cx.editor.config();
+        cx.editor.set_status(format!(
+            "diagnostics: {} (cursor line: {})",
+            describe(&config.end_of_line_diagnostics),
+            describe(&config.inline_diagnostics.cursor_line)
+        ));
+        return Ok(());
+    };
+    let Some(level) = parse_diagnostic_severity(name) else {
+        bail!("unknown level `{name}` (error, warning, info, hint, off)");
+    };
+    let filter = match level {
+        Some(severity) => DiagnosticFilter::Enable(severity),
+        None => DiagnosticFilter::Disable,
+    };
+    let mut ecx = editor_context(cx);
+    super::edit_live_config(&mut ecx, |c| {
+        c.end_of_line_diagnostics = filter;
+        c.inline_diagnostics.cursor_line = filter;
+        // `other_lines` is off by default and set by the user's config; raising
+        // the threshold must not switch it on behind them.
+        if !matches!(c.inline_diagnostics.other_lines, DiagnosticFilter::Disable) {
+            c.inline_diagnostics.other_lines = filter;
+        }
+    });
+    cx.editor
+        .set_status(format!("diagnostics: {}", describe(&filter)));
+    Ok(())
+}
+
 /// `:changelist [NAME]` — JetBrains changelists (`ChangesView.Move`): put this
 /// file in the named list, or report which list it is in.
 ///
@@ -63567,6 +63636,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "diagnostics-severity",
+        aliases: &["error-highlighting"],
+        doc: "The lowest diagnostic severity the editor draws: error, warning, info, hint, off (JetBrains Error Highlighting).",
+        fun: diagnostics_severity,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "changelist",
         aliases: &["cl"],
         doc: "Put this file in a named changelist, or report which one holds it (JetBrains changelists).",
@@ -78720,5 +78800,28 @@ mod fzf_sink_tests {
             sink_args("open {}", "%sh{echo hi} report.md"),
             ["%sh{echo hi} report.md"]
         );
+    }
+}
+
+#[cfg(test)]
+mod diagnostic_severity_tests {
+    use super::parse_diagnostic_severity;
+    use zmax_view::editor::Severity;
+
+    #[test]
+    fn every_level_the_command_advertises_parses() {
+        // The four severities, their plurals and the aliases the help lists.
+        assert_eq!(parse_diagnostic_severity("error"), Some(Some(Severity::Error)));
+        assert_eq!(
+            parse_diagnostic_severity("Warnings"),
+            Some(Some(Severity::Warning))
+        );
+        assert_eq!(parse_diagnostic_severity(" info "), Some(Some(Severity::Info)));
+        assert_eq!(parse_diagnostic_severity("all"), Some(Some(Severity::Hint)));
+        // `off` is not a severity: it is the fourth setting, and parses to None
+        // INSIDE Some — a level was named, and that level is "draw nothing".
+        assert_eq!(parse_diagnostic_severity("off"), Some(None));
+        // An unknown word is rejected so the command can list the real ones.
+        assert_eq!(parse_diagnostic_severity("loud"), None);
     }
 }
