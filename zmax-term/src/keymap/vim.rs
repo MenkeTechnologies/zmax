@@ -2276,6 +2276,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "c" => clear_search_highlight,     // SPC s c : clear persistent search highlight
                 "m" => global_search_masked,       // SPC s m : project search restricted to a file glob (JetBrains Find in Path file mask)
                 "u" => highlight_usages_in_file,   // SPC s u : highlight every usage of the symbol at the caret (JetBrains Ctrl-Shift-F7)
+                ">" => goto_next_usage,            // SPC s > : jump to the next usage of the symbol (JetBrains F3; `j` is the symbol picker)
+                "<" => goto_prev_usage,            // SPC s < : jump to the previous usage (JetBrains Shift-F3)
                 "i" => toggle_find_in_selection,   // SPC s i : confine / unconfine search to the selection (JetBrains Search in Selection Only)
                 // uppercase variants are the "with default input" forms: seeded
                 // with the symbol under the cursor.
@@ -2411,6 +2413,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "f" => toggle_drawer_mid,          // SPC W f : fold / unfold the middle drawer column
                 "m" => toggle_bottom_zoom,         // SPC W m : maximize / restore the bottom panel
                 "q" => hide_active_tool_window,    // SPC W q : hide active tool window (JetBrains Shift-Esc)
+                "S" => hide_side_windows,          // SPC W S : fold the left column away (JetBrains Hide Side Tool Windows)
+                "B" => hide_bottom_windows,        // SPC W B : fold the bottom drawer away (JetBrains Hide Bottom Tool Windows)
                 "tab" => jump_to_last_tool_window, // SPC W TAB : jump to last tool window (JetBrains F12)
                 "z" => toggle_ide,                 // SPC W z : hide all tool windows (Zen)
                 "b" => focus_bookmarks,            // SPC W b : Bookmarks tool window

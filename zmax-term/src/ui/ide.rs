@@ -736,6 +736,34 @@ impl Ide {
         self.bottom_zoom
     }
 
+    /// JetBrains "Hide Side Tool Windows" (`HideSideWindows`): collapse the
+    /// left column, or bring it back. Returns the new state (true = hidden).
+    ///
+    /// The bottom drawer is untouched, which is what separates this from
+    /// `toggle_ide` (Zen), where the whole workbench goes.
+    pub fn toggle_side_windows(&mut self) -> bool {
+        self.left_collapsed = !self.left_collapsed;
+        if !self.left_collapsed {
+            self.visible = true;
+        }
+        self.left_collapsed
+    }
+
+    /// JetBrains "Hide Bottom Tool Windows" (`HideBottomWindows`): fold the
+    /// bottom drawer away, or bring it back. Returns the new state
+    /// (true = hidden).
+    pub fn toggle_bottom_windows(&mut self) -> bool {
+        self.fold_problems = !self.fold_problems;
+        if self.fold_problems {
+            // A zoomed bottom drawer that is folded away would leave the
+            // workbench claiming the whole frame for a panel nobody can see.
+            self.bottom_zoom = false;
+        } else {
+            self.visible = true;
+        }
+        self.fold_problems
+    }
+
     /// Whether column `col` (0 = left, 1 = middle, 2 = right) is folded, i.e. a
     /// divider has been dragged to swallow it (zero width).
     fn col_folded(&self, col: usize) -> bool {

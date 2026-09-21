@@ -1835,6 +1835,8 @@ impl MappableCommand {
         toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
         focus_file_tree, "Focus the project file tree panel",
         focus_structure, "Focus the structure/symbol outline panel",
+        hide_side_windows, "Fold the workbench's left column away (JetBrains Hide Side Tool Windows)",
+        hide_bottom_windows, "Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows)",
         hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
         jump_to_last_tool_window, "Toggle focus between the editor and the last tool window (JetBrains F12)",
         stretch_tool_window_left, "Narrow the workbench's left drawer (JetBrains Stretch to Left)",
@@ -2577,6 +2579,8 @@ impl MappableCommand {
         save_selection_as_snippet, "Save the selection as a snippet under a trigger you type (JetBrains Save as Live Template)",
         save_file_as_template, "Save this buffer into the file-template directory (JetBrains Save File as Template)",
         new_file_from_template, "Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)",
+        goto_next_usage, "Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage)",
+        goto_prev_usage, "Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
         rebuild_project, "Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)",
@@ -51456,6 +51460,41 @@ fn toggle_ide(cx: &mut Context) {
     }));
 }
 
+/// JetBrains "Hide Side Tool Windows" (`HideSideWindows`, Cmd-Shift-F12's
+/// neighbour): fold the workbench's left column away, leaving the bottom
+/// drawer where it is.
+fn hide_side_windows(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let state = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.toggle_side_windows());
+        match state {
+            Some(hidden) => cx.editor.set_status(format!(
+                "side tool windows: {}",
+                if hidden { "hidden" } else { "shown" }
+            )),
+            None => cx.editor.set_status("no workbench to hide"),
+        }
+    }));
+}
+
+/// JetBrains "Hide Bottom Tool Windows" (`HideBottomWindows`): fold the
+/// bottom drawer away, leaving the left column where it is.
+fn hide_bottom_windows(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let state = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.toggle_bottom_windows());
+        match state {
+            Some(hidden) => cx.editor.set_status(format!(
+                "bottom tool windows: {}",
+                if hidden { "hidden" } else { "shown" }
+            )),
+            None => cx.editor.set_status("no workbench to hide"),
+        }
+    }));
+}
+
 /// JetBrains "Hide Active Tool Window" (Shift-Esc): return focus to the editor.
 fn hide_active_tool_window(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, _cx| {
@@ -67962,6 +68001,74 @@ fn dabbrev_completion(cx: &mut Context) {
 /// The highlight is a hi-lock pattern, so it uses the same machinery — and the
 /// same `:hi-lock-*` commands — as `:highlight-regexp`, and `hi_lock_mode`
 /// hides the whole set.
+/// JetBrains "Next / Previous Highlighted Usage" (`GotoNextElementUnderCaret\
+/// Usage`, F3 / Shift-F3): jump between the occurrences of the symbol the
+/// caret is on, without leaving the file or touching the search register.
+///
+/// Word-bounded, so `foo` does not stop inside `foobar`, and it wraps, which
+/// is what makes repeated presses a tour of the symbol rather than a walk off
+/// the end of the file.
+fn goto_usage(cx: &mut Context, forward: bool) {
+    let word = typed::word_under_cursor(cx.editor);
+    let word = word.trim().to_string();
+    if word.is_empty() {
+        cx.editor.set_error("No symbol at the caret");
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let haystack: String = text.chunks().collect();
+    let is_word = |c: char| c.is_alphanumeric() || c == '_';
+    let chars: Vec<char> = haystack.chars().collect();
+    let hits: Vec<(usize, usize)> = find_all_ranges(&haystack, &word)
+        .into_iter()
+        .filter(|&(s, e)| {
+            let before_ok = s == 0 || !is_word(chars[s - 1]);
+            let after_ok = e >= chars.len() || !is_word(chars[e]);
+            before_ok && after_ok
+        })
+        .collect();
+    if hits.len() < 2 {
+        cx.editor
+            .set_status(format!("{word}: no other usage in this file"));
+        return;
+    }
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let target = if forward {
+        hits.iter()
+            .find(|(s, _)| *s > cursor)
+            .or_else(|| hits.first())
+    } else {
+        hits.iter()
+            .rev()
+            .find(|(s, _)| *s < cursor)
+            .or_else(|| hits.last())
+    };
+    if let Some(&(start, end)) = target {
+        let range = if cx.editor.vim_semantics {
+            Range::point(start)
+        } else {
+            Range::new(start, end)
+        };
+        let (view, doc) = current!(cx.editor);
+        doc.set_selection(view.id, Selection::single(range.anchor, range.head));
+        align_view(doc, view, Align::Center);
+        let which = hits.iter().position(|&(s, _)| s == start).unwrap_or(0) + 1;
+        cx.editor
+            .set_status(format!("{word}: usage {which} of {}", hits.len()));
+    }
+}
+
+/// JetBrains "Next Highlighted Usage" (F3).
+fn goto_next_usage(cx: &mut Context) {
+    goto_usage(cx, true);
+}
+
+/// JetBrains "Previous Highlighted Usage" (Shift-F3).
+fn goto_prev_usage(cx: &mut Context) {
+    goto_usage(cx, false);
+}
+
 fn highlight_usages_in_file(cx: &mut Context) {
     let word = typed::word_under_cursor(cx.editor);
     let word = word.trim();

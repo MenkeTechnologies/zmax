@@ -1444,6 +1444,8 @@
 | `toggle_auto_reveal` | Toggle always-select-opened-file (autoscroll from source) | **spacemacs, hybrid** — normal: `` <space>pV ``, select: `` <space>pV `` |
 | `focus_file_tree` | Focus the project file tree panel | **spacemacs, hybrid** — normal: `` <space>Wp ``, `` <space>Wt ``, select: `` <space>Wp ``, `` <space>Wt `` |
 | `focus_structure` | Focus the structure/symbol outline panel | **spacemacs, hybrid** — normal: `` <space>Wo ``, `` <space>Ws ``, select: `` <space>Wo ``, `` <space>Ws `` |
+| `hide_side_windows` | Fold the workbench's left column away (JetBrains Hide Side Tool Windows) | **spacemacs, hybrid** — normal: `` <space>WS ``, select: `` <space>WS `` |
+| `hide_bottom_windows` | Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows) | **spacemacs, hybrid** — normal: `` <space>WB ``, select: `` <space>WB `` |
 | `hide_active_tool_window` | Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc) | **spacemacs, hybrid** — normal: `` <space>Wq ``, select: `` <space>Wq `` |
 | `jump_to_last_tool_window` | Toggle focus between the editor and the last tool window (JetBrains F12) | **spacemacs, hybrid** — normal: `` <space>W<tab> ``, select: `` <space>W<tab> `` |
 | `stretch_tool_window_left` | Narrow the workbench's left drawer (JetBrains Stretch to Left) | **spacemacs, hybrid** — normal: `` <space>W<left> ``, select: `` <space>W<left> `` |
@@ -2186,6 +2188,8 @@
 | `save_selection_as_snippet` | Save the selection as a snippet under a trigger you type (JetBrains Save as Live Template) | **spacemacs, hybrid** — normal: `` <space>cS ``, select: `` <space>cS `` |
 | `save_file_as_template` | Save this buffer into the file-template directory (JetBrains Save File as Template) |  |
 | `new_file_from_template` | Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template) | **spacemacs, hybrid** — normal: `` <space>fN ``, select: `` <space>fN `` |
+| `goto_next_usage` | Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage) | **spacemacs, hybrid** — normal: `` <space>s<gt> ``, select: `` <space>s<gt> `` |
+| `goto_prev_usage` | Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage) | **spacemacs, hybrid** — normal: `` <space>s<lt> ``, select: `` <space>s<lt> `` |
 | `highlight_usages_in_file` | Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7) | **spacemacs, hybrid** — normal: `` <space>su ``, select: `` <space>su `` |
 | `build_project` | Build the project with its own build tool (JetBrains Build Project, Ctrl F9) | **spacemacs, hybrid** — normal: `` <space>pB ``, select: `` <space>pB `` |
 | `rebuild_project` | Clean and build the project (JetBrains Rebuild, Ctrl Shift F9) | **spacemacs, hybrid** — normal: `` <space>pC ``, select: `` <space>pC `` |

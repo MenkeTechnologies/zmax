@@ -691,6 +691,17 @@ impl EditorView {
         }
     }
 
+    /// JetBrains "Hide Side Tool Windows" (`HideSideWindows`): fold the left
+    /// column away, or bring it back. `None` when there is no workbench.
+    pub fn toggle_side_windows(&mut self) -> Option<bool> {
+        self.ide.as_mut().map(|ide| ide.toggle_side_windows())
+    }
+
+    /// JetBrains "Hide Bottom Tool Windows" (`HideBottomWindows`).
+    pub fn toggle_bottom_windows(&mut self) -> Option<bool> {
+        self.ide.as_mut().map(|ide| ide.toggle_bottom_windows())
+    }
+
     /// JetBrains "Stretch to …": resize the workbench drawers from the
     /// keyboard. False when there is no visible workbench to resize.
     pub fn stretch_ide(&mut self, dir: crate::ui::StretchDir) -> bool {
