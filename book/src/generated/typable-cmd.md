@@ -1231,6 +1231,9 @@
 | `:git-stage`, `:stage`, `:git-add` | Stage the current buffer's file (git add). |
 | `:vc-root-version-diff`, `:vc-root-diff` | Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff). |
 | `:vc-revision-other-window` | Show a past revision of the current file, default HEAD (emacs vc-revision-other-window). |
+| `:toggle-file-readonly`, `:make-writable`, `:make-read-only` | Flip the file's write permission on disk (JetBrains Toggle Read-Only Attribute). |
+| `:shelve`, `:shelve-changes` | Put the working tree's diff aside as a named patch and restore the tree (JetBrains Shelve Changes). |
+| `:unshelve`, `:unshelve-changes` | Apply a shelf entry back onto the tree, or list the shelf (JetBrains Unshelve). |
 | `:create-patch`, `:patch-create` | Write the working tree's diff to a file, or show it in a scratch buffer (JetBrains Create Patch from Local Changes). |
 | `:copy-patch`, `:patch-copy` | Copy the working tree's diff to the clipboard (JetBrains Copy as Patch to Clipboard). |
 | `:apply-patch`, `:patch-apply` | Apply the patch on the clipboard with git apply (JetBrains Apply Patch from Clipboard). |

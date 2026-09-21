@@ -1122,3 +1122,97 @@ async fn test_buffer_close_readonly() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// JetBrains "Shelve Changes" / "Unshelve": the shelf is a patch file that
+/// survives being applied, which is the whole difference from a stash pop.
+///
+/// The round trip is the test: shelve restores the tracked file to HEAD, and
+/// unshelve puts the same edit back, twice over if asked.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_shelve_and_unshelve_round_trip() -> anyhow::Result<()> {
+    fn git(args: &[&str], cwd: &std::path::Path) -> std::process::Output {
+        std::process::Command::new("git")
+            .args(args)
+            .current_dir(cwd)
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "test@example.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "test@example.com")
+            .env("GIT_CONFIG_COUNT", "2")
+            .env("GIT_CONFIG_KEY_0", "commit.gpgsign")
+            .env("GIT_CONFIG_VALUE_0", "false")
+            .env("GIT_CONFIG_KEY_1", "init.defaultBranch")
+            .env("GIT_CONFIG_VALUE_1", "main")
+            .output()
+            .expect("run git")
+    }
+
+    let repo = tempfile::tempdir()?;
+    let dir = repo.path();
+    assert!(git(&["init"], dir).status.success(), "git init");
+    let file = dir.join("a.txt");
+    std::fs::write(&file, "one\n")?;
+    assert!(git(&["add", "a.txt"], dir).status.success(), "git add");
+    assert!(
+        git(&["commit", "-m", "base"], dir).status.success(),
+        "git commit"
+    );
+    // The working-tree edit the shelf is supposed to carry.
+    std::fs::write(&file, "one\ntwo\n")?;
+
+    let mut app = helpers::AppBuilder::new().with_file(&file, None).build()?;
+
+    test_key_sequence(&mut app, Some(":shelve work<ret>"), None, false).await?;
+    assert_eq!(
+        std::fs::read_to_string(&file)?,
+        "one\n",
+        "shelving restored the tracked file to HEAD"
+    );
+    assert!(
+        dir.join(".git/zmax-shelf/work.patch").exists(),
+        "the patch is on the shelf under its given name"
+    );
+
+    test_key_sequence(&mut app, Some(":unshelve work<ret>"), None, false).await?;
+    assert_eq!(
+        std::fs::read_to_string(&file)?,
+        "one\ntwo\n",
+        "unshelving put the edit back"
+    );
+    assert!(
+        dir.join(".git/zmax-shelf/work.patch").exists(),
+        "the entry stays on the shelf after being applied — not a stash pop"
+    );
+
+    Ok(())
+}
+
+/// JetBrains "Toggle Read-Only Attribute": the FILE's permission bits move, and
+/// the buffer's own `readonly` flag follows them.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_toggle_file_readonly_changes_permissions() -> anyhow::Result<()> {
+    let file = tempfile::NamedTempFile::new()?;
+    let path = file.path().to_path_buf();
+    let mut app = helpers::AppBuilder::new().with_file(&path, None).build()?;
+
+    test_key_sequence(&mut app, Some(":toggle<minus>file<minus>readonly<ret>"), None, false)
+        .await?;
+    assert!(
+        std::fs::metadata(&path)?.permissions().readonly(),
+        "the file is read-only on disk"
+    );
+    assert!(
+        app.editor.documents().all(|d| d.readonly),
+        "the buffer flag followed the file"
+    );
+
+    test_key_sequence(&mut app, Some(":toggle<minus>file<minus>readonly<ret>"), None, false)
+        .await?;
+    assert!(
+        !std::fs::metadata(&path)?.permissions().readonly(),
+        "and back to writable"
+    );
+    assert!(app.editor.documents().all(|d| !d.readonly));
+
+    Ok(())
+}

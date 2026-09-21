@@ -24149,6 +24149,180 @@ pub(crate) fn git_on_current_file(
     }
 }
 
+/// `:toggle-file-readonly` — JetBrains "Toggle Read-Only Attribute"
+/// (`ToggleReadOnlyAttribute`, its synonyms "Make File Writable" / "Make File
+/// Read-Only"): flip the write bits on the FILE, not just the buffer flag.
+///
+/// `toggle_readonly` (`SPC b w`) is vim's `:set readonly`, a buffer flag that
+/// disappears on reload; this is the IDE's action, which changes the file's
+/// permissions on disk. The buffer's flag is re-detected afterwards so the two
+/// agree immediately.
+fn toggle_file_readonly(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = doc!(cx.editor)
+        .path()
+        .map(ToOwned::to_owned)
+        .context("buffer has no file")?;
+    let mut perms = std::fs::metadata(&path)
+        .map_err(|e| anyhow!("{}: {e}", path.display()))?
+        .permissions();
+    let making_writable = perms.readonly();
+    perms.set_readonly(!making_writable);
+    std::fs::set_permissions(&path, perms).map_err(|e| anyhow!("{}: {e}", path.display()))?;
+
+    let id = doc!(cx.editor).id();
+    if let Some(doc) = cx.editor.document_mut(id) {
+        doc.detect_readonly();
+    }
+    cx.editor.set_status(format!(
+        "{} is now {}",
+        path.display(),
+        if making_writable {
+            "writable"
+        } else {
+            "read-only"
+        }
+    ));
+    Ok(())
+}
+
+/// Where the shelf keeps its patches: `.git/zmax-shelf`, so it travels with the
+/// repository but is never committed, the way the IDE keeps its shelf beside
+/// the project rather than in it.
+fn shelf_dir(dir: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["rev-parse", "--git-dir"])
+        .output()
+        .map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!("not in a git repository");
+    }
+    let git_dir = std::path::PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_string());
+    let git_dir = if git_dir.is_absolute() {
+        git_dir
+    } else {
+        dir.join(git_dir)
+    };
+    let shelf = git_dir.join("zmax-shelf");
+    std::fs::create_dir_all(&shelf).map_err(|e| anyhow!("{}: {e}", shelf.display()))?;
+    Ok(shelf)
+}
+
+/// `:shelve [name]` — JetBrains "Shelve Changes" (`ChangesView.Shelve`): put
+/// the working tree's diff aside as a named patch and restore the tree.
+///
+/// This is not `:stash`. A stash is a commit on git's stash stack, popped once;
+/// a shelf entry is a patch file that stays until you delete it and can be
+/// applied as often as you like — the IDE's own distinction, and the reason it
+/// ships both.
+fn shelve_changes(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = git_dir_for_current(cx);
+    let patch = local_changes_patch(&dir)?;
+    if patch.is_empty() {
+        cx.editor.set_status("nothing to shelve — the tree is clean");
+        return Ok(());
+    }
+    let name = match args.first() {
+        Some(name) => name.replace(['/', '\\'], "-"),
+        None => format!(
+            "shelf-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0)
+        ),
+    };
+    let file = shelf_dir(&dir)?.join(format!("{name}.patch"));
+    std::fs::write(&file, &patch).map_err(|e| anyhow!("{}: {e}", file.display()))?;
+
+    // Restore the tree: the patch holds everything `git diff HEAD` showed, so
+    // reversing it is exactly the undo of what was just saved. Tracked files
+    // only, as the IDE's shelf is.
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(["checkout", "--", "."])
+        .output()
+        .map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!(
+            "shelved to {} but the tree was left alone: {}",
+            file.display(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    reload_open_docs(cx);
+    cx.editor
+        .set_status(format!("shelved {} bytes as {name}", patch.len()));
+    Ok(())
+}
+
+/// `:unshelve NAME` — JetBrains "Unshelve" (`ChangesView.Unshelve`): apply a
+/// shelf entry back onto the tree. With no name, the shelf is listed.
+fn unshelve_changes(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = git_dir_for_current(cx);
+    let shelf = shelf_dir(&dir)?;
+    let mut names: Vec<String> = std::fs::read_dir(&shelf)
+        .map_err(|e| anyhow!("{}: {e}", shelf.display()))?
+        .filter_map(Result::ok)
+        .filter_map(|e| {
+            let path = e.path();
+            (path.extension().and_then(|x| x.to_str()) == Some("patch"))
+                .then(|| path.file_stem()?.to_str().map(ToOwned::to_owned))
+                .flatten()
+        })
+        .collect();
+    names.sort();
+    if names.is_empty() {
+        cx.editor.set_status("the shelf is empty");
+        return Ok(());
+    }
+    let Some(name) = args.first() else {
+        cx.editor
+            .set_status(format!("shelf: {} (:unshelve NAME)", names.join(", ")));
+        return Ok(());
+    };
+    let file = shelf.join(format!("{name}.patch"));
+    if !file.exists() {
+        bail!("no shelf entry named {name}");
+    }
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .arg("apply")
+        .arg(&file)
+        .output()
+        .map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!("git apply: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    reload_open_docs(cx);
+    cx.editor.set_status(format!("unshelved {name}"));
+    Ok(())
+}
+
 /// `git diff` of the whole working tree, staged changes included — the same
 /// set the IDE's "Create Patch from Local Changes" collects.
 fn local_changes_patch(dir: &std::path::Path) -> anyhow::Result<String> {
@@ -62566,6 +62740,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).",
         fun: ex_vc_revision_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "toggle-file-readonly",
+        aliases: &["make-writable", "make-read-only"],
+        doc: "Flip the file's write permission on disk (JetBrains Toggle Read-Only Attribute).",
+        fun: toggle_file_readonly,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shelve",
+        aliases: &["shelve-changes"],
+        doc: "Put the working tree's diff aside as a named patch and restore the tree (JetBrains Shelve Changes).",
+        fun: shelve_changes,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unshelve",
+        aliases: &["unshelve-changes"],
+        doc: "Apply a shelf entry back onto the tree, or list the shelf (JetBrains Unshelve).",
+        fun: unshelve_changes,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
