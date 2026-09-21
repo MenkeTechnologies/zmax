@@ -1263,3 +1263,99 @@ async fn test_sticky_lines_toggle_and_limit() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// JetBrains "Export Settings" / "Import Settings": the export is a plain tree
+/// of the config directory and the import reads exactly that back, so the two
+/// have to round-trip a nested file.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_export_and_import_settings_round_trip() -> anyhow::Result<()> {
+    let export_to = tempfile::tempdir()?;
+    let export_path = export_to.path().join("settings");
+    let config_dir = zmax_loader::config_dir();
+    std::fs::create_dir_all(config_dir.join("themes"))?;
+    // A file the export must carry, under a subdirectory, with a name no other
+    // test would write.
+    let marker = config_dir.join("themes/zmax-export-test.toml");
+    std::fs::write(&marker, "# export round-trip marker\n")?;
+
+    let mut app = helpers::AppBuilder::new().build()?;
+    let export_arg = export_path.display().to_string();
+
+    test_key_sequence(
+        &mut app,
+        Some(&format!(":export<minus>settings {export_arg}<ret>")),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "error: {:?}", app.editor.get_status());
+        }),
+        false,
+    )
+    .await?;
+
+    assert_eq!(
+        std::fs::read_to_string(export_path.join("themes/zmax-export-test.toml"))?,
+        "# export round-trip marker\n",
+        "the export carried the nested file"
+    );
+
+    // Change the exported copy, import it, and the config directory follows.
+    std::fs::write(
+        export_path.join("themes/zmax-export-test.toml"),
+        "# imported\n",
+    )?;
+    test_key_sequence(
+        &mut app,
+        Some(&format!(":import<minus>settings {export_arg}<ret>")),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "error: {:?}", app.editor.get_status());
+        }),
+        false,
+    )
+    .await?;
+    assert_eq!(
+        std::fs::read_to_string(&marker)?,
+        "# imported\n",
+        "the import wrote the config directory back"
+    );
+
+    std::fs::remove_file(&marker)?;
+    Ok(())
+}
+
+/// JetBrains "Clear All Notifications": `:messages` reads the log, so clearing
+/// it has to empty what that command would show.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_messages_clear_empties_the_log() -> anyhow::Result<()> {
+    test_key_sequences(
+        &mut helpers::AppBuilder::new().build()?,
+        vec![
+            // Any status line goes into the log; `:messages` itself reports
+            // "no messages" when it is empty.
+            (
+                Some(":pin<minus>tab<ret>"),
+                Some(&|app| {
+                    assert!(
+                        !app.editor.messages.is_empty(),
+                        "a status message was logged"
+                    );
+                }),
+            ),
+            (
+                Some(":messages<minus>clear<ret>"),
+                Some(&|app| {
+                    // Everything before the clear is gone; what remains is the
+                    // line reporting it, which `set_status` logs like any other.
+                    assert_eq!(app.editor.messages.len(), 1, "only the confirmation is left");
+                    assert!(
+                        app.editor.messages[0].0.starts_with("cleared "),
+                        "and that one line is the confirmation: {:?}",
+                        app.editor.messages[0].0
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+
+    Ok(())
+}

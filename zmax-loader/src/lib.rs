@@ -147,8 +147,23 @@ pub fn config_file() -> PathBuf {
     CONFIG_FILE.get().map(|path| path.to_path_buf()).unwrap()
 }
 
+/// The config file, or `None` when `initialize_config_file` has not run.
+///
+/// A normal session initialises it during start-up, so [`config_file`] may
+/// unwrap; callers that can run before that (or in a test harness that never
+/// starts the editor) use this instead of panicking.
+pub fn config_file_checked() -> Option<PathBuf> {
+    CONFIG_FILE.get().map(|path| path.to_path_buf())
+}
+
 pub fn log_file() -> PathBuf {
     LOG_FILE.get().map(|path| path.to_path_buf()).unwrap()
+}
+
+/// The log file, or `None` when `initialize_log_file` has not run. See
+/// [`config_file_checked`].
+pub fn log_file_checked() -> Option<PathBuf> {
+    LOG_FILE.get().map(|path| path.to_path_buf())
 }
 
 pub fn workspace_config_file() -> PathBuf {

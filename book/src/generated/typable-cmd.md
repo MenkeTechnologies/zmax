@@ -488,6 +488,12 @@
 | `:tlast` | Jump to the last matching tag (vim :tlast). |
 | `:pop`, `:po` | Pop the tag stack, returning to where the last :tag jumped from (vim :pop). |
 | `:tags` | Show the tag stack depth and the current matching tag (vim :tags). |
+| `:special-paths`, `:special-files`, `:browse-special-paths` | Pick one of the editor's own files or directories and open it (JetBrains Special Files and Folders). |
+| `:show-log-in-finder`, `:reveal-log` | Reveal the log file in the OS file manager (JetBrains Show Log in Finder). |
+| `:collect-logs`, `:diagnostic-data` | Version, paths and the tail of the log, for a bug report (JetBrains Collect Logs and Diagnostic Data). |
+| `:messages-clear`, `:mesc`, `:clear-notifications` | Empty the message log (JetBrains Clear All Notifications). |
+| `:export-settings`, `:settings-export` | Copy the config directory into DIR (JetBrains Export Settings). |
+| `:import-settings`, `:settings-import` | Copy a directory of settings back over the config directory and reload (JetBrains Import Settings). |
 | `:messages`, `:mes` | Show the message log — every status/error shown this session (vim :messages). |
 | `:Man`, `:man` | Open a man page in the run console (neovim :Man). |
 | `:Man-next-manpage`, `:man-next-manpage` | Show the next page of the topic :Man looked up, wrapping at the end (emacs Man-next-manpage). |

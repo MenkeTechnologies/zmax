@@ -745,6 +745,8 @@
 | `harpoon_next` | Open the next harpoon mark | **spacemacs, hybrid** — normal: `` <space>Hn ``, select: `` <space>Hn `` |
 | `harpoon_prev` | Open the previous harpoon mark | **spacemacs, hybrid** — normal: `` <space>Hp ``, select: `` <space>Hp `` |
 | `bookmark_toggle` | Toggle a line bookmark (JetBrains F11) | **spacemacs, hybrid** — normal: `` <space>rt ``, select: `` <space>rt `` |
+| `bookmark_open_tabs` | Bookmark the cursor line of every open buffer (JetBrains Bookmark Open Tabs) |  |
+| `open_bookmarked_files` | Open every file that holds a line bookmark (JetBrains Open All Bookmarked Files) |  |
 | `bookmark_next` | Jump to the next line bookmark (JetBrains) | **spacemacs, hybrid** — normal: `` <space>rn ``, select: `` <space>rn `` |
 | `bookmark_prev` | Jump to the previous line bookmark (JetBrains) | **spacemacs, hybrid** — normal: `` <space>rN ``, select: `` <space>rN `` |
 | `harpoon_menu` | Open the harpoon marks menu | **spacemacs, hybrid** — normal: `` <space>Hh ``, `` <space>Hl ``, select: `` <space>Hh ``, `` <space>Hl `` |

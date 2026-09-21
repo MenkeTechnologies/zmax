@@ -1136,6 +1136,8 @@ impl MappableCommand {
         harpoon_next, "Open the next harpoon mark",
         harpoon_prev, "Open the previous harpoon mark",
         bookmark_toggle, "Toggle a line bookmark (JetBrains F11)",
+        bookmark_open_tabs, "Bookmark the cursor line of every open buffer (JetBrains Bookmark Open Tabs)",
+        open_bookmarked_files, "Open every file that holds a line bookmark (JetBrains Open All Bookmarked Files)",
         bookmark_next, "Jump to the next line bookmark (JetBrains)",
         bookmark_prev, "Jump to the previous line bookmark (JetBrains)",
         harpoon_menu, "Open the harpoon marks menu",
@@ -34034,6 +34036,84 @@ fn bookmark_cycle(cx: &mut Context, forward: bool) {
 /// JetBrains "Next Bookmark": jump to the next line bookmark (wraps).
 fn bookmark_next(cx: &mut Context) {
     bookmark_cycle(cx, true);
+}
+
+/// JetBrains "Bookmark Open Tabs" (`BookmarkOpenTabs`): drop a line bookmark in
+/// every open buffer at the line its cursor is on.
+///
+/// A buffer with no file (a scratch) has nothing to bookmark and is skipped
+/// rather than refusing the whole run, and a line already bookmarked is left
+/// as it is instead of being toggled off.
+fn bookmark_open_tabs(cx: &mut Context) {
+    let mut lines: Vec<(std::path::PathBuf, usize)> = Vec::new();
+    for view in cx.editor.tree.views() {
+        let view = view.0;
+        if let Some(doc) = cx.editor.document(view.doc) {
+            if let Some(path) = doc.path() {
+                let text = doc.text().slice(..);
+                let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+                lines.push((path.to_path_buf(), line));
+            }
+        }
+    }
+    // Buffers that are open but not shown in any split are tabs too.
+    for doc in cx.editor.documents() {
+        if let Some(path) = doc.path() {
+            if !lines.iter().any(|(p, _)| p == path) {
+                lines.push((path.to_path_buf(), 0));
+            }
+        }
+    }
+    if lines.is_empty() {
+        cx.editor.set_status("no file buffers to bookmark");
+        return;
+    }
+    let mut marks = BOOKMARKS.lock().unwrap();
+    let mut added = 0;
+    for (path, line) in lines {
+        if !marks.iter().any(|(p, l)| *p == path && *l == line) {
+            marks.push((path, line));
+            added += 1;
+        }
+    }
+    marks.sort();
+    drop(marks);
+    cx.editor.set_status(format!("bookmarked {added} tab(s)"));
+}
+
+/// JetBrains "Open All Bookmarked Files" (`OpenBookmarkGroup`): open every file
+/// that holds a line bookmark, leaving the focus where it was.
+fn open_bookmarked_files(cx: &mut Context) {
+    let mut paths: Vec<std::path::PathBuf> = BOOKMARKS
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|(p, _)| p.clone())
+        .collect();
+    paths.sort();
+    paths.dedup();
+    if paths.is_empty() {
+        cx.editor.set_status("no bookmarks yet");
+        return;
+    }
+    let focus = cx.editor.tree.focus;
+    let mut opened = 0;
+    let mut failed = 0;
+    for path in &paths {
+        match cx.editor.open(path, Action::Load) {
+            Ok(_) => opened += 1,
+            Err(_) => failed += 1,
+        }
+    }
+    cx.editor.focus(focus);
+    if failed > 0 {
+        cx.editor.set_status(format!(
+            "opened {opened} bookmarked file(s), {failed} could not be read"
+        ));
+    } else {
+        cx.editor
+            .set_status(format!("opened {opened} bookmarked file(s)"));
+    }
 }
 
 /// JetBrains "Previous Bookmark": jump to the previous line bookmark (wraps).

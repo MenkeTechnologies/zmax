@@ -4644,6 +4644,150 @@ fn man_previous_manpage(
 
 /// vim `:messages` / `:mes` — show the message log (every status/error/warning
 /// shown this session, newest last), the way emacs shows its `*Messages*` buffer.
+/// `:messages-clear` — JetBrains "Clear All Notifications"
+/// (`ClearAllNotifications`): empty the message log the status line and
+/// `:messages` read from.
+fn messages_clear(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = cx.editor.messages.len();
+    cx.editor.messages.clear();
+    // `set_status` logs too, so the line confirming the clear is the only one
+    // left — which is what the status line is showing anyway.
+    cx.editor.set_status(format!("cleared {n} message(s)"));
+    Ok(())
+}
+
+/// Entries of the config directory that settings export/import must not carry.
+///
+/// `runtime` is a checkout of the shipped grammars and queries — here it is a
+/// symlink at the repository, 19 MB of grammar sources and read-only git packs
+/// that fail to copy and belong to the install, not to your settings. The
+/// caches and logs are equally not settings, and `projects` is per-machine
+/// session state.
+const SETTINGS_EXPORT_SKIP: &[&str] = &[
+    "runtime",
+    "grammars",
+    ".git",
+    "cache",
+    "projects",
+    "zmax.log",
+];
+
+/// Copy `from` into `to` recursively, returning how many files were written.
+/// Used by settings export/import, which move a directory of small text files.
+///
+/// Symlinks are followed rather than copied: an export that carried a link
+/// instead of the file behind it would be useless on another machine. Depth is
+/// capped so a link pointing at one of its own parents cannot spin forever,
+/// anything that is neither a file nor a directory is skipped, and the entries
+/// in [`SETTINGS_EXPORT_SKIP`] are left behind at the top level.
+fn copy_dir_all(from: &std::path::Path, to: &std::path::Path) -> anyhow::Result<usize> {
+    fn copy_into(
+        from: &std::path::Path,
+        to: &std::path::Path,
+        depth: usize,
+    ) -> anyhow::Result<usize> {
+        const MAX_DEPTH: usize = 16;
+        if depth > MAX_DEPTH {
+            return Ok(0);
+        }
+        std::fs::create_dir_all(to).map_err(|e| anyhow!("{}: {e}", to.display()))?;
+        let mut n = 0;
+        for entry in std::fs::read_dir(from).map_err(|e| anyhow!("{}: {e}", from.display()))? {
+            let entry = entry?;
+            let name = entry.file_name();
+            if SETTINGS_EXPORT_SKIP
+                .iter()
+                .any(|skip| std::ffi::OsStr::new(skip) == name)
+            {
+                continue;
+            }
+            let src = entry.path();
+            let dst = to.join(&name);
+            // `metadata` follows symlinks; `entry.file_type()` does not.
+            let Ok(meta) = std::fs::metadata(&src) else {
+                continue; // a broken link has nothing to copy
+            };
+            if meta.is_dir() {
+                n += copy_into(&src, &dst, depth + 1)?;
+            } else if meta.is_file() {
+                std::fs::copy(&src, &dst).map_err(|e| anyhow!("{}: {e}", src.display()))?;
+                n += 1;
+            }
+        }
+        Ok(n)
+    }
+    copy_into(from, to, 0)
+}
+
+/// `:export-settings DIR` — JetBrains "Export Settings" (`ExportSettings`):
+/// copy the whole config directory (config.toml, themes, snippets, the
+/// language file, every runtime override) into `DIR`.
+///
+/// A directory rather than the IDE's zip: nothing here needs unpacking, and a
+/// plain tree is what `:import-settings` reads back and what you would put in
+/// a dotfiles repository. The install's own `runtime`, the caches, the log and
+/// the per-machine `projects` state are left behind — see
+/// [`SETTINGS_EXPORT_SKIP`].
+fn export_settings(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dest = args.first().context("usage: :export-settings DIR")?;
+    let from = zmax_loader::config_dir();
+    if !from.exists() {
+        bail!("{} does not exist — nothing to export", from.display());
+    }
+    let n = copy_dir_all(&from, std::path::Path::new(dest))?;
+    cx.editor
+        .set_status(format!("exported {n} settings file(s) to {dest}"));
+    Ok(())
+}
+
+/// `:import-settings DIR` — JetBrains "Import Settings" (`ImportSettings`):
+/// copy a directory written by `:export-settings` back over the config
+/// directory, then reload the config so the session picks it up.
+///
+/// Files already there that the export does not carry are left alone, as the
+/// IDE's import merges rather than wipes.
+fn import_settings(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let src = args.first().context("usage: :import-settings DIR")?;
+    let src = std::path::Path::new(src);
+    if !src.is_dir() {
+        bail!("{} is not a directory", src.display());
+    }
+    let n = copy_dir_all(src, &zmax_loader::config_dir())?;
+    // Reloading needs a config file the session knows about; without one
+    // (before start-up finished, or under a test harness) the files are still
+    // imported and the next start picks them up.
+    if zmax_loader::config_file_checked().is_some() {
+        refresh_config(cx, Args::default(), PromptEvent::Validate)?;
+        cx.editor
+            .set_status(format!("imported {n} settings file(s); config reloaded"));
+    } else {
+        cx.editor
+            .set_status(format!("imported {n} settings file(s)"));
+    }
+    Ok(())
+}
+
 fn messages_list(
     cx: &mut compositor::Context,
     _args: Args,
@@ -7337,6 +7481,205 @@ fn inject_language(
     Ok(())
 }
 
+/// Reveal `path` in the OS file manager: macOS `open -R` selects the entry,
+/// elsewhere the parent directory is opened. Shared by `:RevealInFinder` and
+/// `:show-log-in-finder`.
+fn reveal_path_in_file_manager(path: &std::path::Path) {
+    let mut cmd = if cfg!(target_os = "macos") {
+        let mut c = std::process::Command::new("open");
+        c.arg("-R").arg(path);
+        c
+    } else {
+        let dir = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+        let mut c = std::process::Command::new("xdg-open");
+        c.arg(dir);
+        c
+    };
+    let _ = cmd
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
+
+/// `:show-log-in-finder` — JetBrains "Show Log in Finder" / "Show Log in
+/// Explorer" (`ShowLog.Finder`): reveal the log FILE in the file manager.
+/// `:log` opens it in a buffer; this is the other half, for handing the file
+/// to someone else.
+fn show_log_in_finder(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let log = zmax_loader::log_file_checked().context("the log file is not open yet")?;
+    if !log.exists() {
+        bail!("{} does not exist yet", log.display());
+    }
+    reveal_path_in_file_manager(&log);
+    cx.editor.set_status(format!("revealed {}", log.display()));
+    Ok(())
+}
+
+/// `:special-paths` — JetBrains "Special Files and Folders…"
+/// (`BrowseSpecialPaths`): the directories and files the editor itself uses,
+/// picked and opened. A directory opens in the file explorer, a file in a
+/// buffer, so the picker is useful for both kinds.
+fn special_paths(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    struct Entry {
+        what: &'static str,
+        path: std::path::PathBuf,
+    }
+    let mut items = vec![
+        Entry {
+            what: "config directory",
+            path: zmax_loader::config_dir(),
+        },
+        Entry {
+            what: "config file",
+            path: zmax_loader::config_file_checked()
+                .unwrap_or_else(|| zmax_loader::config_dir().join("config.toml")),
+        },
+        Entry {
+            what: "language config",
+            path: zmax_loader::lang_config_file(),
+        },
+        Entry {
+            what: "log file",
+            path: zmax_loader::log_file_checked()
+                .unwrap_or_else(|| zmax_loader::config_dir().join("zmax.log")),
+        },
+        Entry {
+            what: "cache directory",
+            path: zmax_loader::cache_dir(),
+        },
+        Entry {
+            what: "data directory",
+            path: zmax_loader::data_dir(),
+        },
+        Entry {
+            what: "workspace config",
+            path: zmax_loader::workspace_config_file(),
+        },
+    ];
+    items.extend(zmax_loader::runtime_dirs().iter().map(|dir| Entry {
+        what: "runtime directory",
+        path: dir.clone(),
+    }));
+
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let columns = [
+                    ui::PickerColumn::new("what", |e: &Entry, _: &()| e.what.into()),
+                    ui::PickerColumn::new("path", |e: &Entry, _: &()| {
+                        let shown = e.path.display().to_string();
+                        if e.path.exists() {
+                            shown.into()
+                        } else {
+                            format!("{shown} (missing)").into()
+                        }
+                    }),
+                ];
+                let picker = ui::Picker::new(columns, 0, items, (), |cx, entry: &Entry, action| {
+                    // A directory opens in the file explorer, a file in a
+                    // buffer, so one picker serves both kinds of entry.
+                    if entry.path.is_dir() {
+                        // A picker's callback cannot push a layer directly, so
+                        // the explorer goes on through the job queue, as the
+                        // other nested overlays here do.
+                        let dir = entry.path.clone();
+                        cx.editor.set_status(format!("browsing {}", dir.display()));
+                        cx.jobs.callback(async move {
+                            let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+                                move |editor: &mut Editor, compositor: &mut Compositor| {
+                                    match ui::file_explorer(dir.clone(), editor) {
+                                        Ok(picker) => {
+                                            compositor.push(Box::new(overlaid(picker)))
+                                        }
+                                        Err(e) => {
+                                            editor.set_error(format!("{}: {e}", dir.display()))
+                                        }
+                                    }
+                                },
+                            ));
+                            Ok(call)
+                        });
+                    } else if let Err(e) = cx.editor.open(&entry.path, action) {
+                        cx.editor
+                            .set_error(format!("{}: {e}", entry.path.display()));
+                    }
+                });
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// `:collect-logs [FILE]` — JetBrains "Collect Logs and Diagnostic Data"
+/// (`CollectZippedLogs`): write one file holding the version, the paths in
+/// play and the tail of the log, ready to attach to a bug report.
+///
+/// Plain text rather than the IDE's zip: the log is the only bulky part and a
+/// tail of it is what a report needs, so there is nothing to unpack.
+fn collect_logs(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    const TAIL_LINES: usize = 500;
+    let log = zmax_loader::log_file_checked().unwrap_or_default();
+    let log_text = std::fs::read_to_string(&log).unwrap_or_default();
+    let tail: Vec<&str> = log_text
+        .lines()
+        .rev()
+        .take(TAIL_LINES)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+
+    let mut out = String::new();
+    out.push_str(&format!("zmax {}\n", zmax_loader::VERSION_AND_GIT_HASH));
+    out.push_str(&format!("os: {}\n", std::env::consts::OS));
+    out.push_str(&format!("arch: {}\n", std::env::consts::ARCH));
+    out.push_str(&format!("config dir: {}\n", zmax_loader::config_dir().display()));
+    out.push_str(&format!("cache dir: {}\n", zmax_loader::cache_dir().display()));
+    out.push_str(&format!("log file: {}\n", log.display()));
+    out.push_str(&format!("open buffers: {}\n", cx.editor.documents().count()));
+    out.push_str(&format!("\n--- last {} log lines ---\n", tail.len()));
+    out.push_str(&tail.join("\n"));
+    out.push('\n');
+
+    match args.first() {
+        Some(path) => {
+            std::fs::write(path, &out).map_err(|e| anyhow!("{path}: {e}"))?;
+            cx.editor
+                .set_status(format!("wrote diagnostic data to {path}"));
+        }
+        None => {
+            super::show_text_in_scratch(cx.editor, &out);
+            cx.editor.set_status("diagnostic data");
+        }
+    }
+    Ok(())
+}
+
 /// `:RevealInFinder` — reveal the current file in the OS file manager (JetBrains
 /// "Reveal in Finder"). macOS `open -R`; elsewhere open the parent directory.
 fn reveal_in_finder(
@@ -7355,21 +7698,7 @@ fn reveal_in_finder(
         cx.editor.set_error("no file to reveal");
         return Ok(());
     };
-    let mut cmd = if cfg!(target_os = "macos") {
-        let mut c = std::process::Command::new("open");
-        c.arg("-R").arg(&path);
-        c
-    } else {
-        let dir = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
-        let mut c = std::process::Command::new("xdg-open");
-        c.arg(dir);
-        c
-    };
-    let _ = cmd
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn();
+    reveal_path_in_file_manager(&path);
     cx.editor.set_status(format!("revealed {}", path.display()));
     Ok(())
 }
@@ -54585,6 +54914,72 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "special-paths",
+        aliases: &["special-files", "browse-special-paths"],
+        doc: "Pick one of the editor's own files or directories and open it (JetBrains Special Files and Folders).",
+        fun: special_paths,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "show-log-in-finder",
+        aliases: &["reveal-log"],
+        doc: "Reveal the log file in the OS file manager (JetBrains Show Log in Finder).",
+        fun: show_log_in_finder,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "collect-logs",
+        aliases: &["diagnostic-data"],
+        doc: "Version, paths and the tail of the log, for a bug report (JetBrains Collect Logs and Diagnostic Data).",
+        fun: collect_logs,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "messages-clear",
+        aliases: &["mesc", "clear-notifications"],
+        doc: "Empty the message log (JetBrains Clear All Notifications).",
+        fun: messages_clear,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "export-settings",
+        aliases: &["settings-export"],
+        doc: "Copy the config directory into DIR (JetBrains Export Settings).",
+        fun: export_settings,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "import-settings",
+        aliases: &["settings-import"],
+        doc: "Copy a directory of settings back over the config directory and reload (JetBrains Import Settings).",
+        fun: import_settings,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

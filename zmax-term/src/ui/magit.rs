@@ -340,6 +340,20 @@ pub struct LogEntry {
     pub summary: String,
 }
 
+/// The commit subject with a leading `git log --decorate` decoration removed:
+/// `(HEAD -> main, origin/main) fix the thing` -> `fix the thing`. An unclosed
+/// parenthesis is left alone, since then it is part of the subject. Pure —
+/// unit tested.
+fn strip_decoration(summary: &str) -> String {
+    let t = summary.trim();
+    if let Some(rest) = t.strip_prefix('(') {
+        if let Some(end) = rest.find(')') {
+            return rest[end + 1..].trim().to_string();
+        }
+    }
+    t.to_string()
+}
+
 /// Parse `git log --oneline [--decorate]` output into [`LogEntry`]s. Pure and
 /// unit-tested.
 ///
@@ -2832,6 +2846,63 @@ impl MagitLog {
 }
 
 impl MagitLog {
+    /// JetBrains "Copy Commit Subject" (`Vcs.CopyCommitSubjectAction`): the
+    /// selected commit's subject line into the clipboard register.
+    ///
+    /// The subject only — not the sha, which `SPC g Y r` already copies — so
+    /// it can go straight into a changelog or a cherry-pick note.
+    fn copy_commit_subject(&self, cx: &mut Context) {
+        let Some(entry) = self.entries.get(self.selected) else {
+            return;
+        };
+        // `git log --oneline --decorate` puts `(HEAD -> main, …)` in front of
+        // the subject; the IDE copies the message, so the decoration goes.
+        let subject = strip_decoration(&entry.summary);
+        let _ = cx.editor.registers.write('+', vec![subject.clone()]);
+        cx.editor.set_status(format!("copied: {subject}"));
+    }
+
+    /// JetBrains "Show All Affected Files" (`VcsHistory.ShowAllAffected`): the
+    /// files the selected commit touched, with their add/delete counts.
+    fn show_affected_files(&self, cx: &mut Context) {
+        let Some(entry) = self.entries.get(self.selected) else {
+            return;
+        };
+        let sha = entry.sha.clone();
+        let out = git_output(
+            &self.repo_dir,
+            &["show", "--numstat", "--format=%h %s%n", &sha],
+        )
+        .unwrap_or_default();
+        if out.trim().is_empty() {
+            cx.editor.set_error(format!("no files for {sha}"));
+            return;
+        }
+        crate::commands::show_text_in_scratch(cx.editor, &out);
+        cx.editor
+            .set_status(format!("files affected by {sha}"));
+    }
+
+    /// JetBrains "History Up to Here" (`Vcs.ShowHistoryForRevision`): the log
+    /// of the repository up to and including the selected commit.
+    fn history_up_to_here(&self, cx: &mut Context) {
+        let Some(entry) = self.entries.get(self.selected) else {
+            return;
+        };
+        let sha = entry.sha.clone();
+        let out = git_output(
+            &self.repo_dir,
+            &["log", "--oneline", "--decorate", "-n", "200", &sha],
+        )
+        .unwrap_or_default();
+        if out.trim().is_empty() {
+            cx.editor.set_error(format!("no history up to {sha}"));
+            return;
+        }
+        crate::commands::show_text_in_scratch(cx.editor, &out);
+        cx.editor.set_status(format!("history up to {sha}"));
+    }
+
     /// JetBrains "Cherry-Pick" (`Vcs.ApplySelectedChanges`): replay the
     /// selected commit onto the current branch.
     ///
@@ -2891,6 +2962,9 @@ impl Component for MagitLog {
             }
             // `A` is magit's own apply/cherry-pick key.
             key!('A') => self.cherry_pick(cx),
+            key!('y') => self.copy_commit_subject(cx),
+            key!('f') => self.show_affected_files(cx),
+            key!('h') => self.history_up_to_here(cx),
             // `log-view-toggle-entry-display`: short form <-> full entry.
             key!(Tab) => {
                 if let Some(status) = self.toggle_entry_display() {
@@ -2923,7 +2997,7 @@ impl Component for MagitLog {
 
         let title = " Magit log";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d show diff  Tab long form  A cherry-pick  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  Tab long form  y subject  f files  h history  A cherry-pick  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -5850,6 +5924,20 @@ MM both.rs
         assert_eq!(log[0].summary, "feat: do a thing");
         assert_eq!(log[1].sha, "def5678");
         assert_eq!(log[1].summary, "fix: another");
+    }
+
+    #[test]
+    fn strip_decoration_drops_only_a_leading_ref_list() {
+        assert_eq!(
+            strip_decoration("(HEAD -> main, origin/main) fix the thing"),
+            "fix the thing"
+        );
+        // No decoration, and a subject that merely starts with a paren.
+        assert_eq!(strip_decoration("fix the thing"), "fix the thing");
+        assert_eq!(
+            strip_decoration("(unclosed subject"),
+            "(unclosed subject"
+        );
     }
 
     #[test]
