@@ -17408,11 +17408,14 @@ fn toggle_fringe(cx: &mut Context) {
     ));
 }
 
+/// The five background-work switches [`power_save_mode`] turns off, in the
+/// order it reads them back.
+type PowerSaveState = (bool, bool, bool, bool, bool);
+
 /// What [`power_save_mode`] switched off, so the second toggle puts back what
 /// was on rather than turning everything on.
-static SAVED_POWER_SAVE: once_cell::sync::Lazy<
-    std::sync::Mutex<Option<(bool, bool, bool, bool, bool)>>,
-> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
+static SAVED_POWER_SAVE: once_cell::sync::Lazy<std::sync::Mutex<Option<PowerSaveState>>> =
+    once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
 
 /// JetBrains "Power Save Mode" (`TogglePowerSave`): stop the work that happens
 /// while you are not asking for anything — the background analysis the IDE
@@ -17456,10 +17459,18 @@ fn power_save_mode(cx: &mut Context) {
         .set_status(format!("power save mode: {}", if on { "on" } else { "off" }));
 }
 
+/// The gutters, buffer-line setting and status-line flag
+/// [`distraction_free_mode`] hides.
+type DistractionFreeState = (
+    Vec<zmax_view::editor::GutterType>,
+    zmax_view::editor::BufferLine,
+    bool,
+);
+
 /// What [`distraction_free_mode`] hid, for the same reason as
 /// [`SAVED_POWER_SAVE`].
 static SAVED_DISTRACTION_FREE: once_cell::sync::Lazy<
-    std::sync::Mutex<Option<(Vec<zmax_view::editor::GutterType>, zmax_view::editor::BufferLine, bool)>>,
+    std::sync::Mutex<Option<DistractionFreeState>>,
 > = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
 
 /// JetBrains "Distraction Free Mode" (`ToggleDistractionFreeMode`): the text
@@ -39042,7 +39053,7 @@ fn paste_from_history(cx: &mut Context) {
         let mode = cx.editor.mode;
         let (view, doc) = current!(cx.editor);
         paste_impl(
-            &[entry.clone()],
+            std::slice::from_ref(entry),
             doc,
             view,
             Paste::Before,
