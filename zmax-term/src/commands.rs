@@ -688,6 +688,7 @@ impl MappableCommand {
         toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
         power_save_mode, "Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode)",
         distraction_free_mode, "Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode)",
+        toggle_breadcrumbs, "Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)",
         toggle_sticky_lines, "Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
@@ -17590,6 +17591,26 @@ fn distraction_free_mode(cx: &mut Context) {
         "distraction free mode: {}",
         if on { "on" } else { "off" }
     ));
+}
+
+/// Whether the IDE toolbar draws the breadcrumb trail — JetBrains
+/// "Show Breadcrumbs" (`EditorToggleShowBreadcrumbs`). On, as the IDE ships it.
+static BREADCRUMBS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Whether the IDE view should draw the breadcrumb trail.
+pub(crate) fn breadcrumbs_enabled() -> bool {
+    BREADCRUMBS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// JetBrains "Show Breadcrumbs" (`EditorToggleShowBreadcrumbs`): the trail of
+/// directories, file and enclosing symbol on the toolbar, on or off.
+///
+/// `navigation_bar` (the jump) keeps working either way — the IDE separates
+/// showing the trail from navigating by it, and so does this.
+fn toggle_breadcrumbs(cx: &mut Context) {
+    let on = !BREADCRUMBS.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor
+        .set_status(format!("breadcrumbs: {}", if on { "on" } else { "off" }));
 }
 
 /// Whether the sticky scope headers are drawn, and how many at most — JetBrains

@@ -3173,9 +3173,13 @@ impl Ide {
             area.x
         };
 
-        // breadcrumb of the current file in the gap between the selector and buttons
+        // breadcrumb of the current file in the gap between the selector and
+        // buttons — JetBrains "Show Breadcrumbs" turns it off.
         let bc_start = lx + 2;
-        if buttons_start > bc_start + 4 && !self.status_path.is_empty() {
+        if crate::commands::breadcrumbs_enabled()
+            && buttons_start > bc_start + 4
+            && !self.status_path.is_empty()
+        {
             let avail = (buttons_start - 1 - bc_start) as usize;
             let parts: Vec<&str> = self
                 .status_path
