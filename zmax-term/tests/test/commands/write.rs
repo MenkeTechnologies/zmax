@@ -1216,3 +1216,50 @@ async fn test_toggle_file_readonly_changes_permissions() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// JetBrains "Show Sticky Lines" / "Configure Sticky Lines…": the toggle and
+/// the limit are one setting pair, and `:sticky-lines` with no argument reports
+/// both. The limit is clamped, so a silly number cannot fill a window with
+/// headers.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_sticky_lines_toggle_and_limit() -> anyhow::Result<()> {
+    let status = |app: &Application| app.editor.get_status().map(|(m, _)| m.to_string());
+
+    test_key_sequences(
+        &mut helpers::AppBuilder::new().build()?,
+        vec![
+            (
+                Some(":sticky<minus>lines<ret>"),
+                Some(&move |app: &Application| {
+                    assert_eq!(status(app), Some("sticky lines: on, at most 5".to_string()));
+                }),
+            ),
+            (
+                Some(":sticky<minus>lines 3<ret>"),
+                Some(&move |app: &Application| {
+                    assert_eq!(status(app), Some("sticky lines: at most 3".to_string()));
+                }),
+            ),
+            // Clamped at 20; the window caps it further by its own height.
+            (
+                Some(":sticky<minus>lines 999<ret>"),
+                Some(&move |app: &Application| {
+                    assert_eq!(status(app), Some("sticky lines: at most 20".to_string()));
+                }),
+            ),
+            (
+                Some(":sticky<minus>lines nine<ret>"),
+                Some(&move |app: &Application| {
+                    assert!(
+                        app.editor.is_err(),
+                        "a non-number is an error, not a silent no-op"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+
+    Ok(())
+}

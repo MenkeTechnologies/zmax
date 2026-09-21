@@ -1572,6 +1572,12 @@ impl EditorView {
         theme: &Theme,
         loader: &syntax::Loader,
     ) {
+        // JetBrains "Show Sticky Lines" (`EditorGutterToggleGlobalStickyLines`):
+        // the headers can be turned off, and the IDE's "Configure Sticky Lines…"
+        // sets how many it will pin at once.
+        if !crate::commands::sticky_lines_enabled() {
+            return;
+        }
         if inner.height < 6 || inner.width < 8 {
             return;
         }
@@ -1610,8 +1616,9 @@ impl EditorView {
         if ctx.is_empty() {
             return;
         }
-        // Keep at most a third of the viewport, innermost-closest to the content.
-        let max = ((inner.height as usize) / 3).clamp(1, 5);
+        // Keep at most a third of the viewport, innermost-closest to the
+        // content, and never more than the configured limit.
+        let max = ((inner.height as usize) / 3).clamp(1, crate::commands::sticky_lines_limit());
         if ctx.len() > max {
             ctx = ctx.split_off(ctx.len() - max);
         }

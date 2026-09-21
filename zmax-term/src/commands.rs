@@ -684,6 +684,7 @@ impl MappableCommand {
         toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
         power_save_mode, "Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode)",
         distraction_free_mode, "Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode)",
+        toggle_sticky_lines, "Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
         toggle_auto_highlight, "Toggle automatic symbol-under-cursor highlight (SPC t h a)",
@@ -17357,6 +17358,43 @@ fn distraction_free_mode(cx: &mut Context) {
         "distraction free mode: {}",
         if on { "on" } else { "off" }
     ));
+}
+
+/// Whether the sticky scope headers are drawn, and how many at most — JetBrains
+/// "Show Sticky Lines" and "Configure Sticky Lines…". On, five, as the IDE
+/// ships them.
+static STICKY_LINES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+static STICKY_LINES_LIMIT: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(5);
+
+/// Whether the editor view should pin scope headers at the top.
+pub(crate) fn sticky_lines_enabled() -> bool {
+    STICKY_LINES.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The most headers to pin at once; the view still caps this at a third of its
+/// own height, so a short window pins fewer.
+pub(crate) fn sticky_lines_limit() -> usize {
+    STICKY_LINES_LIMIT
+        .load(std::sync::atomic::Ordering::Relaxed)
+        .max(1)
+}
+
+/// Set the limit, returning what it became. Clamped to 1..=20: zero headers is
+/// what the toggle is for, and twenty is already more than any window will
+/// give a third of its height to.
+pub(crate) fn set_sticky_lines_limit(n: usize) -> usize {
+    let n = n.clamp(1, 20);
+    STICKY_LINES_LIMIT.store(n, std::sync::atomic::Ordering::Relaxed);
+    n
+}
+
+/// JetBrains "Show Sticky Lines" (`EditorGutterToggleGlobalStickyLines`): the
+/// enclosing scope headers pinned at the top of the window, on or off.
+fn toggle_sticky_lines(cx: &mut Context) {
+    let on = !STICKY_LINES.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor
+        .set_status(format!("sticky lines: {}", if on { "on" } else { "off" }));
 }
 
 /// Toggle indentation guides (IntelliJ "View > Active Editor > Show Indent Guides").

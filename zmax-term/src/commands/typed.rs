@@ -24149,6 +24149,42 @@ pub(crate) fn git_on_current_file(
     }
 }
 
+/// `:sticky-lines [N]` — JetBrains "Configure Sticky Lines…": how many
+/// enclosing scope headers the window pins at once. With no argument it reports
+/// the current limit. The window still caps the headers at a third of its own
+/// height, so a short split pins fewer than the limit.
+fn sticky_lines_limit_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match args.first() {
+        Some(n) => {
+            let n: usize = n
+                .parse()
+                .map_err(|_| anyhow!("sticky-lines: {n} is not a number"))?;
+            let set = super::set_sticky_lines_limit(n);
+            cx.editor
+                .set_status(format!("sticky lines: at most {set}"));
+        }
+        None => {
+            let n = super::sticky_lines_limit();
+            cx.editor.set_status(format!(
+                "sticky lines: {}, at most {n}",
+                if super::sticky_lines_enabled() {
+                    "on"
+                } else {
+                    "off"
+                }
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// `:toggle-file-readonly` — JetBrains "Toggle Read-Only Attribute"
 /// (`ToggleReadOnlyAttribute`, its synonyms "Make File Writable" / "Make File
 /// Read-Only"): flip the write bits on the FILE, not just the buffer flag.
@@ -62740,6 +62776,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).",
         fun: ex_vc_revision_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sticky-lines",
+        aliases: &["sticky-context"],
+        doc: "Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines).",
+        fun: sticky_lines_limit_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),

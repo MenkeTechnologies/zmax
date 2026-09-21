@@ -293,6 +293,7 @@
 | `toggle_line_numbers` | Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers) |  |
 | `power_save_mode` | Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode) | **spacemacs, hybrid** — normal: `` <space>zp ``, select: `` <space>zp `` |
 | `distraction_free_mode` | Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode) | **spacemacs, hybrid** — normal: `` <space>zd ``, select: `` <space>zd `` |
+| `toggle_sticky_lines` | Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines) |  |
 | `toggle_indent_guides` | Toggle indentation guides (IntelliJ View > Show Indent Guides) |  |
 | `toggle_inlay_hints` | Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints) |  |
 | `toggle_auto_highlight` | Toggle automatic symbol-under-cursor highlight (SPC t h a) | **spacemacs, hybrid** — normal: `` <space>tha ``, select: `` <space>tha `` |
