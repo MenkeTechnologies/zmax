@@ -249,6 +249,97 @@ pub fn stop(run: &Run) {
 }
 
 /// Re-run the same command, returning a fresh `Run`.
+/// The names of the tests a run reported as failed, in the shapes the common
+/// runners print. Pure — unit tested.
+///
+/// * cargo/libtest: `test foo::bar ... FAILED`, and the `failures:` block that
+///   follows lists the same names indented.
+/// * pytest: `FAILED tests/test_x.py::test_y - AssertionError`.
+/// * jest/vitest: `✕ adds two numbers` / `✗ …`, and `● Console` is not a test.
+/// * go: `--- FAIL: TestThing (0.00s)`.
+///
+/// Names are deduplicated and kept in the order they first appeared, because
+/// that is the order a re-run reports them in and the order you read.
+pub fn failed_tests(lines: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut push = |name: &str| {
+        let name = name.trim();
+        if !name.is_empty() && !out.iter().any(|n| n == name) {
+            out.push(name.to_string());
+        }
+    };
+    for raw in lines {
+        let line = raw.trim();
+        // cargo / libtest
+        if let Some(rest) = line.strip_prefix("test ") {
+            if rest.ends_with("FAILED") {
+                if let Some((name, _)) = rest.split_once(" ... ") {
+                    push(name);
+                    continue;
+                }
+            }
+        }
+        // go
+        if let Some(rest) = line.strip_prefix("--- FAIL: ") {
+            push(rest.split_whitespace().next().unwrap_or(""));
+            continue;
+        }
+        // pytest
+        if let Some(rest) = line.strip_prefix("FAILED ") {
+            push(rest.split(" - ").next().unwrap_or(rest));
+            continue;
+        }
+        // jest / vitest
+        for marker in ["✕ ", "✗ "] {
+            if let Some(rest) = line.strip_prefix(marker) {
+                // `✕ adds (12 ms)` — the timing is not part of the name.
+                let name = rest.rsplit_once(" (").map(|(n, _)| n).unwrap_or(rest);
+                push(name);
+            }
+        }
+    }
+    out
+}
+
+/// The command that re-runs only `failed`, given the command that produced
+/// them — JetBrains "Rerun Failed Tests" (`RerunFailedTests`). `None` when the
+/// runner is one whose filter syntax we do not know, so the caller can say so
+/// rather than running something that means something else. Pure — unit tested.
+pub fn rerun_failed_command(cmd: &str, failed: &[String]) -> Option<String> {
+    if failed.is_empty() {
+        return None;
+    }
+    let base = cmd.trim();
+    // cargo test: the filter is a positional substring, and `--exact` with
+    // several `--` filters is not a thing, so one name per run is wrong —
+    // libtest takes repeated filters after `--`.
+    if base.starts_with("cargo test") || base.starts_with("cargo nextest") {
+        let filters = failed.join(" ");
+        return Some(if base.contains(" -- ") {
+            format!("{base} {filters}")
+        } else {
+            format!("{base} -- {filters}")
+        });
+    }
+    if base.starts_with("pytest") || base.contains("python -m pytest") {
+        // pytest takes each nodeid as its own argument.
+        return Some(format!("{base} {}", failed.join(" ")));
+    }
+    if base.starts_with("go test") {
+        // go's filter is one regex alternation.
+        return Some(format!("{base} -run '^({})$'", failed.join("|")));
+    }
+    if base.starts_with("npx jest") || base.starts_with("jest") || base.starts_with("npx vitest") || base.starts_with("vitest") {
+        // jest matches test names by regex with -t.
+        let escaped: Vec<String> = failed
+            .iter()
+            .map(|n| n.replace(['(', ')', '[', ']', '.', '+', '*', '?'], "."))
+            .collect();
+        return Some(format!("{base} -t '{}'", escaped.join("|")));
+    }
+    None
+}
+
 pub fn rerun(run: &Run) -> Run {
     let (cmd, shell, cwd) = {
         let s = run.lock().unwrap();
@@ -318,5 +409,68 @@ mod push_tests {
         s.push_line("你好".to_string()); // CJK: 2 cells each
         assert_eq!(s.line_widths[0], 3);
         assert_eq!(s.line_widths[1], 4);
+    }
+
+    fn lines(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn failed_tests_reads_every_runner_we_claim() {
+        let out = failed_tests(&lines(&[
+            "test parser::parses_empty ... ok",
+            "test parser::parses_nested ... FAILED",
+            "--- FAIL: TestRoundTrip (0.00s)",
+            "FAILED tests/test_api.py::test_timeout - AssertionError: 3 != 4",
+            "  ✕ adds two numbers (12 ms)",
+            "test parser::parses_nested ... FAILED",
+        ]));
+        assert_eq!(
+            out,
+            vec![
+                "parser::parses_nested".to_string(),
+                "TestRoundTrip".to_string(),
+                "tests/test_api.py::test_timeout".to_string(),
+                "adds two numbers".to_string(),
+            ],
+            "one entry per failure, deduplicated, in first-seen order"
+        );
+    }
+
+    #[test]
+    fn failed_tests_ignores_passes_and_noise() {
+        assert!(failed_tests(&lines(&[
+            "test a ... ok",
+            "--- PASS: TestOk (0.00s)",
+            "● Console",
+            "running 3 tests",
+        ]))
+        .is_empty());
+    }
+
+    #[test]
+    fn rerun_failed_command_speaks_each_runners_filter() {
+        let failed = vec!["a::b".to_string(), "c::d".to_string()];
+        assert_eq!(
+            rerun_failed_command("cargo test", &failed).unwrap(),
+            "cargo test -- a::b c::d"
+        );
+        // An existing `--` is not duplicated.
+        assert_eq!(
+            rerun_failed_command("cargo test -- --nocapture", &failed).unwrap(),
+            "cargo test -- --nocapture a::b c::d"
+        );
+        assert_eq!(
+            rerun_failed_command("go test ./...", &vec!["TestA".into()]).unwrap(),
+            "go test ./... -run '^(TestA)$'"
+        );
+        assert_eq!(
+            rerun_failed_command("pytest -q", &vec!["t.py::test_x".into()]).unwrap(),
+            "pytest -q t.py::test_x"
+        );
+        // An unknown runner is refused rather than guessed at.
+        assert!(rerun_failed_command("make check", &failed).is_none());
+        // Nothing failed, nothing to re-run.
+        assert!(rerun_failed_command("cargo test", &[]).is_none());
     }
 }

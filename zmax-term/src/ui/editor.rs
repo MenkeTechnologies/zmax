@@ -657,6 +657,19 @@ impl EditorView {
         }
     }
 
+    /// JetBrains "Rerun Failed Tests": re-run only what failed last time.
+    pub fn rerun_failed_tests(&mut self, cx: &mut crate::compositor::Context) {
+        match self.ide.as_mut() {
+            Some(ide) => match ide.rerun_failed() {
+                Ok(n) => cx
+                    .editor
+                    .set_status(format!("re-running {n} failed test(s)")),
+                Err(msg) => cx.editor.set_error(msg),
+            },
+            None => cx.editor.set_error("no previous run"),
+        }
+    }
+
     /// Stop the active run (Run-console context menu / toolbar Stop).
     pub fn stop_active_run(&mut self) {
         if let Some(ide) = self.ide.as_mut() {

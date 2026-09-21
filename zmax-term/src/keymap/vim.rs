@@ -2491,6 +2491,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "P" => toggle_comments,            // SPC c P : invert comment paragraphs
                 "C" => run_active_config,          // SPC c C : compile (run active config)
                 "r" => rerun_last_run,             // SPC c r : recompile (re-run last)
+                "f" => rerun_failed_tests,         // SPC c f : re-run only the failed tests (JetBrains Rerun Failed Tests)
                 "m" => run_config_manager,         // SPC c m : pick a build/run target (helm-make)
                 "k" => clear_run_output,           // SPC c k : kill compilation (clear run output)
                 "x" => comment_kill,               // SPC c x : kill the comment on the current line (emacs comment-kill)

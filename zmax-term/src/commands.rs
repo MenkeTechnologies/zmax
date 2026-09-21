@@ -1833,6 +1833,7 @@ impl MappableCommand {
         clear_run_output, "Clear the Run tool window output",
         open_log_file, "Open zmax's own log file (JetBrains Show Log)",
         global_search_masked, "Search the project, restricted to a file glob (JetBrains Find in Path file mask)",
+        rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
         run_prev_error, "Jump to the previous file:line in the run output",
@@ -52078,6 +52079,17 @@ fn rerun_last_run(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
             view.rerun_last_run(cx);
+        }
+    }));
+}
+
+/// JetBrains "Rerun Failed Tests" (`RerunFailedTests`): re-run the last
+/// command with only the tests that failed, read out of the Run console.
+fn rerun_failed_tests(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        match compositor.find::<crate::ui::EditorView>() {
+            Some(view) => view.rerun_failed_tests(cx),
+            None => cx.editor.set_error("no previous run"),
         }
     }));
 }

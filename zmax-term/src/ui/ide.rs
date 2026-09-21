@@ -838,6 +838,39 @@ impl Ide {
         true
     }
 
+    /// JetBrains "Rerun Failed Tests" (`RerunFailedTests`): re-run the last
+    /// command restricted to the tests it reported as failed.
+    ///
+    /// `Ok(n)` is how many tests the re-run covers. The two failure modes are
+    /// worth telling apart, so they are separate errors: nothing failed (there
+    /// is nothing to re-run) and an unrecognised runner (re-running the whole
+    /// suite would silently do the wrong thing).
+    pub fn rerun_failed(&mut self) -> Result<usize, &'static str> {
+        let Some(r) = self.run.clone() else {
+            return Err("no previous run");
+        };
+        let (cmd, shell, cwd, lines) = {
+            let s = r.lock().map_err(|_| "the run console is locked")?;
+            (s.cmd.clone(), s.shell.clone(), s.cwd.clone(), s.lines.clone())
+        };
+        let failed = crate::ui::run::failed_tests(&lines);
+        if failed.is_empty() {
+            return Err("no failed tests in the last run");
+        }
+        let Some(next) = crate::ui::run::rerun_failed_command(&cmd, &failed) else {
+            return Err("cannot filter this runner — re-run it yourself");
+        };
+        let prev_focus = self.focus;
+        crate::ui::run::stop(&r);
+        self.run = Some(crate::ui::run::spawn(next, shell, cwd));
+        self.select_tab(BottomTab::Run);
+        self.visible = true;
+        self.fold_problems = false;
+        self.run_error_idx = usize::MAX;
+        self.focus = prev_focus;
+        Ok(failed.len())
+    }
+
     /// Whether a run is attached and its process is still alive (`kill-compilation`
     /// checks this before signalling). `None` when no run has ever been started.
     pub fn run_running(&self) -> Option<bool> {
