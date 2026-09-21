@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6bd36e5b.js";
+            window.path_to_searchindex_js = "searchindex-d750180e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -990,6 +990,9 @@
 <tr><td><code>:buffer-close-others</code>, <code>:bco</code>, <code>:bcloseother</code></td><td>Close all buffers but the currently focused one.</td></tr>
 <tr><td><code>:buffer-close-others!</code>, <code>:bco!</code>, <code>:bcloseother!</code></td><td>Force close all buffers but the currently focused one.</td></tr>
 <tr><td><code>:buffer-close-unmodified</code>, <code>:bcu</code></td><td>Close every buffer with no unsaved changes, keeping pinned ones.</td></tr>
+<tr><td><code>:buffer-close-left</code>, <code>:bcl</code></td><td>Close the buffers left of this one in the bufferline, keeping pinned ones (JetBrains Close Tabs to the Left).</td></tr>
+<tr><td><code>:buffer-close-right</code>, <code>:bcr</code></td><td>Close the buffers right of this one in the bufferline, keeping pinned ones (JetBrains Close Tabs to the Right).</td></tr>
+<tr><td><code>:buffer-close-readonly</code>, <code>:bcro</code></td><td>Close every read-only buffer, keeping pinned ones (JetBrains Close All Read-Only Tabs).</td></tr>
 <tr><td><code>:pin-tab</code>, <code>:pin</code></td><td>Pin or unpin this buffer, keeping it out of the bulk buffer closes.</td></tr>
 <tr><td><code>:buffer-close-all</code>, <code>:bca</code>, <code>:bcloseall</code></td><td>Close all buffers without quitting.</td></tr>
 <tr><td><code>:buffer-close-all!</code>, <code>:bca!</code>, <code>:bcloseall!</code></td><td>Force close all buffers ignoring unsaved changes without quitting.</td></tr>
@@ -1429,6 +1432,9 @@
 <tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
 <tr><td><code>:vc-root-version-diff</code>, <code>:vc-root-diff</code></td><td>Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).</td></tr>
 <tr><td><code>:vc-revision-other-window</code></td><td>Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).</td></tr>
+<tr><td><code>:create-patch</code>, <code>:patch-create</code></td><td>Write the working tree’s diff to a file, or show it in a scratch buffer (JetBrains Create Patch from Local Changes).</td></tr>
+<tr><td><code>:copy-patch</code>, <code>:patch-copy</code></td><td>Copy the working tree’s diff to the clipboard (JetBrains Copy as Patch to Clipboard).</td></tr>
+<tr><td><code>:apply-patch</code>, <code>:patch-apply</code></td><td>Apply the patch on the clipboard with git apply (JetBrains Apply Patch from Clipboard).</td></tr>
 <tr><td><code>:git-unstage</code>, <code>:unstage</code></td><td>Unstage the current buffer’s file (git reset HEAD).</td></tr>
 <tr><td><code>:stash</code>, <code>:git-stash</code></td><td>git stash the working-tree changes (then reload open buffers).</td></tr>
 <tr><td><code>:stash-pop</code>, <code>:git-stash-pop</code></td><td>git stash pop the most recent stash (then reload open buffers).</td></tr>
@@ -2126,6 +2132,8 @@
 <tr><td><code>buffer_sort_by_relative_path</code></td><td>Sort the buffer line by relative path (AstroNvim SPC b s r)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bor</code>, select: <code>&lt;space&gt;bor</code></td></tr>
 <tr><td><code>buffer_sort_by_number</code></td><td>Sort the buffer line by buffer number (AstroNvim SPC b s i)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;boi</code>, select: <code>&lt;space&gt;boi</code></td></tr>
 <tr><td><code>buffer_sort_by_last_used</code></td><td>Sort the buffer line by last use (AstroNvim SPC b s m)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bom</code>, select: <code>&lt;space&gt;bom</code></td></tr>
+<tr><td><code>fold_custom_regions</code></td><td>Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions)</editor-fold></td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cR</code>, select: <code>&lt;space&gt;cR</code></td></tr>
+<tr><td><code>goto_custom_region</code></td><td>Jump to a //region or <editor-fold> block by name (JetBrains Custom Folding)</editor-fold></td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;jr</code>, select: <code>&lt;space&gt;jr</code></td></tr>
 <tr><td><code>fold_comments</code></td><td>Fold multi-line comment blocks (SPC c h)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;ch</code>, select: <code>&lt;space&gt;ch</code></td></tr>
 <tr><td><code>move_visual_line_up</code></td><td>Move up</td><td><strong>spacemacs, vim</strong> — normal: <code>gk</code>, <code>g&lt;up&gt;</code>, insert: <code>&lt;C-g&gt;k</code>, <code>&lt;C-g&gt;&lt;up&gt;</code>, <code>&lt;C-g&gt;&lt;C-k&gt;</code><br><strong>hybrid</strong> — normal: <code>gk</code>, <code>g&lt;up&gt;</code>, insert: <code>&lt;up&gt;</code>, <code>&lt;C-p&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>k</code>, <code>&lt;up&gt;</code>, insert: <code>&lt;up&gt;</code><br><strong>emacs, cua, nano</strong> — normal: <code>&lt;up&gt;</code>, <code>&lt;C-p&gt;</code>, insert: <code>&lt;up&gt;</code>, <code>&lt;C-p&gt;</code><br><strong>micro</strong> — normal: <code>&lt;up&gt;</code>, insert: <code>&lt;up&gt;</code></td></tr>
 <tr><td><code>move_visual_line_down</code></td><td>Move down</td><td><strong>spacemacs, vim</strong> — normal: <code>gj</code>, <code>g&lt;down&gt;</code>, insert: <code>&lt;C-g&gt;j</code>, <code>&lt;C-g&gt;&lt;C-j&gt;</code>, <code>&lt;C-g&gt;&lt;down&gt;</code><br><strong>hybrid</strong> — normal: <code>gj</code>, <code>g&lt;down&gt;</code>, insert: <code>&lt;C-n&gt;</code>, <code>&lt;down&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>j</code>, <code>&lt;down&gt;</code>, insert: <code>&lt;down&gt;</code><br><strong>emacs, cua, nano</strong> — normal: <code>&lt;C-n&gt;</code>, <code>&lt;down&gt;</code>, insert: <code>&lt;C-n&gt;</code>, <code>&lt;down&gt;</code><br><strong>micro</strong> — normal: <code>&lt;down&gt;</code>, insert: <code>&lt;down&gt;</code></td></tr>
@@ -2397,6 +2405,8 @@
 <tr><td><code>toggle_soft_wrap</code></td><td>Toggle soft-wrap of long lines (IntelliJ View &gt; Soft-Wrap)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;xt</code>, select: <code>&lt;C-x&gt;xt</code>, insert: <code>&lt;C-x&gt;xt</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;xt</code>, select: <code>&lt;C-x&gt;xt</code></td></tr>
 <tr><td><code>toggle_whitespace_render</code></td><td>Toggle rendering of whitespace characters (IntelliJ View &gt; Show Whitespaces)</td><td></td></tr>
 <tr><td><code>toggle_line_numbers</code></td><td>Toggle the line-numbers gutter (IntelliJ View &gt; Show Line Numbers)</td><td></td></tr>
+<tr><td><code>power_save_mode</code></td><td>Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;zp</code>, select: <code>&lt;space&gt;zp</code></td></tr>
+<tr><td><code>distraction_free_mode</code></td><td>Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;zd</code>, select: <code>&lt;space&gt;zd</code></td></tr>
 <tr><td><code>toggle_indent_guides</code></td><td>Toggle indentation guides (IntelliJ View &gt; Show Indent Guides)</td><td></td></tr>
 <tr><td><code>toggle_inlay_hints</code></td><td>Toggle display of LSP inlay hints (IntelliJ View &gt; Inlay Hints)</td><td></td></tr>
 <tr><td><code>toggle_auto_highlight</code></td><td>Toggle automatic symbol-under-cursor highlight (SPC t h a)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;tha</code>, select: <code>&lt;space&gt;tha</code></td></tr>
@@ -3080,6 +3090,7 @@
 <tr><td><code>paste_before_cursor_after</code></td><td>Paste before selection, cursor after the pasted text (vim gP)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>gP</code></td></tr>
 <tr><td><code>paste_before</code></td><td>Paste before selection</td><td><strong>spacemacs, hybrid</strong> — normal: <code>P</code>, <code>[P</code>, <code>]P</code>, <code>&lt;space&gt;kP</code>, select: <code>&lt;space&gt;kP</code><br><strong>vim</strong> — normal: <code>P</code>, <code>[P</code>, <code>]P</code><br><strong>helix, kakoune</strong> — normal: <code>P</code>, select: <code>P</code></td></tr>
 <tr><td><code>yank_from_kill_ring</code></td><td>Yank the latest kill-ring entry (emacs C-y)</td><td><strong>hybrid</strong> — insert: <code>&lt;C-y&gt;</code><br><strong>emacs</strong> — normal: <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-y&gt;</code><br><strong>cua</strong> — normal: <code>&lt;C-v&gt;</code>, <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-v&gt;</code>, <code>&lt;C-y&gt;</code></td></tr>
+<tr><td><code>paste_from_history</code></td><td>Pick an entry from the kill ring and paste it (JetBrains Paste from History)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>&lt;A-Y&gt;</code></td></tr>
 <tr><td><code>yank_pop</code></td><td>Replace the just-yanked text with the next kill-ring entry (emacs M-y)</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-y&gt;</code><br><strong>hybrid, emacs, cua, micro, nano</strong> — normal: <code>&lt;A-y&gt;</code>, insert: <code>&lt;A-y&gt;</code></td></tr>
 <tr><td><code>set_mark_command</code></td><td>Set mark and activate region, pushing to the mark ring (emacs C-SPC)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-@&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;C-@&gt;</code>, insert: <code>&lt;C-space&gt;</code><br><strong>emacs, cua, micro, nano</strong> — insert: <code>&lt;C-space&gt;</code></td></tr>
 <tr><td><code>pop_to_mark</code></td><td>Jump to the top of the mark ring, rotating it (emacs C-x C-SPC)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-x&gt;&lt;C-space&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-space&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-space&gt;</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;&lt;C-space&gt;</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;&lt;C-space&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-space&gt;</code></td></tr>
@@ -3470,6 +3481,8 @@
 <tr><td><code>file_info</code></td><td>Show file name and cursor position (CTRL-G)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>&lt;C-g&gt;</code></td></tr>
 <tr><td><code>document_stats</code></td><td>Show document line/word/char counts (g CTRL-G)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>g&lt;C-g&gt;</code>, select: <code>g&lt;C-g&gt;</code></td></tr>
 <tr><td><code>git_blame_line</code></td><td>Show git blame for the current line (g b)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vg</code>, <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code>, select: <code>&lt;C-x&gt;vg</code>, <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code>, insert: <code>&lt;C-x&gt;vg</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vg</code>, <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code>, select: <code>&lt;C-x&gt;vg</code>, <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code></td></tr>
+<tr><td><code>copy_branch_name</code></td><td>Yank the current git branch name to the clipboard (JetBrains Copy Branch Name)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gYb</code>, select: <code>&lt;space&gt;gYb</code></td></tr>
+<tr><td><code>copy_revision_number</code></td><td>Yank the commit that last touched this line to the clipboard (JetBrains Copy Revision Number)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gYr</code>, select: <code>&lt;space&gt;gYr</code></td></tr>
 <tr><td><code>toggle_inline_blame</code></td><td>Toggle GitLens-style inline blame on the current line</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gI</code>, select: <code>&lt;space&gt;gI</code></td></tr>
 <tr><td><code>toggle_blame_annotate</code></td><td>Toggle the git-blame annotate gutter column (SPC g B)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gB</code>, select: <code>&lt;space&gt;gB</code></td></tr>
 <tr><td><code>git_branch_picker</code></td><td>Pick a git branch and check it out</td><td></td></tr>
