@@ -480,6 +480,17 @@ impl ReplPanel {
     }
 
     /// Evaluate the current input line, append the result, and reset for the next.
+    /// Open the panel with `src` already in its input, for JetBrains "Execute
+    /// Current Statement in Console": the statement arrives typed but not yet
+    /// run, so a mis-selected line can be edited before Enter rather than
+    /// evaluated behind your back.
+    pub fn with_input(lang: ReplLang, src: &str) -> Self {
+        let mut panel = Self::new(lang);
+        panel.input = src.chars().collect();
+        panel.cursor = panel.input.len();
+        panel
+    }
+
     fn submit(&mut self, cx: &mut Context) {
         let src = self.input_string();
         if src.trim().is_empty() {

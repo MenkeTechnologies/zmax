@@ -2444,6 +2444,7 @@ impl MappableCommand {
         recentf_mode, "Toggle recording of opened files in the recent-files list (emacs recentf-mode)",
         recentf_save_list, "Write the recent-files list to its store file (emacs recentf-save-list)",
         recentf_edit_list, "Edit the recent-files list: mark entries and delete them (emacs recentf-edit-list)",
+        repl_send_statement, "Send the selection or line to the REPL for this language (JetBrains Execute Current Statement in Console)",
         repl, "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)",
         goto_word, "Jump to a two-character label",
         extend_to_word, "Extend to a two-character label",
@@ -50651,6 +50652,52 @@ fn repl(cx: &mut Context) {
         Ok(Box::new(crate::ui::repl::ReplPanel::new(
             crate::ui::repl::ReplLang::Elisp,
         )) as Box<dyn Component>)
+    });
+}
+
+/// JetBrains "Execute Current Statement in Console" (`Console.Execute`): send
+/// the selection — or the line the cursor is on — to the REPL for this
+/// buffer's language.
+///
+/// The REPL opens with the statement in its input rather than already
+/// evaluated: a mis-selected line is then edited before Enter instead of
+/// running behind your back, which matters when the statement drops a table.
+/// A buffer whose language has no REPL says so and names the languages that
+/// do, rather than silently opening an elisp prompt.
+fn repl_send_statement(cx: &mut Context) {
+    let (src, lang_name) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let primary = doc.selection(view.id).primary();
+        let src = if primary.len() > 1 {
+            primary.fragment(text).to_string()
+        } else {
+            let line = text.char_to_line(primary.cursor(text));
+            text.line(line).to_string()
+        };
+        (
+            src.trim().to_string(),
+            doc.language_name().unwrap_or_default().to_string(),
+        )
+    };
+    if src.is_empty() {
+        cx.editor.set_status("nothing to send");
+        return;
+    }
+    let Some(lang) = crate::ui::repl::ReplLang::from_name(&lang_name) else {
+        cx.editor.set_error(format!(
+            "no REPL for `{}` — open one with :repl <lang>",
+            if lang_name.is_empty() {
+                "this buffer"
+            } else {
+                &lang_name
+            }
+        ));
+        return;
+    };
+    open_overlay(cx, move |_editor| {
+        Ok(Box::new(crate::ui::repl::ReplPanel::with_input(lang, &src))
+            as Box<dyn Component>)
     });
 }
 

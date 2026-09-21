@@ -1948,6 +1948,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "U" => undo_tree,                  // SPC a U : browse branching undo history (vim undotree)
                 "c" => ai_commit_message,          // SPC a c : AI git commit message
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
+                "q" => repl_send_statement,        // SPC a q : send the selection/line to this language's REPL (JetBrains Execute Current Statement in Console; `a r` opens it, `a R` is agent review)
                 "d" => file_explorer,              // SPC a d : dired (file manager)
                 // The emoji layer hangs its browser off `SPC a f`, so that slot is
                 // a prefix (as it is in spacemacs) rather than a leaf; the file

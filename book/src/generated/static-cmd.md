@@ -2053,6 +2053,7 @@
 | `recentf_mode` | Toggle recording of opened files in the recent-files list (emacs recentf-mode) |  |
 | `recentf_save_list` | Write the recent-files list to its store file (emacs recentf-save-list) |  |
 | `recentf_edit_list` | Edit the recent-files list: mark entries and delete them (emacs recentf-edit-list) |  |
+| `repl_send_statement` | Send the selection or line to the REPL for this language (JetBrains Execute Current Statement in Console) | **spacemacs, hybrid** — normal: `` <space>aq ``, select: `` <space>aq `` |
 | `repl` | Open the embedded-language REPL (elisp/viml/stryke/awk/zsh) |  |
 | `goto_word` | Jump to a two-character label | **spacemacs, hybrid** — normal: `` <space>jl ``, `` <space>jw ``, select: `` <space>jl ``, `` <space>jw ``<br>**helix, kakoune** — normal: `` gw `` |
 | `extend_to_word` | Extend to a two-character label | **helix, kakoune** — select: `` gw `` |
