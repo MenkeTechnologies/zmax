@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6ffaa5bc.js";
+            window.path_to_searchindex_js = "searchindex-6cf68d0b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4934,6 +4934,8 @@ without scrolling.</p>
 <tr><td><code>title_case_selection</code></td><td>Title-case the selection (capitalize each word)</td><td></td></tr>
 <tr><td><code>sentence_case_selection</code></td><td>Capitalize the first letter of each sentence in the selection</td><td></td></tr>
 <tr><td><code>straighten_quotes_selection</code></td><td>Convert smart quotes/dashes in the selection to plain ASCII</td><td></td></tr>
+<tr><td><code>show_color_picker</code></td><td>Pick a colour and insert its hex (JetBrains Show Color Picker)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xh</code>, select: <code>&lt;space&gt;xh</code></td></tr>
+<tr><td><code>surround_with_tag</code></td><td>Wrap the selection in an element you name (JetBrains Surround with Tag)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xT</code>, select: <code>&lt;space&gt;xT</code></td></tr>
 <tr><td><code>hex_to_rgb_selection</code></td><td>Convert a #hex color in the selection to rgb(r, g, b)</td><td></td></tr>
 <tr><td><code>rgb_to_hex_selection</code></td><td>Convert an rgb(r, g, b) color in the selection to #hex</td><td></td></tr>
 <tr><td><code>to_roman_selection</code></td><td>Convert the selected integer to a Roman numeral</td><td></td></tr>
@@ -4950,6 +4952,7 @@ without scrolling.</p>
 <tr><td><code>contrast_text</code></td><td>Recommend black/white text for the selected hex background color</td><td></td></tr>
 <tr><td><code>toggle_value_selection</code></td><td>Toggle the boolean/keyword in the selection (true&lt;-&gt;false, …)</td><td></td></tr>
 <tr><td><code>normalize_whitespace_selection</code></td><td>Collapse internal whitespace runs in the selection</td><td></td></tr>
+<tr><td><code>toggle_rendered_view</code></td><td>Show this markdown buffer rendered in a scratch (JetBrains Toggle Rendered View)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xv</code>, select: <code>&lt;space&gt;xv</code></td></tr>
 <tr><td><code>insert_toc</code></td><td>Insert a markdown table of contents from the buffer’s headings</td><td></td></tr>
 <tr><td><code>slugify_selection</code></td><td>Slugify the selection (lowercase, hyphen-separated)</td><td></td></tr>
 <tr><td><code>humanize_selection</code></td><td>Humanize a slug/identifier into a Title-Cased label</td><td></td></tr>
@@ -5090,6 +5093,10 @@ without scrolling.</p>
 <tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-r&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code></td></tr>
 <tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, insert: <code>&lt;C-x&gt;`</code><br><strong>hybrid</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code></td></tr>
 <tr><td><code>run_prev_error</code></td><td>Jump to the previous file:line in the run output</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;A-g&gt;p</code>, <code>&lt;space&gt;Rp</code>, <code>&lt;A-g&gt;&lt;A-p&gt;</code>, select: <code>&lt;space&gt;Rp</code></td></tr>
+<tr><td><code>show_vcs_console</code></td><td>Every git command the editor has run this session (JetBrains Show VCS Console)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;g!</code>, select: <code>&lt;space&gt;g!</code></td></tr>
+<tr><td><code>clear_vcs_console</code></td><td>Empty the VCS console</td><td></td></tr>
+<tr><td><code>reveal_directory_in_tree</code></td><td>Reveal the current file’s directory in the project tree (JetBrains Select Directory in Project View)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;jT</code>, select: <code>&lt;space&gt;jT</code></td></tr>
+<tr><td><code>show_scratch_files</code></td><td>Pick among the scratch buffers (JetBrains Show Scratch Files)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;b&lt;C-s&gt;</code>, select: <code>&lt;space&gt;b&lt;C-s&gt;</code></td></tr>
 <tr><td><code>reveal_in_tree</code></td><td>Reveal the current file in the project tree</td><td></td></tr>
 <tr><td><code>toggle_auto_reveal</code></td><td>Toggle always-select-opened-file (autoscroll from source)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pV</code>, select: <code>&lt;space&gt;pV</code></td></tr>
 <tr><td><code>focus_file_tree</code></td><td>Focus the project file tree panel</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code>, select: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code></td></tr>
@@ -5296,6 +5303,7 @@ without scrolling.</p>
 <tr><td><code>profiler_write_report</code></td><td>Write the command profiler report to a prompted file (SPC h P w)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;hPw</code>, select: <code>&lt;space&gt;hPw</code></td></tr>
 <tr><td><code>regexp_generate_strings</code></td><td>Generate every string matched by a finite regexp (SPC x r ’)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xr'</code>, <code>&lt;space&gt;xrp'</code>, select: <code>&lt;space&gt;xr'</code>, <code>&lt;space&gt;xrp'</code></td></tr>
 <tr><td><code>regexp_generate_strings_emacs</code></td><td>Generate every string matched by a finite Emacs regexp (SPC x r e ’)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xre'</code>, select: <code>&lt;space&gt;xre'</code></td></tr>
+<tr><td><code>toggle_gutter_icons</code></td><td>Show or hide the gutter’s icon columns (JetBrains Show Gutter Icons)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xG</code>, select: <code>&lt;space&gt;xG</code></td></tr>
 <tr><td><code>toggle_fringe</code></td><td>Hide or show the whole fringe (gutter column strip) (fringe-mode, SPC T f)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Tf</code>, select: <code>&lt;space&gt;Tf</code></td></tr>
 <tr><td><code>restart_editor</code></td><td>Close every view and relaunch zmax with the same arguments (restart-emacs, SPC q r)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;qr</code>, select: <code>&lt;space&gt;qr</code></td></tr>
 <tr><td><code>duplicate_selection_down</code></td><td>Duplicate current line(s) downward</td><td><strong>micro</strong> — normal: <code>&lt;C-d&gt;</code>, insert: <code>&lt;C-d&gt;</code></td></tr>
@@ -9562,7 +9570,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>574</strong> (5.8%)</li>
 <li>Absent: <strong>378</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2569 static commands, 3170 typable <code>:</code> commands, 4666 default keybindings</li>
+<li>zmax source surface: 2577 static commands, 3170 typable <code>:</code> commands, 4673 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
