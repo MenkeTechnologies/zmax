@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-1bb888c5.js";
+            window.path_to_searchindex_js = "searchindex-d4026df8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -683,6 +683,12 @@
 <tr><td><code>:tlast</code></td><td>Jump to the last matching tag (vim :tlast).</td></tr>
 <tr><td><code>:pop</code>, <code>:po</code></td><td>Pop the tag stack, returning to where the last :tag jumped from (vim :pop).</td></tr>
 <tr><td><code>:tags</code></td><td>Show the tag stack depth and the current matching tag (vim :tags).</td></tr>
+<tr><td><code>:special-paths</code>, <code>:special-files</code>, <code>:browse-special-paths</code></td><td>Pick one of the editor’s own files or directories and open it (JetBrains Special Files and Folders).</td></tr>
+<tr><td><code>:show-log-in-finder</code>, <code>:reveal-log</code></td><td>Reveal the log file in the OS file manager (JetBrains Show Log in Finder).</td></tr>
+<tr><td><code>:collect-logs</code>, <code>:diagnostic-data</code></td><td>Version, paths and the tail of the log, for a bug report (JetBrains Collect Logs and Diagnostic Data).</td></tr>
+<tr><td><code>:messages-clear</code>, <code>:mesc</code>, <code>:clear-notifications</code></td><td>Empty the message log (JetBrains Clear All Notifications).</td></tr>
+<tr><td><code>:export-settings</code>, <code>:settings-export</code></td><td>Copy the config directory into DIR (JetBrains Export Settings).</td></tr>
+<tr><td><code>:import-settings</code>, <code>:settings-import</code></td><td>Copy a directory of settings back over the config directory and reload (JetBrains Import Settings).</td></tr>
 <tr><td><code>:messages</code>, <code>:mes</code></td><td>Show the message log — every status/error shown this session (vim :messages).</td></tr>
 <tr><td><code>:Man</code>, <code>:man</code></td><td>Open a man page in the run console (neovim :Man).</td></tr>
 <tr><td><code>:Man-next-manpage</code>, <code>:man-next-manpage</code></td><td>Show the next page of the topic :Man looked up, wrapping at the end (emacs Man-next-manpage).</td></tr>
@@ -2864,6 +2870,8 @@
 <tr><td><code>harpoon_next</code></td><td>Open the next harpoon mark</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Hn</code>, select: <code>&lt;space&gt;Hn</code></td></tr>
 <tr><td><code>harpoon_prev</code></td><td>Open the previous harpoon mark</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Hp</code>, select: <code>&lt;space&gt;Hp</code></td></tr>
 <tr><td><code>bookmark_toggle</code></td><td>Toggle a line bookmark (JetBrains F11)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;rt</code>, select: <code>&lt;space&gt;rt</code></td></tr>
+<tr><td><code>bookmark_open_tabs</code></td><td>Bookmark the cursor line of every open buffer (JetBrains Bookmark Open Tabs)</td><td></td></tr>
+<tr><td><code>open_bookmarked_files</code></td><td>Open every file that holds a line bookmark (JetBrains Open All Bookmarked Files)</td><td></td></tr>
 <tr><td><code>bookmark_next</code></td><td>Jump to the next line bookmark (JetBrains)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;rn</code>, select: <code>&lt;space&gt;rn</code></td></tr>
 <tr><td><code>bookmark_prev</code></td><td>Jump to the previous line bookmark (JetBrains)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;rN</code>, select: <code>&lt;space&gt;rN</code></td></tr>
 <tr><td><code>harpoon_menu</code></td><td>Open the harpoon marks menu</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code>, select: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code></td></tr>
