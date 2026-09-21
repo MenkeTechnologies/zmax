@@ -2264,6 +2264,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "p" => global_search,              // SPC s p
                 "j" => symbol_picker,              // SPC s j
                 "e" => select_references_to_symbol_under_cursor, // SPC s e : edit occurrences
+                "C" => add_carets_to_line_ends,    // SPC s C : a cursor at the end of every selected line (JetBrains Add Carets to Ends of Selected Lines)
                 "h" => select_references_to_symbol_under_cursor, // SPC s h : highlight symbol
                 "S" => workspace_symbol_picker,
                 "`" => jump_backward,              // SPC s ` : back to pre-jump location
@@ -2499,6 +2500,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "=" => format_selections,          // SPC j = : format region/buffer
                 "+" => format_selections,          // SPC j + : format region/buffer (alt)
                 "(" => goto_prev_unmatched_paren,  // SPC j ( : jump to first unbalanced paren
+                ")" => goto_outside_bracket,       // SPC j ) : jump just past the enclosing bracket/quote (JetBrains Jump Outside Current Bracket/Quote)
                 "r" => goto_custom_region,         // SPC j r : jump to a //region block by name (JetBrains Custom Folding)
                 "D" => file_explorer_in_current_buffer_directory, // SPC j D : current directory listing
                 "U" => goto_file,                  // SPC j U : select URL and follow

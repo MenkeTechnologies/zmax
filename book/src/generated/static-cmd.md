@@ -1603,6 +1603,8 @@
 | `goto_line_middle` | Goto middle of text line (gM) | **spacemacs, hybrid, vim** — normal: `` gM `` |
 | `goto_screen_line_middle` | Goto half a screenwidth right of the screen line's start (gm) | **spacemacs, hybrid, vim** — normal: `` gm `` |
 | `goto_byte` | Goto byte {count} in buffer (go) | **spacemacs, hybrid, vim** — normal: `` go `` |
+| `goto_outside_bracket` | Jump just past the enclosing bracket or quote (JetBrains Jump Outside Current Bracket/Quote) | **spacemacs, hybrid** — normal: `` <space>j) ``, select: `` <space>j) `` |
+| `add_carets_to_line_ends` | Put a cursor at the end of every selected line (JetBrains Add Carets to Ends of Selected Lines) | **spacemacs, hybrid** — normal: `` <space>sC ``, select: `` <space>sC `` |
 | `goto_prev_unmatched_paren` | Goto previous unmatched ( ([() | **spacemacs, hybrid** — normal: `` [( ``, `` <space>j( ``, select: `` <space>j( ``<br>**vim** — normal: `` [( `` |
 | `goto_prev_unmatched_brace` | Goto previous unmatched { ([{) | **spacemacs, hybrid, vim** — normal: `` [{ `` |
 | `goto_next_unmatched_paren` | Goto next unmatched ) (]) | **spacemacs, hybrid, vim** — normal: `` ]) `` |

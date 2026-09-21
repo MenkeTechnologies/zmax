@@ -1994,6 +1994,8 @@ impl MappableCommand {
         goto_line_middle, "Goto middle of text line (gM)",
         goto_screen_line_middle, "Goto half a screenwidth right of the screen line's start (gm)",
         goto_byte, "Goto byte {count} in buffer (go)",
+        goto_outside_bracket, "Jump just past the enclosing bracket or quote (JetBrains Jump Outside Current Bracket/Quote)",
+        add_carets_to_line_ends, "Put a cursor at the end of every selected line (JetBrains Add Carets to Ends of Selected Lines)",
         goto_prev_unmatched_paren, "Goto previous unmatched ( ([()",
         goto_prev_unmatched_brace, "Goto previous unmatched { ([{)",
         goto_next_unmatched_paren, "Goto next unmatched ) (])",
@@ -4130,6 +4132,139 @@ fn goto_unmatched_bracket(cx: &mut Context, open: char, close: char, forward: bo
         }
     });
     doc.set_selection(view.id, selection);
+}
+
+/// The position just past the innermost bracket or quote that encloses `pos`,
+/// scanning forward — JetBrains "Jump Outside Current Bracket/Quote". Pure,
+/// unit tested.
+///
+/// Whether `pos` sits inside a string is decided by reading its line from the
+/// start, so the `)` in `"x)y"` is not mistaken for a closer: inside a string,
+/// the way out is that string's own terminator. Outside one, the first closer
+/// with no opener of its own after `pos` is the enclosing bracket, and any
+/// string opening on the way is skipped whole. Backslash escapes are stepped
+/// over throughout, as the IDE does not treat `\"` as a terminator.
+fn outside_bracket_or_quote(text: RopeSlice, pos: usize) -> Option<usize> {
+    let len = text.len_chars();
+    if pos >= len {
+        return None;
+    }
+    let is_quote = |c: char| matches!(c, '"' | '\'' | '`');
+
+    // Which string, if any, the cursor is in.
+    let line_start = text.line_to_char(text.char_to_line(pos));
+    let mut inside: Option<char> = None;
+    let mut i = line_start;
+    while i < pos {
+        let c = text.char(i);
+        if c == '\\' {
+            i += 2;
+            continue;
+        }
+        match inside {
+            Some(q) if c == q => inside = None,
+            None if is_quote(c) => inside = Some(c),
+            _ => {}
+        }
+        i += 1;
+    }
+
+    let mut i = pos;
+    if let Some(q) = inside {
+        while i < len {
+            let c = text.char(i);
+            if c == '\\' {
+                i += 2;
+                continue;
+            }
+            if c == q {
+                return Some(i + 1);
+            }
+            i += 1;
+        }
+        return None;
+    }
+
+    let mut depth = 0usize;
+    while i < len {
+        let c = text.char(i);
+        if c == '\\' {
+            i += 2;
+            continue;
+        }
+        if is_quote(c) {
+            // Step over the whole string so brackets inside it do not count.
+            let q = c;
+            i += 1;
+            while i < len {
+                let c = text.char(i);
+                if c == '\\' {
+                    i += 2;
+                    continue;
+                }
+                if c == q {
+                    break;
+                }
+                i += 1;
+            }
+            i += 1;
+            continue;
+        }
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => {
+                if depth == 0 {
+                    return Some(i + 1);
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+/// JetBrains "Jump Outside Current Bracket/Quote" (`BraceOrQuoteOut`): put the
+/// cursor just past the bracket or quote the cursor sits inside.
+fn goto_outside_bracket(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let mut moved = false;
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        match outside_bracket_or_quote(text, range.cursor(text)) {
+            Some(pos) => {
+                moved = true;
+                Range::point(pos.min(text.len_chars()))
+            }
+            None => range,
+        }
+    });
+    if moved {
+        doc.set_selection(view.id, selection);
+    } else {
+        cx.editor
+            .set_status("no enclosing bracket or quote to jump out of");
+    }
+}
+
+/// JetBrains "Add Carets to Ends of Selected Lines"
+/// (`EditorAddCaretPerSelectedLine`): one cursor at the end of every line the
+/// selection touches.
+///
+/// `split_selection_on_newline` (`A-s`) leaves one range per line covering the
+/// line; this collapses each to its end, which is what the IDE's action is for
+/// — typing then appends to every line at once.
+fn add_carets_to_line_ends(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let split = selection::split_on_newline(text, doc.selection(view.id));
+    let selection = split.transform(|range| {
+        let line = text.char_to_line(range.cursor(text));
+        let end = zmax_core::line_ending::line_end_char_index(&text, line);
+        Range::point(end)
+    });
+    doc.set_selection(view.id, selection.merge_ranges());
 }
 
 fn goto_prev_unmatched_paren(cx: &mut Context) {
@@ -63483,6 +63618,21 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn outside_bracket_or_quote_leaves_the_innermost_one() {
+        let rope = Rope::from_str("f(a, g(b), \"x)y\")");
+        let text = rope.slice(..);
+        // From inside the inner call, the jump lands just past ITS closer.
+        assert_eq!(outside_bracket_or_quote(text, 8), Some(9));
+        // From inside the string, the closing quote wins over the `)` in it.
+        assert_eq!(outside_bracket_or_quote(text, 12), Some(16));
+        // An escaped quote is not a terminator.
+        let rope = Rope::from_str("\"a\\\"b\" rest");
+        assert_eq!(outside_bracket_or_quote(rope.slice(..), 1), Some(6));
+        // Nothing encloses the tail of a file.
+        assert_eq!(outside_bracket_or_quote(Rope::from_str("abc").slice(..), 1), None);
     }
 
     #[test]
