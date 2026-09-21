@@ -60135,7 +60135,7 @@ fn goto_prev_test(cx: &mut Context) {
 }
 
 /// Runs of ≥2 consecutive `true` flags as inclusive (start, end) ranges. Pure.
-fn comment_fold_runs(flags: &[bool]) -> Vec<(usize, usize)> {
+pub(crate) fn comment_fold_runs(flags: &[bool]) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let n = flags.len();
     let mut l = 0;

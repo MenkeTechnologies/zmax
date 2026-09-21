@@ -24514,6 +24514,46 @@ fn sticky_lines_limit_cmd(
     Ok(())
 }
 
+/// `:fold-matching PATTERN` — JetBrains "Fold Lines Like This"
+/// (`ConsoleView.FoldLinesLikeThis`): fold away every run of lines matching a
+/// regex, which is how a console full of repeated noise is made readable.
+///
+/// Runs, not single lines: folding one line at a time would leave a fold
+/// marker per line and read worse than the noise. A run of one is left alone
+/// for the same reason. `zR` opens them all again.
+fn fold_matching(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.first().context("usage: :fold-matching PATTERN")?;
+    let regex = regex::Regex::new(pattern).map_err(|e| anyhow!("bad pattern: {e}"))?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let flags: Vec<bool> = (0..text.len_lines())
+        .map(|l| regex.is_match(&text.line(l).to_string()))
+        .collect();
+    let runs = super::comment_fold_runs(&flags);
+    if runs.is_empty() {
+        cx.editor
+            .set_status(format!("no runs of 2+ lines match `{pattern}`"));
+        return Ok(());
+    }
+    let n = text.len_lines();
+    let count = runs.len();
+    for (start, end) in runs {
+        doc.folds_mut().create(start, end);
+    }
+    doc.folds_mut().clamp(n.saturating_sub(1));
+    let _ = view;
+    cx.editor
+        .set_status(format!("folded {count} run(s) matching `{pattern}`"));
+    Ok(())
+}
+
 /// `:attach-dir DIR` — JetBrains "Attach Directory to Project…"
 /// (`AttachDirectory`): add a second content root, so the file picker and
 /// project search cover it as well as the workspace.
@@ -63372,6 +63412,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "fold-matching",
+        aliases: &["fold-lines-like-this"],
+        doc: "Fold every run of lines matching a regex (JetBrains Fold Lines Like This).",
+        fun: fold_matching,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },
