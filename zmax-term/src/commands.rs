@@ -24568,8 +24568,13 @@ fn build_global_search_picker(
                 .binary_detection(BinaryDetection::quit(b'\x00'))
                 .multi_line(true)
                 .build();
-            WalkBuilder::new(search_root)
-                .hidden(config.file_picker_config.hidden)
+            let mut walk = WalkBuilder::new(&search_root);
+            // The extra content roots (JetBrains "Attach Directory to
+            // Project") are searched with the workspace.
+            for extra in crate::attached_dirs::extra_roots(&search_root) {
+                walk.add(extra);
+            }
+            walk.hidden(config.file_picker_config.hidden)
                 .parents(config.file_picker_config.parents)
                 .ignore(config.file_picker_config.ignore)
                 .follow_links(config.file_picker_config.follow_symlinks)

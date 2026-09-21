@@ -413,7 +413,13 @@ pub fn workspace_walk(editor: &Editor, root: &Path) -> ignore::Walk {
     let dedup_symlinks = config.file_picker.deduplicate_links;
     let absolute_root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
 
-    WalkBuilder::new(root)
+    let mut builder = WalkBuilder::new(root);
+    // JetBrains "Attach Directory to Project": the extra content roots are
+    // walked alongside the workspace, so they are in the file picker too.
+    for extra in crate::attached_dirs::extra_roots(root) {
+        builder.add(extra);
+    }
+    builder
         .hidden(config.file_picker.hidden)
         .parents(config.file_picker.parents)
         .ignore(config.file_picker.ignore)

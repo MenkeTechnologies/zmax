@@ -1238,6 +1238,8 @@
 | `:vc-root-version-diff`, `:vc-root-diff` | Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff). |
 | `:vc-revision-other-window` | Show a past revision of the current file, default HEAD (emacs vc-revision-other-window). |
 | `:sticky-lines`, `:sticky-context` | Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines). |
+| `:attach-dir`, `:attach-directory` | Add a directory as a second content root, searched with the workspace (JetBrains Attach Directory to Project). |
+| `:detach-dir`, `:detach-directory` | Detach an attached directory, `*` for all, or list them (JetBrains Detach Directory from Project). |
 | `:git-clone`, `:clone` | Clone a repository and open it as the workspace (JetBrains Get from Version Control). |
 | `:prune-empty-dirs`, `:prune-empty-directories` | Delete directories that hold no files at any depth (JetBrains Prune Empty Directories). |
 | `:toggle-file-readonly`, `:make-writable`, `:make-read-only` | Flip the file's write permission on disk (JetBrains Toggle Read-Only Attribute). |

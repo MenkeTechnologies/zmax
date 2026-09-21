@@ -24514,6 +24514,80 @@ fn sticky_lines_limit_cmd(
     Ok(())
 }
 
+/// `:attach-dir DIR` — JetBrains "Attach Directory to Project…"
+/// (`AttachDirectory`): add a second content root, so the file picker and
+/// project search cover it as well as the workspace.
+///
+/// A directory already inside the workspace is refused rather than attached:
+/// it is already covered, and attaching it would walk it twice.
+fn attach_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = args.first().context("usage: :attach-dir DIR")?;
+    let dir = std::path::PathBuf::from(dir);
+    let dir = dir.canonicalize().unwrap_or(dir);
+    if !dir.is_dir() {
+        bail!("{} is not a directory", dir.display());
+    }
+    let root = zmax_loader::find_workspace().0;
+    if dir.starts_with(&root) {
+        bail!(
+            "{} is already inside the workspace ({})",
+            dir.display(),
+            root.display()
+        );
+    }
+    if crate::attached_dirs::attach(dir.clone()) {
+        cx.editor
+            .set_status(format!("attached {}", dir.display()));
+    } else {
+        cx.editor
+            .set_status(format!("{} is already attached", dir.display()));
+    }
+    Ok(())
+}
+
+/// `:detach-dir [DIR]` — JetBrains "Detach Directory from Project…"
+/// (`DetachDirectory`). With no argument it lists what is attached; with `*`
+/// it detaches everything.
+fn detach_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let attached = crate::attached_dirs::list();
+    let Some(arg) = args.first() else {
+        cx.editor.set_status(if attached.is_empty() {
+            "no attached directories".to_string()
+        } else {
+            format!(
+                "attached: {}",
+                attached
+                    .iter()
+                    .map(|d| d.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        });
+        return Ok(());
+    };
+    if arg == "*" {
+        let n = crate::attached_dirs::detach_all();
+        cx.editor
+            .set_status(format!("detached {n} director{}", if n == 1 { "y" } else { "ies" }));
+        return Ok(());
+    }
+    let dir = std::path::PathBuf::from(arg);
+    let dir = dir.canonicalize().unwrap_or(dir);
+    if crate::attached_dirs::detach(&dir) {
+        cx.editor
+            .set_status(format!("detached {}", dir.display()));
+    } else {
+        bail!("{} is not attached", dir.display());
+    }
+    Ok(())
+}
+
 /// `:git-clone URL [DIR]` — JetBrains "Get from Version Control…"
 /// (`Vcs.VcsClone`): clone a repository and open it as the workspace.
 ///
@@ -63296,6 +63370,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines).",
         fun: sticky_lines_limit_cmd,
         completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "attach-dir",
+        aliases: &["attach-directory"],
+        doc: "Add a directory as a second content root, searched with the workspace (JetBrains Attach Directory to Project).",
+        fun: attach_dir,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "detach-dir",
+        aliases: &["detach-directory"],
+        doc: "Detach an attached directory, `*` for all, or list them (JetBrains Detach Directory from Project).",
+        fun: detach_dir,
+        completer: CommandCompleter::all(completers::directory),
         signature: Signature {
             positionals: (0, Some(1)),
             ..Signature::DEFAULT
