@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-bebd3a8f.js";
+            window.path_to_searchindex_js = "searchindex-558e8821.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -3812,6 +3812,7 @@ without scrolling.</p>
 <tr><td><code>add_selection_to_next_match</code></td><td>Add the next occurrence of the selection as a new cursor</td><td><strong>micro</strong> — normal: <code>&lt;A-n&gt;</code>, insert: <code>&lt;A-n&gt;</code></td></tr>
 <tr><td><code>skip_selection_to_next_match</code></td><td>Skip this occurrence and select the next one (vis C-x)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xn</code>, select: <code>&lt;space&gt;xn</code></td></tr>
 <tr><td><code>select_all_occurrences</code></td><td>Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xo</code>, select: <code>&lt;space&gt;xo</code></td></tr>
+<tr><td><code>toggle_find_in_selection</code></td><td>Confine search to the selected region, or lift it (JetBrains Search in Selection Only)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;si</code>, select: <code>&lt;space&gt;si</code></td></tr>
 <tr><td><code>search_selection</code></td><td>Use current selection as search pattern</td><td><strong>helix, kakoune</strong> — normal: <code>&lt;A-*&gt;</code>, select: <code>&lt;A-*&gt;</code></td></tr>
 <tr><td><code>search_selection_detect_word_boundaries</code></td><td>Use current selection as the search pattern, automatically wrapping with <code>\b</code> on word boundaries</td><td><strong>helix, kakoune</strong> — normal: <code>*</code>, select: <code>*</code></td></tr>
 <tr><td><code>make_search_word_bounded</code></td><td>Modify current search to make it word bounded</td><td></td></tr>
@@ -9531,7 +9532,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>574</strong> (5.8%)</li>
 <li>Absent: <strong>378</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2547 static commands, 3150 typable <code>:</code> commands, 4648 default keybindings</li>
+<li>zmax source surface: 2548 static commands, 3150 typable <code>:</code> commands, 4649 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
