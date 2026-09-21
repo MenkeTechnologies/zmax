@@ -1445,6 +1445,7 @@
 | `rerun_last_run` | Re-run the last command in the Run console | **spacemacs** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> ``<br>**hybrid** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> `` |
 | `run_next_error` | Jump to the next file:line in the run output | **spacemacs** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` ``<br>**hybrid** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn `` |
 | `run_prev_error` | Jump to the previous file:line in the run output | **spacemacs, hybrid** — normal: `` <A-g>p ``, `` <space>Rp ``, `` <A-g><A-p> ``, select: `` <space>Rp `` |
+| `locate_duplicates` | Find the blocks this buffer repeats, longest first (JetBrains Locate Duplicates) | **spacemacs, hybrid** — normal: `` <space>s2 ``, select: `` <space>s2 `` |
 | `show_vcs_console` | Every git command the editor has run this session (JetBrains Show VCS Console) | **spacemacs, hybrid** — normal: `` <space>g! ``, select: `` <space>g! `` |
 | `clear_vcs_console` | Empty the VCS console |  |
 | `reveal_directory_in_tree` | Reveal the current file's directory in the project tree (JetBrains Select Directory in Project View) | **spacemacs, hybrid** — normal: `` <space>jT ``, select: `` <space>jT `` |

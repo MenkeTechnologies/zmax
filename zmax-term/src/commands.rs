@@ -1836,6 +1836,7 @@ impl MappableCommand {
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
         run_prev_error, "Jump to the previous file:line in the run output",
+        locate_duplicates, "Find the blocks this buffer repeats, longest first (JetBrains Locate Duplicates)",
         show_vcs_console, "Every git command the editor has run this session (JetBrains Show VCS Console)",
         clear_vcs_console, "Empty the VCS console",
         reveal_directory_in_tree, "Reveal the current file's directory in the project tree (JetBrains Select Directory in Project View)",
@@ -51712,6 +51713,133 @@ fn reveal_in_tree(cx: &mut Context) {
     }));
 }
 
+/// A run of lines that appears more than once in a buffer.
+#[derive(Debug, PartialEq, Eq, Clone)]
+struct DuplicateBlock {
+    /// The 0-based first lines of each occurrence, in order.
+    starts: Vec<usize>,
+    /// How many lines the run covers.
+    len: usize,
+}
+
+/// The duplicated line-runs in `lines`, longest first — JetBrains "Locate
+/// Duplicates…" (`DupLocate`). Pure — unit tested.
+///
+/// Lines are compared with their leading and trailing whitespace removed, so
+/// the same code at two indentation levels still matches, and blank lines and
+/// runs shorter than `min_len` are ignored — otherwise every closing brace in
+/// the file is a "duplicate". Occurrences are grown greedily and overlapping
+/// or already-reported runs are dropped, so one copied block is one finding
+/// rather than one per line of it.
+fn duplicate_blocks(lines: &[String], min_len: usize) -> Vec<DuplicateBlock> {
+    let min_len = min_len.max(1);
+    let norm: Vec<&str> = lines.iter().map(|l| l.trim()).collect();
+    let n = norm.len();
+    let mut taken = vec![false; n];
+    let mut out: Vec<DuplicateBlock> = Vec::new();
+
+    for i in 0..n {
+        if taken[i] || norm[i].is_empty() {
+            continue;
+        }
+        // Where else this line appears, ignoring blanks.
+        let mut matches: Vec<usize> = ((i + 1)..n)
+            .filter(|&j| !taken[j] && norm[j] == norm[i])
+            .collect();
+        if matches.is_empty() {
+            continue;
+        }
+        // Grow every occurrence together for as long as they all agree.
+        let mut len = 1;
+        loop {
+            let next = len;
+            let i_next = i + next;
+            if i_next >= n || norm[i_next].is_empty() {
+                break;
+            }
+            let all_agree = matches.iter().all(|&j| {
+                let j_next = j + next;
+                j_next < n && !taken[j_next] && norm[j_next] == norm[i_next] && j_next > i_next
+            });
+            if !all_agree {
+                break;
+            }
+            len += 1;
+        }
+        if len < min_len {
+            continue;
+        }
+        // Occurrences that overlap the first one are the same text repeating
+        // (`x x x`), not two separate copies; keep the disjoint ones.
+        matches.retain(|&j| j >= i + len);
+        if matches.is_empty() {
+            continue;
+        }
+        for &j in std::iter::once(&i).chain(matches.iter()) {
+            for k in j..(j + len).min(n) {
+                taken[k] = true;
+            }
+        }
+        let mut starts = vec![i];
+        starts.extend(matches);
+        out.push(DuplicateBlock { starts, len });
+    }
+    out.sort_by(|a, b| b.len.cmp(&a.len).then(a.starts[0].cmp(&b.starts[0])));
+    out
+}
+
+/// JetBrains "Locate Duplicates…" (`DupLocate`): the blocks of this buffer
+/// that appear more than once, longest first, in a picker that jumps to them.
+///
+/// Six lines is the floor, which is about where a repeated block stops being
+/// boilerplate and starts being a copy worth extracting.
+fn locate_duplicates(cx: &mut Context) {
+    const MIN_LINES: usize = 6;
+    let lines = buffer_lines(doc!(cx.editor));
+    let blocks = duplicate_blocks(&lines, MIN_LINES);
+    if blocks.is_empty() {
+        cx.editor.set_status(format!(
+            "no duplicated blocks of {MIN_LINES}+ lines in this buffer"
+        ));
+        return;
+    }
+    struct Finding {
+        line: usize,
+        len: usize,
+        copies: usize,
+        first: String,
+    }
+    let mut findings: Vec<Finding> = Vec::new();
+    for block in &blocks {
+        for &start in &block.starts {
+            findings.push(Finding {
+                line: start,
+                len: block.len,
+                copies: block.starts.len(),
+                first: lines
+                    .get(start)
+                    .map(|l| l.trim().to_string())
+                    .unwrap_or_default(),
+            });
+        }
+    }
+    let columns = [
+        PickerColumn::new("line", |f: &Finding, _: &()| (f.line + 1).to_string().into()),
+        PickerColumn::new("lines", |f: &Finding, _: &()| f.len.to_string().into()),
+        PickerColumn::new("copies", |f: &Finding, _: &()| f.copies.to_string().into()),
+        PickerColumn::new("text", |f: &Finding, _: &()| f.first.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, findings, (), |cx, finding: &Finding, _action| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let line = finding.line.min(text.len_lines().saturating_sub(1));
+        let pos = text.line_to_char(line);
+        doc.set_selection(view.id, Selection::point(pos));
+        align_view(doc, view, Align::Center);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// JetBrains "Show VCS Console" (`Vcs.ShowConsoleTab`): every git command the
 /// editor has run this session, newest last, failures marked.
 ///
@@ -64431,6 +64559,49 @@ mod insert_generator_tests {
         // The plain comment block is left for `fold_comments`; a single doc
         // line has nothing to fold.
         assert_eq!(doc_comment_runs(&src), vec![(0, 1), (5, 7)]);
+    }
+
+    #[test]
+    fn duplicate_blocks_finds_copies_and_ignores_boilerplate() {
+        let src = lines(&[
+            "fn a() {",      // 0
+            "    let x = 1;",
+            "    let y = 2;",
+            "    print(x);",
+            "}",
+            "",              // 5
+            "fn b() {",      // 6 — same body, different name
+            "    let x = 1;",
+            "    let y = 2;",
+            "    print(x);",
+            "}",
+            "",
+            "fn c() {}",
+        ]);
+        // The four-line body repeats; with a floor of 4 it is one finding with
+        // two occurrences.
+        let dups = duplicate_blocks(&src, 4);
+        assert_eq!(dups.len(), 1, "one finding, not one per line: {dups:?}");
+        assert_eq!(dups[0].starts, vec![1, 7]);
+        assert_eq!(dups[0].len, 4);
+        // With a higher floor nothing qualifies.
+        assert!(duplicate_blocks(&src, 8).is_empty());
+    }
+
+    #[test]
+    fn duplicate_blocks_compares_trimmed_lines() {
+        let src = lines(&[
+            "if a {",
+            "    do_it();",
+            "}",
+            "x",
+            "        if a {",  // deeper indentation, same code
+            "            do_it();",
+            "        }",
+        ]);
+        let dups = duplicate_blocks(&src, 3);
+        assert_eq!(dups.len(), 1, "indentation does not hide a copy: {dups:?}");
+        assert_eq!(dups[0].starts, vec![0, 4]);
     }
 
     #[test]
