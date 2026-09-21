@@ -1238,6 +1238,9 @@
 | `:vc-root-version-diff`, `:vc-root-diff` | Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff). |
 | `:vc-revision-other-window` | Show a past revision of the current file, default HEAD (emacs vc-revision-other-window). |
 | `:sticky-lines`, `:sticky-context` | Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines). |
+| `:changelist`, `:cl` | Put this file in a named changelist, or report which one holds it (JetBrains changelists). |
+| `:changelists`, `:cls` | List every changelist and the files in it (JetBrains Changes view). |
+| `:changelist-commit`, `:cl-commit` | Commit only the files in a changelist (JetBrains Commit changelist). |
 | `:fold-matching`, `:fold-lines-like-this` | Fold every run of lines matching a regex (JetBrains Fold Lines Like This). |
 | `:attach-dir`, `:attach-directory` | Add a directory as a second content root, searched with the workspace (JetBrains Attach Directory to Project). |
 | `:detach-dir`, `:detach-directory` | Detach an attached directory, `*` for all, or list them (JetBrains Detach Directory from Project). |

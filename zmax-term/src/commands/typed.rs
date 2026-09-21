@@ -24514,6 +24514,157 @@ fn sticky_lines_limit_cmd(
     Ok(())
 }
 
+/// The repository's git dir and root, for the changelist store.
+fn repo_dirs(cx: &compositor::Context) -> anyhow::Result<(std::path::PathBuf, std::path::PathBuf)> {
+    let dir = git_dir_for_current(cx);
+    let git_dir = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(["rev-parse", "--absolute-git-dir"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| std::path::PathBuf::from(String::from_utf8_lossy(&o.stdout).trim().to_string()))
+        .context("not in a git repository")?;
+    let root = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| std::path::PathBuf::from(String::from_utf8_lossy(&o.stdout).trim().to_string()))
+        .context("not in a git repository")?;
+    Ok((git_dir, root))
+}
+
+/// Load the repository's changelists.
+fn load_changelists(cx: &compositor::Context) -> anyhow::Result<(std::path::PathBuf, std::path::PathBuf, crate::changelists::Store)> {
+    let (git_dir, root) = repo_dirs(cx)?;
+    let path = crate::changelists::store_path(&git_dir);
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    Ok((path, root, crate::changelists::parse(&text)))
+}
+
+/// The current buffer's path relative to the repository root.
+fn current_repo_relative(cx: &compositor::Context, root: &std::path::Path) -> anyhow::Result<String> {
+    let path = doc!(cx.editor)
+        .path()
+        .map(ToOwned::to_owned)
+        .context("buffer has no file")?;
+    let path = path.canonicalize().unwrap_or(path);
+    let rel = path.strip_prefix(root).unwrap_or(&path);
+    Ok(rel.to_string_lossy().replace('\\', "/"))
+}
+
+/// `:changelist [NAME]` — JetBrains changelists (`ChangesView.Move`): put this
+/// file in the named list, or report which list it is in.
+///
+/// A file belongs to one list, as in the IDE, so assigning moves it and says
+/// where it came from. The store lives in `.git/zmax-changelists`, per
+/// repository and never committed.
+fn changelist(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (path, root, mut store) = load_changelists(cx)?;
+    let rel = current_repo_relative(cx, &root)?;
+    let Some(name) = args.first() else {
+        cx.editor.set_status(match crate::changelists::list_of(&store, &rel) {
+            Some(list) => format!("{rel} is in changelist `{list}`"),
+            None => format!("{rel} is in no changelist"),
+        });
+        return Ok(());
+    };
+    let moved_from = crate::changelists::assign(&mut store, name, &rel);
+    std::fs::write(&path, crate::changelists::render(&store))
+        .map_err(|e| anyhow!("{}: {e}", path.display()))?;
+    cx.editor.set_status(match moved_from {
+        Some(old) => format!("moved {rel} from `{old}` to `{name}`"),
+        None => format!("{rel} is now in changelist `{name}`"),
+    });
+    Ok(())
+}
+
+/// `:changelists` — list every changelist and what is in it
+/// (`ChangesView`'s tree, as text).
+fn changelists_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (_, _, store) = load_changelists(cx)?;
+    if store.is_empty() {
+        cx.editor
+            .set_status("no changelists — `:changelist NAME` starts one");
+        return Ok(());
+    }
+    let mut text = String::new();
+    for (name, paths) in &store {
+        text.push_str(&format!("[{name}] ({} file(s))\n", paths.len()));
+        for p in paths {
+            text.push_str(&format!("    {p}\n"));
+        }
+        text.push('\n');
+    }
+    super::show_text_in_scratch(cx.editor, &text);
+    cx.editor
+        .set_status(format!("{} changelist(s)", store.len()));
+    Ok(())
+}
+
+/// `:changelist-commit NAME MESSAGE` — JetBrains "Commit changelist": commit
+/// only the files in `NAME`.
+///
+/// The paths are passed to `git commit` explicitly, so whatever else is
+/// staged or modified stays where it is — which is the whole reason to keep
+/// changelists rather than staging by hand.
+fn changelist_commit(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().context("usage: :changelist-commit NAME MESSAGE")?;
+    let message: String = args
+        .iter()
+        .skip(1)
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if message.trim().is_empty() {
+        bail!("usage: :changelist-commit NAME MESSAGE");
+    }
+    let (_, root, store) = load_changelists(cx)?;
+    let paths = store
+        .get(name)
+        .filter(|paths| !paths.is_empty())
+        .with_context(|| format!("changelist `{name}` is empty or does not exist"))?;
+
+    let mut cmd = std::process::Command::new("git");
+    cmd.arg("-C").arg(&root).args(["commit", "-m", &message, "--"]);
+    for p in paths {
+        cmd.arg(p);
+    }
+    let out = cmd.output().map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!(
+            "git commit: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    cx.editor.set_status(format!(
+        "committed {} file(s) from `{name}`",
+        paths.len()
+    ));
+    Ok(())
+}
+
 /// `:fold-matching PATTERN` — JetBrains "Fold Lines Like This"
 /// (`ConsoleView.FoldLinesLikeThis`): fold away every run of lines matching a
 /// regex, which is how a console full of repeated noise is made readable.
@@ -63412,6 +63563,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "changelist",
+        aliases: &["cl"],
+        doc: "Put this file in a named changelist, or report which one holds it (JetBrains changelists).",
+        fun: changelist,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "changelists",
+        aliases: &["cls"],
+        doc: "List every changelist and the files in it (JetBrains Changes view).",
+        fun: changelists_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "changelist-commit",
+        aliases: &["cl-commit"],
+        doc: "Commit only the files in a changelist (JetBrains Commit changelist).",
+        fun: changelist_commit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
             ..Signature::DEFAULT
         },
     },
