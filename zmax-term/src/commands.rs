@@ -1677,6 +1677,8 @@ impl MappableCommand {
         title_case_selection, "Title-case the selection (capitalize each word)",
         sentence_case_selection, "Capitalize the first letter of each sentence in the selection",
         straighten_quotes_selection, "Convert smart quotes/dashes in the selection to plain ASCII",
+        show_color_picker, "Pick a colour and insert its hex (JetBrains Show Color Picker)",
+        surround_with_tag, "Wrap the selection in an element you name (JetBrains Surround with Tag)",
         hex_to_rgb_selection, "Convert a #hex color in the selection to rgb(r, g, b)",
         rgb_to_hex_selection, "Convert an rgb(r, g, b) color in the selection to #hex",
         to_roman_selection, "Convert the selected integer to a Roman numeral",
@@ -1693,6 +1695,7 @@ impl MappableCommand {
         contrast_text, "Recommend black/white text for the selected hex background color",
         toggle_value_selection, "Toggle the boolean/keyword in the selection (true<->false, …)",
         normalize_whitespace_selection, "Collapse internal whitespace runs in the selection",
+        toggle_rendered_view, "Show this markdown buffer rendered in a scratch (JetBrains Toggle Rendered View)",
         insert_toc, "Insert a markdown table of contents from the buffer's headings",
         slugify_selection, "Slugify the selection (lowercase, hyphen-separated)",
         humanize_selection, "Humanize a slug/identifier into a Title-Cased label",
@@ -1833,6 +1836,10 @@ impl MappableCommand {
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
         run_prev_error, "Jump to the previous file:line in the run output",
+        show_vcs_console, "Every git command the editor has run this session (JetBrains Show VCS Console)",
+        clear_vcs_console, "Empty the VCS console",
+        reveal_directory_in_tree, "Reveal the current file's directory in the project tree (JetBrains Select Directory in Project View)",
+        show_scratch_files, "Pick among the scratch buffers (JetBrains Show Scratch Files)",
         reveal_in_tree, "Reveal the current file in the project tree",
         toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
         focus_file_tree, "Focus the project file tree panel",
@@ -2039,6 +2046,7 @@ impl MappableCommand {
         profiler_write_report, "Write the command profiler report to a prompted file (SPC h P w)",
         regexp_generate_strings, "Generate every string matched by a finite regexp (SPC x r ')",
         regexp_generate_strings_emacs, "Generate every string matched by a finite Emacs regexp (SPC x r e ')",
+        toggle_gutter_icons, "Show or hide the gutter's icon columns (JetBrains Show Gutter Icons)",
         toggle_fringe, "Hide or show the whole fringe (gutter column strip) (fringe-mode, SPC T f)",
         restart_editor, "Close every view and relaunch zmax with the same arguments (restart-emacs, SPC q r)",
         duplicate_selection_down, "Duplicate current line(s) downward",
@@ -4569,6 +4577,8 @@ fn git_out(dir: &std::path::Path, args: &[&str]) -> Option<String> {
         .args(args)
         .output()
         .ok()?;
+    // Every git call the editor makes goes in the VCS console.
+    crate::git_console::record(dir, args, out.status.success());
     if !out.status.success() {
         return None;
     }
@@ -9499,6 +9509,125 @@ fn rgb_to_hex_selection(cx: &mut Context) {
     });
 }
 
+/// The colours JetBrains "Show Color Picker" (`ShowColorPicker`) offers: the
+/// sixteen terminal colours, which is the palette a theme file is written in,
+/// plus the greys a UI needs between them.
+const COLOR_PALETTE: &[(&str, &str)] = &[
+    ("black", "#000000"),
+    ("red", "#cc0000"),
+    ("green", "#4e9a06"),
+    ("yellow", "#c4a000"),
+    ("blue", "#3465a4"),
+    ("magenta", "#75507b"),
+    ("cyan", "#06989a"),
+    ("white", "#d3d7cf"),
+    ("bright black", "#555753"),
+    ("bright red", "#ef2929"),
+    ("bright green", "#8ae234"),
+    ("bright yellow", "#fce94f"),
+    ("bright blue", "#729fcf"),
+    ("bright magenta", "#ad7fa8"),
+    ("bright cyan", "#34e2e2"),
+    ("bright white", "#eeeeec"),
+    ("grey 10%", "#1a1a1a"),
+    ("grey 25%", "#404040"),
+    ("grey 50%", "#808080"),
+    ("grey 75%", "#bfbfbf"),
+    ("grey 90%", "#e6e6e6"),
+];
+
+/// JetBrains "Show Color Picker" (`ShowColorPicker`): pick a colour and put
+/// its hex in the buffer.
+///
+/// A selection is replaced, so picking over an existing `#rrggbb` swaps it;
+/// with no selection the hex is inserted at the cursor. The swatch column
+/// shows the colour itself, which is the point of a picker in a terminal.
+fn show_color_picker(cx: &mut Context) {
+    struct Swatch {
+        name: &'static str,
+        hex: &'static str,
+    }
+    let colors: Vec<Swatch> = COLOR_PALETTE
+        .iter()
+        .map(|(name, hex)| Swatch { name, hex })
+        .collect();
+    let columns = [
+        PickerColumn::new("color", |c: &Swatch, _: &()| c.name.into()),
+        PickerColumn::new("hex", |c: &Swatch, _: &()| c.hex.into()),
+        // A block drawn in the colour: the swatch a graphical picker shows.
+        PickerColumn::new("swatch", |c: &Swatch, _: &()| {
+            let color = zmax_view::graphics::Color::from_hex(c.hex)
+                .unwrap_or(zmax_view::graphics::Color::Reset);
+            Span::styled("████████", zmax_view::graphics::Style::default().fg(color)).into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, colors, (), |cx, swatch: &Swatch, _action| {
+        let hex = swatch.hex.to_string();
+        let (view, doc) = current!(cx.editor);
+        let selection = doc.selection(view.id).clone();
+        let transaction = Transaction::change_by_selection(doc.text(), &selection, |range| {
+            (range.from(), range.to(), Some(Tendril::from(hex.as_str())))
+        });
+        doc.apply(&transaction, view.id);
+        cx.editor.set_status(format!("inserted {hex}"));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// The selection wrapped in `<tag>`…`</tag>` — JetBrains "Surround with Tag".
+/// An attribute list is kept out of the closing tag, so `div class="x"` closes
+/// as `</div>`. Pure — unit tested.
+fn surround_with_tag_text(inner: &str, tag: &str) -> String {
+    let name = tag.split_whitespace().next().unwrap_or("").to_string();
+    format!("<{tag}>{inner}</{name}>")
+}
+
+/// JetBrains "Surround with Tag" (`SurroundWithTagTemplate`): wrap the
+/// selection in an element whose name you type.
+///
+/// `surround_add` (helix `ms`) wraps in a PAIR — a bracket, a quote — which
+/// cannot express `<div class="x">…</div>`; this is the markup half.
+fn surround_with_tag(cx: &mut Context) {
+    let has_selection = {
+        let (view, doc) = current_ref!(cx.editor);
+        doc.selection(view.id).primary().len() > 0
+    };
+    if !has_selection {
+        cx.editor.set_error("select the text to surround first");
+        return;
+    }
+    ui::prompt(
+        cx,
+        "tag: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let tag = input.trim();
+            if tag.is_empty() {
+                cx.editor.set_error("a tag needs a name");
+                return;
+            }
+            let tag = tag.to_string();
+            let (view, doc) = current!(cx.editor);
+            let selection = doc.selection(view.id).clone();
+            let text = doc.text().slice(..);
+            let transaction = Transaction::change_by_selection(doc.text(), &selection, |range| {
+                let inner: String = text.slice(range.from()..range.to()).chunks().collect();
+                (
+                    range.from(),
+                    range.to(),
+                    Some(Tendril::from(surround_with_tag_text(&inner, &tag).as_str())),
+                )
+            });
+            doc.apply(&transaction, view.id);
+            cx.editor.set_status(format!("surrounded with <{tag}>"));
+        },
+    );
+}
+
 /// Convert an integer (1–3999) to a Roman numeral, or `None` if out of range.
 /// Pure — unit tested.
 fn to_roman(mut n: u32) -> Option<String> {
@@ -10013,6 +10142,109 @@ fn markdown_toc(text: &str) -> String {
 
 /// `:toc` — insert a markdown table of contents (from the buffer's headings) at
 /// the cursor.
+/// Markdown rendered as plain text — JetBrains "Toggle Rendered View"
+/// (`ToggleRenderedDocPresentation`) in a terminal. Pure — unit tested.
+///
+/// Headings become underlined titles, list bullets are normalised, emphasis
+/// and inline-code markers are dropped, link text is kept over its URL, and a
+/// fenced block is passed through indented and unchanged — the rendering a
+/// reader wants and the IDE's rendered view shows.
+fn render_markdown(text: &str) -> String {
+    let mut out = String::new();
+    let mut in_fence = false;
+    for raw in text.lines() {
+        let line = raw.trim_end();
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            in_fence = !in_fence;
+            continue;
+        }
+        if in_fence {
+            out.push_str("    ");
+            out.push_str(line);
+            out.push('\n');
+            continue;
+        }
+        if let Some(rest) = trimmed.strip_prefix('#') {
+            let level = 1 + rest.chars().take_while(|c| *c == '#').count();
+            let title = render_markdown_inline(rest.trim_start_matches('#').trim());
+            out.push_str(&title);
+            out.push('\n');
+            // `=` under a top-level heading, `-` under the rest: the shape a
+            // rendered document has when it has no fonts to change.
+            let rule = if level == 1 { '=' } else { '-' };
+            out.push_str(&rule.to_string().repeat(title.chars().count()));
+            out.push('\n');
+            continue;
+        }
+        let indent: String = line.chars().take_while(|c| c.is_whitespace()).collect();
+        let body = if let Some(item) = trimmed
+            .strip_prefix("- ")
+            .or_else(|| trimmed.strip_prefix("* "))
+            .or_else(|| trimmed.strip_prefix("+ "))
+        {
+            format!("• {}", render_markdown_inline(item))
+        } else {
+            render_markdown_inline(trimmed)
+        };
+        out.push_str(&indent);
+        out.push_str(&body);
+        out.push('\n');
+    }
+    out
+}
+
+/// One line of markdown with its inline markers resolved. Pure — unit tested.
+fn render_markdown_inline(line: &str) -> String {
+    // `[text](url)` keeps the text; the URL follows in angle brackets so a
+    // rendered view does not silently lose where a link went.
+    let mut out = String::new();
+    let chars: Vec<char> = line.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '[' {
+            if let Some(close) = chars[i..].iter().position(|c| *c == ']') {
+                let text: String = chars[i + 1..i + close].iter().collect();
+                let after = i + close + 1;
+                if chars.get(after) == Some(&'(') {
+                    if let Some(end) = chars[after..].iter().position(|c| *c == ')') {
+                        let url: String = chars[after + 1..after + end].iter().collect();
+                        out.push_str(&text);
+                        out.push_str(&format!(" <{url}>"));
+                        i = after + end + 1;
+                        continue;
+                    }
+                }
+            }
+        }
+        // Emphasis and inline code: the marker goes, the text stays.
+        if matches!(chars[i], '*' | '_' | '`') {
+            i += 1;
+            continue;
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
+/// JetBrains "Toggle Rendered View" (`ToggleRenderedDocPresentation`): show
+/// the markdown of this buffer rendered, in a scratch buffer beside it.
+///
+/// A scratch rather than an in-place toggle: the IDE swaps the editor for a
+/// renderer and back, and the terminal equivalent of "back" is closing the
+/// scratch, which leaves the source untouched and still editable.
+fn toggle_rendered_view(cx: &mut Context) {
+    let text = doc!(cx.editor).text().to_string();
+    if text.trim().is_empty() {
+        cx.editor.set_status("nothing to render");
+        return;
+    }
+    let rendered = render_markdown(&text);
+    show_text_in_scratch(cx.editor, &rendered);
+    cx.editor.set_status("rendered view (q or :bd to go back)");
+}
+
 fn insert_toc(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let text: String = doc.text().slice(..).chunks().collect();
@@ -17470,6 +17702,57 @@ fn toggle_line_numbers(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("line numbers: {}", if on { "on" } else { "off" }));
+}
+
+/// The gutter entries hidden by [`toggle_gutter_icons`], so the next toggle
+/// puts back exactly what was there.
+static SAVED_GUTTER_ICONS: once_cell::sync::Lazy<
+    std::sync::Mutex<Option<Vec<zmax_view::editor::GutterType>>>,
+> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
+
+/// JetBrains "Show Gutter Icons" (`EditorToggleShowGutterIcons`): the icon
+/// columns — diagnostics and breakpoints, code-action hints, vim marks and
+/// signs — on or off.
+///
+/// Line numbers and the diff stripe stay: the IDE's switch is about the icons,
+/// and `toggle_fringe` (`SPC T f`) is the one that takes the whole gutter.
+fn toggle_gutter_icons(cx: &mut Context) {
+    use zmax_view::editor::GutterType;
+    const ICONS: &[GutterType] = &[
+        GutterType::Diagnostics,
+        GutterType::CodeActionHint,
+        GutterType::Marks,
+        GutterType::Signs,
+    ];
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let mut saved = SAVED_GUTTER_ICONS.lock().unwrap();
+        match saved.take() {
+            Some(hidden) => {
+                // Put each one back where it was: ahead of the line numbers,
+                // which is where the icon columns live by default.
+                for gutter in hidden {
+                    if !c.gutters.layout.contains(&gutter) {
+                        c.gutters.layout.insert(0, gutter);
+                    }
+                }
+                on = true;
+            }
+            None => {
+                let hidden: Vec<GutterType> = c
+                    .gutters
+                    .layout
+                    .iter()
+                    .copied()
+                    .filter(|g| ICONS.contains(g))
+                    .collect();
+                c.gutters.layout.retain(|g| !ICONS.contains(g));
+                *saved = Some(hidden);
+            }
+        }
+    });
+    cx.editor
+        .set_status(format!("gutter icons: {}", if on { "on" } else { "off" }));
 }
 
 /// The gutter layout stashed by [`toggle_fringe`] so the next toggle restores it.
@@ -51429,6 +51712,87 @@ fn reveal_in_tree(cx: &mut Context) {
     }));
 }
 
+/// JetBrains "Show VCS Console" (`Vcs.ShowConsoleTab`): every git command the
+/// editor has run this session, newest last, failures marked.
+///
+/// `:magit`, the hunk commands, blame, the log view and the patch commands all
+/// shell out; this is how you find out what they actually ran against your
+/// repository. The record is kept by the three helpers every git call goes
+/// through, so it cannot drift from what was executed.
+fn show_vcs_console(cx: &mut Context) {
+    let runs = crate::git_console::entries();
+    let text = crate::git_console::render(&runs);
+    show_text_in_scratch(cx.editor, &text);
+    cx.editor
+        .set_status(format!("{} git command(s) this session", runs.len()));
+}
+
+/// Empty the VCS console (JetBrains' console has a clear button).
+fn clear_vcs_console(cx: &mut Context) {
+    let n = crate::git_console::clear();
+    cx.editor
+        .set_status(format!("cleared {n} git command(s) from the console"));
+}
+
+/// JetBrains "Select Directory in Project View"
+/// (`SelectInProjectView.directory`): reveal the current file's DIRECTORY in
+/// the project tree rather than the file itself — the move you make before
+/// creating a sibling of the file you are in.
+fn reveal_directory_in_tree(cx: &mut Context) {
+    let Some(dir) = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+    else {
+        cx.editor
+            .set_error("Current buffer has no directory to reveal");
+        return;
+    };
+    cx.callback.push(Box::new(move |compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.reveal_in_tree(&dir);
+        }
+    }));
+}
+
+/// JetBrains "Show Scratch Files" (`Scratch.ShowFilesPopup`): a picker over
+/// the scratch buffers — the ones with no file behind them — since the buffer
+/// picker shows them by name among every other open file.
+fn show_scratch_files(cx: &mut Context) {
+    struct Scratch {
+        id: zmax_view::DocumentId,
+        name: String,
+        lines: usize,
+        modified: bool,
+    }
+    let scratches: Vec<Scratch> = cx
+        .editor
+        .documents()
+        .filter(|doc| doc.path().is_none())
+        .map(|doc| Scratch {
+            id: doc.id(),
+            name: doc.display_name().into_owned(),
+            lines: doc.text().len_lines(),
+            modified: doc.is_modified(),
+        })
+        .collect();
+    if scratches.is_empty() {
+        cx.editor
+            .set_status("no scratch buffers — `:scratch` makes one");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("scratch", |s: &Scratch, _: &()| s.name.as_str().into()),
+        PickerColumn::new("lines", |s: &Scratch, _: &()| s.lines.to_string().into()),
+        PickerColumn::new("", |s: &Scratch, _: &()| {
+            if s.modified { "[+]" } else { "" }.into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, scratches, (), |cx, scratch: &Scratch, action| {
+        cx.editor.switch(scratch.id, action);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// Toggle maximizing the bottom panel (read long logs/diffs/errors full-height).
 fn toggle_bottom_zoom(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
@@ -64067,6 +64431,44 @@ mod insert_generator_tests {
         // The plain comment block is left for `fold_comments`; a single doc
         // line has nothing to fold.
         assert_eq!(doc_comment_runs(&src), vec![(0, 1), (5, 7)]);
+    }
+
+    #[test]
+    fn render_markdown_shapes_headings_lists_and_links() {
+        let src = "\
+# Title
+Some *emphasis* and `code`.
+
+## Section
+- one
+* two
+
+[zmax](https://example.com/zmax)
+
+```rust
+let x = 1;
+```
+";
+        let out = render_markdown(src);
+        assert!(out.contains("Title\n====="), "h1 is underlined with =: {out}");
+        assert!(out.contains("Section\n-------"), "h2 with -: {out}");
+        assert!(out.contains("Some emphasis and code."), "markers dropped: {out}");
+        assert!(out.contains("• one") && out.contains("• two"), "bullets: {out}");
+        assert!(
+            out.contains("zmax <https://example.com/zmax>"),
+            "link text over its url: {out}"
+        );
+        assert!(out.contains("    let x = 1;"), "fenced code indented: {out}");
+        assert!(!out.contains("```"), "the fence markers are gone: {out}");
+    }
+
+    #[test]
+    fn surround_with_tag_keeps_attributes_out_of_the_closing_tag() {
+        assert_eq!(surround_with_tag_text("hi", "b"), "<b>hi</b>");
+        assert_eq!(
+            surround_with_tag_text("hi", "div class=\"x\""),
+            "<div class=\"x\">hi</div>"
+        );
     }
 
     #[test]

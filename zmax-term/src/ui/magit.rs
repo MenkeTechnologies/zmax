@@ -948,6 +948,7 @@ impl MagitStatus {
         }
         match cmd.output() {
             Ok(out) => {
+                crate::git_console::record(&self.repo_dir, args, out.status.success());
                 let mut parts = Vec::new();
                 let stdout = String::from_utf8_lossy(&out.stdout);
                 let stderr = String::from_utf8_lossy(&out.stderr);
@@ -4321,6 +4322,8 @@ fn git_output(dir: &Path, args: &[&str]) -> Option<String> {
         cmd.arg(a);
     }
     let out = cmd.output().ok()?;
+    // Every git call the editor makes goes in the VCS console.
+    crate::git_console::record(dir, args, out.status.success());
     if out.status.success() {
         Some(String::from_utf8_lossy(&out.stdout).into_owned())
     } else {

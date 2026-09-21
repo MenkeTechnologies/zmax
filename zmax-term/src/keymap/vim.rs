@@ -2069,6 +2069,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "m" => buffer_sort_by_last_used,
                 },
                 "b" => buffer_picker,              // SPC b b
+                "C-s" => show_scratch_files,       // SPC b C-s : pick among the scratch buffers (JetBrains Show Scratch Files; `s`/`S` already make one)
                 "n" => goto_next_buffer,           // SPC b n
                 "p" => goto_previous_buffer,       // SPC b p
                 "m" => changed_file_picker,        // SPC b m
@@ -2499,6 +2500,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "$" => goto_line_end,              // SPC j $
                 "b" => jump_backward,              // SPC j b : back to prev location
                 "d" => file_explorer_in_current_buffer_directory, // SPC j d : dir listing
+                "T" => reveal_directory_in_tree,   // SPC j T : reveal this file's DIRECTORY in the project tree (JetBrains Select Directory in Project View)
                 "c" => goto_last_change,           // SPC j c : go to last change
                 "k" => [move_visual_line_down, indent], // SPC j k : next line + indent
                 "u" => goto_file,                  // SPC j u : jump to URL/file under cursor
@@ -2573,6 +2575,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "^" => goto_super_method,          // SPC g ^ : the method this one overrides (JetBrains Cmd U)
                 "U" => type_hierarchy_subtypes,    // SPC g U : type hierarchy — subtypes
                 "b" => git_blame_line,             // SPC g b : git blame current line (spacemacs magit-blame)
+                "!" => show_vcs_console,           // SPC g ! : every git command this session (JetBrains Show VCS Console)
                 "s" => git_status,                 // SPC g s : magit status porcelain (Spacemacs magit-status)
                 "m" => resolve_conflicts,          // SPC g m : open 3-way merge-conflict resolver
                 "G" => focus_git_panel,            // SPC g G : focus zmax Git changes panel
@@ -2671,6 +2674,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             },
             "v" => expand_selection,               // SPC v : expand region
             "x" => { "Text"
+                "h" => show_color_picker,          // SPC x h : pick a colour and insert its hex (JetBrains Show Color Picker)
+                "T" => surround_with_tag,          // SPC x T : wrap the selection in an element you name (JetBrains Surround with Tag; `x t` is the transpose prefix)
+                "v" => toggle_rendered_view,       // SPC x v : this markdown rendered in a scratch (JetBrains Toggle Rendered View)
+                "G" => toggle_gutter_icons,        // SPC x G : show or hide the gutter icon columns (JetBrains Show Gutter Icons; `x g` is the translate prefix)
                 // drag-stuff transient state: j/k keep dragging until q/ESC.
                 "." => { "Drag" sticky=true
                     "j" | "down" => drag_line_down,    // SPC x . j : drag line down

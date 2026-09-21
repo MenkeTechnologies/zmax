@@ -23,6 +23,7 @@ pub mod commands;
 pub mod compositor;
 pub mod config;
 pub mod dictionary;
+pub mod git_console;
 pub mod emacs_abbrev;
 pub mod emacs_bookmark;
 pub mod emacs_button;

@@ -1286,6 +1286,8 @@
 | `title_case_selection` | Title-case the selection (capitalize each word) |  |
 | `sentence_case_selection` | Capitalize the first letter of each sentence in the selection |  |
 | `straighten_quotes_selection` | Convert smart quotes/dashes in the selection to plain ASCII |  |
+| `show_color_picker` | Pick a colour and insert its hex (JetBrains Show Color Picker) | **spacemacs, hybrid** — normal: `` <space>xh ``, select: `` <space>xh `` |
+| `surround_with_tag` | Wrap the selection in an element you name (JetBrains Surround with Tag) | **spacemacs, hybrid** — normal: `` <space>xT ``, select: `` <space>xT `` |
 | `hex_to_rgb_selection` | Convert a #hex color in the selection to rgb(r, g, b) |  |
 | `rgb_to_hex_selection` | Convert an rgb(r, g, b) color in the selection to #hex |  |
 | `to_roman_selection` | Convert the selected integer to a Roman numeral |  |
@@ -1302,6 +1304,7 @@
 | `contrast_text` | Recommend black/white text for the selected hex background color |  |
 | `toggle_value_selection` | Toggle the boolean/keyword in the selection (true<->false, …) |  |
 | `normalize_whitespace_selection` | Collapse internal whitespace runs in the selection |  |
+| `toggle_rendered_view` | Show this markdown buffer rendered in a scratch (JetBrains Toggle Rendered View) | **spacemacs, hybrid** — normal: `` <space>xv ``, select: `` <space>xv `` |
 | `insert_toc` | Insert a markdown table of contents from the buffer's headings |  |
 | `slugify_selection` | Slugify the selection (lowercase, hyphen-separated) |  |
 | `humanize_selection` | Humanize a slug/identifier into a Title-Cased label |  |
@@ -1442,6 +1445,10 @@
 | `rerun_last_run` | Re-run the last command in the Run console | **spacemacs** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> ``<br>**hybrid** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> `` |
 | `run_next_error` | Jump to the next file:line in the run output | **spacemacs** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` ``<br>**hybrid** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn `` |
 | `run_prev_error` | Jump to the previous file:line in the run output | **spacemacs, hybrid** — normal: `` <A-g>p ``, `` <space>Rp ``, `` <A-g><A-p> ``, select: `` <space>Rp `` |
+| `show_vcs_console` | Every git command the editor has run this session (JetBrains Show VCS Console) | **spacemacs, hybrid** — normal: `` <space>g! ``, select: `` <space>g! `` |
+| `clear_vcs_console` | Empty the VCS console |  |
+| `reveal_directory_in_tree` | Reveal the current file's directory in the project tree (JetBrains Select Directory in Project View) | **spacemacs, hybrid** — normal: `` <space>jT ``, select: `` <space>jT `` |
+| `show_scratch_files` | Pick among the scratch buffers (JetBrains Show Scratch Files) | **spacemacs, hybrid** — normal: `` <space>b<C-s> ``, select: `` <space>b<C-s> `` |
 | `reveal_in_tree` | Reveal the current file in the project tree |  |
 | `toggle_auto_reveal` | Toggle always-select-opened-file (autoscroll from source) | **spacemacs, hybrid** — normal: `` <space>pV ``, select: `` <space>pV `` |
 | `focus_file_tree` | Focus the project file tree panel | **spacemacs, hybrid** — normal: `` <space>Wp ``, `` <space>Wt ``, select: `` <space>Wp ``, `` <space>Wt `` |
@@ -1648,6 +1655,7 @@
 | `profiler_write_report` | Write the command profiler report to a prompted file (SPC h P w) | **spacemacs, hybrid** — normal: `` <space>hPw ``, select: `` <space>hPw `` |
 | `regexp_generate_strings` | Generate every string matched by a finite regexp (SPC x r ') | **spacemacs, hybrid** — normal: `` <space>xr' ``, `` <space>xrp' ``, select: `` <space>xr' ``, `` <space>xrp' `` |
 | `regexp_generate_strings_emacs` | Generate every string matched by a finite Emacs regexp (SPC x r e ') | **spacemacs, hybrid** — normal: `` <space>xre' ``, select: `` <space>xre' `` |
+| `toggle_gutter_icons` | Show or hide the gutter's icon columns (JetBrains Show Gutter Icons) | **spacemacs, hybrid** — normal: `` <space>xG ``, select: `` <space>xG `` |
 | `toggle_fringe` | Hide or show the whole fringe (gutter column strip) (fringe-mode, SPC T f) | **spacemacs, hybrid** — normal: `` <space>Tf ``, select: `` <space>Tf `` |
 | `restart_editor` | Close every view and relaunch zmax with the same arguments (restart-emacs, SPC q r) | **spacemacs, hybrid** — normal: `` <space>qr ``, select: `` <space>qr `` |
 | `duplicate_selection_down` | Duplicate current line(s) downward | **micro** — normal: `` <C-d> ``, insert: `` <C-d> `` |
