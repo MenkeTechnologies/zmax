@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d750180e.js";
+            window.path_to_searchindex_js = "searchindex-bebd3a8f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2953,6 +2953,9 @@ without scrolling.</p>
 <tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
 <tr><td><code>:vc-root-version-diff</code>, <code>:vc-root-diff</code></td><td>Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).</td></tr>
 <tr><td><code>:vc-revision-other-window</code></td><td>Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).</td></tr>
+<tr><td><code>:toggle-file-readonly</code>, <code>:make-writable</code>, <code>:make-read-only</code></td><td>Flip the file’s write permission on disk (JetBrains Toggle Read-Only Attribute).</td></tr>
+<tr><td><code>:shelve</code>, <code>:shelve-changes</code></td><td>Put the working tree’s diff aside as a named patch and restore the tree (JetBrains Shelve Changes).</td></tr>
+<tr><td><code>:unshelve</code>, <code>:unshelve-changes</code></td><td>Apply a shelf entry back onto the tree, or list the shelf (JetBrains Unshelve).</td></tr>
 <tr><td><code>:create-patch</code>, <code>:patch-create</code></td><td>Write the working tree’s diff to a file, or show it in a scratch buffer (JetBrains Create Patch from Local Changes).</td></tr>
 <tr><td><code>:copy-patch</code>, <code>:patch-copy</code></td><td>Copy the working tree’s diff to the clipboard (JetBrains Copy as Patch to Clipboard).</td></tr>
 <tr><td><code>:apply-patch</code>, <code>:patch-apply</code></td><td>Apply the patch on the clipboard with git apply (JetBrains Apply Patch from Clipboard).</td></tr>
@@ -9528,7 +9531,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>574</strong> (5.8%)</li>
 <li>Absent: <strong>378</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2547 static commands, 3143 typable <code>:</code> commands, 4648 default keybindings</li>
+<li>zmax source surface: 2547 static commands, 3150 typable <code>:</code> commands, 4648 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
