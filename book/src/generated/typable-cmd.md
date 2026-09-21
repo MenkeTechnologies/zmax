@@ -795,6 +795,9 @@
 | `:buffer-close-others`, `:bco`, `:bcloseother` | Close all buffers but the currently focused one. |
 | `:buffer-close-others!`, `:bco!`, `:bcloseother!` | Force close all buffers but the currently focused one. |
 | `:buffer-close-unmodified`, `:bcu` | Close every buffer with no unsaved changes, keeping pinned ones. |
+| `:buffer-close-left`, `:bcl` | Close the buffers left of this one in the bufferline, keeping pinned ones (JetBrains Close Tabs to the Left). |
+| `:buffer-close-right`, `:bcr` | Close the buffers right of this one in the bufferline, keeping pinned ones (JetBrains Close Tabs to the Right). |
+| `:buffer-close-readonly`, `:bcro` | Close every read-only buffer, keeping pinned ones (JetBrains Close All Read-Only Tabs). |
 | `:pin-tab`, `:pin` | Pin or unpin this buffer, keeping it out of the bulk buffer closes. |
 | `:buffer-close-all`, `:bca`, `:bcloseall` | Close all buffers without quitting. |
 | `:buffer-close-all!`, `:bca!`, `:bcloseall!` | Force close all buffers ignoring unsaved changes without quitting. |
@@ -1228,6 +1231,9 @@
 | `:git-stage`, `:stage`, `:git-add` | Stage the current buffer's file (git add). |
 | `:vc-root-version-diff`, `:vc-root-diff` | Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff). |
 | `:vc-revision-other-window` | Show a past revision of the current file, default HEAD (emacs vc-revision-other-window). |
+| `:create-patch`, `:patch-create` | Write the working tree's diff to a file, or show it in a scratch buffer (JetBrains Create Patch from Local Changes). |
+| `:copy-patch`, `:patch-copy` | Copy the working tree's diff to the clipboard (JetBrains Copy as Patch to Clipboard). |
+| `:apply-patch`, `:patch-apply` | Apply the patch on the clipboard with git apply (JetBrains Apply Patch from Clipboard). |
 | `:git-unstage`, `:unstage` | Unstage the current buffer's file (git reset HEAD). |
 | `:stash`, `:git-stash` | git stash the working-tree changes (then reload open buffers). |
 | `:stash-pop`, `:git-stash-pop` | git stash pop the most recent stash (then reload open buffers). |

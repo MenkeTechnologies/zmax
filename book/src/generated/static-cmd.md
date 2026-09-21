@@ -17,6 +17,8 @@
 | `buffer_sort_by_relative_path` | Sort the buffer line by relative path (AstroNvim SPC b s r) | **spacemacs, hybrid** — normal: `` <space>bor ``, select: `` <space>bor `` |
 | `buffer_sort_by_number` | Sort the buffer line by buffer number (AstroNvim SPC b s i) | **spacemacs, hybrid** — normal: `` <space>boi ``, select: `` <space>boi `` |
 | `buffer_sort_by_last_used` | Sort the buffer line by last use (AstroNvim SPC b s m) | **spacemacs, hybrid** — normal: `` <space>bom ``, select: `` <space>bom `` |
+| `fold_custom_regions` | Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions) | **spacemacs, hybrid** — normal: `` <space>cR ``, select: `` <space>cR `` |
+| `goto_custom_region` | Jump to a //region or <editor-fold> block by name (JetBrains Custom Folding) | **spacemacs, hybrid** — normal: `` <space>jr ``, select: `` <space>jr `` |
 | `fold_comments` | Fold multi-line comment blocks (SPC c h) | **spacemacs, hybrid** — normal: `` <space>ch ``, select: `` <space>ch `` |
 | `move_visual_line_up` | Move up | **spacemacs, vim** — normal: `` gk ``, `` g<up> ``, insert: `` <C-g>k ``, `` <C-g><up> ``, `` <C-g><C-k> ``<br>**hybrid** — normal: `` gk ``, `` g<up> ``, insert: `` <up> ``, `` <C-p> ``<br>**helix, kakoune** — normal: `` k ``, `` <up> ``, insert: `` <up> ``<br>**emacs, cua, nano** — normal: `` <up> ``, `` <C-p> ``, insert: `` <up> ``, `` <C-p> ``<br>**micro** — normal: `` <up> ``, insert: `` <up> `` |
 | `move_visual_line_down` | Move down | **spacemacs, vim** — normal: `` gj ``, `` g<down> ``, insert: `` <C-g>j ``, `` <C-g><C-j> ``, `` <C-g><down> ``<br>**hybrid** — normal: `` gj ``, `` g<down> ``, insert: `` <C-n> ``, `` <down> ``<br>**helix, kakoune** — normal: `` j ``, `` <down> ``, insert: `` <down> ``<br>**emacs, cua, nano** — normal: `` <C-n> ``, `` <down> ``, insert: `` <C-n> ``, `` <down> ``<br>**micro** — normal: `` <down> ``, insert: `` <down> `` |
@@ -288,6 +290,8 @@
 | `toggle_soft_wrap` | Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap) | **spacemacs** — normal: `` <C-x>xt ``, select: `` <C-x>xt ``, insert: `` <C-x>xt ``<br>**hybrid** — normal: `` <C-x>xt ``, select: `` <C-x>xt `` |
 | `toggle_whitespace_render` | Toggle rendering of whitespace characters (IntelliJ View > Show Whitespaces) |  |
 | `toggle_line_numbers` | Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers) |  |
+| `power_save_mode` | Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode) | **spacemacs, hybrid** — normal: `` <space>zp ``, select: `` <space>zp `` |
+| `distraction_free_mode` | Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode) | **spacemacs, hybrid** — normal: `` <space>zd ``, select: `` <space>zd `` |
 | `toggle_indent_guides` | Toggle indentation guides (IntelliJ View > Show Indent Guides) |  |
 | `toggle_inlay_hints` | Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints) |  |
 | `toggle_auto_highlight` | Toggle automatic symbol-under-cursor highlight (SPC t h a) | **spacemacs, hybrid** — normal: `` <space>tha ``, select: `` <space>tha `` |
@@ -971,6 +975,7 @@
 | `paste_before_cursor_after` | Paste before selection, cursor after the pasted text (vim gP) | **spacemacs, hybrid, vim** — normal: `` gP `` |
 | `paste_before` | Paste before selection | **spacemacs, hybrid** — normal: `` P ``, `` [P ``, `` ]P ``, `` <space>kP ``, select: `` <space>kP ``<br>**vim** — normal: `` P ``, `` [P ``, `` ]P ``<br>**helix, kakoune** — normal: `` P ``, select: `` P `` |
 | `yank_from_kill_ring` | Yank the latest kill-ring entry (emacs C-y) | **hybrid** — insert: `` <C-y> ``<br>**emacs** — normal: `` <C-y> ``, insert: `` <C-y> ``<br>**cua** — normal: `` <C-v> ``, `` <C-y> ``, insert: `` <C-v> ``, `` <C-y> `` |
+| `paste_from_history` | Pick an entry from the kill ring and paste it (JetBrains Paste from History) | **spacemacs, hybrid, vim** — normal: `` <A-Y> `` |
 | `yank_pop` | Replace the just-yanked text with the next kill-ring entry (emacs M-y) | **spacemacs** — normal: `` <A-y> ``<br>**hybrid, emacs, cua, micro, nano** — normal: `` <A-y> ``, insert: `` <A-y> `` |
 | `set_mark_command` | Set mark and activate region, pushing to the mark ring (emacs C-SPC) | **spacemacs** — normal: `` <C-@> ``<br>**hybrid** — normal: `` <C-@> ``, insert: `` <C-space> ``<br>**emacs, cua, micro, nano** — insert: `` <C-space> `` |
 | `pop_to_mark` | Jump to the top of the mark ring, rotating it (emacs C-x C-SPC) | **spacemacs, hybrid** — normal: `` <C-x><C-space> ``, select: `` <C-x><C-space> ``, insert: `` <C-x><C-space> ``<br>**emacs** — insert: `` <C-x><C-space> ``<br>**cua** — select: `` <C-X><C-space> ``, insert: `` <C-x><C-space> `` |
@@ -1361,6 +1366,8 @@
 | `file_info` | Show file name and cursor position (CTRL-G) | **spacemacs, hybrid, vim** — normal: `` <C-g> `` |
 | `document_stats` | Show document line/word/char counts (g CTRL-G) | **spacemacs, hybrid, vim** — normal: `` g<C-g> ``, select: `` g<C-g> `` |
 | `git_blame_line` | Show git blame for the current line (g b) | **spacemacs** — normal: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, select: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, insert: `` <C-x>vg ``<br>**hybrid** — normal: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, select: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb `` |
+| `copy_branch_name` | Yank the current git branch name to the clipboard (JetBrains Copy Branch Name) | **spacemacs, hybrid** — normal: `` <space>gYb ``, select: `` <space>gYb `` |
+| `copy_revision_number` | Yank the commit that last touched this line to the clipboard (JetBrains Copy Revision Number) | **spacemacs, hybrid** — normal: `` <space>gYr ``, select: `` <space>gYr `` |
 | `toggle_inline_blame` | Toggle GitLens-style inline blame on the current line | **spacemacs, hybrid** — normal: `` <space>gI ``, select: `` <space>gI `` |
 | `toggle_blame_annotate` | Toggle the git-blame annotate gutter column (SPC g B) | **spacemacs, hybrid** — normal: `` <space>gB ``, select: `` <space>gB `` |
 | `git_branch_picker` | Pick a git branch and check it out |  |
