@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-f7a343b4.js";
+            window.path_to_searchindex_js = "searchindex-91348a10.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2960,6 +2960,10 @@ without scrolling.</p>
 <tr><td><code>:vc-root-version-diff</code>, <code>:vc-root-diff</code></td><td>Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).</td></tr>
 <tr><td><code>:vc-revision-other-window</code></td><td>Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).</td></tr>
 <tr><td><code>:sticky-lines</code>, <code>:sticky-context</code></td><td>Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines).</td></tr>
+<tr><td><code>:diagnostics-severity</code>, <code>:error-highlighting</code></td><td>The lowest diagnostic severity the editor draws: error, warning, info, hint, off (JetBrains Error Highlighting).</td></tr>
+<tr><td><code>:changelist</code>, <code>:cl</code></td><td>Put this file in a named changelist, or report which one holds it (JetBrains changelists).</td></tr>
+<tr><td><code>:changelists</code>, <code>:cls</code></td><td>List every changelist and the files in it (JetBrains Changes view).</td></tr>
+<tr><td><code>:changelist-commit</code>, <code>:cl-commit</code></td><td>Commit only the files in a changelist (JetBrains Commit changelist).</td></tr>
 <tr><td><code>:fold-matching</code>, <code>:fold-lines-like-this</code></td><td>Fold every run of lines matching a regex (JetBrains Fold Lines Like This).</td></tr>
 <tr><td><code>:attach-dir</code>, <code>:attach-directory</code></td><td>Add a directory as a second content root, searched with the workspace (JetBrains Attach Directory to Project).</td></tr>
 <tr><td><code>:detach-dir</code>, <code>:detach-directory</code></td><td>Detach an attached directory, <code>*</code> for all, or list them (JetBrains Detach Directory from Project).</td></tr>
@@ -5106,6 +5110,7 @@ without scrolling.</p>
 <tr><td><code>toggle_auto_reveal</code></td><td>Toggle always-select-opened-file (autoscroll from source)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pV</code>, select: <code>&lt;space&gt;pV</code></td></tr>
 <tr><td><code>focus_file_tree</code></td><td>Focus the project file tree panel</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code>, select: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code></td></tr>
 <tr><td><code>focus_structure</code></td><td>Focus the structure/symbol outline panel</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code>, select: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code></td></tr>
+<tr><td><code>toggle_file_details</code></td><td>Show or hide file sizes in the project tree (JetBrains File Details)</td><td></td></tr>
 <tr><td><code>restore_default_layout</code></td><td>Put the workbench drawers back to their default layout (JetBrains Restore Default Layout)</td><td></td></tr>
 <tr><td><code>hide_side_windows</code></td><td>Fold the workbench’s left column away (JetBrains Hide Side Tool Windows)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;WS</code>, select: <code>&lt;space&gt;WS</code></td></tr>
 <tr><td><code>hide_bottom_windows</code></td><td>Fold the workbench’s bottom drawer away (JetBrains Hide Bottom Tool Windows)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;WB</code>, select: <code>&lt;space&gt;WB</code></td></tr>
@@ -9576,7 +9581,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>574</strong> (5.8%)</li>
 <li>Absent: <strong>378</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2580 static commands, 3176 typable <code>:</code> commands, 4676 default keybindings</li>
+<li>zmax source surface: 2581 static commands, 3183 typable <code>:</code> commands, 4676 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
