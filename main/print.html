@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d5368cb4.js";
+            window.path_to_searchindex_js = "searchindex-ef99f522.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2960,6 +2960,8 @@ without scrolling.</p>
 <tr><td><code>:vc-root-version-diff</code>, <code>:vc-root-diff</code></td><td>Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).</td></tr>
 <tr><td><code>:vc-revision-other-window</code></td><td>Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).</td></tr>
 <tr><td><code>:sticky-lines</code>, <code>:sticky-context</code></td><td>Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines).</td></tr>
+<tr><td><code>:git-clone</code>, <code>:clone</code></td><td>Clone a repository and open it as the workspace (JetBrains Get from Version Control).</td></tr>
+<tr><td><code>:prune-empty-dirs</code>, <code>:prune-empty-directories</code></td><td>Delete directories that hold no files at any depth (JetBrains Prune Empty Directories).</td></tr>
 <tr><td><code>:toggle-file-readonly</code>, <code>:make-writable</code>, <code>:make-read-only</code></td><td>Flip the file’s write permission on disk (JetBrains Toggle Read-Only Attribute).</td></tr>
 <tr><td><code>:shelve</code>, <code>:shelve-changes</code></td><td>Put the working tree’s diff aside as a named patch and restore the tree (JetBrains Shelve Changes).</td></tr>
 <tr><td><code>:unshelve</code>, <code>:unshelve-changes</code></td><td>Apply a shelf entry back onto the tree, or list the shelf (JetBrains Unshelve).</td></tr>
@@ -4423,6 +4425,7 @@ without scrolling.</p>
 <tr><td><code>tag_pop</code></td><td>Jump back to the position the last tag jump started from (vim CTRL-T, :pop)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>&lt;C-t&gt;</code></td></tr>
 <tr><td><code>peek_definition</code></td><td>Peek the definition in a popup without navigating (JetBrains Quick Definition)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lq</code>, select: <code>&lt;space&gt;lq</code></td></tr>
 <tr><td><code>peek_type_definition</code></td><td>Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;ly</code>, select: <code>&lt;space&gt;ly</code></td></tr>
+<tr><td><code>copy_quick_doc</code></td><td>Copy the symbol’s hover documentation to the clipboard (JetBrains Copy Quick Doc)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lY</code>, select: <code>&lt;space&gt;lY</code></td></tr>
 <tr><td><code>goto_declaration</code></td><td>Goto declaration</td><td><strong>spacemacs, hybrid</strong> — normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code>, select: <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code><br><strong>vim</strong> — normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>gD</code>, select: <code>gD</code></td></tr>
 <tr><td><code>add_newline_above</code></td><td>Add newline above</td><td><strong>helix</strong> — normal: <code>[&lt;space&gt;</code>, select: <code>[&lt;space&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-O&gt;</code>, <code>[&lt;space&gt;</code>, select: <code>[&lt;space&gt;</code></td></tr>
 <tr><td><code>add_newline_below</code></td><td>Add newline below</td><td><strong>helix</strong> — normal: <code>]&lt;space&gt;</code>, select: <code>]&lt;space&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-o&gt;</code>, <code>]&lt;space&gt;</code>, select: <code>]&lt;space&gt;</code></td></tr>
@@ -5834,6 +5837,7 @@ without scrolling.</p>
 <tr><td><code>save_selection_as_snippet</code></td><td>Save the selection as a snippet under a trigger you type (JetBrains Save as Live Template)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cS</code>, select: <code>&lt;space&gt;cS</code></td></tr>
 <tr><td><code>save_file_as_template</code></td><td>Save this buffer into the file-template directory (JetBrains Save File as Template)</td><td></td></tr>
 <tr><td><code>new_file_from_template</code></td><td>Create a file from a template in ~/.zmax/file-templates (JetBrains New File from Template)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fN</code>, select: <code>&lt;space&gt;fN</code></td></tr>
+<tr><td><code>analyze_stack_trace</code></td><td>Turn a pasted stack trace into a jumpable list of frames (JetBrains Analyze Stack Trace)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sT</code>, select: <code>&lt;space&gt;sT</code></td></tr>
 <tr><td><code>goto_next_usage</code></td><td>Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;s&lt;gt&gt;</code>, select: <code>&lt;space&gt;s&lt;gt&gt;</code></td></tr>
 <tr><td><code>goto_prev_usage</code></td><td>Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;s&lt;lt&gt;</code>, select: <code>&lt;space&gt;s&lt;lt&gt;</code></td></tr>
 <tr><td><code>highlight_usages_in_file</code></td><td>Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;su</code>, select: <code>&lt;space&gt;su</code></td></tr>
@@ -9556,7 +9560,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>574</strong> (5.8%)</li>
 <li>Absent: <strong>378</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2565 static commands, 3166 typable <code>:</code> commands, 4663 default keybindings</li>
+<li>zmax source surface: 2567 static commands, 3170 typable <code>:</code> commands, 4665 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
