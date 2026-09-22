@@ -1850,6 +1850,7 @@ impl MappableCommand {
         kill_word, "Kill forward to the word end, onto the kill ring (emacs M-d, JetBrains Kill to Word End)",
         backward_kill_word, "Kill back to the word start, onto the kill ring (emacs M-DEL, JetBrains Kill to Word Start)",
         kill_region, "Cut the region onto the kill ring (emacs C-w, JetBrains Kill Selected Region)",
+        goto_test, "Jump between a file and its test file (JetBrains Go to Test / Go to Test Subject)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -79794,6 +79795,117 @@ fn foldout_exit_fold(cx: &mut Context) {
         .or_else(|| zmax_core::outline::up_heading(&hs, line));
     outline_goto(cx, head);
     cx.editor.set_status("Exited the fold");
+}
+
+/// The file names that would hold the tests for `name`, and — when `name` is
+/// itself a test file — the names of the subject it tests. The first element of
+/// the pair says which direction was taken.
+///
+/// The shapes are the conventions of the languages zmax ships grammars for:
+/// `foo_test.go`, `foo_test.rs`, `test_foo.py`, `foo.test.ts`, `foo.spec.js`,
+/// `FooTest.java`, `foo_spec.rb`. Nothing here parses the file; a name is a
+/// strong enough signal to offer a jump, and the jump only happens when the
+/// candidate exists.
+fn test_counterparts(name: &str) -> (bool, Vec<String>) {
+    let (stem, ext) = match name.rsplit_once('.') {
+        Some((stem, ext)) => (stem, ext),
+        None => (name, ""),
+    };
+    // Already a test file → the subject.
+    let subject = if let Some(rest) = stem.strip_suffix("_test") {
+        Some(rest.to_string())
+    } else if let Some(rest) = stem.strip_suffix("_spec") {
+        Some(rest.to_string())
+    } else if let Some(rest) = stem.strip_suffix("Test") {
+        Some(rest.to_string())
+    } else if let Some(rest) = stem.strip_prefix("test_") {
+        Some(rest.to_string())
+    } else if let Some(rest) = stem.strip_suffix(".test") {
+        Some(rest.to_string())
+    } else {
+        stem.strip_suffix(".spec").map(|rest| rest.to_string())
+    };
+    if let Some(subject) = subject {
+        return (true, vec![format!("{subject}.{ext}")]);
+    }
+    (
+        false,
+        vec![
+            format!("{stem}_test.{ext}"),
+            format!("test_{stem}.{ext}"),
+            format!("{stem}.test.{ext}"),
+            format!("{stem}.spec.{ext}"),
+            format!("{stem}_spec.{ext}"),
+            format!("{stem}Test.{ext}"),
+        ],
+    )
+}
+
+/// JetBrains "Go to Test" / "Go to Test Subject" — one command, because the
+/// direction is decided by the file the cursor is in.
+///
+/// The candidates are looked for beside the file first, then in the `tests`,
+/// `test` and `spec` siblings of its directory and of the workspace root, which
+/// is where the languages that separate tests from sources put them.
+fn goto_test(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("goto-test: buffer is not visiting a file");
+        return;
+    };
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return;
+    };
+    let (to_subject, candidates) = test_counterparts(name);
+    let dir = path.parent().unwrap_or(std::path::Path::new("."));
+    let root = zmax_loader::find_workspace().0;
+    let mut dirs = vec![dir.to_path_buf()];
+    for base in [dir.parent().unwrap_or(dir), root.as_path()] {
+        for alt in ["tests", "test", "spec", "src", "lib"] {
+            let d = base.join(alt);
+            if d.is_dir() && !dirs.contains(&d) {
+                dirs.push(d);
+            }
+        }
+    }
+    for cand in &candidates {
+        for d in &dirs {
+            let target = d.join(cand);
+            if target.is_file() {
+                if let Err(err) = cx.editor.open(&target, Action::Replace) {
+                    cx.editor.set_error(format!("goto-test: {err}"));
+                }
+                return;
+            }
+        }
+    }
+    cx.editor.set_error(if to_subject {
+        format!("goto-test: no subject file for {name}")
+    } else {
+        format!("goto-test: no test file for {name}")
+    });
+}
+
+#[cfg(test)]
+mod goto_test_tests {
+    use super::test_counterparts;
+
+    #[test]
+    fn a_source_file_offers_every_test_shape() {
+        let (to_subject, names) = test_counterparts("parser.rs");
+        assert!(!to_subject);
+        assert!(names.contains(&"parser_test.rs".to_string()));
+        assert!(names.contains(&"test_parser.rs".to_string()));
+        assert!(names.contains(&"parser.spec.rs".to_string()));
+    }
+
+    #[test]
+    fn a_test_file_offers_its_subject() {
+        assert_eq!(test_counterparts("parser_test.go"), (true, vec!["parser.go".to_string()]));
+        assert_eq!(test_counterparts("test_parser.py"), (true, vec!["parser.py".to_string()]));
+        assert_eq!(test_counterparts("FooTest.java"), (true, vec!["Foo.java".to_string()]));
+        assert_eq!(test_counterparts("foo.test.ts"), (true, vec!["foo.ts".to_string()]));
+        assert_eq!(test_counterparts("foo_spec.rb"), (true, vec!["foo.rb".to_string()]));
+    }
 }
 
 /// Emacs `ff-find-related-file` (`find-file.el`): visit the file related to this

@@ -2022,6 +2022,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "N" => new_file_from_template,                  // SPC f N : create a file from a ~/.zmax/file-templates template (JetBrains New File from Template)
                 "T" => save_file_as_template,                   // SPC f T : save this buffer as a file template (JetBrains Save File as Template)
                 "t" => file_explorer,                          // SPC f t
+                "g" => goto_test,                              // SPC f g : jump between a file and its test (JetBrains Go to Test)
                 "d" => file_explorer_in_current_buffer_directory, // SPC f d
                 "j" => file_explorer_in_current_buffer_directory, // SPC f j : dired
                 "y" => { "Yank path"
