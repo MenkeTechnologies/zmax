@@ -2278,6 +2278,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "d" => global_search,              // SPC s d : search current directory
                 "c" => clear_search_highlight,     // SPC s c : clear persistent search highlight
                 "m" => global_search_masked,       // SPC s m : project search restricted to a file glob (JetBrains Find in Path file mask)
+                "M" => global_search_in_scope,     // SPC s M : project search inside a saved scope (JetBrains scopes)
                 "u" => highlight_usages_in_file,   // SPC s u : highlight every usage of the symbol at the caret (JetBrains Ctrl-Shift-F7)
                 "T" => analyze_stack_trace,        // SPC s T : jump into a pasted stack trace (JetBrains Analyze Stack Trace)
                 "2" => locate_duplicates,          // SPC s 2 : the blocks this buffer repeats (JetBrains Locate Duplicates; `s D` is directory search)

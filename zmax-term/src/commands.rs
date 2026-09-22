@@ -1836,6 +1836,7 @@ impl MappableCommand {
         clear_run_output, "Clear the Run tool window output",
         open_log_file, "Open zmax's own log file (JetBrains Show Log)",
         global_search_masked, "Search the project, restricted to a file glob (JetBrains Find in Path file mask)",
+        global_search_in_scope, "Search the project inside a saved named scope (JetBrains scopes)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -24499,6 +24500,35 @@ fn global_search_masked(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// JetBrains "Find in Path" scoped to a named scope: pick one of the scopes
+/// saved by `:scope-define`, then run the project search with that scope's glob
+/// as the file mask.
+fn global_search_in_scope(cx: &mut Context) {
+    let scopes = crate::scopes::load();
+    if scopes.is_empty() {
+        cx.editor
+            .set_status("no scopes — `:scope-define NAME GLOB` makes one");
+        return;
+    }
+    let rows: Vec<(String, String)> = scopes.into_iter().collect();
+    let columns = [
+        PickerColumn::new("scope", |r: &(String, String), _: &()| r.0.as_str().into()),
+        PickerColumn::new("glob", |r: &(String, String), _: &()| r.1.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, rows, (), |cx, row: &(String, String), _action| {
+        let mask = row.1.clone();
+        cx.jobs.callback(async move {
+            let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+                move |editor: &mut Editor, compositor: &mut Compositor| {
+                    compositor.push(build_global_search_picker(editor, None, Some(mask), None));
+                },
+            ));
+            Ok(call)
+        });
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 fn global_search_seeded_masked(cx: &mut Context, seed: Option<String>, mask: Option<String>) {

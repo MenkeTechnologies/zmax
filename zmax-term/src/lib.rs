@@ -25,6 +25,7 @@ pub mod config;
 pub mod dictionary;
 pub mod attached_dirs;
 pub mod changelists;
+pub mod scopes;
 pub mod git_console;
 pub mod emacs_abbrev;
 pub mod emacs_bookmark;

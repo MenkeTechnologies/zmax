@@ -24575,6 +24575,89 @@ pub(crate) fn parse_diagnostic_severity(
     }
 }
 
+/// `:scope-define NAME GLOB` — JetBrains "Edit Scopes…"
+/// (`ScopeView.EditScopes`): bind a name to a file glob, so a search can be
+/// narrowed to it without retyping the pattern.
+fn scope_define(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().context("usage: :scope-define NAME GLOB")?;
+    let glob: String = args
+        .iter()
+        .skip(1)
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if glob.trim().is_empty() {
+        bail!("usage: :scope-define NAME GLOB");
+    }
+    // Reject a glob the search would reject anyway, at the point where the
+    // person can fix it, rather than at every later use of the scope.
+    let mut builder = ignore::overrides::OverrideBuilder::new(zmax_loader::find_workspace().0);
+    builder
+        .add(&glob)
+        .and_then(|b| b.build())
+        .map_err(|e| anyhow!("bad glob `{glob}`: {e}"))?;
+
+    let mut scopes = crate::scopes::load();
+    let replaced = scopes.insert(name.to_string(), glob.clone());
+    crate::scopes::save(&scopes)?;
+    cx.editor.set_status(match replaced {
+        Some(old) if old != glob => format!("scope `{name}`: {old} -> {glob}"),
+        _ => format!("scope `{name}` = {glob}"),
+    });
+    Ok(())
+}
+
+/// `:scope-delete NAME` — forget a scope.
+fn scope_delete(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().context("usage: :scope-delete NAME")?;
+    let mut scopes = crate::scopes::load();
+    if scopes.remove(name).is_none() {
+        bail!("no scope named `{name}`");
+    }
+    crate::scopes::save(&scopes)?;
+    cx.editor.set_status(format!("deleted scope `{name}`"));
+    Ok(())
+}
+
+/// `:scopes` — list the saved scopes and their globs.
+fn scopes_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let scopes = crate::scopes::load();
+    if scopes.is_empty() {
+        cx.editor
+            .set_status("no scopes — `:scope-define NAME GLOB` makes one");
+        return Ok(());
+    }
+    cx.editor.set_status(
+        scopes
+            .iter()
+            .map(|(name, glob)| format!("{name}={glob}"))
+            .collect::<Vec<_>>()
+            .join("  "),
+    );
+    Ok(())
+}
+
 /// `:diagnostics-severity [LEVEL]` — JetBrains "Error Highlighting"
 /// (`ChangeInspectionProfile`): the lowest severity the editor draws.
 ///
@@ -63632,6 +63715,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "scope-define",
+        aliases: &["scope"],
+        doc: "Bind a name to a file glob for searches (JetBrains Edit Scopes).",
+        fun: scope_define,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "scope-delete",
+        aliases: &[],
+        doc: "Forget a saved scope.",
+        fun: scope_delete,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "scopes",
+        aliases: &[],
+        doc: "List the saved search scopes (JetBrains Scopes).",
+        fun: scopes_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
