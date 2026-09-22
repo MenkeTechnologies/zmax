@@ -1855,6 +1855,7 @@ impl MappableCommand {
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
         sort_tree_by_time_oldest, "Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time)",
         structural_search, "Find code by shape with a tree-sitter query (JetBrains Search Structurally)",
+        structural_replace, "Rewrite what a tree-sitter query captures (JetBrains Replace Structurally)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -53829,6 +53830,159 @@ fn structural_matches(editor: &Editor, source: &str) -> Result<Vec<StructuralHit
     hits.sort_by_key(|h| h.char_pos);
     hits.dedup_by_key(|h| h.char_pos);
     Ok(hits)
+}
+
+/// Substitute `@capture` references in a structural-replacement template with
+/// the text each capture matched.
+///
+/// Longest name first, so `@name_full` is not eaten by `@name`. A reference to
+/// a capture the match does not have is left as written — the template is the
+/// user's text, and silently dropping part of it would be worse than showing
+/// it.
+fn expand_capture_template(template: &str, captures: &[(String, String)]) -> String {
+    let mut names: Vec<&(String, String)> = captures.iter().collect();
+    names.sort_by_key(|(name, _)| std::cmp::Reverse(name.len()));
+    let mut out = template.to_string();
+    for (name, text) in names {
+        out = out.replace(&format!("@{name}"), text);
+    }
+    out
+}
+
+/// JetBrains "Replace Structurally": run a tree-sitter query over the buffer
+/// and rewrite what it captures.
+///
+/// The span replaced is the node captured by `@match` when the query has one,
+/// otherwise the first captured node of each match; every capture can be
+/// referenced in the template as `@name`. Nested and overlapping matches are
+/// skipped after the first, because rewriting a node and then rewriting a
+/// piece of what it used to be is not an edit anybody asked for.
+fn structural_replace(cx: &mut Context) {
+    if doc!(cx.editor).syntax().is_none() {
+        cx.editor
+            .set_error("structural replace needs a parsed syntax tree for this buffer");
+        return;
+    }
+    prompt_then(cx, "tree-sitter query: ", move |cx, query| {
+        let query = query.to_string();
+        prompt_then_cx_allow_empty(cx, "replace with (@name interpolates): ", move |cx, tmpl| {
+            let edits = match structural_replacements(cx.editor, &query, tmpl) {
+                Ok(edits) => edits,
+                Err(err) => {
+                    cx.editor.set_error(err);
+                    return;
+                }
+            };
+            if edits.is_empty() {
+                cx.editor.set_status("no matches");
+                return;
+            }
+            let n = edits.len();
+            let (view, doc) = current!(cx.editor);
+            let transaction = Transaction::change(
+                doc.text(),
+                edits
+                    .into_iter()
+                    .map(|(from, to, text)| (from, to, (!text.is_empty()).then(|| text.into()))),
+            );
+            doc.apply(&transaction, view.id);
+            doc.append_changes_to_history(view);
+            cx.editor.set_status(format!("{n} match(es) replaced"));
+        });
+    });
+}
+
+/// The edits a structural replace would make, in document order and without
+/// overlaps.
+fn structural_replacements(
+    editor: &Editor,
+    source: &str,
+    template: &str,
+) -> Result<Vec<(usize, usize, String)>, String> {
+    use zmax_core::tree_sitter::{InactiveQueryCursor, Query};
+
+    let loader = editor.syn_loader.load();
+    let loader: &zmax_core::syntax::Loader = &loader;
+    let (_, doc) = current_ref!(editor);
+    let syntax = doc.syntax().ok_or("no syntax tree")?;
+    let text = doc.text().slice(..);
+    let layer = syntax.layer_for_byte_range(0, 0);
+    let language = syntax.layer(layer).language;
+    let grammar = zmax_core::syntax::LanguageLoader::get_config(loader, language)
+        .ok_or("no grammar for this buffer")?
+        .grammar;
+    let query = Query::new(grammar, source, |_, _| Ok(())).map_err(|err| err.to_string())?;
+    if query.num_captures() == 0 {
+        return Err("the query captures nothing — add an @name to what should be replaced".into());
+    }
+    let root = syntax.tree_for_byte_range(0, 0).root_node();
+    let mut cursor =
+        InactiveQueryCursor::new(0..u32::MAX, zmax_core::syntax::TREE_SITTER_MATCH_LIMIT)
+            .execute_query(&query, &root, zmax_core::tree_sitter::RopeInput::new(text));
+
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    while let Some(matched) = cursor.next_match() {
+        let mut captures: Vec<(String, String)> = Vec::new();
+        for node in matched.matched_nodes() {
+            let name = query.capture_name(node.capture).to_string();
+            let range = node.node.byte_range();
+            let from = text.byte_to_char(range.start as usize);
+            let to = text.byte_to_char((range.end as usize).min(text.len_bytes()));
+            captures.push((name, text.slice(from..to).to_string()));
+        }
+        // The span to rewrite: `@match` if the query names one, else the first
+        // captured node of this match.
+        let target = matched
+            .matched_nodes()
+            .find(|n| query.capture_name(n.capture) == "match")
+            .or_else(|| matched.matched_nodes().next());
+        let Some(target) = target else {
+            continue;
+        };
+        let range = target.node.byte_range();
+        let from = text.byte_to_char(range.start as usize);
+        let to = text.byte_to_char((range.end as usize).min(text.len_bytes()));
+        edits.push((from, to, expand_capture_template(template, &captures)));
+    }
+    edits.sort_by_key(|(from, to, _)| (*from, *to));
+    let mut out: Vec<(usize, usize, String)> = Vec::new();
+    for edit in edits {
+        match out.last() {
+            Some((_, prev_to, _)) if edit.0 < *prev_to => continue,
+            _ => out.push(edit),
+        }
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod structural_template_tests {
+    use super::expand_capture_template;
+
+    fn caps(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
+        pairs
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn captures_are_substituted_by_name() {
+        let out = expand_capture_template("let @name = @value;", &caps(&[("name", "x"), ("value", "1")]));
+        assert_eq!(out, "let x = 1;");
+    }
+
+    #[test]
+    fn the_longer_name_wins_over_its_prefix() {
+        let out = expand_capture_template("@name_full/@name", &caps(&[("name", "a"), ("name_full", "a::b")]));
+        assert_eq!(out, "a::b/a");
+    }
+
+    #[test]
+    fn an_unknown_capture_is_left_as_written() {
+        let out = expand_capture_template("@missing", &caps(&[("name", "x")]));
+        assert_eq!(out, "@missing");
+    }
 }
 
 fn imenu_index(editor: &Editor) -> Vec<ImenuEntry> {

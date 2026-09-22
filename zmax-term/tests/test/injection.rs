@@ -875,3 +875,40 @@ async fn structural_search_reports_what_the_query_does() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// JetBrains "Replace Structurally" (SPC s R): the query's captures pick what
+/// is rewritten and what the template can interpolate.
+#[tokio::test(flavor = "multi_thread")]
+async fn structural_replace_rewrites_what_the_query_captures() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".rs").tempfile()?;
+    std::fs::write(file.path(), "fn alpha() {}\nfn beta() {}\n")?;
+    let mut app = helpers::preset_app("spacemacs")
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            // The second prompt arrives through the job queue, so the template
+            // is typed in its own step.
+            (
+                Some("<space>sR(function_item name: (identifier) @name)<ret>"),
+                None,
+            ),
+            (
+            Some("fn_@name<ret>"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "fn fn_alpha() {}\nfn fn_beta() {}\n",
+                    doc.text().to_string(),
+                    "each captured name is rewritten through the template"
+                );
+            }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

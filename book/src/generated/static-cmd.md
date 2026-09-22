@@ -1464,6 +1464,7 @@
 | `sort_tree_by_time_newest` | Order the project tree by modification time, newest first (JetBrains Sort by Modification Time) |  |
 | `sort_tree_by_time_oldest` | Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time) |  |
 | `structural_search` | Find code by shape with a tree-sitter query (JetBrains Search Structurally) | **spacemacs, hybrid** — normal: `` <space>st ``, select: `` <space>st `` |
+| `structural_replace` | Rewrite what a tree-sitter query captures (JetBrains Replace Structurally) | **spacemacs, hybrid** — normal: `` <space>sR ``, select: `` <space>sR `` |
 | `rerun_failed_tests` | Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests) | **spacemacs, hybrid** — normal: `` <space>cf ``, select: `` <space>cf `` |
 | `rerun_last_run` | Re-run the last command in the Run console | **spacemacs** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> ``<br>**hybrid** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> `` |
 | `run_next_error` | Jump to the next file:line in the run output | **spacemacs** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` ``<br>**hybrid** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn `` |
