@@ -297,6 +297,7 @@
 | `toggle_line_numbers` | Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers) |  |
 | `power_save_mode` | Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode) | **spacemacs, hybrid** — normal: `` <space>zp ``, select: `` <space>zp `` |
 | `distraction_free_mode` | Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode) | **spacemacs, hybrid** — normal: `` <space>zd ``, select: `` <space>zd `` |
+| `toggle_focus_mode` | Dim everything outside the declaration the cursor is in (JetBrains Highlight Only Current Declaration) |  |
 | `toggle_completion_docs` | Show or hide the documentation beside the completion list (JetBrains Show Automatically During Completion) |  |
 | `toggle_breadcrumbs` | Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs) |  |
 | `toggle_sticky_lines` | Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines) |  |
