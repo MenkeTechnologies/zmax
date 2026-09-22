@@ -399,3 +399,33 @@ async fn c_h_4_i_opens_an_info_mode_buffer() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// M-d is `kill-word`: the deleted text goes on the kill ring, so C-y brings it
+/// back (JetBrains "Kill to Word End").
+#[tokio::test(flavor = "multi_thread")]
+async fn kill_word_puts_the_word_on_the_kill_ring() -> anyhow::Result<()> {
+    let mut app = helpers::preset_app("emacs")
+        .with_input_text("#[f|]#oo bar\n")
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("<A-d>"), None),
+            (
+                Some("<C-y>"),
+                Some(&|app| {
+                    let doc = app.editor.documents().next().unwrap();
+                    assert_eq!(
+                        "foo bar\n",
+                        doc.text().to_string(),
+                        "the killed word yanks back from the ring"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

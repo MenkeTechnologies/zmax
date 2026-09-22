@@ -222,8 +222,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // `(keyboard-translate ?\C-h ?\C-?)`, it is not the stock binding.
         "backspace" => delete_char_backward,
         "C-k" => kill_to_line_end,          // kill-line
-        "A-d" => delete_word_forward,       // M-d: kill-word
-        "A-backspace" | "C-w" => delete_word_backward, // C-w/M-DEL approx (no region: kill prev word)
+        "A-d" => kill_word,                 // M-d: kill-word (onto the kill ring)
+        "A-backspace" => backward_kill_word, // M-DEL: backward-kill-word
+        // C-w is kill-region, not a word kill: emacs cuts the region and puts
+        // it on the ring, and says so when there is no region.
+        "C-w" => kill_region,               // C-w: kill-region
         "A-w" => [yank, collapse_selection],// M-w: kill-ring-save (copy)
         "C-y" => yank_from_kill_ring,       // C-y: yank latest kill-ring entry
         "A-y" => yank_pop,                  // M-y: yank-pop, cycle to older kill
@@ -255,7 +258,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-l" => downcase_word,             // M-l: downcase-word
         "A-z" => zap_to_char,               // M-z: zap-to-char
         "A-h" => mark_paragraph,            // M-h: mark-paragraph
-        "C-A-backspace" => delete_word_backward, // C-M-DEL: backward-kill-word (approx)
+        "C-A-backspace" => backward_kill_word, // C-M-DEL: backward-kill-word
         // indent-region modifies the buffer, which sets `deactivate-mark`, so
         // the region ends here. `indent` keeps the selection now (for repeated
         // `>` in the vim/helix presets), so this spells the exit out.

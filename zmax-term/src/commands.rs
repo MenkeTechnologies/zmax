@@ -1847,6 +1847,9 @@ impl MappableCommand {
         show_siblings, "List the symbols beside the one under the cursor (JetBrains Show Siblings)",
         delete_word_backward_other_humps, "Delete to the word start with the camel-hump setting inverted (JetBrains Delete to Word Start in Different CamelHumps Mode)",
         delete_word_forward_other_humps, "Delete to the word end with the camel-hump setting inverted (JetBrains Delete to Word End in Different CamelHumps Mode)",
+        kill_word, "Kill forward to the word end, onto the kill ring (emacs M-d, JetBrains Kill to Word End)",
+        backward_kill_word, "Kill back to the word start, onto the kill ring (emacs M-DEL, JetBrains Kill to Word Start)",
+        kill_region, "Cut the region onto the kill ring (emacs C-w, JetBrains Kill Selected Region)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -60345,6 +60348,97 @@ fn mark_defun(cx: &mut Context) {
             .editor
             .set_status("mark-defun: no function at point (needs a parsed syntax tree)"),
     }
+}
+
+/// Emacs `kill-word` (M-d), JetBrains "Kill to Word End": delete forward to the
+/// end of the word and put the text on the kill ring, so it can be yanked back.
+/// The boundary follows the sub-word setting, like the motions do.
+fn kill_word(cx: &mut Context) {
+    let count = cx.count();
+    let subword = cx.editor.subword;
+    let (from, to, killed) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let cursor = range.cursor(slice);
+        let end = if subword {
+            movement::move_next_sub_word_end(slice, range, count).to()
+        } else {
+            movement::move_next_word_end(slice, range, count).to()
+        };
+        if end <= cursor {
+            (cursor, cursor, String::new())
+        } else {
+            (cursor, end, slice.slice(cursor..end).to_string())
+        }
+    };
+    if from == to {
+        cx.editor.set_status("end of buffer");
+        return;
+    }
+    crate::emacs_kill::record(killed);
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), [(from, to, None)].into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `backward-kill-word` (M-DEL), JetBrains "Kill to Word Start". Like
+/// [`kill_word`] backwards, and the text is prepended to the previous kill so a
+/// run of backward kills yanks back in reading order.
+fn backward_kill_word(cx: &mut Context) {
+    let count = cx.count();
+    let subword = cx.editor.subword;
+    let (from, to, killed) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let cursor = range.cursor(slice);
+        let start = if subword {
+            movement::move_prev_sub_word_start(slice, range, count).from()
+        } else {
+            movement::move_prev_word_start(slice, range, count).from()
+        };
+        if start >= cursor {
+            (cursor, cursor, String::new())
+        } else {
+            (start, cursor, slice.slice(start..cursor).to_string())
+        }
+    };
+    if from == to {
+        cx.editor.set_status("beginning of buffer");
+        return;
+    }
+    crate::emacs_kill::record_prepend(killed);
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), [(from, to, None)].into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `kill-region` (C-w), JetBrains "Kill Selected Region": cut the region
+/// to the kill ring — the destructive companion of `copy-region-as-kill`.
+fn kill_region(cx: &mut Context) {
+    let (from, to, killed) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        (
+            sel.from(),
+            sel.to(),
+            slice.slice(sel.from()..sel.to()).to_string(),
+        )
+    };
+    if from == to {
+        cx.editor.set_status("no region to kill");
+        return;
+    }
+    crate::emacs_kill::record(killed);
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), [(from, to, None)].into_iter());
+    doc.apply(&tx, view.id);
+    doc.set_selection(view.id, Selection::point(from));
+    doc.append_changes_to_history(view);
 }
 
 /// Emacs `kill-sentence` (M-k): kill from point to the end of the sentence,

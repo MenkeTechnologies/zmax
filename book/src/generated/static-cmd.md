@@ -958,8 +958,8 @@
 | `delete_chars_forward_vim` | Delete char(s) under cursor, line-bounded (vim x) | **spacemacs, hybrid, vim** — normal: `` x ``, `` <del> `` |
 | `delete_chars_backward_vim` | Delete char(s) before cursor, no line join (vim X) | **spacemacs, hybrid, vim** — normal: `` X `` |
 | `replace_chars_vim` | Replace char(s) under cursor, line-bounded (vim r) | **spacemacs, hybrid, vim** — normal: `` r `` |
-| `delete_word_backward` | Delete previous word | **spacemacs, vim, helix, kakoune** — insert: `` <C-w> ``, `` <A-backspace> ``<br>**hybrid, emacs, cua** — insert: `` <C-w> ``, `` <A-backspace> ``, `` <A-C-backspace> ``<br>**micro, nano** — insert: `` <A-backspace> ``, `` <A-C-backspace> `` |
-| `delete_word_forward` | Delete next word | **spacemacs, hybrid** — normal: `` <A-d> ``, insert: `` <A-d> ``<br>**vim, emacs, cua, micro** — insert: `` <A-d> ``<br>**helix, kakoune** — insert: `` <A-d> ``, `` <A-del> `` |
+| `delete_word_backward` | Delete previous word | **spacemacs, vim, helix, kakoune** — insert: `` <C-w> ``, `` <A-backspace> `` |
+| `delete_word_forward` | Delete next word | **spacemacs** — normal: `` <A-d> ``, insert: `` <A-d> ``<br>**hybrid** — normal: `` <A-d> ``<br>**vim** — insert: `` <A-d> ``<br>**helix, kakoune** — insert: `` <A-d> ``, `` <A-del> `` |
 | `insert_kill_entered_vim` | Delete the text entered this insert session (vim i_CTRL-U) | **spacemacs, vim** — insert: `` <C-u> `` |
 | `kill_to_line_start` | Delete till start of line | **helix, kakoune** — insert: `` <C-u> `` |
 | `kill_to_line_end` | Delete till end of line | **hybrid, helix, kakoune** — insert: `` <C-k> ``<br>**emacs, cua, nano** — normal: `` <C-k> ``, insert: `` <C-k> `` |
@@ -1456,6 +1456,9 @@
 | `show_siblings` | List the symbols beside the one under the cursor (JetBrains Show Siblings) | **spacemacs, hybrid** — normal: `` <space>lB ``, select: `` <space>lB `` |
 | `delete_word_backward_other_humps` | Delete to the word start with the camel-hump setting inverted (JetBrains Delete to Word Start in Different CamelHumps Mode) | **spacemacs, vim** — insert: `` <A-W> `` |
 | `delete_word_forward_other_humps` | Delete to the word end with the camel-hump setting inverted (JetBrains Delete to Word End in Different CamelHumps Mode) | **spacemacs, vim** — insert: `` <A-D> `` |
+| `kill_word` | Kill forward to the word end, onto the kill ring (emacs M-d, JetBrains Kill to Word End) | **hybrid, emacs, cua, micro** — insert: `` <A-d> `` |
+| `backward_kill_word` | Kill back to the word start, onto the kill ring (emacs M-DEL, JetBrains Kill to Word Start) | **hybrid, emacs, cua, micro, nano** — insert: `` <A-backspace> ``, `` <A-C-backspace> `` |
+| `kill_region` | Cut the region onto the kill ring (emacs C-w, JetBrains Kill Selected Region) | **hybrid, emacs, cua** — insert: `` <C-w> `` |
 | `rerun_failed_tests` | Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests) | **spacemacs, hybrid** — normal: `` <space>cf ``, select: `` <space>cf `` |
 | `rerun_last_run` | Re-run the last command in the Run console | **spacemacs** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> ``<br>**hybrid** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> `` |
 | `run_next_error` | Jump to the next file:line in the run output | **spacemacs** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` ``<br>**hybrid** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn `` |
