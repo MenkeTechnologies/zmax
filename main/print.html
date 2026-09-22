@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e2ab9130.js";
+            window.path_to_searchindex_js = "searchindex-fbba5f5e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -5112,6 +5112,8 @@ without scrolling.</p>
 <tr><td><code>word_prev_other_humps_extend</code></td><td>Extend to the previous word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)</td><td></td></tr>
 <tr><td><code>goto_changed_file</code></td><td>Pick one of the files git reports as changed and open it (JetBrains Go to Changed File)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gfc</code>, select: <code>&lt;space&gt;gfc</code></td></tr>
 <tr><td><code>show_siblings</code></td><td>List the symbols beside the one under the cursor (JetBrains Show Siblings)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lB</code>, select: <code>&lt;space&gt;lB</code></td></tr>
+<tr><td><code>delete_word_backward_other_humps</code></td><td>Delete to the word start with the camel-hump setting inverted (JetBrains Delete to Word Start in Different CamelHumps Mode)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;A-W&gt;</code></td></tr>
+<tr><td><code>delete_word_forward_other_humps</code></td><td>Delete to the word end with the camel-hump setting inverted (JetBrains Delete to Word End in Different CamelHumps Mode)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;A-D&gt;</code></td></tr>
 <tr><td><code>rerun_failed_tests</code></td><td>Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cf</code>, select: <code>&lt;space&gt;cf</code></td></tr>
 <tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-r&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code></td></tr>
 <tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, insert: <code>&lt;C-x&gt;`</code><br><strong>hybrid</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code></td></tr>
@@ -9599,7 +9601,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>574</strong> (5.8%)</li>
 <li>Absent: <strong>378</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2596 static commands, 3187 typable <code>:</code> commands, 4685 default keybindings</li>
+<li>zmax source surface: 2598 static commands, 3187 typable <code>:</code> commands, 4687 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
