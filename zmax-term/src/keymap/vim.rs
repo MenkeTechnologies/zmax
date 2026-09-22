@@ -242,6 +242,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x <",   "Text",    "move_element_left"),                    // SPC x < : swap syntax node with prev sibling (JetBrains Move Element Left)
     ("space x J",   "Text",    ":move-line-down"),                       // SPC x J : drag down
     ("space x K",   "Text",    ":move-line-up"),                         // SPC x K : drag up
+    ("space x j",   "Text",    "move_statement_down"),                  // SPC x j : move the statement below its next sibling (JetBrains Move Statement Down)
+    ("space x k",   "Text",    "move_statement_up"),                    // SPC x k : move the statement above its previous sibling (JetBrains Move Statement Up)
     ("space x t c", "Text",    ":transpose-chars"),                      // SPC x t c
     ("space x t l", "Text",    ":move-line-up"),                         // SPC x t l : transpose lines
     ("space x t w", "Text",    ":transpose-words"),                      // SPC x t w

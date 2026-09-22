@@ -190,11 +190,11 @@
 | `regex_emacs_to_rx_explain` | Explain the selected Emacs regex as rx (SPC x r e /) | **spacemacs, hybrid** — normal: `` <space>xre/ ``, select: `` <space>xre/ `` |
 | `regex_pcre_to_rx_replace` | Convert the selected PCRE regex to rx form (SPC x r x) | **spacemacs, hybrid** — normal: `` <space>xrt ``, `` <space>xrx ``, `` <space>xrpx ``, select: `` <space>xrt ``, `` <space>xrx ``, `` <space>xrpx `` |
 | `regex_pcre_to_rx_explain` | Explain the selected PCRE regex as rx (SPC x r /) | **spacemacs, hybrid** — normal: `` <space>xr/ ``, `` <space>xrp/ ``, select: `` <space>xr/ ``, `` <space>xrp/ `` |
-| `justify_left` | Left-justify (fill) the region (SPC x j l) | **spacemacs, hybrid** — normal: `` <space>xjl ``, select: `` <space>xjl `` |
-| `justify_right` | Right-justify the region (SPC x j r) | **spacemacs, hybrid** — normal: `` <space>xjr ``, select: `` <space>xjr `` |
-| `justify_center` | Center-justify the region (SPC x j c) | **spacemacs, hybrid** — normal: `` <space>xjc ``, select: `` <space>xjc `` |
-| `justify_full` | Full-justify the region (SPC x j f) | **spacemacs, hybrid** — normal: `` <space>xjf ``, select: `` <space>xjf `` |
-| `justify_none` | Remove justification / left-fill (SPC x j n) | **spacemacs, hybrid** — normal: `` <space>xjn ``, select: `` <space>xjn `` |
+| `justify_left` | Left-justify (fill) the region (SPC x j l) |  |
+| `justify_right` | Right-justify the region (SPC x j r) |  |
+| `justify_center` | Center-justify the region (SPC x j c) |  |
+| `justify_full` | Full-justify the region (SPC x j f) |  |
+| `justify_none` | Remove justification / left-fill (SPC x j n) |  |
 | `count_words_region` | Count occurrences per word in the selection (SPC x w c) | **spacemacs, hybrid** — normal: `` <space>xwc ``, select: `` <space>xwc ``<br>**nano** — normal: `` <A-d> ``, insert: `` <A-d> `` |
 | `goto_next_close_paren` | Go forward to next closing paren (SPC k j) | **spacemacs, hybrid** — normal: `` <space>kj ``, select: `` <space>kj `` |
 | `goto_prev_open_paren` | Go backward to previous opening paren (SPC k k) | **spacemacs, hybrid** — normal: `` <space>kk ``, select: `` <space>kk `` |
@@ -1446,6 +1446,8 @@
 | `open_log_file` | Open zmax's own log file (JetBrains Show Log) | **spacemacs, hybrid** — normal: `` <space>hL ``, select: `` <space>hL `` |
 | `global_search_masked` | Search the project, restricted to a file glob (JetBrains Find in Path file mask) | **spacemacs, hybrid** — normal: `` <space>sm ``, select: `` <space>sm `` |
 | `global_search_in_scope` | Search the project inside a saved named scope (JetBrains scopes) | **spacemacs, hybrid** — normal: `` <space>sM ``, select: `` <space>sM `` |
+| `move_statement_up` | Move the statement under the cursor above its previous sibling (JetBrains Move Statement Up) | **spacemacs, hybrid** — normal: `` <space>xk ``, select: `` <space>xk `` |
+| `move_statement_down` | Move the statement under the cursor below its next sibling (JetBrains Move Statement Down) | **spacemacs, hybrid** — normal: `` <space>xj ``, select: `` <space>xj `` |
 | `rerun_failed_tests` | Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests) | **spacemacs, hybrid** — normal: `` <space>cf ``, select: `` <space>cf `` |
 | `rerun_last_run` | Re-run the last command in the Run console | **spacemacs** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> ``<br>**hybrid** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> `` |
 | `run_next_error` | Jump to the next file:line in the run output | **spacemacs** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` ``<br>**hybrid** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn `` |

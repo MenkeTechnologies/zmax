@@ -1837,6 +1837,8 @@ impl MappableCommand {
         open_log_file, "Open zmax's own log file (JetBrains Show Log)",
         global_search_masked, "Search the project, restricted to a file glob (JetBrains Find in Path file mask)",
         global_search_in_scope, "Search the project inside a saved named scope (JetBrains scopes)",
+        move_statement_up, "Move the statement under the cursor above its previous sibling (JetBrains Move Statement Up)",
+        move_statement_down, "Move the statement under the cursor below its next sibling (JetBrains Move Statement Down)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -44134,6 +44136,194 @@ fn reverse_selection_contents(cx: &mut Context) {
 }
 
 // tree sitter node selection
+
+/// True when the char range `from..to` covers whole lines: it starts at the
+/// first non-blank of its first line and nothing but blanks follow it on its
+/// last line. That is the shape a statement has on screen, and the shape
+/// JetBrains' Move Statement moves.
+fn covers_whole_lines(text: RopeSlice, from: usize, to: usize) -> bool {
+    if to <= from || to > text.len_chars() {
+        return false;
+    }
+    let first = text.char_to_line(from);
+    let indent = text
+        .line(first)
+        .chars()
+        .take_while(|c| c.is_whitespace() && *c != '\n')
+        .count();
+    if from != text.line_to_char(first) + indent {
+        return false;
+    }
+    let last = text.char_to_line(to - 1);
+    let end = zmax_core::line_ending::line_end_char_index(&text, last);
+    to >= end || text.slice(to..end).chars().all(char::is_whitespace)
+}
+
+/// The char range of the whole lines that `from..to` sits on.
+fn whole_lines_of(text: RopeSlice, from: usize, to: usize) -> (usize, usize) {
+    let first = text.char_to_line(from);
+    let last = text.char_to_line(to.saturating_sub(1));
+    let start = text.line_to_char(first);
+    let end = if last + 1 < text.len_lines() {
+        text.line_to_char(last + 1)
+    } else {
+        text.len_chars()
+    };
+    (start, end)
+}
+
+/// Move the statement under the cursor over its neighbouring sibling in the
+/// syntax tree (JetBrains Move Statement Up/Down). Siblings share an
+/// indentation level, so the two blocks of lines are swapped as they stand —
+/// nothing is re-indented, unlike a plain line drag out of its block.
+fn move_statement(cx: &mut Context, down: bool) {
+    let (view, doc) = current!(cx.editor);
+    let Some(syntax) = doc.syntax() else {
+        cx.editor.set_error("no syntax tree for this buffer");
+        return;
+    };
+    let text = doc.text().slice(..);
+    let cursor_char = doc.selection(view.id).primary().cursor(text);
+
+    // The tree cursor borrows the document, so the two ranges are taken out of
+    // this block as plain offsets before anything is edited.
+    let found = {
+        let mut walk = syntax.walk();
+        let byte = text.char_to_byte(cursor_char) as u32;
+        walk.reset_to_byte_range(byte, byte);
+        let range_of = |node: &zmax_core::tree_sitter::Node| {
+            (
+                text.byte_to_char(node.start_byte() as usize),
+                text.byte_to_char(node.end_byte() as usize),
+            )
+        };
+        let mut stmt = None;
+        loop {
+            let (from, to) = range_of(&walk.node());
+            if covers_whole_lines(text, from, to) {
+                stmt = Some((from, to));
+                break;
+            }
+            if !walk.goto_parent() {
+                break;
+            }
+        }
+        match stmt {
+            None => Err("no statement under the cursor"),
+            Some(stmt) => loop {
+                let moved = if down {
+                    walk.goto_next_sibling()
+                } else {
+                    walk.goto_previous_sibling()
+                };
+                if !moved {
+                    break Err("no statement to move past");
+                }
+                let (from, to) = range_of(&walk.node());
+                if covers_whole_lines(text, from, to) {
+                    break Ok((stmt, (from, to)));
+                }
+            },
+        }
+    };
+    let found = match found {
+        Ok(found) => found,
+        Err(msg) => {
+            cx.editor.set_error(msg);
+            return;
+        }
+    };
+
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let line_ending = doc.line_ending.as_str();
+    let stmt = whole_lines_of(text, found.0 .0, found.0 .1);
+    let other = whole_lines_of(text, found.1 .0, found.1 .1);
+    if stmt == other {
+        return;
+    }
+    let (lo, hi) = if stmt.0 < other.0 {
+        (stmt, other)
+    } else {
+        (other, stmt)
+    };
+
+    let mut lo_text: String = text.slice(lo.0..lo.1).chunks().collect();
+    let mut hi_text: String = text.slice(hi.0..hi.1).chunks().collect();
+    // The last block of the file may have no trailing newline; moving it up
+    // must not glue the following line onto it, so the ending moves with it.
+    if !hi_text.ends_with('\n') {
+        hi_text.push_str(line_ending);
+        while lo_text.ends_with('\n') || lo_text.ends_with('\r') {
+            lo_text.pop();
+        }
+    }
+
+    let column = cursor_char.saturating_sub(stmt.0);
+    let transaction = Transaction::change(
+        doc.text(),
+        [
+            (lo.0, lo.1, Some(hi_text.as_str().into())),
+            (hi.0, hi.1, Some(lo_text.as_str().into())),
+        ]
+        .into_iter(),
+    );
+    doc.apply(&transaction, view.id);
+
+    let new_start = if down {
+        // The statement now sits where the sibling block ended.
+        (hi.1 + hi_text.len().saturating_sub(lo_text.len())).saturating_sub(stmt.1 - stmt.0)
+    } else {
+        lo.0
+    };
+    let len = doc.text().len_chars();
+    doc.set_selection(view.id, Selection::point((new_start + column).min(len)));
+    doc.append_changes_to_history(view);
+}
+
+fn move_statement_down(cx: &mut Context) {
+    move_statement(cx, true)
+}
+
+fn move_statement_up(cx: &mut Context) {
+    move_statement(cx, false)
+}
+
+#[cfg(test)]
+mod move_statement_tests {
+    use super::{covers_whole_lines, whole_lines_of};
+    use zmax_core::Rope;
+
+    #[test]
+    fn a_statement_is_a_node_that_owns_its_lines() {
+        let rope = Rope::from_str("fn a() {\n    let x = 1;\n    b();\n}\n");
+        let text = rope.slice(..);
+        // `let x = 1;` starts at its line's indent and ends the line.
+        let from = text.line_to_char(1) + 4;
+        let to = text.line_to_char(2) - 1;
+        assert!(covers_whole_lines(text, from, to));
+        // `x` on its own does not.
+        assert!(!covers_whole_lines(text, from + 4, from + 5));
+        // Neither does a node starting mid-line.
+        assert!(!covers_whole_lines(text, from + 4, to));
+    }
+
+    #[test]
+    fn trailing_blanks_still_count_as_the_end_of_a_line() {
+        let rope = Rope::from_str("a;   \nb;\n");
+        let text = rope.slice(..);
+        assert!(covers_whole_lines(text, 0, 2));
+    }
+
+    #[test]
+    fn whole_lines_span_from_line_start_to_past_the_newline() {
+        let rope = Rope::from_str("one\ntwo\nthree");
+        let text = rope.slice(..);
+        assert_eq!(whole_lines_of(text, 4, 7), (4, 8));
+        // The last line has no newline of its own, so the span ends the rope.
+        assert_eq!(whole_lines_of(text, 8, 13), (8, 13));
+    }
+}
 
 fn expand_selection(cx: &mut Context) {
     let motion = |editor: &mut Editor| {
