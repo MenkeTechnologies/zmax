@@ -1844,6 +1844,7 @@ impl MappableCommand {
         word_next_other_humps_extend, "Extend to the next word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)",
         word_prev_other_humps_extend, "Extend to the previous word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)",
         goto_changed_file, "Pick one of the files git reports as changed and open it (JetBrains Go to Changed File)",
+        show_siblings, "List the symbols beside the one under the cursor (JetBrains Show Siblings)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",

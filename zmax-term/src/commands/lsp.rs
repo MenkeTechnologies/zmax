@@ -1678,6 +1678,178 @@ fn type_hierarchy_impl(cx: &mut Context, supertypes: bool) {
     });
 }
 
+/// The symbol list the cursor's own symbol belongs to — its siblings.
+///
+/// The walk descends into whichever symbol covers the position and returns the
+/// list at the deepest level that still covers it, so standing on a method
+/// gives the other members of its type rather than the file's top level.
+fn siblings_at(symbols: &[lsp::DocumentSymbol], pos: lsp::Position) -> Vec<lsp::DocumentSymbol> {
+    for sym in symbols {
+        if sym.range.start > pos || pos > sym.range.end {
+            continue;
+        }
+        if let Some(children) = &sym.children {
+            let deeper = siblings_at(children, pos);
+            if !deeper.is_empty() {
+                return deeper;
+            }
+        }
+        return symbols.to_vec();
+    }
+    Vec::new()
+}
+
+/// JetBrains "Show Siblings": the symbols that sit beside the one under the
+/// cursor — the other methods of its class, or the other top-level items of
+/// the file when the cursor is not inside anything.
+///
+/// A server that answers `documentSymbol` with the flat form sends no nesting
+/// to find a level in, so that case lists the whole file and says so.
+pub fn show_siblings(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let language_server =
+        language_server_with_feature!(cx.editor, doc, LanguageServerFeature::DocumentSymbols);
+    let offset_encoding = language_server.offset_encoding();
+    let pos = doc.position(view.id, offset_encoding);
+    let identifier = doc.identifier();
+    let doc_uri = doc
+        .uri()
+        .expect("docs with active language servers must be backed by paths");
+    let Some(request) = language_server.document_symbols(identifier.clone()) else {
+        cx.editor
+            .set_error("Language server does not support document symbols");
+        return;
+    };
+
+    cx.jobs.callback(async move {
+        let response = request.await?;
+        let call = move |editor: &mut Editor, compositor: &mut Compositor| {
+            let mut flat = Vec::new();
+            let mut whole_file = false;
+            match response {
+                Some(lsp::DocumentSymbolResponse::Nested(symbols)) => {
+                    let mut siblings = siblings_at(&symbols, pos);
+                    if siblings.is_empty() {
+                        siblings = symbols;
+                    }
+                    for symbol in siblings {
+                        #[allow(deprecated)]
+                        flat.push(SymbolInformationItem {
+                            symbol: lsp::SymbolInformation {
+                                name: symbol.name,
+                                kind: symbol.kind,
+                                tags: symbol.tags,
+                                deprecated: symbol.deprecated,
+                                location: lsp::Location::new(
+                                    identifier.uri.clone(),
+                                    symbol.selection_range,
+                                ),
+                                container_name: None,
+                            },
+                            location: Location {
+                                uri: doc_uri.clone(),
+                                range: symbol.selection_range,
+                                offset_encoding,
+                            },
+                        });
+                    }
+                }
+                Some(lsp::DocumentSymbolResponse::Flat(symbols)) => {
+                    whole_file = true;
+                    for symbol in symbols {
+                        flat.push(SymbolInformationItem {
+                            location: Location {
+                                uri: doc_uri.clone(),
+                                range: symbol.location.range,
+                                offset_encoding,
+                            },
+                            symbol,
+                        });
+                    }
+                }
+                None => {}
+            }
+            if flat.is_empty() {
+                editor.set_error("No symbols beside this one");
+                return;
+            }
+            if whole_file {
+                editor.set_status("flat symbol list: showing the whole file");
+            }
+            let columns = [
+                ui::PickerColumn::new("kind", |item: &SymbolInformationItem, _| {
+                    display_symbol_kind(item.symbol.kind).into()
+                }),
+                ui::PickerColumn::new("name", |item: &SymbolInformationItem, _| {
+                    item.symbol.name.as_str().into()
+                }),
+            ];
+            let picker = Picker::new(columns, 1, flat, (), move |cx, item, action| {
+                jump_to_location(cx.editor, &item.location, action);
+            })
+            .with_preview(|_editor, item| location_to_file_location(&item.location));
+            compositor.push(Box::new(overlaid(picker)));
+        };
+        Ok(Callback::EditorCompositor(Box::new(call)))
+    });
+}
+
+#[cfg(test)]
+mod siblings_tests {
+    use super::{lsp, siblings_at};
+
+    fn pos(line: u32) -> lsp::Position {
+        lsp::Position::new(line, 0)
+    }
+
+    #[allow(deprecated)]
+    fn symbol(name: &str, from: u32, to: u32, children: Vec<lsp::DocumentSymbol>) -> lsp::DocumentSymbol {
+        lsp::DocumentSymbol {
+            name: name.to_string(),
+            detail: None,
+            kind: lsp::SymbolKind::FUNCTION,
+            tags: None,
+            deprecated: None,
+            range: lsp::Range::new(pos(from), pos(to)),
+            selection_range: lsp::Range::new(pos(from), pos(from)),
+            children: if children.is_empty() {
+                None
+            } else {
+                Some(children)
+            },
+        }
+    }
+
+    fn names(symbols: &[lsp::DocumentSymbol]) -> Vec<&str> {
+        symbols.iter().map(|s| s.name.as_str()).collect()
+    }
+
+    #[test]
+    fn inside_a_type_the_siblings_are_its_members() {
+        let tree = vec![
+            symbol("A", 0, 20, vec![symbol("a1", 1, 5, vec![]), symbol("a2", 6, 10, vec![])]),
+            symbol("B", 21, 30, vec![]),
+        ];
+        assert_eq!(names(&siblings_at(&tree, pos(7))), vec!["a1", "a2"]);
+    }
+
+    #[test]
+    fn outside_every_member_the_siblings_are_the_types_themselves() {
+        let tree = vec![
+            symbol("A", 0, 20, vec![symbol("a1", 1, 5, vec![])]),
+            symbol("B", 21, 30, vec![]),
+        ];
+        // Line 15 is inside A but past its only member.
+        assert_eq!(names(&siblings_at(&tree, pos(15))), vec!["A", "B"]);
+    }
+
+    #[test]
+    fn a_position_in_no_symbol_has_no_siblings() {
+        let tree = vec![symbol("A", 0, 5, vec![])];
+        assert!(siblings_at(&tree, pos(9)).is_empty());
+    }
+}
+
 /// The innermost class/interface/struct/enum/trait whose range covers `pos`,
 /// as a flat walk over a `documentSymbol` response.
 fn enclosing_type_symbol(

@@ -2633,6 +2633,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "Y" => copy_quick_doc,             // SPC l Y : copy the hover documentation (JetBrains Copy Quick Doc)
                 "y" => peek_type_definition,       // SPC l y : peek the TYPE definition, mirroring gy (JetBrains Quick Type Definition)
                 "Q" => context_info,               // SPC l Q : the declarations enclosing the caret (JetBrains Alt-Q)
+                "B" => show_siblings,              // SPC l B : the symbols beside this one (JetBrains Show Siblings)
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format
                 // --- layouts (named window configurations) ---
