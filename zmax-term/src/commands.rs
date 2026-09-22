@@ -1845,6 +1845,8 @@ impl MappableCommand {
         word_prev_other_humps_extend, "Extend to the previous word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)",
         goto_changed_file, "Pick one of the files git reports as changed and open it (JetBrains Go to Changed File)",
         show_siblings, "List the symbols beside the one under the cursor (JetBrains Show Siblings)",
+        delete_word_backward_other_humps, "Delete to the word start with the camel-hump setting inverted (JetBrains Delete to Word Start in Different CamelHumps Mode)",
+        delete_word_forward_other_humps, "Delete to the word end with the camel-hump setting inverted (JetBrains Delete to Word End in Different CamelHumps Mode)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -38934,11 +38936,37 @@ pub mod insert {
     }
 
     pub fn delete_word_backward(cx: &mut Context) {
+        delete_word_backward_humps(cx, cx.editor.subword)
+    }
+
+    pub fn delete_word_forward(cx: &mut Context) {
+        delete_word_forward_humps(cx, cx.editor.subword)
+    }
+
+    /// JetBrains "Delete to Word Start in Different CamelHumps Mode": the one
+    /// delete runs under the inverted sub-word setting, which is put back by
+    /// the caller having never changed it.
+    pub fn delete_word_backward_other_humps(cx: &mut Context) {
+        delete_word_backward_humps(cx, !cx.editor.subword)
+    }
+
+    /// JetBrains "Delete to Word End in Different CamelHumps Mode".
+    pub fn delete_word_forward_other_humps(cx: &mut Context) {
+        delete_word_forward_humps(cx, !cx.editor.subword)
+    }
+
+    /// Delete back to a word start, splitting `camelCase`/`snake_case` when
+    /// `subword` — the same boundary `w`/`b` use under `SPC t c`.
+    fn delete_word_backward_humps(cx: &mut Context, subword: bool) {
         let count = cx.count();
         delete_by_selection_insert_mode(
             cx,
-            |text, range| {
-                let anchor = movement::move_prev_word_start(text, *range, count).from();
+            move |text, range| {
+                let anchor = if subword {
+                    movement::move_prev_sub_word_start(text, *range, count).from()
+                } else {
+                    movement::move_prev_word_start(text, *range, count).from()
+                };
                 let next = Range::new(anchor, range.cursor(text));
                 let range = exclude_cursor(text, next, *range);
                 (range.from(), range.to())
@@ -38947,12 +38975,17 @@ pub mod insert {
         );
     }
 
-    pub fn delete_word_forward(cx: &mut Context) {
+    /// Delete forward to a word end, on the same boundary rule.
+    fn delete_word_forward_humps(cx: &mut Context, subword: bool) {
         let count = cx.count();
         delete_by_selection_insert_mode(
             cx,
-            |text, range| {
-                let head = movement::move_next_word_end(text, *range, count).to();
+            move |text, range| {
+                let head = if subword {
+                    movement::move_next_sub_word_end(text, *range, count).to()
+                } else {
+                    movement::move_next_word_end(text, *range, count).to()
+                };
                 (range.cursor(text), head)
             },
             Direction::Forward,

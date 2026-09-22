@@ -1307,3 +1307,14 @@ async fn other_humps_word_motion_inverts_the_subword_setting() -> anyhow::Result
 
     Ok(())
 }
+
+/// JetBrains "Delete to Word Start in Different CamelHumps Mode" (i_A-W): the
+/// delete runs on the inverted sub-word boundary, so with sub-word mode off it
+/// takes one hump instead of the whole identifier.
+#[tokio::test(flavor = "multi_thread")]
+async fn other_humps_delete_takes_a_single_hump() -> anyhow::Result<()> {
+    test_vim(("fooBarBaz#[|\n]#", "i<A-W><esc>", "fooBa#[r|]#\n")).await?;
+    // The plain delete still takes the whole word.
+    test_vim(("fooBarBaz#[|\n]#", "i<C-w><esc>", "#[|\n]#")).await?;
+    Ok(())
+}

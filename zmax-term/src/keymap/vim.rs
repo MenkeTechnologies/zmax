@@ -3131,6 +3131,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-w"               => delete_word_backward,
         "A-backspace"       => delete_word_backward,
         "A-d"               => delete_word_forward,
+        // JetBrains' two "in Different CamelHumps Mode" deletes: one delete on
+        // the inverted sub-word boundary.
+        "A-W"               => delete_word_backward_other_humps,
+        "A-D"               => delete_word_forward_other_humps,
         "C-u"               => insert_kill_entered_vim,  // i_CTRL-U: drop what THIS session typed, not the line
         "C-k"               => insert_digraph,   // vim i_CTRL-K: enter a digraph (was emacs kill-to-eol)
 
