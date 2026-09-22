@@ -753,6 +753,7 @@
 | `bookmark_toggle` | Toggle a line bookmark (JetBrains F11) | **spacemacs, hybrid** — normal: `` <space>rt ``, select: `` <space>rt `` |
 | `bookmark_open_tabs` | Bookmark the cursor line of every open buffer (JetBrains Bookmark Open Tabs) |  |
 | `open_bookmarked_files` | Open every file that holds a line bookmark (JetBrains Open All Bookmarked Files) |  |
+| `bookmarks_view` | List every line bookmark, grouped by file (JetBrains Bookmarks tool window) | **spacemacs, hybrid** — normal: `` <space>rL ``, select: `` <space>rL `` |
 | `bookmark_next` | Jump to the next line bookmark (JetBrains) | **spacemacs, hybrid** — normal: `` <space>rn ``, select: `` <space>rn `` |
 | `bookmark_prev` | Jump to the previous line bookmark (JetBrains) | **spacemacs, hybrid** — normal: `` <space>rN ``, select: `` <space>rN `` |
 | `harpoon_menu` | Open the harpoon marks menu | **spacemacs, hybrid** — normal: `` <space>Hh ``, `` <space>Hl ``, select: `` <space>Hh ``, `` <space>Hl `` |
