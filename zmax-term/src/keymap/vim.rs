@@ -2694,6 +2694,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "x" => { "Text"
                 "h" => show_color_picker,          // SPC x h : pick a colour and insert its hex (JetBrains Show Color Picker)
                 "T" => surround_with_tag,          // SPC x T : wrap the selection in an element you name (JetBrains Surround with Tag; `x t` is the transpose prefix)
+                "S" => surround_with,              // SPC x S : wrap the selected lines in a block construct (JetBrains Surround With)
                 "v" => toggle_rendered_view,       // SPC x v : this markdown rendered in a scratch (JetBrains Toggle Rendered View)
                 "G" => toggle_gutter_icons,        // SPC x G : show or hide the gutter icon columns (JetBrains Show Gutter Icons; `x g` is the translate prefix)
                 // drag-stuff transient state: j/k keep dragging until q/ESC.

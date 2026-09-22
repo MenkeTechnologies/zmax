@@ -1857,6 +1857,7 @@ impl MappableCommand {
         structural_search, "Find code by shape with a tree-sitter query (JetBrains Search Structurally)",
         structural_replace, "Rewrite what a tree-sitter query captures (JetBrains Replace Structurally)",
         goto_link_target, "Open what the file in this buffer links to (JetBrains Go to Link Target)",
+        surround_with, "Wrap the selected lines in one of the language's block constructs (JetBrains Surround With)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -9603,6 +9604,183 @@ fn show_color_picker(cx: &mut Context) {
         cx.editor.set_status(format!("inserted {hex}"));
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// A "Surround With" wrapper: what is offered, what goes above the selection
+/// and what goes below it.
+type SurroundTemplate = (&'static str, &'static str, &'static str);
+
+/// C-like braces — Rust, C, C++, Java, JavaScript, TypeScript, Go, C#, Swift…
+const SURROUND_BRACES: &[SurroundTemplate] = &[
+    ("if", "if condition {", "}"),
+    ("while", "while condition {", "}"),
+    ("for", "for item in iterable {", "}"),
+    ("block", "{", "}"),
+    ("try / catch", "try {", "} catch (e) {\n}"),
+];
+
+const SURROUND_PYTHON: &[SurroundTemplate] = &[
+    ("if", "if condition:", ""),
+    ("while", "while condition:", ""),
+    ("for", "for item in iterable:", ""),
+    ("try / except", "try:", "except Exception:\n    pass"),
+    ("with", "with open(path) as f:", ""),
+];
+
+const SURROUND_SHELL: &[SurroundTemplate] = &[
+    ("if", "if condition; then", "fi"),
+    ("while", "while condition; do", "done"),
+    ("for", "for item in list; do", "done"),
+    ("function", "name() {", "}"),
+];
+
+const SURROUND_LISP: &[SurroundTemplate] = &[
+    ("when", "(when condition", ")"),
+    ("let", "(let ((x nil))", ")"),
+    ("progn", "(progn", ")"),
+];
+
+/// The wrappers offered for a language. The brace set is the fallback: it is
+/// what most of the grammars zmax ships speak, and a wrapper that does not fit
+/// is visible at once rather than silently wrong.
+fn surround_templates(language: Option<&str>) -> &'static [SurroundTemplate] {
+    match language.unwrap_or_default() {
+        "python" => SURROUND_PYTHON,
+        "bash" | "sh" | "zsh" | "fish" => SURROUND_SHELL,
+        "clojure" | "scheme" | "lisp" | "elisp" | "fennel" => SURROUND_LISP,
+        _ => SURROUND_BRACES,
+    }
+}
+
+/// Wrap `body` between `before` and `after`, indenting the body one unit and
+/// keeping the whole block at `indent` — the indentation of the line the
+/// selection starts on, so the wrapped code lands where the original sat.
+///
+/// An empty `after` means the language closes the block by indentation
+/// (Python), so nothing is written below. Pure — unit tested.
+fn surround_with_block(body: &str, before: &str, after: &str, indent: &str, unit: &str) -> String {
+    let mut out = String::new();
+    for (i, line) in before.lines().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        out.push_str(indent);
+        out.push_str(line);
+    }
+    for line in body.lines() {
+        out.push('\n');
+        if line.trim().is_empty() {
+            continue;
+        }
+        out.push_str(indent);
+        out.push_str(unit);
+        out.push_str(line.trim_end());
+    }
+    for line in after.lines() {
+        out.push('\n');
+        out.push_str(indent);
+        out.push_str(line);
+    }
+    out
+}
+
+/// JetBrains "Surround With…" (Ctrl-Alt-T): wrap the selected lines in one of
+/// the language's block constructs.
+///
+/// `surround_add` wraps in a pair and `surround_with_tag` in markup; this is
+/// the statement half, and the one that has to re-indent what it wraps.
+fn surround_with(cx: &mut Context) {
+    let (has_selection, language) = {
+        let (view, doc) = current_ref!(cx.editor);
+        (
+            doc.selection(view.id).primary().len() > 0,
+            doc.language_name().map(str::to_string),
+        )
+    };
+    if !has_selection {
+        cx.editor.set_error("select the lines to surround first");
+        return;
+    }
+    let rows: Vec<SurroundTemplate> = surround_templates(language.as_deref()).to_vec();
+    let columns = [
+        PickerColumn::new("surround with", |t: &SurroundTemplate, _: &()| t.0.into()),
+        PickerColumn::new("opens", |t: &SurroundTemplate, _: &()| {
+            t.1.lines().next().unwrap_or_default().into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, rows, (), |cx, template: &SurroundTemplate, _| {
+        let (before, after) = (template.1, template.2);
+        let (view, doc) = current!(cx.editor);
+        let unit = doc.indent_style.as_str().to_string();
+        let selection = doc.selection(view.id).clone();
+        let text = doc.text().slice(..);
+        let transaction = Transaction::change_by_selection(doc.text(), &selection, |range| {
+            // Whole lines: a block wrapper around half a line would not compile
+            // in any of these languages.
+            let first = text.char_to_line(range.from());
+            let last = text.char_to_line(range.to().saturating_sub(1).max(range.from()));
+            let from = text.line_to_char(first);
+            let to = if last + 1 < text.len_lines() {
+                text.line_to_char(last + 1) - 1
+            } else {
+                text.len_chars()
+            };
+            let indent: String = text
+                .line(first)
+                .chars()
+                .take_while(|c| *c == ' ' || *c == '\t')
+                .collect();
+            let body: String = text.slice(from..to).chunks().collect();
+            (
+                from,
+                to,
+                Some(Tendril::from(
+                    surround_with_block(&body, before, after, &indent, &unit).as_str(),
+                )),
+            )
+        });
+        doc.apply(&transaction, view.id);
+        doc.append_changes_to_history(view);
+        cx.editor
+            .set_status(format!("surrounded with {}", template.0));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+#[cfg(test)]
+mod surround_with_tests {
+    use super::{surround_templates, surround_with_block};
+
+    #[test]
+    fn the_body_is_indented_one_unit_under_the_opener() {
+        let out = surround_with_block("foo();\nbar();", "if condition {", "}", "    ", "    ");
+        assert_eq!(
+            out,
+            "    if condition {\n        foo();\n        bar();\n    }"
+        );
+    }
+
+    #[test]
+    fn a_language_that_closes_by_indentation_writes_nothing_below() {
+        let out = surround_with_block("foo()", "if condition:", "", "", "    ");
+        assert_eq!(out, "if condition:\n    foo()");
+    }
+
+    #[test]
+    fn a_multi_line_closer_keeps_the_block_indent() {
+        let out = surround_with_block("f();", "try {", "} catch (e) {\n}", "  ", "  ");
+        assert_eq!(out, "  try {\n    f();\n  } catch (e) {\n  }");
+    }
+
+    #[test]
+    fn each_language_family_gets_its_own_wrappers() {
+        assert_eq!(surround_templates(Some("python"))[0].1, "if condition:");
+        assert_eq!(surround_templates(Some("bash"))[0].2, "fi");
+        assert_eq!(surround_templates(Some("clojure"))[0].1, "(when condition");
+        // Anything else falls back to braces.
+        assert_eq!(surround_templates(Some("rust"))[0].1, "if condition {");
+        assert_eq!(surround_templates(None)[0].1, "if condition {");
+    }
 }
 
 /// The selection wrapped in `<tag>`…`</tag>` — JetBrains "Surround with Tag".
