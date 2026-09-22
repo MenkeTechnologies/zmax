@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-9f8f92d2.js";
+            window.path_to_searchindex_js = "searchindex-bdfc7dd3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -1439,6 +1439,9 @@
 <tr><td><code>:vc-root-version-diff</code>, <code>:vc-root-diff</code></td><td>Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).</td></tr>
 <tr><td><code>:vc-revision-other-window</code></td><td>Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).</td></tr>
 <tr><td><code>:sticky-lines</code>, <code>:sticky-context</code></td><td>Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines).</td></tr>
+<tr><td><code>:scope-define</code>, <code>:scope</code></td><td>Bind a name to a file glob for searches (JetBrains Edit Scopes).</td></tr>
+<tr><td><code>:scope-delete</code></td><td>Forget a saved scope.</td></tr>
+<tr><td><code>:scopes</code></td><td>List the saved search scopes (JetBrains Scopes).</td></tr>
 <tr><td><code>:diagnostics-severity</code>, <code>:error-highlighting</code></td><td>The lowest diagnostic severity the editor draws: error, warning, info, hint, off (JetBrains Error Highlighting).</td></tr>
 <tr><td><code>:changelist</code>, <code>:cl</code></td><td>Put this file in a named changelist, or report which one holds it (JetBrains changelists).</td></tr>
 <tr><td><code>:changelists</code>, <code>:cls</code></td><td>List every changelist and the files in it (JetBrains Changes view).</td></tr>
@@ -3579,6 +3582,7 @@
 <tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code>, select: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code></td></tr>
 <tr><td><code>open_log_file</code></td><td>Open zmax’s own log file (JetBrains Show Log)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;hL</code>, select: <code>&lt;space&gt;hL</code></td></tr>
 <tr><td><code>global_search_masked</code></td><td>Search the project, restricted to a file glob (JetBrains Find in Path file mask)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sm</code>, select: <code>&lt;space&gt;sm</code></td></tr>
+<tr><td><code>global_search_in_scope</code></td><td>Search the project inside a saved named scope (JetBrains scopes)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sM</code>, select: <code>&lt;space&gt;sM</code></td></tr>
 <tr><td><code>rerun_failed_tests</code></td><td>Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cf</code>, select: <code>&lt;space&gt;cf</code></td></tr>
 <tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-r&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code></td></tr>
 <tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, insert: <code>&lt;C-x&gt;`</code><br><strong>hybrid</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code></td></tr>
