@@ -2077,6 +2077,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "m" => buffer_sort_by_last_used,
                 },
                 "b" => buffer_picker,              // SPC b b
+                "E" => export_to_scratch,          // SPC b E : copy the selection (or the buffer) into a scratch buffer (JetBrains Export to Scratch File)
                 "C-s" => show_scratch_files,       // SPC b C-s : pick among the scratch buffers (JetBrains Show Scratch Files; `s`/`S` already make one)
                 "n" => goto_next_buffer,           // SPC b n
                 "p" => goto_previous_buffer,       // SPC b p
