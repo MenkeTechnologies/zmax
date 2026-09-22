@@ -688,6 +688,7 @@ impl MappableCommand {
         toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
         power_save_mode, "Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode)",
         distraction_free_mode, "Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode)",
+        toggle_completion_docs, "Show or hide the documentation beside the completion list (JetBrains Show Automatically During Completion)",
         toggle_breadcrumbs, "Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)",
         toggle_sticky_lines, "Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
@@ -17887,6 +17888,31 @@ fn distraction_free_mode(cx: &mut Context) {
     });
     cx.editor.set_status(format!(
         "distraction free mode: {}",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Whether the completion popup shows documentation beside it — JetBrains
+/// "Show Automatically During Completion" (`Documentation.ToggleAutoShow`). On,
+/// as the IDE ships it.
+static COMPLETION_DOCS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Whether the completion popup should draw its documentation panel.
+pub(crate) fn completion_docs_enabled() -> bool {
+    COMPLETION_DOCS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// JetBrains "Show Automatically During Completion"
+/// (`Documentation.ToggleAutoShow`): the documentation panel beside the
+/// completion list, on or off.
+///
+/// Off does not stop the language server resolving items — it stops the panel
+/// being drawn and the resolve request being made for it, which is what makes
+/// completion feel quiet on a slow server. Hover (`SPC l k`) still answers.
+fn toggle_completion_docs(cx: &mut Context) {
+    let on = !COMPLETION_DOCS.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "documentation during completion: {}",
         if on { "on" } else { "off" }
     ));
 }

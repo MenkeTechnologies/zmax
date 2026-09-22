@@ -565,6 +565,12 @@ impl Component for Completion {
             Some(option) => option,
             None => return,
         };
+        // JetBrains "Show Automatically During Completion"
+        // (`Documentation.ToggleAutoShow`): with it off the completion list
+        // stands alone and documentation is on demand (`SPC l k` hover).
+        if !crate::commands::completion_docs_enabled() {
+            return;
+        }
         if let CompletionItem::Lsp(option) = option {
             self.resolve_handler.ensure_item_resolved(cx.editor, option);
         }
