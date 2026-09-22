@@ -287,6 +287,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g c o", "Git",     ":conflict-ours"),                        // SPC g c o : keep ours
     ("space g c t", "Git",     ":conflict-theirs"),                      // SPC g c t : keep theirs
     ("space g c b", "Git",     ":conflict-both"),                        // SPC g c b : keep both
+    ("space g c i", "Git",     ":conflict-imports"),                     // SPC g c i : merge import-only conflicts (JetBrains Resolve Conflicts in Import Statements)
     ("] x",         "Git",     ":conflict-next"),                        // next conflict
     ("[ x",         "Git",     ":conflict-prev"),                        // previous conflict
     ("space g f l", "Git",     "git_file_log_picker"),                   // SPC g f l : commits log for current file (:BCommits)

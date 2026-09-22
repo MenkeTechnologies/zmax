@@ -8521,6 +8521,136 @@ fn conflict_block(text: &zmax_core::Rope, cursor: usize) -> Option<(usize, usize
     ))
 }
 
+/// The lines a conflict in an import block may contain: an import in one of
+/// the shapes the common languages write, or a blank line. Anything else means
+/// the conflict is not purely about imports.
+fn is_import_line(line: &str) -> bool {
+    let line = line.trim();
+    line.is_empty()
+        || line.starts_with("import ")
+        || line.starts_with("import(")
+        || line.starts_with("from ")
+        || line.starts_with("use ")
+        || line.starts_with("using ")
+        || line.starts_with("#include")
+        || line.starts_with("require ")
+        || line.starts_with("@import")
+        || line.starts_with("pub use ")
+}
+
+/// Merge the two sides of a conflict that only moves imports around: the union
+/// of the lines, each kept once, in sorted order.
+///
+/// Returns `None` when either side holds a line that is not an import, because
+/// merging those blind would silently keep code the author never wrote
+/// together — which is why JetBrains restricts its action to imports too.
+fn merge_import_conflict(ours: &str, theirs: &str) -> Option<String> {
+    let mut lines: Vec<&str> = Vec::new();
+    for side in [ours, theirs] {
+        for line in side.lines() {
+            if !is_import_line(line) {
+                return None;
+            }
+            if !line.trim().is_empty() {
+                lines.push(line);
+            }
+        }
+    }
+    lines.sort_unstable();
+    lines.dedup();
+    if lines.is_empty() {
+        return Some(String::new());
+    }
+    Some(lines.join("\n") + "\n")
+}
+
+/// `:conflict-imports` — JetBrains "Resolve Conflicts in Import Statements":
+/// every conflict in the buffer whose two sides are only imports is replaced
+/// by the union of them, sorted. Conflicts that touch anything else are left
+/// alone for a human to read.
+fn conflict_imports(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (changes, skipped) = {
+        let doc = doc!(cx.editor);
+        let text = doc.text();
+        let mut changes: Vec<(usize, usize, String)> = Vec::new();
+        let mut skipped = 0usize;
+        let mut line = 0;
+        while line < text.len_lines() {
+            if !text.line(line).chars().take(7).eq("<<<<<<<".chars()) {
+                line += 1;
+                continue;
+            }
+            let Some((start, end, ours, theirs)) = conflict_block(text, text.line_to_char(line))
+            else {
+                line += 1;
+                continue;
+            };
+            match merge_import_conflict(&ours, &theirs) {
+                Some(merged) => changes.push((start, end, merged)),
+                None => skipped += 1,
+            }
+            line = text.char_to_line(end.min(text.len_chars()));
+            if end >= text.len_chars() {
+                break;
+            }
+        }
+        (changes, skipped)
+    };
+    if changes.is_empty() {
+        cx.editor.set_status(if skipped > 0 {
+            format!("{skipped} conflict(s) hold more than imports — left alone")
+        } else {
+            "no import conflicts".to_string()
+        });
+        return Ok(());
+    }
+    let resolved = changes.len();
+    let (view, doc) = current!(cx.editor);
+    let transaction = Transaction::change(
+        doc.text(),
+        changes
+            .into_iter()
+            .map(|(start, end, merged)| (start, end, (!merged.is_empty()).then(|| merged.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(if skipped > 0 {
+        format!("{resolved} import conflict(s) merged, {skipped} left alone")
+    } else {
+        format!("{resolved} import conflict(s) merged")
+    });
+    Ok(())
+}
+
+#[cfg(test)]
+mod import_conflict_tests {
+    use super::merge_import_conflict;
+
+    #[test]
+    fn both_sides_merge_into_one_sorted_set() {
+        let merged = merge_import_conflict("use b;\nuse a;\n", "use c;\nuse a;\n").unwrap();
+        assert_eq!(merged, "use a;\nuse b;\nuse c;\n");
+    }
+
+    #[test]
+    fn blank_lines_are_dropped_not_refused() {
+        let merged = merge_import_conflict("use a;\n\n", "\nuse b;\n").unwrap();
+        assert_eq!(merged, "use a;\nuse b;\n");
+    }
+
+    #[test]
+    fn a_side_with_code_is_left_for_a_human() {
+        assert!(merge_import_conflict("use a;\n", "fn main() {}\n").is_none());
+    }
+}
+
 /// Resolve the merge conflict under the cursor by keeping `which` ∈ {ours, theirs, both}.
 fn conflict_resolve(cx: &mut compositor::Context, which: &str) -> anyhow::Result<()> {
     let change: Option<(usize, usize, String)> = {
@@ -59776,6 +59906,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["conflict-keep-both"],
         doc: "Resolve the merge conflict at the cursor by keeping BOTH sides.",
         fun: conflict_both,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "conflict-imports",
+        aliases: &[],
+        doc: "Merge every conflict whose two sides are only import statements (JetBrains Resolve Conflicts in Import Statements).",
+        fun: conflict_imports,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
