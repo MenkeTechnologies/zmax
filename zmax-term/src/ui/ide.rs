@@ -806,6 +806,17 @@ impl Ide {
         self.project.toggle_sort_by_type()
     }
 
+    /// JetBrains "Sort by Modification Time" (`ProjectView.SortByTimeDescending`
+    /// / `.SortByTimeAscending`), replacing whatever order was in force.
+    pub fn sort_project_by_time(&mut self, newest_first: bool) {
+        self.visible = true;
+        self.project.set_sort(if newest_first {
+            crate::ui::file_tree::TreeSort::TimeNewest
+        } else {
+            crate::ui::file_tree::TreeSort::TimeOldest
+        });
+    }
+
     /// JetBrains "File Details" (`ViewInplaceComments`): show or hide the file
     /// sizes in the project tree. Returns the new state.
     pub fn toggle_file_details(&mut self) -> bool {

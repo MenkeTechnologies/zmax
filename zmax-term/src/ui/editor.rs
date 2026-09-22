@@ -719,6 +719,13 @@ impl EditorView {
         self.ide.as_mut().map(|ide| ide.toggle_sort_by_type())
     }
 
+    /// JetBrains "Sort by Modification Time", newest or oldest first.
+    pub fn sort_project_by_time(&mut self, newest_first: bool) -> Option<()> {
+        self.ide
+            .as_mut()
+            .map(|ide| ide.sort_project_by_time(newest_first))
+    }
+
     /// JetBrains "File Details": show or hide file sizes in the project tree.
     pub fn toggle_file_details(&mut self) -> Option<bool> {
         self.ide.as_mut().map(|ide| ide.toggle_file_details())

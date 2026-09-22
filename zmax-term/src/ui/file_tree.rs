@@ -34,9 +34,9 @@ pub struct FileTree {
     /// JetBrains "Compact Directories" (`ProjectView.CompactDirectories`): draw
     /// a chain of single-child directories as one row, `a/b/c`. Off by default.
     compact_dirs: bool,
-    /// JetBrains "Sort by Type" (`ProjectView.SortByType`): files ordered by
-    /// extension, then by name. Off by default (plain name order).
-    sort_by_type: bool,
+    /// How a directory's files are ordered (JetBrains' Sort by Name / Type /
+    /// Modification Time). Directories come first whatever this says.
+    sort: TreeSort,
     root: PathBuf,
     expanded: HashSet<PathBuf>,
     rows: Vec<Row>,
@@ -59,12 +59,23 @@ pub struct FileTree {
     dir_cache: HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
 }
 
+/// How the project tree orders the files inside a directory (JetBrains' Sort by
+/// Name / Sort by Type / Sort by Modification Time). Directories always come
+/// first; this only decides the order among entries of the same kind.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TreeSort {
+    Name,
+    Type,
+    TimeNewest,
+    TimeOldest,
+}
+
 impl FileTree {
     pub fn new(root: PathBuf) -> Self {
         let mut tree = Self {
             details: false,
             compact_dirs: false,
-            sort_by_type: false,
+            sort: TreeSort::Name,
             root: root.clone(),
             expanded: HashSet::new(),
             rows: Vec::new(),
@@ -98,12 +109,12 @@ impl FileTree {
         cache: &mut HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
         dir: &Path,
         show_hidden: bool,
-        by_type: bool,
+        sort: TreeSort,
     ) -> Vec<(PathBuf, String, bool)> {
         if let Some(v) = cache.get(dir) {
             return v.clone();
         }
-        let v = Self::read_dir_sorted(dir, show_hidden, by_type);
+        let v = Self::read_dir_sorted(dir, show_hidden, sort);
         cache.insert(dir.to_path_buf(), v.clone());
         v
     }
@@ -132,35 +143,42 @@ impl FileTree {
     fn read_dir_sorted(
         dir: &Path,
         show_hidden: bool,
-        by_type: bool,
+        sort: TreeSort,
     ) -> Vec<(PathBuf, String, bool)> {
-        let mut entries: Vec<(PathBuf, String, bool)> = std::fs::read_dir(dir)
-            .into_iter()
-            .flatten()
-            .flatten()
-            .map(|e| {
-                let path = e.path();
-                let is_dir = path.is_dir();
-                let name = e.file_name().to_string_lossy().into_owned();
-                (path, name, is_dir)
-            })
-            .filter(|(_, name, _)| show_hidden || !name.starts_with('.'))
-            .collect();
+        let mut entries: Vec<(PathBuf, String, bool, std::time::SystemTime)> =
+            std::fs::read_dir(dir)
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|e| {
+                    let path = e.path();
+                    let meta = e.metadata().ok();
+                    let is_dir = meta.as_ref().map(|m| m.is_dir()).unwrap_or(false);
+                    let mtime = meta
+                        .and_then(|m| m.modified().ok())
+                        .unwrap_or(std::time::UNIX_EPOCH);
+                    let name = e.file_name().to_string_lossy().into_owned();
+                    (path, name, is_dir, mtime)
+                })
+                .filter(|(_, name, _, _)| show_hidden || !name.starts_with('.'))
+                .collect();
         entries.sort_by(|a, b| {
-            // Directories first either way; `by_type` then groups files by
-            // extension (JetBrains "Sort by Type") before falling back to the
-            // name, so the order inside a group is still predictable.
+            // Directories first whatever the sort is; the sort then decides the
+            // order among equals, and the name is always the last word so the
+            // listing is stable.
             b.2.cmp(&a.2)
-                .then_with(|| {
-                    if by_type {
-                        file_extension(&a.1).cmp(&file_extension(&b.1))
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
+                .then_with(|| match sort {
+                    TreeSort::Name => std::cmp::Ordering::Equal,
+                    TreeSort::Type => file_extension(&a.1).cmp(&file_extension(&b.1)),
+                    TreeSort::TimeNewest => b.3.cmp(&a.3),
+                    TreeSort::TimeOldest => a.3.cmp(&b.3),
                 })
                 .then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase()))
         });
         entries
+            .into_iter()
+            .map(|(path, name, is_dir, _)| (path, name, is_dir))
+            .collect()
     }
 
     /// Re-read the directory tree from disk (preserving expand/selection state).
@@ -173,7 +191,7 @@ impl FileTree {
 
     fn rebuild(&mut self) {
         let show_hidden = self.show_hidden;
-        let by_type = self.sort_by_type;
+        let sort = self.sort;
         let compact = self.compact_dirs;
         #[allow(clippy::too_many_arguments)]
         fn walk(
@@ -183,16 +201,16 @@ impl FileTree {
             expanded: &HashSet<PathBuf>,
             out: &mut Vec<Row>,
             show_hidden: bool,
-            by_type: bool,
+            sort: TreeSort,
             compact: bool,
         ) {
-            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, by_type) {
+            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, sort) {
                 // "Compact Directories": a directory whose only child is another
                 // directory is drawn as one row, `a/b/c`, and the walk continues
                 // from the end of the chain — the empty package levels the IDE
                 // folds away.
                 let (path, name) = if compact && is_dir {
-                    FileTree::compact_chain(cache, path, name, show_hidden, by_type)
+                    FileTree::compact_chain(cache, path, name, show_hidden, sort)
                 } else {
                     (path, name)
                 };
@@ -212,7 +230,7 @@ impl FileTree {
                         expanded,
                         out,
                         show_hidden,
-                        by_type,
+                        sort,
                         compact,
                     );
                 }
@@ -251,7 +269,7 @@ impl FileTree {
                 return false;
             }
             let mut any = false;
-            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, false) {
+            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, TreeSort::Name) {
                 if is_dir {
                     let name_match = fuzzy(&name, q);
                     let mut kids = Vec::new();
@@ -294,7 +312,7 @@ impl FileTree {
                 &expanded,
                 &mut rows,
                 show_hidden,
-                by_type,
+                sort,
                 compact,
             );
         } else {
@@ -594,11 +612,11 @@ impl FileTree {
         mut path: PathBuf,
         mut name: String,
         show_hidden: bool,
-        by_type: bool,
+        sort: TreeSort,
     ) -> (PathBuf, String) {
         const MAX: usize = 32;
         for _ in 0..MAX {
-            let children = FileTree::cached_children(cache, &path, show_hidden, by_type);
+            let children = FileTree::cached_children(cache, &path, show_hidden, sort);
             match children.as_slice() {
                 [(child_path, child_name, true)] => {
                     name = format!("{name}/{child_name}");
@@ -622,10 +640,18 @@ impl FileTree {
 
     /// JetBrains "Sort by Type": order files by extension, then by name.
     pub fn toggle_sort_by_type(&mut self) -> bool {
-        self.sort_by_type = !self.sort_by_type;
+        let on = self.sort != TreeSort::Type;
+        self.set_sort(if on { TreeSort::Type } else { TreeSort::Name });
+        on
+    }
+
+    /// JetBrains' Sort by Modification Time, newest or oldest first. Choosing
+    /// one replaces whatever order was in force — the four orders are one
+    /// choice, not four switches.
+    pub fn set_sort(&mut self, sort: TreeSort) {
+        self.sort = sort;
         self.dir_cache.clear();
         self.rebuild();
-        self.sort_by_type
     }
 
     /// JetBrains "File Details" (`ViewInplaceComments`): show or hide each
@@ -851,6 +877,35 @@ mod tests {
         assert!(!tree.is_filtering());
         let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
         assert!(names.contains(&"beta.txt"), "filter cleared: {names:?}");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn modification_time_order_flips_with_the_sort() {
+        let root = std::env::temp_dir().join(format!("zmax_mtime_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        // Written oldest-first, with names that sort the other way, so name
+        // order cannot be mistaken for time order.
+        for (name, secs) in [
+            ("c_old.rs", 1_000_000),
+            ("b_mid.rs", 2_000_000),
+            ("a_new.rs", 3_000_000),
+        ] {
+            let file = std::fs::File::create(root.join(name)).unwrap();
+            let when = std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs);
+            file.set_modified(when).unwrap();
+        }
+
+        let mut tree = FileTree::new(root.clone());
+        tree.set_sort(TreeSort::TimeNewest);
+        let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(names, vec!["a_new.rs", "b_mid.rs", "c_old.rs"]);
+
+        tree.set_sort(TreeSort::TimeOldest);
+        let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(names, vec!["c_old.rs", "b_mid.rs", "a_new.rs"]);
 
         let _ = std::fs::remove_dir_all(&root);
     }

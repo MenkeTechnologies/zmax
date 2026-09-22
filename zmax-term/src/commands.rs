@@ -1852,6 +1852,8 @@ impl MappableCommand {
         goto_test, "Jump between a file and its test file (JetBrains Go to Test / Go to Test Subject)",
         export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
         recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
+        sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
+        sort_tree_by_time_oldest, "Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -16239,8 +16241,10 @@ fn ediff_dotfile_and_template(cx: &mut Context) {
     ));
 }
 
-/// JetBrains "Compare with Clipboard": diff the current buffer against the system
-/// clipboard side by side, read-only.
+/// JetBrains "Compare with Clipboard": diff the buffer against the system
+/// clipboard side by side, read-only — or, when something is selected, just
+/// that selection, which is what the action does in the IDE and what makes it
+/// useful on a long file.
 fn compare_with_clipboard(cx: &mut Context) {
     let clip: String = cx
         .editor
@@ -16252,9 +16256,17 @@ fn compare_with_clipboard(cx: &mut Context) {
         cx.editor.set_status("clipboard is empty");
         return;
     }
-    let doc = doc!(cx.editor);
+    let (view_id, doc) = current_ref!(cx.editor);
     let name = doc.display_name().into_owned();
-    let cur = doc.text().to_string();
+    let sel = doc.selection(view_id.id).primary();
+    let (cur, name) = if sel.from() == sel.to() {
+        (doc.text().to_string(), name)
+    } else {
+        (
+            doc.text().slice(sel.from()..sel.to()).to_string(),
+            format!("{name} (selection)"),
+        )
+    };
     let doc_id = doc.id();
     let view = crate::ui::merge::DiffView::new(format!("{name} ⇔ clipboard"), doc_id, &cur, &clip)
         .read_only();
@@ -52586,6 +52598,34 @@ fn toggle_compact_directories(cx: &mut Context) {
             None => cx.editor.set_status("no project tree"),
         }
     }));
+}
+
+/// JetBrains "Sort by Modification Time" (`ProjectView.SortByTimeDescending` /
+/// `.SortByTimeAscending`): order the tree's files by when they were last
+/// written. It replaces the type order rather than stacking with it — the four
+/// orders JetBrains offers are one choice.
+fn sort_tree_by_time(cx: &mut Context, newest_first: bool) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let done = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.sort_project_by_time(newest_first));
+        match done {
+            Some(()) => cx.editor.set_status(if newest_first {
+                "sort by modification time: newest first"
+            } else {
+                "sort by modification time: oldest first"
+            }),
+            None => cx.editor.set_status("no project tree"),
+        }
+    }));
+}
+
+fn sort_tree_by_time_newest(cx: &mut Context) {
+    sort_tree_by_time(cx, true)
+}
+
+fn sort_tree_by_time_oldest(cx: &mut Context) {
+    sort_tree_by_time(cx, false)
 }
 
 /// JetBrains "Sort by Type" (`ProjectView.SortByType`): order the tree's files

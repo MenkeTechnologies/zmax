@@ -1461,6 +1461,8 @@
 | `goto_test` | Jump between a file and its test file (JetBrains Go to Test / Go to Test Subject) | **spacemacs, hybrid** — normal: `` <space>fg ``, select: `` <space>fg `` |
 | `export_to_scratch` | Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File) | **spacemacs, hybrid** — normal: `` <space>bE ``, select: `` <space>bE `` |
 | `recent_tests` | Pick one of the test runs that have finished and run it again (JetBrains Recent Tests) | **spacemacs, hybrid** — normal: `` <space>cH ``, select: `` <space>cH `` |
+| `sort_tree_by_time_newest` | Order the project tree by modification time, newest first (JetBrains Sort by Modification Time) |  |
+| `sort_tree_by_time_oldest` | Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time) |  |
 | `rerun_failed_tests` | Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests) | **spacemacs, hybrid** — normal: `` <space>cf ``, select: `` <space>cf `` |
 | `rerun_last_run` | Re-run the last command in the Run console | **spacemacs** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> ``<br>**hybrid** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> `` |
 | `run_next_error` | Jump to the next file:line in the run output | **spacemacs** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` ``<br>**hybrid** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn `` |
