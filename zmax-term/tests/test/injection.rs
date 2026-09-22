@@ -912,3 +912,31 @@ async fn structural_replace_rewrites_what_the_query_captures() -> anyhow::Result
     .await?;
     Ok(())
 }
+
+/// JetBrains "Fix Doc Comment" (SPC c o): the parameters come from the syntax
+/// tree, so the comment lists what the definition actually takes.
+#[tokio::test(flavor = "multi_thread")]
+async fn fix_doc_comment_lists_the_parameters_of_the_definition() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".rs").tempfile()?;
+    std::fs::write(file.path(), "fn parse(input: &str, strict: bool) -> bool {\n    strict\n}\n")?;
+    let mut app = helpers::preset_app("spacemacs")
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("<space>co"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "///\n///\n/// # Arguments\n/// * `input` -\n/// * `strict` -\nfn parse(input: &str, strict: bool) -> bool {\n    strict\n}\n",
+                    doc.text().to_string()
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}

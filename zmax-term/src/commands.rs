@@ -1962,6 +1962,7 @@ impl MappableCommand {
         fold_to_level, "Set foldlevel to the count outright (JetBrains Expand to Level N)",
         goto_next_problem_file, "Go to the next open buffer that has diagnostics (JetBrains Select Next Problem File)",
         goto_prev_problem_file, "Go to the previous open buffer that has diagnostics (JetBrains Select Previous Problem File)",
+        fix_doc_comment, "Write the doc comment for the definition at the cursor (JetBrains Fix Doc Comment)",
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_recursive, "Delete the fold under the cursor and every fold nested in it (zD)",
         fold_delete_all, "Delete all folds (zE)",
@@ -3915,6 +3916,277 @@ fn goto_next_problem_file(cx: &mut Context) {
 
 fn goto_prev_problem_file(cx: &mut Context) {
     goto_problem_file(cx, Direction::Backward)
+}
+
+/// The parameter names in a parameter list, as written. Pure — unit tested.
+///
+/// The list is split on the commas that sit at depth zero, so a default value
+/// or a generic type holding commas does not split an argument in two. From
+/// each argument the leading identifier is taken, which is where every language
+/// zmax ships a grammar for puts the name, bar the C family's `type name` —
+/// hence the trailing-identifier fallback when the leading one is followed by
+/// another word rather than by `:`, `=` or the end.
+fn param_names(list: &str) -> Vec<String> {
+    let inner = list
+        .trim()
+        .trim_start_matches(['(', '['])
+        .trim_end_matches([')', ']']);
+    let mut args = Vec::new();
+    let mut depth = 0i32;
+    let mut current = String::new();
+    for c in inner.chars() {
+        match c {
+            '(' | '[' | '{' | '<' => {
+                depth += 1;
+                current.push(c);
+            }
+            ')' | ']' | '}' | '>' => {
+                depth -= 1;
+                current.push(c);
+            }
+            ',' if depth == 0 => {
+                args.push(std::mem::take(&mut current));
+            }
+            _ => current.push(c),
+        }
+    }
+    args.push(current);
+
+    args.into_iter()
+        .filter_map(|arg| {
+            let arg = arg.trim();
+            if arg.is_empty() {
+                return None;
+            }
+            // The receiver is not a documented parameter in any of these
+            // languages.
+            let head = arg.split([':', '=']).next().unwrap_or(arg).trim();
+            let words: Vec<&str> = head.split_whitespace().collect();
+            // `type name` (C, Java, Go) documents the last word; `name: type`
+            // and a bare `name` document the first.
+            let name = if head.contains(':') || head.contains('=') || words.len() == 1 {
+                words.first().copied()
+            } else {
+                words.last().copied()
+            }?;
+            let name = name.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
+            if name.is_empty() || matches!(name, "self" | "this" | "cls" | "mut" | "void") {
+                return None;
+            }
+            Some(name.to_string())
+        })
+        .collect()
+}
+
+/// The doc-comment shape a language writes.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum DocStyle {
+    /// Rust, C#, Dart: `///` lines with a `# Arguments` list.
+    TripleSlash,
+    /// JavaScript, TypeScript, Java, PHP, C, C++: `/** @param */`.
+    JsDoc,
+    /// Python: a `"""` docstring with an `Args:` block.
+    PyDoc,
+    /// Go, Ruby, shell, Lua: plain comment lines above the definition.
+    LineComment(&'static str),
+}
+
+fn doc_style(language: Option<&str>) -> DocStyle {
+    match language.unwrap_or_default() {
+        "python" => DocStyle::PyDoc,
+        "javascript" | "typescript" | "tsx" | "jsx" | "java" | "php" | "c" | "cpp" | "kotlin" => {
+            DocStyle::JsDoc
+        }
+        "go" | "lua" => DocStyle::LineComment("//"),
+        "ruby" | "bash" | "sh" | "zsh" | "python2" => DocStyle::LineComment("#"),
+        _ => DocStyle::TripleSlash,
+    }
+}
+
+/// The doc comment to insert above a definition: a summary line to fill in and
+/// one entry per parameter. Pure — unit tested.
+///
+/// The Python docstring goes *inside* the definition, so it is indented one
+/// unit further than the others; every other style sits above it at the
+/// definition's own indentation.
+fn doc_comment_skeleton(style: DocStyle, params: &[String], indent: &str, unit: &str) -> String {
+    let mut out = String::new();
+    match style {
+        DocStyle::TripleSlash => {
+            out.push_str(&format!("{indent}///\n"));
+            if !params.is_empty() {
+                out.push_str(&format!("{indent}///\n{indent}/// # Arguments\n"));
+                for p in params {
+                    out.push_str(&format!("{indent}/// * `{p}` -\n"));
+                }
+            }
+        }
+        DocStyle::JsDoc => {
+            out.push_str(&format!("{indent}/**\n{indent} *\n"));
+            for p in params {
+                out.push_str(&format!("{indent} * @param {p}\n"));
+            }
+            out.push_str(&format!("{indent} */\n"));
+        }
+        DocStyle::PyDoc => {
+            let body = format!("{indent}{unit}");
+            out.push_str(&format!("{body}\"\"\"\n{body}\n"));
+            if !params.is_empty() {
+                out.push_str(&format!("{body}Args:\n"));
+                for p in params {
+                    out.push_str(&format!("{body}{unit}{p}:\n"));
+                }
+            }
+            out.push_str(&format!("{body}\"\"\"\n"));
+        }
+        DocStyle::LineComment(token) => {
+            out.push_str(&format!("{indent}{token}\n"));
+            for p in params {
+                out.push_str(&format!("{indent}{token} {p}:\n"));
+            }
+        }
+    }
+    out
+}
+
+/// JetBrains "Fix Doc Comment": write the doc comment for the definition at the
+/// cursor — a summary line to fill in, and an entry for every parameter, in the
+/// shape the language writes.
+///
+/// The parameters come from the syntax tree, so the comment lists what the
+/// definition actually takes rather than what it took when someone last edited
+/// the comment by hand.
+fn fix_doc_comment(cx: &mut Context) {
+    // The tree cursor borrows the document, so everything the edit needs is
+    // taken out of this block as plain values before the editor is touched.
+    let found = {
+        let (view, doc) = current_ref!(cx.editor);
+        let Some(syntax) = doc.syntax() else {
+            cx.editor
+                .set_error("fix-doc-comment needs a parsed syntax tree for this buffer");
+            return;
+        };
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let byte = text.char_to_byte(cursor) as u32;
+        let mut walk = syntax.walk();
+        walk.reset_to_byte_range(byte, byte);
+        let mut definition = None;
+        loop {
+            let node = walk.node();
+            let kind = node.kind();
+            if kind.contains("function") || kind.contains("method") || kind.contains("constructor")
+            {
+                definition = Some(node);
+                break;
+            }
+            if !walk.goto_parent() {
+                break;
+            }
+        }
+        definition.map(|definition| {
+            // The parameter list is the child the grammars all call some
+            // flavour of "parameters"; its text is parsed rather than its
+            // children walked, so one rule covers every grammar.
+            let params = definition
+                .children()
+                .find(|child| {
+                    child.kind().contains("parameter") || child.kind().contains("argument")
+                })
+                .map(|node| {
+                    let from = text.byte_to_char(node.start_byte() as usize);
+                    let to = text.byte_to_char((node.end_byte() as usize).min(text.len_bytes()));
+                    param_names(&text.slice(from..to).to_string())
+                })
+                .unwrap_or_default();
+
+            let style = doc_style(doc.language_name());
+            let start = text.byte_to_char(definition.start_byte() as usize);
+            let line = text.char_to_line(start);
+            let indent: String = text
+                .line(line)
+                .chars()
+                .take_while(|c| *c == ' ' || *c == '\t')
+                .collect();
+            let unit = doc.indent_style.as_str().to_string();
+            // A Python docstring goes on the line after the `def`; every other
+            // style goes above the definition.
+            let insert_at = if style == DocStyle::PyDoc {
+                let next = (line + 1).min(text.len_lines().saturating_sub(1));
+                text.line_to_char(next)
+            } else {
+                text.line_to_char(line)
+            };
+            (insert_at, params, style, indent, unit)
+        })
+    };
+
+    let Some((insert_at, params, style, indent, unit)) = found else {
+        cx.editor.set_status("no function or method at the cursor");
+        return;
+    };
+    let skeleton = doc_comment_skeleton(style, &params, &indent, &unit);
+    let (view, doc) = current!(cx.editor);
+    let transaction = Transaction::change(
+        doc.text(),
+        [(insert_at, insert_at, Some(skeleton.as_str().into()))].into_iter(),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!(
+        "doc comment written for {} parameter(s)",
+        params.len()
+    ));
+}
+
+#[cfg(test)]
+mod doc_comment_tests {
+    use super::{doc_comment_skeleton, doc_style, param_names, DocStyle};
+
+    #[test]
+    fn a_parameter_list_gives_up_its_names() {
+        assert_eq!(param_names("(a: u32, b: &str)"), vec!["a", "b"]);
+        // The receiver is not a parameter.
+        assert_eq!(param_names("(&mut self, path: &Path)"), vec!["path"]);
+        // `type name`, the C family's order.
+        assert_eq!(param_names("(int count, char *name)"), vec!["count", "name"]);
+        // Defaults and generics hold commas that must not split an argument.
+        assert_eq!(
+            param_names("(items: Vec<(u8, u8)>, sep = \",\")"),
+            vec!["items", "sep"]
+        );
+        assert_eq!(param_names("()"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn each_style_lists_the_parameters_its_own_way() {
+        let params = vec!["a".to_string(), "b".to_string()];
+        assert_eq!(
+            doc_comment_skeleton(DocStyle::TripleSlash, &params, "  ", "    "),
+            "  ///\n  ///\n  /// # Arguments\n  /// * `a` -\n  /// * `b` -\n"
+        );
+        assert_eq!(
+            doc_comment_skeleton(DocStyle::JsDoc, &params, "", "  "),
+            "/**\n *\n * @param a\n * @param b\n */\n"
+        );
+        assert_eq!(
+            doc_comment_skeleton(DocStyle::PyDoc, &params, "", "    "),
+            "    \"\"\"\n    \n    Args:\n        a:\n        b:\n    \"\"\"\n"
+        );
+        assert_eq!(
+            doc_comment_skeleton(DocStyle::LineComment("//"), &params, "", "\t"),
+            "//\n// a:\n// b:\n"
+        );
+    }
+
+    #[test]
+    fn the_style_follows_the_language() {
+        assert_eq!(doc_style(Some("python")), DocStyle::PyDoc);
+        assert_eq!(doc_style(Some("typescript")), DocStyle::JsDoc);
+        assert_eq!(doc_style(Some("go")), DocStyle::LineComment("//"));
+        assert_eq!(doc_style(Some("rust")), DocStyle::TripleSlash);
+        assert_eq!(doc_style(None), DocStyle::TripleSlash);
+    }
 }
 
 fn extend_to_line_start(cx: &mut Context) {

@@ -2493,6 +2493,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "p" => toggle_comments,            // SPC c p : comment paragraph
                 "h" => fold_comments,              // SPC c h : hide comments (fold comment blocks)
                 "S" => save_selection_as_snippet,  // SPC c S : save the selection as a snippet (JetBrains Save as Live Template)
+                "o" => fix_doc_comment,            // SPC c o : write the doc comment for the definition at the cursor (JetBrains Fix Doc Comment)
                 "R" => fold_custom_regions,        // SPC c R : fold every //region / <editor-fold> block (JetBrains Collapse Custom Regions)
                 "D" => fold_doc_comments,          // SPC c D : fold the doc comments only (JetBrains Collapse Doc Comments)
                 "E" => unfold_doc_comments,        // SPC c E : open the doc-comment folds (JetBrains Expand Doc Comments)
