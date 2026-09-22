@@ -830,3 +830,48 @@ func run() {
     assert_eq!(got[2].as_deref(), Some("sql"), "conn.ExecContext(ctx, ...)");
     Ok(())
 }
+
+/// JetBrains "Search Structurally" (SPC s t): the pattern is a tree-sitter
+/// query, so a query that compiles lists its captures and one that does not is
+/// reported with the parser's own complaint.
+#[tokio::test(flavor = "multi_thread")]
+async fn structural_search_reports_what_the_query_does() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".rs").tempfile()?;
+    std::fs::write(file.path(), "fn alpha() {}\nfn beta() {}\n")?;
+    let mut app = helpers::preset_app("spacemacs")
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            // A query with no capture names nothing to jump to, and says so.
+            (
+                Some("<space>st(function_item)<ret>"),
+                Some(&|app| {
+                    let status = app.editor.get_status().map(|(s, _)| s.to_string());
+                    assert!(
+                        status
+                            .as_deref()
+                            .is_some_and(|s| s.contains("captures nothing")),
+                        "status was {status:?}"
+                    );
+                }),
+            ),
+            // A query that does not compile is reported, not swallowed.
+            (
+                Some("<space>st(no_such_node) @x<ret>"),
+                Some(&|app| {
+                    let status = app.editor.get_status().map(|(s, _)| s.to_string());
+                    assert!(
+                        status.as_deref().is_some_and(|s| !s.is_empty()),
+                        "a broken query must report something"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -2270,6 +2270,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "s" => { "Search"
                 "s" => global_search,              // SPC s s
                 "E" => search_everywhere,          // SPC s E : Search Everywhere (JetBrains double-shift)
+                "t" => structural_search,          // SPC s t : find code by shape with a tree-sitter query (JetBrains Search Structurally)
                 "f" => global_search,              // SPC s f
                 "b" => global_search,              // SPC s b
                 "p" => global_search,              // SPC s p

@@ -1854,6 +1854,7 @@ impl MappableCommand {
         recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
         sort_tree_by_time_oldest, "Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time)",
+        structural_search, "Find code by shape with a tree-sitter query (JetBrains Search Structurally)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -53692,6 +53693,144 @@ struct ImenuEntry {
 /// / `class.around` captures of the language's textobject query, which is what
 /// `goto-next-function` navigates by. The name of a definition is the first line
 /// of its text, which is its signature.
+/// JetBrains "Search Structurally": find code by its shape rather than its
+/// text. The pattern language is tree-sitter's own query syntax, which is what
+/// the editor already uses for highlighting and textobjects, so the grammar's
+/// node names are the vocabulary:
+///
+/// ```query
+/// (function_item name: (identifier) @name)
+/// ```
+///
+/// Only captured nodes are listed — a query with no `@capture` matches shapes
+/// but names nothing to jump to, and saying so beats listing whole files.
+fn structural_search(cx: &mut Context) {
+    if doc!(cx.editor).syntax().is_none() {
+        cx.editor
+            .set_error("structural search needs a parsed syntax tree for this buffer");
+        return;
+    }
+    let prompt = ui::Prompt::new(
+        "tree-sitter query: ".into(),
+        Some('S'),
+        ui::completers::none,
+        move |cx, input: &str, event: ui::PromptEvent| {
+            if event != ui::PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            match structural_matches(cx.editor, input) {
+                Ok(hits) if hits.is_empty() => cx.editor.set_status("no matches"),
+                Ok(hits) => {
+                    // The picker holds boxed closures, so it is built inside the
+                    // compositor callback rather than carried across the job
+                    // boundary; only the hits travel.
+                    cx.jobs.callback(async move {
+                        let call: crate::job::Callback = crate::job::Callback::EditorCompositor(
+                            Box::new(move |_e: &mut Editor, comp: &mut Compositor| {
+                                let columns = [
+                                    PickerColumn::new("line", |h: &StructuralHit, _: &()| {
+                                        (h.line + 1).to_string().into()
+                                    }),
+                                    PickerColumn::new("capture", |h: &StructuralHit, _: &()| {
+                                        h.capture.as_str().into()
+                                    }),
+                                    PickerColumn::new("text", |h: &StructuralHit, _: &()| {
+                                        h.text.as_str().into()
+                                    }),
+                                ];
+                                let picker = Picker::new(
+                                    columns,
+                                    2,
+                                    hits,
+                                    (),
+                                    |cx, hit: &StructuralHit, _action| {
+                                        let (view, doc) = current!(cx.editor);
+                                        let pos = hit.char_pos.min(doc.text().len_chars());
+                                        doc.set_selection(view.id, Selection::point(pos));
+                                        align_view(doc, view, Align::Center);
+                                    },
+                                );
+                                comp.push(Box::new(overlaid(picker)));
+                            }),
+                        );
+                        Ok(call)
+                    });
+                }
+                // A query that does not compile is the common case while
+                // writing one, so the parser's own message is what is shown.
+                Err(err) => cx.editor.set_error(err),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// One captured node from a structural search.
+#[derive(Debug, Clone)]
+struct StructuralHit {
+    line: usize,
+    char_pos: usize,
+    capture: String,
+    text: String,
+}
+
+/// Compile `source` against the buffer's grammar and collect every captured
+/// node, in document order.
+fn structural_matches(editor: &Editor, source: &str) -> Result<Vec<StructuralHit>, String> {
+    let loader = editor.syn_loader.load();
+    let loader: &zmax_core::syntax::Loader = &loader;
+    let (_, doc) = current_ref!(editor);
+    let syntax = doc.syntax().ok_or("no syntax tree")?;
+    let text = doc.text().slice(..);
+    let layer = syntax.layer_for_byte_range(0, 0);
+    let language = syntax.layer(layer).language;
+    let grammar = zmax_core::syntax::LanguageLoader::get_config(loader, language)
+        .ok_or("no grammar for this buffer")?
+        .grammar;
+    let query = zmax_core::tree_sitter::Query::new(grammar, source, |_, _| Ok(()))
+        .map_err(|err| err.to_string())?;
+    let names: Vec<String> = query.captures().map(|(_, name)| name.to_string()).collect();
+    if names.is_empty() {
+        return Err("the query captures nothing — add an @name to what you want listed".into());
+    }
+    let root = syntax.tree_for_byte_range(0, 0).root_node();
+    let toq = zmax_core::syntax::TextObjectQuery::new(query);
+    let mut hits = Vec::new();
+    for name in names {
+        let Some(nodes) = toq.capture_nodes(&name, &root, text) else {
+            continue;
+        };
+        for node in nodes {
+            let range = node.byte_range();
+            if range.start >= text.len_bytes() {
+                continue;
+            }
+            let start = text.byte_to_char(range.start);
+            let end = text.byte_to_char((range.end as usize).min(text.len_bytes()));
+            let line = text.char_to_line(start);
+            let snippet: String = text
+                .slice(start..end)
+                .to_string()
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .chars()
+                .take(80)
+                .collect();
+            hits.push(StructuralHit {
+                line,
+                char_pos: start,
+                capture: name.clone(),
+                text: snippet,
+            });
+        }
+    }
+    hits.sort_by_key(|h| h.char_pos);
+    hits.dedup_by_key(|h| h.char_pos);
+    Ok(hits)
+}
+
 fn imenu_index(editor: &Editor) -> Vec<ImenuEntry> {
     let (_, doc) = current_ref!(editor);
     let Some(syntax) = doc.syntax() else {
