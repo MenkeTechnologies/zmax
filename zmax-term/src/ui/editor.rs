@@ -1250,6 +1250,10 @@ impl EditorView {
             }
         }
 
+        if let Some(overlay) = Self::doc_focus_mode_highlights(doc, view, theme, &loader) {
+            overlays.push(overlay);
+        }
+
         if let Some(overlay) = Self::doc_document_link_highlights(doc, theme) {
             overlays.push(overlay);
         }
@@ -2735,6 +2739,48 @@ impl EditorView {
             return None;
         }
 
+        Some(OverlayHighlights::Homogeneous { highlight, ranges })
+    }
+
+    /// JetBrains "Highlight Only Current Declaration" (`ToggleFocusMode`): dim
+    /// everything outside the declaration the cursor is in.
+    ///
+    /// The declaration is the innermost outline symbol containing the cursor —
+    /// the same symbol the breadcrumb names, so what is lit matches what the
+    /// trail says you are in. Without a syntax tree, or outside every symbol,
+    /// nothing is dimmed: greying the whole file would be a worse answer than
+    /// leaving it alone.
+    pub fn doc_focus_mode_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+        loader: &syntax::Loader,
+    ) -> Option<OverlayHighlights> {
+        if !crate::commands::focus_mode_enabled() {
+            return None;
+        }
+        let highlight = theme
+            .find_highlight_exact("comment")
+            .or_else(|| theme.find_highlight_exact("ui.virtual.whitespace"))?;
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let items = crate::commands::syntax::document_outline(doc, loader);
+        let scope = items
+            .iter()
+            .filter(|o| o.start <= cursor && cursor <= o.end)
+            .min_by_key(|o| o.end.saturating_sub(o.start))?;
+        let len = text.len_chars();
+        let (start, end) = (scope.start.min(len), scope.end.min(len));
+        let mut ranges = Vec::new();
+        if start > 0 {
+            ranges.push(0..start);
+        }
+        if end < len {
+            ranges.push(end..len);
+        }
+        if ranges.is_empty() {
+            return None;
+        }
         Some(OverlayHighlights::Homogeneous { highlight, ranges })
     }
 

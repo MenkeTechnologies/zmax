@@ -688,6 +688,7 @@ impl MappableCommand {
         toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
         power_save_mode, "Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode)",
         distraction_free_mode, "Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode)",
+        toggle_focus_mode, "Dim everything outside the declaration the cursor is in (JetBrains Highlight Only Current Declaration)",
         toggle_completion_docs, "Show or hide the documentation beside the completion list (JetBrains Show Automatically During Completion)",
         toggle_breadcrumbs, "Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)",
         toggle_sticky_lines, "Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)",
@@ -17890,6 +17891,27 @@ fn distraction_free_mode(cx: &mut Context) {
         "distraction free mode: {}",
         if on { "on" } else { "off" }
     ));
+}
+
+/// Whether focus mode is on — JetBrains "Highlight Only Current Declaration"
+/// (`ToggleFocusMode`). Off by default, as in the IDE.
+static FOCUS_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether the view should dim everything outside the enclosing declaration.
+pub(crate) fn focus_mode_enabled() -> bool {
+    FOCUS_MODE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// JetBrains "Highlight Only Current Declaration" (`ToggleFocusMode`): dim
+/// everything outside the function or class the cursor is in.
+///
+/// This is not `narrow_to_function`, which FOLDS the rest away and changes
+/// what the motions can reach; focus mode leaves the buffer whole and only
+/// changes how it is painted, so `G` still goes to the end of the file.
+fn toggle_focus_mode(cx: &mut Context) {
+    let on = !FOCUS_MODE.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor
+        .set_status(format!("focus mode: {}", if on { "on" } else { "off" }));
 }
 
 /// Whether the completion popup shows documentation beside it — JetBrains
