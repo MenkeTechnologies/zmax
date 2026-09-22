@@ -224,6 +224,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
                     let mut s = st.lock().unwrap();
                     s.exit_code = status.ok().and_then(|s| s.code());
                     s.running = false;
+                    remember(&s);
                     return;
                 }
             }
@@ -233,10 +234,23 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
         let mut s = st.lock().unwrap();
         s.exit_code = code;
         s.running = false;
+        remember(&s);
     });
 
     state.lock().unwrap().abort = Some(handle.abort_handle());
     state
+}
+
+/// Put a finished run in the test history, if it was a test run. Called at both
+/// points where a run ends, so a run that outlives its output streams is
+/// remembered the same as one that does not.
+fn remember(s: &RunState) {
+    crate::test_history::record(
+        &s.cmd,
+        &s.cwd,
+        s.exit_code == Some(0),
+        failed_tests(&s.lines),
+    );
 }
 
 /// Stop a running command (kills the child via kill-on-drop when the task aborts).

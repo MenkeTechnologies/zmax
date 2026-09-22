@@ -1851,6 +1851,7 @@ impl MappableCommand {
         kill_region, "Cut the region onto the kill ring (emacs C-w, JetBrains Kill Selected Region)",
         goto_test, "Jump between a file and its test file (JetBrains Go to Test / Go to Test Subject)",
         export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
+        recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -78818,6 +78819,49 @@ fn start_run(jobs: &mut job::Jobs, command: String, cwd: std::path::PathBuf) {
         },
     ));
     jobs.callback(async move { Ok(call) });
+}
+
+/// JetBrains "Recent Tests": the test runs that have finished, newest first.
+/// Picking one runs it again in the Run console, rooted where it ran before.
+///
+/// A run that failed lists the tests it failed on, so the list answers "what
+/// was broken last time" without re-running anything.
+fn recent_tests(cx: &mut Context) {
+    let mut rows = crate::test_history::entries();
+    if rows.is_empty() {
+        cx.editor
+            .set_status("no test runs recorded yet — run one from the Run console");
+        return;
+    }
+    rows.reverse();
+    let columns = [
+        PickerColumn::new("", |e: &crate::test_history::Entry, _: &()| {
+            if e.ok { "ok" } else { "FAIL" }.into()
+        }),
+        PickerColumn::new("command", |e: &crate::test_history::Entry, _: &()| {
+            e.cmd.as_str().into()
+        }),
+        PickerColumn::new("failed", |e: &crate::test_history::Entry, _: &()| {
+            if e.failed.is_empty() {
+                "".into()
+            } else {
+                e.failed.join(", ").into()
+            }
+        }),
+        PickerColumn::new("where", |e: &crate::test_history::Entry, _: &()| {
+            e.cwd.to_string_lossy().into_owned().into()
+        }),
+    ];
+    let picker = Picker::new(
+        columns,
+        1,
+        rows,
+        (),
+        |cx, entry: &crate::test_history::Entry, _action| {
+            start_run(cx.jobs, entry.cmd.clone(), entry.cwd.clone());
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// Shell-quote one argument for the run console's shell.
