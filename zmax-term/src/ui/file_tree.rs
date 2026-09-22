@@ -31,6 +31,12 @@ pub struct FileTree {
     /// JetBrains "File Details" (`ViewInplaceComments`): show each file's size
     /// beside its name. Off by default, as in the IDE.
     details: bool,
+    /// JetBrains "Compact Directories" (`ProjectView.CompactDirectories`): draw
+    /// a chain of single-child directories as one row, `a/b/c`. Off by default.
+    compact_dirs: bool,
+    /// JetBrains "Sort by Type" (`ProjectView.SortByType`): files ordered by
+    /// extension, then by name. Off by default (plain name order).
+    sort_by_type: bool,
     root: PathBuf,
     expanded: HashSet<PathBuf>,
     rows: Vec<Row>,
@@ -57,6 +63,8 @@ impl FileTree {
     pub fn new(root: PathBuf) -> Self {
         let mut tree = Self {
             details: false,
+            compact_dirs: false,
+            sort_by_type: false,
             root: root.clone(),
             expanded: HashSet::new(),
             rows: Vec::new(),
@@ -90,11 +98,12 @@ impl FileTree {
         cache: &mut HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
         dir: &Path,
         show_hidden: bool,
+        by_type: bool,
     ) -> Vec<(PathBuf, String, bool)> {
         if let Some(v) = cache.get(dir) {
             return v.clone();
         }
-        let v = Self::read_dir_sorted(dir, show_hidden);
+        let v = Self::read_dir_sorted(dir, show_hidden, by_type);
         cache.insert(dir.to_path_buf(), v.clone());
         v
     }
@@ -120,7 +129,11 @@ impl FileTree {
 
     /// Directory entries, dirs first, then case-insensitive by name. Dotfiles are
     /// included unless `show_hidden` is false (`editor.file-explorer.hidden`).
-    fn read_dir_sorted(dir: &Path, show_hidden: bool) -> Vec<(PathBuf, String, bool)> {
+    fn read_dir_sorted(
+        dir: &Path,
+        show_hidden: bool,
+        by_type: bool,
+    ) -> Vec<(PathBuf, String, bool)> {
         let mut entries: Vec<(PathBuf, String, bool)> = std::fs::read_dir(dir)
             .into_iter()
             .flatten()
@@ -134,7 +147,17 @@ impl FileTree {
             .filter(|(_, name, _)| show_hidden || !name.starts_with('.'))
             .collect();
         entries.sort_by(|a, b| {
+            // Directories first either way; `by_type` then groups files by
+            // extension (JetBrains "Sort by Type") before falling back to the
+            // name, so the order inside a group is still predictable.
             b.2.cmp(&a.2)
+                .then_with(|| {
+                    if by_type {
+                        file_extension(&a.1).cmp(&file_extension(&b.1))
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                })
                 .then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase()))
         });
         entries
@@ -150,6 +173,9 @@ impl FileTree {
 
     fn rebuild(&mut self) {
         let show_hidden = self.show_hidden;
+        let by_type = self.sort_by_type;
+        let compact = self.compact_dirs;
+        #[allow(clippy::too_many_arguments)]
         fn walk(
             cache: &mut HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
             dir: &Path,
@@ -157,8 +183,19 @@ impl FileTree {
             expanded: &HashSet<PathBuf>,
             out: &mut Vec<Row>,
             show_hidden: bool,
+            by_type: bool,
+            compact: bool,
         ) {
-            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden) {
+            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, by_type) {
+                // "Compact Directories": a directory whose only child is another
+                // directory is drawn as one row, `a/b/c`, and the walk continues
+                // from the end of the chain — the empty package levels the IDE
+                // folds away.
+                let (path, name) = if compact && is_dir {
+                    FileTree::compact_chain(cache, path, name, show_hidden, by_type)
+                } else {
+                    (path, name)
+                };
                 let exp = is_dir && expanded.contains(&path);
                 out.push(Row {
                     path: path.clone(),
@@ -168,7 +205,16 @@ impl FileTree {
                     expanded: exp,
                 });
                 if exp {
-                    walk(cache, &path, depth + 1, expanded, out, show_hidden);
+                    walk(
+                        cache,
+                        &path,
+                        depth + 1,
+                        expanded,
+                        out,
+                        show_hidden,
+                        by_type,
+                        compact,
+                    );
                 }
             }
         }
@@ -205,7 +251,7 @@ impl FileTree {
                 return false;
             }
             let mut any = false;
-            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden) {
+            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, false) {
                 if is_dir {
                     let name_match = fuzzy(&name, q);
                     let mut kids = Vec::new();
@@ -248,6 +294,8 @@ impl FileTree {
                 &expanded,
                 &mut rows,
                 show_hidden,
+                by_type,
+                compact,
             );
         } else {
             walk_filtered(&mut self.dir_cache, &root, 0, &q, &mut rows, show_hidden);
@@ -537,6 +585,49 @@ impl FileTree {
     }
 
     /// Render just the tree rows into `area` (the Ide draws the drawer header above this).
+    /// Follow a chain of directories that each hold exactly one directory and
+    /// nothing else, returning the end of the chain and the joined name
+    /// (`a/b/c`) — JetBrains "Compact Directories". Depth-capped so a
+    /// pathological tree cannot spin.
+    fn compact_chain(
+        cache: &mut HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
+        mut path: PathBuf,
+        mut name: String,
+        show_hidden: bool,
+        by_type: bool,
+    ) -> (PathBuf, String) {
+        const MAX: usize = 32;
+        for _ in 0..MAX {
+            let children = FileTree::cached_children(cache, &path, show_hidden, by_type);
+            match children.as_slice() {
+                [(child_path, child_name, true)] => {
+                    name = format!("{name}/{child_name}");
+                    path = child_path.clone();
+                }
+                _ => break,
+            }
+        }
+        (path, name)
+    }
+
+    /// JetBrains "Compact Directories": collapse chains of single-child
+    /// directories into one row. Returns the new state; the rows are rebuilt so
+    /// the change is visible at once.
+    pub fn toggle_compact_dirs(&mut self) -> bool {
+        self.compact_dirs = !self.compact_dirs;
+        self.dir_cache.clear();
+        self.rebuild();
+        self.compact_dirs
+    }
+
+    /// JetBrains "Sort by Type": order files by extension, then by name.
+    pub fn toggle_sort_by_type(&mut self) -> bool {
+        self.sort_by_type = !self.sort_by_type;
+        self.dir_cache.clear();
+        self.rebuild();
+        self.sort_by_type
+    }
+
     /// JetBrains "File Details" (`ViewInplaceComments`): show or hide each
     /// file's size beside its name. Returns the new state.
     pub fn toggle_details(&mut self) -> bool {
@@ -671,6 +762,16 @@ impl FileTree {
                 }
             }
         }
+    }
+}
+
+/// The extension the tree sorts by under "Sort by Type": lowercased, empty for
+/// a name with no extension and for a dotfile (`.gitignore` is a name, not an
+/// extension). Pure — unit tested.
+pub fn file_extension(name: &str) -> String {
+    match name.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() => ext.to_lowercase(),
+        _ => String::new(),
     }
 }
 
@@ -892,5 +993,16 @@ mod tests {
         // The unit ladder stops at T rather than running off the end.
         assert_eq!(human_size(5 * 1024u64.pow(4)), "5.0T");
         assert_eq!(human_size(9999 * 1024u64.pow(4)), "9999T");
+    }
+
+    #[test]
+    fn file_extension_treats_a_dotfile_as_a_name() {
+        assert_eq!(file_extension("main.rs"), "rs");
+        assert_eq!(file_extension("Cargo.TOML"), "toml");
+        assert_eq!(file_extension("archive.tar.gz"), "gz");
+        // No extension, and a dotfile is a name rather than a bare extension —
+        // sorting by type must not file `.gitignore` under "gitignore".
+        assert_eq!(file_extension("Makefile"), "");
+        assert_eq!(file_extension(".gitignore"), "");
     }
 }

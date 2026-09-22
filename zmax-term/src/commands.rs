@@ -1846,6 +1846,8 @@ impl MappableCommand {
         toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
         focus_file_tree, "Focus the project file tree panel",
         focus_structure, "Focus the structure/symbol outline panel",
+        toggle_compact_directories, "Draw single-child directory chains as one row (JetBrains Compact Directories)",
+        toggle_sort_by_type, "Order the project tree's files by extension (JetBrains Sort by Type)",
         toggle_file_details, "Show or hide file sizes in the project tree (JetBrains File Details)",
         restore_default_layout, "Put the workbench drawers back to their default layout (JetBrains Restore Default Layout)",
         hide_side_windows, "Fold the workbench's left column away (JetBrains Hide Side Tool Windows)",
@@ -52110,6 +52112,41 @@ fn toggle_ide(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, _cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
             view.toggle_ide();
+        }
+    }));
+}
+
+/// JetBrains "Compact Directories" (`ProjectView.CompactDirectories`): draw a
+/// chain of single-child directories as one row, the way the IDE folds empty
+/// package levels away.
+fn toggle_compact_directories(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let state = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.toggle_compact_dirs());
+        match state {
+            Some(on) => cx.editor.set_status(format!(
+                "compact directories: {}",
+                if on { "on" } else { "off" }
+            )),
+            None => cx.editor.set_status("no project tree"),
+        }
+    }));
+}
+
+/// JetBrains "Sort by Type" (`ProjectView.SortByType`): order the tree's files
+/// by extension, then by name. Directories stay first either way.
+fn toggle_sort_by_type(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let state = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.toggle_sort_by_type());
+        match state {
+            Some(on) => cx.editor.set_status(format!(
+                "sort by type: {}",
+                if on { "on" } else { "off" }
+            )),
+            None => cx.editor.set_status("no project tree"),
         }
     }));
 }

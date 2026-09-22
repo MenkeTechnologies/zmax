@@ -736,6 +736,18 @@ impl Ide {
         self.bottom_zoom
     }
 
+    /// JetBrains "Compact Directories" (`ProjectView.CompactDirectories`).
+    pub fn toggle_compact_dirs(&mut self) -> bool {
+        self.visible = true;
+        self.project.toggle_compact_dirs()
+    }
+
+    /// JetBrains "Sort by Type" (`ProjectView.SortByType`).
+    pub fn toggle_sort_by_type(&mut self) -> bool {
+        self.visible = true;
+        self.project.toggle_sort_by_type()
+    }
+
     /// JetBrains "File Details" (`ViewInplaceComments`): show or hide the file
     /// sizes in the project tree. Returns the new state.
     pub fn toggle_file_details(&mut self) -> bool {

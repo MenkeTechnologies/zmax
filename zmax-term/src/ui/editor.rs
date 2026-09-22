@@ -704,6 +704,16 @@ impl EditorView {
         }
     }
 
+    /// JetBrains "Compact Directories": collapse single-child directory chains.
+    pub fn toggle_compact_dirs(&mut self) -> Option<bool> {
+        self.ide.as_mut().map(|ide| ide.toggle_compact_dirs())
+    }
+
+    /// JetBrains "Sort by Type": order tree files by extension, then name.
+    pub fn toggle_sort_by_type(&mut self) -> Option<bool> {
+        self.ide.as_mut().map(|ide| ide.toggle_sort_by_type())
+    }
+
     /// JetBrains "File Details": show or hide file sizes in the project tree.
     pub fn toggle_file_details(&mut self) -> Option<bool> {
         self.ide.as_mut().map(|ide| ide.toggle_file_details())
