@@ -2700,6 +2700,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "T" => surround_with_tag,          // SPC x T : wrap the selection in an element you name (JetBrains Surround with Tag; `x t` is the transpose prefix)
                 "S" => surround_with,              // SPC x S : wrap the selected lines in a block construct (JetBrains Surround With)
                 "v" => toggle_rendered_view,       // SPC x v : this markdown rendered in a scratch (JetBrains Toggle Rendered View)
+                "V" => render_doc_comments,        // SPC x V : every doc comment in the buffer, rendered (JetBrains Render All Doc Comments)
                 "G" => toggle_gutter_icons,        // SPC x G : show or hide the gutter icon columns (JetBrains Show Gutter Icons; `x g` is the translate prefix)
                 // drag-stuff transient state: j/k keep dragging until q/ESC.
                 "." => { "Drag" sticky=true

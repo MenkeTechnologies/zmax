@@ -1964,6 +1964,7 @@ impl MappableCommand {
         goto_prev_problem_file, "Go to the previous open buffer that has diagnostics (JetBrains Select Previous Problem File)",
         fix_doc_comment, "Write the doc comment for the definition at the cursor (JetBrains Fix Doc Comment)",
         find_usages_in_file, "References to the symbol at the cursor, in this file only (JetBrains Find Usages in File)",
+        render_doc_comments, "Show every doc comment in the buffer as rendered prose (JetBrains Render All Doc Comments)",
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_recursive, "Delete the fold under the cursor and every fold nested in it (zD)",
         fold_delete_all, "Delete all folds (zE)",
@@ -10793,6 +10794,99 @@ fn toggle_rendered_view(cx: &mut Context) {
     let rendered = render_markdown(&text);
     show_text_in_scratch(cx.editor, &rendered);
     cx.editor.set_status("rendered view (q or :bd to go back)");
+}
+
+/// Strip the comment markers from a doc-comment run, leaving the prose.
+/// Pure — unit tested.
+fn strip_doc_markers(lines: &[String]) -> String {
+    let mut out = Vec::new();
+    for line in lines {
+        let t = line.trim();
+        let t = t
+            .strip_prefix("/**")
+            .or_else(|| t.strip_prefix("///"))
+            .or_else(|| t.strip_prefix("//!"))
+            .or_else(|| t.strip_prefix("*/"))
+            .or_else(|| t.strip_prefix('*'))
+            .or_else(|| t.strip_prefix("##"))
+            .or_else(|| t.strip_prefix("#'"))
+            .unwrap_or(t);
+        let t = t.strip_suffix("*/").unwrap_or(t);
+        out.push(t.trim().to_string());
+    }
+    // A run that is all markers renders as nothing rather than as blank lines.
+    while out.last().is_some_and(|l| l.is_empty()) {
+        out.pop();
+    }
+    out.join("\n")
+}
+
+/// JetBrains "Render All Doc Comments" (`ToggleRenderedDocPresentationForAll`):
+/// show every doc comment in the buffer as rendered prose, in reading order,
+/// each under the line it documents.
+///
+/// A terminal editor cannot draw rendered prose in place of the source, so the
+/// whole buffer's documentation opens in a scratch view — the same route
+/// `toggle_rendered_view` takes for a Markdown file.
+fn render_doc_comments(cx: &mut Context) {
+    let lines: Vec<String> = doc!(cx.editor)
+        .text()
+        .lines()
+        .map(|l| l.to_string().trim_end().to_string())
+        .collect();
+    let runs = doc_comment_runs(&lines);
+    if runs.is_empty() {
+        cx.editor.set_status("no doc comments in this buffer");
+        return;
+    }
+    let mut source = String::new();
+    for (start, end) in &runs {
+        let prose = strip_doc_markers(&lines[*start..=*end]);
+        if prose.trim().is_empty() {
+            continue;
+        }
+        // The line after the run is what it documents; it makes the rendered
+        // list navigable without the source beside it.
+        let subject = lines.get(end + 1).map(|l| l.trim()).unwrap_or_default();
+        if !subject.is_empty() {
+            source.push_str(&format!("## `{subject}`\n\n"));
+        }
+        source.push_str(&prose);
+        source.push_str("\n\n");
+    }
+    let rendered = render_markdown(&source);
+    show_text_in_scratch(cx.editor, &rendered);
+    cx.editor.set_status(format!(
+        "{} doc comment(s) rendered (q or :bd to go back)",
+        runs.len()
+    ));
+}
+
+#[cfg(test)]
+mod render_doc_comment_tests {
+    use super::strip_doc_markers;
+
+    fn lines(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn line_markers_come_off() {
+        let out = strip_doc_markers(&lines(&["/// one", "/// two", "///"]));
+        assert_eq!(out, "one\ntwo");
+    }
+
+    #[test]
+    fn a_block_comment_loses_its_frame() {
+        let out = strip_doc_markers(&lines(&["/**", " * one", " * two", " */"]));
+        assert_eq!(out, "\none\ntwo");
+    }
+
+    #[test]
+    fn inner_docs_and_hash_docs_are_stripped_too() {
+        assert_eq!(strip_doc_markers(&lines(&["//! crate"])), "crate");
+        assert_eq!(strip_doc_markers(&lines(&["## shell doc"])), "shell doc");
+    }
 }
 
 fn insert_toc(cx: &mut Context) {
