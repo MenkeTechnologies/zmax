@@ -8558,6 +8558,135 @@ mod test_report_tests {
     }
 }
 
+/// One diagnostic as the exported report lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ProblemReportRow {
+    path: String,
+    line: u32,
+    severity: &'static str,
+    source: String,
+    message: String,
+}
+
+/// Render the problems as `path:line: severity: message`, grouped by file in
+/// path order and by line within a file — the shape every compiler and grep
+/// already prints, so the export drops straight into the tools that read those.
+fn render_problem_report(mut rows: Vec<ProblemReportRow>) -> String {
+    rows.sort_by(|a, b| a.path.cmp(&b.path).then(a.line.cmp(&b.line)));
+    let mut out = String::new();
+    let mut file = None;
+    for row in &rows {
+        if file != Some(&row.path) {
+            if file.is_some() {
+                out.push('\n');
+            }
+            out.push_str(&format!("{}\n", row.path));
+            file = Some(&row.path);
+        }
+        let source = if row.source.is_empty() {
+            String::new()
+        } else {
+            format!(" [{}]", row.source)
+        };
+        out.push_str(&format!(
+            "  {}:{}: {}{}\n",
+            row.path,
+            row.line + 1,
+            row.severity,
+            source
+        ));
+        for line in row.message.lines() {
+            out.push_str(&format!("      {line}\n"));
+        }
+    }
+    out
+}
+
+/// `:export-problems [path]` — JetBrains "Export to Text File" on the Problems
+/// tool window. Writes every diagnostic the editor holds to a file and opens
+/// it. The default path is `problems.txt` in the working directory.
+fn export_problems(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut rows = Vec::new();
+    for (uri, diags) in cx.editor.diagnostics.iter() {
+        let path = uri
+            .as_path()
+            .map(|p| {
+                zmax_stdx::path::get_relative_path(p)
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .unwrap_or_else(|| uri.to_string());
+        for (diag, _provider) in diags {
+            rows.push(ProblemReportRow {
+                path: path.clone(),
+                line: diag.range.start.line,
+                severity: match diag.severity {
+                    Some(zmax_lsp::lsp::DiagnosticSeverity::ERROR) => "error",
+                    Some(zmax_lsp::lsp::DiagnosticSeverity::WARNING) => "warning",
+                    Some(zmax_lsp::lsp::DiagnosticSeverity::INFORMATION) => "info",
+                    _ => "hint",
+                },
+                source: diag.source.clone().unwrap_or_default(),
+                message: diag.message.clone(),
+            });
+        }
+    }
+    if rows.is_empty() {
+        bail!("no problems to export");
+    }
+    let count = rows.len();
+    let path = match args.first() {
+        Some(p) => PathBuf::from(zmax_stdx::path::expand_tilde(Path::new(p)).as_ref()),
+        None => zmax_stdx::env::current_working_dir().join("problems.txt"),
+    };
+    std::fs::write(&path, render_problem_report(rows))?;
+    cx.editor.open(&path, Action::Replace)?;
+    cx.editor
+        .set_status(format!("{count} problem(s) written to {}", path.display()));
+    Ok(())
+}
+
+#[cfg(test)]
+mod problem_report_tests {
+    use super::{render_problem_report, ProblemReportRow};
+
+    fn row(path: &str, line: u32, severity: &'static str, message: &str) -> ProblemReportRow {
+        ProblemReportRow {
+            path: path.to_string(),
+            line,
+            severity,
+            source: "rustc".to_string(),
+            message: message.to_string(),
+        }
+    }
+
+    #[test]
+    fn problems_are_grouped_by_file_and_ordered_by_line() {
+        let report = render_problem_report(vec![
+            row("b.rs", 4, "warning", "unused"),
+            row("a.rs", 9, "error", "mismatched types"),
+            row("a.rs", 1, "error", "cannot find value"),
+        ]);
+        assert_eq!(
+            report,
+            "a.rs\n  a.rs:2: error [rustc]\n      cannot find value\n  a.rs:10: error [rustc]\n      mismatched types\n\nb.rs\n  b.rs:5: warning [rustc]\n      unused\n"
+        );
+    }
+
+    #[test]
+    fn a_multi_line_message_keeps_its_lines() {
+        let report = render_problem_report(vec![row("a.rs", 0, "error", "first\nsecond")]);
+        assert!(report.contains("      first\n      second\n"));
+    }
+}
+
 /// Locate the git merge-conflict block containing (or nearest above) `cursor`.
 /// Returns `(block_start_char, block_end_char, ours_text, theirs_text)`. Handles both the 2-way
 /// (`<<<<<<< ======= >>>>>>>`) and diff3 (`<<<<<<< ||||||| ======= >>>>>>>`) marker styles.
@@ -59990,6 +60119,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "export-problems",
+        aliases: &[],
+        doc: "Write every diagnostic to a file and open it (JetBrains Export to Text File).",
+        fun: export_problems,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
