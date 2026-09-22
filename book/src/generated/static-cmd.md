@@ -1568,6 +1568,7 @@
 | `fold_enable_on` | Set 'foldenable': folds back to 'foldlevel' (vim zN) | **spacemacs, hybrid, vim** — normal: `` zN `` |
 | `fold_more` | Fold more: close one more level of nested folds (zm) | **spacemacs, hybrid, vim** — normal: `` zm `` |
 | `fold_less` | Fold less: open one more level of nested folds (zr) | **spacemacs, hybrid, vim** — normal: `` zr `` |
+| `fold_to_level` | Set foldlevel to the count outright (JetBrains Expand to Level N) |  |
 | `fold_delete` | Delete fold under cursor (zd) | **spacemacs, hybrid, vim** — normal: `` zd `` |
 | `fold_delete_recursive` | Delete the fold under the cursor and every fold nested in it (zD) | **spacemacs, hybrid, vim** — normal: `` zD `` |
 | `fold_delete_all` | Delete all folds (zE) | **spacemacs, hybrid, vim** — normal: `` zE `` |

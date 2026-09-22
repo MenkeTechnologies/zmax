@@ -1959,6 +1959,7 @@ impl MappableCommand {
         fold_enable_on, "Set 'foldenable': folds back to 'foldlevel' (vim zN)",
         fold_more, "Fold more: close one more level of nested folds (zm)",
         fold_less, "Fold less: open one more level of nested folds (zr)",
+        fold_to_level, "Set foldlevel to the count outright (JetBrains Expand to Level N)",
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_recursive, "Delete the fold under the cursor and every fold nested in it (zD)",
         fold_delete_all, "Delete all folds (zE)",
@@ -57912,6 +57913,24 @@ fn fold_close(cx: &mut Context) {
     }
     doc.folds_mut().close(line);
     fold_snap_cursor(view, doc);
+}
+
+/// JetBrains "Expand to Level 1–5" (and its Expand All variants): set
+/// 'foldlevel' outright instead of stepping it with `zm`/`zr`. The count is the
+/// level, so a count of 3 shows three levels of nesting and no count shows one.
+///
+/// Command only: vim spells this `:set foldlevel=N`, and every `z` key that
+/// would read as "level N" already means something else.
+///
+/// Folds are built on demand first, the same way `zM` does it, since a buffer
+/// that has never folded has no levels to set.
+fn fold_to_level(cx: &mut Context) {
+    let level = cx.count();
+    ensure_folds(cx);
+    let (view, doc) = current!(cx.editor);
+    doc.folds_mut().set_level(level);
+    fold_snap_cursor(view, doc);
+    cx.editor.set_status(format!("foldlevel={level}"));
 }
 
 fn fold_open_all(cx: &mut Context) {
