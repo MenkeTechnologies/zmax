@@ -392,6 +392,34 @@ impl FileTree {
     /// into here — recursively walking `.git/objects` would freeze the UI — even
     /// though dotfiles are still listed in the tree and can be expanded by hand.
     pub fn expand_all(&mut self) {
+        let mut budget = 5000usize;
+        let root = self.root.clone();
+        Self::collect_dirs(&root, &mut self.expanded, &mut budget);
+        self.expanded.insert(root);
+        self.rebuild();
+    }
+
+    /// JetBrains "Expand Selected" / "Fully Expand Tree Node" (`*`): open the
+    /// selected directory and everything under it, leaving the rest of the tree
+    /// as it is. Same budget and same skipped directories as
+    /// [`FileTree::expand_all`] — walking `.git/objects` would freeze the UI
+    /// whether it was asked for globally or on one node.
+    pub fn expand_recursively(&mut self) {
+        let Some(dir) = self
+            .rows
+            .get(self.selected)
+            .filter(|row| row.is_dir)
+            .map(|row| row.path.clone())
+        else {
+            return;
+        };
+        let mut budget = 5000usize;
+        self.expanded.insert(dir.clone());
+        Self::collect_dirs(&dir, &mut self.expanded, &mut budget);
+        self.rebuild();
+    }
+
+    fn collect_dirs(dir: &Path, out: &mut HashSet<PathBuf>, budget: &mut usize) {
         fn collect(dir: &Path, out: &mut HashSet<PathBuf>, budget: &mut usize) {
             if *budget == 0 {
                 return;
@@ -416,11 +444,7 @@ impl FileTree {
                 collect(&p, out, budget);
             }
         }
-        let mut budget = 5000usize;
-        let root = self.root.clone();
-        collect(&root, &mut self.expanded, &mut budget);
-        self.expanded.insert(root);
-        self.rebuild();
+        collect(dir, out, budget);
     }
 
     /// Reveal `path` in the tree (JetBrains "Select Opened File"): expand every
@@ -542,6 +566,11 @@ impl FileTree {
             // Collapse the whole tree back to the project root.
             KeyCode::Char('c') => {
                 self.collapse_all();
+                TreeAction::None
+            }
+            // Expand the selected directory and everything under it.
+            KeyCode::Char('*') => {
+                self.expand_recursively();
                 TreeAction::None
             }
             KeyCode::Esc => TreeAction::Close,
@@ -906,6 +935,34 @@ mod tests {
         tree.set_sort(TreeSort::TimeOldest);
         let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
         assert_eq!(names, vec!["c_old.rs", "b_mid.rs", "a_new.rs"]);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn star_expands_only_the_selected_subtree() {
+        let root = std::env::temp_dir().join(format!("zmax_star_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("a").join("deep")).unwrap();
+        std::fs::create_dir_all(root.join("b").join("other")).unwrap();
+        std::fs::write(root.join("a").join("deep").join("leaf.rs"), "").unwrap();
+
+        let mut tree = FileTree::new(root.clone());
+        // Select `a` (rows are directories first, then names).
+        tree.selected = tree
+            .rows
+            .iter()
+            .position(|r| r.name == "a")
+            .expect("`a` is listed");
+        tree.handle_key(key('*'));
+
+        let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
+        assert!(names.contains(&"deep"), "the subtree opened: {names:?}");
+        assert!(names.contains(&"leaf.rs"), "all the way down: {names:?}");
+        assert!(
+            !names.contains(&"other"),
+            "the rest of the tree stayed shut: {names:?}"
+        );
 
         let _ = std::fs::remove_dir_all(&root);
     }
