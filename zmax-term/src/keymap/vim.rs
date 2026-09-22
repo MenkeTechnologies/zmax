@@ -2643,6 +2643,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "y" => peek_type_definition,       // SPC l y : peek the TYPE definition, mirroring gy (JetBrains Quick Type Definition)
                 "Q" => context_info,               // SPC l Q : the declarations enclosing the caret (JetBrains Alt-Q)
                 "B" => show_siblings,              // SPC l B : the symbols beside this one (JetBrains Show Siblings)
+                "u" => find_usages_in_file,        // SPC l u : usages of the symbol in THIS file (JetBrains Find Usages in File)
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format
                 // --- layouts (named window configurations) ---

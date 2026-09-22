@@ -1963,6 +1963,7 @@ impl MappableCommand {
         goto_next_problem_file, "Go to the next open buffer that has diagnostics (JetBrains Select Next Problem File)",
         goto_prev_problem_file, "Go to the previous open buffer that has diagnostics (JetBrains Select Previous Problem File)",
         fix_doc_comment, "Write the doc comment for the definition at the cursor (JetBrains Fix Doc Comment)",
+        find_usages_in_file, "References to the symbol at the cursor, in this file only (JetBrains Find Usages in File)",
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_recursive, "Delete the fold under the cursor and every fold nested in it (zD)",
         fold_delete_all, "Delete all folds (zE)",

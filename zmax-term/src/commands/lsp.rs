@@ -1404,8 +1404,21 @@ pub fn goto_implementation(cx: &mut Context) {
 }
 
 pub fn goto_reference(cx: &mut Context) {
+    goto_reference_impl(cx, false)
+}
+
+/// JetBrains "Find Usages in File" (Ctrl-F7): the same references request,
+/// narrowed to the file being edited. A symbol with hundreds of call sites
+/// across a workspace is unreadable in one list; the ones in front of you are
+/// the ones you are about to change.
+pub fn find_usages_in_file(cx: &mut Context) {
+    goto_reference_impl(cx, true)
+}
+
+fn goto_reference_impl(cx: &mut Context, this_file_only: bool) {
     let config = cx.editor.config();
     let (view, doc) = current_ref!(cx.editor);
+    let this_file = doc.uri();
 
     let mut futures: FuturesUnordered<_> = doc
         .language_servers_with_feature(LanguageServerFeature::GotoReference)
@@ -1437,9 +1450,16 @@ pub fn goto_reference(cx: &mut Context) {
                 Err(err) => log::error!("Error requesting references: {err}"),
             }
         }
+        if this_file_only {
+            locations.retain(|location| Some(&location.uri) == this_file.as_ref());
+        }
         let call = move |editor: &mut Editor, compositor: &mut Compositor| {
             if locations.is_empty() {
-                editor.set_error("No references found.");
+                editor.set_error(if this_file_only {
+                    "No usages in this file."
+                } else {
+                    "No references found."
+                });
             } else {
                 goto_impl(editor, compositor, locations);
             }
