@@ -1839,6 +1839,10 @@ impl MappableCommand {
         global_search_in_scope, "Search the project inside a saved named scope (JetBrains scopes)",
         move_statement_up, "Move the statement under the cursor above its previous sibling (JetBrains Move Statement Up)",
         move_statement_down, "Move the statement under the cursor below its next sibling (JetBrains Move Statement Down)",
+        word_next_other_humps, "Next word start with the camel-hump setting inverted for this motion (JetBrains Move Caret to Next Word in Different CamelHumps Mode)",
+        word_prev_other_humps, "Previous word start with the camel-hump setting inverted for this motion (JetBrains Move Caret to Previous Word in Different CamelHumps Mode)",
+        word_next_other_humps_extend, "Extend to the next word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)",
+        word_prev_other_humps_extend, "Extend to the previous word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -60428,6 +60432,39 @@ fn toggle_auto_fill(cx: &mut Context) {
 // WORD motion, symbols joined). The two modes are mutually exclusive, so at most
 // one branch is ever taken; when both are off they call the original word command
 // and behavior is identical. This keeps the core motion fns untouched.
+/// Run one motion with the camel-hump setting inverted, then put the setting
+/// back — JetBrains' "in Different CamelHumps Mode" actions, which let a
+/// buffer stay in one hump mode and still step over a single `camelCase` hump
+/// (or over a whole identifier) when that is what the edit needs.
+///
+/// Super-word mode swallows sub-word motion, so it is lifted for the duration
+/// as well; otherwise inverting `subword` would change nothing.
+fn with_other_humps(cx: &mut Context, motion: fn(&mut Context)) {
+    let subword = cx.editor.subword;
+    let superword = cx.editor.superword;
+    cx.editor.subword = !subword;
+    cx.editor.superword = false;
+    motion(cx);
+    cx.editor.subword = subword;
+    cx.editor.superword = superword;
+}
+
+fn word_next_other_humps(cx: &mut Context) {
+    with_other_humps(cx, subword_w)
+}
+
+fn word_prev_other_humps(cx: &mut Context) {
+    with_other_humps(cx, subword_b)
+}
+
+fn word_next_other_humps_extend(cx: &mut Context) {
+    with_other_humps(cx, subword_extend_w)
+}
+
+fn word_prev_other_humps_extend(cx: &mut Context) {
+    with_other_humps(cx, subword_extend_b)
+}
+
 fn subword_w(cx: &mut Context) {
     if cx.editor.superword {
         move_word_vim_impl(cx, movement::move_next_long_word_start_vim, false)

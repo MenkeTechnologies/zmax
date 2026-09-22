@@ -418,6 +418,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t k M", "Toggles", "which_key_major_mode_full"), // SPC t k M : pin the full major-mode keymap
 
     // Text / lookup.
+    ("space x w w", "Text", "word_next_other_humps"),        // SPC x w w : next word, camel-hump setting inverted (JetBrains Different CamelHumps Mode)
+    ("space x w b", "Text", "word_prev_other_humps"),        // SPC x w b : previous word, camel-hump setting inverted
     ("space x w d", "Text", ":dictionary-search"),          // SPC x w d : define the word at point
 
     // ediff (SPC D): the region-wise and backup-file sessions.

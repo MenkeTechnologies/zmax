@@ -1255,3 +1255,55 @@ async fn dV_paragraph_forces_linewise_from_midline() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// JetBrains "Move Caret to Next Word in Different CamelHumps Mode" (SPC x w w):
+/// one motion runs with the sub-word setting inverted, and the setting is the
+/// same afterwards.
+#[tokio::test(flavor = "multi_thread")]
+async fn other_humps_word_motion_inverts_the_subword_setting() -> anyhow::Result<()> {
+    use std::io::Write;
+
+    async fn cursor_after_other_humps(subword: bool) -> anyhow::Result<(usize, bool)> {
+        let mut file = tempfile::NamedTempFile::new()?;
+        write!(file, "fooBarBaz baz")?;
+        file.flush()?;
+        // The SPC leader lives in the spacemacs preset.
+        let mut app = helpers::preset_app("spacemacs")
+            .with_file(file.path(), None)
+            .build()?;
+        app.editor.subword = subword;
+
+        let pos = std::cell::Cell::new(0);
+        test_key_sequences(
+            &mut app,
+            vec![(
+                Some("<space>xww"),
+                Some(&|app| {
+                    let view = app.editor.tree.get(app.editor.tree.focus);
+                    let doc = app.editor.documents().next().unwrap();
+                    pos.set(
+                        doc.selection(view.id)
+                            .primary()
+                            .cursor(doc.text().slice(..)),
+                    );
+                }),
+            )],
+            false,
+        )
+        .await?;
+        let restored = app.editor.subword;
+        Ok((pos.get(), restored))
+    }
+
+    // Sub-word off: this one motion stops at the hump.
+    let (pos, restored) = cursor_after_other_humps(false).await?;
+    assert_eq!(3, pos, "with subword off, SPC x w w stops at 'B' of Bar");
+    assert!(!restored, "the setting is put back");
+
+    // Sub-word on: this one motion steps over the whole identifier.
+    let (pos, restored) = cursor_after_other_humps(true).await?;
+    assert_eq!(10, pos, "with subword on, SPC x w w skips to 'baz'");
+    assert!(restored, "the setting is put back");
+
+    Ok(())
+}
