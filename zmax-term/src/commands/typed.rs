@@ -8477,6 +8477,87 @@ fn hunk_prev(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     hunk_goto(cx, false)
 }
 
+/// Render the test history as a plain-text report, newest run first. Pure so
+/// the format is pinned by a test rather than by whatever the last run looked
+/// like.
+fn render_test_report(entries: &[crate::test_history::Entry]) -> String {
+    let mut out = String::from("# zmax test results\n\n");
+    for entry in entries.iter().rev() {
+        out.push_str(&format!(
+            "## {} {}\n{}\nin {}\n",
+            if entry.ok { "PASS" } else { "FAIL" },
+            entry.cmd,
+            // Seconds since the epoch rather than a formatted date: the report
+            // is meant to be diffed and grepped, and a fixed number does both.
+            entry.when,
+            entry.cwd.display()
+        ));
+        for failed in &entry.failed {
+            out.push_str(&format!("  failed: {failed}\n"));
+        }
+        out.push('\n');
+    }
+    out
+}
+
+/// `:export-test-results [path]` — JetBrains "Export Test Results". Writes the
+/// recorded test runs to a file and opens it. The default path is
+/// `test-results.txt` in the working directory.
+fn export_test_results(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let entries = crate::test_history::entries();
+    if entries.is_empty() {
+        bail!("no test runs recorded yet");
+    }
+    let path = match args.first() {
+        Some(p) => PathBuf::from(zmax_stdx::path::expand_tilde(Path::new(p)).as_ref()),
+        None => zmax_stdx::env::current_working_dir().join("test-results.txt"),
+    };
+    std::fs::write(&path, render_test_report(&entries))?;
+    cx.editor.open(&path, Action::Replace)?;
+    cx.editor
+        .set_status(format!("{} run(s) written to {}", entries.len(), path.display()));
+    Ok(())
+}
+
+#[cfg(test)]
+mod test_report_tests {
+    use super::render_test_report;
+    use crate::test_history::Entry;
+    use std::path::PathBuf;
+
+    #[test]
+    fn the_report_is_newest_first_and_names_the_failures() {
+        let entries = vec![
+            Entry {
+                when: 1,
+                ok: true,
+                cwd: PathBuf::from("/p"),
+                cmd: "cargo test".into(),
+                failed: vec![],
+            },
+            Entry {
+                when: 2,
+                ok: false,
+                cwd: PathBuf::from("/p"),
+                cmd: "pytest".into(),
+                failed: vec!["test_a".into()],
+            },
+        ];
+        let report = render_test_report(&entries);
+        let fail_at = report.find("## FAIL pytest").expect("the failing run is listed");
+        let pass_at = report.find("## PASS cargo test").expect("the passing run is listed");
+        assert!(fail_at < pass_at, "newest first");
+        assert!(report.contains("  failed: test_a\n"));
+    }
+}
+
 /// Locate the git merge-conflict block containing (or nearest above) `cursor`.
 /// Returns `(block_start_char, block_end_char, ours_text, theirs_text)`. Handles both the 2-way
 /// (`<<<<<<< ======= >>>>>>>`) and diff3 (`<<<<<<< ||||||| ======= >>>>>>>`) marker styles.
@@ -59909,6 +59990,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "export-test-results",
+        aliases: &[],
+        doc: "Write the recorded test runs to a file and open it (JetBrains Export Test Results).",
+        fun: export_test_results,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

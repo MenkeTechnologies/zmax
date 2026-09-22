@@ -881,6 +881,7 @@
 | `:conflict-ours`, `:diffget-ours`, `:conflict-keep-ours` | Resolve the merge conflict at the cursor by keeping OUR side (HEAD). |
 | `:conflict-theirs`, `:diffget-theirs`, `:conflict-keep-theirs` | Resolve the merge conflict at the cursor by keeping THEIR side (incoming). |
 | `:conflict-both`, `:conflict-keep-both` | Resolve the merge conflict at the cursor by keeping BOTH sides. |
+| `:export-test-results` | Write the recorded test runs to a file and open it (JetBrains Export Test Results). |
 | `:conflict-imports` | Merge every conflict whose two sides are only import statements (JetBrains Resolve Conflicts in Import Statements). |
 | `:conflict-next` | Jump to the next merge-conflict marker. |
 | `:conflict-prev` | Jump to the previous merge-conflict marker. |

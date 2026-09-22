@@ -1856,6 +1856,7 @@ impl MappableCommand {
         sort_tree_by_time_oldest, "Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time)",
         structural_search, "Find code by shape with a tree-sitter query (JetBrains Search Structurally)",
         structural_replace, "Rewrite what a tree-sitter query captures (JetBrains Replace Structurally)",
+        goto_link_target, "Open what the file in this buffer links to (JetBrains Go to Link Target)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -80220,6 +80221,36 @@ mod goto_test_tests {
         assert_eq!(test_counterparts("FooTest.java"), (true, vec!["Foo.java".to_string()]));
         assert_eq!(test_counterparts("foo.test.ts"), (true, vec!["foo.ts".to_string()]));
         assert_eq!(test_counterparts("foo_spec.rb"), (true, vec!["foo.rb".to_string()]));
+    }
+}
+
+/// JetBrains "Go to Link Target": when the file in the buffer is a symbolic
+/// link, open what it points at. Relative targets resolve against the link's
+/// own directory, which is what the filesystem does.
+fn goto_link_target(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("goto-link-target: buffer is not visiting a file");
+        return;
+    };
+    let target = match std::fs::read_link(&path) {
+        Ok(target) => target,
+        Err(_) => {
+            cx.editor.set_status(format!(
+                "{} is not a symbolic link",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ));
+            return;
+        }
+    };
+    let target = if target.is_absolute() {
+        target
+    } else {
+        path.parent().unwrap_or(std::path::Path::new(".")).join(target)
+    };
+    if let Err(err) = cx.editor.open(&target, Action::Replace) {
+        cx.editor
+            .set_error(format!("goto-link-target: {}: {err}", target.display()));
     }
 }
 

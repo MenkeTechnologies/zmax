@@ -2511,6 +2511,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             },
             "j" => { "Jump"
                 "i" => symbol_picker,              // SPC j i
+                "L" => goto_link_target,           // SPC j L : open what the file in this buffer links to (JetBrains Go to Link Target)
                 "j" => jumplist_picker,            // SPC j j
                 "0" => goto_line_start,            // SPC j 0
                 "$" => goto_line_end,              // SPC j $
