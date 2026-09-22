@@ -1569,6 +1569,8 @@
 | `fold_more` | Fold more: close one more level of nested folds (zm) | **spacemacs, hybrid, vim** — normal: `` zm `` |
 | `fold_less` | Fold less: open one more level of nested folds (zr) | **spacemacs, hybrid, vim** — normal: `` zr `` |
 | `fold_to_level` | Set foldlevel to the count outright (JetBrains Expand to Level N) |  |
+| `goto_next_problem_file` | Go to the next open buffer that has diagnostics (JetBrains Select Next Problem File) | **spacemacs, hybrid** — normal: `` <space>b] ``, select: `` <space>b] `` |
+| `goto_prev_problem_file` | Go to the previous open buffer that has diagnostics (JetBrains Select Previous Problem File) | **spacemacs, hybrid** — normal: `` <space>b[ ``, select: `` <space>b[ `` |
 | `fold_delete` | Delete fold under cursor (zd) | **spacemacs, hybrid, vim** — normal: `` zd `` |
 | `fold_delete_recursive` | Delete the fold under the cursor and every fold nested in it (zD) | **spacemacs, hybrid, vim** — normal: `` zD `` |
 | `fold_delete_all` | Delete all folds (zE) | **spacemacs, hybrid, vim** — normal: `` zE `` |

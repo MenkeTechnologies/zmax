@@ -2083,6 +2083,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "p" => goto_previous_buffer,       // SPC b p
                 "m" => changed_file_picker,        // SPC b m : the files git reports as changed, opening on the first hunk (JetBrains Go to Changed File)
                 "M" => kill_buffers_by_regex,      // SPC b M : kill buffers matching a regexp
+                "]" => goto_next_problem_file,     // SPC b ] : next open buffer with diagnostics (JetBrains Select Next Problem File)
+                "[" => goto_prev_problem_file,     // SPC b [ : previous open buffer with diagnostics
                 "W" => goto_buffer_window,         // SPC b W : focus the window already showing a chosen buffer
                 "N" => { "New buffer"
                     "h" => vsplit_new,             // SPC b N h : new buffer in window left (vertical split)

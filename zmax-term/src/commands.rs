@@ -1960,6 +1960,8 @@ impl MappableCommand {
         fold_more, "Fold more: close one more level of nested folds (zm)",
         fold_less, "Fold less: open one more level of nested folds (zr)",
         fold_to_level, "Set foldlevel to the count outright (JetBrains Expand to Level N)",
+        goto_next_problem_file, "Go to the next open buffer that has diagnostics (JetBrains Select Next Problem File)",
+        goto_prev_problem_file, "Go to the previous open buffer that has diagnostics (JetBrains Select Previous Problem File)",
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_recursive, "Delete the fold under the cursor and every fold nested in it (zD)",
         fold_delete_all, "Delete all folds (zE)",
@@ -3848,6 +3850,71 @@ fn goto_buffer(editor: &mut Editor, direction: Direction, count: usize) {
     let id = *id;
 
     editor.switch(id, Action::Replace);
+}
+
+/// JetBrains "Select Next/Previous Problem File" (the Switcher's problem
+/// arrows): move to the next open buffer that has diagnostics, in the order the
+/// buffer bar shows.
+///
+/// Buffers with nothing wrong are skipped rather than visited and left, which
+/// is the point — the walk is over the files that need attention, not over all
+/// of them.
+fn goto_problem_file(cx: &mut Context, direction: Direction) {
+    let current = view!(cx.editor).doc;
+    let order = cx.editor.ordered_document_ids();
+    let with_problems: Vec<_> = order
+        .iter()
+        .copied()
+        .filter(|id| {
+            cx.editor
+                .documents
+                .get(id)
+                .and_then(|doc| doc.uri())
+                .and_then(|uri| cx.editor.diagnostics.get(&uri))
+                .is_some_and(|diags| !diags.is_empty())
+        })
+        .collect();
+    if with_problems.is_empty() {
+        cx.editor.set_status("no open buffer has problems");
+        return;
+    }
+    // The position to walk from: where the current buffer sits in the list, or
+    // where it would sit when it has no problems of its own.
+    let at = with_problems.iter().position(|id| *id == current);
+    let next = match (direction, at) {
+        (Direction::Forward, Some(i)) => with_problems[(i + 1) % with_problems.len()],
+        (Direction::Backward, Some(i)) => {
+            with_problems[(i + with_problems.len() - 1) % with_problems.len()]
+        }
+        // Not on a problem file: take the first one after (or before) it in
+        // buffer order, falling back to the ends of the list.
+        (Direction::Forward, None) => {
+            let here = order.iter().position(|id| *id == current).unwrap_or(0);
+            with_problems
+                .iter()
+                .copied()
+                .find(|id| order.iter().position(|o| o == id).unwrap_or(0) > here)
+                .unwrap_or(with_problems[0])
+        }
+        (Direction::Backward, None) => {
+            let here = order.iter().position(|id| *id == current).unwrap_or(0);
+            with_problems
+                .iter()
+                .copied()
+                .filter(|id| order.iter().position(|o| o == id).unwrap_or(0) < here)
+                .next_back()
+                .unwrap_or(with_problems[with_problems.len() - 1])
+        }
+    };
+    cx.editor.switch(next, Action::Replace);
+}
+
+fn goto_next_problem_file(cx: &mut Context) {
+    goto_problem_file(cx, Direction::Forward)
+}
+
+fn goto_prev_problem_file(cx: &mut Context) {
+    goto_problem_file(cx, Direction::Backward)
 }
 
 fn extend_to_line_start(cx: &mut Context) {
