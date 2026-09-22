@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-cbd89040.js";
+            window.path_to_searchindex_js = "searchindex-f8f8aa69.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -1076,6 +1076,7 @@
 <tr><td><code>:conflict-ours</code>, <code>:diffget-ours</code>, <code>:conflict-keep-ours</code></td><td>Resolve the merge conflict at the cursor by keeping OUR side (HEAD).</td></tr>
 <tr><td><code>:conflict-theirs</code>, <code>:diffget-theirs</code>, <code>:conflict-keep-theirs</code></td><td>Resolve the merge conflict at the cursor by keeping THEIR side (incoming).</td></tr>
 <tr><td><code>:conflict-both</code>, <code>:conflict-keep-both</code></td><td>Resolve the merge conflict at the cursor by keeping BOTH sides.</td></tr>
+<tr><td><code>:export-test-results</code></td><td>Write the recorded test runs to a file and open it (JetBrains Export Test Results).</td></tr>
 <tr><td><code>:conflict-imports</code></td><td>Merge every conflict whose two sides are only import statements (JetBrains Resolve Conflicts in Import Statements).</td></tr>
 <tr><td><code>:conflict-next</code></td><td>Jump to the next merge-conflict marker.</td></tr>
 <tr><td><code>:conflict-prev</code></td><td>Jump to the previous merge-conflict marker.</td></tr>
@@ -3603,6 +3604,7 @@
 <tr><td><code>sort_tree_by_time_oldest</code></td><td>Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time)</td><td></td></tr>
 <tr><td><code>structural_search</code></td><td>Find code by shape with a tree-sitter query (JetBrains Search Structurally)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;st</code>, select: <code>&lt;space&gt;st</code></td></tr>
 <tr><td><code>structural_replace</code></td><td>Rewrite what a tree-sitter query captures (JetBrains Replace Structurally)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sR</code>, select: <code>&lt;space&gt;sR</code></td></tr>
+<tr><td><code>goto_link_target</code></td><td>Open what the file in this buffer links to (JetBrains Go to Link Target)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;jL</code>, select: <code>&lt;space&gt;jL</code></td></tr>
 <tr><td><code>rerun_failed_tests</code></td><td>Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cf</code>, select: <code>&lt;space&gt;cf</code></td></tr>
 <tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-r&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code></td></tr>
 <tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, insert: <code>&lt;C-x&gt;`</code><br><strong>hybrid</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code></td></tr>
