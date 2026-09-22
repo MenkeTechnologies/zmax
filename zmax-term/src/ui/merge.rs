@@ -604,6 +604,10 @@ pub struct DiffView {
     /// writes back to any document or disk — the view is comparison-only, so it
     /// can safely diff arbitrary files without risking the current buffer.
     read_only: bool,
+    /// JetBrains "Swap Sides" (`SwapSidesInDiffWindow`): draw the two sides the
+    /// other way round. Comparison only — swapping while a resolution is being
+    /// built would silently change what `,` and `.` take.
+    swapped: bool,
     /// Emerge `emerge-auto-advance`: choosing a side for a difference moves on to
     /// the next difference by itself.
     auto_advance: bool,
@@ -645,6 +649,7 @@ impl DiffView {
             hscroll: 0,
             viewport: 1,
             read_only: false,
+            swapped: false,
             auto_advance: false,
             skip_prefers: false,
             word_refine: false,
@@ -795,6 +800,7 @@ impl DiffView {
             hscroll: 0,
             viewport: 1,
             read_only: false,
+            swapped: false,
             auto_advance: false,
             skip_prefers: false,
             word_refine: false,
@@ -979,6 +985,17 @@ impl Component for DiffView {
         let page = self.viewport.max(1) as isize;
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            // JetBrains "Swap Sides". Only in a read-only comparison: with a
+            // resolution in progress, `,`/`.` mean "take the left/right side",
+            // and swapping under them would change what they take without
+            // changing what they are called.
+            key!('s') if self.read_only => {
+                self.swapped = !self.swapped;
+                std::mem::swap(&mut self.base_lines, &mut self.doc_lines);
+                for row in &mut self.rows {
+                    std::mem::swap(&mut row.left, &mut row.right);
+                }
+            }
             // Apply: write the resolved Result back into the document, then close.
             // In conflict mode, once every conflict is resolved, also write the
             // file to disk and `git add` it to mark the conflict resolved.
@@ -1196,7 +1213,12 @@ impl Component for DiffView {
             to_zstyle_bold(title_style),
         );
         // Key hint + column labels on the second header row (mode-dependent).
-        let (hint, left_label, right_label) = match self.kind {
+        let (hint, mut left_label, mut right_label) = match self.kind {
+            ViewKind::Diff if self.read_only => (
+                "s swap sides   n/p nav   q close",
+                " HEAD",
+                " Working tree",
+            ),
             ViewKind::Diff => (
                 ", take HEAD   . take working   n/p nav   Enter apply   q cancel",
                 " HEAD",
@@ -1208,6 +1230,11 @@ impl Component for DiffView {
                 " Incoming (theirs)",
             ),
         };
+        // The labels follow the panes, or a swapped view would lie about which
+        // side is which.
+        if self.swapped {
+            std::mem::swap(&mut left_label, &mut right_label);
+        }
         if let Some((base_x, base_w)) = base_col {
             surface.set_stringn(base_x, area.y + 1, " Base", base_w as usize, linenr_style);
         }
