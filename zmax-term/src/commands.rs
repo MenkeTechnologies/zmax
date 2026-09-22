@@ -1144,6 +1144,7 @@ impl MappableCommand {
         bookmark_toggle, "Toggle a line bookmark (JetBrains F11)",
         bookmark_open_tabs, "Bookmark the cursor line of every open buffer (JetBrains Bookmark Open Tabs)",
         open_bookmarked_files, "Open every file that holds a line bookmark (JetBrains Open All Bookmarked Files)",
+        bookmarks_view, "List every line bookmark, grouped by file (JetBrains Bookmarks tool window)",
         bookmark_next, "Jump to the next line bookmark (JetBrains)",
         bookmark_prev, "Jump to the previous line bookmark (JetBrains)",
         harpoon_menu, "Open the harpoon marks menu",
@@ -34458,6 +34459,93 @@ fn bookmark_toggle(cx: &mut Context) {
 }
 
 /// Jump to the next/previous bookmark across all files (wrapping), relative to the cursor.
+/// JetBrains Bookmarks tool window with "Group Line Bookmarks by File"
+/// (`BookmarksView.GroupLineBookmarks`): every line bookmark, grouped under
+/// the file that holds it, with the line's text.
+///
+/// `bookmark_next`/`bookmark_prev` walk them one at a time; until now there was
+/// no way to SEE them. Entries are sorted by path and then by line, which is
+/// the grouping — a flat list in that order reads as one block per file, and a
+/// picker filter still crosses files, which a real tree would not.
+///
+/// The line text is read from the open buffer when the file is open and from
+/// disk when it is not, so a bookmark in a file you closed still shows what it
+/// points at rather than a bare number.
+fn bookmarks_view(cx: &mut Context) {
+    struct Bookmark {
+        path: std::path::PathBuf,
+        display: String,
+        line: usize,
+        text: String,
+    }
+    let mut marks = BOOKMARKS.lock().unwrap().clone();
+    marks.sort();
+    if marks.is_empty() {
+        cx.editor
+            .set_status("No bookmarks set (toggle one with bookmark_toggle)");
+        return;
+    }
+    let root = zmax_loader::find_workspace().0;
+    let items: Vec<Bookmark> = marks
+        .into_iter()
+        .map(|(path, line)| {
+            let text = cx
+                .editor
+                .document_by_path(&path)
+                .map(|doc| {
+                    let rope = doc.text();
+                    rope.get_line(line)
+                        .map(|l| l.to_string())
+                        .unwrap_or_default()
+                })
+                .or_else(|| {
+                    std::fs::read_to_string(&path)
+                        .ok()
+                        .and_then(|s| s.lines().nth(line).map(str::to_string))
+                })
+                .unwrap_or_default();
+            let display = path
+                .strip_prefix(&root)
+                .unwrap_or(&path)
+                .display()
+                .to_string();
+            Bookmark {
+                path,
+                display,
+                line,
+                text: text.trim().to_string(),
+            }
+        })
+        .collect();
+    let columns = [
+        PickerColumn::new("file", |b: &Bookmark, _: &()| b.display.as_str().into()),
+        PickerColumn::new("line", |b: &Bookmark, _: &()| (b.line + 1).to_string().into()),
+        PickerColumn::new("text", |b: &Bookmark, _: &()| b.text.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, items, (), |cx, bookmark: &Bookmark, action| {
+        match cx.editor.open(&bookmark.path, action) {
+            Ok(_) => {
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text();
+                let line = bookmark.line.min(text.len_lines().saturating_sub(1));
+                let pos = text.line_to_char(line);
+                doc.set_selection(view.id, Selection::point(pos));
+                align_view(doc, view, Align::Center);
+            }
+            Err(e) => cx
+                .editor
+                .set_error(format!("{}: {e}", bookmark.path.display())),
+        }
+    })
+    .with_preview(|_editor, bookmark: &Bookmark| {
+        Some((
+            bookmark.path.as_path().into(),
+            Some((bookmark.line, bookmark.line)),
+        ))
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 fn bookmark_cycle(cx: &mut Context, forward: bool) {
     let marks = BOOKMARKS.lock().unwrap().clone();
     if marks.is_empty() {

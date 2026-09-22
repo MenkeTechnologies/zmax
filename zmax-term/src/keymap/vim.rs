@@ -184,6 +184,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space a v X", "Embedded", ":pio-debug"),          // SPC a v X : PlatformIO debugger
     ("space f R", "Files",   ":move"),             // SPC f R : rename file
     ("space f D", "Files",   ":delete-file"),      // SPC f D : delete file + buffer
+    ("space r L", "Bookmarks", "bookmarks_view"), // SPC r L : every line bookmark, grouped by file (JetBrains Bookmarks tool window)
     ("space b M", "Buffers", "buffer_menu"),       // SPC b M : Buffer Menu (emacs buffer-menu)
     ("space b d", "Buffers", ":buffer-close"),     // SPC b d : kill buffer
     ("space b X", "Buffers", ":buffer-close!"),    // SPC b X : FORCE kill buffer (discard unsaved)
@@ -2423,6 +2424,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "tab" => jump_to_last_tool_window, // SPC W TAB : jump to last tool window (JetBrains F12)
                 "z" => toggle_ide,                 // SPC W z : hide all tool windows (Zen)
                 "b" => focus_bookmarks,            // SPC W b : Bookmarks tool window
+
                 "k" => focus_marks_panel,          // SPC W k : Marks tool window
                 "R" => focus_registers_panel,      // SPC W R : Registers tool window
                 "j" => focus_jumplist_panel,       // SPC W j : Jumplist tool window
