@@ -1843,7 +1843,6 @@ impl MappableCommand {
         word_prev_other_humps, "Previous word start with the camel-hump setting inverted for this motion (JetBrains Move Caret to Previous Word in Different CamelHumps Mode)",
         word_next_other_humps_extend, "Extend to the next word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)",
         word_prev_other_humps_extend, "Extend to the previous word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)",
-        goto_changed_file, "Pick one of the files git reports as changed and open it (JetBrains Go to Changed File)",
         show_siblings, "List the symbols beside the one under the cursor (JetBrains Show Siblings)",
         delete_word_backward_other_humps, "Delete to the word start with the camel-hump setting inverted (JetBrains Delete to Word Start in Different CamelHumps Mode)",
         delete_word_forward_other_humps, "Delete to the word end with the camel-hump setting inverted (JetBrains Delete to Word End in Different CamelHumps Mode)",
@@ -1851,6 +1850,7 @@ impl MappableCommand {
         backward_kill_word, "Kill back to the word start, onto the kill ring (emacs M-DEL, JetBrains Kill to Word Start)",
         kill_region, "Cut the region onto the kill ring (emacs C-w, JetBrains Kill Selected Region)",
         goto_test, "Jump between a file and its test file (JetBrains Go to Test / Go to Test Subject)",
+        export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
         rerun_failed_tests, "Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)",
         rerun_last_run, "Re-run the last command in the Run console",
         run_next_error, "Jump to the next file:line in the run output",
@@ -21880,6 +21880,35 @@ fn git_init(cx: &mut Context) {
     }
 }
 
+/// JetBrains "Export to Scratch File": copy the selection — or the whole
+/// buffer, when nothing is selected — into a fresh scratch buffer that keeps
+/// the language of the file it came from, so highlighting and the language
+/// server carry over to the throwaway copy.
+fn export_to_scratch(cx: &mut Context) {
+    let (content, language) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        let content = if sel.from() == sel.to() {
+            doc.text().to_string()
+        } else {
+            slice.slice(sel.from()..sel.to()).to_string()
+        };
+        (content, doc.language_name().map(str::to_string))
+    };
+    show_text_in_scratch(cx.editor, &content);
+    if let Some(language) = language {
+        let loader = cx.editor.syn_loader.load();
+        let doc = doc_mut!(cx.editor);
+        let _ = doc.set_language_by_language_id(&language, &loader);
+        doc.detect_indent_and_line_ending();
+        let id = doc.id();
+        drop(loader);
+        cx.editor.refresh_language_servers(id);
+    }
+    cx.editor.set_status("exported to a scratch buffer");
+}
+
 /// Load `content` into a fresh scratch buffer in the current window (replacing the view's
 /// document, which stays in the buffer list). Used to display read-only generated text.
 pub(crate) fn show_text_in_scratch(editor: &mut Editor, content: &str) {
@@ -34934,13 +34963,19 @@ fn changed_file_picker(cx: &mut Context) {
         },
         |cx, meta: &FileChange, action| {
             let path_to_open = meta.path();
-            if let Err(e) = cx.editor.open(path_to_open, action) {
-                let err = if let Some(err) = e.source() {
-                    format!("{}", err)
-                } else {
-                    format!("unable to open \"{}\"", path_to_open.display())
-                };
-                cx.editor.set_error(err);
+            match cx.editor.open(path_to_open, action) {
+                // JetBrains' Go to Changed File lands on the first hunk rather
+                // than at the top: the reason the file was picked out of a list
+                // of changes is the change itself.
+                Ok(_) => goto_first_change(&mut typed::editor_context(cx)),
+                Err(e) => {
+                    let err = if let Some(err) = e.source() {
+                        format!("{}", err)
+                    } else {
+                        format!("unable to open \"{}\"", path_to_open.display())
+                    };
+                    cx.editor.set_error(err);
+                }
             }
         },
     )
@@ -37421,103 +37456,6 @@ fn goto_prev_diag_warning(cx: &mut Context) {
         Direction::Backward,
         Some(zmax_core::diagnostic::Severity::Warning),
     );
-}
-
-/// Split `git status --porcelain` into (status, path) rows.
-///
-/// A rename is reported as `R  old -> new`; the new path is the one worth
-/// opening. Paths with odd bytes come back quoted, and the quotes are dropped
-/// rather than unescaped — the picker only needs something openable, and
-/// git quotes only what the shell would mangle.
-fn parse_porcelain(text: &str) -> Vec<(String, String)> {
-    text.lines()
-        .filter(|line| line.len() > 3)
-        .map(|line| {
-            let (status, rest) = line.split_at(2);
-            let path = rest.trim_start();
-            let path = path.rsplit(" -> ").next().unwrap_or(path);
-            let path = path.trim_matches('"');
-            (status.trim().to_string(), path.to_string())
-        })
-        .filter(|(_, path)| !path.is_empty())
-        .collect()
-}
-
-/// JetBrains "Go to Changed File…": pick one of the files git reports as
-/// changed and open it on its first changed hunk, which is where the reason
-/// for opening it usually is.
-fn goto_changed_file(cx: &mut Context) {
-    let root = doc!(cx.editor)
-        .path()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(|| zmax_loader::find_workspace().0);
-    let Some(out) = crate::ui::magit::git_output(&root, &["status", "--porcelain"]) else {
-        cx.editor.set_error("not a git repository");
-        return;
-    };
-    let toplevel = crate::ui::magit::git_output(&root, &["rev-parse", "--show-toplevel"])
-        .map(|s| PathBuf::from(s.trim()))
-        .unwrap_or(root);
-    let rows: Vec<(String, PathBuf)> = parse_porcelain(&out)
-        .into_iter()
-        .map(|(status, path)| (status, toplevel.join(path)))
-        .collect();
-    if rows.is_empty() {
-        cx.editor.set_status("no changed files");
-        return;
-    }
-    let columns = [
-        PickerColumn::new("status", |r: &(String, PathBuf), _: &()| {
-            r.0.as_str().into()
-        }),
-        PickerColumn::new("path", |r: &(String, PathBuf), _: &()| {
-            r.1.to_string_lossy().into_owned().into()
-        }),
-    ];
-    let picker = Picker::new(columns, 1, rows, (), |cx, row: &(String, PathBuf), action| {
-        match cx.editor.open(&row.1, action) {
-            Ok(_) => goto_first_change(&mut typed::editor_context(cx)),
-            Err(err) => cx.editor.set_error(format!("{}: {err}", row.1.display())),
-        }
-    })
-    .with_preview(|_, row: &(String, PathBuf)| Some((row.1.as_path().into(), None)));
-    cx.push_layer(Box::new(overlaid(picker)));
-}
-
-#[cfg(test)]
-mod changed_file_tests {
-    use super::parse_porcelain;
-
-    #[test]
-    fn porcelain_rows_split_into_status_and_path() {
-        let out = " M zmax-term/src/commands.rs\n?? new.rs\nA  added.rs\n";
-        assert_eq!(
-            parse_porcelain(out),
-            vec![
-                ("M".to_string(), "zmax-term/src/commands.rs".to_string()),
-                ("??".to_string(), "new.rs".to_string()),
-                ("A".to_string(), "added.rs".to_string()),
-            ]
-        );
-    }
-
-    #[test]
-    fn a_rename_reports_the_new_path() {
-        let out = "R  old/name.rs -> new/name.rs\n";
-        assert_eq!(
-            parse_porcelain(out),
-            vec![("R".to_string(), "new/name.rs".to_string())]
-        );
-    }
-
-    #[test]
-    fn quoted_paths_lose_their_quotes() {
-        let out = " M \"a file.rs\"\n";
-        assert_eq!(
-            parse_porcelain(out),
-            vec![("M".to_string(), "a file.rs".to_string())]
-        );
-    }
 }
 
 fn goto_first_change(cx: &mut Context) {

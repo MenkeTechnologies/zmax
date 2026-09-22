@@ -295,7 +295,6 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g S",   "Git",     ":git-stage"),                           // SPC g S : stage current file
     ("space g U",   "Git",     ":git-unstage"),                         // SPC g U : unstage current file
     ("space g i",   "Git",     "git_init"),                             // SPC g i : initialize a new git repo
-    ("space g f c", "Git",     "goto_changed_file"),                    // SPC g f c : pick a file git reports as changed (JetBrains Go to Changed File)
     ("space g f d", "Git",     "git_diff"),                             // SPC g f d : diff current file vs HEAD
     ("space g f m", "Git",     "git_file_dispatch"),                    // SPC g f m : magit file-operations dispatch
     ("space g f f", "Git",     "view_file_at_rev"),                     // SPC g f f : view current file at a branch/commit
@@ -2081,7 +2080,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "C-s" => show_scratch_files,       // SPC b C-s : pick among the scratch buffers (JetBrains Show Scratch Files; `s`/`S` already make one)
                 "n" => goto_next_buffer,           // SPC b n
                 "p" => goto_previous_buffer,       // SPC b p
-                "m" => changed_file_picker,        // SPC b m
+                "m" => changed_file_picker,        // SPC b m : the files git reports as changed, opening on the first hunk (JetBrains Go to Changed File)
                 "M" => kill_buffers_by_regex,      // SPC b M : kill buffers matching a regexp
                 "W" => goto_buffer_window,         // SPC b W : focus the window already showing a chosen buffer
                 "N" => { "New buffer"

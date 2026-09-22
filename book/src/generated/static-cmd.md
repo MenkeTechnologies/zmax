@@ -1452,7 +1452,6 @@
 | `word_prev_other_humps` | Previous word start with the camel-hump setting inverted for this motion (JetBrains Move Caret to Previous Word in Different CamelHumps Mode) | **spacemacs, hybrid** — normal: `` <space>xwb ``, select: `` <space>xwb `` |
 | `word_next_other_humps_extend` | Extend to the next word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection) |  |
 | `word_prev_other_humps_extend` | Extend to the previous word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection) |  |
-| `goto_changed_file` | Pick one of the files git reports as changed and open it (JetBrains Go to Changed File) | **spacemacs, hybrid** — normal: `` <space>gfc ``, select: `` <space>gfc `` |
 | `show_siblings` | List the symbols beside the one under the cursor (JetBrains Show Siblings) | **spacemacs, hybrid** — normal: `` <space>lB ``, select: `` <space>lB `` |
 | `delete_word_backward_other_humps` | Delete to the word start with the camel-hump setting inverted (JetBrains Delete to Word Start in Different CamelHumps Mode) | **spacemacs, vim** — insert: `` <A-W> `` |
 | `delete_word_forward_other_humps` | Delete to the word end with the camel-hump setting inverted (JetBrains Delete to Word End in Different CamelHumps Mode) | **spacemacs, vim** — insert: `` <A-D> `` |
@@ -1460,6 +1459,7 @@
 | `backward_kill_word` | Kill back to the word start, onto the kill ring (emacs M-DEL, JetBrains Kill to Word Start) | **hybrid, emacs, cua, micro, nano** — insert: `` <A-backspace> ``, `` <A-C-backspace> `` |
 | `kill_region` | Cut the region onto the kill ring (emacs C-w, JetBrains Kill Selected Region) | **hybrid, emacs, cua** — insert: `` <C-w> `` |
 | `goto_test` | Jump between a file and its test file (JetBrains Go to Test / Go to Test Subject) | **spacemacs, hybrid** — normal: `` <space>fg ``, select: `` <space>fg `` |
+| `export_to_scratch` | Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File) |  |
 | `rerun_failed_tests` | Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests) | **spacemacs, hybrid** — normal: `` <space>cf ``, select: `` <space>cf `` |
 | `rerun_last_run` | Re-run the last command in the Run console | **spacemacs** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> ``<br>**hybrid** — normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> `` |
 | `run_next_error` | Jump to the next file:line in the run output | **spacemacs** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` ``<br>**hybrid** — normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn `` |
