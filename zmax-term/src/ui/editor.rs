@@ -704,6 +704,11 @@ impl EditorView {
         }
     }
 
+    /// JetBrains "Group by Inspection": group the problems list by checker.
+    pub fn toggle_group_problems(&mut self) -> Option<bool> {
+        self.ide.as_mut().map(|ide| ide.toggle_group_problems())
+    }
+
     /// JetBrains "Compact Directories": collapse single-child directory chains.
     pub fn toggle_compact_dirs(&mut self) -> Option<bool> {
         self.ide.as_mut().map(|ide| ide.toggle_compact_dirs())

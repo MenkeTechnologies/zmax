@@ -1455,6 +1455,7 @@
 | `toggle_auto_reveal` | Toggle always-select-opened-file (autoscroll from source) | **spacemacs, hybrid** — normal: `` <space>pV ``, select: `` <space>pV `` |
 | `focus_file_tree` | Focus the project file tree panel | **spacemacs, hybrid** — normal: `` <space>Wp ``, `` <space>Wt ``, select: `` <space>Wp ``, `` <space>Wt `` |
 | `focus_structure` | Focus the structure/symbol outline panel | **spacemacs, hybrid** — normal: `` <space>Wo ``, `` <space>Ws ``, select: `` <space>Wo ``, `` <space>Ws `` |
+| `toggle_group_problems` | Group the Problems panel by the checker that reported each diagnostic (JetBrains Group by Inspection) |  |
 | `toggle_compact_directories` | Draw single-child directory chains as one row (JetBrains Compact Directories) |  |
 | `toggle_sort_by_type` | Order the project tree's files by extension (JetBrains Sort by Type) |  |
 | `toggle_file_details` | Show or hide file sizes in the project tree (JetBrains File Details) |  |

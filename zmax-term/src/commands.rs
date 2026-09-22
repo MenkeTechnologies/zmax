@@ -1846,6 +1846,7 @@ impl MappableCommand {
         toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
         focus_file_tree, "Focus the project file tree panel",
         focus_structure, "Focus the structure/symbol outline panel",
+        toggle_group_problems, "Group the Problems panel by the checker that reported each diagnostic (JetBrains Group by Inspection)",
         toggle_compact_directories, "Draw single-child directory chains as one row (JetBrains Compact Directories)",
         toggle_sort_by_type, "Order the project tree's files by extension (JetBrains Sort by Type)",
         toggle_file_details, "Show or hide file sizes in the project tree (JetBrains File Details)",
@@ -52112,6 +52113,24 @@ fn toggle_ide(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, _cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
             view.toggle_ide();
+        }
+    }));
+}
+
+/// JetBrains "Group by Inspection" (`ProblemsView.GroupByToolId`): break the
+/// Problems panel up by the checker that reported each diagnostic — which
+/// answers "is this clippy or the compiler" without reading every message.
+fn toggle_group_problems(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let state = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.toggle_group_problems());
+        match state {
+            Some(on) => cx.editor.set_status(format!(
+                "group problems by inspection: {}",
+                if on { "on" } else { "off" }
+            )),
+            None => cx.editor.set_status("no problems panel"),
         }
     }));
 }

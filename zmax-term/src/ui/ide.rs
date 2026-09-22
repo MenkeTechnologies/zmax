@@ -258,6 +258,50 @@ struct ProblemRow {
     end: usize,
     sev: Severity,
     msg: String,
+    /// The checker that produced it (`rustc`, `clippy`, `eslint`), for
+    /// JetBrains "Group by Inspection". `None` when the server sent no source.
+    source: Option<String>,
+    /// A group header inserted by [`group_problems_by_source`]; it names a
+    /// source rather than pointing at a diagnostic, so clicking it does not
+    /// jump anywhere.
+    header: bool,
+}
+
+/// The problems list broken up by the checker that reported each one, with a
+/// header row per source — JetBrains "Group by Inspection"
+/// (`ProblemsView.GroupByToolId`). Pure — unit tested.
+///
+/// Sources are ordered by name so the list does not reshuffle between frames,
+/// and diagnostics with no source are gathered last under `other`: dropping
+/// them would hide problems, and inventing a name for them would claim a
+/// checker that did not report itself.
+fn group_problems_by_source(rows: Vec<ProblemRow>) -> Vec<ProblemRow> {
+    use std::collections::BTreeMap;
+    let mut groups: BTreeMap<String, Vec<ProblemRow>> = BTreeMap::new();
+    let mut ungrouped: Vec<ProblemRow> = Vec::new();
+    for row in rows {
+        match row.source.clone() {
+            Some(source) => groups.entry(source).or_default().push(row),
+            None => ungrouped.push(row),
+        }
+    }
+    if !ungrouped.is_empty() {
+        groups.entry("other".to_string()).or_default().extend(ungrouped);
+    }
+    let mut out = Vec::new();
+    for (source, rows) in groups {
+        out.push(ProblemRow {
+            line: 0,
+            start: 0,
+            end: 0,
+            sev: Severity::Hint,
+            msg: format!("{source} ({})", rows.len()),
+            source: Some(source),
+            header: true,
+        });
+        out.extend(rows);
+    }
+    out
 }
 
 /// Flattened Debug-tab row: `(kind, text, jump target)` where kind is
@@ -303,6 +347,9 @@ pub struct Ide {
     structure_searching: bool,
 
     problems: Vec<ProblemRow>,
+    /// JetBrains "Group by Inspection" (`ProblemsView.GroupByToolId`): the
+    /// problems list broken up by the checker that reported each one.
+    group_problems: bool,
     problems_sel: usize,
     problems_state: ratatui::widgets::TableState,
     ci_state: ratatui::widgets::TableState,
@@ -484,6 +531,7 @@ impl Ide {
             structure_filter: String::new(),
             structure_searching: false,
             problems: Vec::new(),
+            group_problems: false,
             problems_sel: 0,
             problems_state: ratatui::widgets::TableState::default(),
             ci_state: ratatui::widgets::TableState::default(),
@@ -734,6 +782,16 @@ impl Ide {
             self.fold_problems = false;
         }
         self.bottom_zoom
+    }
+
+    /// JetBrains "Group by Inspection" (`ProblemsView.GroupByToolId`): break
+    /// the problems list up by the checker that reported each one.
+    pub fn toggle_group_problems(&mut self) -> bool {
+        self.group_problems = !self.group_problems;
+        self.visible = true;
+        self.fold_problems = false;
+        self.problems_sel = 0;
+        self.group_problems
     }
 
     /// JetBrains "Compact Directories" (`ProjectView.CompactDirectories`).
@@ -1793,6 +1851,8 @@ impl Ide {
         } else {
             self.problems
                 .get(self.problems_sel)
+                // A group header names a checker; there is nothing to jump to.
+                .filter(|p| !p.header)
                 .map(|p| IdeAction::Goto {
                     from: p.start,
                     to: p.end,
@@ -2933,8 +2993,13 @@ impl Ide {
                 end: d.range.end,
                 sev: d.severity.unwrap_or(Severity::Hint),
                 msg: d.message.clone(),
+                source: d.source.clone(),
+                header: false,
             })
             .collect();
+        if self.group_problems {
+            self.problems = group_problems_by_source(std::mem::take(&mut self.problems));
+        }
         if self.problems_sel >= self.problems.len() {
             self.problems_sel = 0;
         }
@@ -4045,6 +4110,17 @@ impl Ide {
             .problems
             .iter()
             .map(|p| {
+                if p.header {
+                    // A source header: no severity glyph, no line number, the
+                    // name and count in the directory colour so the groups
+                    // read as structure rather than as problems.
+                    return Row::new(vec![
+                        Cell::from("▾").style(dim),
+                        Cell::from("").style(dim),
+                        Cell::from(p.msg.clone())
+                            .style(crate::ui::rat::to_rat_style(theme.get("function"))),
+                    ]);
+                }
                 let (glyph, st) = sev_mark(p.sev, theme);
                 Row::new(vec![
                     Cell::from(glyph).style(crate::ui::rat::to_rat_style(st)),
@@ -5348,8 +5424,8 @@ fn git_churn(dir: &std::path::Path) -> Vec<u64> {
 #[cfg(test)]
 mod parse_tests {
     use super::{
-        git_is_conflict, parse_file_line, parse_percent, parse_test_progress, todo_marker,
-        todo_marker_scope,
+        git_is_conflict, group_problems_by_source, parse_file_line, parse_percent,
+        parse_test_progress, todo_marker, todo_marker_scope, ProblemRow, Severity,
     };
 
     #[test]
@@ -5519,5 +5595,49 @@ mod parse_tests {
         // a bare timestamp must NOT match (no path-like token)
         assert_eq!(parse_file_line("12:34:56 building"), None);
         assert_eq!(parse_file_line("no location here"), None);
+    }
+
+    fn problem(msg: &str, source: Option<&str>) -> ProblemRow {
+        ProblemRow {
+            line: 0,
+            start: 0,
+            end: 0,
+            sev: Severity::Warning,
+            msg: msg.to_string(),
+            source: source.map(str::to_string),
+            header: false,
+        }
+    }
+
+    #[test]
+    fn group_problems_by_source_headers_each_checker() {
+        let grouped = group_problems_by_source(vec![
+            problem("unused import", Some("rustc")),
+            problem("needless clone", Some("clippy")),
+            problem("mystery", None),
+            problem("dead code", Some("rustc")),
+        ]);
+        let shape: Vec<(bool, String)> = grouped
+            .iter()
+            .map(|p| (p.header, p.msg.clone()))
+            .collect();
+        assert_eq!(
+            shape,
+            vec![
+                (true, "clippy (1)".to_string()),
+                (false, "needless clone".to_string()),
+                (true, "other (1)".to_string()),
+                (false, "mystery".to_string()),
+                (true, "rustc (2)".to_string()),
+                (false, "unused import".to_string()),
+                (false, "dead code".to_string()),
+            ],
+            "sources sorted by name, sourceless gathered under `other`, nothing dropped"
+        );
+    }
+
+    #[test]
+    fn group_problems_by_source_is_a_no_op_on_nothing() {
+        assert!(group_problems_by_source(Vec::new()).is_empty());
     }
 }
