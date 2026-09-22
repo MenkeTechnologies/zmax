@@ -941,6 +941,39 @@ impl DiffView {
     }
 
     /// Set every block's resolution.
+    /// JetBrains "Resolve Simple Conflicts" (`Diff.MagicResolveConflicts`):
+    /// take the blocks whose two sides say the same thing — both branches added
+    /// the same import, or reformatted a line identically — and leave every
+    /// real disagreement for a human. Returns how many were resolved.
+    ///
+    /// Sides are compared with their indentation and trailing space trimmed:
+    /// two branches that wrote the same line under different formatters are the
+    /// same change, and keeping either is the same file.
+    fn resolve_simple(&mut self) -> usize {
+        let side = |rows: &[DiffRow], range: &Range<usize>, lines: &[String], left: bool| {
+            rows[range.clone()]
+                .iter()
+                .filter_map(|r| if left { r.left } else { r.right })
+                .filter_map(|i| lines.get(i))
+                .map(|l| l.trim().to_string())
+                .filter(|l| !l.is_empty())
+                .collect::<Vec<_>>()
+        };
+        let mut resolved = 0;
+        for block in &mut self.blocks {
+            if block.resolution != Resolution::None {
+                continue;
+            }
+            let ours = side(&self.rows, &block.rows, &self.base_lines, true);
+            let theirs = side(&self.rows, &block.rows, &self.doc_lines, false);
+            if !ours.is_empty() && ours == theirs {
+                block.resolution = Resolution::Left;
+                resolved += 1;
+            }
+        }
+        resolved
+    }
+
     fn resolve_all(&mut self, resolution: Resolution) {
         for block in &mut self.blocks {
             block.resolution = resolution;
@@ -964,7 +997,7 @@ impl DiffView {
 }
 
 impl Component for DiffView {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let close: crate::compositor::Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
@@ -1078,6 +1111,16 @@ impl Component for DiffView {
             key!('R') => self.resolve_all(Resolution::Right),
             // Conflict-mode only: take both sides / reset to unresolved.
             key!('b') if self.kind == ViewKind::Conflict => self.resolve_selected(Resolution::Both),
+            // JetBrains "Resolve Simple Conflicts": the blocks whose two sides
+            // agree resolve themselves; the rest stay unresolved.
+            key!('m') if self.kind == ViewKind::Conflict => {
+                let n = self.resolve_simple();
+                let remaining = self.unresolved_count();
+                cx.editor.set_status(match n {
+                    0 => "no conflict has two sides that agree".to_string(),
+                    n => format!("{n} simple conflict(s) resolved, {remaining} left"),
+                });
+            }
             key!('u') | key!('x') if self.kind == ViewKind::Conflict => {
                 self.resolve_selected(Resolution::None)
             }
@@ -1225,7 +1268,7 @@ impl Component for DiffView {
                 " Working tree",
             ),
             ViewKind::Conflict => (
-                ", ours  . theirs  b both  u unresolve  B base  n/p nav  Enter apply  q cancel",
+                ", ours  . theirs  b both  m simple  u unresolve  B base  n/p nav  Enter apply  q cancel",
                 " Current (ours)",
                 " Incoming (theirs)",
             ),
@@ -2630,5 +2673,37 @@ mod tests {
         assert_eq!(view.hscroll, 6);
         view.hscroll_by(-100);
         assert_eq!(view.hscroll, 0);
+    }
+
+    #[test]
+    fn simple_conflicts_are_the_ones_whose_sides_agree() {
+        let text = "\
+ctx
+<<<<<<< HEAD
+use a;
+=======
+    use a;
+>>>>>>> other
+mid
+<<<<<<< HEAD
+let x = 1;
+=======
+let x = 2;
+>>>>>>> other
+";
+        let segments = parse_conflicts(text).expect("the text holds conflicts");
+        let mut view = DiffView::from_conflicts(
+            "f.rs".to_string(),
+            DocumentId::default(),
+            None,
+            segments,
+        );
+
+        // The first conflict says the same thing on both sides bar the indent;
+        // the second is a real disagreement.
+        assert_eq!(view.resolve_simple(), 1);
+        assert_eq!(view.unresolved_count(), 1);
+        // Running it again finds nothing new to do.
+        assert_eq!(view.resolve_simple(), 0);
     }
 }
