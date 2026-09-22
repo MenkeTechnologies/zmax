@@ -4315,7 +4315,7 @@ fn git_run(dir: &Path, args: &[&str]) -> Result<(), String> {
 }
 
 /// Run a read-only `git -C <dir> …`, returning stdout on success.
-fn git_output(dir: &Path, args: &[&str]) -> Option<String> {
+pub(crate) fn git_output(dir: &Path, args: &[&str]) -> Option<String> {
     let mut cmd = Command::new("git");
     cmd.arg("-C").arg(dir);
     for a in args {
