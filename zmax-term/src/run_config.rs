@@ -137,6 +137,21 @@ pub fn save(data: &RunConfigs) {
     let _ = std::fs::write(path, contents);
 }
 
+impl RunConfigs {
+    /// Remove config `index`, keeping `active` on the config it pointed at, or
+    /// on the nearest one left when that config is the one removed.
+    pub fn remove(&mut self, index: usize) -> Option<RunConfig> {
+        if index >= self.configs.len() {
+            return None;
+        }
+        let removed = self.configs.remove(index);
+        if self.active > index || self.active >= self.configs.len() {
+            self.active = self.active.saturating_sub(1);
+        }
+        Some(removed)
+    }
+}
+
 /// The currently-selected config, if the list is non-empty.
 pub fn active() -> Option<RunConfig> {
     let data = load();
@@ -200,5 +215,29 @@ mod tests {
     #[test]
     fn a_key_with_a_foreign_character_decodes_to_nothing() {
         assert!(b64_url_decode("abc*def").is_none());
+    }
+
+    #[test]
+    fn removing_a_config_keeps_active_on_the_same_one() {
+        let named = |names: &[&str]| super::RunConfigs {
+            active: 0,
+            configs: names
+                .iter()
+                .map(|n| super::RunConfig {
+                    name: n.to_string(),
+                    ..Default::default()
+                })
+                .collect(),
+        };
+        let mut data = named(&["a", "b", "c"]);
+        data.active = 2;
+        data.remove(0);
+        assert_eq!("c", data.configs[data.active].name);
+
+        let mut data = named(&["a", "b"]);
+        data.active = 1;
+        data.remove(1);
+        assert_eq!(0, data.active, "the removed active one falls back to its neighbour");
+        assert!(data.remove(5).is_none());
     }
 }

@@ -1607,6 +1607,10 @@
 | `shell_backward_command` | Move backward over a shell command on the input line (emacs shell-backward-command) |  |
 | `run_config_manager` | Manage run/debug configurations | **spacemacs, hybrid** — normal: `` <space>Rc ``, `` <space>Re ``, `` <space>cm ``, `` <space>pi ``, select: `` <space>Rc ``, `` <space>Re ``, `` <space>cm ``, `` <space>pi `` |
 | `run_active_config` | Run the active run configuration | **spacemacs** — normal: `` <F5> ``, `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, select: `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, insert: `` <C-c><C-c> ``<br>**hybrid** — normal: `` <F5> ``, `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, select: `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``<br>**vim** — normal: `` <F5> `` |
+| `run_config_picker` | Pick the active run configuration (JetBrains Select Run/Debug Configuration) |  |
+| `delete_run_config` | Delete a picked run configuration (JetBrains Delete Run Configuration) |  |
+| `copy_run_config` | Duplicate a picked run configuration (JetBrains Copy Configuration) |  |
+| `rerun_tests` | Run the most recent test run again (JetBrains Rerun Tests) |  |
 | `stop_run` | Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2) | **spacemacs, hybrid** — normal: `` <space>px ``, select: `` <space>px `` |
 | `clear_run_output` | Clear the Run tool window output | **spacemacs, hybrid** — normal: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck ``, select: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck `` |
 | `open_log_file` | Open zmax's own log file (JetBrains Show Log) | **spacemacs, hybrid** — normal: `` <space>hL ``, select: `` <space>hL `` |

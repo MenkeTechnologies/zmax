@@ -84338,5 +84338,37 @@
    "static:local_history_selection"
   ],
   "note": "LocalHistory.ShowSelectionHistory = zmax `local_history_selection` over the Local History store (zmax-term/src/local_history.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DeleteRunConfiguration",
+  "status": "ported",
+  "evidence": [
+   "static:delete_run_config"
+  ],
+  "note": "DeleteRunConfiguration = zmax `delete_run_config` over the project run configurations (zmax-term/src/run_config.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RerunTests",
+  "status": "ported",
+  "evidence": [
+   "static:rerun_tests"
+  ],
+  "note": "RerunTests = zmax `rerun_tests` over the project run configurations (zmax-term/src/run_config.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunConfiguration",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_picker"
+  ],
+  "note": "RunConfiguration = zmax `run_config_picker` over the project run configurations (zmax-term/src/run_config.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.CopyConfiguration",
+  "status": "ported",
+  "evidence": [
+   "static:copy_run_config"
+  ],
+  "note": "RunDashboard.CopyConfiguration = zmax `copy_run_config` over the project run configurations (zmax-term/src/run_config.rs)."
  }
 ]

@@ -1998,6 +1998,10 @@ impl MappableCommand {
         shell_backward_command, "Move backward over a shell command on the input line (emacs shell-backward-command)",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
+        run_config_picker, "Pick the active run configuration (JetBrains Select Run/Debug Configuration)",
+        delete_run_config, "Delete a picked run configuration (JetBrains Delete Run Configuration)",
+        copy_run_config, "Duplicate a picked run configuration (JetBrains Copy Configuration)",
+        rerun_tests, "Run the most recent test run again (JetBrains Rerun Tests)",
         stop_run, "Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2)",
         clear_run_output, "Clear the Run tool window output",
         open_log_file, "Open zmax's own log file (JetBrains Show Log)",
@@ -58224,6 +58228,100 @@ fn org_capture(cx: &mut Context) {
 }
 
 /// Run the active named run configuration (or auto-detect when none is set).
+/// Pick one of the project's run configurations and hand its index to `on_pick`.
+fn pick_run_config(
+    cx: &mut Context,
+    header: &'static str,
+    on_pick: impl Fn(&mut crate::compositor::Context, usize) + 'static,
+) {
+    let configs: Vec<(usize, crate::run_config::RunConfig)> =
+        crate::run_config::load().configs.into_iter().enumerate().collect();
+    if configs.is_empty() {
+        cx.editor.set_status("no run configurations");
+        return;
+    }
+    let columns = [
+        PickerColumn::new(header, |c: &(usize, crate::run_config::RunConfig), _: &()| {
+            c.1.name.as_str().into()
+        }),
+        PickerColumn::new("command", |c: &(usize, crate::run_config::RunConfig), _: &()| {
+            c.1.command.as_str().into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, configs, (), move |cx, c: &(usize, crate::run_config::RunConfig), _| {
+        on_pick(cx, c.0)
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Select Run/Debug Configuration" (`RunConfiguration`): pick the
+/// configuration the Run button and `run_active_config` use.
+fn run_config_picker(cx: &mut Context) {
+    pick_run_config(cx, "select", |cx, index| {
+        let mut data = crate::run_config::load();
+        data.active = index;
+        crate::run_config::save(&data);
+        let name = data.configs.get(index).map(|c| c.name.clone()).unwrap_or_default();
+        cx.editor.set_status(format!("active run configuration: {name}"));
+    });
+}
+
+/// JetBrains "Delete Run Configuration" (`DeleteRunConfiguration`).
+fn delete_run_config(cx: &mut Context) {
+    pick_run_config(cx, "delete", |cx, index| {
+        let mut data = crate::run_config::load();
+        let Some(removed) = data.remove(index) else {
+            return;
+        };
+        crate::run_config::save(&data);
+        cx.editor
+            .set_status(format!("deleted run configuration '{}'", removed.name));
+    });
+}
+
+/// JetBrains "Copy Configuration" (`RunDashboard.CopyConfiguration`): a
+/// duplicate of a run configuration, named after it, to edit into a variant.
+fn copy_run_config(cx: &mut Context) {
+    pick_run_config(cx, "copy", |cx, index| {
+        let mut data = crate::run_config::load();
+        let Some(original) = data.configs.get(index).cloned() else {
+            return;
+        };
+        let taken: std::collections::HashSet<String> =
+            data.configs.iter().map(|c| c.name.clone()).collect();
+        let name = (1..)
+            .map(|n| {
+                if n == 1 {
+                    format!("{} (copy)", original.name)
+                } else {
+                    format!("{} (copy {n})", original.name)
+                }
+            })
+            .find(|name| !taken.contains(name))
+            .unwrap_or_default();
+        data.configs.push(crate::run_config::RunConfig {
+            name: name.clone(),
+            ..original
+        });
+        crate::run_config::save(&data);
+        cx.editor.set_status(format!("added run configuration '{name}'"));
+    });
+}
+
+/// JetBrains "Rerun Tests" (`RerunTests`): run the most recent test run again,
+/// from the test history, whatever has run in the console since.
+fn rerun_tests(cx: &mut Context) {
+    let Some(last) = crate::test_history::entries().into_iter().max_by_key(|e| e.when) else {
+        cx.editor.set_status("no test run to repeat");
+        return;
+    };
+    cx.callback.push(Box::new(move |compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.start_run(cx, last.cmd.clone(), last.cwd.clone());
+        }
+    }));
+}
+
 fn run_active_config(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
