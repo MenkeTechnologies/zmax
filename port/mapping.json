@@ -83314,5 +83314,157 @@
    "static:git_worktree_prune"
   ],
   "note": "Git.WorkingTrees.Prune = zmax `git_worktree_prune`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Checkout.Update",
+  "status": "ported",
+  "evidence": [
+   "static:git_checkout_and_update"
+  ],
+  "note": "Git.Checkout.Update = zmax `git_checkout_and_update`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.CreateNewWorkingTree",
+  "status": "ported",
+  "evidence": [
+   "static:git_worktree_add"
+  ],
+  "note": "Git.CreateNewWorkingTree = zmax `git_worktree_add`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.FindMergedLocalBranches",
+  "status": "ported",
+  "evidence": [
+   "static:git_merged_branches"
+  ],
+  "note": "Git.FindMergedLocalBranches = zmax `git_merged_branches`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Merge",
+  "status": "ported",
+  "evidence": [
+   "static:git_merge_branch"
+  ],
+  "note": "Git.Merge = zmax `git_merge_branch`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Rebase",
+  "status": "ported",
+  "evidence": [
+   "static:git_rebase_onto"
+  ],
+  "note": "Git.Rebase = zmax `git_rebase_onto`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Ref.Compare.With",
+  "status": "ported",
+  "evidence": [
+   "static:git_compare_ref"
+  ],
+  "note": "Git.Ref.Compare.With = zmax `git_compare_ref`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Ref.Diff.With.Local",
+  "status": "ported",
+  "evidence": [
+   "static:git_diff_ref_with_local"
+  ],
+  "note": "Git.Ref.Diff.With.Local = zmax `git_diff_ref_with_local`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Rename.Local.Branch",
+  "status": "ported",
+  "evidence": [
+   "static:git_rename_branch"
+  ],
+  "note": "Git.Rename.Local.Branch = zmax `git_rename_branch`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Reset",
+  "status": "ported",
+  "evidence": [
+   "static:git_reset_head"
+  ],
+  "note": "Git.Reset = zmax `git_reset_head`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Compare.Local.Staged",
+  "status": "ported",
+  "evidence": [
+   "static:git_diff_local_staged"
+  ],
+  "note": "Git.Stage.Compare.Local.Staged = zmax `git_diff_local_staged`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Compare.Staged.Head",
+  "status": "ported",
+  "evidence": [
+   "static:git_diff_staged_head"
+  ],
+  "note": "Git.Stage.Compare.Staged.Head = zmax `git_diff_staged_head`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Compare.Staged.Local",
+  "status": "ported",
+  "evidence": [
+   "static:git_diff_staged_local"
+  ],
+  "note": "Git.Stage.Compare.Staged.Local = zmax `git_diff_staged_local`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Show.Staged",
+  "status": "ported",
+  "evidence": [
+   "static:git_show_staged"
+  ],
+  "note": "Git.Stage.Show.Staged = zmax `git_show_staged`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Stash.Files",
+  "status": "ported",
+  "evidence": [
+   "static:git_stash_file"
+  ],
+  "note": "Git.Stage.Stash.Files = zmax `git_stash_file`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash.Apply",
+  "status": "ported",
+  "evidence": [
+   "static:git_stash_apply_picked"
+  ],
+  "note": "Git.Stash.Apply = zmax `git_stash_apply_picked`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash.Drop",
+  "status": "ported",
+  "evidence": [
+   "static:git_stash_drop_picked"
+  ],
+  "note": "Git.Stash.Drop = zmax `git_stash_drop_picked`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash.UnstashAs",
+  "status": "ported",
+  "evidence": [
+   "static:git_unstash_as_branch"
+  ],
+  "note": "Git.Stash.UnstashAs = zmax `git_unstash_as_branch`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Tag.Push",
+  "status": "ported",
+  "evidence": [
+   "static:git_push_tag"
+  ],
+  "note": "Git.Tag.Push = zmax `git_push_tag`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.WorkingTrees.Remove",
+  "status": "ported",
+  "evidence": [
+   "static:git_worktree_remove"
+  ],
+  "note": "Git.WorkingTrees.Remove = zmax `git_worktree_remove`: same git operation; the IDE dialog or list selection is a picker or prompt."
  }
 ]

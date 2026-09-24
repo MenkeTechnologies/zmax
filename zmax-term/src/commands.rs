@@ -1326,6 +1326,25 @@ impl MappableCommand {
         git_worktree_prune, "Forget working trees whose directories are gone (JetBrains Prune)",
         git_stash_clear, "Drop every stash (JetBrains Clear)",
         git_open_exclude_file, "Open the repository's .git/info/exclude (JetBrains Git.OpenExcludeFile)",
+        git_merge_branch, "Merge a picked branch into the current one (JetBrains Merge)",
+        git_rebase_onto, "Rebase the current branch onto a picked one (JetBrains Rebase)",
+        git_checkout_and_update, "Check out a picked branch and fast-forward it from upstream (JetBrains Checkout and Update)",
+        git_rename_branch, "Rename a picked local branch (JetBrains Git.Rename.Local.Branch)",
+        git_reset_head, "Reset HEAD to a commit, soft, mixed, hard or keep (JetBrains Reset HEAD)",
+        git_push_tag, "Push a picked tag to the current branch's remote (JetBrains Git.Tag.Push)",
+        git_stash_apply_picked, "Apply a picked stash (JetBrains stash Apply)",
+        git_stash_drop_picked, "Drop a picked stash (JetBrains stash Drop)",
+        git_unstash_as_branch, "Pop a picked stash onto a new branch (JetBrains Unstash)",
+        git_stash_file, "Stash the changes to this file only (JetBrains Git.Stage.Stash.Files)",
+        git_worktree_add, "Create a linked worktree at a path, on a new branch or at HEAD (JetBrains New Worktree)",
+        git_worktree_remove, "Remove a picked linked worktree (JetBrains worktree Delete)",
+        git_merged_branches, "List local branches already merged into HEAD (JetBrains Find Merged Local Branches)",
+        git_diff_ref_with_local, "Diff a picked branch against the working tree (JetBrains Git.Ref.Diff.With.Local)",
+        git_compare_ref, "Commits and files that differ between a picked branch and HEAD (JetBrains Git.Ref.Compare.With)",
+        git_diff_staged_head, "Diff the staged version of this file against HEAD (JetBrains Compare with HEAD Version)",
+        git_diff_local_staged, "Diff this file against its staged version (JetBrains Compare with Staged Version)",
+        git_diff_staged_local, "Diff the staged version of this file against the working tree (JetBrains Compare with Local Version)",
+        git_show_staged, "Show this file as the index holds it (JetBrains Show Staged Version)",
         git_acp, "Stage all, commit, and push in one shot (C-x v c)",
         vc_print_log, "VC log for the current file (emacs vc-print-log)",
         vc_print_root_log, "VC log for the whole repository (emacs vc-print-root-log)",
@@ -71518,6 +71537,382 @@ fn git_compare_with_branch(cx: &mut Context) {
         );
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Run `git <args>` in the workspace from a picker or prompt callback, report
+/// the outcome, and reload open buffers when the working tree may have moved.
+fn git_run_cx(cx: &mut crate::compositor::Context, args: &[&str], done: &str, reload: bool) {
+    match git_exec(args) {
+        Ok(_) => {
+            if reload {
+                crate::commands::typed::reload_open_docs(cx);
+            }
+            cx.editor.set_status(done.to_string());
+        }
+        Err(e) => cx.editor.set_error(format!(
+            "git {}: {}",
+            args.join(" "),
+            e.lines().find(|l| !l.trim().is_empty()).unwrap_or("failed")
+        )),
+    }
+}
+
+/// `git_async` from a picker or prompt callback, which holds a compositor
+/// context rather than a command one.
+fn git_async_cx(
+    cx: &mut crate::compositor::Context,
+    busy: &'static str,
+    args: Vec<String>,
+    label: &'static str,
+    reload_worktree: bool,
+) {
+    let mut cx = Context {
+        register: None,
+        count: None,
+        editor: cx.editor,
+        callback: Vec::new(),
+        on_next_key_callback: None,
+        jobs: cx.jobs,
+    };
+    git_async(&mut cx, busy, args, label, reload_worktree);
+}
+
+/// The lines `git <args>` prints, or nothing when git fails.
+fn git_lines(args: &[&str]) -> Vec<String> {
+    git_exec(args)
+        .map(|out| {
+            out.lines()
+                .map(|l| l.trim().to_string())
+                .filter(|l| !l.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Local branches, then remote-tracking ones: what JetBrains' branch actions
+/// offer to merge, rebase onto or compare with.
+fn git_branch_refs() -> Vec<String> {
+    git_lines(&[
+        "for-each-ref",
+        "--format=%(refname:short)",
+        "refs/heads/",
+        "refs/remotes/",
+    ])
+    .into_iter()
+    .filter(|r| !r.ends_with("/HEAD"))
+    .collect()
+}
+
+/// A one-column picker over `items`, calling `on_pick` with the chosen one.
+fn git_pick<F>(cx: &mut Context, header: &'static str, items: Vec<String>, empty: &str, on_pick: F)
+where
+    F: Fn(&mut crate::compositor::Context, &str) + 'static,
+{
+    if items.is_empty() {
+        cx.editor.set_status(empty.to_string());
+        return;
+    }
+    let columns = [PickerColumn::new(header, |item: &String, _: &()| {
+        item.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, items, (), move |cx, item: &String, _action| {
+        on_pick(cx, item)
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Merge" (`Git.Merge`): merge a picked branch into the current one.
+fn git_merge_branch(cx: &mut Context) {
+    git_pick(cx, "merge into current", git_branch_refs(), "No git branches", |cx, branch| {
+        git_run_cx(cx, &["merge", branch], &format!("Merged {branch}"), true)
+    });
+}
+
+/// JetBrains "Rebase" (`Git.Rebase`): rebase the current branch onto a picked
+/// one.
+fn git_rebase_onto(cx: &mut Context) {
+    git_pick(cx, "rebase onto", git_branch_refs(), "No git branches", |cx, branch| {
+        git_run_cx(cx, &["rebase", branch], &format!("Rebased onto {branch}"), true)
+    });
+}
+
+/// JetBrains "Checkout and Update" (`Git.Checkout.Update`): switch to a local
+/// branch, then fast-forward it from its upstream.
+fn git_checkout_and_update(cx: &mut Context) {
+    git_pick(cx, "checkout and update", git_branch_names(), "No git branches", |cx, branch| {
+        if let Err(e) = git_exec(&["checkout", branch]) {
+            cx.editor.set_error(format!(
+                "git checkout {branch}: {}",
+                e.lines().next().unwrap_or("failed")
+            ));
+            return;
+        }
+        crate::commands::typed::reload_open_docs(cx);
+        git_async_cx(
+            cx,
+            "updating…",
+            vec!["pull".into(), "--ff-only".into()],
+            "checked out and updated",
+            true,
+        );
+    });
+}
+
+/// JetBrains `Git.Rename.Local.Branch`: rename a picked local branch.
+fn git_rename_branch(cx: &mut Context) {
+    git_pick(cx, "rename branch", git_branch_names(), "No git branches", |cx, branch| {
+        let old = branch.to_string();
+        prompt_then_cx(cx, "new branch name: ", move |cx, new| {
+            git_run_cx(cx, &["branch", "-m", &old, new], &format!("Renamed {old} to {new}"), false)
+        });
+    });
+}
+
+/// JetBrains "Reset HEAD" (`Git.Reset`): move HEAD to a commit, branch or tag,
+/// then choose what happens to the index and working tree, as the dialog's
+/// Soft / Mixed / Hard / Keep does.
+fn git_reset_head(cx: &mut Context) {
+    prompt_then(cx, "reset HEAD to: ", |cx, target| {
+        let target = target.to_string();
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let modes = ["mixed", "soft", "hard", "keep"].map(String::from).to_vec();
+                let columns = [PickerColumn::new("reset mode", |m: &String, _: &()| {
+                    m.as_str().into()
+                })];
+                let target = target.clone();
+                let picker = Picker::new(columns, 0, modes, (), move |cx, mode: &String, _| {
+                    git_run_cx(
+                        cx,
+                        &["reset", &format!("--{mode}"), &target],
+                        &format!("HEAD reset to {target} ({mode})"),
+                        true,
+                    )
+                });
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+/// The remote the current branch pushes to, or `origin`.
+fn git_push_remote() -> String {
+    git_exec(&["rev-parse", "--abbrev-ref", "HEAD"])
+        .ok()
+        .and_then(|branch| git_exec(&["config", &format!("branch.{branch}.remote")]).ok())
+        .filter(|remote| !remote.is_empty())
+        .unwrap_or_else(|| "origin".into())
+}
+
+/// JetBrains `Git.Tag.Push`: push a picked tag to the current branch's remote.
+fn git_push_tag(cx: &mut Context) {
+    let tags = git_lines(&["tag", "--sort=-creatordate"]);
+    git_pick(cx, "push tag", tags, "No tags", |cx, tag| {
+        git_async_cx(
+            cx,
+            "pushing tag…",
+            vec!["push".into(), git_push_remote(), format!("refs/tags/{tag}")],
+            "tag pushed",
+            false,
+        )
+    });
+}
+
+/// `stash@{n}: message` for every stash, newest first.
+fn git_stashes() -> Vec<String> {
+    git_lines(&["stash", "list", "--format=%gd: %s"])
+}
+
+/// The `stash@{n}` a stash-list line starts with.
+fn stash_ref(line: &str) -> &str {
+    line.split(": ").next().unwrap_or(line)
+}
+
+/// JetBrains "Apply" in the stash list (`Git.Stash.Apply`).
+fn git_stash_apply_picked(cx: &mut Context) {
+    git_pick(cx, "apply stash", git_stashes(), "No stashes", |cx, line| {
+        let stash = stash_ref(line);
+        git_run_cx(cx, &["stash", "apply", stash], &format!("Applied {stash}"), true)
+    });
+}
+
+/// JetBrains "Drop" in the stash list (`Git.Stash.Drop`).
+fn git_stash_drop_picked(cx: &mut Context) {
+    git_pick(cx, "drop stash", git_stashes(), "No stashes", |cx, line| {
+        let stash = stash_ref(line);
+        git_run_cx(cx, &["stash", "drop", stash], &format!("Dropped {stash}"), false)
+    });
+}
+
+/// JetBrains "Unstash" as a new branch (`Git.Stash.UnstashAs`): `git stash
+/// branch` checks out a branch at the commit the stash was made on and pops
+/// the stash there, index included.
+fn git_unstash_as_branch(cx: &mut Context) {
+    git_pick(cx, "unstash as branch", git_stashes(), "No stashes", |cx, line| {
+        let stash = stash_ref(line).to_string();
+        prompt_then_cx(cx, "new branch: ", move |cx, branch| {
+            git_run_cx(
+                cx,
+                &["stash", "branch", branch, &stash],
+                &format!("Unstashed {stash} onto {branch}"),
+                true,
+            )
+        });
+    });
+}
+
+/// `git stash push` limited to this buffer's file (`Git.Stage.Stash.Files`).
+fn git_stash_file(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_run_status(cx, &["stash", "push", "--", &rel], true);
+}
+
+/// JetBrains "New Worktree" (`Git.CreateNewWorkingTree`): a linked working tree
+/// at a new path, on a new branch when one is named and at HEAD otherwise.
+fn git_worktree_add(cx: &mut Context) {
+    prompt_then(cx, "worktree path: ", |cx, path| {
+        let path = path.to_string();
+        prompt_then_cx_allow_empty(cx, "new branch (empty: detached HEAD): ", move |cx, branch| {
+            let branch = branch.trim();
+            let mut args = vec!["worktree", "add"];
+            if !branch.is_empty() {
+                args.extend(["-b", branch]);
+            } else {
+                args.push("--detach");
+            }
+            args.push(&path);
+            git_run_cx(cx, &args, &format!("Worktree created at {path}"), false)
+        });
+    });
+}
+
+/// The linked working trees, the main one left out since it cannot be removed.
+fn git_linked_worktrees() -> Vec<String> {
+    git_lines(&["worktree", "list", "--porcelain"])
+        .into_iter()
+        .filter_map(|l| l.strip_prefix("worktree ").map(str::to_string))
+        .skip(1)
+        .collect()
+}
+
+/// JetBrains "Delete" in the worktree list (`Git.WorkingTrees.Remove`).
+fn git_worktree_remove(cx: &mut Context) {
+    git_pick(cx, "remove worktree", git_linked_worktrees(), "No linked worktrees", |cx, path| {
+        git_run_cx(cx, &["worktree", "remove", path], &format!("Removed worktree {path}"), false)
+    });
+}
+
+/// JetBrains "Find Merged Local Branches" (`Git.FindMergedLocalBranches`):
+/// the local branches whose work is already in the current one.
+fn git_merged_branches(cx: &mut Context) {
+    git_output_to_scratch(
+        cx,
+        &["branch", "--merged", "HEAD", "--format=%(refname:short)"],
+        "No local branches are merged into HEAD",
+    );
+}
+
+/// JetBrains `Git.Ref.Diff.With.Local`: the whole tree's difference between a
+/// picked branch and the working tree.
+fn git_diff_ref_with_local(cx: &mut Context) {
+    git_pick(cx, "diff with local", git_branch_refs(), "No git branches", |cx, branch| {
+        git_output_to_scratch_cx(
+            cx,
+            &["diff", branch],
+            &format!("The working tree matches {branch}"),
+        )
+    });
+}
+
+/// JetBrains `Git.Ref.Compare.With`: what a picked branch has that the current
+/// one lacks, the reverse, and the files that differ.
+fn git_compare_ref(cx: &mut Context) {
+    git_pick(cx, "compare with current", git_branch_refs(), "No git branches", |cx, branch| {
+        let section = |title: String, args: &[&str]| {
+            let body = git_exec(args).unwrap_or_default();
+            format!("{title}\n{}\n", if body.is_empty() { "  (none)".into() } else { body })
+        };
+        let text = [
+            section(format!("Commits in {branch} not in HEAD:"), &["log", "--oneline", &format!("HEAD..{branch}")]),
+            section(format!("Commits in HEAD not in {branch}:"), &["log", "--oneline", &format!("{branch}..HEAD")]),
+            section("Files that differ:".into(), &["diff", "--stat", &format!("HEAD...{branch}")]),
+        ]
+        .join("\n");
+        show_text_in_scratch(cx.editor, &text);
+    });
+}
+
+/// This buffer's path relative to the workspace root, which is where
+/// `git_exec` runs. Reports an error and returns `None` for a scratch buffer.
+fn git_rel_path(cx: &mut Context) -> Option<String> {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("buffer has no file path");
+        return None;
+    };
+    let root = zmax_loader::find_workspace().0;
+    Some(path.strip_prefix(&root).unwrap_or(&path).display().to_string())
+}
+
+/// Run `git <args>` and put the last line it prints on the status line.
+/// `reload` refreshes open buffers, for commands that rewrite the working tree.
+fn git_run_status(cx: &mut Context, args: &[&str], reload: bool) {
+    match git_exec(args) {
+        Ok(out) => {
+            if reload {
+                reload_all_open_docs(cx.editor);
+            }
+            cx.editor.set_status(
+                out.lines()
+                    .last()
+                    .map_or_else(|| format!("git {}", args.join(" ")), str::to_string),
+            );
+        }
+        Err(e) => cx.editor.set_error(format!(
+            "git {}: {}",
+            args.join(" "),
+            e.lines().next().unwrap_or("failed")
+        )),
+    }
+}
+
+/// JetBrains "Compare with HEAD Version" of the staged file
+/// (`Git.Stage.Compare.Staged.Head`): what `git commit` would record for it.
+fn git_diff_staged_head(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_output_to_scratch(cx, &["diff", "--cached", "--", &rel], "Nothing staged for this file");
+}
+
+/// JetBrains "Compare with Staged Version" (`Git.Stage.Compare.Local.Staged`):
+/// the working-tree changes not yet staged.
+fn git_diff_local_staged(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_output_to_scratch(cx, &["diff", "--", &rel], "The working tree matches the staged version");
+}
+
+/// JetBrains "Compare with Local Version" of the staged file
+/// (`Git.Stage.Compare.Staged.Local`): the same pair as the one above, read
+/// from the staged side.
+fn git_diff_staged_local(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_output_to_scratch(cx, &["diff", "-R", "--", &rel], "The staged version matches the working tree");
+}
+
+/// JetBrains "Show Staged Version" (`Git.Stage.Show.Staged`): the file as the
+/// index holds it.
+fn git_show_staged(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_output_to_scratch(cx, &["show", &format!(":{rel}")], "The staged version is empty");
 }
 
 /// JetBrains "Pin Tab": keep this buffer out of `:buffer-close-others`,

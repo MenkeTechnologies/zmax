@@ -935,6 +935,25 @@
 | `git_worktree_prune` | Forget working trees whose directories are gone (JetBrains Prune) |  |
 | `git_stash_clear` | Drop every stash (JetBrains Clear) |  |
 | `git_open_exclude_file` | Open the repository's .git/info/exclude (JetBrains Git.OpenExcludeFile) |  |
+| `git_merge_branch` | Merge a picked branch into the current one (JetBrains Merge) |  |
+| `git_rebase_onto` | Rebase the current branch onto a picked one (JetBrains Rebase) |  |
+| `git_checkout_and_update` | Check out a picked branch and fast-forward it from upstream (JetBrains Checkout and Update) |  |
+| `git_rename_branch` | Rename a picked local branch (JetBrains Git.Rename.Local.Branch) |  |
+| `git_reset_head` | Reset HEAD to a commit, soft, mixed, hard or keep (JetBrains Reset HEAD) |  |
+| `git_push_tag` | Push a picked tag to the current branch's remote (JetBrains Git.Tag.Push) |  |
+| `git_stash_apply_picked` | Apply a picked stash (JetBrains stash Apply) |  |
+| `git_stash_drop_picked` | Drop a picked stash (JetBrains stash Drop) |  |
+| `git_unstash_as_branch` | Pop a picked stash onto a new branch (JetBrains Unstash) |  |
+| `git_stash_file` | Stash the changes to this file only (JetBrains Git.Stage.Stash.Files) |  |
+| `git_worktree_add` | Create a linked worktree at a path, on a new branch or at HEAD (JetBrains New Worktree) |  |
+| `git_worktree_remove` | Remove a picked linked worktree (JetBrains worktree Delete) |  |
+| `git_merged_branches` | List local branches already merged into HEAD (JetBrains Find Merged Local Branches) |  |
+| `git_diff_ref_with_local` | Diff a picked branch against the working tree (JetBrains Git.Ref.Diff.With.Local) |  |
+| `git_compare_ref` | Commits and files that differ between a picked branch and HEAD (JetBrains Git.Ref.Compare.With) |  |
+| `git_diff_staged_head` | Diff the staged version of this file against HEAD (JetBrains Compare with HEAD Version) |  |
+| `git_diff_local_staged` | Diff this file against its staged version (JetBrains Compare with Staged Version) |  |
+| `git_diff_staged_local` | Diff the staged version of this file against the working tree (JetBrains Compare with Local Version) |  |
+| `git_show_staged` | Show this file as the index holds it (JetBrains Show Staged Version) |  |
 | `git_acp` | Stage all, commit, and push in one shot (C-x v c) | **spacemacs** — normal: `` <C-x>vc ``, select: `` <C-x>vc ``, insert: `` <C-x>vc ``<br>**hybrid** — normal: `` <C-x>vc ``, select: `` <C-x>vc `` |
 | `vc_print_log` | VC log for the current file (emacs vc-print-log) | **spacemacs** — normal: `` <C-x>vl ``, select: `` <C-x>vl ``, insert: `` <C-x>vl ``<br>**hybrid** — normal: `` <C-x>vl ``, select: `` <C-x>vl `` |
 | `vc_print_root_log` | VC log for the whole repository (emacs vc-print-root-log) | **spacemacs** — normal: `` <C-x>vL ``, select: `` <C-x>vL ``, insert: `` <C-x>vL ``<br>**hybrid** — normal: `` <C-x>vL ``, select: `` <C-x>vL `` |
