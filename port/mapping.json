@@ -78021,5 +78021,4818 @@
    "static:later"
   ],
   "note": "`:later {count|timespan}` steps forward (zmax-term/src/commands/typed.rs:55474-55476)."
+ },
+ {
+  "spec_id": "jetbrains-actions.$Copy",
+  "status": "ported",
+  "evidence": [
+   "typable:clipboard-yank"
+  ],
+  "note": "$Copy (Copy) = zmax `clipboard-yank`: copies the main selection to the system clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.$Cut",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_clipboard"
+  ],
+  "note": "$Cut (Cut) = zmax `cut_to_clipboard`: cuts the selection to the system clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.$Delete",
+  "status": "ported",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "$Delete (Delete) = zmax `delete_selection`: deletes the selected text."
+ },
+ {
+  "spec_id": "jetbrains-actions.$Paste",
+  "status": "ported",
+  "evidence": [
+   "static:paste_clipboard_after"
+  ],
+  "note": "$Paste (Paste) = zmax `paste_clipboard_after`: pastes the system clipboard at the selections."
+ },
+ {
+  "spec_id": "jetbrains-actions.$Redo",
+  "status": "ported",
+  "evidence": [
+   "static:redo"
+  ],
+  "note": "$Redo (Redo) = zmax `redo`: redoes the last undone change."
+ },
+ {
+  "spec_id": "jetbrains-actions.$SearchWeb",
+  "status": "partial",
+  "evidence": [
+   "typable:eww-search-words"
+  ],
+  "note": "$SearchWeb (Search with Google) = zmax `eww-search-words`: web-searches the word under the cursor (or given words) but renders results in the in-editor eww browser rather than searching the selection in the OS browser."
+ },
+ {
+  "spec_id": "jetbrains-actions.$SelectAll",
+  "status": "ported",
+  "evidence": [
+   "static:select_all"
+  ],
+  "note": "$SelectAll (Select All) = zmax `select_all`: selects the whole document."
+ },
+ {
+  "spec_id": "jetbrains-actions.$Undo",
+  "status": "ported",
+  "evidence": [
+   "static:undo"
+  ],
+  "note": "$Undo (Undo) = zmax `undo`: undoes the last change."
+ },
+ {
+  "spec_id": "jetbrains-actions.About",
+  "status": "ported",
+  "evidence": [
+   "typable:version"
+  ],
+  "note": "About (About) = zmax `:version`: shows the editor version and compiled feature summary."
+ },
+ {
+  "spec_id": "jetbrains-actions.ActivateCommitToolWindow",
+  "status": "ported",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "ActivateCommitToolWindow (ActivateCommitToolWindow) = zmax `git_status`: opens the Magit status buffer that lists local changes and composes the commit (same mapping as keymap \"Show Commit window\")."
+ },
+ {
+  "spec_id": "jetbrains-actions.ActivateDebugToolWindow",
+  "status": "ported",
+  "evidence": [
+   "static:show_debug_window"
+  ],
+  "note": "ActivateDebugToolWindow (Debug) = zmax `show_debug_window`: opens the Debug tool window."
+ },
+ {
+  "spec_id": "jetbrains-actions.ActivateRunToolWindow",
+  "status": "ported",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": "ActivateRunToolWindow (Run) = zmax `focus_run_console`: focuses the Run console panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.ActivityView.Revert",
+  "status": "partial",
+  "evidence": [
+   "static:local_history_revert"
+  ],
+  "note": "ActivityView.Revert (Revert Selected and Later Changes) = zmax `local_history_revert`: reverts the buffer to a picked Local History snapshot (dropping every later change) but from a picker, not the Activity timeline view."
+ },
+ {
+  "spec_id": "jetbrains-actions.Annotate",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_blame_annotate"
+  ],
+  "note": "Annotate (Annotate) = zmax `toggle_blame_annotate`: toggles a git-blame gutter column showing each line's last commit author/date."
+ },
+ {
+  "spec_id": "jetbrains-actions.AssociateWithFileType",
+  "status": "partial",
+  "evidence": [
+   "typable:set-language"
+  ],
+  "note": "AssociateWithFileType (Associate with File Type) = zmax `:set-language`: sets the current buffer's language, but only for that buffer; IntelliJ persists a file-name-to-file-type association."
+ },
+ {
+  "spec_id": "jetbrains-actions.AutoIndentLines",
+  "status": "ported",
+  "evidence": [
+   "static:auto_indent_lines"
+  ],
+  "note": "AutoIndentLines (Auto-Indent Lines) = zmax `auto_indent_lines`: reindents the selected lines per the language's indent rules."
+ },
+ {
+  "spec_id": "jetbrains-actions.Back",
+  "status": "ported",
+  "evidence": [
+   "static:jump_backward"
+  ],
+  "note": "Back (Back) = zmax `jump_backward`: moves back one entry on the navigation jumplist."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarkOpenTabs",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_open_tabs"
+  ],
+  "note": "BookmarkOpenTabs (Bookmark Open Tabs) = zmax `bookmark_open_tabs`: drops a line bookmark at the cursor line of every open buffer (zmax-term/src/commands.rs:35285)."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.GroupLineBookmarks",
+  "status": "ported",
+  "evidence": [
+   "static:bookmarks_view"
+  ],
+  "note": "BookmarksView.GroupLineBookmarks (Group Line Bookmarks by File) = zmax `bookmarks_view`: lists every line bookmark grouped by file with its line text (zmax-term/src/commands.rs:35165)."
+ },
+ {
+  "spec_id": "jetbrains-actions.BraceOrQuoteOut",
+  "status": "ported",
+  "evidence": [
+   "static:goto_outside_bracket"
+  ],
+  "note": "BraceOrQuoteOut (Jump Outside Current Bracket/Quote) = zmax `goto_outside_bracket`: puts the cursor just past the enclosing bracket or quote (zmax-term/src/commands.rs:4628)."
+ },
+ {
+  "spec_id": "jetbrains-actions.BrowseSpecialPaths",
+  "status": "ported",
+  "evidence": [
+   "typable:special-paths"
+  ],
+  "note": "BrowseSpecialPaths (Special Files and Folders) = zmax `:special-paths`: picks and opens the editor's own config/data/log directories and files (zmax-term/src/commands/typed.rs:7527)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CallHierarchy",
+  "status": "ported",
+  "evidence": [
+   "static:call_hierarchy_incoming_calls"
+  ],
+  "note": "CallHierarchy (Call Hierarchy) = zmax `call_hierarchy_incoming_calls`: shows the LSP call hierarchy of callers for the symbol."
+ },
+ {
+  "spec_id": "jetbrains-actions.CallInlineCompletionAction",
+  "status": "partial",
+  "evidence": [
+   "static:ai_complete"
+  ],
+  "note": "CallInlineCompletionAction (Call Inline Completion) = zmax `ai_complete`: requests an AI completion at the cursor on demand but inserts it directly instead of showing it as inline ghost text to accept."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeColorScheme",
+  "status": "ported",
+  "evidence": [
+   "static:theme_picker"
+  ],
+  "note": "ChangeColorScheme (Editor Color Scheme) = zmax `theme_picker`: switches the editor color theme with live preview."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeFileEncodingAction",
+  "status": "ported",
+  "evidence": [
+   "typable:encoding"
+  ],
+  "note": "ChangeFileEncodingAction (File Encoding) = zmax `:encoding`: sets the buffer's file encoding."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeInspectionProfile",
+  "status": "ported",
+  "evidence": [
+   "typable:diagnostics-severity"
+  ],
+  "note": "ChangeInspectionProfile (Error Highlighting) = zmax `:diagnostics-severity`: sets the lowest diagnostic severity drawn, zmax's Error Highlighting level (zmax-term/src/commands/typed.rs:25002)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeKeymap",
+  "status": "ported",
+  "evidence": [
+   "typable:keymap"
+  ],
+  "note": "ChangeKeymap (Keymap) = zmax `:keymap`: switches the active keymap preset."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeLaf",
+  "status": "partial",
+  "evidence": [
+   "static:theme_picker"
+  ],
+  "note": "ChangeLaf (Theme) = zmax `theme_picker`: switches one theme that styles both text and UI chrome; there is no separate IDE look-and-feel layer."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeSignature",
+  "status": "ported",
+  "evidence": [
+   "static:change_signature"
+  ],
+  "note": "ChangeSignature (Change Signature) = zmax `change_signature`: changes a function's signature and updates its call sites."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeSplitOrientation",
+  "status": "ported",
+  "evidence": [
+   "static:transpose_view"
+  ],
+  "note": "ChangeSplitOrientation (Change Splitter Orientation) = zmax `transpose_view`: flips the split between horizontal and vertical."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.AddUnversioned",
+  "status": "ported",
+  "evidence": [
+   "typable:git-stage"
+  ],
+  "note": "ChangesView.AddUnversioned (Add to VCS) = zmax `:git-stage`: adds the current file to git (same mapping as keymap \"Add to VCS\")."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.ApplyPatch",
+  "status": "partial",
+  "evidence": [
+   "static:ediff_patch_file"
+  ],
+  "note": "ChangesView.ApplyPatch (Apply Patch) = zmax `ediff_patch_file`: applies a patch file and reviews the result, but to one file rather than across the project tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.ApplyPatchFromClipboard",
+  "status": "ported",
+  "evidence": [
+   "typable:apply-patch"
+  ],
+  "note": "ChangesView.ApplyPatchFromClipboard (Apply Patch from Clipboard) = zmax `:apply-patch`: feeds the clipboard to `git apply` and reloads touched buffers (zmax-term/src/commands/typed.rs:25629)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.Browse",
+  "status": "ported",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "ChangesView.Browse (Browse Changes) = zmax `git_repo_log_picker`: browses the repository's commit history."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.CreatePatch",
+  "status": "ported",
+  "evidence": [
+   "typable:create-patch"
+  ],
+  "note": "ChangesView.CreatePatch (Create Patch from Local Changes) = zmax `:create-patch`: writes the working tree diff to a file or scratch buffer (zmax-term/src/commands/typed.rs:25577)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.CreatePatchFromChanges",
+  "status": "partial",
+  "evidence": [
+   "typable:create-patch"
+  ],
+  "note": "ChangesView.CreatePatchFromChanges (Create Patch) = zmax `:create-patch`: makes a patch of all local changes; there is no per-selected-change subset."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.CreatePatchToClipboard",
+  "status": "ported",
+  "evidence": [
+   "typable:copy-patch"
+  ],
+  "note": "ChangesView.CreatePatchToClipboard (Copy as Patch to Clipboard) = zmax `:copy-patch`: copies the working tree diff to the clipboard (zmax-term/src/commands/typed.rs:25607)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.Edit",
+  "status": "ported",
+  "evidence": [
+   "typable:p4-edit"
+  ],
+  "note": "ChangesView.Edit (Check Out) = zmax `:p4-edit`: checks a file out for edit (`p4 edit`), the VCS checkout this action performs."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.Move",
+  "status": "ported",
+  "evidence": [
+   "typable:changelist"
+  ],
+  "note": "ChangesView.Move (Move to Another Changelist) = zmax `:changelist NAME`: moves the current file into the named changelist (zmax-term/src/commands/typed.rs:25052)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.Refresh",
+  "status": "partial",
+  "evidence": [
+   "static:vc_refresh_state"
+  ],
+  "note": "ChangesView.Refresh (Refresh) = zmax `vc_refresh_state`: recomputes VC state for the current buffer only, not the whole changes list."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.Revert",
+  "status": "partial",
+  "evidence": [
+   "static:vc_revert"
+  ],
+  "note": "ChangesView.Revert (Rollback) = zmax `vc_revert`: rolls the current file back to HEAD; it does not act on a multi-file selection of changes."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.RevertFiles",
+  "status": "ported",
+  "evidence": [
+   "static:vc_revert"
+  ],
+  "note": "ChangesView.RevertFiles (Rollback File) = zmax `vc_revert`: discards the current file's working-tree changes (git checkout -- file) and reloads it."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.Shelve",
+  "status": "ported",
+  "evidence": [
+   "typable:shelve"
+  ],
+  "note": "ChangesView.Shelve (Shelve Changes) = zmax `:shelve`: saves the working-tree diff as a named shelf patch and restores the tree (zmax-term/src/commands/typed.rs:25454)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CheckinFiles",
+  "status": "partial",
+  "evidence": [
+   "static:vc_next_action"
+  ],
+  "note": "CheckinFiles (Commit File) = zmax `vc_next_action`: stages the current file and opens Magit to commit; the commit message is composed in Magit rather than a per-file commit dialog."
+ },
+ {
+  "spec_id": "jetbrains-actions.CheckinProject",
+  "status": "ported",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "CheckinProject (Commit) = zmax `git_status`: opens Magit status to commit the project's changes (same mapping as keymap \"Commit\")."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChooseDebugConfiguration",
+  "status": "ported",
+  "evidence": [
+   "static:dap_launch"
+  ],
+  "note": "ChooseDebugConfiguration (Debug) = zmax `dap_launch`: opens a picker of debug templates and launches the chosen one."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChooseRunConfiguration",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "ChooseRunConfiguration (Run) = zmax `run_config_manager`: lists run configurations and Enter runs the selected one (zmax-term/src/ui/run_config.rs:287)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ClearAllNotifications",
+  "status": "ported",
+  "evidence": [
+   "typable:messages-clear"
+  ],
+  "note": "ClearAllNotifications (Clear All Notifications) = zmax `:messages-clear`: empties the message log the status line reads from (zmax-term/src/commands/typed.rs:4648)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllEditors",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-all"
+  ],
+  "note": "CloseAllEditors (Close All Tabs) = zmax `:buffer-close-all`: closes all buffers without quitting."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllEditorsButActive",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-others"
+  ],
+  "note": "CloseAllEditorsButActive (Close Other Tabs) = zmax `:buffer-close-others`: closes every buffer except the focused one."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllReadonly",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-readonly"
+  ],
+  "note": "CloseAllReadonly (Close All Read-Only Tabs) = zmax `:buffer-close-readonly`: closes every read-only buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllToTheLeft",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-left"
+  ],
+  "note": "CloseAllToTheLeft (Close Tabs to the Left) = zmax `:buffer-close-left`: closes the buffers left of the current one in the bufferline."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllToTheRight",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-right"
+  ],
+  "note": "CloseAllToTheRight (Close Tabs to the Right) = zmax `:buffer-close-right`: closes the buffers right of the current one in the bufferline."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllUnmodifiedEditors",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-unmodified"
+  ],
+  "note": "CloseAllUnmodifiedEditors (Close Unmodified Tabs) = zmax `:buffer-close-unmodified`: closes every buffer with no unsaved changes."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllUnpinnedEditors",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-all"
+  ],
+  "note": "CloseAllUnpinnedEditors (Close All but Pinned) = zmax `:buffer-close-all`: closes every buffer but skips pinned ones (drop_pinned, zmax-term/src/commands/typed.rs:6360)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseContent",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "CloseContent (Close Tab) = zmax `:buffer-close`: closes the current buffer (same mapping as keymap \"Close Tab\")."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseEditor",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "CloseEditor (Close Active Editor) = zmax `:buffer-close`: closes the active buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeCleanup",
+  "status": "ported",
+  "evidence": [
+   "static:code_cleanup"
+  ],
+  "note": "CodeCleanup (Code Cleanup) = zmax `code_cleanup`: applies every fix-all source action the language server offers."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeCompletion",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "CodeCompletion (Basic) = zmax `completion`: opens basic code completion."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollapseAllRegions",
+  "status": "ported",
+  "evidence": [
+   "static:fold_close_all"
+  ],
+  "note": "CollapseAllRegions (Collapse All) = zmax `fold_close_all`: closes all folds."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollapseDocComments",
+  "status": "ported",
+  "evidence": [
+   "static:fold_doc_comments"
+  ],
+  "note": "CollapseDocComments (Collapse Doc Comments) = zmax `fold_doc_comments`: folds doc comments only (zmax-term/src/commands.rs:61853)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollapseRegion",
+  "status": "ported",
+  "evidence": [
+   "static:fold_close"
+  ],
+  "note": "CollapseRegion (Collapse) = zmax `fold_close`: closes the fold under the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollapseRegionRecursively",
+  "status": "ported",
+  "evidence": [
+   "static:fold_close_recursive"
+  ],
+  "note": "CollapseRegionRecursively (Collapse Recursively) = zmax `fold_close_recursive`: closes the fold under the cursor and all nested folds."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollapseSelection",
+  "status": "ported",
+  "evidence": [
+   "static:fold_create"
+  ],
+  "note": "CollapseSelection (Fold Selection / Remove Region) = zmax `fold_create`: creates a fold over the selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollectTroubleshootingInformation",
+  "status": "partial",
+  "evidence": [
+   "static:copy_system_info"
+  ],
+  "note": "CollectTroubleshootingInformation (Collect Troubleshooting Information) = zmax `copy_system_info`: copies version/OS/arch to the clipboard; IntelliJ's dialog also includes project, plugin and JVM detail."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollectZippedLogs",
+  "status": "ported",
+  "evidence": [
+   "typable:collect-logs"
+  ],
+  "note": "CollectZippedLogs (Collect Logs and Diagnostic Data) = zmax `:collect-logs`: writes version, paths and log tail into one file for a bug report (zmax-term/src/commands/typed.rs:7632)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CommentByBlockComment",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_block_comments"
+  ],
+  "note": "CommentByBlockComment (Comment with Block Comment) = zmax `toggle_block_comments`: comments/uncomments the selection with block comments."
+ },
+ {
+  "spec_id": "jetbrains-actions.CommentByLineComment",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_line_comments"
+  ],
+  "note": "CommentByLineComment (Comment with Line Comment) = zmax `toggle_line_comments`: comments/uncomments lines with line comments."
+ },
+ {
+  "spec_id": "jetbrains-actions.Compare.SameVersion",
+  "status": "ported",
+  "evidence": [
+   "static:git_diff"
+  ],
+  "note": "Compare.SameVersion (Compare with Same Repository Version) = zmax `git_diff`: opens a side-by-side diff of the file against HEAD, its base revision."
+ },
+ {
+  "spec_id": "jetbrains-actions.Compare.Selected",
+  "status": "partial",
+  "evidence": [
+   "static:vc_ediff"
+  ],
+  "note": "Compare.Selected (Compare with Revision) = zmax `vc_ediff`: diffs the file against a typed revision rather than one picked from the file history list."
+ },
+ {
+  "spec_id": "jetbrains-actions.Compare.Specified",
+  "status": "ported",
+  "evidence": [
+   "static:vc_ediff"
+  ],
+  "note": "Compare.Specified (Compare with Specified Revision) = zmax `vc_ediff`: prompts for a revision and diffs the current file against it."
+ },
+ {
+  "spec_id": "jetbrains-actions.CompareClipboardWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:compare_with_clipboard"
+  ],
+  "note": "CompareClipboardWithSelection (Compare with Clipboard) = zmax `compare_with_clipboard`: diffs the selection (or buffer) against the clipboard side by side."
+ },
+ {
+  "spec_id": "jetbrains-actions.CompareTwoFiles",
+  "status": "ported",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": "CompareTwoFiles (Compare Files) = zmax `:diff OLD NEW`: shows the differences between two files (same mapping as keymap \"Compare Files\")."
+ },
+ {
+  "spec_id": "jetbrains-actions.Console.Execute",
+  "status": "ported",
+  "evidence": [
+   "static:repl_send_statement"
+  ],
+  "note": "Console.Execute (Execute Current Statement in Console) = zmax `repl_send_statement`: sends the selection or current line to the language REPL (zmax-term/src/commands.rs:51726)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConsoleView.ClearAll",
+  "status": "ported",
+  "evidence": [
+   "static:clear_run_output"
+  ],
+  "note": "ConsoleView.ClearAll (ConsoleView.ClearAll) = zmax `clear_run_output`: clears the Run tool window output."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConsoleView.FoldLinesLikeThis",
+  "status": "ported",
+  "evidence": [
+   "typable:fold-matching"
+  ],
+  "note": "ConsoleView.FoldLinesLikeThis (Fold Lines Like This) = zmax `:fold-matching PATTERN`: folds every run of lines matching a regex (zmax-term/src/commands/typed.rs:25161)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConvertIndentsToSpaces",
+  "status": "partial",
+  "evidence": [
+   "typable:untabify"
+  ],
+  "note": "ConvertIndentsToSpaces (To Spaces) = zmax `:untabify`: expands every tab in the region to spaces, not only indentation tabs."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConvertIndentsToTabs",
+  "status": "partial",
+  "evidence": [
+   "typable:tabify"
+  ],
+  "note": "ConvertIndentsToTabs (To Tabs) = zmax `:tabify`: converts runs of spaces at tab stops anywhere in the region, not only leading indentation."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConvertToUnixLineSeparators",
+  "status": "ported",
+  "evidence": [
+   "typable:line-ending"
+  ],
+  "note": "ConvertToUnixLineSeparators (ConvertToUnixLineSeparators) = zmax `:line-ending lf`: rewrites every line ending to LF."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConvertToWindowsLineSeparators",
+  "status": "ported",
+  "evidence": [
+   "typable:line-ending"
+  ],
+  "note": "ConvertToWindowsLineSeparators (ConvertToWindowsLineSeparators) = zmax `:line-ending crlf`: rewrites every line ending to CRLF."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyAbsolutePath",
+  "status": "ported",
+  "evidence": [
+   "static:yank_file_path"
+  ],
+  "note": "CopyAbsolutePath (Absolute Path) = zmax `yank_file_path`: copies the current file's full path to the clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyAsPlainText",
+  "status": "ported",
+  "evidence": [
+   "static:yank_to_clipboard"
+  ],
+  "note": "CopyAsPlainText (Copy as Plain Text) = zmax `yank_to_clipboard`: copies the selection to the clipboard as plain text."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyAsRichText",
+  "status": "partial",
+  "evidence": [
+   "static:copy_as_format_html"
+  ],
+  "note": "CopyAsRichText (Copy as Rich Text) = zmax `copy_as_format_html`: copies the region as HTML pre/code but without RTF or syntax colors."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyElement",
+  "status": "ported",
+  "evidence": [
+   "static:copy_file"
+  ],
+  "note": "CopyElement (Copy) = zmax `copy_file`: copies the current file to a prompted destination."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyFileName",
+  "status": "ported",
+  "evidence": [
+   "static:yank_file_name"
+  ],
+  "note": "CopyFileName (File Name) = zmax `yank_file_name`: copies the current file's name to the clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyPathWithLineNumber",
+  "status": "ported",
+  "evidence": [
+   "static:yank_file_path_with_line"
+  ],
+  "note": "CopyPathWithLineNumber (Path with Line Number) = zmax `yank_file_path_with_line`: copies path:line to the clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyPaths",
+  "status": "ported",
+  "evidence": [
+   "static:yank_file_path"
+  ],
+  "note": "CopyPaths (Copy Paths) = zmax `yank_file_path`: copies the file path to the clipboard (same mapping as keymap \"Copy Paths\")."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyReference",
+  "status": "ported",
+  "evidence": [
+   "static:copy_reference"
+  ],
+  "note": "CopyReference (Copy Reference) = zmax `copy_reference`: copies a project-relative file:line reference."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.AddToWatch",
+  "status": "ported",
+  "evidence": [
+   "typable:gdb-watch"
+  ],
+  "note": "Debugger.AddToWatch (Add to Watches) = zmax `gdb-watch`: `:gdb-watch` adds the expression at the cursor (or given) to the DAP watch list shown in the watch buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.RemoveAllBreakpoints",
+  "status": "ported",
+  "evidence": [
+   "typable:breakdel"
+  ],
+  "note": "Debugger.RemoveAllBreakpoints (Remove All Breakpoints) = zmax `breakdel`: `:breakdel *` removes every DAP breakpoint via dap_toggle_breakpoint_impl."
+ },
+ {
+  "spec_id": "jetbrains-actions.DecrementWindowHeight",
+  "status": "partial",
+  "evidence": [
+   "static:stretch_tool_window_down"
+  ],
+  "note": "DecrementWindowHeight (Decrement Height) = zmax `stretch_tool_window_down`: shrinks the bottom drawer only; JetBrains shrinks whichever tool window is active."
+ },
+ {
+  "spec_id": "jetbrains-actions.DecrementWindowWidth",
+  "status": "partial",
+  "evidence": [
+   "static:stretch_tool_window_left"
+  ],
+  "note": "DecrementWindowWidth (Decrement Width) = zmax `stretch_tool_window_left`: narrows the left drawer only; JetBrains narrows whichever tool window is active."
+ },
+ {
+  "spec_id": "jetbrains-actions.DeleteRecentFilesFallback",
+  "status": "partial",
+  "evidence": [
+   "static:recentf_edit_list"
+  ],
+  "note": "DeleteRecentFilesFallback (Delete from Recent Files) = zmax `recentf_edit_list`: removes entries from the recent-files list via a mark-and-delete list buffer rather than deleting the selected row in the popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ApplyLeftSide",
+  "status": "ported",
+  "evidence": [
+   "typable:conflict-ours"
+  ],
+  "note": "Diff.ApplyLeftSide (Accept Left Side) = zmax `conflict-ours`: resolves the conflict at the cursor by keeping the left (ours/HEAD) side."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ApplyRightSide",
+  "status": "ported",
+  "evidence": [
+   "typable:conflict-theirs"
+  ],
+  "note": "Diff.ApplyRightSide (Accept Right Side) = zmax `conflict-theirs`: resolves the conflict at the cursor by keeping the right (theirs) side."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.MagicResolveConflicts",
+  "status": "partial",
+  "evidence": [
+   "static:resolve_conflicts"
+  ],
+  "note": "Diff.MagicResolveConflicts (Resolve Simple Conflicts) = zmax `resolve_conflicts`: resolve_simple (zmax-term/src/ui/merge.rs:944) takes blocks whose sides agree, but only as the `m` key inside the 3-way merge view resolve_conflicts opens, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.NextConflict",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_conflict"
+  ],
+  "note": "Diff.NextConflict (Next Conflict) = zmax `goto_next_conflict`: jumps to the next merge-conflict marker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.PreviousConflict",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_conflict"
+  ],
+  "note": "Diff.PreviousConflict (Previous Conflict) = zmax `goto_prev_conflict`: jumps to the previous merge-conflict marker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ShowDiff",
+  "status": "ported",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": "Diff.ShowDiff (Show Diff) = zmax `diff`: `:diff` shows buffer vs HEAD or two given files side by side."
+ },
+ {
+  "spec_id": "jetbrains-actions.Documentation.ToggleAutoShow",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_completion_docs"
+  ],
+  "note": "Documentation.ToggleAutoShow (Show Automatically During Completion) = zmax `toggle_completion_docs`: toggles documentation beside the completion list (zmax-term/src/commands.rs:18563)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DupLocate",
+  "status": "ported",
+  "evidence": [
+   "static:locate_duplicates"
+  ],
+  "note": "DupLocate (Locate Duplicates) = zmax `locate_duplicates`: finds repeated blocks (zmax-term/src/commands.rs:52846); scope is the buffer rather than the project."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditBookmark",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_rename"
+  ],
+  "note": "EditBookmark (Rename Bookmark) = zmax `bookmark_rename`: renames a bookmark."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditBreakpoint",
+  "status": "partial",
+  "evidence": [
+   "static:dap_edit_condition"
+  ],
+  "note": "EditBreakpoint (Edit Breakpoint) = zmax `dap_edit_condition`: edits the condition of the breakpoint on the current line; JetBrains opens a full property dialog (condition, log, suspend policy), zmax splits condition and log (dap_edit_log) into separate prompts."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditMacros",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_menu"
+  ],
+  "note": "EditMacros (Edit Macros) = zmax `kmacro_menu`: lists the macro ring for delete/copy/edit; JetBrains macros are named persistent action lists, zmax macros are an Emacs keyboard-macro ring."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditSource",
+  "status": "ported",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": "EditSource (Jump to Source) = zmax `goto_definition`: reuses the keymap \"Jump to Source\" mapping: opens the declaration of the item at the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorAddCaretPerSelectedLine",
+  "status": "ported",
+  "evidence": [
+   "static:add_carets_to_line_ends"
+  ],
+  "note": "EditorAddCaretPerSelectedLine (Add Carets to Ends of Selected Lines) = zmax `add_carets_to_line_ends`: one cursor at the end of every selected line (zmax-term/src/commands.rs:4652)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorBackSpace",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_backward"
+  ],
+  "note": "EditorBackSpace (Backspace) = zmax `delete_char_backward`: deletes the previous character."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorBackwardParagraph",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": "EditorBackwardParagraph (Move Caret Backward a Paragraph) = zmax `goto_prev_paragraph`: moves to the previous paragraph."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorBackwardParagraphWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_prev_paragraph"
+  ],
+  "note": "EditorBackwardParagraphWithSelection (Move Caret Backward a Paragraph with Selection) = zmax `extend_prev_paragraph`: extends the selection to the previous paragraph."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorBreadcrumbsHideBoth",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "EditorBreadcrumbsHideBoth (Don't Show) = zmax `toggle_breadcrumbs`: toggles the breadcrumb trail on/off; no explicit hide action and no above/below placement."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCloneCaretAbove",
+  "status": "ported",
+  "evidence": [
+   "static:copy_selection_on_prev_line"
+  ],
+  "note": "EditorCloneCaretAbove (Clone Caret Above) = zmax `copy_selection_on_prev_line`: adds a cursor on the line above."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCloneCaretBelow",
+  "status": "ported",
+  "evidence": [
+   "static:copy_selection_on_next_line"
+  ],
+  "note": "EditorCloneCaretBelow (Clone Caret Below) = zmax `copy_selection_on_next_line`: adds a cursor on the line below."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCodeBlockEnd",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_unmatched_brace"
+  ],
+  "note": "EditorCodeBlockEnd (Move Caret to Code Block End) = zmax `goto_next_unmatched_brace`: moves to the closing brace of the enclosing block."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCodeBlockStart",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_unmatched_brace"
+  ],
+  "note": "EditorCodeBlockStart (Move Caret to Code Block Start) = zmax `goto_prev_unmatched_brace`: moves to the opening brace of the enclosing block."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCompleteStatement",
+  "status": "ported",
+  "evidence": [
+   "static:complete_current_statement"
+  ],
+  "note": "EditorCompleteStatement (Complete Current Statement) = zmax `complete_current_statement`: completes the current statement."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorContextInfo",
+  "status": "ported",
+  "evidence": [
+   "static:context_info"
+  ],
+  "note": "EditorContextInfo (Context Info) = zmax `context_info`: shows the declarations enclosing the caret."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCopy",
+  "status": "ported",
+  "evidence": [
+   "typable:clipboard-yank"
+  ],
+  "note": "EditorCopy (Copy) = zmax `clipboard-yank`: copies the selection to the system clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCut",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_clipboard"
+  ],
+  "note": "EditorCut (Cut) = zmax `cut_to_clipboard`: cuts the selection to the system clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDecreaseFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_decrease"
+  ],
+  "note": "EditorDecreaseFontSize (Decrease Font Size) = zmax `text_scale_decrease`: steps the font down via OSC 50, which resizes the whole terminal rather than one editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDecreaseFontSizeGlobal",
+  "status": "ported",
+  "evidence": [
+   "static:text_scale_decrease"
+  ],
+  "note": "EditorDecreaseFontSizeGlobal (Decrease Font Size in All Editors) = zmax `text_scale_decrease`: OSC 50 font step applies to every editor in the terminal."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDelete",
+  "status": "ported",
+  "evidence": [
+   "static:delete_char_forward"
+  ],
+  "note": "EditorDelete (Delete) = zmax `delete_char_forward`: deletes the next character."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDeleteLine",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-lines"
+  ],
+  "note": "EditorDeleteLine (Delete Line) = zmax `delete-lines`: deletes the current line(s)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDeleteToLineEnd",
+  "status": "ported",
+  "evidence": [
+   "static:kill_to_line_end"
+  ],
+  "note": "EditorDeleteToLineEnd (Delete to Line End) = zmax `kill_to_line_end`: deletes from the caret to line end without touching a register."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDeleteToLineStart",
+  "status": "ported",
+  "evidence": [
+   "static:kill_to_line_start"
+  ],
+  "note": "EditorDeleteToLineStart (Delete to Line Start) = zmax `kill_to_line_start`: deletes from the caret back to line start (first non-blank first) without touching a register."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDeleteToWordEnd",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_forward"
+  ],
+  "note": "EditorDeleteToWordEnd (Delete to Word End) = zmax `delete_word_forward`: deletes to the end of the word."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDeleteToWordEndInDifferentHumpsMode",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_forward_other_humps"
+  ],
+  "note": "EditorDeleteToWordEndInDifferentHumpsMode (Delete to Word End in Different \"CamelHumps\" Mode) = zmax `delete_word_forward_other_humps`: deletes to word end with the camel-hump setting inverted."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDeleteToWordStart",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "EditorDeleteToWordStart (Delete to Word Start) = zmax `delete_word_backward`: deletes to the start of the word."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDeleteToWordStartInDifferentHumpsMode",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward_other_humps"
+  ],
+  "note": "EditorDeleteToWordStartInDifferentHumpsMode (Delete to Word Start in Different \"CamelHumps\" Mode) = zmax `delete_word_backward_other_humps`: deletes to word start with the camel-hump setting inverted."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDown",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_down"
+  ],
+  "note": "EditorDown (Down) = zmax `move_visual_line_down`: moves the caret down one line."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDownWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_visual_line_down"
+  ],
+  "note": "EditorDownWithSelection (Down with Selection) = zmax `extend_visual_line_down`: extends the selection down one line."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDuplicate",
+  "status": "ported",
+  "evidence": [
+   "typable:duplicate-line"
+  ],
+  "note": "EditorDuplicate (Duplicate Line or Selection) = zmax `duplicate-line`: reuses keymap \"Duplicate Line or Selection\" mapping."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorDuplicateLines",
+  "status": "ported",
+  "evidence": [
+   "static:duplicate_selection_down"
+  ],
+  "note": "EditorDuplicateLines (Duplicate Entire Lines) = zmax `duplicate_selection_down`: duplicates the whole covered line(s) downward."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorEnter",
+  "status": "ported",
+  "evidence": [
+   "static:insert_newline"
+  ],
+  "note": "EditorEnter (Enter) = zmax `insert_newline`: inserts a newline."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorForwardParagraph",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": "EditorForwardParagraph (Move Caret Forward a Paragraph) = zmax `goto_next_paragraph`: moves to the next paragraph."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorForwardParagraphWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_next_paragraph"
+  ],
+  "note": "EditorForwardParagraphWithSelection (Move Caret Forward a Paragraph with Selection) = zmax `extend_next_paragraph`: extends the selection to the next paragraph."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorGutterToggleGlobalIndentLines",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_indent_guides"
+  ],
+  "note": "EditorGutterToggleGlobalIndentLines (Show Indent Guides) = zmax `toggle_indent_guides`: toggles indent guides."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorGutterToggleGlobalLineNumbers",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_line_numbers"
+  ],
+  "note": "EditorGutterToggleGlobalLineNumbers (Show Line Numbers) = zmax `toggle_line_numbers`: toggles line numbers."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorGutterToggleGlobalStickyLines",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_sticky_lines"
+  ],
+  "note": "EditorGutterToggleGlobalStickyLines (Show Sticky Lines) = zmax `toggle_sticky_lines`: toggles sticky scope headers (zmax-term/src/commands.rs:18636)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorHungryBackSpace",
+  "status": "ported",
+  "evidence": [
+   "static:c_hungry_delete_backwards"
+  ],
+  "note": "EditorHungryBackSpace (Hungry Backspace) = zmax `c_hungry_delete_backwards`: deletes all whitespace before point, else one char."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorIncreaseFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_increase"
+  ],
+  "note": "EditorIncreaseFontSize (Increase Font Size) = zmax `text_scale_increase`: steps the font up via OSC 50, which resizes the whole terminal rather than one editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorIncreaseFontSizeGlobal",
+  "status": "ported",
+  "evidence": [
+   "static:text_scale_increase"
+  ],
+  "note": "EditorIncreaseFontSizeGlobal (Increase Font Size in All Editors) = zmax `text_scale_increase`: OSC 50 font step applies to every editor in the terminal."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorIndentLineOrSelection",
+  "status": "ported",
+  "evidence": [
+   "typable:indent-lines"
+  ],
+  "note": "EditorIndentLineOrSelection (Indent Line or Selection) = zmax `indent-lines`: indents the current line(s) by one shiftwidth."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorIndentSelection",
+  "status": "ported",
+  "evidence": [
+   "typable:indent-lines"
+  ],
+  "note": "EditorIndentSelection (Indent Selection) = zmax `indent-lines`: indents the selected lines by one shiftwidth."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorJoinLines",
+  "status": "ported",
+  "evidence": [
+   "static:join_selections"
+  ],
+  "note": "EditorJoinLines (Join Lines) = zmax `join_selections`: joins the lines."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorKillRegion",
+  "status": "ported",
+  "evidence": [
+   "static:kill_region"
+  ],
+  "note": "EditorKillRegion (Kill Selected Region) = zmax `kill_region`: cuts the region onto the kill ring."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorKillRingSave",
+  "status": "ported",
+  "evidence": [
+   "static:copy_region_as_kill"
+  ],
+  "note": "EditorKillRingSave (Save to Kill Ring) = zmax `copy_region_as_kill`: copies the region to the kill ring without deleting."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorKillToWordEnd",
+  "status": "ported",
+  "evidence": [
+   "static:kill_word"
+  ],
+  "note": "EditorKillToWordEnd (Kill to Word End) = zmax `kill_word`: kills forward to word end onto the kill ring."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorKillToWordStart",
+  "status": "ported",
+  "evidence": [
+   "static:backward_kill_word"
+  ],
+  "note": "EditorKillToWordStart (Kill to Word Start) = zmax `backward_kill_word`: kills back to word start onto the kill ring."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLeft",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_left"
+  ],
+  "note": "EditorLeft (Left) = zmax `move_char_left`: moves the caret left."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLeftWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_char_left"
+  ],
+  "note": "EditorLeftWithSelection (Left with Selection) = zmax `extend_char_left`: extends the selection left."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLineEnd",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": "EditorLineEnd (Move Caret to Line End) = zmax `goto_line_end`: moves to line end."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLineEndWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_end"
+  ],
+  "note": "EditorLineEndWithSelection (Move Caret to Line End with Selection) = zmax `extend_to_line_end`: extends the selection to line end."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLineStart",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": "EditorLineStart (Move Caret to Line Start) = zmax `goto_line_start`: moves to line start."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLineStartWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_line_start"
+  ],
+  "note": "EditorLineStartWithSelection (Move Caret to Line Start with Selection) = zmax `extend_to_line_start`: extends the selection to line start."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMatchBrace",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets"
+  ],
+  "note": "EditorMatchBrace (Move Caret to Matching Brace) = zmax `match_brackets`: moves to the matching bracket."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMoveToPageBottom",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_bottom"
+  ],
+  "note": "EditorMoveToPageBottom (Move Caret to Page Bottom) = zmax `goto_window_bottom`: moves the caret to the last visible line."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMoveToPageTop",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": "EditorMoveToPageTop (Move Caret to Page Top) = zmax `goto_window_top`: moves the caret to the first visible line."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorNextWord",
+  "status": "ported",
+  "evidence": [
+   "static:move_next_word_start"
+  ],
+  "note": "EditorNextWord (Move Caret to Next Word) = zmax `move_next_word_start`: moves to the next word."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorNextWordInDifferentHumpsMode",
+  "status": "ported",
+  "evidence": [
+   "static:word_next_other_humps"
+  ],
+  "note": "EditorNextWordInDifferentHumpsMode (Move Caret to Next Word in Different \"CamelHumps\" Mode) = zmax `word_next_other_humps`: next word with the camel-hump setting inverted."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorNextWordInDifferentHumpsModeWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:word_next_other_humps_extend"
+  ],
+  "note": "EditorNextWordInDifferentHumpsModeWithSelection (Move Caret to Next Word with Selection in Different \"CamelHumps\" Mode) = zmax `word_next_other_humps_extend`: extends to next word with camel-hump inverted."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorNextWordWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_next_word_start"
+  ],
+  "note": "EditorNextWordWithSelection (Move Caret to Next Word with Selection) = zmax `extend_next_word_start`: extends the selection to the next word."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPageDown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "EditorPageDown (Page Down) = zmax `page_down`: moves a page down."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPageDownWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_page_down"
+  ],
+  "note": "EditorPageDownWithSelection (Page Down with Selection) = zmax `extend_page_down`: extends the selection a page down."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPageUp",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "EditorPageUp (Page Up) = zmax `page_up`: moves a page up."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPageUpWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_page_up"
+  ],
+  "note": "EditorPageUpWithSelection (Page Up with Selection) = zmax `extend_page_up`: extends the selection a page up."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPaste",
+  "status": "ported",
+  "evidence": [
+   "static:paste_clipboard_before"
+  ],
+  "note": "EditorPaste (Paste) = zmax `paste_clipboard_before`: inserts the system clipboard at the caret."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPasteFromX11",
+  "status": "ported",
+  "evidence": [
+   "static:paste_primary_clipboard_before"
+  ],
+  "note": "EditorPasteFromX11 (Paste from X Clipboard) = zmax `paste_primary_clipboard_before`: pastes the X primary selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPreviousWord",
+  "status": "ported",
+  "evidence": [
+   "static:move_prev_word_start"
+  ],
+  "note": "EditorPreviousWord (Move Caret to Previous Word) = zmax `move_prev_word_start`: moves to the previous word."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPreviousWordInDifferentHumpsMode",
+  "status": "ported",
+  "evidence": [
+   "static:word_prev_other_humps"
+  ],
+  "note": "EditorPreviousWordInDifferentHumpsMode (Move Caret to Previous Word in Different \"CamelHumps\" Mode) = zmax `word_prev_other_humps`: previous word with the camel-hump setting inverted."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPreviousWordInDifferentHumpsModeWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:word_prev_other_humps_extend"
+  ],
+  "note": "EditorPreviousWordInDifferentHumpsModeWithSelection (Move Caret to Previous Word with Selection in Different \"CamelHumps\" Mode) = zmax `word_prev_other_humps_extend`: extends to previous word with camel-hump inverted."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPreviousWordWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_prev_word_start"
+  ],
+  "note": "EditorPreviousWordWithSelection (Move Caret to Previous Word with Selection) = zmax `extend_prev_word_start`: extends the selection to the previous word."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorResetFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_reset"
+  ],
+  "note": "EditorResetFontSize (Reset Font Size) = zmax `text_scale_reset`: resets the font via OSC 50, which affects the whole terminal rather than one editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorResetFontSizeGlobal",
+  "status": "ported",
+  "evidence": [
+   "static:text_scale_reset"
+  ],
+  "note": "EditorResetFontSizeGlobal (Reset Font Size in All Editors) = zmax `text_scale_reset`: OSC 50 font reset applies to every editor in the terminal."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorReverseLines",
+  "status": "ported",
+  "evidence": [
+   "typable:reverse"
+  ],
+  "note": "EditorReverseLines (Reverse Lines) = zmax `reverse`: reverses the order of the selected lines."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorRight",
+  "status": "ported",
+  "evidence": [
+   "static:move_char_right"
+  ],
+  "note": "EditorRight (Right) = zmax `move_char_right`: moves the caret right."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorRightWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_char_right"
+  ],
+  "note": "EditorRightWithSelection (Right with Selection) = zmax `extend_char_right`: extends the selection right."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollDown",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "EditorScrollDown (Scroll Down) = zmax `scroll_down`: scrolls the view down a line, moving the caret only if it leaves the view."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollDownAndMove",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "EditorScrollDownAndMove (Scroll Down and Move If Necessary) = zmax `scroll_down`: scrolls down, moving the caret only when it would leave the view."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollLeft",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_column_left"
+  ],
+  "note": "EditorScrollLeft (Scroll Left) = zmax `scroll_column_left`: scrolls the view one column left."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollRight",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_column_right"
+  ],
+  "note": "EditorScrollRight (Scroll Right) = zmax `scroll_column_right`: scrolls the view one column right."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollToCenter",
+  "status": "ported",
+  "evidence": [
+   "static:align_view_center"
+  ],
+  "note": "EditorScrollToCenter (Scroll to Center) = zmax `align_view_center`: scrolls so the caret line is centered."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollUp",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "EditorScrollUp (Scroll Up) = zmax `scroll_up`: scrolls the view up a line, moving the caret only if it leaves the view."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollUpAndMove",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "EditorScrollUpAndMove (Scroll Up and Move If Necessary) = zmax `scroll_up`: scrolls the view up one line and drags the cursor along when it would leave the screen."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSearchSession.NextOccurrenceAction",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "EditorSearchSession.NextOccurrenceAction (EditorSearchSession.NextOccurrenceAction) = zmax `search_next`: selects the next match of the active search."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSearchSession.PrevOccurrence",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "EditorSearchSession.PrevOccurrence (EditorSearchSession.PrevOccurrence) = zmax `search_prev`: selects the previous match of the active search."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSearchSession.ToggleMatchCase",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_toggle_case_fold"
+  ],
+  "note": "EditorSearchSession.ToggleMatchCase (EditorSearchSession.ToggleMatchCase) = zmax `isearch_toggle_case_fold`: flips case-sensitivity of the live incremental search and re-runs it (commands.rs isearch_toggle)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSearchSession.ToggleRegex",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_toggle_regexp"
+  ],
+  "note": "EditorSearchSession.ToggleRegex (EditorSearchSession.ToggleRegex) = zmax `isearch_toggle_regexp`: flips regex matching of the live incremental search and re-runs it."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSearchSession.ToggleWholeWordsOnlyAction",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_toggle_word"
+  ],
+  "note": "EditorSearchSession.ToggleWholeWordsOnlyAction (EditorSearchSession.ToggleWholeWordsOnlyAction) = zmax `isearch_toggle_word`: flips whole-word matching of the live incremental search and re-runs it."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSelectLine",
+  "status": "ported",
+  "evidence": [
+   "static:extend_line_below"
+  ],
+  "note": "EditorSelectLine (Extend Line Selection) = zmax `extend_line_below`: selects the current line, extending by a line on each repeat."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSelectSingleLineAtCaret",
+  "status": "partial",
+  "evidence": [
+   "static:extend_to_line_bounds"
+  ],
+  "note": "EditorSelectSingleLineAtCaret (Select Single Line at Caret) = zmax `extend_to_line_bounds`: selects the caret line when there is no selection, but grows an existing multi-line selection to its line bounds instead of replacing it with the single caret line."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSelectWord",
+  "status": "ported",
+  "evidence": [
+   "static:wildfire"
+  ],
+  "note": "EditorSelectWord (Extend Selection) = zmax `wildfire`: expands the selection to the next enclosing text object (same evidence as keymap Extend Selection)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSelectWordAtCurrentCaret",
+  "status": "ported",
+  "evidence": [
+   "static:wildfire"
+  ],
+  "note": "EditorSelectWordAtCurrentCaret (Extend Selection) = zmax `wildfire`: expands the selection to the next enclosing text object (same evidence as keymap Extend Selection)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSortLines",
+  "status": "ported",
+  "evidence": [
+   "typable:sort-lines"
+  ],
+  "note": "EditorSortLines (Sort Lines) = zmax `:sort-lines`: sorts the selected lines, or the whole buffer with no selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorStartNewLine",
+  "status": "ported",
+  "evidence": [
+   "static:open_below"
+  ],
+  "note": "EditorStartNewLine (Start New Line) = zmax `open_below`: opens a new line below the current one and puts the cursor on it."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorStartNewLineBefore",
+  "status": "ported",
+  "evidence": [
+   "static:open_above"
+  ],
+  "note": "EditorStartNewLineBefore (Start New Line Before Current) = zmax `open_above`: opens a new line above the current one and puts the cursor on it."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorStickyLinesDisable",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_sticky_lines"
+  ],
+  "note": "EditorStickyLinesDisable (Disable) = zmax `toggle_sticky_lines`: hides the pinned scope headers when they are on, but it is a toggle rather than a one-way disable."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSwapSelectionBoundaries",
+  "status": "ported",
+  "evidence": [
+   "static:flip_selections"
+  ],
+  "note": "EditorSwapSelectionBoundaries (Swap Selection Boundaries) = zmax `flip_selections`: swaps each selection's cursor and anchor."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorTab",
+  "status": "ported",
+  "evidence": [
+   "static:insert_tab"
+  ],
+  "note": "EditorTab (Tab) = zmax `insert_tab`: inserts one indent unit honouring the buffer's tabs/spaces style and soft tab stops."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorTextEnd",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_end"
+  ],
+  "note": "EditorTextEnd (Move Caret to Text End) = zmax `goto_file_end`: moves the cursor to the end of the buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorTextEndWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_file_end"
+  ],
+  "note": "EditorTextEndWithSelection (Move Caret to Text End with Selection) = zmax `extend_to_file_end`: extends the selection to the end of the buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorTextStart",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "EditorTextStart (Move Caret to Text Start) = zmax `goto_file_start`: moves the cursor to the start of the buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorTextStartWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_file_start"
+  ],
+  "note": "EditorTextStartWithSelection (Move Caret to Text Start with Selection) = zmax `extend_to_file_start`: extends the selection to the start of the buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleCase",
+  "status": "ported",
+  "evidence": [
+   "static:switch_case"
+  ],
+  "note": "EditorToggleCase (Toggle Case) = zmax `switch_case`: toggles the case of each selected character."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleColumnMode",
+  "status": "ported",
+  "evidence": [
+   "static:visual_block_mode"
+  ],
+  "note": "EditorToggleColumnMode (Column Selection Mode) = zmax `visual_block_mode`: enters/leaves column (block) selection mode (same evidence as keymap Toggle Column Selection Mode)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleInsertState",
+  "status": "ported",
+  "evidence": [
+   "static:overwrite_mode"
+  ],
+  "note": "EditorToggleInsertState (Toggle Insert/Overwrite) = zmax `overwrite_mode`: toggles a persistent mode where typed characters replace the one under the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleShowBreadcrumbs",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "EditorToggleShowBreadcrumbs (Show Breadcrumbs) = zmax `toggle_breadcrumbs`: shows/hides the breadcrumb trail (cited at zmax-term/src/commands.rs:18588)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleShowGutterIcons",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_gutter_icons"
+  ],
+  "note": "EditorToggleShowGutterIcons (Show Gutter Icons) = zmax `toggle_gutter_icons`: shows/hides the gutter icon columns (cited at zmax-term/src/commands.rs:18367)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleShowIndentLines",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_indent_guides"
+  ],
+  "note": "EditorToggleShowIndentLines (Show Indent Guides) = zmax `toggle_indent_guides`: toggles rendering of indent guides."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleShowLineNumbers",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_line_numbers"
+  ],
+  "note": "EditorToggleShowLineNumbers (Show Line Numbers) = zmax `toggle_line_numbers`: toggles the line-number gutter."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleShowWhitespaces",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_whitespace_render"
+  ],
+  "note": "EditorToggleShowWhitespaces (Show Whitespaces) = zmax `toggle_whitespace_render`: toggles rendering of whitespace characters."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleStickySelection",
+  "status": "ported",
+  "evidence": [
+   "static:set_mark_command"
+  ],
+  "note": "EditorToggleStickySelection (Toggle Sticky Selection) = zmax `set_mark_command`: emacs C-SPC, activates a region that subsequent motions extend and a second press deactivates."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleUseSoftWraps",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_soft_wrap"
+  ],
+  "note": "EditorToggleUseSoftWraps (Soft-Wrap) = zmax `toggle_soft_wrap`: toggles soft-wrap of long lines."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorTranspose",
+  "status": "ported",
+  "evidence": [
+   "static:transpose_char"
+  ],
+  "note": "EditorTranspose (Transpose) = zmax `transpose_char`: swaps the two characters around the cursor and steps past them."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorUnSelectWord",
+  "status": "ported",
+  "evidence": [
+   "static:wildfire_shrink"
+  ],
+  "note": "EditorUnSelectWord (Shrink Selection) = zmax `wildfire_shrink`: shrinks to the previously selected text object (same evidence as keymap Shrink Selection)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorUnindentSelection",
+  "status": "ported",
+  "evidence": [
+   "static:unindent"
+  ],
+  "note": "EditorUnindentSelection (Unindent Line or Selection) = zmax `unindent`: unindents the current line or selected lines."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorUniqueLines",
+  "status": "ported",
+  "evidence": [
+   "typable:uniquify-lines"
+  ],
+  "note": "EditorUniqueLines (Delete Duplicate Lines) = zmax `:uniquify-lines`: deletes duplicate lines keeping the first occurrence."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorUp",
+  "status": "ported",
+  "evidence": [
+   "static:move_visual_line_up"
+  ],
+  "note": "EditorUp (Up) = zmax `move_visual_line_up`: moves the cursor up one visual line."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorUpWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_visual_line_up"
+  ],
+  "note": "EditorUpWithSelection (Up with Selection) = zmax `extend_visual_line_up`: extends the selection up one visual line."
+ },
+ {
+  "spec_id": "jetbrains-actions.EmacsStyleIndent",
+  "status": "ported",
+  "evidence": [
+   "static:c_indent_line_or_region"
+  ],
+  "note": "EmacsStyleIndent (Emacs Tab) = zmax `c_indent_line_or_region`: re-indents the current line (or selected lines) to its tree-sitter indentation, as emacs TAB does."
+ },
+ {
+  "spec_id": "jetbrains-actions.EmojiAndSymbols",
+  "status": "partial",
+  "evidence": [
+   "static:emoji_list"
+  ],
+  "note": "EmojiAndSymbols (Emoji \\\\&\\\\& Symbols) = zmax `emoji_list`: picks an emoji by name and inserts it; covers emoji only, not the macOS palette's full symbol set."
+ },
+ {
+  "spec_id": "jetbrains-actions.EmojiPicker.Open",
+  "status": "ported",
+  "evidence": [
+   "static:emoji_list"
+  ],
+  "note": "EmojiPicker.Open (Emoji \\\\& Symbols) = zmax `emoji_list`: opens an emoji picker and inserts the chosen emoji."
+ },
+ {
+  "spec_id": "jetbrains-actions.EscapeEntities",
+  "status": "ported",
+  "evidence": [
+   "static:html_escape_selection"
+  ],
+  "note": "EscapeEntities (Encode XML/HTML Special Characters) = zmax `html_escape_selection`: replaces & < > quotes in the selection with HTML entities."
+ },
+ {
+  "spec_id": "jetbrains-actions.EvaluateExpression",
+  "status": "ported",
+  "evidence": [
+   "static:dap_evaluate_expression"
+  ],
+  "note": "EvaluateExpression (Evaluate Expression) = zmax `dap_evaluate_expression`: evaluates an expression in the selected debug frame."
+ },
+ {
+  "spec_id": "jetbrains-actions.Exit",
+  "status": "ported",
+  "evidence": [
+   "typable:quit-all"
+  ],
+  "note": "Exit (Exit) = zmax `:quit-all`: closes all views and exits the editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandAllRegions",
+  "status": "ported",
+  "evidence": [
+   "static:fold_open_all"
+  ],
+  "note": "ExpandAllRegions (Expand All) = zmax `fold_open_all`: opens every fold in the buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandAllToLevel1",
+  "status": "ported",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandAllToLevel1 (1) = zmax `fold_to_level` with count 1: sets the buffer-wide fold level (doc: JetBrains Expand to Level N)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandAllToLevel2",
+  "status": "ported",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandAllToLevel2 (2) = zmax `fold_to_level` with count 2: sets the buffer-wide fold level."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandAllToLevel3",
+  "status": "ported",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandAllToLevel3 (3) = zmax `fold_to_level` with count 3: sets the buffer-wide fold level."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandAllToLevel4",
+  "status": "ported",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandAllToLevel4 (4) = zmax `fold_to_level` with count 4: sets the buffer-wide fold level."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandAllToLevel5",
+  "status": "ported",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandAllToLevel5 (5) = zmax `fold_to_level` with count 5: sets the buffer-wide fold level."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandCollapseToggleAction",
+  "status": "ported",
+  "evidence": [
+   "static:fold_toggle"
+  ],
+  "note": "ExpandCollapseToggleAction (Toggle Folding) = zmax `fold_toggle`: toggles the fold under the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandDocComments",
+  "status": "ported",
+  "evidence": [
+   "static:unfold_doc_comments"
+  ],
+  "note": "ExpandDocComments (Expand Doc Comments) = zmax `unfold_doc_comments`: opens the doc-comment folds only (cited at zmax-term/src/commands.rs:61873)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandLiveTemplateByTab",
+  "status": "ported",
+  "evidence": [
+   "static:snippet_expand"
+  ],
+  "note": "ExpandLiveTemplateByTab (Expand Live Template by Tab) = zmax `snippet_expand`: expands the snippet whose trigger precedes the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandLiveTemplateCustom",
+  "status": "ported",
+  "evidence": [
+   "static:snippet_expand"
+  ],
+  "note": "ExpandLiveTemplateCustom (Expand Live Template / Emmet Abbreviation) = zmax `snippet_expand`: expands the snippet whose trigger precedes the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandRegion",
+  "status": "ported",
+  "evidence": [
+   "static:fold_open"
+  ],
+  "note": "ExpandRegion (Expand) = zmax `fold_open`: opens the fold under the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandRegionRecursively",
+  "status": "ported",
+  "evidence": [
+   "static:fold_open_recursive"
+  ],
+  "note": "ExpandRegionRecursively (Expand Recursively) = zmax `fold_open_recursive`: opens the fold under the cursor and all nested folds."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandToLevel1",
+  "status": "partial",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandToLevel1 (1) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandToLevel2",
+  "status": "partial",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandToLevel2 (2) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandToLevel3",
+  "status": "partial",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandToLevel3 (3) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandToLevel4",
+  "status": "partial",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandToLevel4 (4) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandToLevel5",
+  "status": "partial",
+  "evidence": [
+   "static:fold_to_level"
+  ],
+  "note": "ExpandToLevel5 (5) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExportSettings",
+  "status": "ported",
+  "evidence": [
+   "typable:export-settings"
+  ],
+  "note": "ExportSettings (Export Settings) = zmax `:export-settings DIR`: copies the whole config directory out (cited at zmax-term/src/commands/typed.rs:4729)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExportToHTML",
+  "status": "partial",
+  "evidence": [
+   "static:htmlfontify_buffer"
+  ],
+  "note": "ExportToHTML (Export Files or Selection to HTML) = zmax `htmlfontify_buffer`: exports the buffer as HTML into a scratch buffer, but without syntax colouring yet (commands.rs htmlfontify_buffer doc)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExportToTextFile",
+  "status": "partial",
+  "evidence": [
+   "typable:export-problems"
+  ],
+  "note": "ExportToTextFile (Export to Text File) = zmax `:export-problems`: writes the Problems list to a file; JetBrains exports whatever tree/list view is focused."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalJavaDoc",
+  "status": "partial",
+  "evidence": [
+   "static:dash_at_point"
+  ],
+  "note": "ExternalJavaDoc (External Documentation) = zmax `dash_at_point`: looks the symbol up in external Dash/Zeal docsets rather than opening the language's web documentation URL."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExtractMethod",
+  "status": "ported",
+  "evidence": [
+   "static:extract_function"
+  ],
+  "note": "ExtractMethod (Extract Method) = zmax `extract_function`: extracts the selection into a function via LSP (same evidence as keymap Extract Method)."
+ },
+ {
+  "spec_id": "jetbrains-actions.FillParagraph",
+  "status": "ported",
+  "evidence": [
+   "static:prog_fill_reindent_defun"
+  ],
+  "note": "FillParagraph (Fill Paragraph) = zmax `prog_fill_reindent_defun`: fills the comment/string at point to the fill width (falls back to reindenting the defun outside one)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Find",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "Find (Find) = zmax `search`: searches the buffer for a pattern."
+ },
+ {
+  "spec_id": "jetbrains-actions.FindInPath",
+  "status": "ported",
+  "evidence": [
+   "static:search_in_files"
+  ],
+  "note": "FindInPath (Find in Files) = zmax `search_in_files`: opens the project-wide Find in Files panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.FindNext",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "FindNext (Find Next / Move to Next Occurrence) = zmax `search_next`: moves to the next match of the last search."
+ },
+ {
+  "spec_id": "jetbrains-actions.FindPrevWordAtCaret",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection_detect_word_boundaries",
+   "static:search_prev"
+  ],
+  "note": "FindPrevWordAtCaret (Previous Occurrence of the Word at Caret) = zmax `search_selection_detect_word_boundaries` + `search_prev` (vim `#`, keymap/vim.rs:798): searches the word at the cursor backward."
+ },
+ {
+  "spec_id": "jetbrains-actions.FindPrevious",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "FindPrevious (Find Previous / Move to Previous Occurrence) = zmax `search_prev`: moves to the previous match of the last search."
+ },
+ {
+  "spec_id": "jetbrains-actions.FindSelectionInPath",
+  "status": "ported",
+  "evidence": [
+   "static:global_search_symbol"
+  ],
+  "note": "FindSelectionInPath (Find in Files) = zmax `global_search_symbol`: opens project search seeded with the selection (or the word at the cursor)."
+ },
+ {
+  "spec_id": "jetbrains-actions.FindUsages",
+  "status": "ported",
+  "evidence": [
+   "static:goto_reference"
+  ],
+  "note": "FindUsages (Find Usages) = zmax `goto_reference`: lists LSP references to the symbol at the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.FindUsagesInFile",
+  "status": "ported",
+  "evidence": [
+   "static:find_usages_in_file"
+  ],
+  "note": "FindUsagesInFile (Find Usages in File) = zmax `find_usages_in_file`: references to the symbol at the cursor, restricted to the current file."
+ },
+ {
+  "spec_id": "jetbrains-actions.FindWordAtCaret",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection_detect_word_boundaries",
+   "static:search_next"
+  ],
+  "note": "FindWordAtCaret (Next Occurrence of the Word at Caret) = zmax `search_selection_detect_word_boundaries` + `search_next` (vim `*`, keymap/vim.rs:797): searches the word at the cursor forward."
+ },
+ {
+  "spec_id": "jetbrains-actions.FixDocComment",
+  "status": "ported",
+  "evidence": [
+   "static:fix_doc_comment"
+  ],
+  "note": "FixDocComment (Fix Doc Comment) = zmax `fix_doc_comment`: writes the doc comment (summary + parameter entries) for the definition at the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.FixLineSeparators",
+  "status": "partial",
+  "evidence": [
+   "typable:line-ending"
+  ],
+  "note": "FixLineSeparators (Fix Line Separators) = zmax `:line-ending`: converts every line ending of the current buffer to the chosen one; JetBrains converts selected files to the project default."
+ },
+ {
+  "spec_id": "jetbrains-actions.Floating.CodeToolbar.SurroundWithIf",
+  "status": "partial",
+  "evidence": [
+   "static:surround_with"
+  ],
+  "note": "Floating.CodeToolbar.SurroundWithIf (if) = zmax `surround_with`: wraps the selected lines in `if` via the picker entry (commands.rs:9957) rather than a one-click toolbar action."
+ },
+ {
+  "spec_id": "jetbrains-actions.Floating.CodeToolbar.SurroundWithTryCatch",
+  "status": "partial",
+  "evidence": [
+   "static:surround_with"
+  ],
+  "note": "Floating.CodeToolbar.SurroundWithTryCatch (try / catch) = zmax `surround_with`: wraps the selected lines in `try / catch` via the picker entry (commands.rs:9961) rather than a one-click toolbar action."
+ },
+ {
+  "spec_id": "jetbrains-actions.FocusEditor",
+  "status": "partial",
+  "evidence": [
+   "static:hide_active_tool_window"
+  ],
+  "note": "FocusEditor (Focus Editor) = zmax `hide_active_tool_window`: returns focus to the editor but also hides the tool window, where JetBrains Focus Editor leaves it open."
+ },
+ {
+  "spec_id": "jetbrains-actions.Forward",
+  "status": "ported",
+  "evidence": [
+   "static:jump_forward"
+  ],
+  "note": "Forward (Forward) = zmax `jump_forward`: moves forward on the jumplist, redoing the last back-navigation."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ChangesView.Shelf.CreatePatchFromChanges",
+  "status": "partial",
+  "evidence": [
+   "typable:create-patch"
+  ],
+  "note": "Frontend.ChangesView.Shelf.CreatePatchFromChanges (Create Patch) = zmax `:create-patch`: writes the working tree's diff as a patch; JetBrains creates it from a selected shelf entry."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ChangesView.Shelf.CreatePatchFromChanges.Clipboard",
+  "status": "partial",
+  "evidence": [
+   "typable:copy-patch"
+  ],
+  "note": "Frontend.ChangesView.Shelf.CreatePatchFromChanges.Clipboard (Copy as Patch to Clipboard) = zmax `:copy-patch`: copies the working tree's diff to the clipboard; JetBrains copies a selected shelf entry."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ChangesView.ShowDiff",
+  "status": "ported",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": "Frontend.ChangesView.ShowDiff (Show Diff) = zmax `:diff`: side-by-side diff of the file vs git HEAD (same evidence as keymap Show Diff)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ChangesView.UnshelveSilently",
+  "status": "ported",
+  "evidence": [
+   "typable:unshelve"
+  ],
+  "note": "Frontend.ChangesView.UnshelveSilently (Unshelve Silently) = zmax `:unshelve`: applies a shelf entry back onto the working tree without a dialog."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ShelveChanges.UnshelveWithDialog",
+  "status": "ported",
+  "evidence": [
+   "typable:unshelve"
+  ],
+  "note": "Frontend.ShelveChanges.UnshelveWithDialog (Unshelve) = zmax `:unshelve`: applies a chosen shelf entry back onto the working tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.Vcs.CompareWithLocal",
+  "status": "ported",
+  "evidence": [
+   "typable:compare-ref"
+  ],
+  "note": "Frontend.Vcs.CompareWithLocal (Compare with Local) = zmax `:compare-ref`: diffs the buffer against its version at a given git revision."
+ },
+ {
+  "spec_id": "jetbrains-actions.Generate",
+  "status": "ported",
+  "evidence": [
+   "static:generate_code"
+  ],
+  "note": "Generate (Generate) = zmax `generate_code`: generates getters/constructors/impls via LSP (same evidence as keymap Generate)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Add",
+  "status": "ported",
+  "evidence": [
+   "typable:git-stage"
+  ],
+  "note": "Git.Add (Add) = zmax `:git-stage`: `git add` of the current file."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Branches",
+  "status": "ported",
+  "evidence": [
+   "static:git_branch_picker"
+  ],
+  "note": "Git.Branches (Branches) = zmax `git_branch_picker`: picks a branch and checks it out (same evidence as keymap Branches)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Branches.Popup.Fetch",
+  "status": "ported",
+  "evidence": [
+   "static:git_fetch"
+  ],
+  "note": "Git.Branches.Popup.Fetch (Git.Branches.Popup.Fetch) = zmax `git_fetch`: fetches all remotes."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.ChangesView.AcceptTheirs",
+  "status": "partial",
+  "evidence": [
+   "typable:conflict-theirs"
+  ],
+  "note": "Git.ChangesView.AcceptTheirs (Git.ChangesView.AcceptTheirs) = zmax `:conflict-theirs`: keeps the incoming side of the conflict at the cursor; JetBrains resolves the whole file with theirs."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.ChangesView.AcceptYours",
+  "status": "partial",
+  "evidence": [
+   "typable:conflict-ours"
+  ],
+  "note": "Git.ChangesView.AcceptYours (Git.ChangesView.AcceptYours) = zmax `:conflict-ours`: keeps our side of the conflict at the cursor; JetBrains resolves the whole file with yours."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.ChangesView.Merge",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "Git.ChangesView.Merge (Git.ChangesView.Merge) = zmax `:merge`: resolves the file's merge conflicts in a 3-pane ours/result/theirs view."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.CheckoutRevision",
+  "status": "partial",
+  "evidence": [
+   "static:vc_retrieve_tag"
+  ],
+  "note": "Git.CheckoutRevision (Checkout Revision) = zmax `vc_retrieve_tag`: runs `git checkout <ref>` for a typed ref; JetBrains checks out the commit selected in the log."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Clone",
+  "status": "ported",
+  "evidence": [
+   "typable:git-clone"
+  ],
+  "note": "Git.Clone (Clone) = zmax `:git-clone`: clones a repository and opens it as the workspace."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Commit.And.Push.Executor",
+  "status": "partial",
+  "evidence": [
+   "static:git_acp"
+  ],
+  "note": "Git.Commit.And.Push.Executor (Git.Commit.And.Push.Executor) = zmax `git_acp`: stages everything, commits and pushes; JetBrains commits only the chosen changes before pushing."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Commit.Stage",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Git.Commit.Stage (Commit) = zmax `:magit`: status buffer whose commit commits the staged index; not a direct one-shot commit command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.CompareWithBranch",
+  "status": "ported",
+  "evidence": [
+   "static:git_compare_with_branch"
+  ],
+  "note": "Git.CompareWithBranch (Compare with Branch or Tag) = zmax `git_compare_with_branch`: diffs this file against a picked branch."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.CreateNewBranch",
+  "status": "ported",
+  "evidence": [
+   "static:vc_create_branch"
+  ],
+  "note": "Git.CreateNewBranch (New Branch) = zmax `vc_create_branch`: `git switch -c <name>`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.CreateNewTag",
+  "status": "partial",
+  "evidence": [
+   "static:vc_create_tag"
+  ],
+  "note": "Git.CreateNewTag (New Tag) = zmax `vc_create_tag`: tags HEAD; JetBrains tags the commit selected in the log."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Fetch",
+  "status": "ported",
+  "evidence": [
+   "static:git_fetch"
+  ],
+  "note": "Git.Fetch (Fetch) = zmax `git_fetch`: fetches all remotes."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Init",
+  "status": "ported",
+  "evidence": [
+   "static:git_init"
+  ],
+  "note": "Git.Init (Create Git Repository) = zmax `git_init`: initializes a new git repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Log",
+  "status": "ported",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "Git.Log (Show Git Repository Log) = zmax `git_repo_log_picker`: commit log for the whole repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Pull",
+  "status": "partial",
+  "evidence": [
+   "static:git_pull"
+  ],
+  "note": "Git.Pull (Pull) = zmax `git_pull`: `git pull --ff-only`; JetBrains Pull offers merge/rebase and branch choice."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.ResolveConflicts",
+  "status": "ported",
+  "evidence": [
+   "static:resolve_conflicts"
+  ],
+  "note": "Git.ResolveConflicts (Resolve Conflicts) = zmax `resolve_conflicts`: opens the 3-way merge-conflict resolver."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Show.Stage",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Git.Show.Stage (Show Staging Area) = zmax `:magit`: status buffer showing staged/unstaged sections; not a dedicated staging-area view."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Show.WorkingTrees",
+  "status": "partial",
+  "evidence": [
+   "typable:projectile-switch-worktree"
+  ],
+  "note": "Git.Show.WorkingTrees (Worktrees) = zmax `:projectile-switch-worktree`: lists other worktrees from `git worktree list` in order to switch; no worktree management panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.ShowBranches",
+  "status": "ported",
+  "evidence": [
+   "static:git_branch_picker"
+  ],
+  "note": "Git.ShowBranches (Show Branches) = zmax `git_branch_picker`: lists branches and checks out the pick."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.AcceptTheirs",
+  "status": "partial",
+  "evidence": [
+   "static:conflict_take_all_theirs"
+  ],
+  "note": "Git.Stage.AcceptTheirs (Git.Stage.AcceptTheirs) ~ zmax `conflict_take_all_theirs`: resolves every conflict hunk in the buffer with their side, but does not `git checkout --theirs`/stage the file from a staging-area tree as JetBrains does"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.AcceptYours",
+  "status": "partial",
+  "evidence": [
+   "static:conflict_take_all_ours"
+  ],
+  "note": "Git.Stage.AcceptYours (Git.Stage.AcceptYours) ~ zmax `conflict_take_all_ours`: resolves every conflict hunk in the buffer with our side, but does not `git checkout --ours`/stage the file from a staging-area tree as JetBrains does"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Add",
+  "status": "ported",
+  "evidence": [
+   "typable:git-stage"
+  ],
+  "note": "Git.Stage.Add (Git.Stage.Add) = zmax `git-stage`: `:git-stage` runs `git add` on the current file, the same staging operation"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Merge",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "Git.Stage.Merge (Git.Stage.Merge) = zmax `merge`: `:merge` opens the conflicted file in a 3-pane ours/result/theirs resolver, the same merge tool JetBrains opens for a conflicted staged file"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Reset",
+  "status": "ported",
+  "evidence": [
+   "typable:git-unstage"
+  ],
+  "note": "Git.Stage.Reset (Git.Stage.Reset) = zmax `git-unstage`: `:git-unstage` runs `git reset HEAD` on the current file, the same unstage operation"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Revert",
+  "status": "partial",
+  "evidence": [
+   "static:vc_revert"
+  ],
+  "note": "Git.Stage.Revert (Git.Stage.Revert) ~ zmax `vc_revert`: reverts the file to HEAD, while JetBrains' staging-area rollback discards only unstaged changes back to the index version"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash",
+  "status": "ported",
+  "evidence": [
+   "typable:stash"
+  ],
+  "note": "Git.Stash (Stash Changes) = zmax `stash`: `:stash` runs `git stash` on the working-tree changes, the same Stash Changes operation"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash.Pop",
+  "status": "partial",
+  "evidence": [
+   "typable:stash-pop"
+  ],
+  "note": "Git.Stash.Pop (Pop) ~ zmax `stash-pop`: `:stash-pop` pops only the most recent stash; JetBrains pops the stash selected in the stash list"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash.Silently",
+  "status": "ported",
+  "evidence": [
+   "typable:stash"
+  ],
+  "note": "Git.Stash.Silently (Stash Silently) = zmax `stash`: `:stash` stashes with no dialog, which is what Stash Silently does"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Tag",
+  "status": "ported",
+  "evidence": [
+   "static:vc_create_tag"
+  ],
+  "note": "Git.Tag (New Tag) = zmax `vc_create_tag`: `vc_create_tag` creates a git tag at HEAD, the same New Tag operation"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Unstash",
+  "status": "partial",
+  "evidence": [
+   "typable:stash-pop"
+  ],
+  "note": "Git.Unstash (Unstash Changes) ~ zmax `stash-pop`: `:stash-pop` pops the most recent stash; JetBrains Unstash offers a stash picker with pop/apply/branch options"
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.WorkingTrees.Open",
+  "status": "partial",
+  "evidence": [
+   "typable:projectile-switch-worktree"
+  ],
+  "note": "Git.WorkingTrees.Open (Open as a Project) ~ zmax `projectile-switch-worktree`: switches the workspace to another checkout of the repository rather than opening the worktree as a separate project window"
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.Clone",
+  "status": "partial",
+  "evidence": [
+   "typable:git-clone"
+  ],
+  "note": "Github.Clone (Clone Repository from GitHub) ~ zmax `git-clone`: `:git-clone` clones a URL and opens it as the workspace; JetBrains lists the account's GitHub repositories to choose from"
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.View.Pull.Request",
+  "status": "ported",
+  "evidence": [
+   "typable:github"
+  ],
+  "note": "Github.View.Pull.Request (View Pull Requests) = zmax `github`: `:github prs` opens the GitHub browser on its Pull Requests tab (zmax-term/src/ui/github.rs:419), the same View Pull Requests list"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToLastTab",
+  "status": "ported",
+  "evidence": [
+   "typable:blast"
+  ],
+  "note": "GoToLastTab (Select the Last Tab) = zmax `blast`: `:blast` goes to the last buffer in the buffer list, i.e. the last tab of the bufferline"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToLinkTarget",
+  "status": "ported",
+  "evidence": [
+   "static:goto_link_target"
+  ],
+  "note": "GoToLinkTarget (Go to Link Target) = zmax `goto_link_target`: `goto_link_target` opens what the file in this buffer links to, the same JetBrains Go to Link Target"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab1",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab1 (GoToTab1) ~ zmax `tab_select`: `1 tab_select` goes to the 1-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab2",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab2 (GoToTab2) ~ zmax `tab_select`: `2 tab_select` goes to the 2-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab3",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab3 (GoToTab3) ~ zmax `tab_select`: `3 tab_select` goes to the 3-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab4",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab4 (GoToTab4) ~ zmax `tab_select`: `4 tab_select` goes to the 4-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab5",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab5 (GoToTab5) ~ zmax `tab_select`: `5 tab_select` goes to the 5-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab6",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab6 (GoToTab6) ~ zmax `tab_select`: `6 tab_select` goes to the 6-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab7",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab7 (GoToTab7) ~ zmax `tab_select`: `7 tab_select` goes to the 7-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab8",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab8 (GoToTab8) ~ zmax `tab_select`: `8 tab_select` goes to the 8-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GoToTab9",
+  "status": "partial",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "GoToTab9 (GoToTab9) ~ zmax `tab_select`: `9 tab_select` goes to the 9-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoAction",
+  "status": "ported",
+  "evidence": [
+   "static:command_palette"
+  ],
+  "note": "GotoAction (Find Action) = zmax `command_palette`: `command_palette` opens the searchable list of every command, the same Find Action"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark0",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark0 (GotoBookmark0) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `0` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark1",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark1 (GotoBookmark1) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `1` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark2",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark2 (GotoBookmark2) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `2` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark3",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark3 (GotoBookmark3) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `3` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark4",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark4 (GotoBookmark4) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `4` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark5",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark5 (GotoBookmark5) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `5` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark6",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark6 (GotoBookmark6) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `6` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark7",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark7 (GotoBookmark7) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `7` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark8",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark8 (GotoBookmark8) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `8` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmark9",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmark9 (GotoBookmark9) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `9` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkA",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkA (GotoBookmarkA) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `a` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkB",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkB (GotoBookmarkB) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `b` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkC",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkC (GotoBookmarkC) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `c` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkD",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkD (GotoBookmarkD) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `d` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkE",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkE (GotoBookmarkE) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `e` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkF",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkF (GotoBookmarkF) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `f` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkG",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkG (GotoBookmarkG) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `g` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkH",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkH (GotoBookmarkH) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `h` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkI",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkI (GotoBookmarkI) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `i` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkJ",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkJ (GotoBookmarkJ) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `j` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkK",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkK (GotoBookmarkK) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `k` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkL",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkL (GotoBookmarkL) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `l` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkM",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkM (GotoBookmarkM) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `m` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkN",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkN (GotoBookmarkN) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `n` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkO",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkO (GotoBookmarkO) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `o` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkP",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkP (GotoBookmarkP) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `p` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkQ",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkQ (GotoBookmarkQ) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `q` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkR",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkR (GotoBookmarkR) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `r` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkS",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkS (GotoBookmarkS) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `s` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkT",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkT (GotoBookmarkT) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `t` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkU",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkU (GotoBookmarkU) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `u` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkV",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkV (GotoBookmarkV) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `v` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkW",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkW (GotoBookmarkW) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `w` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkX",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkX (GotoBookmarkX) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `x` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkY",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkY (GotoBookmarkY) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `y` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoBookmarkZ",
+  "status": "partial",
+  "evidence": [
+   "static:goto_numbered_bookmark"
+  ],
+  "note": "GotoBookmarkZ (GotoBookmarkZ) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `z` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoChangedFile",
+  "status": "ported",
+  "evidence": [
+   "static:changed_file_picker"
+  ],
+  "note": "GotoChangedFile (Go to Changed File) = zmax `changed_file_picker`: `changed_file_picker` fuzzy-picks among VCS-changed files, the same Go to Changed File"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoClass",
+  "status": "partial",
+  "evidence": [
+   "static:workspace_symbol_picker"
+  ],
+  "note": "GotoClass (Go to Class) ~ zmax `workspace_symbol_picker`: searches all project symbols via LSP workspace symbols, not only classes/types"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoCustomRegion",
+  "status": "ported",
+  "evidence": [
+   "static:goto_custom_region"
+  ],
+  "note": "GotoCustomRegion (Custom Folding) = zmax `goto_custom_region`: `goto_custom_region` picks a //region or <editor-fold> block by name and jumps to it (zmax-term/src/commands.rs:61986)"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoDeclaration",
+  "status": "partial",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": "GotoDeclaration (Go to Declaration or Usages) ~ zmax `goto_definition`: jumps to the definition but does not fall back to showing usages when invoked on the declaration itself"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoDeclarationOnly",
+  "status": "ported",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": "GotoDeclarationOnly (Go to Declaration) = zmax `goto_definition`: `goto_definition` jumps to the symbol's declaration site with no usages fallback, which is Go to Declaration"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoFile",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "GotoFile (Go to File) = zmax `file_picker`: `file_picker` fuzzy-opens a project file, the same Go to File"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoImplementation",
+  "status": "ported",
+  "evidence": [
+   "static:goto_implementation"
+  ],
+  "note": "GotoImplementation (Go to Implementation(s)) = zmax `goto_implementation`: `goto_implementation` jumps to the implementations of the symbol via LSP"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoLine",
+  "status": "ported",
+  "evidence": [
+   "typable:goto"
+  ],
+  "note": "GotoLine (Go to Line:Column) = zmax `goto`: `:goto` jumps to a line number, the Go to Line operation"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoNextBookmark",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_next"
+  ],
+  "note": "GotoNextBookmark (Next Line Bookmark) = zmax `bookmark_next`: `bookmark_next` jumps to the next line bookmark across files, wrapping"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoNextElementUnderCaretUsage",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_usage"
+  ],
+  "note": "GotoNextElementUnderCaretUsage (Next Highlighted Usage) = zmax `goto_next_usage`: `goto_next_usage` jumps to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage)"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoNextError",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": "GotoNextError (Next Highlighted Error) = zmax `goto_next_diag`: `goto_next_diag` jumps to the next diagnostic, the same Next Highlighted Error"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoPrevElementUnderCaretUsage",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_usage"
+  ],
+  "note": "GotoPrevElementUnderCaretUsage (Previous Highlighted Usage) = zmax `goto_prev_usage`: `goto_prev_usage` jumps to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage)"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoPreviousBookmark",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_prev"
+  ],
+  "note": "GotoPreviousBookmark (Previous Line Bookmark) = zmax `bookmark_prev`: `bookmark_prev` jumps to the previous line bookmark across files, wrapping"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoPreviousError",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_diag"
+  ],
+  "note": "GotoPreviousError (Previous Highlighted Error) = zmax `goto_prev_diag`: `goto_prev_diag` jumps to the previous diagnostic, the same Previous Highlighted Error"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoRelated",
+  "status": "partial",
+  "evidence": [
+   "static:find_sibling_file"
+  ],
+  "note": "GotoRelated (Related Symbol) ~ zmax `find_sibling_file`: opens a related file (header/source, test/impl, style/template) but not related symbols"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoSuperMethod",
+  "status": "ported",
+  "evidence": [
+   "static:goto_super_method"
+  ],
+  "note": "GotoSuperMethod (Go to Super Method) = zmax `goto_super_method`: `goto_super_method` goes to the method this one overrides (JetBrains Go to Super Method)"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoSymbol",
+  "status": "ported",
+  "evidence": [
+   "static:workspace_symbol_picker"
+  ],
+  "note": "GotoSymbol (Go to Symbol) = zmax `workspace_symbol_picker`: `workspace_symbol_picker` searches symbols across the project via LSP, the same Go to Symbol"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoTest",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_test_file"
+  ],
+  "note": "GotoTest (Go to Test) = zmax `toggle_test_file`: `toggle_test_file` switches between implementation and its test file, the same Go to Test"
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoTypeDeclaration",
+  "status": "ported",
+  "evidence": [
+   "static:goto_type_definition"
+  ],
+  "note": "GotoTypeDeclaration (Go to Type Declaration) = zmax `goto_type_definition`: `goto_type_definition` jumps to the declaration of the symbol's type via LSP"
+ },
+ {
+  "spec_id": "jetbrains-actions.Help.KeymapReference",
+  "status": "partial",
+  "evidence": [
+   "static:describe_keymap"
+  ],
+  "note": "Help.KeymapReference (Keyboard Shortcuts PDF) ~ zmax `describe_keymap`: lists every binding of the current mode's keymap in the editor instead of opening a printable shortcut PDF"
+ },
+ {
+  "spec_id": "jetbrains-actions.HelpTopics",
+  "status": "ported",
+  "evidence": [
+   "typable:help"
+  ],
+  "note": "HelpTopics (Help) = zmax `help`: `:help` opens the editor's help browser, the same Help action"
+ },
+ {
+  "spec_id": "jetbrains-actions.HideActiveWindow",
+  "status": "ported",
+  "evidence": [
+   "static:hide_active_tool_window"
+  ],
+  "note": "HideActiveWindow (Hide Active Tool Window) = zmax `hide_active_tool_window`: `hide_active_tool_window` hides the active tool window and returns focus to the editor (JetBrains Shift-Esc)"
+ },
+ {
+  "spec_id": "jetbrains-actions.HideAllWindows",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_ide"
+  ],
+  "note": "HideAllWindows (Hide All Tool Windows) = zmax `toggle_ide`: `toggle_ide` toggles the whole tool-window workbench away, the same Hide All Tool Windows"
+ },
+ {
+  "spec_id": "jetbrains-actions.HideBottomWindows",
+  "status": "ported",
+  "evidence": [
+   "static:hide_bottom_windows"
+  ],
+  "note": "HideBottomWindows (Hide Bottom Tool Windows) = zmax `hide_bottom_windows`: `hide_bottom_windows` folds the workbench's bottom drawer away (zmax-term/src/commands.rs:53315)"
+ },
+ {
+  "spec_id": "jetbrains-actions.HideSideWindows",
+  "status": "ported",
+  "evidence": [
+   "static:hide_side_windows"
+  ],
+  "note": "HideSideWindows (Hide Side Tool Windows) = zmax `hide_side_windows`: `hide_side_windows` folds the workbench's left column away (zmax-term/src/commands.rs:53297)"
+ },
+ {
+  "spec_id": "jetbrains-actions.HighlightUsagesInFile",
+  "status": "ported",
+  "evidence": [
+   "static:highlight_usages_in_file"
+  ],
+  "note": "HighlightUsagesInFile (Highlight Usages in File) = zmax `highlight_usages_in_file`: `highlight_usages_in_file` highlights every occurrence of the symbol at the caret (JetBrains Highlight Usages in File)"
+ },
+ {
+  "spec_id": "jetbrains-actions.HippieCompletion",
+  "status": "ported",
+  "evidence": [
+   "static:dabbrev_expand"
+  ],
+  "note": "HippieCompletion (Cyclic Expand Word) = zmax `dabbrev_expand`: `dabbrev_expand` expands the word before point from other buffer words, cycling (JetBrains Cyclic Expand Word)"
+ },
+ {
+  "spec_id": "jetbrains-actions.ImplementMethods",
+  "status": "ported",
+  "evidence": [
+   "static:implement_methods"
+  ],
+  "note": "ImplementMethods (Implement Methods) = zmax `implement_methods`: `implement_methods` implements missing interface/trait members via LSP (IntelliJ Ctrl-I)"
+ },
+ {
+  "spec_id": "jetbrains-actions.ImportSettings",
+  "status": "ported",
+  "evidence": [
+   "typable:import-settings"
+  ],
+  "note": "ImportSettings (Import Settings) = zmax `import-settings`: `:import-settings DIR` copies an exported settings directory back over the config and reloads (zmax-term/src/commands/typed.rs:4757)"
+ },
+ {
+  "spec_id": "jetbrains-actions.IncrementWindowHeight",
+  "status": "partial",
+  "evidence": [
+   "typable:resize"
+  ],
+  "note": "IncrementWindowHeight (Increment Height) ~ zmax `resize`: `:resize +N` grows the current editor split's height; JetBrains resizes the active tool window"
+ },
+ {
+  "spec_id": "jetbrains-actions.IncrementalSearch",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": "IncrementalSearch (Incremental Search) = zmax `search`: `search` is the regex search prompt that moves to matches as you type, the same incremental search"
+ },
+ {
+  "spec_id": "jetbrains-actions.Inline",
+  "status": "ported",
+  "evidence": [
+   "static:inline_refactor"
+  ],
+  "note": "Inline (Inline) = zmax `inline_refactor`: `inline_refactor` inlines a variable/method via LSP (IntelliJ Inline)"
+ },
+ {
+  "spec_id": "jetbrains-actions.InsertInlineCompletionAction",
+  "status": "ported",
+  "evidence": [
+   "static:ghost_text_accept"
+  ],
+  "note": "InsertInlineCompletionAction (Insert Inline Proposal) = zmax `ghost_text_accept`: `ghost_text_accept` accepts the whole inline ghost-text suggestion"
+ },
+ {
+  "spec_id": "jetbrains-actions.InsertInlineCompletionWordAction",
+  "status": "ported",
+  "evidence": [
+   "static:ghost_text_accept_word"
+  ],
+  "note": "InsertInlineCompletionWordAction (Insert Inline Proposal's Word) = zmax `ghost_text_accept_word`: `ghost_text_accept_word` accepts the next word of the inline ghost-text suggestion"
+ },
+ {
+  "spec_id": "jetbrains-actions.InsertLiveTemplate",
+  "status": "partial",
+  "evidence": [
+   "static:snippet_expand"
+  ],
+  "note": "InsertLiveTemplate (Insert Live Template) ~ zmax `snippet_expand`: expands the user snippet whose trigger precedes the cursor instead of showing a template picker"
+ },
+ {
+  "spec_id": "jetbrains-actions.IntroduceConstant",
+  "status": "ported",
+  "evidence": [
+   "static:extract_constant"
+  ],
+  "note": "IntroduceConstant (Introduce Constant) = zmax `extract_constant`: `extract_constant` extracts the selection into a constant via LSP (IntelliJ Extract Constant)"
+ },
+ {
+  "spec_id": "jetbrains-actions.IntroduceField",
+  "status": "ported",
+  "evidence": [
+   "static:extract_field"
+  ],
+  "note": "IntroduceField (Introduce Field) = zmax `extract_field`: `extract_field` introduces a field via LSP (IntelliJ Introduce Field)"
+ },
+ {
+  "spec_id": "jetbrains-actions.IntroduceParameter",
+  "status": "ported",
+  "evidence": [
+   "static:extract_parameter"
+  ],
+  "note": "IntroduceParameter (Introduce Parameter) = zmax `extract_parameter`: `extract_parameter` introduces a parameter via LSP (IntelliJ Introduce Parameter)"
+ },
+ {
+  "spec_id": "jetbrains-actions.IntroduceVariable",
+  "status": "ported",
+  "evidence": [
+   "static:extract_variable"
+  ],
+  "note": "IntroduceVariable (Introduce Variable) = zmax `extract_variable`: `extract_variable` introduces a variable via LSP (IntelliJ Introduce Variable)"
+ },
+ {
+  "spec_id": "jetbrains-actions.JumpToLastChange",
+  "status": "ported",
+  "evidence": [
+   "static:goto_older_change"
+  ],
+  "note": "JumpToLastChange (Last Edit Location) = zmax `goto_older_change`: `goto_older_change` (vim g;) steps back through edit locations, the same Last Edit Location"
+ },
+ {
+  "spec_id": "jetbrains-actions.JumpToLastWindow",
+  "status": "ported",
+  "evidence": [
+   "static:jump_to_last_tool_window"
+  ],
+  "note": "JumpToLastWindow (Jump to Last Tool Window) = zmax `jump_to_last_tool_window`: `jump_to_last_tool_window` toggles focus to the last tool window (JetBrains F12)"
+ },
+ {
+  "spec_id": "jetbrains-actions.JumpToNextChange",
+  "status": "ported",
+  "evidence": [
+   "static:goto_newer_change"
+  ],
+  "note": "JumpToNextChange (Next Edit Location) = zmax `goto_newer_change`: `goto_newer_change` (vim g,) steps forward through edit locations, the same Next Edit Location"
+ },
+ {
+  "spec_id": "jetbrains-actions.LocalHistory.ShowHistory",
+  "status": "ported",
+  "evidence": [
+   "typable:LocalHistory"
+  ],
+  "note": "LocalHistory.ShowHistory (Show History) = zmax `LocalHistory`: `:LocalHistory` picks a saved Local History snapshot of this file and opens it (typed.rs:65330)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.GenerateTableOfContents",
+  "status": "ported",
+  "evidence": [
+   "static:insert_toc"
+  ],
+  "note": "Markdown.GenerateTableOfContents (Generate Table Of Contents) = zmax `insert_toc`: inserts a markdown TOC from the buffer headings."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Styling.CreateLink",
+  "status": "ported",
+  "evidence": [
+   "typable:markdown-link"
+  ],
+  "note": "Markdown.Styling.CreateLink (Create Link) = zmax `markdown-link`: `:markdown-link` wraps the selection as [text](url)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Styling.CreateOrChangeList",
+  "status": "partial",
+  "evidence": [
+   "static:bullet_list_selection"
+  ],
+  "note": "Markdown.Styling.CreateOrChangeList (Create Or Change List) = zmax `bullet_list_selection`: makes a bullet list from the selected lines; no numbered/checkbox list cycling."
+ },
+ {
+  "spec_id": "jetbrains-actions.MaximizeToolWindow",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_bottom_zoom"
+  ],
+  "note": "MaximizeToolWindow (MaximizeToolWindow) = zmax `toggle_bottom_zoom`: maximizes/restores only the bottom panel, not any active tool window."
+ },
+ {
+  "spec_id": "jetbrains-actions.MemberPushDown",
+  "status": "ported",
+  "evidence": [
+   "static:push_members_down"
+  ],
+  "note": "MemberPushDown (Push Members Down) = zmax `push_members_down`: LSP push-members-down refactor."
+ },
+ {
+  "spec_id": "jetbrains-actions.MembersPullUp",
+  "status": "ported",
+  "evidence": [
+   "static:pull_members_up"
+  ],
+  "note": "MembersPullUp (Pull Members Up) = zmax `pull_members_up`: LSP pull-members-up refactor."
+ },
+ {
+  "spec_id": "jetbrains-actions.MethodDown",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_function"
+  ],
+  "note": "MethodDown (Next Method) = zmax `goto_next_function`: jumps to the next function definition."
+ },
+ {
+  "spec_id": "jetbrains-actions.MethodUp",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_function"
+  ],
+  "note": "MethodUp (Previous Method) = zmax `goto_prev_function`: jumps to the previous function definition."
+ },
+ {
+  "spec_id": "jetbrains-actions.Move",
+  "status": "partial",
+  "evidence": [
+   "static:move_file_refactor"
+  ],
+  "note": "Move (Move) = zmax `move_file_refactor`: moves the current file to another directory; IntelliJ Move also moves symbols/classes, zmax only files."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveEditorToOppositeTabGroup",
+  "status": "ported",
+  "evidence": [
+   "static:move_to_opposite_group"
+  ],
+  "note": "MoveEditorToOppositeTabGroup (Move to Opposite Group) = zmax `move_to_opposite_group`: moves the current editor to the opposite split group."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveElementLeft",
+  "status": "ported",
+  "evidence": [
+   "static:move_element_left"
+  ],
+  "note": "MoveElementLeft (Move Element Left) = zmax `move_element_left`: swaps the syntax node with its previous sibling."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveElementRight",
+  "status": "ported",
+  "evidence": [
+   "static:move_element_right"
+  ],
+  "note": "MoveElementRight (Move Element Right) = zmax `move_element_right`: swaps the syntax node with its next sibling."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveLineDown",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_down"
+  ],
+  "note": "MoveLineDown (Move Line Down) = zmax `shift_line_down`: moves the line/selection down one line (commands.rs shift_lines)."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveLineUp",
+  "status": "ported",
+  "evidence": [
+   "static:shift_line_up"
+  ],
+  "note": "MoveLineUp (Move Line Up) = zmax `shift_line_up`: moves the line/selection up one line (commands.rs:12830)."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveStatementDown",
+  "status": "ported",
+  "evidence": [
+   "static:move_statement_down"
+  ],
+  "note": "MoveStatementDown (Move Statement Down) = zmax `move_statement_down`: moves the statement under the cursor below its next sibling."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveStatementUp",
+  "status": "ported",
+  "evidence": [
+   "static:move_statement_up"
+  ],
+  "note": "MoveStatementUp (Move Statement Up) = zmax `move_statement_up`: moves the statement under the cursor above its previous sibling (commands.rs:44995)."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveTabDown",
+  "status": "partial",
+  "evidence": [
+   "static:hsplit"
+  ],
+  "note": "MoveTabDown (Split and Move Down) = zmax `hsplit`: opens a bottom split on the same document; IntelliJ moves the tab out of the original group, zmax leaves the original view."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoveTabRight",
+  "status": "partial",
+  "evidence": [
+   "static:vsplit"
+  ],
+  "note": "MoveTabRight (Split and Move Right) = zmax `vsplit`: opens a right split on the same document; IntelliJ moves the tab out of the original group, zmax leaves the original view."
+ },
+ {
+  "spec_id": "jetbrains-actions.NewDir",
+  "status": "ported",
+  "evidence": [
+   "typable:mkdir"
+  ],
+  "note": "NewDir (Directory/Package) = zmax `mkdir`: `:mkdir` creates a directory (and missing parents)."
+ },
+ {
+  "spec_id": "jetbrains-actions.NewElementSamePlace",
+  "status": "ported",
+  "evidence": [
+   "static:new_file_in_directory"
+  ],
+  "note": "NewElementSamePlace (New in This Directory) = zmax `new_file_in_directory`: prompts for a name and creates the file next to the current one, then opens it."
+ },
+ {
+  "spec_id": "jetbrains-actions.NewFile",
+  "status": "partial",
+  "evidence": [
+   "static:new_file_in_directory"
+  ],
+  "note": "NewFile (File) = zmax `new_file_in_directory`: creates and opens a named file on disk, but always in the current file's directory rather than a project-view selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.NewScratchBuffer",
+  "status": "ported",
+  "evidence": [
+   "typable:new"
+  ],
+  "note": "NewScratchBuffer (New Scratch Buffer) = zmax `new`: `:new` creates a new scratch buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.NewScratchFile",
+  "status": "partial",
+  "evidence": [
+   "typable:new"
+  ],
+  "note": "NewScratchFile (Scratch File) = zmax `new`: `:new` creates an unnamed scratch buffer; IntelliJ prompts for a language and persists the scratch file."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextDiff",
+  "status": "partial",
+  "evidence": [
+   "static:goto_next_change"
+  ],
+  "note": "NextDiff (Next Difference) = zmax `goto_next_change`: jumps to the next VCS diff hunk in the buffer rather than the next difference in a diff viewer."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextOccurence",
+  "status": "partial",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": "NextOccurence (Next Occurrence) = zmax `search_next`: next match of the editor search only; IntelliJ also walks Find/Usages tool-window results."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextParameter",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_parameter"
+  ],
+  "note": "NextParameter (Next Parameter) = zmax `goto_next_parameter`: moves to the next parameter node (tree-sitter parameter object)."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextSplitter",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "NextSplitter (Go to Next Splitter) = zmax `rotate_view`: focuses the next split window."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextTab",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "NextTab (Select Next Tab) = zmax `goto_next_buffer`: switches to the next buffer tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextTemplateParameter",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_tabstop"
+  ],
+  "note": "NextTemplateParameter (Next Live Template Parameter) = zmax `goto_next_tabstop`: moves to the next placeholder of the active snippet."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextTemplateVariable",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_tabstop"
+  ],
+  "note": "NextTemplateVariable (Next Template Variable or Finish In-Place Refactoring) = zmax `goto_next_tabstop`: moves to the next placeholder of the active snippet."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenBookmarkGroup",
+  "status": "ported",
+  "evidence": [
+   "static:open_bookmarked_files"
+  ],
+  "note": "OpenBookmarkGroup (Open All Bookmarked Files) = zmax `open_bookmarked_files`: opens every file holding a line bookmark (cited commands.rs:35328)."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenElementInNewWindow",
+  "status": "partial",
+  "evidence": [
+   "static:make_frame_command"
+  ],
+  "note": "OpenElementInNewWindow (Open in New Editor Window) = zmax `make_frame_command`: opens the buffer in a new zmax frame inside the same terminal rather than a new OS window."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenFile",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": "OpenFile (Open) = zmax `open`: `:open` opens a file from disk."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenInAssociatedApplication",
+  "status": "ported",
+  "evidence": [
+   "static:open_file_external"
+  ],
+  "note": "OpenInAssociatedApplication (Open in Associated Application) = zmax `open_file_external`: opens the current file with the OS default program."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenLog",
+  "status": "ported",
+  "evidence": [
+   "static:open_log_file"
+  ],
+  "note": "OpenLog (Open Log in Editor) = zmax `open_log_file`: opens zmax's own log file in the editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.OptimizeImports",
+  "status": "ported",
+  "evidence": [
+   "static:organize_imports"
+  ],
+  "note": "OptimizeImports (Optimize Imports) = zmax `organize_imports`: runs the LSP organize-imports source action."
+ },
+ {
+  "spec_id": "jetbrains-actions.OverrideFileTypeAction",
+  "status": "partial",
+  "evidence": [
+   "typable:set-language"
+  ],
+  "note": "OverrideFileTypeAction (Override File Type) = zmax `set-language`: sets the buffer's language for this session; IntelliJ persists the override per file."
+ },
+ {
+  "spec_id": "jetbrains-actions.OverrideMethods",
+  "status": "ported",
+  "evidence": [
+   "static:override_methods"
+  ],
+  "note": "OverrideMethods (Override Methods) = zmax `override_methods`: LSP override-inherited-members action."
+ },
+ {
+  "spec_id": "jetbrains-actions.ParameterInfo",
+  "status": "ported",
+  "evidence": [
+   "static:signature_help"
+  ],
+  "note": "ParameterInfo (Parameter Info) = zmax `signature_help`: shows LSP signature help for the call at the cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.PasteMultiple",
+  "status": "ported",
+  "evidence": [
+   "static:paste_from_history"
+  ],
+  "note": "PasteMultiple (Paste from History) = zmax `paste_from_history`: picks an entry from the kill ring and pastes it (cited commands.rs:40396)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Pause",
+  "status": "ported",
+  "evidence": [
+   "static:dap_pause"
+  ],
+  "note": "Pause (Pause Program) = zmax `dap_pause`: pauses the debuggee via DAP."
+ },
+ {
+  "spec_id": "jetbrains-actions.PinActiveEditorTab",
+  "status": "ported",
+  "evidence": [
+   "static:pin_tab"
+  ],
+  "note": "PinActiveEditorTab (Pin Active Tab) = zmax `pin_tab`: pins/unpins the current buffer tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.PinActiveTab",
+  "status": "ported",
+  "evidence": [
+   "static:pin_tab"
+  ],
+  "note": "PinActiveTab (Pin Active Tab) = zmax `pin_tab`: pins/unpins the current buffer tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.PinActiveTabToggle",
+  "status": "ported",
+  "evidence": [
+   "static:pin_tab"
+  ],
+  "note": "PinActiveTabToggle (Pin Active Tab) = zmax `pin_tab`: pins/unpins the current buffer tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.PlaybackLastMacro",
+  "status": "ported",
+  "evidence": [
+   "static:replay_macro"
+  ],
+  "note": "PlaybackLastMacro (Play Back Last Macro) = zmax `replay_macro`: replays the recorded macro."
+ },
+ {
+  "spec_id": "jetbrains-actions.PrevParameter",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_parameter"
+  ],
+  "note": "PrevParameter (Prev Parameter) = zmax `goto_prev_parameter`: moves to the previous parameter node (tree-sitter parameter object)."
+ },
+ {
+  "spec_id": "jetbrains-actions.PrevSplitter",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view_reverse"
+  ],
+  "note": "PrevSplitter (Go to Previous Splitter) = zmax `rotate_view_reverse`: focuses the previous split window."
+ },
+ {
+  "spec_id": "jetbrains-actions.PrevTemplateParameter",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_tabstop"
+  ],
+  "note": "PrevTemplateParameter (Previous Live Template Parameter) = zmax `goto_prev_tabstop`: moves to the previous placeholder of the active snippet."
+ },
+ {
+  "spec_id": "jetbrains-actions.PreviousDiff",
+  "status": "partial",
+  "evidence": [
+   "static:goto_prev_change"
+  ],
+  "note": "PreviousDiff (Previous Difference) = zmax `goto_prev_change`: jumps to the previous VCS diff hunk in the buffer rather than the previous difference in a diff viewer."
+ },
+ {
+  "spec_id": "jetbrains-actions.PreviousOccurence",
+  "status": "partial",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": "PreviousOccurence (Previous Occurrence) = zmax `search_prev`: previous match of the editor search only; IntelliJ also walks Find/Usages tool-window results."
+ },
+ {
+  "spec_id": "jetbrains-actions.PreviousTab",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "PreviousTab (Select Previous Tab) = zmax `goto_previous_buffer`: switches to the previous buffer tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.PreviousTemplateVariable",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_tabstop"
+  ],
+  "note": "PreviousTemplateVariable (Previous Template Variable) = zmax `goto_prev_tabstop`: moves to the previous placeholder of the active snippet."
+ },
+ {
+  "spec_id": "jetbrains-actions.Print",
+  "status": "ported",
+  "evidence": [
+   "static:ps_print_buffer"
+  ],
+  "note": "Print (Print) = zmax `ps_print_buffer`: prints the buffer as PostScript via lpr."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.CopyProblemDescription",
+  "status": "partial",
+  "evidence": [
+   "static:copy_diagnostic"
+  ],
+  "note": "ProblemsView.CopyProblemDescription (Copy Problem Description) = zmax `copy_diagnostic`: copies the diagnostic message(s) on the cursor line in the editor, not a row selected in the Problems panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.CopyProblemDescription",
+  "status": "partial",
+  "evidence": [
+   "static:copy_diagnostic"
+  ],
+  "note": "ProblemsView.Frontend.CopyProblemDescription (Copy Problem Description) = zmax `copy_diagnostic`: copies the diagnostic message(s) on the cursor line in the editor, not a row selected in the Problems panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.GroupByToolId",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_group_problems"
+  ],
+  "note": "ProblemsView.Frontend.GroupByToolId (Group by Inspection) = zmax `toggle_group_problems`: groups the Problems panel by reporting checker (cited commands.rs:53183)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.GroupByToolId",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_group_problems"
+  ],
+  "note": "ProblemsView.GroupByToolId (Group by Inspection) = zmax `toggle_group_problems`: groups the Problems panel by reporting checker (cited commands.rs:53183)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.AutoscrollFromSource",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_auto_reveal"
+  ],
+  "note": "ProjectView.AutoscrollFromSource (Always Select Opened File) = zmax `toggle_auto_reveal`: toggles always-select-opened-file in the project tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.CompactDirectories",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_compact_directories"
+  ],
+  "note": "ProjectView.CompactDirectories (Compact Directories) = zmax `toggle_compact_directories`: draws single-child directory chains as one row (cited commands.rs:53201)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.SortByTimeAscending",
+  "status": "ported",
+  "evidence": [
+   "static:sort_tree_by_time_oldest"
+  ],
+  "note": "ProjectView.SortByTimeAscending (Sort by Modification Time (Oldest First)) = zmax `sort_tree_by_time_oldest`: orders the project tree by modification time, oldest first (cited commands.rs:53219)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.SortByTimeDescending",
+  "status": "ported",
+  "evidence": [
+   "static:sort_tree_by_time_newest"
+  ],
+  "note": "ProjectView.SortByTimeDescending (Sort by Modification Time (Newest First)) = zmax `sort_tree_by_time_newest`: orders the project tree by modification time, newest first (cited commands.rs:53219)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.SortByType",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_sort_by_type"
+  ],
+  "note": "ProjectView.SortByType (Sort by Type) = zmax `toggle_sort_by_type`: orders the project tree files by extension (cited commands.rs:53247)."
+ },
+ {
+  "spec_id": "jetbrains-actions.PruneEmptyDirectories",
+  "status": "ported",
+  "evidence": [
+   "typable:prune-empty-dirs"
+  ],
+  "note": "PruneEmptyDirectories (Prune Empty Directories) = zmax `prune-empty-dirs`: `:prune-empty-dirs` deletes directories holding no files (cited typed.rs:25315)."
+ },
+ {
+  "spec_id": "jetbrains-actions.QuickChangeScheme",
+  "status": "ported",
+  "evidence": [
+   "static:quick_switch_scheme"
+  ],
+  "note": "QuickChangeScheme (Quick Switch Scheme) = zmax `quick_switch_scheme`: one popup to switch theme, keymap preset or language (cited commands.rs:41289)."
+ },
+ {
+  "spec_id": "jetbrains-actions.QuickDocCopy",
+  "status": "ported",
+  "evidence": [
+   "static:copy_quick_doc"
+  ],
+  "note": "QuickDocCopy (Copy Quick Doc) = zmax `copy_quick_doc`: copies the hover documentation to the clipboard (cited lsp.rs:2153)."
+ },
+ {
+  "spec_id": "jetbrains-actions.QuickEvaluateExpression",
+  "status": "ported",
+  "evidence": [
+   "static:dap_quick_evaluate"
+  ],
+  "note": "QuickEvaluateExpression (Quick Evaluate Expression) = zmax `dap_quick_evaluate`: evaluates the selection or word at the cursor in the debugger."
+ },
+ {
+  "spec_id": "jetbrains-actions.QuickImplementations",
+  "status": "ported",
+  "evidence": [
+   "static:peek_definition"
+  ],
+  "note": "QuickImplementations (Quick Definition) = zmax `peek_definition`: peeks the definition in a popup without navigating."
+ },
+ {
+  "spec_id": "jetbrains-actions.QuickJavaDoc",
+  "status": "ported",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": "QuickJavaDoc (Quick Documentation) = zmax `hover`: shows LSP hover documentation for the symbol."
+ },
+ {
+  "spec_id": "jetbrains-actions.QuickTypeDefinition",
+  "status": "ported",
+  "evidence": [
+   "static:peek_type_definition"
+  ],
+  "note": "QuickTypeDefinition (Quick Type Definition) = zmax `peek_type_definition`: peeks the type definition in a popup (cited lsp.rs:1280)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RecentChangedFilesFallback",
+  "status": "partial",
+  "evidence": [
+   "static:recent_changes_picker"
+  ],
+  "note": "RecentChangedFilesFallback (Recently Changed Files) = zmax `recent_changes_picker`: lists recently changed files from saved Local History snapshots, not from in-session edits of recent files."
+ },
+ {
+  "spec_id": "jetbrains-actions.RecentChanges",
+  "status": "ported",
+  "evidence": [
+   "static:recent_changes_picker"
+  ],
+  "note": "RecentChanges (Recent Changes) = zmax `recent_changes_picker`: project-wide Local History recent changes picker (commands.rs:53371)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RecentFilesFallback",
+  "status": "ported",
+  "evidence": [
+   "static:frecent_file_picker"
+  ],
+  "note": "RecentFilesFallback (Recent Files) = zmax `frecent_file_picker`: picker over recently opened files."
+ },
+ {
+  "spec_id": "jetbrains-actions.RecentLocations",
+  "status": "ported",
+  "evidence": [
+   "typable:RecentLocations"
+  ],
+  "note": "RecentLocations (Recent Locations) = zmax `RecentLocations`: `:RecentLocations` jump ring newest-first with context (typed.rs:65319)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RedesignedRunConfigurationSelector",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "RedesignedRunConfigurationSelector (Select Run/Debug Configuration) = zmax `run_config_manager`: selecting the active config happens inside the full manager (Space/s, ui/run_config.rs:278) rather than a toolbar dropdown."
+ },
+ {
+  "spec_id": "jetbrains-actions.Refactorings.QuickListPopupAction",
+  "status": "ported",
+  "evidence": [
+   "static:refactor_this"
+  ],
+  "note": "Refactorings.QuickListPopupAction (Refactor This) = zmax `refactor_this`: shows all applicable refactorings."
+ },
+ {
+  "spec_id": "jetbrains-actions.ReformatCode",
+  "status": "ported",
+  "evidence": [
+   "typable:format"
+  ],
+  "note": "ReformatCode (Reformat Code) = zmax `format`: (alias `fmt`) formats the file through the external formatter or language server, the same whole-file reformat."
+ },
+ {
+  "spec_id": "jetbrains-actions.RenameElement",
+  "status": "ported",
+  "evidence": [
+   "static:rename_symbol"
+  ],
+  "note": "RenameElement (Rename) = zmax `rename_symbol`: renames the symbol under the cursor across the project via LSP, the same in-place rename refactoring."
+ },
+ {
+  "spec_id": "jetbrains-actions.RenameFile",
+  "status": "ported",
+  "evidence": [
+   "typable:move"
+  ],
+  "note": "RenameFile (Rename File) = zmax `move`: (alias `mv`) moves the current buffer and its file to a new path, which renames the file being edited."
+ },
+ {
+  "spec_id": "jetbrains-actions.ReopenClosedTab",
+  "status": "ported",
+  "evidence": [
+   "static:reopen_last_closed"
+  ],
+  "note": "ReopenClosedTab (Reopen Closed Tab) = zmax `reopen_last_closed`: reopens the most recently closed file, the same reopen-closed-editor op."
+ },
+ {
+  "spec_id": "jetbrains-actions.Replace",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "Replace (Replace) = zmax `substitute`: (`:s`/`:%s`) replaces pattern matches in the current file (keymap map uses the same evidence); cited in zmax-view/src/editor.rs:3306 only as an enum name."
+ },
+ {
+  "spec_id": "jetbrains-actions.ReplaceInPath",
+  "status": "ported",
+  "evidence": [
+   "typable:project-replace"
+  ],
+  "note": "ReplaceInPath (Replace in Files) = zmax `project-replace`: (alias `replace-in-files`) regex-replaces across workspace files, documented as JetBrains Replace in Files."
+ },
+ {
+  "spec_id": "jetbrains-actions.RemoveBom",
+  "status": "partial",
+  "evidence": [
+   "typable:set"
+  ],
+  "note": "RemoveBom (Remove BOM) = zmax `set`: drops the byte-order mark on the next write of the buffer (typed.rs:28384-28400); JetBrains strips BOMs from selected files immediately, possibly many at once."
+ },
+ {
+  "spec_id": "jetbrains-actions.Rerun",
+  "status": "ported",
+  "evidence": [
+   "static:rerun_last_run"
+  ],
+  "note": "Rerun (Rerun) = zmax `rerun_last_run`: re-runs the last command in the Run console, the same rerun of the last launch."
+ },
+ {
+  "spec_id": "jetbrains-actions.RestartIde",
+  "status": "ported",
+  "evidence": [
+   "static:restart_editor"
+  ],
+  "note": "RestartIde (Restart IDE) = zmax `restart_editor`: closes every view and relaunches zmax with the same arguments, the same editor restart."
+ },
+ {
+  "spec_id": "jetbrains-actions.RestoreFactoryDefaultLayout",
+  "status": "ported",
+  "evidence": [
+   "static:restore_default_layout"
+  ],
+  "note": "RestoreFactoryDefaultLayout (Default) = zmax `restore_default_layout`: puts the workbench drawers back to their default layout, the same factory layout reset."
+ },
+ {
+  "spec_id": "jetbrains-actions.Runner.RestoreLayout",
+  "status": "ported",
+  "evidence": [
+   "static:restore_default_layout"
+  ],
+  "note": "Runner.RestoreLayout (Restore Default Layout) = zmax `restore_default_layout`: restores the default workbench drawer layout; source cites this action at zmax-term/src/commands.rs:53281."
+ },
+ {
+  "spec_id": "jetbrains-actions.ResizeToolWindowDown",
+  "status": "ported",
+  "evidence": [
+   "static:stretch_tool_window_down"
+  ],
+  "note": "ResizeToolWindowDown (Stretch to Bottom) = zmax `stretch_tool_window_down`: resizes the bottom tool-window drawer, documented as JetBrains Stretch to Bottom."
+ },
+ {
+  "spec_id": "jetbrains-actions.ResizeToolWindowLeft",
+  "status": "ported",
+  "evidence": [
+   "static:stretch_tool_window_left"
+  ],
+  "note": "ResizeToolWindowLeft (Stretch to Left) = zmax `stretch_tool_window_left`: resizes the left tool-window drawer, documented as JetBrains Stretch to Left."
+ },
+ {
+  "spec_id": "jetbrains-actions.ResizeToolWindowRight",
+  "status": "ported",
+  "evidence": [
+   "static:stretch_tool_window_right"
+  ],
+  "note": "ResizeToolWindowRight (Stretch to Right) = zmax `stretch_tool_window_right`: resizes the left tool-window drawer, documented as JetBrains Stretch to Right."
+ },
+ {
+  "spec_id": "jetbrains-actions.ResizeToolWindowUp",
+  "status": "ported",
+  "evidence": [
+   "static:stretch_tool_window_up"
+  ],
+  "note": "ResizeToolWindowUp (Stretch to Top) = zmax `stretch_tool_window_up`: grows the bottom tool-window drawer, documented as JetBrains Stretch to Top."
+ },
+ {
+  "spec_id": "jetbrains-actions.Resume",
+  "status": "ported",
+  "evidence": [
+   "static:dap_continue"
+  ],
+  "note": "Resume (Resume Program) = zmax `dap_continue`: continues program execution in the debugger, the same Resume Program."
+ },
+ {
+  "spec_id": "jetbrains-actions.RevealIn",
+  "status": "ported",
+  "evidence": [
+   "typable:RevealInFinder"
+  ],
+  "note": "RevealIn (Show in File Manager) = zmax `RevealInFinder`: reveals the current file in the OS file manager (macOS `open -R`, else opens the parent dir)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunAnything",
+  "status": "ported",
+  "evidence": [
+   "static:run_anything"
+  ],
+  "note": "RunAnything (Run Anything) = zmax `run_anything`: runs any shell command in the Run tool window, documented as JetBrains Run Anything."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToCursor",
+  "status": "ported",
+  "evidence": [
+   "static:dap_run_to_cursor"
+  ],
+  "note": "RunToCursor (Run to Cursor) = zmax `dap_run_to_cursor`: runs the debugger up to the cursor line, documented as JetBrains Run To Cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.SafeDelete",
+  "status": "ported",
+  "evidence": [
+   "static:safe_delete"
+  ],
+  "note": "SafeDelete (Safe Delete) = zmax `safe_delete`: deletes the symbol only if unused, else shows its usages, the same Safe Delete."
+ },
+ {
+  "spec_id": "jetbrains-actions.SaveAll",
+  "status": "ported",
+  "evidence": [
+   "typable:write-all"
+  ],
+  "note": "SaveAll (Save All) = zmax `write-all`: (`:wa`) writes all modified buffers to disk."
+ },
+ {
+  "spec_id": "jetbrains-actions.SaveAsTemplate",
+  "status": "ported",
+  "evidence": [
+   "static:save_selection_as_snippet"
+  ],
+  "note": "SaveAsTemplate (Save as Live Template) = zmax `save_selection_as_snippet`: turns the selection into a snippet under a typed trigger; source cites this action at zmax-term/src/commands.rs:71140."
+ },
+ {
+  "spec_id": "jetbrains-actions.SaveDocument",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "SaveDocument (Save Document) = zmax `write`: saves the current buffer to disk, the same single-document save."
+ },
+ {
+  "spec_id": "jetbrains-actions.SaveFileAsTemplate",
+  "status": "ported",
+  "evidence": [
+   "static:save_file_as_template"
+  ],
+  "note": "SaveFileAsTemplate (Save File as Template) = zmax `save_file_as_template`: copies the buffer into the file-template directory; source cites this action at zmax-term/src/commands.rs:71198."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScopeView.EditScopes",
+  "status": "partial",
+  "evidence": [
+   "typable:scope-define",
+   "typable:scopes"
+  ],
+  "note": "ScopeView.EditScopes (Edit Scopes) = zmax `scope-define`: / `:scopes` define and list named search scopes (cited zmax-term/src/scopes.rs:1, typed.rs:24919); scopes are single file globs rather than IntelliJ's scope-expression editor dialog."
+ },
+ {
+  "spec_id": "jetbrains-actions.Scratch.ChangeLanguage",
+  "status": "ported",
+  "evidence": [
+   "typable:set-language"
+  ],
+  "note": "Scratch.ChangeLanguage (Change File Language) = zmax `set-language`: (alias `lang`) sets the language of the current buffer, the same change-language op applied to a scratch buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.Scratch.ExportToScratch",
+  "status": "ported",
+  "evidence": [
+   "static:export_to_scratch"
+  ],
+  "note": "Scratch.ExportToScratch (Export to Scratch File) = zmax `export_to_scratch`: copies the selection or buffer into a scratch buffer of the same language, documented as JetBrains Export to Scratch File."
+ },
+ {
+  "spec_id": "jetbrains-actions.Scratch.ShowFilesPopup",
+  "status": "ported",
+  "evidence": [
+   "static:show_scratch_files"
+  ],
+  "note": "Scratch.ShowFilesPopup (Show Scratch Files) = zmax `show_scratch_files`: opens a picker over scratch buffers; source cites this action at zmax-term/src/commands.rs:53005."
+ },
+ {
+  "spec_id": "jetbrains-actions.SearchEverywhere",
+  "status": "ported",
+  "evidence": [
+   "static:search_everywhere"
+  ],
+  "note": "SearchEverywhere (Search Everywhere) = zmax `search_everywhere`: offers a Files/Symbols/Text/Actions/Buffers search, documented as JetBrains Search Everywhere."
+ },
+ {
+  "spec_id": "jetbrains-actions.SelectAllOccurrences",
+  "status": "ported",
+  "evidence": [
+   "static:select_all_occurrences"
+  ],
+  "note": "SelectAllOccurrences (Select All Occurrences) = zmax `select_all_occurrences`: puts a cursor on every occurrence of the selection, documented as JetBrains Select All Occurrences."
+ },
+ {
+  "spec_id": "jetbrains-actions.SelectIn",
+  "status": "ported",
+  "evidence": [
+   "static:select_in"
+  ],
+  "note": "SelectIn (Select In) = zmax `select_in`: selects the current file in another view (project tree, dired, terminal), documented as JetBrains Select In."
+ },
+ {
+  "spec_id": "jetbrains-actions.SelectInProjectView",
+  "status": "ported",
+  "evidence": [
+   "static:reveal_in_tree"
+  ],
+  "note": "SelectInProjectView (Select File in Project View) = zmax `reveal_in_tree`: reveals and selects the current file in the project tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.SelectNextOccurrence",
+  "status": "ported",
+  "evidence": [
+   "static:select_next_occurrence"
+  ],
+  "note": "SelectNextOccurrence (Add Selection for Next Occurrence) = zmax `select_next_occurrence`: adds a cursor on the next occurrence of the selection; source cites this action at zmax-term/src/commands.rs:13116."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShelveChanges.UnshelveWithDialog",
+  "status": "partial",
+  "evidence": [
+   "typable:unshelve"
+  ],
+  "note": "ShelveChanges.UnshelveWithDialog (Unshelve) = zmax `unshelve`: applies a whole shelf entry back onto the tree (typed.rs:25510); there is no dialog to pick individual files or a target changelist."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowBookmarks",
+  "status": "ported",
+  "evidence": [
+   "static:bookmarks_view"
+  ],
+  "note": "ShowBookmarks (Show Bookmarks) = zmax `bookmarks_view`: lists every line bookmark grouped by file for jumping, the same bookmarks popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowColorPicker",
+  "status": "ported",
+  "evidence": [
+   "static:show_color_picker"
+  ],
+  "note": "ShowColorPicker (Show Color Picker) = zmax `show_color_picker`: picks a colour and inserts its hex; source cites this action at zmax-term/src/commands.rs:9913."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowErrorDescription",
+  "status": "ported",
+  "evidence": [
+   "static:error_description"
+  ],
+  "note": "ShowErrorDescription (Error Description) = zmax `error_description`: shows the full text of the diagnostic under the cursor, documented as JetBrains Error Description."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowExecutionPoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_show_execution_point"
+  ],
+  "note": "ShowExecutionPoint (Show Execution Point) = zmax `dap_show_execution_point`: jumps to where the program is stopped, documented as JetBrains Show Execution Point."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowHoverInfo",
+  "status": "partial",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": "ShowHoverInfo (Hover Info) = zmax `hover`: shows the LSP docs popup for the item under the cursor; JetBrains Hover Info also combines the diagnostic hover into the same popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowIntentionActions",
+  "status": "ported",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "ShowIntentionActions (Show Context Actions) = zmax `code_action`: lists the code actions available at the cursor, the same context-actions popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowLog",
+  "status": "ported",
+  "evidence": [
+   "typable:show-log-in-finder"
+  ],
+  "note": "ShowLog (Show Log in File Manager) = zmax `show-log-in-finder`: (alias `reveal-log`) reveals zmax's log file in the OS file manager."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowMainMenu",
+  "status": "ported",
+  "evidence": [
+   "static:menu_bar_open"
+  ],
+  "note": "ShowMainMenu (Show Main Menu) = zmax `menu_bar_open`: opens the menu bar from the keyboard, the same show-main-menu op."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowPopupMenu",
+  "status": "ported",
+  "evidence": [
+   "static:context_menu_open"
+  ],
+  "note": "ShowPopupMenu (Show Context Menu) = zmax `context_menu_open`: pops up the context menu at point, the same keyboard-invoked context menu."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowSearchHistory",
+  "status": "ported",
+  "evidence": [
+   "static:search_history_picker"
+  ],
+  "note": "ShowSearchHistory (Show Search History) = zmax `search_history_picker`: fuzzy-picks and re-runs a past search, the same search-history popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowSettings",
+  "status": "ported",
+  "evidence": [
+   "static:preferences"
+  ],
+  "note": "ShowSettings (ShowSettings) = zmax `preferences`: opens the unified Preferences window (keymap map uses the same evidence for Settings)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowTrustProjectDialog",
+  "status": "ported",
+  "evidence": [
+   "typable:trust"
+  ],
+  "note": "ShowTrustProjectDialog (Trust Project) = zmax `trust`: trusts the current workspace (language servers + local config), with `++deny`/`++remove` for the other answers."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowUsages",
+  "status": "ported",
+  "evidence": [
+   "static:goto_reference"
+  ],
+  "note": "ShowUsages (Show Usages) = zmax `goto_reference`: opens a picker of the references to the symbol at the cursor, the same usages popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.SilentCodeCleanup",
+  "status": "ported",
+  "evidence": [
+   "static:code_cleanup"
+  ],
+  "note": "SilentCodeCleanup (Silent Code Cleanup) = zmax `code_cleanup`: applies every server fix-all source action to the buffer without a dialog, which is the silent cleanup variant."
+ },
+ {
+  "spec_id": "jetbrains-actions.SmartSelect",
+  "status": "ported",
+  "evidence": [
+   "static:wildfire"
+  ],
+  "note": "SmartSelect (Extend Selection) = zmax `wildfire`: expands the selection to the enclosing syntax object (keymap map uses the same evidence for Extend Selection)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SmartUnSelect",
+  "status": "ported",
+  "evidence": [
+   "static:wildfire_shrink"
+  ],
+  "note": "SmartUnSelect (Shrink Selection) = zmax `wildfire_shrink`: shrinks back to the previously selected object (keymap map uses the same evidence for Shrink Selection)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SmartStepInto",
+  "status": "ported",
+  "evidence": [
+   "static:dap_smart_step_in"
+  ],
+  "note": "SmartStepInto (Smart Step Into) = zmax `dap_smart_step_in`: steps into a chosen call on the line, documented as JetBrains Smart Step Into."
+ },
+ {
+  "spec_id": "jetbrains-actions.SmartTypeCompletion",
+  "status": "ported",
+  "evidence": [
+   "static:smart_type_completion"
+  ],
+  "note": "SmartTypeCompletion (Type-Matching) = zmax `smart_type_completion`: completes with only what fits the expected type, documented as JetBrains Smart Type Completion."
+ },
+ {
+  "spec_id": "jetbrains-actions.SetShortcutAction",
+  "status": "partial",
+  "evidence": [
+   "static:keymap_global_set"
+  ],
+  "note": "SetShortcutAction (Add Shortcut) = zmax `keymap_global_set`: binds a key sequence to a command live; JetBrains adds the shortcut to an action selected in the Keymap settings tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitHorizontally",
+  "status": "ported",
+  "evidence": [
+   "static:hsplit"
+  ],
+  "note": "SplitHorizontally (Split Down) = zmax `hsplit`: opens a bottom split of the current buffer, the same Split Down."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitVertically",
+  "status": "ported",
+  "evidence": [
+   "static:vsplit"
+  ],
+  "note": "SplitVertically (Split Right) = zmax `vsplit`: opens a right split of the current buffer, the same Split Right."
+ },
+ {
+  "spec_id": "jetbrains-actions.Start.Use.Vcs",
+  "status": "ported",
+  "evidence": [
+   "static:git_init"
+  ],
+  "note": "Start.Use.Vcs (Enable Version Control Integration) = zmax `git_init`: initializes a new git repository, the same enable-VCS-integration op for git."
+ },
+ {
+  "spec_id": "jetbrains-actions.StartStopMacroRecording",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "StartStopMacroRecording (Start/Stop Macro Recording) = zmax `record_macro`: toggles macro recording (keymap map uses the same evidence)."
+ },
+ {
+  "spec_id": "jetbrains-actions.StepInto",
+  "status": "ported",
+  "evidence": [
+   "static:dap_step_in"
+  ],
+  "note": "StepInto (Step Into) = zmax `dap_step_in`: steps into the call in the debugger."
+ },
+ {
+  "spec_id": "jetbrains-actions.StepOut",
+  "status": "ported",
+  "evidence": [
+   "static:dap_step_out"
+  ],
+  "note": "StepOut (Step Out) = zmax `dap_step_out`: steps out of the current frame in the debugger."
+ },
+ {
+  "spec_id": "jetbrains-actions.StepOver",
+  "status": "ported",
+  "evidence": [
+   "static:dap_next"
+  ],
+  "note": "StepOver (Step Over) = zmax `dap_next`: DAP step-over (next) in the active debug session."
+ },
+ {
+  "spec_id": "jetbrains-actions.Stop",
+  "status": "ported",
+  "evidence": [
+   "static:stop_run",
+   "static:dap_terminate"
+  ],
+  "note": "Stop (Stop) = zmax `stop_run` + `dap_terminate`: stops the Run tool window process (doc cites JetBrains Stop), and `dap_terminate` ends a debug session."
+ },
+ {
+  "spec_id": "jetbrains-actions.StretchSplitToBottom",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_taller"
+  ],
+  "note": "StretchSplitToBottom (Stretch Editor to Bottom) = zmax `resize_view_taller`: grows the focused split vertically by count."
+ },
+ {
+  "spec_id": "jetbrains-actions.StretchSplitToLeft",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_narrower"
+  ],
+  "note": "StretchSplitToLeft (Stretch Editor to Left) = zmax `resize_view_narrower`: moves the focused split's width edge left by count."
+ },
+ {
+  "spec_id": "jetbrains-actions.StretchSplitToRight",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_wider"
+  ],
+  "note": "StretchSplitToRight (Stretch Editor to Right) = zmax `resize_view_wider`: widens the focused split by count."
+ },
+ {
+  "spec_id": "jetbrains-actions.StretchSplitToTop",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_shorter"
+  ],
+  "note": "StretchSplitToTop (Stretch Editor to Top) = zmax `resize_view_shorter`: shrinks the focused split vertically by count."
+ },
+ {
+  "spec_id": "jetbrains-actions.SurroundWith",
+  "status": "ported",
+  "evidence": [
+   "static:surround_with"
+  ],
+  "note": "SurroundWith (Surround With) = zmax `surround_with`: wraps selected lines in a language block construct and re-indents (commands.rs:10029 cites JetBrains Surround With)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SurroundWithTagTemplate",
+  "status": "ported",
+  "evidence": [
+   "static:surround_with_tag"
+  ],
+  "note": "SurroundWithTagTemplate (Surround with Tag) = zmax `surround_with_tag`: wraps the selection in a named element (commands.rs:10136 cites SurroundWithTagTemplate)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitcherFallback",
+  "status": "ported",
+  "evidence": [
+   "static:recent_files_switcher"
+  ],
+  "note": "SwitcherFallback (Switcher) = zmax `recent_files_switcher`: two-pane popup of tool windows plus recent/open files, the JetBrains Switcher layout (ui/switcher.rs:1)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitcherNextProblemFallback",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_problem_file"
+  ],
+  "note": "SwitcherNextProblemFallback (Select Next Problem File) = zmax `goto_next_problem_file`: moves to the next open buffer with diagnostics (commands.rs:3858 cites the Switcher problem arrows)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitcherPreviousProblemFallback",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_problem_file"
+  ],
+  "note": "SwitcherPreviousProblemFallback (Select Previous Problem File) = zmax `goto_prev_problem_file`: moves to the previous open buffer with diagnostics (commands.rs:3858)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Synchronize",
+  "status": "ported",
+  "evidence": [
+   "typable:reload-all"
+  ],
+  "note": "Synchronize (Reload All from Disk) = zmax `reload-all`: reloads every buffer from disk."
+ },
+ {
+  "spec_id": "jetbrains-actions.SynchronizeCurrentFile",
+  "status": "ported",
+  "evidence": [
+   "typable:reload"
+  ],
+  "note": "SynchronizeCurrentFile (Reload from Disk) = zmax `reload`: reloads the current buffer from disk."
+ },
+ {
+  "spec_id": "jetbrains-actions.TextSearchAction",
+  "status": "ported",
+  "evidence": [
+   "static:global_search"
+  ],
+  "note": "TextSearchAction (Text) = zmax `global_search`: full-text search of the workspace, the same target search_everywhere's \"Text in Path\" entry dispatches to (commands.rs:35665)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_toggle"
+  ],
+  "note": "ToggleBookmark (Toggle Bookmark) = zmax `bookmark_toggle`: toggles an anonymous line bookmark on the cursor line."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleDistractionFreeMode",
+  "status": "ported",
+  "evidence": [
+   "static:distraction_free_mode"
+  ],
+  "note": "ToggleDistractionFreeMode (Toggle Distraction Free Mode) = zmax `distraction_free_mode`: hides tab bar, gutter and status line (commands.rs:18506 cites ToggleDistractionFreeMode)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleFindInSelection",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_find_in_selection"
+  ],
+  "note": "ToggleFindInSelection (Search in Selection Only) = zmax `toggle_find_in_selection`: confines search to the selected region or lifts it (commands.rs:13729 cites ToggleFindInSelection)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleFocusMode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_focus_mode"
+  ],
+  "note": "ToggleFocusMode (Highlight Only Current Declaration) = zmax `toggle_focus_mode`: dims everything outside the enclosing declaration (commands.rs:18542 cites ToggleFocusMode)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleFullScreen",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_frame_fullscreen"
+  ],
+  "note": "ToggleFullScreen (Toggle Full Screen Mode) = zmax `toggle_frame_fullscreen`: asks the terminal emulator to toggle its window full-screen via XTWINOPS CSI 10;2t (commands.rs:82025)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleInlayHintsGloballyAction",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_inlay_hints"
+  ],
+  "note": "ToggleInlayHintsGloballyAction (ToggleInlayHintsGloballyAction) = zmax `toggle_inlay_hints`: toggles display of all LSP inlay hints globally."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleLineBreakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_toggle_breakpoint"
+  ],
+  "note": "ToggleLineBreakpoint (Toggle Line Breakpoint) = zmax `dap_toggle_breakpoint`: toggles a breakpoint on the cursor line."
+ },
+ {
+  "spec_id": "jetbrains-actions.TogglePowerSave",
+  "status": "ported",
+  "evidence": [
+   "static:power_save_mode"
+  ],
+  "note": "TogglePowerSave (Power Save Mode) = zmax `power_save_mode`: stops background completion, inlay hints, signature help and document highlight (commands.rs:18450 cites TogglePowerSave)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleReadOnlyAttribute",
+  "status": "ported",
+  "evidence": [
+   "typable:toggle-file-readonly"
+  ],
+  "note": "ToggleReadOnlyAttribute (Toggle Read-Only Attribute) = zmax `toggle-file-readonly`: flips the file's write permission on disk (commands/typed.rs:25388 cites ToggleReadOnlyAttribute)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleTemporaryLineBreakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_toggle_temporary_breakpoint"
+  ],
+  "note": "ToggleTemporaryLineBreakpoint (Toggle Temporary Line Breakpoint) = zmax `dap_toggle_temporary_breakpoint`: toggles a breakpoint that clears on first hit."
+ },
+ {
+  "spec_id": "jetbrains-actions.TrustProject",
+  "status": "ported",
+  "evidence": [
+   "typable:trust"
+  ],
+  "note": "TrustProject (Trust) = zmax `trust`: trusts the current workspace for language servers and local config."
+ },
+ {
+  "spec_id": "jetbrains-actions.TypeHierarchy.Subtypes",
+  "status": "ported",
+  "evidence": [
+   "static:type_hierarchy_subtypes"
+  ],
+  "note": "TypeHierarchy.Subtypes (Subtypes Hierarchy) = zmax `type_hierarchy_subtypes`: LSP type hierarchy, subtypes of the symbol."
+ },
+ {
+  "spec_id": "jetbrains-actions.TypeHierarchy.Supertypes",
+  "status": "ported",
+  "evidence": [
+   "static:type_hierarchy_supertypes"
+  ],
+  "note": "TypeHierarchy.Supertypes (Supertypes Hierarchy) = zmax `type_hierarchy_supertypes`: LSP type hierarchy, supertypes of the symbol."
+ },
+ {
+  "spec_id": "jetbrains-actions.TypeHierarchy",
+  "status": "partial",
+  "evidence": [
+   "static:type_hierarchy_supertypes",
+   "static:type_hierarchy_subtypes"
+  ],
+  "note": "TypeHierarchy (Type Hierarchy) partial: zmax has separate supertypes/subtypes pickers, not one hierarchy tree view with switchable modes."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleInlineHintsAction",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_inlay_hints"
+  ],
+  "note": "ToggleInlineHintsAction (Toggle Parameter Name Hints) partial: zmax `toggle_inlay_hints` toggles every inlay hint kind; there is no parameter-name-hints-only toggle."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleRenderedDocPresentation",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_rendered_view"
+  ],
+  "note": "ToggleRenderedDocPresentation (Toggle Rendered View) partial: zmax `toggle_rendered_view` renders the whole Markdown buffer into a scratch view instead of toggling in-place rendering of the doc comment at the caret (commands.rs:10697)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleRenderedDocPresentationForAll",
+  "status": "partial",
+  "evidence": [
+   "static:render_doc_comments"
+  ],
+  "note": "ToggleRenderedDocPresentationForAll (Render All Doc Comments) partial: zmax `render_doc_comments` shows every doc comment as rendered prose in a scratch view, not rendered in place in the editor (commands.rs:10824)."
+ },
+ {
+  "spec_id": "jetbrains-actions.TabList",
+  "status": "partial",
+  "evidence": [
+   "static:buffer_picker"
+  ],
+  "note": "TabList (Show Hidden Tabs) partial: zmax `buffer_picker` lists every open buffer for selection; there is no tab-overflow concept, so it is not a hidden-tabs-only list."
+ },
+ {
+  "spec_id": "jetbrains-actions.UnselectPreviousOccurrence",
+  "status": "ported",
+  "evidence": [
+   "static:unselect_previous_occurrence"
+  ],
+  "note": "UnselectPreviousOccurrence (Unselect Occurrence) = zmax `unselect_previous_occurrence`: drops the cursor added last by select_next_occurrence, keeping the final one (commands.rs:13159)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Unscramble",
+  "status": "ported",
+  "evidence": [
+   "static:analyze_stack_trace"
+  ],
+  "note": "Unscramble (Analyze Stack Trace or Thread Dump) = zmax `analyze_stack_trace`: parses a pasted stack trace from selection/buffer into a picker of jumpable frames (commands.rs:70477)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Unsplit",
+  "status": "ported",
+  "evidence": [
+   "static:wclose"
+  ],
+  "note": "Unsplit (Unsplit) = zmax `wclose`: closes the current split; buffers stay open in the buffer list, matching Unsplit leaving the files open."
+ },
+ {
+  "spec_id": "jetbrains-actions.UnsplitAll",
+  "status": "ported",
+  "evidence": [
+   "static:wonly"
+  ],
+  "note": "UnsplitAll (Unsplit All) = zmax `wonly`: closes every window but the current one, removing all splitters (same evidence as keymap Unsplit All)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Unwrap",
+  "status": "ported",
+  "evidence": [
+   "static:unwrap_remove"
+  ],
+  "note": "Unwrap (Unwrap/Remove) = zmax `unwrap_remove`: unwraps the block around the cursor keeping its body (same evidence as keymap Unwrap/Remove)."
+ },
+ {
+  "spec_id": "jetbrains-actions.UntrustProject",
+  "status": "ported",
+  "evidence": [
+   "typable:workspace-untrust"
+  ],
+  "note": "UntrustProject (Do Not Trust) = zmax `:workspace-untrust`: revokes the current workspace's trust grant."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.CopyCurrentBranchName",
+  "status": "ported",
+  "evidence": [
+   "static:copy_branch_name"
+  ],
+  "note": "Vcs.CopyCurrentBranchName (Copy Branch Name) = zmax `copy_branch_name`: yanks the checked-out branch (short sha when detached) to the clipboard (commands.rs:5012)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.CopyRevisionNumberAction",
+  "status": "ported",
+  "evidence": [
+   "static:copy_revision_number"
+  ],
+  "note": "Vcs.CopyRevisionNumberAction (Copy Revision Number) = zmax `copy_revision_number`: yanks the commit that last touched the cursor line to the clipboard (commands.rs:5029)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ShowConsoleTab",
+  "status": "ported",
+  "evidence": [
+   "static:show_vcs_console"
+  ],
+  "note": "Vcs.ShowConsoleTab (Show VCS Console Tab) = zmax `show_vcs_console`: lists every git command the editor ran this session with failures marked (commands.rs:52963)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.VcsClone",
+  "status": "ported",
+  "evidence": [
+   "typable:git-clone"
+  ],
+  "note": "Vcs.VcsClone (Get from Version Control) = zmax `:git-clone`: clones a repository and opens it as the workspace (typed.rs:25275)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewInplaceComments",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_file_details"
+  ],
+  "note": "ViewInplaceComments (File Details) = zmax `toggle_file_details`: shows/hides file sizes beside names in the project tree (commands.rs:53264)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ApplySelectedChanges",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.ApplySelectedChanges (Cherry-Pick Selected Changes) = zmax `:magit` log view `A`: cherry-picks the selected commit with -x (ui/magit.rs:2956); picks the whole commit, not a subset of its file changes as the IDE action does."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.CherryPick",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.CherryPick (Vcs.CherryPick) = zmax `:magit` log view `A`: cherry-picks the selected log commit onto the current branch (ui/magit.rs:2963). Reachable only as a key inside the :magit view, not as a command of its own."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.CopyCommitSubjectAction",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.CopyCommitSubjectAction (Copy Commit Subject) = zmax `:magit` log view `y`: copies the selected commit's subject to the clipboard register (ui/magit.rs:2850). Reachable only as a key inside the :magit view, not as a command of its own."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Push.Force",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Push.Force (Force Push) = zmax `:magit` status force-push: pushes with --force-with-lease like the IDE's Force Push (ui/magit.rs:1011). Reachable only as a key inside the :magit view, not as a command of its own."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.RevertSelectedChanges",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.RevertSelectedChanges (Revert Selected Changes) = zmax `:magit` log view `R`: reverts the selected commit with --no-edit (ui/magit.rs:2907); whole commit only, not selected file changes within it."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ShowDiffWithLocal",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.ShowDiffWithLocal (Compare with Local) = zmax `:magit` log view `c`: diff from the selected commit to the working tree (ui/magit.rs:2937). Reachable only as a key inside the :magit view, not as a command of its own."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ShowHistoryForRevision",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.ShowHistoryForRevision (History Up to Here) = zmax `:magit` log view `h`: log up to and including the selected commit (ui/magit.rs:2887). Reachable only as a key inside the :magit view, not as a command of its own."
+ },
+ {
+  "spec_id": "jetbrains-actions.VcsHistory.ShowAllAffected",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "VcsHistory.ShowAllAffected (Show All Affected Files) = zmax `:magit` log view `f`: files the selected commit touched with add/delete counts (ui/magit.rs:2866). Reachable only as a key inside the :magit view, not as a command of its own."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.ShowAllAffected",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.ShowAllAffected (Show All Affected Files) = zmax `:magit` log view `f`: same show_affected_files op on the selected log commit (ui/magit.rs:2868). Reachable only as a key inside the :magit view, not as a command of its own."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Push",
+  "status": "ported",
+  "evidence": [
+   "static:git_push"
+  ],
+  "note": "Vcs.Push (Push) = zmax `git_push`: pushes the current branch to its remote (same evidence as keymap Push)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Push.Simple",
+  "status": "ported",
+  "evidence": [
+   "static:git_push"
+  ],
+  "note": "Vcs.Push.Simple (Vcs.Push.Simple) = zmax `git_push`: pushes the current branch without a dialog, which is what the dialog-less push action does."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.RollbackChangedLines",
+  "status": "ported",
+  "evidence": [
+   "typable:hunk-reset"
+  ],
+  "note": "Vcs.RollbackChangedLines (Rollback Lines) = zmax `:hunk-reset`: restores the changed hunk under the cursor from HEAD (same evidence as keymap Rollback)."
+ },
+ {
+  "spec_id": "jetbrains-actions.VcsShowNextChangeMarker",
+  "status": "ported",
+  "evidence": [
+   "typable:hunk-next"
+  ],
+  "note": "VcsShowNextChangeMarker (Next Change) = zmax `:hunk-next`: moves to the next git change (same evidence as keymap Next Change)."
+ },
+ {
+  "spec_id": "jetbrains-actions.VcsShowPrevChangeMarker",
+  "status": "ported",
+  "evidence": [
+   "typable:hunk-prev"
+  ],
+  "note": "VcsShowPrevChangeMarker (Previous Change) = zmax `:hunk-prev`: moves to the previous git change (same evidence as keymap Previous Change)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ShowTabbedFileHistory",
+  "status": "ported",
+  "evidence": [
+   "static:git_file_log_picker"
+  ],
+  "note": "Vcs.ShowTabbedFileHistory (Show History) = zmax `git_file_log_picker`: commit log of the current file (same evidence as keymap Show History)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ShowHistoryForBlock",
+  "status": "ported",
+  "evidence": [
+   "static:git_history_for_selection"
+  ],
+  "note": "Vcs.ShowHistoryForBlock (Show History for Selection) = zmax `git_history_for_selection`: commits that touched the selected lines."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Show.Log",
+  "status": "ported",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "Vcs.Show.Log (Show VCS Log) = zmax `git_repo_log_picker`: commit log for the whole repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Show.Local.Changes",
+  "status": "ported",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "Vcs.Show.Local.Changes (Show Local Changes) = zmax `git_status`: Magit status listing the working tree's unstaged/staged changes."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.OpenRepositoryVersion",
+  "status": "partial",
+  "evidence": [
+   "static:view_file_at_rev"
+  ],
+  "note": "Vcs.OpenRepositoryVersion (Vcs.OpenRepositoryVersion) = zmax `view_file_at_rev`: shows the current file at a revision in a scratch; the revision is typed at a prompt instead of taken from a selected history entry."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.OpenRepositoryVersion",
+  "status": "partial",
+  "evidence": [
+   "static:view_file_at_rev"
+  ],
+  "note": "Vcs.Log.OpenRepositoryVersion (Show File at Revision) = zmax `view_file_at_rev`: opens the current file as of a revision; prompt-driven for the buffer's file, not the file selected in a log commit."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ToggleAmendCommitMode",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.ToggleAmendCommitMode (Amend Commit) = zmax `:magit` status `a`: opens the commit editor in --amend mode pre-filled with the last message (ui/magit.rs:1323); a separate entry point, not a toggle in the commit dialog."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.UpdateProject",
+  "status": "partial",
+  "evidence": [
+   "static:git_pull"
+  ],
+  "note": "Vcs.UpdateProject (Update Project) = zmax `git_pull`: \"Update Project\" pull, but --ff-only; no merge/rebase update strategy when branches diverge."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewBreakpoints",
+  "status": "ported",
+  "evidence": [
+   "static:dap_breakpoints_picker"
+  ],
+  "note": "ViewBreakpoints (View Breakpoints) = zmax `dap_breakpoints_picker`: lists all breakpoints (same evidence as keymap View Breakpoints)."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.AttachToProcess",
+  "status": "ported",
+  "evidence": [
+   "static:dap_attach_to_process"
+  ],
+  "note": "XDebugger.AttachToProcess (XDebugger.AttachToProcess) = zmax `dap_attach_to_process`: attaches the debugger to a running process."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.NewWatch",
+  "status": "partial",
+  "evidence": [
+   "typable:gdb-watch"
+  ],
+  "note": "XDebugger.NewWatch (New Watch) = zmax `:gdb-watch`: adds a watch expression, but to the gud/gdb session's watch list, not the DAP debugger's watches pane."
+ },
+ {
+  "spec_id": "jetbrains-actions.editRunConfigurations",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "editRunConfigurations (Edit Configurations) = zmax `run_config_manager`: opens Preferences on the Run/Debug Configurations tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.ZoomCurrentWindow",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_frame_maximized"
+  ],
+  "note": "ZoomCurrentWindow (Zoom) = zmax `toggle_frame_maximized`: asks the terminal emulator to maximize/restore its window (CSI 9;1t / 9;0t), the window Zoom op."
+ },
+ {
+  "spec_id": "jetbrains-actions.ZoomInIdeAction",
+  "status": "ported",
+  "evidence": [
+   "static:frame_zoom_in"
+  ],
+  "note": "ZoomInIdeAction (Zoom In IDE) = zmax `frame_zoom_in`: steps the whole UI's font size up via OSC 50, the terminal equivalent of IDE-wide zoom."
+ },
+ {
+  "spec_id": "jetbrains-actions.ZoomOutIdeAction",
+  "status": "ported",
+  "evidence": [
+   "static:frame_zoom_out"
+  ],
+  "note": "ZoomOutIdeAction (Zoom Out IDE) = zmax `frame_zoom_out`: steps the whole UI's font size down via OSC 50."
  }
 ]

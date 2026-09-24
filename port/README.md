@@ -48,6 +48,7 @@ report tracks that build-out.
 | `lazyvim.json`, `astronvim.json`, `lunarvim.json` | each distribution's own Lua keymap (`map(…)` calls, `maps.n[…]` tables, `normal_mode` tables) |
 | `cursor.json` | Cursor — keyboard shortcut reference |
 | `jetbrains_keymap.json` | JetBrains IntelliJ IDEA — macOS Default Keymap reference (`jetbrains.com/help/idea/reference-keymap-mac-default.html`) |
+| `jetbrains_actions.json` | JetBrains IntelliJ IDEA — the action registry itself: every `<action id=… class=…>` in the plugin descriptors of the platform jars and the editor-general bundled plugins (Git, GitHub, Bookmarks, Terminal, Markdown, VCS split, Services), with display text from the shipped `ActionsBundle` properties. Language/framework plugins (Java, Kotlin, DatabaseTools, Docker, Kubernetes, …) are out of scope. Regenerated from an installed IDE by `scripts/gen_jetbrains_actions.pl`; each `doc_ref` names the IDE build, jar and descriptor. |
 | `functionality.json` | **Primary measure.** A curated taxonomy of distinct editor *capabilities*, deduplicated across the sources above — one row per feature, not per source. The report leads with this; the per-source rows are secondary muscle-memory-compatibility views. Includes capabilities zmax lacks (absent) so the denominator stays fair. |
 
 Each item carries a `doc_ref` back to its source line/anchor.
