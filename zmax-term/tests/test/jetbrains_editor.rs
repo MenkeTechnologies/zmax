@@ -300,3 +300,32 @@ async fn breakpoints_disable_remove_and_restore() -> anyhow::Result<()> {
     )
     .await
 }
+
+/// Next Line Bookmark in Editor walks this file's bookmarks and wraps.
+#[tokio::test(flavor = "multi_thread")]
+async fn bookmark_cycle_in_file_wraps() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".txt").tempfile()?;
+    std::fs::write(file.path(), "a\nb\nc\nd\n")?;
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => bookmark_toggle,
+            "Q" => bookmark_next_in_file,
+        }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("ZjjZkQ"), Some(&|app| assert_eq!(2, cursor_line(app)))),
+            (Some("Q"), Some(&|app| assert_eq!(0, cursor_line(app)))),
+        ],
+        false,
+    )
+    .await
+}

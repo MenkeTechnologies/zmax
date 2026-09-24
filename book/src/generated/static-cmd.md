@@ -752,6 +752,10 @@
 | `harpoon_prev` | Open the previous harpoon mark | **spacemacs, hybrid** — normal: `` <space>Hp ``, select: `` <space>Hp `` |
 | `bookmark_toggle` | Toggle a line bookmark (JetBrains F11) | **spacemacs, hybrid** — normal: `` <space>rt ``, select: `` <space>rt `` |
 | `toggle_bookmark_with_mnemonic` | Toggle a mnemonic bookmark on this line; the next key names it (JetBrains Toggle Bookmark Mnemonic) |  |
+| `remove_bookmark_mnemonic` | Drop the mnemonic of the bookmark on this line, keeping the bookmark (JetBrains Remove Mnemonic) |  |
+| `mnemonic_bookmarks_picker` | Pick a mnemonic bookmark and jump to it (JetBrains Go to Mnemonic) |  |
+| `bookmark_next_in_file` | Next line bookmark in this file (JetBrains Next Line Bookmark in Editor) |  |
+| `bookmark_prev_in_file` | Previous line bookmark in this file (JetBrains Previous Line Bookmark in Editor) |  |
 | `toggle_bookmark_0` | Toggle mnemonic bookmark 0 on this line (JetBrains Toggle Bookmark 0) |  |
 | `toggle_bookmark_1` | Toggle mnemonic bookmark 1 on this line (JetBrains Toggle Bookmark 1) |  |
 | `toggle_bookmark_2` | Toggle mnemonic bookmark 2 on this line (JetBrains Toggle Bookmark 2) |  |
@@ -962,6 +966,9 @@
 | `git_reset_to_commit` | Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here) |  |
 | `git_revert_commit` | Commit the inverse of a picked commit (JetBrains Revert Commit) |  |
 | `git_push_up_to_commit` | Push the current branch only up to a picked commit (JetBrains Push All up to Here) |  |
+| `git_revert_into_worktree` | Apply the reverse of a picked commit without committing (JetBrains Revert Changes) |  |
+| `git_compare_with_upstream` | Diff this file against its upstream version (JetBrains Compare with Latest Repository Version) |  |
+| `git_show_file_at_commit` | Show this file as it was at a picked commit (JetBrains Show Current Revision) |  |
 | `vcs_get_version` | Replace this file with its content at a revision (JetBrains Get) |  |
 | `git_annotate_at_commit` | Blame this file as it stood at a picked commit (JetBrains Annotate) |  |
 | `git_diff_before_with_local` | Diff the version before a picked commit with this file (JetBrains Compare Before with Local) |  |
@@ -1842,6 +1849,10 @@
 | `yank_file_name` | Yank current file name to clipboard | **spacemacs, hybrid** — normal: `` <space>fyN ``, `` <space>fyn ``, select: `` <space>fyN ``, `` <space>fyn `` |
 | `yank_file_path_with_line` | Yank current file path:line to clipboard | **spacemacs, hybrid** — normal: `` <space>fyL ``, `` <space>fyl ``, select: `` <space>fyL ``, `` <space>fyl `` |
 | `yank_file_path_with_line_col` | Yank current file path:line:col to clipboard | **spacemacs, hybrid** — normal: `` <space>fyc ``, select: `` <space>fyc `` |
+| `yank_file_path_from_workspace` | Yank this file's path relative to the workspace root (JetBrains Path from Content Root) |  |
+| `yank_file_path_from_repo` | Yank this file's path relative to its git repository root (JetBrains Path From Repository Root) |  |
+| `yank_url_at_cursor` | Yank the URL under the cursor (JetBrains Copy URL) |  |
+| `open_file_in_browser` | Open this file in the system browser (JetBrains Open in Default Browser) |  |
 | `yank_file_dir` | Yank current file's directory to clipboard | **spacemacs, hybrid** — normal: `` <space>fyD ``, `` <space>fyd ``, select: `` <space>fyD ``, `` <space>fyd `` |
 | `copy_remote_url` | Copy web permalink (host/blob/<sha>/path#Ln) for current line | **spacemacs, hybrid** — normal: `` <space>glC ``, `` <space>glL ``, `` <space>glP ``, select: `` <space>glC ``, `` <space>glL ``, `` <space>glP `` |
 | `open_remote_url` | Open current line's web permalink in the browser | **spacemacs, hybrid** — normal: `` <space>glc ``, `` <space>gll ``, `` <space>glp ``, select: `` <space>glc ``, `` <space>gll ``, `` <space>glp `` |

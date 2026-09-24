@@ -1143,6 +1143,10 @@ impl MappableCommand {
         harpoon_prev, "Open the previous harpoon mark",
         bookmark_toggle, "Toggle a line bookmark (JetBrains F11)",
         toggle_bookmark_with_mnemonic, "Toggle a mnemonic bookmark on this line; the next key names it (JetBrains Toggle Bookmark Mnemonic)",
+        remove_bookmark_mnemonic, "Drop the mnemonic of the bookmark on this line, keeping the bookmark (JetBrains Remove Mnemonic)",
+        mnemonic_bookmarks_picker, "Pick a mnemonic bookmark and jump to it (JetBrains Go to Mnemonic)",
+        bookmark_next_in_file, "Next line bookmark in this file (JetBrains Next Line Bookmark in Editor)",
+        bookmark_prev_in_file, "Previous line bookmark in this file (JetBrains Previous Line Bookmark in Editor)",
         toggle_bookmark_0, "Toggle mnemonic bookmark 0 on this line (JetBrains Toggle Bookmark 0)",
         toggle_bookmark_1, "Toggle mnemonic bookmark 1 on this line (JetBrains Toggle Bookmark 1)",
         toggle_bookmark_2, "Toggle mnemonic bookmark 2 on this line (JetBrains Toggle Bookmark 2)",
@@ -1353,6 +1357,9 @@ impl MappableCommand {
         git_reset_to_commit, "Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)",
         git_revert_commit, "Commit the inverse of a picked commit (JetBrains Revert Commit)",
         git_push_up_to_commit, "Push the current branch only up to a picked commit (JetBrains Push All up to Here)",
+        git_revert_into_worktree, "Apply the reverse of a picked commit without committing (JetBrains Revert Changes)",
+        git_compare_with_upstream, "Diff this file against its upstream version (JetBrains Compare with Latest Repository Version)",
+        git_show_file_at_commit, "Show this file as it was at a picked commit (JetBrains Show Current Revision)",
         vcs_get_version, "Replace this file with its content at a revision (JetBrains Get)",
         git_annotate_at_commit, "Blame this file as it stood at a picked commit (JetBrains Annotate)",
         git_diff_before_with_local, "Diff the version before a picked commit with this file (JetBrains Compare Before with Local)",
@@ -2233,6 +2240,10 @@ impl MappableCommand {
         yank_file_name, "Yank current file name to clipboard",
         yank_file_path_with_line, "Yank current file path:line to clipboard",
         yank_file_path_with_line_col, "Yank current file path:line:col to clipboard",
+        yank_file_path_from_workspace, "Yank this file's path relative to the workspace root (JetBrains Path from Content Root)",
+        yank_file_path_from_repo, "Yank this file's path relative to its git repository root (JetBrains Path From Repository Root)",
+        yank_url_at_cursor, "Yank the URL under the cursor (JetBrains Copy URL)",
+        open_file_in_browser, "Open this file in the system browser (JetBrains Open in Default Browser)",
         yank_file_dir, "Yank current file's directory to clipboard",
         copy_remote_url, "Copy web permalink (host/blob/<sha>/path#Ln) for current line",
         open_remote_url, "Open current line's web permalink in the browser",
@@ -5183,6 +5194,69 @@ fn yank_file_path_with_line_col(cx: &mut Context) {
 }
 fn yank_file_dir(cx: &mut Context) {
     yank_file_path_kind(cx, FilePathKind::Dir);
+}
+
+/// Yank this file's path relative to the root `root_of` finds for it.
+fn yank_relative_path(cx: &mut Context, root_of: impl FnOnce(&Path) -> Option<PathBuf>) {
+    let Some(path) = doc!(cx.editor).path().map(Path::to_path_buf) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let Some(root) = root_of(&path) else {
+        cx.editor.set_error("no root for this file");
+        return;
+    };
+    let relative = path.strip_prefix(&root).unwrap_or(&path).display().to_string();
+    let _ = cx.editor.registers.write('+', vec![relative.clone()]);
+    cx.editor.set_status(format!("Yanked to clipboard: {relative}"));
+}
+
+/// JetBrains "Path from Content Root" (`CopyContentRootPath`): this file's path
+/// relative to the workspace root.
+fn yank_file_path_from_workspace(cx: &mut Context) {
+    yank_relative_path(cx, |_| Some(zmax_loader::find_workspace().0));
+}
+
+/// JetBrains "Path From Repository Root" (`CopyPathFromRepositoryRootProvider`):
+/// this file's path relative to the root of the git repository holding it.
+fn yank_file_path_from_repo(cx: &mut Context) {
+    yank_relative_path(cx, |path| {
+        git_in(path.parent()?, &["rev-parse", "--show-toplevel"])
+            .ok()
+            .map(PathBuf::from)
+    });
+}
+
+/// JetBrains "Copy URL" (`CopyUrl`): the URL under the cursor, to the clipboard.
+fn yank_url_at_cursor(cx: &mut Context) {
+    let url = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        url_at(&text.line(line).to_string(), cursor - text.line_to_char(line))
+    };
+    match url {
+        Some(url) => {
+            let _ = cx.editor.registers.write('+', vec![url.clone()]);
+            cx.editor.set_status(format!("Yanked to clipboard: {url}"));
+        }
+        None => cx.editor.set_status("No URL under the cursor"),
+    }
+}
+
+/// JetBrains "Open in Default Browser" (`OpenInBrowser`): this file, as a
+/// `file://` URL, in the system browser.
+fn open_file_in_browser(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(Path::to_path_buf) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let url = format!("file://{}", path.display());
+    match open_in_browser(&url) {
+        Ok(()) => cx.editor.set_status(format!("Opening {url}")),
+        Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+    }
 }
 
 /// Convert a git remote URL (ssh, scp-like, git://, or `http[s]` form) to its base
@@ -36078,6 +36152,94 @@ fn goto_mnemonic_bookmark(cx: &mut Context, mnemonic: char) {
     let pos = doc.text().line_to_char(line);
     doc.set_selection(view.id, Selection::point(pos));
     align_view(doc, view, Align::Center);
+}
+
+/// JetBrains "Remove Mnemonic" (`DeleteMnemonicFromBookmark`,
+/// `BookmarksView.DeleteType`): the bookmark on this line keeps its place but
+/// no longer answers to a digit or letter.
+fn remove_bookmark_mnemonic(cx: &mut Context) {
+    let Some((path, line)) = current_file_line(cx) else {
+        return;
+    };
+    let mut mnemonics = MNEMONIC_BOOKMARKS.lock().unwrap();
+    let before = mnemonics.len();
+    mnemonics.retain(|(_, p, l)| !(*p == path && *l == line));
+    cx.editor.set_status(if mnemonics.len() < before {
+        "Mnemonic removed"
+    } else {
+        "No mnemonic bookmark on this line"
+    });
+}
+
+/// JetBrains "Go to Mnemonic" (`ShowTypeBookmarks`): pick a mnemonic bookmark
+/// and jump to it.
+fn mnemonic_bookmarks_picker(cx: &mut Context) {
+    let mut marks = MNEMONIC_BOOKMARKS.lock().unwrap().clone();
+    if marks.is_empty() {
+        cx.editor.set_status("No mnemonic bookmarks");
+        return;
+    }
+    marks.sort();
+    let root = zmax_loader::find_workspace().0;
+    let columns = [
+        PickerColumn::new("mnemonic", |m: &(char, PathBuf, usize), _: &PathBuf| {
+            m.0.to_string().into()
+        }),
+        PickerColumn::new("location", |m: &(char, PathBuf, usize), root: &PathBuf| {
+            format!("{}:{}", m.1.strip_prefix(root).unwrap_or(&m.1).display(), m.2 + 1).into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, marks, root, |cx, mark: &(char, PathBuf, usize), _| {
+        let mut cx = Context {
+            register: None,
+            count: None,
+            editor: cx.editor,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        };
+        goto_mnemonic_bookmark(&mut cx, mark.0);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Next / Previous Line Bookmark in Editor"
+/// (`GotoNextBookmarkInEditor`, `GotoPreviousBookmarkInEditor`): the
+/// bookmark cycle, kept to this file.
+fn bookmark_cycle_in_file(cx: &mut Context, forward: bool) {
+    let Some((path, line)) = current_file_line(cx) else {
+        return;
+    };
+    let mut lines: Vec<usize> = BOOKMARKS
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|(p, _)| *p == path)
+        .map(|(_, l)| *l)
+        .collect();
+    lines.sort_unstable();
+    let target = if forward {
+        lines.iter().find(|&&l| l > line).or(lines.first())
+    } else {
+        lines.iter().rev().find(|&&l| l < line).or(lines.last())
+    };
+    let Some(&target) = target else {
+        cx.editor.set_status("No bookmarks in this file");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    push_jump(view, doc);
+    let target = target.min(doc.text().len_lines().saturating_sub(1));
+    let pos = doc.text().line_to_char(target);
+    doc.set_selection(view.id, Selection::point(pos));
+}
+
+fn bookmark_next_in_file(cx: &mut Context) {
+    bookmark_cycle_in_file(cx, true);
+}
+
+fn bookmark_prev_in_file(cx: &mut Context) {
+    bookmark_cycle_in_file(cx, false);
 }
 
 /// JetBrains "Toggle Bookmark Mnemonic" (`ToggleBookmarkWithMnemonic`):
@@ -72817,6 +72979,43 @@ fn git_remove_deleted(cx: &mut Context) {
             e.lines().next().unwrap_or("failed")
         )),
     }
+}
+
+/// JetBrains "Revert Changes" of a commit (`CommittedChanges.Revert`): apply
+/// the reverse of a picked commit to the working tree, without committing.
+fn git_revert_into_worktree(cx: &mut Context) {
+    git_pick_commit(cx, "revert into working tree", |cx, sha| {
+        git_run_cx(
+            cx,
+            &["revert", "--no-commit", sha],
+            &format!("Reverse of {sha} applied to the working tree"),
+            true,
+        )
+    });
+}
+
+/// JetBrains "Compare with Latest Repository Version" (`Compare.LastVersion`):
+/// this file against its version on the branch's upstream.
+fn git_compare_with_upstream(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_output_to_scratch(
+        cx,
+        &["diff", "@{upstream}", "--", &rel],
+        "The file matches its upstream version",
+    );
+}
+
+/// JetBrains "Show Current Revision" (`Show.Current.Revision`): this file as it
+/// was at a picked commit.
+fn git_show_file_at_commit(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_pick_file_commit(cx, "show at", rel, |cx, sha, rel| {
+        git_output_to_scratch_cx(cx, &["show", &format!("{sha}:{rel}")], "The file was empty")
+    });
 }
 
 /// JetBrains "Push All up to Here" (`Git.PushUpToCommit`): push the current

@@ -84082,5 +84082,117 @@
    "static:toggle_minimap"
   ],
   "note": "ToggleMinimap = zmax `toggle_minimap`: the workbench minimap stripe (ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.DeleteType",
+  "status": "ported",
+  "evidence": [
+   "static:remove_bookmark_mnemonic"
+  ],
+  "note": "BookmarksView.DeleteType = zmax `remove_bookmark_mnemonic`."
+ },
+ {
+  "spec_id": "jetbrains-actions.CommittedChanges.Revert",
+  "status": "ported",
+  "evidence": [
+   "static:git_revert_into_worktree"
+  ],
+  "note": "CommittedChanges.Revert = zmax `git_revert_into_worktree`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Compare.LastVersion",
+  "status": "ported",
+  "evidence": [
+   "static:git_compare_with_upstream"
+  ],
+  "note": "Compare.LastVersion = zmax `git_compare_with_upstream`."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyContentRootPath",
+  "status": "ported",
+  "evidence": [
+   "static:yank_file_path_from_workspace"
+  ],
+  "note": "CopyContentRootPath = zmax `yank_file_path_from_workspace`."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyPathFromRepositoryRootProvider",
+  "status": "ported",
+  "evidence": [
+   "static:yank_file_path_from_repo"
+  ],
+  "note": "CopyPathFromRepositoryRootProvider = zmax `yank_file_path_from_repo`."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopyUrl",
+  "status": "ported",
+  "evidence": [
+   "static:yank_url_at_cursor"
+  ],
+  "note": "CopyUrl = zmax `yank_url_at_cursor`."
+ },
+ {
+  "spec_id": "jetbrains-actions.DeleteMnemonicFromBookmark",
+  "status": "ported",
+  "evidence": [
+   "static:remove_bookmark_mnemonic"
+  ],
+  "note": "DeleteMnemonicFromBookmark = zmax `remove_bookmark_mnemonic`."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileHistory.AnnotateRevision",
+  "status": "ported",
+  "evidence": [
+   "static:git_annotate_at_commit"
+  ],
+  "note": "FileHistory.AnnotateRevision = zmax `git_annotate_at_commit`."
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoNextBookmarkInEditor",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_next_in_file"
+  ],
+  "note": "GotoNextBookmarkInEditor = zmax `bookmark_next_in_file`."
+ },
+ {
+  "spec_id": "jetbrains-actions.GotoPreviousBookmarkInEditor",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_prev_in_file"
+  ],
+  "note": "GotoPreviousBookmarkInEditor = zmax `bookmark_prev_in_file`."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenInBrowser",
+  "status": "ported",
+  "evidence": [
+   "static:open_file_in_browser"
+  ],
+  "note": "OpenInBrowser = zmax `open_file_in_browser`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Show.Current.Revision",
+  "status": "ported",
+  "evidence": [
+   "static:git_show_file_at_commit"
+  ],
+  "note": "Show.Current.Revision = zmax `git_show_file_at_commit`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowTypeBookmarks",
+  "status": "ported",
+  "evidence": [
+   "static:mnemonic_bookmarks_picker"
+  ],
+  "note": "ShowTypeBookmarks = zmax `mnemonic_bookmarks_picker`."
+ },
+ {
+  "spec_id": "jetbrains-actions.IncrementWindowWidth",
+  "status": "partial",
+  "evidence": [
+   "static:stretch_tool_window_right"
+  ],
+  "note": "IncrementWindowWidth (Increment Width) = zmax `stretch_tool_window_right`: widens the left drawer only; JetBrains widens whichever tool window is active (same model as DecrementWindowWidth)."
  }
 ]
