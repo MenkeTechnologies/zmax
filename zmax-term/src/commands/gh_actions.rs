@@ -8,8 +8,8 @@
 use serde_json::{json, Value};
 
 use super::{prompt_then, show_text_in_scratch, Context, Editor};
-use crate::job::{self, Callback};
-use crate::ui::{self, overlay::overlaid, Picker, PickerColumn};
+use crate::job::Callback;
+use crate::ui::{overlay::overlaid, Picker, PickerColumn};
 
 /// The repository root the current buffer (or the working directory) is in.
 fn repo_dir(editor: &Editor) -> std::path::PathBuf {
