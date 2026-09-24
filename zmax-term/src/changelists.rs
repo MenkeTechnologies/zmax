@@ -84,6 +84,45 @@ pub fn assign(store: &mut Store, name: &str, path: &str) -> Option<String> {
     previous
 }
 
+/// Where the name of the default changelist lives: the list that the changes no
+/// list claims count toward, as the IDE's active changelist does.
+pub fn default_path(git_dir: &Path) -> PathBuf {
+    git_dir.join("zmax-changelists-default")
+}
+
+/// JetBrains "New Changelist": an empty list. `false` when it exists. Pure —
+/// unit tested.
+pub fn create(store: &mut Store, name: &str) -> bool {
+    if store.contains_key(name) {
+        return false;
+    }
+    store.insert(name.to_string(), Vec::new());
+    true
+}
+
+/// JetBrains "Delete Changelist": drop the list, moving its files into
+/// `into` (the default list) when there is one, so no change is lost from
+/// every list at once. Returns the files it held. Pure — unit tested.
+pub fn delete(store: &mut Store, name: &str, into: Option<&str>) -> Option<Vec<String>> {
+    let paths = store.remove(name)?;
+    if let Some(into) = into.filter(|into| *into != name) {
+        for path in &paths {
+            assign(store, into, path);
+        }
+    }
+    Some(paths)
+}
+
+/// JetBrains "Rename Changelist". Pure — unit tested.
+pub fn rename(store: &mut Store, old: &str, new: &str) -> Result<(), &'static str> {
+    if store.contains_key(new) {
+        return Err("a changelist by that name exists");
+    }
+    let paths = store.remove(old).ok_or("no such changelist")?;
+    store.insert(new.to_string(), paths);
+    Ok(())
+}
+
 /// Which list holds `path`, if any. Pure — unit tested.
 pub fn list_of<'a>(store: &'a Store, path: &str) -> Option<&'a str> {
     store
@@ -132,5 +171,24 @@ mod tests {
         // Assigning twice is not a duplicate.
         assert_eq!(assign(&mut store, "b", "src/x.rs"), None);
         assert_eq!(store["b"], vec!["src/x.rs"]);
+    }
+
+    #[test]
+    fn deleting_a_list_hands_its_files_to_the_default() {
+        let mut store = parse("[work]\nsrc/a.rs\n[main]\nsrc/b.rs\n");
+        assert_eq!(Some(vec!["src/a.rs".to_string()]), delete(&mut store, "work", Some("main")));
+        assert!(!store.contains_key("work"));
+        assert_eq!(list_of(&store, "src/a.rs"), Some("main"));
+        assert_eq!(None, delete(&mut store, "work", None));
+    }
+
+    #[test]
+    fn create_and_rename_refuse_to_clobber() {
+        let mut store = parse("[a]\nsrc/x.rs\n");
+        assert!(!create(&mut store, "a"));
+        assert!(create(&mut store, "b"));
+        assert!(rename(&mut store, "a", "b").is_err());
+        assert!(rename(&mut store, "a", "c").is_ok());
+        assert_eq!(list_of(&store, "src/x.rs"), Some("c"));
     }
 }

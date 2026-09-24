@@ -25122,11 +25122,26 @@ fn changelist_commit(
     if message.trim().is_empty() {
         bail!("usage: :changelist-commit NAME MESSAGE");
     }
-    let (_, root, store) = load_changelists(cx)?;
-    let paths = store
-        .get(name)
-        .filter(|paths| !paths.is_empty())
-        .with_context(|| format!("changelist `{name}` is empty or does not exist"))?;
+    let (store_path, root, store) = load_changelists(cx)?;
+    let mut paths = store.get(name).cloned().unwrap_or_default();
+    // The default list also holds every change no list claims.
+    if changelist_default_name(&store_path).as_deref() == Some(name) {
+        let changed = std::process::Command::new("git")
+            .arg("-C")
+            .arg(&root)
+            .args(["diff", "--name-only", "HEAD"])
+            .output()
+            .map_err(|e| anyhow!("git: {e}"))?;
+        for path in String::from_utf8_lossy(&changed.stdout).lines() {
+            if crate::changelists::list_of(&store, path).is_none() && !paths.iter().any(|p| p == path) {
+                paths.push(path.to_string());
+            }
+        }
+    }
+    if paths.is_empty() {
+        bail!("changelist `{name}` is empty or does not exist");
+    }
+    let paths = &paths;
 
     let mut cmd = std::process::Command::new("git");
     cmd.arg("-C").arg(&root).args(["commit", "-m", &message, "--"]);
@@ -25144,6 +25159,97 @@ fn changelist_commit(
         "committed {} file(s) from `{name}`",
         paths.len()
     ));
+    Ok(())
+}
+
+/// The default changelist's name, stored beside the changelists at `store`.
+fn changelist_default_name(store: &std::path::Path) -> Option<String> {
+    let dir = store.parent()?;
+    std::fs::read_to_string(crate::changelists::default_path(dir))
+        .ok()
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty())
+}
+
+fn save_changelists(path: &std::path::Path, store: &crate::changelists::Store) -> anyhow::Result<()> {
+    std::fs::write(path, crate::changelists::render(store)).map_err(|e| anyhow!("{}: {e}", path.display()))
+}
+
+/// `:changelist-new NAME` — JetBrains "New Changelist"
+/// (`ChangesView.NewChangeList`): an empty list to move files into.
+fn changelist_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().context("usage: :changelist-new NAME")?;
+    let (path, _, mut store) = load_changelists(cx)?;
+    if !crate::changelists::create(&mut store, name) {
+        bail!("changelist `{name}` exists");
+    }
+    save_changelists(&path, &store)?;
+    cx.editor.set_status(format!("created changelist `{name}`"));
+    Ok(())
+}
+
+/// `:changelist-delete NAME` — JetBrains "Delete Changelist"
+/// (`ChangesView.RemoveChangeList`). Its files move to the default list when
+/// one is set, as the IDE moves them to its active one.
+fn changelist_delete(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().context("usage: :changelist-delete NAME")?;
+    let (path, _, mut store) = load_changelists(cx)?;
+    let default = changelist_default_name(&path);
+    let moved = crate::changelists::delete(&mut store, name, default.as_deref())
+        .with_context(|| format!("no changelist `{name}`"))?;
+    save_changelists(&path, &store)?;
+    cx.editor.set_status(match default.filter(|d| d != name) {
+        Some(default) if !moved.is_empty() => {
+            format!("deleted `{name}`; {} file(s) moved to `{default}`", moved.len())
+        }
+        _ => format!("deleted `{name}`"),
+    });
+    Ok(())
+}
+
+/// `:changelist-rename OLD NEW` — JetBrains "Rename Changelist"
+/// (`ChangesView.Rename`).
+fn changelist_rename(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (Some(old), Some(new)) = (args.first(), args.get(1)) else {
+        bail!("usage: :changelist-rename OLD NEW");
+    };
+    let (path, _, mut store) = load_changelists(cx)?;
+    crate::changelists::rename(&mut store, old, new).map_err(|e| anyhow!("{e}"))?;
+    save_changelists(&path, &store)?;
+    if changelist_default_name(&path).as_deref() == Some(old) {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::write(crate::changelists::default_path(dir), new);
+        }
+    }
+    cx.editor.set_status(format!("renamed `{old}` to `{new}`"));
+    Ok(())
+}
+
+/// `:changelist-default NAME` — JetBrains "Set Active Changelist"
+/// (`ChangesView.SetDefault`): the list that the changes no other list claims
+/// belong to, and so the one `:changelist-commit` commits them with.
+fn changelist_default(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().context("usage: :changelist-default NAME")?;
+    let (path, _, mut store) = load_changelists(cx)?;
+    if crate::changelists::create(&mut store, name) {
+        save_changelists(&path, &store)?;
+    }
+    let dir = path.parent().context("no git directory")?;
+    std::fs::write(crate::changelists::default_path(dir), name)
+        .map_err(|e| anyhow!("{e}"))?;
+    cx.editor.set_status(format!("`{name}` is the default changelist"));
     Ok(())
 }
 
@@ -64194,6 +64300,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "changelist-new",
+        aliases: &["cl-new"],
+        doc: "Create an empty changelist (JetBrains New Changelist).",
+        fun: changelist_new,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "changelist-delete",
+        aliases: &["cl-delete"],
+        doc: "Delete a changelist, moving its files to the default list (JetBrains Delete Changelist).",
+        fun: changelist_delete,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "changelist-rename",
+        aliases: &["cl-rename"],
+        doc: "Rename a changelist (JetBrains Rename Changelist).",
+        fun: changelist_rename,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "changelist-default",
+        aliases: &["cl-default"],
+        doc: "Make a changelist the default, which also holds the changes no list claims (JetBrains Set Active Changelist).",
+        fun: changelist_default,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

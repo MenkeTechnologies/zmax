@@ -84474,5 +84474,37 @@
    "static:shelf_apply"
   ],
   "note": "Vcs.Show.Shelf = zmax `shelf_apply` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.NewChangeList",
+  "status": "ported",
+  "evidence": [
+   "typable:changelist-new"
+  ],
+  "note": "ChangesView.NewChangeList = zmax `:changelist-new` over the changelist store (zmax-term/src/changelists.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.RemoveChangeList",
+  "status": "ported",
+  "evidence": [
+   "typable:changelist-delete"
+  ],
+  "note": "ChangesView.RemoveChangeList = zmax `:changelist-delete` over the changelist store (zmax-term/src/changelists.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.Rename",
+  "status": "partial",
+  "evidence": [
+   "typable:changelist-rename"
+  ],
+  "note": "ChangesView.Rename (Edit Changelist) ~ zmax `:changelist-rename`: renames the list; the IDE dialog also edits a description, which zmax changelists do not have."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.SetDefault",
+  "status": "ported",
+  "evidence": [
+   "typable:changelist-default"
+  ],
+  "note": "ChangesView.SetDefault = zmax `:changelist-default` over the changelist store (zmax-term/src/changelists.rs)."
  }
 ]

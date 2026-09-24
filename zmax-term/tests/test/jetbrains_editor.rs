@@ -498,3 +498,44 @@ async fn shelve_from_a_subdirectory_covers_the_whole_tree() -> anyhow::Result<()
     assert_eq!("B\n", std::fs::read_to_string(&nested)?);
     Ok(())
 }
+
+/// Committing the default changelist takes the changes no list claims and
+/// leaves another list's file alone.
+#[tokio::test(flavor = "multi_thread")]
+async fn default_changelist_commits_the_unclaimed_changes() -> anyhow::Result<()> {
+    let repo = tempfile::tempdir()?;
+    let git = |args: &[&str]| -> String {
+        let out = std::process::Command::new("git")
+            .arg("-C")
+            .arg(repo.path())
+            .args(args)
+            .output()
+            .expect("git runs");
+        assert!(out.status.success(), "git {args:?}");
+        String::from_utf8_lossy(&out.stdout).into_owned()
+    };
+    git(&["init", "-q"]);
+    git(&["config", "user.email", "user@example.com"]);
+    git(&["config", "user.name", "user"]);
+    let (a, b) = (repo.path().join("a.txt"), repo.path().join("b.txt"));
+    std::fs::write(&a, "a\n")?;
+    std::fs::write(&b, "b\n")?;
+    git(&["add", "."]);
+    git(&["commit", "-qm", "base"]);
+    std::fs::write(&a, "A\n")?;
+    std::fs::write(&b, "B\n")?;
+
+    let mut app = AppBuilder::new().with_file(&a, None).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some(":changelist-default main<ret>:changelist-new work<ret>:changelist work<ret>:changelist-commit main fix b<ret>"),
+            None,
+        )],
+        false,
+    )
+    .await?;
+    assert_eq!("b.txt\n", git(&["show", "--name-only", "--format=", "HEAD"]));
+    assert_eq!(" M a.txt\n", git(&["status", "--porcelain"]), "work's file stayed uncommitted");
+    Ok(())
+}
