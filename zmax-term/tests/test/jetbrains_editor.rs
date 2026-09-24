@@ -458,3 +458,43 @@ async fn shelf_save_pop_and_restore() -> anyhow::Result<()> {
     assert_eq!(1, patches(&shelf), "restored from the recycled shelf");
     Ok(())
 }
+
+/// `:shelve` and `:unshelve` act on the whole repository even when the buffer
+/// sits in a subdirectory. Run from there, `git checkout -- .` restored only
+/// the subdirectory and `git apply` skipped the rest, both without an error.
+#[tokio::test(flavor = "multi_thread")]
+async fn shelve_from_a_subdirectory_covers_the_whole_tree() -> anyhow::Result<()> {
+    let repo = tempfile::tempdir()?;
+    let git = |args: &[&str]| {
+        let ok = std::process::Command::new("git")
+            .arg("-C")
+            .arg(repo.path())
+            .args(args)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        assert!(ok, "git {args:?}");
+    };
+    git(&["init", "-q"]);
+    git(&["config", "user.email", "user@example.com"]);
+    git(&["config", "user.name", "user"]);
+    std::fs::create_dir(repo.path().join("sub"))?;
+    let top = repo.path().join("top.txt");
+    let nested = repo.path().join("sub").join("s.txt");
+    std::fs::write(&top, "a\n")?;
+    std::fs::write(&nested, "b\n")?;
+    git(&["add", "."]);
+    git(&["commit", "-qm", "base"]);
+    std::fs::write(&top, "A\n")?;
+    std::fs::write(&nested, "B\n")?;
+
+    let mut app = AppBuilder::new().with_file(&nested, None).build()?;
+    test_key_sequences(&mut app, vec![(Some(":shelve work<ret>"), None)], false).await?;
+    assert_eq!("a\n", std::fs::read_to_string(&top)?, "the top-level file was shelved too");
+    assert_eq!("b\n", std::fs::read_to_string(&nested)?);
+
+    test_key_sequences(&mut app, vec![(Some(":unshelve work<ret>"), None)], false).await?;
+    assert_eq!("A\n", std::fs::read_to_string(&top)?, "and came back");
+    assert_eq!("B\n", std::fs::read_to_string(&nested)?);
+    Ok(())
+}

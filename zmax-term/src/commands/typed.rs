@@ -25667,11 +25667,25 @@ fn apply_patch_from_clipboard(
 }
 
 /// The directory to run git in for the current buffer (its parent, else cwd).
+/// The top level of the repository holding the current buffer (or the working
+/// directory), where the whole-tree git commands have to run: from a
+/// subdirectory, `git apply` skips the patch's paths outside it and
+/// `git checkout -- .` restores only that subdirectory, both without an error.
+/// Outside a repository it is the buffer's directory, so git reports that.
 fn git_dir_for_current(cx: &compositor::Context) -> std::path::PathBuf {
-    doc!(cx.editor)
+    let dir = doc!(cx.editor)
         .path()
         .and_then(|p| p.parent().map(ToOwned::to_owned))
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| ".".into()))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| ".".into()));
+    std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .ok()
+        .filter(|out| out.status.success())
+        .map(|out| std::path::PathBuf::from(String::from_utf8_lossy(&out.stdout).trim()))
+        .unwrap_or(dir)
 }
 
 /// emacs `vc-root-version-diff`: a unified diff of the whole working tree versus
