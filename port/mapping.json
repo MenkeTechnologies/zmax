@@ -84690,5 +84690,93 @@
    "static:project_tree_toggle_folders_first"
   ],
   "note": "ProjectView.FoldersAlwaysOnTop = zmax `project_tree_toggle_folders_first`: directories first (the default) or ordered among the files."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeView",
+  "status": "ported",
+  "evidence": [
+   "static:change_view_mode"
+  ],
+  "note": "ChangeView = zmax `change_view_mode`."
+ },
+ {
+  "spec_id": "jetbrains-actions.CreateGitHubActionFileAction",
+  "status": "ported",
+  "evidence": [
+   "static:new_github_action"
+  ],
+  "note": "CreateGitHubActionFileAction = zmax `new_github_action`."
+ },
+ {
+  "spec_id": "jetbrains-actions.CreateGitHubWorkflowFileAction",
+  "status": "ported",
+  "evidence": [
+   "static:new_github_workflow"
+  ],
+  "note": "CreateGitHubWorkflowFileAction = zmax `new_github_workflow`."
+ },
+ {
+  "spec_id": "jetbrains-actions.KeymapToCsv",
+  "status": "ported",
+  "evidence": [
+   "static:keymap_to_csv"
+  ],
+  "note": "KeymapToCsv = zmax `keymap_to_csv`."
+ },
+ {
+  "spec_id": "jetbrains-actions.NewHtmlFile",
+  "status": "ported",
+  "evidence": [
+   "static:new_html_file"
+  ],
+  "note": "NewHtmlFile = zmax `new_html_file`."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenEditorInOppositeTabGroup",
+  "status": "ported",
+  "evidence": [
+   "static:open_in_opposite_group"
+  ],
+  "note": "OpenEditorInOppositeTabGroup = zmax `open_in_opposite_group`."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenInRightSplit",
+  "status": "ported",
+  "evidence": [
+   "static:vsplit"
+  ],
+  "note": "OpenInRightSplit: the IDE describes it as splitting the editor area and opening the current file in the right group = zmax `vsplit` (Vertical right split)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ReverteOverrideFileTypeAction",
+  "status": "ported",
+  "evidence": [
+   "static:revert_language_override"
+  ],
+  "note": "ReverteOverrideFileTypeAction = zmax `revert_language_override`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowFilePath",
+  "status": "ported",
+  "evidence": [
+   "static:show_file_path"
+  ],
+  "note": "ShowFilePath = zmax `show_file_path`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleZenMode",
+  "status": "ported",
+  "evidence": [
+   "static:zen_mode"
+  ],
+  "note": "ToggleZenMode = zmax `zen_mode`."
+ },
+ {
+  "spec_id": "jetbrains-actions.UndoClearAction",
+  "status": "ported",
+  "evidence": [
+   "static:clear_undo_history"
+  ],
+  "note": "UndoClearAction = zmax `clear_undo_history`."
  }
 ]

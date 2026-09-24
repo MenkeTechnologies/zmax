@@ -1655,6 +1655,16 @@
 | `toggle_problems_by_severity` | Order the Problems panel by severity, errors first (JetBrains Sort by Severity) |  |
 | `problems_jump_to_source` | Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source) |  |
 | `problems_quick_fixes` | Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes) |  |
+| `zen_mode` | Distraction Free and full screen together (JetBrains Toggle Zen Mode) |  |
+| `change_view_mode` | Pick a view mode: distraction free, zen, full screen, focus (JetBrains View Mode) |  |
+| `keymap_to_csv` | Export every key binding as mode,keys,command CSV (JetBrains Export Keymap to CSV) |  |
+| `new_html_file` | Create an HTML5 page beside the current file (JetBrains HTML File) |  |
+| `new_github_workflow` | Create a GitHub workflow under .github/workflows (JetBrains GitHub Workflow) |  |
+| `new_github_action` | Create a GitHub action.yml in a directory (JetBrains GitHub Action) |  |
+| `show_file_path` | Open one of this file's directories in the file manager (JetBrains File Path) |  |
+| `clear_undo_history` | Forget the buffer's undo history (JetBrains Clear Undo History) |  |
+| `revert_language_override` | Detect the language from the file again, dropping one set by hand (JetBrains Revert File Type Override) |  |
+| `open_in_opposite_group` | Show this buffer in the neighbouring split too (JetBrains Open in Opposite Group) |  |
 | `toggle_maximize_split` | Show the focused window alone, or restore every window (JetBrains Maximize Editor in Split) |  |
 | `toggle_statusline` | Show or hide the status line (JetBrains Status Bar) |  |
 | `toggle_minimap` | Show or hide the workbench minimap (JetBrains Show Minimap) |  |

@@ -567,3 +567,53 @@ async fn watches_add_duplicate_and_clear() -> anyhow::Result<()> {
     )
     .await
 }
+
+/// Clear Undo History leaves the text and takes away what undo would undo.
+#[tokio::test(flavor = "multi_thread")]
+async fn clear_undo_history_keeps_the_text() -> anyhow::Result<()> {
+    let mut config = Config::default();
+    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => clear_undo_history, }));
+    let mut app = AppBuilder::new().with_config(config).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![(Some("ihello<esc>Zu"), Some(&|app| assert_eq!("hello\n", text(app))))],
+        false,
+    )
+    .await
+}
+
+/// Open in Opposite Group shows the buffer in the neighbouring split too.
+#[tokio::test(flavor = "multi_thread")]
+async fn open_in_opposite_group_keeps_the_original() -> anyhow::Result<()> {
+    let mut config = Config::default();
+    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => open_in_opposite_group, }));
+    let mut app = AppBuilder::new().with_config(config).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some(":vnew<ret><C-w>hZ"),
+            Some(&|app| {
+                let docs: Vec<_> = app.editor.tree.views().map(|(v, _)| v.doc).collect();
+                assert_eq!(2, docs.len());
+                assert_eq!(docs[0], docs[1], "both splits show the same buffer");
+            }),
+        )],
+        false,
+    )
+    .await
+}
+
+/// HTML File writes a page beside the current file and opens it.
+#[tokio::test(flavor = "multi_thread")]
+async fn new_html_file_beside_the_buffer() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let file = dir.path().join("a.txt");
+    std::fs::write(&file, "a\n")?;
+    let mut config = Config::default();
+    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => new_html_file, }));
+    let mut app = AppBuilder::new().with_config(config).with_file(&file, None).build()?;
+    test_key_sequences(&mut app, vec![(Some("Zpage<ret>"), None)], false).await?;
+    let page = std::fs::read_to_string(dir.path().join("page.html"))?;
+    assert!(page.starts_with("<!DOCTYPE html>") && page.contains("<title>page</title>"), "{page}");
+    Ok(())
+}

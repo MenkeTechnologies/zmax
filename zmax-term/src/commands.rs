@@ -2048,6 +2048,16 @@ impl MappableCommand {
         toggle_problems_by_severity, "Order the Problems panel by severity, errors first (JetBrains Sort by Severity)",
         problems_jump_to_source, "Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source)",
         problems_quick_fixes, "Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes)",
+        zen_mode, "Distraction Free and full screen together (JetBrains Toggle Zen Mode)",
+        change_view_mode, "Pick a view mode: distraction free, zen, full screen, focus (JetBrains View Mode)",
+        keymap_to_csv, "Export every key binding as mode,keys,command CSV (JetBrains Export Keymap to CSV)",
+        new_html_file, "Create an HTML5 page beside the current file (JetBrains HTML File)",
+        new_github_workflow, "Create a GitHub workflow under .github/workflows (JetBrains GitHub Workflow)",
+        new_github_action, "Create a GitHub action.yml in a directory (JetBrains GitHub Action)",
+        show_file_path, "Open one of this file's directories in the file manager (JetBrains File Path)",
+        clear_undo_history, "Forget the buffer's undo history (JetBrains Clear Undo History)",
+        revert_language_override, "Detect the language from the file again, dropping one set by hand (JetBrains Revert File Type Override)",
+        open_in_opposite_group, "Show this buffer in the neighbouring split too (JetBrains Open in Opposite Group)",
         toggle_maximize_split, "Show the focused window alone, or restore every window (JetBrains Maximize Editor in Split)",
         toggle_statusline, "Show or hide the status line (JetBrains Status Bar)",
         toggle_minimap, "Show or hide the workbench minimap (JetBrains Show Minimap)",
@@ -47154,6 +47164,28 @@ fn vsplit(cx: &mut Context) {
     split(cx.editor, Action::VerticalSplit);
 }
 
+/// JetBrains "Open in Opposite Group" (`OpenEditorInOppositeTabGroup`): show
+/// this buffer in the neighbouring split as well, leaving it open here.
+/// `move_to_opposite_group` swaps the two instead.
+fn open_in_opposite_group(cx: &mut Context) {
+    let focus = cx.editor.tree.focus;
+    let neighbour = [
+        tree::Direction::Right,
+        tree::Direction::Left,
+        tree::Direction::Down,
+        tree::Direction::Up,
+    ]
+    .into_iter()
+    .find_map(|dir| cx.editor.tree.find_split_in_direction(focus, dir));
+    let Some(target) = neighbour else {
+        cx.editor.set_status("No opposite split group");
+        return;
+    };
+    let doc = doc!(cx.editor).id();
+    cx.editor.focus(target);
+    cx.editor.switch(doc, Action::Replace);
+}
+
 fn vsplit_new(cx: &mut Context) {
     cx.editor.new_file(Action::VerticalSplit);
 }
@@ -54742,6 +54774,218 @@ fn problems_jump_to_source(cx: &mut Context) {
 /// (`ProblemsView.QuickFixes`): the code actions for the chosen diagnostic.
 fn problems_quick_fixes(cx: &mut Context) {
     with_selected_problem(cx, code_action);
+}
+
+/// JetBrains "Toggle Zen Mode" (`ToggleZenMode`): Distraction Free and full
+/// screen together.
+fn zen_mode(cx: &mut Context) {
+    distraction_free_mode(cx);
+    toggle_frame_fullscreen(cx);
+}
+
+/// JetBrains "View Mode" (`ChangeView`): pick how the editor is shown.
+fn change_view_mode(cx: &mut Context) {
+    let modes: Vec<(&'static str, fn(&mut Context))> = vec![
+        ("Distraction Free Mode", distraction_free_mode),
+        ("Zen Mode", zen_mode),
+        ("Full Screen", toggle_frame_fullscreen),
+        ("Focus Mode", toggle_focus_mode),
+    ];
+    let columns = [PickerColumn::new("view mode", |m: &(&'static str, fn(&mut Context)), _: &()| {
+        m.0.into()
+    })];
+    let picker = Picker::new(columns, 0, modes, (), |cx, mode: &(&'static str, fn(&mut Context)), _| {
+        let mut cx = Context {
+            register: None,
+            count: None,
+            editor: cx.editor,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        };
+        (mode.1)(&mut cx);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// A CSV field: quoted when it holds a comma, quote or line break.
+fn csv_field(field: &str) -> String {
+    if field.contains([',', '"', '\n']) {
+        format!("\"{}\"", field.replace('"', "\"\""))
+    } else {
+        field.to_string()
+    }
+}
+
+#[cfg(test)]
+mod csv_field_tests {
+    use super::csv_field;
+
+    #[test]
+    fn commas_and_quotes_are_quoted() {
+        assert_eq!("space w", csv_field("space w"));
+        assert_eq!("\"a,b\"", csv_field("a,b"));
+        assert_eq!("\"say \"\"hi\"\"\"", csv_field("say \"hi\""));
+    }
+}
+
+/// JetBrains "Export Keymap to CSV" (`KeymapToCsv`): every binding of every
+/// mode as `mode,keys,command`, written to the file the prompt names or shown
+/// in a scratch buffer.
+fn keymap_to_csv(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        let Some(view) = compositor.find::<ui::EditorView>() else {
+            return;
+        };
+        let mut rows: Vec<(String, String, String)> = Vec::new();
+        for (mode, trie) in view.keymaps.map().iter() {
+            for (command, bindings) in trie.reverse_map() {
+                for keys in bindings {
+                    let keys: String = keys.iter().map(|k| k.key_sequence_format()).collect();
+                    rows.push((format!("{mode:?}").to_lowercase(), keys, command.clone()));
+                }
+            }
+        }
+        rows.sort();
+        let mut csv = String::from("mode,keys,command\n");
+        for (mode, keys, command) in &rows {
+            csv.push_str(&format!("{},{},{}\n", csv_field(mode), csv_field(keys), csv_field(command)));
+        }
+        let count = rows.len();
+        let prompt = crate::ui::prompt::Prompt::new(
+            "export keymap to (empty: scratch): ".into(),
+            None,
+            ui::completers::filename,
+            move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                if event != PromptEvent::Validate {
+                    return;
+                }
+                let path = input.trim();
+                if path.is_empty() {
+                    show_text_in_scratch(cx.editor, &csv);
+                    return;
+                }
+                match std::fs::write(path, &csv) {
+                    Ok(()) => cx.editor.set_status(format!("wrote {count} bindings to {path}")),
+                    Err(e) => cx.editor.set_error(format!("{path}: {e}")),
+                }
+            },
+        );
+        compositor.push(Box::new(prompt));
+    }));
+}
+
+/// Create `name` in `dir` from `body`, refusing to overwrite, and open it.
+fn create_from_template(cx: &mut crate::compositor::Context, path: &Path, body: &str) {
+    if path.exists() {
+        cx.editor.set_error(format!("{} exists", path.display()));
+        return;
+    }
+    if let Some(parent) = path.parent() {
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            cx.editor.set_error(format!("{}: {e}", parent.display()));
+            return;
+        }
+    }
+    if let Err(e) = std::fs::write(path, body) {
+        cx.editor.set_error(format!("{}: {e}", path.display()));
+        return;
+    }
+    if let Err(e) = cx.editor.open(path, Action::Replace) {
+        cx.editor.set_error(format!("{}: {e}", path.display()));
+    }
+}
+
+/// The directory new files go in: the current buffer's, else the workspace.
+fn new_file_dir(editor: &Editor) -> PathBuf {
+    doc!(editor)
+        .path()
+        .and_then(|p| p.parent().map(Path::to_path_buf))
+        .unwrap_or_else(|| zmax_loader::find_workspace().0)
+}
+
+/// JetBrains "HTML File" (`NewHtmlFile`): an HTML5 page beside the current
+/// file, titled after its name.
+fn new_html_file(cx: &mut Context) {
+    let dir = new_file_dir(cx.editor);
+    prompt_then(cx, "new HTML file: ", move |cx, name| {
+        let name = if name.ends_with(".html") || name.ends_with(".htm") {
+            name.to_string()
+        } else {
+            format!("{name}.html")
+        };
+        let title = name.trim_end_matches(".html").trim_end_matches(".htm");
+        let body = format!(
+            "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>{title}</title>\n</head>\n<body>\n\n</body>\n</html>\n"
+        );
+        create_from_template(cx, &dir.join(&name), &body);
+    });
+}
+
+/// JetBrains "GitHub Workflow" (`CreateGitHubWorkflowFileAction`): a workflow
+/// file under `.github/workflows` of the workspace.
+fn new_github_workflow(cx: &mut Context) {
+    let root = zmax_loader::find_workspace().0;
+    prompt_then(cx, "workflow name: ", move |cx, name| {
+        let path = root.join(".github/workflows").join(format!("{name}.yml"));
+        let body = format!(
+            "name: {name}\n\non:\n  push:\n    branches: [main]\n  pull_request:\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: echo build\n"
+        );
+        create_from_template(cx, &path, &body);
+    });
+}
+
+/// JetBrains "GitHub Action" (`CreateGitHubActionFileAction`): an `action.yml`
+/// in the named directory of the workspace.
+fn new_github_action(cx: &mut Context) {
+    let root = zmax_loader::find_workspace().0;
+    prompt_then(cx, "action directory: ", move |cx, dir| {
+        let name = Path::new(dir).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let body = format!(
+            "name: {name}\ndescription: ''\ninputs: {{}}\noutputs: {{}}\nruns:\n  using: composite\n  steps:\n    - run: echo {name}\n      shell: bash\n"
+        );
+        create_from_template(cx, &root.join(dir).join("action.yml"), &body);
+    });
+}
+
+/// JetBrains "File Path" (`ShowFilePath`): this file's directories, innermost
+/// first; picking one opens it in the system file manager.
+fn show_file_path(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(Path::to_path_buf) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let dirs: Vec<PathBuf> = path.ancestors().skip(1).map(Path::to_path_buf).collect();
+    let columns = [PickerColumn::new("open in file manager", |p: &PathBuf, _: &()| {
+        p.display().to_string().into()
+    })];
+    let picker = Picker::new(columns, 0, dirs, (), |cx, dir: &PathBuf, _| {
+        match open_in_browser(&dir.display().to_string()) {
+            Ok(()) => cx.editor.set_status(format!("opened {}", dir.display())),
+            Err(e) => cx.editor.set_error(format!("{}: {e}", dir.display())),
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Clear Undo History" (`UndoClearAction`): forget the buffer's
+/// undo history, keeping its text.
+fn clear_undo_history(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    doc.history.set(zmax_core::history::History::default());
+    cx.editor.set_status("undo history cleared");
+}
+
+/// JetBrains "Revert File Type Override" (`ReverteOverrideFileTypeAction`):
+/// drop a language set by hand and detect it again from the file.
+fn revert_language_override(cx: &mut Context) {
+    let loader = cx.editor.syn_loader.load();
+    let doc = doc_mut!(cx.editor);
+    doc.detect_language(&loader);
+    let language = doc.language_name().unwrap_or("text").to_string();
+    let id = doc.id();
+    cx.editor.refresh_language_servers(id);
+    cx.editor.set_status(format!("language: {language}"));
 }
 
 /// JetBrains "Maximize Editor in Split" (`MaximizeEditorInSplit`): the focused
