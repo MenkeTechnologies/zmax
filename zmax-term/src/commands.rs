@@ -2962,6 +2962,19 @@ impl MappableCommand {
         shell_dynamic_complete_command, "Shell buffer: complete the command name before point from PATH (emacs shell-dynamic-complete-command)",
         term_char_mode, "Terminal: send every key straight to the process (emacs term-char-mode)",
         term_pager_toggle, "Terminal: stop output after each screenful (emacs term-pager-toggle)",
+        terminal_clear, "Clear the terminal screen and scrollback (JetBrains Clear Terminal)",
+        terminal_clear_prompt, "Erase the command being typed in the terminal (JetBrains Clear Command Prompt)",
+        terminal_delete_previous_word, "Delete the word before the terminal cursor (JetBrains Delete Previous Word)",
+        terminal_line_up, "Scroll the terminal back one line (JetBrains Line Up)",
+        terminal_line_down, "Scroll the terminal forward one line (JetBrains Line Down)",
+        terminal_page_up, "Scroll the terminal back one page (JetBrains Page Up)",
+        terminal_page_down, "Scroll the terminal forward one page (JetBrains Page Down)",
+        terminal_close_session, "End the terminal's shell and close its panel (JetBrains Close Session)",
+        terminal_paste, "Paste the clipboard into the terminal (JetBrains Paste)",
+        terminal_paste_selection, "Paste the primary selection into the terminal (JetBrains Paste From Selection Clipboard)",
+        open_in_terminal, "Open a terminal in this file's directory (JetBrains Open in Terminal)",
+        terminal_new_predefined_session, "Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session)",
+        terminal_search_history, "Type a command picked from the shell history at the terminal prompt (JetBrains Search in Command History)",
         switch_to_completions, "Move into the list of completions (emacs switch-to-completions)",
         previous_matching_history_element, "Read a regexp, then recall the newest older history entry matching it (emacs previous-matching-history-element)",
         next_matching_history_element, "Read a regexp, then recall the oldest newer history entry matching it (emacs next-matching-history-element)",
@@ -52369,6 +52382,253 @@ fn term_pager_toggle(cx: &mut Context) {
             "term: pager off"
         });
     });
+}
+
+/// JetBrains "Clear Terminal" (`Terminal.ClearBuffer`).
+fn terminal_clear(cx: &mut Context) {
+    term_action(cx, |panel, _| panel.clear());
+}
+
+/// JetBrains "Clear Command Prompt" (`Terminal.ClearPrompt`).
+fn terminal_clear_prompt(cx: &mut Context) {
+    term_action(cx, |panel, _| panel.clear_prompt());
+}
+
+/// JetBrains "Delete Previous Word" in the terminal (`Terminal.DeletePreviousWord`).
+fn terminal_delete_previous_word(cx: &mut Context) {
+    term_action(cx, |panel, _| panel.delete_previous_word());
+}
+
+/// JetBrains "Line Up" in the terminal (`Terminal.LineUp`).
+fn terminal_line_up(cx: &mut Context) {
+    term_action(cx, |panel, _| panel.scroll_lines(1));
+}
+
+/// JetBrains "Line Down" in the terminal (`Terminal.LineDown`).
+fn terminal_line_down(cx: &mut Context) {
+    term_action(cx, |panel, _| panel.scroll_lines(-1));
+}
+
+/// JetBrains "Page Up" in the terminal (`Terminal.PageUp`).
+fn terminal_page_up(cx: &mut Context) {
+    term_action(cx, |panel, _| panel.scroll_pages(1));
+}
+
+/// JetBrains "Page Down" in the terminal (`Terminal.PageDown`).
+fn terminal_page_down(cx: &mut Context) {
+    term_action(cx, |panel, _| panel.scroll_pages(-1));
+}
+
+/// JetBrains "Close Session" (`Terminal.CloseSession`): end the shell and
+/// close its panel.
+fn terminal_close_session(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if compositor.remove("terminal").is_none() {
+            cx.editor.set_error("term: no terminal panel");
+        }
+    }));
+}
+
+/// Paste register `name` into the terminal, filtered as a bracketed paste is.
+fn terminal_paste_register(cx: &mut Context, name: char) {
+    let text = cx
+        .editor
+        .registers
+        .read(name, cx.editor)
+        .and_then(|mut values| values.next())
+        .map(|value| value.into_owned());
+    match text {
+        Some(text) => term_action(cx, move |panel, _| panel.paste(&text)),
+        None => cx.editor.set_status(format!("register {name} is empty")),
+    }
+}
+
+/// JetBrains "Paste" in the terminal (`Terminal.Paste`): the clipboard.
+fn terminal_paste(cx: &mut Context) {
+    terminal_paste_register(cx, '+');
+}
+
+/// JetBrains "Paste From Selection Clipboard" (`Terminal.PasteSelection`): the
+/// primary selection.
+fn terminal_paste_selection(cx: &mut Context) {
+    terminal_paste_register(cx, '*');
+}
+
+/// Open a terminal panel running `shell` (or `$SHELL`) in `dir`.
+fn open_terminal_panel(
+    editor: &mut Editor,
+    compositor: &mut Compositor,
+    shell: Option<&str>,
+    dir: Option<&std::path::Path>,
+) {
+    match crate::ui::terminal::TerminalPanel::shell_in(shell, dir) {
+        Ok(panel) => compositor.push(Box::new(panel)),
+        Err(e) => editor.set_error(format!("terminal: {e}")),
+    }
+}
+
+/// JetBrains "Open in Terminal" (`Terminal.OpenInTerminal`): a terminal whose
+/// working directory is this file's directory.
+fn open_in_terminal(cx: &mut Context) {
+    let dir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf())
+        .or_else(|| std::env::current_dir().ok());
+    let call: job::Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
+        open_terminal_panel(editor, compositor, None, dir.as_deref())
+    }));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// JetBrains "New Predefined Session" (`TerminalNewPredefinedSession`): pick
+/// one of the shells `/etc/shells` lists and open a terminal on it.
+fn terminal_new_predefined_session(cx: &mut Context) {
+    let shells: Vec<String> = std::fs::read_to_string("/etc/shells")
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .map(str::to_string)
+        .collect();
+    if shells.is_empty() {
+        cx.editor.set_status("/etc/shells lists no shells");
+        return;
+    }
+    let columns = [PickerColumn::new("shell", |s: &String, _: &()| s.as_str().into())];
+    let picker = Picker::new(columns, 0, shells, (), |cx, shell: &String, _| {
+        let shell = shell.clone();
+        let cwd = std::env::current_dir().ok();
+        let call: job::Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
+            open_terminal_panel(editor, compositor, Some(&shell), cwd.as_deref())
+        }));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// The commands in a shell history file, newest first and without repeats.
+///
+/// zsh's extended format prefixes each entry with `: <time>:<elapsed>;`, and a
+/// multi-line entry continues with a trailing backslash on each line but the
+/// last. zsh also "metafies" the file: a byte in 0x83..=0x9f is written as
+/// 0x83 followed by the byte XOR 0x20, which has to be undone before the text
+/// is UTF-8. bash's plain one-command-per-line history needs none of this.
+/// Unit tested.
+fn parse_shell_history(bytes: &[u8]) -> Vec<String> {
+    let mut raw = Vec::with_capacity(bytes.len());
+    let mut iter = bytes.iter();
+    while let Some(&b) = iter.next() {
+        if b == 0x83 {
+            if let Some(&next) = iter.next() {
+                raw.push(next ^ 0x20);
+            }
+        } else {
+            raw.push(b);
+        }
+    }
+    let text = String::from_utf8_lossy(&raw);
+
+    let mut entries: Vec<String> = Vec::new();
+    let mut pending = String::new();
+    for line in text.lines() {
+        let line = if pending.is_empty() {
+            match line.strip_prefix(": ").and_then(|rest| rest.split_once(';')) {
+                Some((_stamp, command)) => command,
+                None => line,
+            }
+        } else {
+            line
+        };
+        if let Some(continued) = line.strip_suffix('\\') {
+            pending.push_str(continued);
+            pending.push('\n');
+            continue;
+        }
+        pending.push_str(line);
+        let entry = std::mem::take(&mut pending);
+        if !entry.trim().is_empty() {
+            entries.push(entry);
+        }
+    }
+
+    let mut seen = std::collections::HashSet::new();
+    entries.into_iter().rev().filter(|e| seen.insert(e.clone())).collect()
+}
+
+/// The history file of the shell the terminal runs: `$HISTFILE` when it is
+/// exported, else zsh's or bash's default.
+fn shell_history_file() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("HISTFILE") {
+        return Some(PathBuf::from(path));
+    }
+    let home = zmax_stdx::path::home_dir().ok()?;
+    let shell = std::env::var("SHELL").unwrap_or_default();
+    let name = if shell.ends_with("zsh") {
+        ".zsh_history"
+    } else {
+        ".bash_history"
+    };
+    Some(home.join(name))
+}
+
+/// JetBrains "Search in Command History" (`Terminal.SearchInCommandHistory`):
+/// pick a command from the shell's history and type it at the prompt, ready to
+/// edit or run.
+fn terminal_search_history(cx: &mut Context) {
+    let entries = shell_history_file()
+        .and_then(|path| std::fs::read(path).ok())
+        .map(|bytes| parse_shell_history(&bytes))
+        .unwrap_or_default();
+    if entries.is_empty() {
+        cx.editor.set_status("No shell history found");
+        return;
+    }
+    let columns = [PickerColumn::new("command", |c: &String, _: &()| c.as_str().into())];
+    let picker = Picker::new(columns, 0, entries, (), |cx, command: &String, _| {
+        let command = command.clone();
+        let call: job::Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
+            match compositor.find::<crate::ui::terminal::TerminalPanel>() {
+                Some(panel) => panel.paste(&command),
+                None => editor.set_error("term: no terminal panel (open one with `terminal`)"),
+            }
+        }));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+#[cfg(test)]
+mod shell_history_tests {
+    use super::parse_shell_history;
+
+    #[test]
+    fn zsh_extended_entries_lose_their_stamps_newest_first() {
+        let file = b": 1700000000:0;ls -la\n: 1700000001:3;cargo build\n";
+        assert_eq!(vec!["cargo build", "ls -la"], parse_shell_history(file));
+    }
+
+    #[test]
+    fn a_continued_entry_stays_one_command_and_repeats_collapse() {
+        let file = b": 1:0;for f in *; do\\\n  echo $f\\\ndone\n: 2:0;ls\n: 3:0;ls\n";
+        assert_eq!(
+            vec!["ls", "for f in *; do\n  echo $f\ndone"],
+            parse_shell_history(file)
+        );
+    }
+
+    #[test]
+    fn metafied_bytes_are_restored_before_decoding() {
+        // "é" is C3 A9; zsh metafies neither, but a byte in 0x83..=0x9f such as
+        // the 0x9f in U+07DF (DF 9F) is written as 83 BF.
+        let file = b": 1:0;echo \xdf\x83\xbf\n";
+        assert_eq!(vec!["echo \u{7df}"], parse_shell_history(file));
+    }
+
+    #[test]
+    fn bash_history_is_one_command_per_line() {
+        assert_eq!(vec!["b", "a"], parse_shell_history(b"a\nb\n"));
+    }
 }
 
 /// Open a comint line-oriented shell buffer on `$SHELL` (emacs `M-x shell`).

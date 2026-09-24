@@ -252,9 +252,16 @@ impl Pager {
 
 impl TerminalPanel {
     pub fn new() -> std::io::Result<Self> {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
         let cwd = std::env::current_dir().ok();
-        Self::with_command(&shell, &[] as &[&str], cwd.as_deref())
+        Self::shell_in(None, cwd.as_deref())
+    }
+
+    /// A shell in `cwd`: `shell`, or `$SHELL` when none is named.
+    pub fn shell_in(shell: Option<&str>, cwd: Option<&std::path::Path>) -> std::io::Result<Self> {
+        let shell = shell
+            .map(str::to_string)
+            .unwrap_or_else(|| std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string()));
+        Self::with_command(&shell, &[] as &[&str], cwd)
     }
 
     /// Spawn an arbitrary `program` (with `args`) in a PTY panel — the same live,
@@ -463,6 +470,71 @@ impl TerminalPanel {
         let _ = self.writer.flush();
     }
 
+    /// JetBrains "Clear Terminal": drop the screen and the scrollback, then ask
+    /// the shell to redraw its prompt (`C-l`).
+    pub fn clear(&mut self) {
+        let (rows, cols) = self.parser.size();
+        *self.parser.parser.lock() = vt100::Parser::new(rows, cols, self.parser.scrollback);
+        self.send(&[0x0c]);
+        zmax_event::request_redraw();
+    }
+
+    /// JetBrains "Clear Command Prompt": erase the command being typed. In line
+    /// mode that is the local line; otherwise the shell's own line editor gets
+    /// `C-e C-u`, end of line then kill to its start, which empties the line
+    /// in both bash and zsh.
+    pub fn clear_prompt(&mut self) {
+        if self.line_mode {
+            self.line.clear();
+        } else {
+            self.send(&[0x05, 0x15]);
+        }
+    }
+
+    /// JetBrains "Delete Previous Word": the shell's `C-w`.
+    pub fn delete_previous_word(&mut self) {
+        if self.line_mode {
+            let kept = self.line.trim_end().rfind(' ').map_or(0, |i| i + 1);
+            self.line.truncate(kept);
+        } else {
+            self.send(&[0x17]);
+        }
+    }
+
+    /// Scroll the scrollback by `lines` (positive: back into history).
+    pub fn scroll_lines(&mut self, lines: isize) {
+        self.scroll(lines);
+    }
+
+    /// Scroll the scrollback by `pages` screenfuls (positive: back into history).
+    pub fn scroll_pages(&mut self, pages: isize) {
+        let rows = self.rows.saturating_sub(1).max(1) as isize;
+        self.scroll(pages * rows);
+    }
+
+    /// Pasted text, filtered through vim `termpastefilter` (`tpf`): "control
+    /// characters to be removed from the text pasted into the terminal window"
+    /// (options.txt). An <Esc> or <BS> in the clipboard would otherwise drive
+    /// the child's line editor instead of being inserted. `:set
+    /// termpastefilter=` (empty) filters nothing; because the effective-value
+    /// store reads an empty value as "unset", the raw `:setglobal` copy — which
+    /// a `:set` of this global option writes as well — is what tells the two
+    /// apart.
+    pub fn paste(&mut self, text: &str) {
+        let filter = crate::commands::vim_opt_global_str("termpastefilter")
+            .or_else(|| crate::commands::vim_opt_global_str("tpf"))
+            .unwrap_or_else(|| "BS,HT,ESC,DEL".to_string());
+        let filtered: String = text
+            .chars()
+            .filter(|&c| !is_paste_filtered(c, &filter))
+            .collect();
+        if self.line_mode {
+            self.line.push_str(&filtered);
+        } else {
+            self.send(filtered.as_bytes());
+        }
+    }
+
     /// Scroll the terminal's scrollback view by `delta` lines (positive = back
     /// into history, negative = toward the live screen).
     fn scroll(&mut self, delta: isize) {
@@ -565,23 +637,7 @@ impl Component for TerminalPanel {
                 EventResult::Consumed(None)
             }
             Event::Paste(s) if focused => {
-                // vim `termpastefilter` (`tpf`): "control characters to be removed
-                // from the text pasted into the terminal window" (options.txt).
-                // Bracketed paste hands the panel whatever was on the clipboard,
-                // and an <Esc> or <BS> in it would drive the child's line editor
-                // instead of being inserted. `:set termpastefilter=` (empty)
-                // filters nothing; because the effective-value store reads an
-                // empty value as "unset", the raw `:setglobal` copy — which a
-                // `:set` of this global option writes as well — is what tells the
-                // two apart.
-                let filter = crate::commands::vim_opt_global_str("termpastefilter")
-                    .or_else(|| crate::commands::vim_opt_global_str("tpf"))
-                    .unwrap_or_else(|| "BS,HT,ESC,DEL".to_string());
-                let filtered: String = s
-                    .chars()
-                    .filter(|&c| !is_paste_filtered(c, &filter))
-                    .collect();
-                self.send(filtered.as_bytes());
+                self.paste(s);
                 EventResult::Consumed(None)
             }
             // While focused, the wheel scrolls the terminal's own scrollback

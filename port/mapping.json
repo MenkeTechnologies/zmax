@@ -83610,5 +83610,117 @@
    "static:show_change_under_caret"
   ],
   "note": "VcsShowCurrentChangeMarker = zmax `show_change_under_caret`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.ClearBuffer",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_clear"
+  ],
+  "note": "Terminal.ClearBuffer = zmax `terminal_clear`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.ClearPrompt",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_clear_prompt"
+  ],
+  "note": "Terminal.ClearPrompt = zmax `terminal_clear_prompt`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.CloseSession",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_close_session"
+  ],
+  "note": "Terminal.CloseSession = zmax `terminal_close_session`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.DeletePreviousWord",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_delete_previous_word"
+  ],
+  "note": "Terminal.DeletePreviousWord = zmax `terminal_delete_previous_word`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.LineDown",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_line_down"
+  ],
+  "note": "Terminal.LineDown = zmax `terminal_line_down`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.LineUp",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_line_up"
+  ],
+  "note": "Terminal.LineUp = zmax `terminal_line_up`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.OpenInReworkedTerminal",
+  "status": "ported",
+  "evidence": [
+   "static:open_in_terminal"
+  ],
+  "note": "Terminal.OpenInReworkedTerminal = zmax `open_in_terminal`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.OpenInTerminal",
+  "status": "ported",
+  "evidence": [
+   "static:open_in_terminal"
+  ],
+  "note": "Terminal.OpenInTerminal = zmax `open_in_terminal`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.PageDown",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_page_down"
+  ],
+  "note": "Terminal.PageDown = zmax `terminal_page_down`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.PageUp",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_page_up"
+  ],
+  "note": "Terminal.PageUp = zmax `terminal_page_up`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.Paste",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_paste"
+  ],
+  "note": "Terminal.Paste = zmax `terminal_paste`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.PasteSelection",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_paste_selection"
+  ],
+  "note": "Terminal.PasteSelection = zmax `terminal_paste_selection`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.SearchInCommandHistory",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_search_history"
+  ],
+  "note": "Terminal.SearchInCommandHistory = zmax `terminal_search_history`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.TerminalNewPredefinedSession",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_new_predefined_session"
+  ],
+  "note": "TerminalNewPredefinedSession = zmax `terminal_new_predefined_session`, acting on the integrated terminal panel (ui/terminal.rs)."
  }
 ]

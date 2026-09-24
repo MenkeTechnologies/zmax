@@ -2571,6 +2571,19 @@
 | `shell_dynamic_complete_command` | Shell buffer: complete the command name before point from PATH (emacs shell-dynamic-complete-command) |  |
 | `term_char_mode` | Terminal: send every key straight to the process (emacs term-char-mode) | **spacemacs** — normal: `` <C-c><C-k> ``, select: `` <C-c><C-k> ``, insert: `` <C-c><C-k> ``<br>**hybrid** — normal: `` <C-c><C-k> ``, select: `` <C-c><C-k> `` |
 | `term_pager_toggle` | Terminal: stop output after each screenful (emacs term-pager-toggle) | **spacemacs** — normal: `` <C-c><C-q> ``, select: `` <C-c><C-q> ``, insert: `` <C-c><C-q> ``<br>**hybrid** — normal: `` <C-c><C-q> ``, select: `` <C-c><C-q> `` |
+| `terminal_clear` | Clear the terminal screen and scrollback (JetBrains Clear Terminal) |  |
+| `terminal_clear_prompt` | Erase the command being typed in the terminal (JetBrains Clear Command Prompt) |  |
+| `terminal_delete_previous_word` | Delete the word before the terminal cursor (JetBrains Delete Previous Word) |  |
+| `terminal_line_up` | Scroll the terminal back one line (JetBrains Line Up) |  |
+| `terminal_line_down` | Scroll the terminal forward one line (JetBrains Line Down) |  |
+| `terminal_page_up` | Scroll the terminal back one page (JetBrains Page Up) |  |
+| `terminal_page_down` | Scroll the terminal forward one page (JetBrains Page Down) |  |
+| `terminal_close_session` | End the terminal's shell and close its panel (JetBrains Close Session) |  |
+| `terminal_paste` | Paste the clipboard into the terminal (JetBrains Paste) |  |
+| `terminal_paste_selection` | Paste the primary selection into the terminal (JetBrains Paste From Selection Clipboard) |  |
+| `open_in_terminal` | Open a terminal in this file's directory (JetBrains Open in Terminal) |  |
+| `terminal_new_predefined_session` | Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session) |  |
+| `terminal_search_history` | Type a command picked from the shell history at the terminal prompt (JetBrains Search in Command History) |  |
 | `switch_to_completions` | Move into the list of completions (emacs switch-to-completions) |  |
 | `previous_matching_history_element` | Read a regexp, then recall the newest older history entry matching it (emacs previous-matching-history-element) |  |
 | `next_matching_history_element` | Read a regexp, then recall the oldest newer history entry matching it (emacs next-matching-history-element) |  |
