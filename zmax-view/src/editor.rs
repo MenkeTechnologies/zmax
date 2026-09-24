@@ -2255,6 +2255,9 @@ pub struct Editor {
     pub current_tab: usize,
     /// Recently closed tabs, most-recent last — reopened by emacs `tab-undo`.
     pub closed_tabs: Vec<TabPage>,
+    /// JetBrains "Search in Selection Only": the document and char range `/`,
+    /// `n` and `N` are confined to, or `None` for the whole buffer.
+    pub find_in_selection: Option<(DocumentId, usize, usize)>,
     /// JetBrains "Scroll to Results During Typing": whether the search prompt
     /// moves to the first match on every keystroke, or only on Enter.
     pub search_preview: bool,
@@ -2720,6 +2723,7 @@ impl Editor {
             closed_tabs: Vec::new(),
             maximized_split: None,
             search_preview: true,
+            find_in_selection: None,
             tab_back: Vec::new(),
             tab_forward: Vec::new(),
             tab_history_mode: true,

@@ -14421,7 +14421,7 @@ fn search_impl(
     // window is the scope instead of the whole buffer — the wrap included, so
     // `n` cycles inside the region rather than escaping it. Unarmed, the bounds
     // are the buffer's own and every search behaves exactly as before.
-    let scoped = find_in_selection_bytes(doc_id, doc);
+    let scoped = find_in_selection_bytes(editor.find_in_selection, doc_id, doc);
     let (lo, hi) = scoped.unwrap_or((0, doc.len_bytes()));
     let start = start.clamp(lo, hi);
 
@@ -14510,20 +14510,19 @@ fn search_impl(
     None
 }
 
-/// The region JetBrains "Search in Selection Only" (`ToggleFindInSelection`)
-/// confines the search to: the document it was armed in and the char range it
-/// covered. `None` means the whole buffer, which is the default.
-static FIND_IN_SELECTION: Lazy<std::sync::Mutex<Option<(DocumentId, usize, usize)>>> =
-    Lazy::new(|| std::sync::Mutex::new(None));
-
-/// The armed scope as a byte range of `text`, if it belongs to `doc_id`.
+/// The armed scope (`Editor::find_in_selection`) as a byte range of `text`,
+/// if it belongs to `doc_id`.
 ///
 /// The scope is held in char positions and converted per search, so edits that
 /// change byte lengths inside it do not drift it. Switching buffers leaves the
 /// scope in place but unused — it applies to the document it was taken in, the
 /// way the IDE's find bar belongs to one editor tab.
-fn find_in_selection_bytes(doc_id: DocumentId, text: RopeSlice) -> Option<(usize, usize)> {
-    let (id, from, to) = (*FIND_IN_SELECTION.lock().unwrap())?;
+fn find_in_selection_bytes(
+    scope: Option<(DocumentId, usize, usize)>,
+    doc_id: DocumentId,
+    text: RopeSlice,
+) -> Option<(usize, usize)> {
+    let (id, from, to) = scope?;
     if id != doc_id {
         return None;
     }
@@ -14546,22 +14545,18 @@ fn toggle_find_in_selection(cx: &mut Context) {
     let from = selection.iter().map(|r| r.from()).min().unwrap_or(0);
     let to = selection.iter().map(|r| r.to()).max().unwrap_or(0);
 
-    let mut guard = FIND_IN_SELECTION.lock().unwrap();
-    if guard.is_some() {
-        *guard = None;
-        drop(guard);
+    let lines = text.char_to_line(to.saturating_sub(1).max(from)) - text.char_to_line(from) + 1;
+    if cx.editor.find_in_selection.is_some() {
+        cx.editor.find_in_selection = None;
         cx.editor.set_status("search scope: the whole buffer");
         return;
     }
     if to <= from {
-        drop(guard);
         cx.editor
             .set_error("select the region to search in first");
         return;
     }
-    *guard = Some((doc_id, from, to));
-    drop(guard);
-    let lines = text.char_to_line(to.saturating_sub(1)) - text.char_to_line(from) + 1;
+    cx.editor.find_in_selection = Some((doc_id, from, to));
     cx.editor
         .set_status(format!("search scope: this selection ({lines} line(s))"));
 }
