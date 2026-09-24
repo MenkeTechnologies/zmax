@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-785ee49a.js";
+            window.path_to_searchindex_js = "searchindex-49debe81.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -6084,6 +6084,11 @@ without scrolling.</p>
 <tr><td><code>error_description</code></td><td>Show the full text of the diagnostic under the cursor (JetBrains Error Description)</td><td></td></tr>
 <tr><td><code>context_info</code></td><td>Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lQ</code>, select: <code>&lt;space&gt;lQ</code></td></tr>
 <tr><td><code>local_history_revert</code></td><td>Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fV</code>, select: <code>&lt;space&gt;fV</code></td></tr>
+<tr><td><code>local_history_put_label</code></td><td>Label the buffer as it is now in Local History (JetBrains Put Label)</td><td></td></tr>
+<tr><td><code>local_history_project</code></td><td>Every Local History snapshot of every file (JetBrains Show Project History)</td><td></td></tr>
+<tr><td><code>local_history_selection</code></td><td>Local History snapshots in which the selected lines differ (JetBrains Show History for Selection)</td><td></td></tr>
+<tr><td><code>local_history_revert_selection</code></td><td>Put the selected lines back as a Local History snapshot has them (JetBrains Revert Selection)</td><td></td></tr>
+<tr><td><code>local_history_create_patch</code></td><td>Diff from a Local History snapshot to the buffer (JetBrains Create Patch)</td><td></td></tr>
 <tr><td><code>pin_tab</code></td><td>Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bt</code>, select: <code>&lt;space&gt;bt</code></td></tr>
 <tr><td><code>git_history_for_selection</code></td><td>Commits that touched the selected lines (JetBrains Show History for Selection)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gfL</code>, select: <code>&lt;space&gt;gfL</code></td></tr>
 <tr><td><code>git_compare_with_branch</code></td><td>Diff this file against a branch you pick (JetBrains Compare with Branch)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gC</code>, select: <code>&lt;space&gt;gC</code></td></tr>
@@ -9826,11 +9831,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9629</strong> (80.7%)</li>
+<li>Ported: <strong>9634</strong> (80.8%)</li>
 <li>Partial: <strong>700</strong> (5.9%)</li>
-<li>Absent: <strong>1597</strong></li>
+<li>Absent: <strong>1592</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2824 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2829 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9893,7 +9898,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">667</td><td style="text-align: right">117</td><td style="text-align: right">33.3%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">672</td><td style="text-align: right">117</td><td style="text-align: right">33.6%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9989,7 +9994,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">62.5%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">476</td><td style="text-align: right">96</td><td style="text-align: right">29.6%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">481</td><td style="text-align: right">96</td><td style="text-align: right">29.9%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">86</td><td style="text-align: right">0</td><td style="text-align: right">85.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">4</td><td style="text-align: right">2</td><td style="text-align: right">25.0%</td></tr>
