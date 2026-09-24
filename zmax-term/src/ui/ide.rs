@@ -794,6 +794,13 @@ impl Ide {
         self.group_problems
     }
 
+    /// Run `f` on the project tree, showing the workbench so the result is
+    /// visible.
+    pub fn with_project<R>(&mut self, f: impl FnOnce(&mut FileTree) -> R) -> R {
+        self.visible = true;
+        f(&mut self.project)
+    }
+
     /// JetBrains "Compact Directories" (`ProjectView.CompactDirectories`).
     pub fn toggle_compact_dirs(&mut self) -> bool {
         self.visible = true;

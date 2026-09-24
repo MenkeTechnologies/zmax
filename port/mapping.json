@@ -83978,5 +83978,85 @@
    "static:dap_remove_all_but_this"
   ],
   "note": "XDebugger.RemoveAllButThisBreakpoint = zmax `dap_remove_all_but_this` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollapseAll",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_collapse_all"
+  ],
+  "note": "CollapseAll = zmax `project_tree_collapse_all`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollapseTreeNode",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_collapse_node"
+  ],
+  "note": "CollapseTreeNode = zmax `project_tree_collapse_node`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandAll",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_expand_all"
+  ],
+  "note": "ExpandAll = zmax `project_tree_expand_all`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandRecursively",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_expand_recursively"
+  ],
+  "note": "ExpandRecursively = zmax `project_tree_expand_recursively`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpandTreeNode",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_expand_node"
+  ],
+  "note": "ExpandTreeNode = zmax `project_tree_expand_node`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.FullyExpandTreeNode",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_expand_recursively"
+  ],
+  "note": "FullyExpandTreeNode = zmax `project_tree_expand_recursively`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.SortByName",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_sort_by_name"
+  ],
+  "note": "ProjectView.SortByName = zmax `project_tree_sort_by_name`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectViewEditSource",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_open_selected"
+  ],
+  "note": "ProjectViewEditSource = zmax `project_tree_open_selected`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectViewExpandAll",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_expand_all"
+  ],
+  "note": "ProjectViewExpandAll = zmax `project_tree_expand_all`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.TreeExpandAll",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_expand_all"
+  ],
+  "note": "TreeExpandAll = zmax `project_tree_expand_all`, acting on the workbench project tree (ui/file_tree.rs)."
  }
 ]

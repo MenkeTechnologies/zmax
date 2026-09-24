@@ -2006,6 +2006,13 @@ impl MappableCommand {
         export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
         recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
+        project_tree_collapse_all, "Collapse every directory in the project tree (JetBrains Collapse All)",
+        project_tree_expand_all, "Expand every directory in the project tree (JetBrains Expand All)",
+        project_tree_expand_node, "Expand the selected project tree directory (JetBrains Expand)",
+        project_tree_collapse_node, "Collapse the selected project tree directory (JetBrains Collapse)",
+        project_tree_expand_recursively, "Expand the selected directory and everything under it (JetBrains Expand Recursively)",
+        project_tree_sort_by_name, "Order the project tree by name (JetBrains Sort by Name)",
+        project_tree_open_selected, "Open the file selected in the project tree (JetBrains Jump to Source)",
         sort_tree_by_time_oldest, "Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time)",
         structural_search, "Find code by shape with a tree-sitter query (JetBrains Search Structurally)",
         structural_replace, "Rewrite what a tree-sitter query captures (JetBrains Replace Structurally)",
@@ -54369,6 +54376,77 @@ fn sort_tree_by_time(cx: &mut Context, newest_first: bool) {
                 "sort by modification time: oldest first"
             }),
             None => cx.editor.set_status("no project tree"),
+        }
+    }));
+}
+
+/// Run `f` on the project tree and report `done`, or that there is no tree.
+fn project_tree_action(
+    cx: &mut Context,
+    done: &'static str,
+    f: impl FnOnce(&mut crate::ui::file_tree::FileTree) + Send + 'static,
+) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let ran = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_project_tree(f));
+        cx.editor
+            .set_status(if ran.is_some() { done } else { "no project tree" });
+    }));
+}
+
+/// JetBrains "Collapse All" (`CollapseAll`) in the project tree.
+fn project_tree_collapse_all(cx: &mut Context) {
+    project_tree_action(cx, "tree collapsed", |tree| tree.collapse_all());
+}
+
+/// JetBrains "Expand All" (`ExpandAll`, `TreeExpandAll`,
+/// `ProjectViewExpandAll`) in the project tree.
+fn project_tree_expand_all(cx: &mut Context) {
+    project_tree_action(cx, "tree expanded", |tree| tree.expand_all());
+}
+
+/// JetBrains "Expand" (`ExpandTreeNode`): open the selected directory.
+fn project_tree_expand_node(cx: &mut Context) {
+    project_tree_action(cx, "expanded", |tree| tree.expand_selected());
+}
+
+/// JetBrains "Collapse" (`CollapseTreeNode`): close the selected directory.
+fn project_tree_collapse_node(cx: &mut Context) {
+    project_tree_action(cx, "collapsed", |tree| tree.collapse_selected());
+}
+
+/// JetBrains "Expand Recursively" / "Fully Expand Tree Node"
+/// (`ExpandRecursively`, `FullyExpandTreeNode`): the selected directory and
+/// everything under it.
+fn project_tree_expand_recursively(cx: &mut Context) {
+    project_tree_action(cx, "subtree expanded", |tree| tree.expand_recursively());
+}
+
+/// JetBrains "Sort by Name" (`ProjectView.SortByName`): back to plain name
+/// order from type or modification-time order.
+fn project_tree_sort_by_name(cx: &mut Context) {
+    project_tree_action(cx, "sort by name", |tree| {
+        tree.set_sort(crate::ui::file_tree::TreeSort::Name)
+    });
+}
+
+/// JetBrains "Jump to Source" from the project tree (`ProjectViewEditSource`):
+/// open the selected file.
+fn project_tree_open_selected(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let path = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_project_tree(|tree| tree.selected_path().map(Path::to_path_buf)))
+            .flatten();
+        match path {
+            Some(path) if path.is_file() => {
+                if let Err(e) = cx.editor.open(&path, Action::Replace) {
+                    cx.editor.set_error(format!("{}: {e}", path.display()));
+                }
+            }
+            Some(_) => cx.editor.set_status("the selection is a directory"),
+            None => cx.editor.set_status("no project tree selection"),
         }
     }));
 }

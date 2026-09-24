@@ -34,7 +34,7 @@ pub(crate) mod editor;
 pub mod ex_input;
 pub mod facemenu;
 pub mod fifteen;
-mod file_tree;
+pub(crate) mod file_tree;
 pub mod fivex5;
 pub mod flappy;
 pub mod frogger;

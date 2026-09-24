@@ -377,6 +377,41 @@ impl FileTree {
         self.filtering
     }
 
+    /// The selected row's path.
+    pub fn selected_path(&self) -> Option<&Path> {
+        self.rows.get(self.selected).map(|row| row.path.as_path())
+    }
+
+    /// JetBrains "Expand" (`ExpandTreeNode`): open the selected directory.
+    pub fn expand_selected(&mut self) {
+        if let Some(row) = self.rows.get(self.selected).filter(|row| row.is_dir) {
+            if self.expanded.insert(row.path.clone()) {
+                self.rebuild();
+            }
+        }
+    }
+
+    /// JetBrains "Collapse" (`CollapseTreeNode`): close the selected directory,
+    /// or the one the selected file is in, and select it.
+    pub fn collapse_selected(&mut self) {
+        let Some(row) = self.rows.get(self.selected) else {
+            return;
+        };
+        let dir = if row.is_dir && self.expanded.contains(&row.path) {
+            row.path.clone()
+        } else {
+            match row.path.parent() {
+                Some(parent) if parent != self.root => parent.to_path_buf(),
+                _ => return,
+            }
+        };
+        self.expanded.remove(&dir);
+        self.rebuild();
+        if let Some(index) = self.rows.iter().position(|r| r.path == dir) {
+            self.selected = index;
+        }
+    }
+
     /// Collapse every directory back to the root (IDE "Collapse All").
     pub fn collapse_all(&mut self) {
         self.expanded.clear();
@@ -935,6 +970,25 @@ mod tests {
         tree.set_sort(TreeSort::TimeOldest);
         let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
         assert_eq!(names, vec!["c_old.rs", "b_mid.rs", "a_new.rs"]);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn collapse_from_a_file_closes_its_directory_and_selects_it() {
+        let root = std::env::temp_dir().join(format!("zmax_node_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("a")).unwrap();
+        std::fs::write(root.join("a").join("f.rs"), "").unwrap();
+
+        let mut tree = FileTree::new(root.clone());
+        tree.selected = tree.rows.iter().position(|r| r.name == "a").unwrap();
+        tree.expand_selected();
+        tree.selected = tree.rows.iter().position(|r| r.name == "f.rs").expect("a opened");
+        tree.collapse_selected();
+
+        assert!(!tree.rows.iter().any(|r| r.name == "f.rs"), "a closed again");
+        assert_eq!("a", tree.rows[tree.selected].name);
 
         let _ = std::fs::remove_dir_all(&root);
     }

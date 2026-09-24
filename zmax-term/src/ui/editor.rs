@@ -714,6 +714,14 @@ impl EditorView {
         self.ide.as_mut().map(|ide| ide.toggle_compact_dirs())
     }
 
+    /// Run `f` on the workbench's project tree; `None` without a workbench.
+    pub fn with_project_tree<R>(
+        &mut self,
+        f: impl FnOnce(&mut crate::ui::file_tree::FileTree) -> R,
+    ) -> Option<R> {
+        self.ide.as_mut().map(|ide| ide.with_project(f))
+    }
+
     /// JetBrains "Sort by Type": order tree files by extension, then name.
     pub fn toggle_sort_by_type(&mut self) -> Option<bool> {
         self.ide.as_mut().map(|ide| ide.toggle_sort_by_type())

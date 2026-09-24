@@ -1615,6 +1615,13 @@
 | `export_to_scratch` | Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File) | **spacemacs, hybrid** — normal: `` <space>bE ``, select: `` <space>bE `` |
 | `recent_tests` | Pick one of the test runs that have finished and run it again (JetBrains Recent Tests) | **spacemacs, hybrid** — normal: `` <space>cH ``, select: `` <space>cH `` |
 | `sort_tree_by_time_newest` | Order the project tree by modification time, newest first (JetBrains Sort by Modification Time) |  |
+| `project_tree_collapse_all` | Collapse every directory in the project tree (JetBrains Collapse All) |  |
+| `project_tree_expand_all` | Expand every directory in the project tree (JetBrains Expand All) |  |
+| `project_tree_expand_node` | Expand the selected project tree directory (JetBrains Expand) |  |
+| `project_tree_collapse_node` | Collapse the selected project tree directory (JetBrains Collapse) |  |
+| `project_tree_expand_recursively` | Expand the selected directory and everything under it (JetBrains Expand Recursively) |  |
+| `project_tree_sort_by_name` | Order the project tree by name (JetBrains Sort by Name) |  |
+| `project_tree_open_selected` | Open the file selected in the project tree (JetBrains Jump to Source) |  |
 | `sort_tree_by_time_oldest` | Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time) |  |
 | `structural_search` | Find code by shape with a tree-sitter query (JetBrains Search Structurally) | **spacemacs, hybrid** — normal: `` <space>st ``, select: `` <space>st `` |
 | `structural_replace` | Rewrite what a tree-sitter query captures (JetBrains Replace Structurally) | **spacemacs, hybrid** — normal: `` <space>sR ``, select: `` <space>sR `` |
