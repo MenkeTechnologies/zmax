@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-76509e97.js";
+            window.path_to_searchindex_js = "searchindex-0816d9b3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4615,6 +4615,14 @@ without scrolling.</p>
 <tr><td><code>git_diff_local_staged</code></td><td>Diff this file against its staged version (JetBrains Compare with Staged Version)</td><td></td></tr>
 <tr><td><code>git_diff_staged_local</code></td><td>Diff the staged version of this file against the working tree (JetBrains Compare with Local Version)</td><td></td></tr>
 <tr><td><code>git_show_staged</code></td><td>Show this file as the index holds it (JetBrains Show Staged Version)</td><td></td></tr>
+<tr><td><code>git_fixup_commit</code></td><td>Commit the staged changes as a fixup! of a picked commit (JetBrains Fixup)</td><td></td></tr>
+<tr><td><code>git_squash_into_commit</code></td><td>Commit the staged changes as a squash! of a picked commit (JetBrains Squash Into)</td><td></td></tr>
+<tr><td><code>git_drop_commit</code></td><td>Remove a picked commit from the branch (JetBrains Drop Commits)</td><td></td></tr>
+<tr><td><code>git_reword_commit</code></td><td>Change the message of a picked commit (JetBrains Edit Commit Message)</td><td></td></tr>
+<tr><td><code>git_branch_at_commit</code></td><td>Create a branch at a picked commit and switch to it (JetBrains New Branch)</td><td></td></tr>
+<tr><td><code>git_reset_to_commit</code></td><td>Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)</td><td></td></tr>
+<tr><td><code>git_revert_commit</code></td><td>Commit the inverse of a picked commit (JetBrains Revert Commit)</td><td></td></tr>
+<tr><td><code>git_push_up_to_commit</code></td><td>Push the current branch only up to a picked commit (JetBrains Push All up to Here)</td><td></td></tr>
 <tr><td><code>git_acp</code></td><td>Stage all, commit, and push in one shot (C-x v c)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vc</code>, select: <code>&lt;C-x&gt;vc</code>, insert: <code>&lt;C-x&gt;vc</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vc</code>, select: <code>&lt;C-x&gt;vc</code></td></tr>
 <tr><td><code>vc_print_log</code></td><td>VC log for the current file (emacs vc-print-log)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vl</code>, select: <code>&lt;C-x&gt;vl</code>, insert: <code>&lt;C-x&gt;vl</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vl</code>, select: <code>&lt;C-x&gt;vl</code></td></tr>
 <tr><td><code>vc_print_root_log</code></td><td>VC log for the whole repository (emacs vc-print-root-log)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vL</code>, select: <code>&lt;C-x&gt;vL</code>, insert: <code>&lt;C-x&gt;vL</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vL</code>, select: <code>&lt;C-x&gt;vL</code></td></tr>
@@ -9732,11 +9740,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9528</strong> (79.9%)</li>
-<li>Partial: <strong>697</strong> (5.8%)</li>
-<li>Absent: <strong>1701</strong></li>
+<li>Ported: <strong>9535</strong> (80.0%)</li>
+<li>Partial: <strong>699</strong> (5.9%)</li>
+<li>Absent: <strong>1692</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2730 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2738 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9799,7 +9807,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">566</td><td style="text-align: right">114</td><td style="text-align: right">28.3%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">573</td><td style="text-align: right">116</td><td style="text-align: right">28.6%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9900,7 +9908,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">4</td><td style="text-align: right">2</td><td style="text-align: right">25.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>terminal</td><td style="text-align: right">59</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>vcs-git</td><td style="text-align: right">118</td><td style="text-align: right">53</td><td style="text-align: right">15</td><td style="text-align: right">44.9%</td></tr>
+<tr><td>jetbrains-actions</td><td>vcs-git</td><td style="text-align: right">118</td><td style="text-align: right">60</td><td style="text-align: right">17</td><td style="text-align: right">50.8%</td></tr>
 <tr><td>jetbrains-actions</td><td>vcs-github</td><td style="text-align: right">24</td><td style="text-align: right">1</td><td style="text-align: right">1</td><td style="text-align: right">4.2%</td></tr>
 <tr><td>kakoune</td><td>cancelling-operations</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>kakoune</td><td>changes</td><td style="text-align: right">46</td><td style="text-align: right">41</td><td style="text-align: right">2</td><td style="text-align: right">89.1%</td></tr>
