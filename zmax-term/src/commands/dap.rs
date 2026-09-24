@@ -1226,6 +1226,244 @@ pub fn dap_variables(cx: &mut Context) {
     cx.replace_or_push_layer("dap-variables", popup);
 }
 
+/// JetBrains debugger watches: expressions evaluated in the selected frame
+/// every time they are shown. They outlive a session, as the IDE's do.
+static WATCHES: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
+/// JetBrains "New Watch" (`XDebugger.NewWatch`): add an expression to the
+/// watches.
+pub fn dap_add_watch(cx: &mut Context) {
+    let prompt = Prompt::new(
+        "watch:".into(),
+        None,
+        ui::completers::none,
+        |cx, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            WATCHES.lock().unwrap().push(input.trim().to_string());
+            cx.editor.set_status(format!("watching {}", input.trim()));
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// JetBrains Watches view: every watch with its value in the selected frame,
+/// or why it has none.
+pub fn dap_show_watches(cx: &mut Context) {
+    let watches = WATCHES.lock().unwrap().clone();
+    if watches.is_empty() {
+        cx.editor.set_status("no watches — add one with dap_add_watch");
+        return;
+    }
+    let debugger = cx.editor.debug_adapters.get_active_client();
+    let frame_id = debugger.and_then(|d| selected_frame(d, false)).map(|f| f.id);
+    let body: String = watches
+        .iter()
+        .map(|expr| {
+            let value = match debugger {
+                Some(debugger) => match block_on(debugger.eval(expr.clone(), frame_id)) {
+                    Ok(resp) => resp.result,
+                    Err(err) => format!("<{err}>"),
+                },
+                None => "<not debugging>".to_string(),
+            };
+            format!("{expr} = {value}\n")
+        })
+        .collect();
+    show_gdb_popup(cx, "dap-watches", body);
+}
+
+/// Pick a watch by its index and hand the index to `on_pick`.
+fn pick_watch(cx: &mut Context, header: &'static str, on_pick: impl Fn(&mut compositor::Context, usize) + 'static) {
+    let watches: Vec<(usize, String)> = WATCHES.lock().unwrap().iter().cloned().enumerate().collect();
+    if watches.is_empty() {
+        cx.editor.set_status("no watches");
+        return;
+    }
+    let columns = [ui::PickerColumn::new(header, |w: &(usize, String), _: &()| {
+        w.1.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, watches, (), move |cx, w: &(usize, String), _| on_pick(cx, w.0));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Remove Watch" (`XDebugger.RemoveWatch`).
+pub fn dap_remove_watch(cx: &mut Context) {
+    pick_watch(cx, "remove watch", |cx, index| {
+        let mut watches = WATCHES.lock().unwrap();
+        if index < watches.len() {
+            let removed = watches.remove(index);
+            cx.editor.set_status(format!("removed watch {removed}"));
+        }
+    });
+}
+
+/// JetBrains "Remove All Watches" (`XDebugger.RemoveAllWatches`).
+pub fn dap_remove_all_watches(cx: &mut Context) {
+    let count = std::mem::take(&mut *WATCHES.lock().unwrap()).len();
+    cx.editor.set_status(format!("removed {count} watch(es)"));
+}
+
+/// JetBrains "Edit Watch" (`XDebugger.EditWatch`).
+pub fn dap_edit_watch(cx: &mut Context) {
+    pick_watch(cx, "edit watch", |cx, index| {
+        let Some(current) = WATCHES.lock().unwrap().get(index).cloned() else {
+            return;
+        };
+        let call: Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
+            let mut prompt = Prompt::new(
+                "watch:".into(),
+                None,
+                ui::completers::none,
+                move |cx, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate || input.trim().is_empty() {
+                        return;
+                    }
+                    if let Some(watch) = WATCHES.lock().unwrap().get_mut(index) {
+                        *watch = input.trim().to_string();
+                    }
+                    cx.editor.set_status("watch edited");
+                },
+            );
+            prompt.insert_str(&current, editor);
+            compositor.push(Box::new(prompt));
+        }));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+/// JetBrains "Duplicate Watch" (`XDebugger.CopyWatch`): a copy below the
+/// original, to edit into a variant.
+pub fn dap_copy_watch(cx: &mut Context) {
+    pick_watch(cx, "duplicate watch", |cx, index| {
+        let mut watches = WATCHES.lock().unwrap();
+        if let Some(watch) = watches.get(index).cloned() {
+            watches.insert(index + 1, watch);
+            cx.editor.set_status("watch duplicated");
+        }
+    });
+}
+
+fn move_watch(cx: &mut Context, down: bool) {
+    pick_watch(cx, if down { "move watch down" } else { "move watch up" }, move |cx, index| {
+        let mut watches = WATCHES.lock().unwrap();
+        let to = if down { index + 1 } else { index.wrapping_sub(1) };
+        if to < watches.len() {
+            watches.swap(index, to);
+            cx.editor.set_status("watch moved");
+        }
+    });
+}
+
+/// JetBrains "Move Watch Up" (`XDebugger.MoveWatchUp`).
+pub fn dap_move_watch_up(cx: &mut Context) {
+    move_watch(cx, false);
+}
+
+/// JetBrains "Move Watch Down" (`XDebugger.MoveWatchDown`).
+pub fn dap_move_watch_down(cx: &mut Context) {
+    move_watch(cx, true);
+}
+
+/// A variable of the selected frame: the scope it came from, its name and value.
+#[derive(Clone)]
+struct FrameVariable {
+    scope: usize,
+    name: String,
+    value: String,
+}
+
+/// Every variable in the selected frame's scopes.
+fn frame_variables(editor: &mut Editor) -> Result<Vec<FrameVariable>, String> {
+    let debugger = editor
+        .debug_adapters
+        .get_active_client()
+        .ok_or("Debugger is not running")?;
+    let frame = selected_frame(debugger, false).ok_or("no stopped frame")?;
+    let scopes = block_on(debugger.scopes(frame.id)).map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    for scope in scopes {
+        for var in block_on(debugger.variables(scope.variables_reference)).unwrap_or_default() {
+            out.push(FrameVariable {
+                scope: scope.variables_reference,
+                name: var.name,
+                value: var.value,
+            });
+        }
+    }
+    Ok(out)
+}
+
+/// Pick a variable of the selected frame and hand it to `on_pick`.
+fn pick_variable(
+    cx: &mut Context,
+    header: &'static str,
+    on_pick: impl Fn(&mut compositor::Context, &FrameVariable) + 'static,
+) {
+    let vars = match frame_variables(cx.editor) {
+        Ok(vars) if !vars.is_empty() => vars,
+        Ok(_) => {
+            cx.editor.set_status("no variables in this frame");
+            return;
+        }
+        Err(e) => {
+            cx.editor.set_error(e);
+            return;
+        }
+    };
+    let columns = [
+        ui::PickerColumn::new(header, |v: &FrameVariable, _: &()| v.name.as_str().into()),
+        ui::PickerColumn::new("value", |v: &FrameVariable, _: &()| v.value.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, vars, (), move |cx, v: &FrameVariable, _| on_pick(cx, v));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Copy Value" (`XDebugger.CopyValue`).
+pub fn dap_copy_variable_value(cx: &mut Context) {
+    pick_variable(cx, "copy value of", |cx, var| {
+        let _ = cx.editor.registers.write('+', vec![var.value.clone()]);
+        cx.editor.set_status(format!("yanked the value of {}", var.name));
+    });
+}
+
+/// JetBrains "Copy Name" (`XDebugger.CopyName`).
+pub fn dap_copy_variable_name(cx: &mut Context) {
+    pick_variable(cx, "copy name of", |cx, var| {
+        let _ = cx.editor.registers.write('+', vec![var.name.clone()]);
+        cx.editor.set_status(format!("yanked {}", var.name));
+    });
+}
+
+/// JetBrains "Set Value" (`XDebugger.SetValue`): DAP `setVariable` on a picked
+/// variable of the selected frame.
+pub fn dap_set_variable(cx: &mut Context) {
+    pick_variable(cx, "set value of", |cx, var| {
+        let var = var.clone();
+        let call: Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
+            let mut prompt = Prompt::new(
+                format!("{} =", var.name).into(),
+                None,
+                ui::completers::none,
+                move |cx, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let debugger = debugger!(cx.editor);
+                    match block_on(debugger.set_variable(var.scope, var.name.clone(), input.to_string())) {
+                        Ok(resp) => cx.editor.set_status(format!("{} = {}", var.name, resp.value)),
+                        Err(e) => cx.editor.set_error(format!("setVariable: {e}")),
+                    }
+                },
+            );
+            prompt.insert_str(&var.value, editor);
+            compositor.push(Box::new(prompt));
+        }));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
 pub fn dap_terminate(cx: &mut Context) {
     cx.editor.set_status("Terminating debug session...");
     let debugger = debugger!(cx.editor);

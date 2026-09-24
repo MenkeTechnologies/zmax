@@ -82797,11 +82797,11 @@
  },
  {
   "spec_id": "jetbrains-actions.XDebugger.NewWatch",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:gdb-watch"
+   "static:dap_add_watch"
   ],
-  "note": "XDebugger.NewWatch (New Watch) = zmax `:gdb-watch`: adds a watch expression, but to the gud/gdb session's watch list, not the DAP debugger's watches pane."
+  "note": "XDebugger.NewWatch = zmax `dap_add_watch` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
  },
  {
   "spec_id": "jetbrains-actions.editRunConfigurations",
@@ -84610,5 +84610,77 @@
    "static:github_copy_branch_pr_url"
   ],
   "note": "Copy Pull Request URL ~ zmax `github_copy_branch_pr_url`: the current branch's pull request, not a list selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.CopyName",
+  "status": "ported",
+  "evidence": [
+   "static:dap_copy_variable_name"
+  ],
+  "note": "XDebugger.CopyName = zmax `dap_copy_variable_name` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.CopyValue",
+  "status": "ported",
+  "evidence": [
+   "static:dap_copy_variable_value"
+  ],
+  "note": "XDebugger.CopyValue = zmax `dap_copy_variable_value` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.CopyWatch",
+  "status": "ported",
+  "evidence": [
+   "static:dap_copy_watch"
+  ],
+  "note": "XDebugger.CopyWatch = zmax `dap_copy_watch` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.EditWatch",
+  "status": "ported",
+  "evidence": [
+   "static:dap_edit_watch"
+  ],
+  "note": "XDebugger.EditWatch = zmax `dap_edit_watch` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.MoveWatchDown",
+  "status": "ported",
+  "evidence": [
+   "static:dap_move_watch_down"
+  ],
+  "note": "XDebugger.MoveWatchDown = zmax `dap_move_watch_down` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.MoveWatchUp",
+  "status": "ported",
+  "evidence": [
+   "static:dap_move_watch_up"
+  ],
+  "note": "XDebugger.MoveWatchUp = zmax `dap_move_watch_up` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.RemoveAllWatches",
+  "status": "ported",
+  "evidence": [
+   "static:dap_remove_all_watches"
+  ],
+  "note": "XDebugger.RemoveAllWatches = zmax `dap_remove_all_watches` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.RemoveWatch",
+  "status": "ported",
+  "evidence": [
+   "static:dap_remove_watch"
+  ],
+  "note": "XDebugger.RemoveWatch = zmax `dap_remove_watch` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.SetValue",
+  "status": "ported",
+  "evidence": [
+   "static:dap_set_variable"
+  ],
+  "note": "XDebugger.SetValue = zmax `dap_set_variable` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
  }
 ]

@@ -539,3 +539,31 @@ async fn default_changelist_commits_the_unclaimed_changes() -> anyhow::Result<()
     assert_eq!(" M a.txt\n", git(&["status", "--porcelain"]), "work's file stayed uncommitted");
     Ok(())
 }
+
+/// Watches are kept whether or not a debugger runs: add one, duplicate it,
+/// and clearing reports both.
+#[tokio::test(flavor = "multi_thread")]
+async fn watches_add_duplicate_and_clear() -> anyhow::Result<()> {
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => dap_add_watch,
+            "Q" => dap_copy_watch,
+            "M" => dap_remove_all_watches,
+        }),
+    );
+    let mut app = AppBuilder::new().with_config(config).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Zcount + 1<ret>Q<ret>M"),
+            Some(&|app| {
+                let (status, _) = app.editor.get_status().expect("a status");
+                assert_eq!("removed 2 watch(es)", status);
+            }),
+        )],
+        false,
+    )
+    .await
+}
