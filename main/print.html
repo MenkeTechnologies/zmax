@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-b6b4b3d2.js";
+            window.path_to_searchindex_js = "searchindex-58715464.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4585,6 +4585,14 @@ without scrolling.</p>
 <tr><td><code>resolve_conflicts</code></td><td>Resolve merge conflicts (3-way)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code>, select: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code></td></tr>
 <tr><td><code>git_status</code></td><td>Magit status</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, select: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, insert: <code>&lt;C-x&gt;vd</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, select: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code></td></tr>
 <tr><td><code>github_browser</code></td><td>GitHub browser (CI runs, PRs, issues, releases)</td><td></td></tr>
+<tr><td><code>github_create_gist</code></td><td>Create a secret gist of the selection or buffer and yank its URL (JetBrains Create Gist)</td><td></td></tr>
+<tr><td><code>github_create_pull_request</code></td><td>Open a pull request from the current branch (JetBrains Create Pull Request)</td><td></td></tr>
+<tr><td><code>github_open_branch_pr</code></td><td>Open the current branch’s pull request in the browser (JetBrains View Pull Request in Browser)</td><td></td></tr>
+<tr><td><code>github_copy_branch_pr_url</code></td><td>Yank the URL of the current branch’s pull request (JetBrains Copy Pull Request URL)</td><td></td></tr>
+<tr><td><code>github_show_pull_request</code></td><td>Show a pull request’s details by number (JetBrains Github.PullRequest.Show)</td><td></td></tr>
+<tr><td><code>github_submit_review</code></td><td>Approve, comment on or request changes to the current branch’s pull request (JetBrains Github.PullRequest.Review.Submit)</td><td></td></tr>
+<tr><td><code>github_share</code></td><td>Create a GitHub repository for the project and push to it (JetBrains Share Project on GitHub)</td><td></td></tr>
+<tr><td><code>github_sync_fork</code></td><td>Rebase the current branch onto the fork’s parent (JetBrains Sync Fork)</td><td></td></tr>
 <tr><td><code>git_push</code></td><td>Push the current branch to its remote (SPC g P)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, insert: <code>&lt;C-x&gt;vP</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code></td></tr>
 <tr><td><code>git_pull</code></td><td>Fast-forward pull from upstream (SPC g u)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, insert: <code>&lt;C-x&gt;v+</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code></td></tr>
 <tr><td><code>git_fetch</code></td><td>Fetch all remotes (SPC g F)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gF</code>, select: <code>&lt;space&gt;gF</code></td></tr>
@@ -9851,11 +9859,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9658</strong> (81.0%)</li>
-<li>Partial: <strong>702</strong> (5.9%)</li>
-<li>Absent: <strong>1566</strong></li>
+<li>Ported: <strong>9664</strong> (81.0%)</li>
+<li>Partial: <strong>704</strong> (5.9%)</li>
+<li>Absent: <strong>1558</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2845 static commands, 3198 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2853 static commands, 3198 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9918,7 +9926,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">696</td><td style="text-align: right">119</td><td style="text-align: right">34.8%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">702</td><td style="text-align: right">121</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10020,7 +10028,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">7</td><td style="text-align: right">2</td><td style="text-align: right">43.8%</td></tr>
 <tr><td>jetbrains-actions</td><td>terminal</td><td style="text-align: right">59</td><td style="text-align: right">14</td><td style="text-align: right">0</td><td style="text-align: right">23.7%</td></tr>
 <tr><td>jetbrains-actions</td><td>vcs-git</td><td style="text-align: right">118</td><td style="text-align: right">65</td><td style="text-align: right">18</td><td style="text-align: right">55.1%</td></tr>
-<tr><td>jetbrains-actions</td><td>vcs-github</td><td style="text-align: right">24</td><td style="text-align: right">1</td><td style="text-align: right">1</td><td style="text-align: right">4.2%</td></tr>
+<tr><td>jetbrains-actions</td><td>vcs-github</td><td style="text-align: right">24</td><td style="text-align: right">7</td><td style="text-align: right">3</td><td style="text-align: right">29.2%</td></tr>
 <tr><td>kakoune</td><td>cancelling-operations</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>kakoune</td><td>changes</td><td style="text-align: right">46</td><td style="text-align: right">41</td><td style="text-align: right">2</td><td style="text-align: right">89.1%</td></tr>
 <tr><td>kakoune</td><td>changes-through-external-programs</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
