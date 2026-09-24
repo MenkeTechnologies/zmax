@@ -1357,6 +1357,13 @@ impl MappableCommand {
         git_reset_to_commit, "Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)",
         git_revert_commit, "Commit the inverse of a picked commit (JetBrains Revert Commit)",
         git_push_up_to_commit, "Push the current branch only up to a picked commit (JetBrains Push All up to Here)",
+        shelf_apply, "Apply a shelved patch, keeping it on the shelf (JetBrains Shelf / Unshelve)",
+        shelf_pop, "Apply a shelved patch and take it off the shelf (JetBrains Unshelve and Remove)",
+        shelf_drop, "Take a patch off the shelf, recoverably (JetBrains Drop)",
+        shelf_restore, "Bring a dropped patch back onto the shelf (JetBrains Restore)",
+        shelf_rename, "Rename a shelf entry (JetBrains Rename)",
+        shelf_import, "Put a patch file on the shelf (JetBrains Import Patches)",
+        shelf_save_keep, "Shelve the working tree's changes and keep them in the tree (JetBrains Save to Shelf)",
         git_revert_into_worktree, "Apply the reverse of a picked commit without committing (JetBrains Revert Changes)",
         git_compare_with_upstream, "Diff this file against its upstream version (JetBrains Compare with Latest Repository Version)",
         git_show_file_at_commit, "Show this file as it was at a picked commit (JetBrains Show Current Revision)",
@@ -73277,6 +73284,223 @@ fn git_remove_deleted(cx: &mut Context) {
             "git rm: {}",
             e.lines().next().unwrap_or("failed")
         )),
+    }
+}
+
+/// The repository holding this buffer (or the working directory): its top
+/// level and its shelf directory.
+fn shelf_here(cx: &mut Context) -> Option<(PathBuf, PathBuf)> {
+    let dir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(Path::to_path_buf))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| ".".into()));
+    let found = git_in(&dir, &["rev-parse", "--show-toplevel"])
+        .map_err(|e| e.to_string())
+        .and_then(|top| {
+            let top = PathBuf::from(top);
+            typed::shelf_dir(&top).map(|shelf| (top, shelf)).map_err(|e| e.to_string())
+        });
+    match found {
+        Ok(found) => Some(found),
+        Err(e) => {
+            cx.editor.set_error(format!("shelf: {e}"));
+            None
+        }
+    }
+}
+
+/// The `.patch` entries in a shelf directory, by name.
+fn shelf_entries(shelf: &Path) -> Vec<PathBuf> {
+    let mut entries: Vec<PathBuf> = std::fs::read_dir(shelf)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "patch"))
+        .collect();
+    entries.sort();
+    entries
+}
+
+/// Where dropped shelf entries wait, so "Restore" can bring them back.
+fn shelf_recycled(shelf: &Path) -> PathBuf {
+    shelf.join("deleted")
+}
+
+/// Pick a patch from `shelf`, previewing it, and hand it to `on_pick` with the
+/// repository's top level.
+fn pick_shelf_entry(
+    cx: &mut Context,
+    header: &'static str,
+    top: PathBuf,
+    shelf: &Path,
+    on_pick: impl Fn(&mut crate::compositor::Context, &Path, &Path) + 'static,
+) {
+    let entries = shelf_entries(shelf);
+    if entries.is_empty() {
+        cx.editor.set_status("the shelf is empty");
+        return;
+    }
+    let columns = [PickerColumn::new(header, |p: &PathBuf, _: &()| {
+        p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default().into()
+    })];
+    let picker = Picker::new(columns, 0, entries, (), move |cx, patch: &PathBuf, _| {
+        on_pick(cx, &top, patch)
+    })
+    .with_preview(|_editor, patch: &PathBuf| Some((patch.as_path().into(), None)));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// `git apply` a shelf patch from the repository's top level — run from a
+/// subdirectory, git ignores the patch's paths outside it.
+fn shelf_apply_patch(cx: &mut crate::compositor::Context, top: &Path, patch: &Path) -> bool {
+    match git_in(top, &["apply", &patch.to_string_lossy()]) {
+        Ok(_) => {
+            crate::commands::typed::reload_open_docs(cx);
+            true
+        }
+        Err(e) => {
+            cx.editor.set_error(format!("git apply: {}", e.lines().next().unwrap_or("failed")));
+            false
+        }
+    }
+}
+
+/// Move a shelf entry into the recycled shelf.
+fn shelf_recycle(patch: &Path) -> std::io::Result<()> {
+    let recycled = shelf_recycled(patch.parent().unwrap_or(Path::new(".")));
+    std::fs::create_dir_all(&recycled)?;
+    std::fs::rename(patch, recycled.join(patch.file_name().unwrap_or_default()))
+}
+
+fn entry_name(patch: &Path) -> String {
+    patch.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+}
+
+/// JetBrains "Shelf" tool window (`Vcs.Show.Shelf`) and "Apply" /
+/// "Unshelve" (`Vcs.Shelf.Apply`, `Vcs.Shelf.UnshelveChanges`): the shelved
+/// patches, previewed; picking one applies it and keeps it on the shelf.
+fn shelf_apply(cx: &mut Context) {
+    let Some((top, shelf)) = shelf_here(cx) else {
+        return;
+    };
+    pick_shelf_entry(cx, "apply shelved", top, &shelf, |cx, top, patch| {
+        if shelf_apply_patch(cx, top, patch) {
+            cx.editor.set_status(format!("applied {}", entry_name(patch)));
+        }
+    });
+}
+
+/// JetBrains "Pop" / "Unshelve and Remove" (`Vcs.Shelf.Pop`,
+/// `Vcs.Shelf.UnshelveChangesAndRemove`): apply a shelved patch and take it
+/// off the shelf.
+fn shelf_pop(cx: &mut Context) {
+    let Some((top, shelf)) = shelf_here(cx) else {
+        return;
+    };
+    pick_shelf_entry(cx, "pop shelved", top, &shelf, |cx, top, patch| {
+        if shelf_apply_patch(cx, top, patch) {
+            let _ = shelf_recycle(patch);
+            cx.editor.set_status(format!("popped {}", entry_name(patch)));
+        }
+    });
+}
+
+/// JetBrains "Drop" (`Vcs.Shelf.Drop`): take a patch off the shelf. It goes to
+/// the recycled shelf, where "Restore" finds it.
+fn shelf_drop(cx: &mut Context) {
+    let Some((top, shelf)) = shelf_here(cx) else {
+        return;
+    };
+    pick_shelf_entry(cx, "drop shelved", top, &shelf, |cx, _, patch| {
+        match shelf_recycle(patch) {
+            Ok(()) => cx.editor.set_status(format!("dropped {}", entry_name(patch))),
+            Err(e) => cx.editor.set_error(format!("shelf: {e}")),
+        }
+    });
+}
+
+/// JetBrains "Restore" of a dropped entry (`ShelvedChanges.Restore`): back
+/// from the recycled shelf.
+fn shelf_restore(cx: &mut Context) {
+    let Some((top, shelf)) = shelf_here(cx) else {
+        return;
+    };
+    let recycled = shelf_recycled(&shelf);
+    pick_shelf_entry(cx, "restore dropped", top, &recycled, move |cx, _, patch| {
+        let back = shelf.join(patch.file_name().unwrap_or_default());
+        match std::fs::rename(patch, &back) {
+            Ok(()) => cx.editor.set_status(format!("restored {}", entry_name(patch))),
+            Err(e) => cx.editor.set_error(format!("shelf: {e}")),
+        }
+    });
+}
+
+/// JetBrains "Rename" of a shelf entry (`ShelvedChanges.Rename`).
+fn shelf_rename(cx: &mut Context) {
+    let Some((top, shelf)) = shelf_here(cx) else {
+        return;
+    };
+    pick_shelf_entry(cx, "rename shelved", top, &shelf, |cx, _, patch| {
+        let patch = patch.to_path_buf();
+        prompt_then_cx(cx, "new name: ", move |cx, name| {
+            let to = patch.with_file_name(format!("{}.patch", name.replace(['/', '\\'], "-")));
+            if to.exists() {
+                cx.editor.set_error(format!("a shelf entry named {name} exists"));
+                return;
+            }
+            match std::fs::rename(&patch, &to) {
+                Ok(()) => cx.editor.set_status(format!("renamed to {name}")),
+                Err(e) => cx.editor.set_error(format!("shelf: {e}")),
+            }
+        });
+    });
+}
+
+/// JetBrains "Import Patches" (`ShelvedChanges.ImportPatches`): put a patch
+/// file on the shelf, under its own name.
+fn shelf_import(cx: &mut Context) {
+    let Some((_, shelf)) = shelf_here(cx) else {
+        return;
+    };
+    prompt_then(cx, "patch file: ", move |cx, file| {
+        let from = PathBuf::from(file);
+        let name = from.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let to = shelf.join(format!("{name}.patch"));
+        match std::fs::copy(&from, &to) {
+            Ok(_) => cx.editor.set_status(format!("imported {name} onto the shelf")),
+            Err(e) => cx.editor.set_error(format!("{file}: {e}")),
+        }
+    });
+}
+
+/// JetBrains "Save to Shelf" (`ChangesView.SaveToShelve`): shelve the working
+/// tree's changes and leave them in the tree as well.
+fn shelf_save_keep(cx: &mut Context) {
+    let Some((top, shelf)) = shelf_here(cx) else {
+        return;
+    };
+    let patch = match typed::local_changes_patch(&top) {
+        Ok(patch) if !patch.is_empty() => patch,
+        Ok(_) => {
+            cx.editor.set_status("nothing to shelve — the tree is clean");
+            return;
+        }
+        Err(e) => {
+            cx.editor.set_error(format!("shelf: {e}"));
+            return;
+        }
+    };
+    let name = format!(
+        "shelf-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    );
+    match std::fs::write(shelf.join(format!("{name}.patch")), &patch) {
+        Ok(()) => cx.editor.set_status(format!("saved {name} to the shelf; the tree is unchanged")),
+        Err(e) => cx.editor.set_error(format!("shelf: {e}")),
     }
 }
 

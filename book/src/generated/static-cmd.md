@@ -966,6 +966,13 @@
 | `git_reset_to_commit` | Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here) |  |
 | `git_revert_commit` | Commit the inverse of a picked commit (JetBrains Revert Commit) |  |
 | `git_push_up_to_commit` | Push the current branch only up to a picked commit (JetBrains Push All up to Here) |  |
+| `shelf_apply` | Apply a shelved patch, keeping it on the shelf (JetBrains Shelf / Unshelve) |  |
+| `shelf_pop` | Apply a shelved patch and take it off the shelf (JetBrains Unshelve and Remove) |  |
+| `shelf_drop` | Take a patch off the shelf, recoverably (JetBrains Drop) |  |
+| `shelf_restore` | Bring a dropped patch back onto the shelf (JetBrains Restore) |  |
+| `shelf_rename` | Rename a shelf entry (JetBrains Rename) |  |
+| `shelf_import` | Put a patch file on the shelf (JetBrains Import Patches) |  |
+| `shelf_save_keep` | Shelve the working tree's changes and keep them in the tree (JetBrains Save to Shelf) |  |
 | `git_revert_into_worktree` | Apply the reverse of a picked commit without committing (JetBrains Revert Changes) |  |
 | `git_compare_with_upstream` | Diff this file against its upstream version (JetBrains Compare with Latest Repository Version) |  |
 | `git_show_file_at_commit` | Show this file as it was at a picked commit (JetBrains Show Current Revision) |  |

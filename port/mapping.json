@@ -84370,5 +84370,109 @@
    "static:copy_run_config"
   ],
   "note": "RunDashboard.CopyConfiguration = zmax `copy_run_config` over the project run configurations (zmax-term/src/run_config.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.SaveToShelve",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_save_keep"
+  ],
+  "note": "ChangesView.SaveToShelve = zmax `shelf_save_keep` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ChangesView.Shelf.ImportFromPatches",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_import"
+  ],
+  "note": "Frontend.ChangesView.Shelf.ImportFromPatches = zmax `shelf_import` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ChangesView.Shelf.Rename",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_rename"
+  ],
+  "note": "Frontend.ChangesView.Shelf.Rename = zmax `shelf_rename` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ChangesView.Shelf.Restore",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_restore"
+  ],
+  "note": "Frontend.ChangesView.Shelf.Restore = zmax `shelf_restore` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShelvedChanges.ImportPatches",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_import"
+  ],
+  "note": "ShelvedChanges.ImportPatches = zmax `shelf_import` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShelvedChanges.Rename",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_rename"
+  ],
+  "note": "ShelvedChanges.Rename = zmax `shelf_rename` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShelvedChanges.Restore",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_restore"
+  ],
+  "note": "ShelvedChanges.Restore = zmax `shelf_restore` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Shelf.Apply",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_apply"
+  ],
+  "note": "Vcs.Shelf.Apply = zmax `shelf_apply` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Shelf.Drop",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_drop"
+  ],
+  "note": "Vcs.Shelf.Drop = zmax `shelf_drop` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Shelf.Pop",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_pop"
+  ],
+  "note": "Vcs.Shelf.Pop = zmax `shelf_pop` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Shelf.UnshelveChanges",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_apply"
+  ],
+  "note": "Vcs.Shelf.UnshelveChanges = zmax `shelf_apply` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Shelf.UnshelveChangesAndRemove",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_pop"
+  ],
+  "note": "Vcs.Shelf.UnshelveChangesAndRemove = zmax `shelf_pop` over the shelf (.git/zmax-shelf patch files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Show.Shelf",
+  "status": "ported",
+  "evidence": [
+   "static:shelf_apply"
+  ],
+  "note": "Vcs.Show.Shelf = zmax `shelf_apply` over the shelf (.git/zmax-shelf patch files)."
  }
 ]

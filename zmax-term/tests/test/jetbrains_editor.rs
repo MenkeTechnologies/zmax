@@ -400,3 +400,61 @@ async fn escape_keeps_one_collapsed_cursor() -> anyhow::Result<()> {
     )
     .await
 }
+
+/// The shelf round trip in a throwaway repository: save the change to the
+/// shelf, lose it from the tree, pop it back, and restore the popped entry.
+#[tokio::test(flavor = "multi_thread")]
+async fn shelf_save_pop_and_restore() -> anyhow::Result<()> {
+    let repo = tempfile::tempdir()?;
+    let git = |args: &[&str]| {
+        let ok = std::process::Command::new("git")
+            .arg("-C")
+            .arg(repo.path())
+            .args(args)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        assert!(ok, "git {args:?}");
+    };
+    git(&["init", "-q"]);
+    git(&["config", "user.email", "user@example.com"]);
+    git(&["config", "user.name", "user"]);
+    let file = repo.path().join("f.txt");
+    std::fs::write(&file, "one\n")?;
+    git(&["add", "f.txt"]);
+    git(&["commit", "-qm", "base"]);
+    std::fs::write(&file, "two\n")?;
+
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => shelf_save_keep,
+            "Q" => shelf_pop,
+            "M" => shelf_restore,
+        }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(&file, None)
+        .build()?;
+    let shelf = repo.path().join(".git").join("zmax-shelf");
+    let patches = move |dir: &std::path::Path| {
+        std::fs::read_dir(dir)
+            .map(|d| d.flatten().filter(|e| e.path().extension().is_some_and(|x| x == "patch")).count())
+            .unwrap_or(0)
+    };
+
+    test_key_sequences(&mut app, vec![(Some("Z"), None)], false).await?;
+    assert_eq!(1, patches(&shelf), "saved to the shelf");
+    assert_eq!("two\n", std::fs::read_to_string(&file)?, "the tree kept the change");
+
+    git(&["checkout", "--", "f.txt"]);
+    test_key_sequences(&mut app, vec![(Some("Q<ret>"), None)], false).await?;
+    assert_eq!("two\n", std::fs::read_to_string(&file)?, "popped back into the tree");
+    assert_eq!(0, patches(&shelf), "and off the shelf");
+
+    test_key_sequences(&mut app, vec![(Some("M<ret>"), None)], false).await?;
+    assert_eq!(1, patches(&shelf), "restored from the recycled shelf");
+    Ok(())
+}

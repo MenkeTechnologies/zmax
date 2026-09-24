@@ -25420,7 +25420,7 @@ fn toggle_file_readonly(
 /// Where the shelf keeps its patches: `.git/zmax-shelf`, so it travels with the
 /// repository but is never committed, the way the IDE keeps its shelf beside
 /// the project rather than in it.
-fn shelf_dir(dir: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
+pub(crate) fn shelf_dir(dir: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
     let out = std::process::Command::new("git")
         .arg("-C")
         .arg(dir)
@@ -25550,7 +25550,7 @@ fn unshelve_changes(
 
 /// `git diff` of the whole working tree, staged changes included — the same
 /// set the IDE's "Create Patch from Local Changes" collects.
-fn local_changes_patch(dir: &std::path::Path) -> anyhow::Result<String> {
+pub(crate) fn local_changes_patch(dir: &std::path::Path) -> anyhow::Result<String> {
     let out = std::process::Command::new("git")
         .arg("-C")
         .arg(dir)
