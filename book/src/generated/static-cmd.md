@@ -966,6 +966,11 @@
 | `git_reset_to_commit` | Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here) |  |
 | `git_revert_commit` | Commit the inverse of a picked commit (JetBrains Revert Commit) |  |
 | `git_push_up_to_commit` | Push the current branch only up to a picked commit (JetBrains Push All up to Here) |  |
+| `git_stash_list` | The stashes; picking one shows its patch (JetBrains Show Git Stash) |  |
+| `git_manage_remotes` | Add a remote, change a remote's URL, or remove it (JetBrains Manage Remotes) |  |
+| `git_cleanup_branches` | Local branches with date, upstream and merged state; pick one to delete safely (JetBrains Clean Up Branches) |  |
+| `git_browse_at_revision` | Browse the repository's files as they were at a picked commit (JetBrains Show Repository at Revision) |  |
+| `git_unresolve_file` | Put the conflict markers back in this file (JetBrains Revert Resolved) |  |
 | `shelf_apply` | Apply a shelved patch, keeping it on the shelf (JetBrains Shelf / Unshelve) |  |
 | `shelf_pop` | Apply a shelved patch and take it off the shelf (JetBrains Unshelve and Remove) |  |
 | `shelf_drop` | Take a patch off the shelf, recoverably (JetBrains Drop) |  |

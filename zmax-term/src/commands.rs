@@ -1357,6 +1357,11 @@ impl MappableCommand {
         git_reset_to_commit, "Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)",
         git_revert_commit, "Commit the inverse of a picked commit (JetBrains Revert Commit)",
         git_push_up_to_commit, "Push the current branch only up to a picked commit (JetBrains Push All up to Here)",
+        git_stash_list, "The stashes; picking one shows its patch (JetBrains Show Git Stash)",
+        git_manage_remotes, "Add a remote, change a remote's URL, or remove it (JetBrains Manage Remotes)",
+        git_cleanup_branches, "Local branches with date, upstream and merged state; pick one to delete safely (JetBrains Clean Up Branches)",
+        git_browse_at_revision, "Browse the repository's files as they were at a picked commit (JetBrains Show Repository at Revision)",
+        git_unresolve_file, "Put the conflict markers back in this file (JetBrains Revert Resolved)",
         shelf_apply, "Apply a shelved patch, keeping it on the shelf (JetBrains Shelf / Unshelve)",
         shelf_pop, "Apply a shelved patch and take it off the shelf (JetBrains Unshelve and Remove)",
         shelf_drop, "Take a patch off the shelf, recoverably (JetBrains Drop)",
@@ -73282,6 +73287,121 @@ fn git_remove_deleted(cx: &mut Context) {
             .set_status(format!("Removed {} deleted file(s) from git", deleted.len())),
         Err(e) => cx.editor.set_error(format!(
             "git rm: {}",
+            e.lines().next().unwrap_or("failed")
+        )),
+    }
+}
+
+/// JetBrains "Show Git Stash" (`Git.Show.Stash`): the stashes, newest first;
+/// picking one shows its patch.
+fn git_stash_list(cx: &mut Context) {
+    git_pick(cx, "stash", git_stashes(), "No stashes", |cx, line| {
+        let stash = stash_ref(line);
+        git_output_to_scratch_cx(cx, &["stash", "show", "-p", "--include-untracked", stash], "The stash is empty")
+    });
+}
+
+/// JetBrains "Manage Remotes" (`Git.Configure.Remotes`): pick a remote to
+/// change its URL — an empty URL removes it — or `+ add remote` for a new one.
+fn git_manage_remotes(cx: &mut Context) {
+    const ADD: &str = "+ add remote";
+    let mut rows = git_lines(&["remote", "-v"])
+        .into_iter()
+        .filter(|l| l.ends_with("(fetch)"))
+        .map(|l| l.trim_end_matches("(fetch)").trim().to_string())
+        .collect::<Vec<_>>();
+    rows.push(ADD.to_string());
+    git_pick(cx, "remote", rows, "", |cx, row| {
+        if row == ADD {
+            prompt_then_cx(cx, "remote name and URL: ", |cx, input| {
+                let mut parts = input.split_whitespace();
+                match (parts.next(), parts.next()) {
+                    (Some(name), Some(url)) => {
+                        git_run_cx(cx, &["remote", "add", name, url], &format!("Added remote {name}"), false)
+                    }
+                    _ => cx.editor.set_error("give a name and a URL"),
+                }
+            });
+            return;
+        }
+        let name = row.split_whitespace().next().unwrap_or(row).to_string();
+        prompt_then_cx_allow_empty(cx, "URL (empty: remove the remote): ", move |cx, url| {
+            let url = url.trim();
+            if url.is_empty() {
+                git_run_cx(cx, &["remote", "remove", &name], &format!("Removed remote {name}"), false)
+            } else {
+                git_run_cx(cx, &["remote", "set-url", &name, url], &format!("{name} now points at {url}"), false)
+            }
+        });
+    });
+}
+
+/// JetBrains "Clean Up Branches" (`Git.Cleanup.Branches`): the local branches
+/// other than the current one, with their last commit date, tracked branch and
+/// whether they are merged into HEAD; picking one deletes it the safe way
+/// (`git branch -d`), which refuses a branch with unmerged work.
+fn git_cleanup_branches(cx: &mut Context) {
+    let merged: std::collections::HashSet<String> =
+        git_lines(&["branch", "--merged", "HEAD", "--format=%(refname:short)"]).into_iter().collect();
+    let current = git_exec(&["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_default();
+    let rows: Vec<String> = git_lines(&[
+        "for-each-ref",
+        "--sort=committerdate",
+        "--format=%(refname:short)\t%(committerdate:short)\t%(upstream:short)",
+        "refs/heads/",
+    ])
+    .into_iter()
+    .filter_map(|line| {
+        let mut fields = line.split('\t');
+        let name = fields.next()?.to_string();
+        if name == current {
+            return None;
+        }
+        let date = fields.next().unwrap_or("");
+        let upstream = fields.next().filter(|u| !u.is_empty()).unwrap_or("-");
+        let status = if merged.contains(&name) { "merged" } else { "not merged" };
+        Some(format!("{name}  {date}  {upstream}  {status}"))
+    })
+    .collect();
+    git_pick(cx, "delete branch", rows, "No other local branches", |cx, row| {
+        let name = row.split_whitespace().next().unwrap_or(row);
+        git_run_cx(cx, &["branch", "-d", name], &format!("Deleted branch {name}"), false)
+    });
+}
+
+/// JetBrains "Show Repository at Revision" (`Git.BrowseRepoAtRevision`): pick a
+/// commit, then a file as it was then, shown read-only.
+fn git_browse_at_revision(cx: &mut Context) {
+    git_pick_commit(cx, "browse at", |cx, sha| {
+        let sha = sha.to_string();
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let files = git_lines(&["ls-tree", "-r", "--name-only", &sha]);
+                let columns = [PickerColumn::new("file", |f: &String, _: &()| f.as_str().into())];
+                let sha = sha.clone();
+                let picker = Picker::new(columns, 0, files, (), move |cx, file: &String, _| {
+                    git_output_to_scratch_cx(cx, &["show", &format!("{sha}:{file}")], "The file was empty")
+                });
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+/// JetBrains "Revert Resolved" (`Git.RevertResolved`): put the conflict markers
+/// back in this file, undoing its resolution, while the merge is still going.
+fn git_unresolve_file(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    match git_exec(&["checkout", "--merge", "--", &rel]) {
+        Ok(_) => {
+            reload_all_open_docs(cx.editor);
+            cx.editor.set_status(format!("{rel} is conflicted again"));
+        }
+        Err(e) => cx.editor.set_error(format!(
+            "git checkout --merge: {}",
             e.lines().next().unwrap_or("failed")
         )),
     }

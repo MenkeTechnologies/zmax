@@ -84506,5 +84506,45 @@
    "typable:changelist-default"
   ],
   "note": "ChangesView.SetDefault = zmax `:changelist-default` over the changelist store (zmax-term/src/changelists.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.BrowseRepoAtRevision",
+  "status": "ported",
+  "evidence": [
+   "static:git_browse_at_revision"
+  ],
+  "note": "Git.BrowseRepoAtRevision = zmax `git_browse_at_revision`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Configure.Remotes",
+  "status": "ported",
+  "evidence": [
+   "static:git_manage_remotes"
+  ],
+  "note": "Git.Configure.Remotes = zmax `git_manage_remotes`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.RevertResolved",
+  "status": "ported",
+  "evidence": [
+   "static:git_unresolve_file"
+  ],
+  "note": "Git.RevertResolved = zmax `git_unresolve_file`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Show.Stash",
+  "status": "ported",
+  "evidence": [
+   "static:git_stash_list"
+  ],
+  "note": "Git.Show.Stash = zmax `git_stash_list`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Cleanup.Branches",
+  "status": "partial",
+  "evidence": [
+   "static:git_cleanup_branches"
+  ],
+  "note": "Git.Cleanup.Branches (Clean Up Branches) ~ zmax `git_cleanup_branches`: the same table (branch, last commit date, tracked branch, merged into HEAD) and safe delete, but one branch per pick where the IDE deletes a multi-selection."
  }
 ]
