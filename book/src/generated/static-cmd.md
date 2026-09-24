@@ -919,6 +919,22 @@
 | `git_push` | Push the current branch to its remote (SPC g P) | **spacemacs** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP ``, insert: `` <C-x>vP ``<br>**hybrid** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP `` |
 | `git_pull` | Fast-forward pull from upstream (SPC g u) | **spacemacs** — normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu ``, insert: `` <C-x>v+ ``<br>**hybrid** — normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu `` |
 | `git_fetch` | Fetch all remotes (SPC g F) | **spacemacs, hybrid** — normal: `` <space>gF ``, select: `` <space>gF `` |
+| `git_cherry_pick_abort` | Abort the cherry-pick in progress (JetBrains Abort Cherry-Pick) |  |
+| `git_cherry_pick_continue` | Continue the cherry-pick once conflicts are resolved (JetBrains Continue Cherry-Pick) |  |
+| `git_merge_abort` | Abort the merge in progress (JetBrains Abort Merge) |  |
+| `git_merge_commit` | Commit the merge once conflicts are resolved (JetBrains Commit merge) |  |
+| `git_rebase_abort` | Abort the rebase in progress (JetBrains Abort Rebase) |  |
+| `git_rebase_continue` | Continue the rebase once conflicts are resolved (JetBrains Continue Rebase) |  |
+| `git_rebase_skip` | Skip the commit the rebase stopped on (JetBrains Skip Commit) |  |
+| `git_revert_abort` | Abort the revert in progress (JetBrains Abort Revert) |  |
+| `git_stage_all` | Stage every change, untracked files included (JetBrains Stage All) |  |
+| `git_stage_tracked` | Stage changes to tracked files only (JetBrains Stage All Tracked) |  |
+| `git_intent_to_add` | git add -N this file: tracked, nothing staged (JetBrains Git.Stage.Add.No.Content) |  |
+| `git_uncommit` | Undo the last commit, keeping its changes staged (JetBrains Undo Commit) |  |
+| `git_unshallow` | Fetch the history a shallow clone left out (JetBrains Unshallow repository) |  |
+| `git_worktree_prune` | Forget working trees whose directories are gone (JetBrains Prune) |  |
+| `git_stash_clear` | Drop every stash (JetBrains Clear) |  |
+| `git_open_exclude_file` | Open the repository's .git/info/exclude (JetBrains Git.OpenExcludeFile) |  |
 | `git_acp` | Stage all, commit, and push in one shot (C-x v c) | **spacemacs** — normal: `` <C-x>vc ``, select: `` <C-x>vc ``, insert: `` <C-x>vc ``<br>**hybrid** — normal: `` <C-x>vc ``, select: `` <C-x>vc `` |
 | `vc_print_log` | VC log for the current file (emacs vc-print-log) | **spacemacs** — normal: `` <C-x>vl ``, select: `` <C-x>vl ``, insert: `` <C-x>vl ``<br>**hybrid** — normal: `` <C-x>vl ``, select: `` <C-x>vl `` |
 | `vc_print_root_log` | VC log for the whole repository (emacs vc-print-root-log) | **spacemacs** — normal: `` <C-x>vL ``, select: `` <C-x>vL ``, insert: `` <C-x>vL ``<br>**hybrid** — normal: `` <C-x>vL ``, select: `` <C-x>vL `` |

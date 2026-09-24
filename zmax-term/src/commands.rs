@@ -1310,6 +1310,22 @@ impl MappableCommand {
         git_push, "Push the current branch to its remote (SPC g P)",
         git_pull, "Fast-forward pull from upstream (SPC g u)",
         git_fetch, "Fetch all remotes (SPC g F)",
+        git_cherry_pick_abort, "Abort the cherry-pick in progress (JetBrains Abort Cherry-Pick)",
+        git_cherry_pick_continue, "Continue the cherry-pick once conflicts are resolved (JetBrains Continue Cherry-Pick)",
+        git_merge_abort, "Abort the merge in progress (JetBrains Abort Merge)",
+        git_merge_commit, "Commit the merge once conflicts are resolved (JetBrains Commit merge)",
+        git_rebase_abort, "Abort the rebase in progress (JetBrains Abort Rebase)",
+        git_rebase_continue, "Continue the rebase once conflicts are resolved (JetBrains Continue Rebase)",
+        git_rebase_skip, "Skip the commit the rebase stopped on (JetBrains Skip Commit)",
+        git_revert_abort, "Abort the revert in progress (JetBrains Abort Revert)",
+        git_stage_all, "Stage every change, untracked files included (JetBrains Stage All)",
+        git_stage_tracked, "Stage changes to tracked files only (JetBrains Stage All Tracked)",
+        git_intent_to_add, "git add -N this file: tracked, nothing staged (JetBrains Git.Stage.Add.No.Content)",
+        git_uncommit, "Undo the last commit, keeping its changes staged (JetBrains Undo Commit)",
+        git_unshallow, "Fetch the history a shallow clone left out (JetBrains Unshallow repository)",
+        git_worktree_prune, "Forget working trees whose directories are gone (JetBrains Prune)",
+        git_stash_clear, "Drop every stash (JetBrains Clear)",
+        git_open_exclude_file, "Open the repository's .git/info/exclude (JetBrains Git.OpenExcludeFile)",
         git_acp, "Stage all, commit, and push in one shot (C-x v c)",
         vc_print_log, "VC log for the current file (emacs vc-print-log)",
         vc_print_root_log, "VC log for the whole repository (emacs vc-print-root-log)",
@@ -53951,6 +53967,143 @@ fn git_fetch(cx: &mut Context) {
         "fetched",
         false,
     );
+}
+
+/// `git_async` over string literals.
+fn git_async_args(
+    cx: &mut Context,
+    busy: &'static str,
+    args: &[&str],
+    label: &'static str,
+    reload_worktree: bool,
+) {
+    let args = args.iter().map(|a| a.to_string()).collect();
+    git_async(cx, busy, args, label, reload_worktree)
+}
+
+// The sequencer controls JetBrains shows while a cherry-pick, merge, rebase or
+// revert is stopped on a conflict. `--continue` commits with the message git
+// prepared: `core.editor=true` accepts it where the IDE shows it in a dialog,
+// since a background git cannot open an editor.
+
+/// JetBrains "Abort Cherry-Pick" (`Git.CherryPick.Abort`).
+fn git_cherry_pick_abort(cx: &mut Context) {
+    git_async_args(cx, "aborting cherry-pick…", &["cherry-pick", "--abort"], "cherry-pick aborted", true)
+}
+
+/// JetBrains "Continue Cherry-Pick" (`Git.CherryPick.Continue`).
+fn git_cherry_pick_continue(cx: &mut Context) {
+    git_async_args(
+        cx,
+        "continuing cherry-pick…",
+        &["-c", "core.editor=true", "cherry-pick", "--continue"],
+        "cherry-pick continued",
+        true,
+    )
+}
+
+/// JetBrains "Abort Merge" (`Git.Merge.Abort`).
+fn git_merge_abort(cx: &mut Context) {
+    git_async_args(cx, "aborting merge…", &["merge", "--abort"], "merge aborted", true)
+}
+
+/// JetBrains "Commit merge" (`Git.Merge.Commit`): conclude a merge whose
+/// conflicts are resolved, with the message git prepared.
+fn git_merge_commit(cx: &mut Context) {
+    git_async_args(cx, "committing merge…", &["commit", "--no-edit"], "merge committed", true)
+}
+
+/// JetBrains "Abort Rebase" (`Git.Rebase.Abort`).
+fn git_rebase_abort(cx: &mut Context) {
+    git_async_args(cx, "aborting rebase…", &["rebase", "--abort"], "rebase aborted", true)
+}
+
+/// JetBrains "Continue Rebase" (`Git.Rebase.Continue`).
+fn git_rebase_continue(cx: &mut Context) {
+    git_async_args(
+        cx,
+        "continuing rebase…",
+        &["-c", "core.editor=true", "rebase", "--continue"],
+        "rebase continued",
+        true,
+    )
+}
+
+/// JetBrains "Skip Commit" (`Git.Rebase.Skip`) during a rebase.
+fn git_rebase_skip(cx: &mut Context) {
+    git_async_args(cx, "skipping commit…", &["rebase", "--skip"], "rebase skipped", true)
+}
+
+/// JetBrains "Abort Revert" (`Git.Revert.Abort`).
+fn git_revert_abort(cx: &mut Context) {
+    git_async_args(cx, "aborting revert…", &["revert", "--abort"], "revert aborted", true)
+}
+
+/// JetBrains "Stage All" (`Git.Stage.Add.All`): stage every change, untracked
+/// files included.
+fn git_stage_all(cx: &mut Context) {
+    git_async_args(cx, "staging…", &["add", "-A"], "staged all", false)
+}
+
+/// JetBrains "Stage All Tracked" (`Git.Stage.Add.Tracked`): stage changes to
+/// files git already tracks, leaving untracked files alone.
+fn git_stage_tracked(cx: &mut Context) {
+    git_async_args(cx, "staging…", &["add", "-u"], "staged tracked", false)
+}
+
+/// JetBrains `Git.Stage.Add.No.Content`: `git add -N`
+/// on this buffer's file, so git knows of it and `git diff` shows it, while
+/// nothing of its content is staged yet.
+fn git_intent_to_add(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_string_lossy().into_owned()) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    git_async(
+        cx,
+        "adding…",
+        vec!["add".into(), "-N".into(), "--".into(), path],
+        "intent to add",
+        false,
+    )
+}
+
+/// JetBrains "Undo Commit" (`Git.Uncommit`): drop the last commit and keep its
+/// changes staged.
+fn git_uncommit(cx: &mut Context) {
+    git_async_args(cx, "undoing commit…", &["reset", "--soft", "HEAD~1"], "uncommitted", true)
+}
+
+/// JetBrains "Unshallow repository" (`Git.Unshallow`): fetch the history a
+/// shallow clone left out.
+fn git_unshallow(cx: &mut Context) {
+    git_async_args(cx, "unshallowing…", &["fetch", "--unshallow"], "unshallowed", false)
+}
+
+/// JetBrains "Prune" in the working-tree list (`Git.WorkingTrees.Prune`): forget working
+/// trees whose directories are gone.
+fn git_worktree_prune(cx: &mut Context) {
+    git_async_args(cx, "pruning…", &["worktree", "prune"], "worktrees pruned", false)
+}
+
+/// JetBrains "Clear" in the stash list (`Git.Stash.Clear`): drop every stash.
+fn git_stash_clear(cx: &mut Context) {
+    git_async_args(cx, "clearing stashes…", &["stash", "clear"], "stashes cleared", false)
+}
+
+/// JetBrains `Git.OpenExcludeFile`: the repository's
+/// private ignore list. Its path comes from git, so a worktree or a relocated
+/// git dir resolves to the right file.
+fn git_open_exclude_file(cx: &mut Context) {
+    let root = zmax_loader::find_workspace().0;
+    match git_in(&root, &["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"]) {
+        Ok(path) => {
+            if let Err(e) = cx.editor.open(std::path::Path::new(&path), Action::Replace) {
+                cx.editor.set_error(format!("{path}: {e}"));
+            }
+        }
+        Err(e) => cx.editor.set_error(format!("not a git repository: {e}")),
+    }
 }
 
 /// Run `git -C <dir> <args>` with `GIT_TERMINAL_PROMPT=0` (auth prompts fail

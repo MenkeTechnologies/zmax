@@ -83186,5 +83186,133 @@
    "static:toggle_bookmark_with_mnemonic"
   ],
   "note": "ToggleBookmarkWithMnemonic (Toggle Bookmark Mnemonic) = zmax `toggle_bookmark_with_mnemonic`: the next key (0-9, A-Z) names the mnemonic to toggle on the line."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.CherryPick.Abort",
+  "status": "ported",
+  "evidence": [
+   "static:git_cherry_pick_abort"
+  ],
+  "note": "Git.CherryPick.Abort = zmax `git_cherry_pick_abort`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.CherryPick.Continue",
+  "status": "ported",
+  "evidence": [
+   "static:git_cherry_pick_continue"
+  ],
+  "note": "Git.CherryPick.Continue = zmax `git_cherry_pick_continue`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Merge.Abort",
+  "status": "ported",
+  "evidence": [
+   "static:git_merge_abort"
+  ],
+  "note": "Git.Merge.Abort = zmax `git_merge_abort`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Merge.Commit",
+  "status": "ported",
+  "evidence": [
+   "static:git_merge_commit"
+  ],
+  "note": "Git.Merge.Commit = zmax `git_merge_commit`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.OpenExcludeFile",
+  "status": "ported",
+  "evidence": [
+   "static:git_open_exclude_file"
+  ],
+  "note": "Git.OpenExcludeFile = zmax `git_open_exclude_file`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Rebase.Abort",
+  "status": "ported",
+  "evidence": [
+   "static:git_rebase_abort"
+  ],
+  "note": "Git.Rebase.Abort = zmax `git_rebase_abort`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Rebase.Continue",
+  "status": "ported",
+  "evidence": [
+   "static:git_rebase_continue"
+  ],
+  "note": "Git.Rebase.Continue = zmax `git_rebase_continue`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Rebase.Skip",
+  "status": "ported",
+  "evidence": [
+   "static:git_rebase_skip"
+  ],
+  "note": "Git.Rebase.Skip = zmax `git_rebase_skip`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Revert.Abort",
+  "status": "ported",
+  "evidence": [
+   "static:git_revert_abort"
+  ],
+  "note": "Git.Revert.Abort = zmax `git_revert_abort`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Add.All",
+  "status": "ported",
+  "evidence": [
+   "static:git_stage_all"
+  ],
+  "note": "Git.Stage.Add.All = zmax `git_stage_all`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Add.No.Content",
+  "status": "ported",
+  "evidence": [
+   "static:git_intent_to_add"
+  ],
+  "note": "Git.Stage.Add.No.Content = zmax `git_intent_to_add`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Add.Tracked",
+  "status": "ported",
+  "evidence": [
+   "static:git_stage_tracked"
+  ],
+  "note": "Git.Stage.Add.Tracked = zmax `git_stage_tracked`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash.Clear",
+  "status": "ported",
+  "evidence": [
+   "static:git_stash_clear"
+  ],
+  "note": "Git.Stash.Clear = zmax `git_stash_clear`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Uncommit",
+  "status": "ported",
+  "evidence": [
+   "static:git_uncommit"
+  ],
+  "note": "Git.Uncommit = zmax `git_uncommit`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Unshallow",
+  "status": "ported",
+  "evidence": [
+   "static:git_unshallow"
+  ],
+  "note": "Git.Unshallow = zmax `git_unshallow`: runs the same git operation in the workspace repository."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.WorkingTrees.Prune",
+  "status": "ported",
+  "evidence": [
+   "static:git_worktree_prune"
+  ],
+  "note": "Git.WorkingTrees.Prune = zmax `git_worktree_prune`: runs the same git operation in the workspace repository."
  }
 ]
