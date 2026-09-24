@@ -2255,6 +2255,9 @@ pub struct Editor {
     pub current_tab: usize,
     /// Recently closed tabs, most-recent last — reopened by emacs `tab-undo`.
     pub closed_tabs: Vec<TabPage>,
+    /// JetBrains "Maximize Editor in Split": the window layout parked while one
+    /// window is shown alone, put back by the next toggle.
+    pub maximized_split: Option<TabPage>,
     /// emacs `tab-bar-history` back/forward stacks of visited tab indices, and
     /// whether history recording is on (`tab-bar-history-mode`).
     pub tab_back: Vec<usize>,
@@ -2712,6 +2715,7 @@ impl Editor {
             tabs: Vec::new(),
             current_tab: 0,
             closed_tabs: Vec::new(),
+            maximized_split: None,
             tab_back: Vec::new(),
             tab_forward: Vec::new(),
             tab_history_mode: true,
@@ -4079,6 +4083,33 @@ impl Editor {
         }
         let focus = self.tree.focus;
         self.ensure_cursor_in_view(focus);
+    }
+
+    /// JetBrains "Maximize Editor in Split": show the focused window alone, or
+    /// put every window back as it was — sizes and each window's selection —
+    /// when one is already shown alone. Returns whether a window is now
+    /// maximized.
+    pub fn toggle_maximize_split(&mut self) -> bool {
+        if let Some(saved) = self.maximized_split.take() {
+            self.drop_live_view_state();
+            self.restore_tab(&saved);
+            return false;
+        }
+        let focus = self.tree.focus;
+        let others: Vec<ViewId> = self
+            .tree
+            .views()
+            .map(|(view, _)| view.id)
+            .filter(|&id| id != focus)
+            .collect();
+        if others.is_empty() {
+            return false;
+        }
+        self.maximized_split = Some(self.snapshot_current_tab());
+        for id in others {
+            self.close(id);
+        }
+        true
     }
 
     /// Make `self.tabs` have one slot per tab, seeding slot 0 from the live

@@ -2013,6 +2013,8 @@ impl MappableCommand {
         export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
         recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
+        toggle_maximize_split, "Show the focused window alone, or restore every window (JetBrains Maximize Editor in Split)",
+        toggle_statusline, "Show or hide the status line (JetBrains Status Bar)",
         toggle_minimap, "Show or hide the workbench minimap (JetBrains Show Minimap)",
         enable_minimap, "Show the workbench minimap (JetBrains EnableMinimap)",
         disable_minimap, "Hide the workbench minimap (JetBrains DisableMinimap)",
@@ -54558,6 +54560,30 @@ fn project_tree_action(
         cx.editor
             .set_status(if ran.is_some() { done } else { "no project tree" });
     }));
+}
+
+/// JetBrains "Maximize Editor in Split" (`MaximizeEditorInSplit`): the focused
+/// window alone, then back to the full layout.
+fn toggle_maximize_split(cx: &mut Context) {
+    let maximized = cx.editor.toggle_maximize_split();
+    cx.editor.set_status(if maximized {
+        "split maximized"
+    } else if cx.editor.tree.views().count() > 1 {
+        "splits restored"
+    } else {
+        "only one window"
+    });
+}
+
+/// JetBrains "Status Bar" (`ViewStatusBar`): show or hide the status line,
+/// the `render-statusline` setting vim's `laststatus` also drives.
+fn toggle_statusline(cx: &mut Context) {
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    typed::run_command_line(&mut bridge, "toggle-option render-statusline");
 }
 
 fn set_minimap(cx: &mut Context, show: Option<bool>) {

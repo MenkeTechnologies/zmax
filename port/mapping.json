@@ -84194,5 +84194,21 @@
    "static:stretch_tool_window_right"
   ],
   "note": "IncrementWindowWidth (Increment Width) = zmax `stretch_tool_window_right`: widens the left drawer only; JetBrains widens whichever tool window is active (same model as DecrementWindowWidth)."
+ },
+ {
+  "spec_id": "jetbrains-actions.MaximizeEditorInSplit",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_maximize_split"
+  ],
+  "note": "MaximizeEditorInSplit = zmax `toggle_maximize_split`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewStatusBar",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_statusline"
+  ],
+  "note": "ViewStatusBar = zmax `toggle_statusline`."
  }
 ]

@@ -1622,6 +1622,8 @@
 | `export_to_scratch` | Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File) | **spacemacs, hybrid** — normal: `` <space>bE ``, select: `` <space>bE `` |
 | `recent_tests` | Pick one of the test runs that have finished and run it again (JetBrains Recent Tests) | **spacemacs, hybrid** — normal: `` <space>cH ``, select: `` <space>cH `` |
 | `sort_tree_by_time_newest` | Order the project tree by modification time, newest first (JetBrains Sort by Modification Time) |  |
+| `toggle_maximize_split` | Show the focused window alone, or restore every window (JetBrains Maximize Editor in Split) |  |
+| `toggle_statusline` | Show or hide the status line (JetBrains Status Bar) |  |
 | `toggle_minimap` | Show or hide the workbench minimap (JetBrains Show Minimap) |  |
 | `enable_minimap` | Show the workbench minimap (JetBrains EnableMinimap) |  |
 | `disable_minimap` | Hide the workbench minimap (JetBrains DisableMinimap) |  |

@@ -329,3 +329,30 @@ async fn bookmark_cycle_in_file_wraps() -> anyhow::Result<()> {
     )
     .await
 }
+
+/// Maximize Editor in Split shows one window, and the second toggle brings
+/// the others back.
+#[tokio::test(flavor = "multi_thread")]
+async fn maximize_split_and_restore() -> anyhow::Result<()> {
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => toggle_maximize_split,
+            "Q" => toggle_statusline,
+        }),
+    );
+    let mut app = AppBuilder::new().with_config(config).build()?;
+    let windows = |app: &Application| app.editor.tree.views().count();
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":vsplit<ret>:split<ret>"), Some(&|app| assert_eq!(3, windows(app)))),
+            (Some("Z"), Some(&|app| assert_eq!(1, windows(app)))),
+            (Some("Z"), Some(&|app| assert_eq!(3, windows(app)))),
+            (Some("Q"), Some(&|app| assert!(!app.editor.config().render_statusline))),
+        ],
+        false,
+    )
+    .await
+}
