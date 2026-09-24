@@ -84842,5 +84842,45 @@
    "typable:set"
   ],
   "note": "AddBom (Add BOM) = zmax `:set bomb`: writes a byte-order mark on the next save of the buffer, as RemoveBom maps; the IDE adds it to selected files immediately."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Export",
+  "status": "ported",
+  "evidence": [
+   "static:md_export"
+  ],
+  "note": "Markdown.Export = zmax `md_export`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.ImportFromDocx",
+  "status": "ported",
+  "evidence": [
+   "static:md_import_docx"
+  ],
+  "note": "Markdown.ImportFromDocx = zmax `md_import_docx`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Insert",
+  "status": "ported",
+  "evidence": [
+   "static:md_insert_menu"
+  ],
+  "note": "Markdown.Insert = zmax `md_insert_menu`."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.styling.InsertImageAction",
+  "status": "ported",
+  "evidence": [
+   "static:md_insert_image"
+  ],
+  "note": "org.intellij.plugins.markdown.ui.actions.styling.InsertImageAction = zmax `md_insert_image`."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.styling.MarkdownIntroduceLinkReferenceAction",
+  "status": "ported",
+  "evidence": [
+   "static:md_link_to_reference"
+  ],
+  "note": "org.intellij.plugins.markdown.ui.actions.styling.MarkdownIntroduceLinkReferenceAction = zmax `md_link_to_reference`."
  }
 ]

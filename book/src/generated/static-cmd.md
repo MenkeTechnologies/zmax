@@ -1509,6 +1509,11 @@
 | `md_table_select_row` | Select the markdown table row (JetBrains Select Row) |  |
 | `md_table_select_column` | Select every content cell of the markdown table column (JetBrains Select Column Cells) |  |
 | `md_insert_table` | Insert an empty markdown table of a given size (JetBrains Insert Table) |  |
+| `md_insert_image` | Insert a markdown image reference at the cursor (JetBrains Insert Image) |  |
+| `md_link_to_reference` | Turn the inline link under the cursor into a reference link (JetBrains Convert to Reference) |  |
+| `md_insert_menu` | Insert a markdown link, image, table or table of contents (JetBrains Insert) |  |
+| `md_export` | Export this markdown file to HTML, PDF or DOCX with pandoc (JetBrains Export Markdown File To) |  |
+| `md_import_docx` | Convert a Word document to markdown with pandoc (JetBrains Import Word Document) |  |
 | `md_toggle_bold` | Toggle markdown bold around the selection or word (JetBrains Bold) |  |
 | `md_toggle_italic` | Toggle markdown italic around the selection or word (JetBrains Italic) |  |
 | `md_toggle_code_span` | Toggle a markdown code span around the selection or word (JetBrains Code) |  |

@@ -1902,6 +1902,11 @@ impl MappableCommand {
         md_table_select_row, "Select the markdown table row (JetBrains Select Row)",
         md_table_select_column, "Select every content cell of the markdown table column (JetBrains Select Column Cells)",
         md_insert_table, "Insert an empty markdown table of a given size (JetBrains Insert Table)",
+        md_insert_image, "Insert a markdown image reference at the cursor (JetBrains Insert Image)",
+        md_link_to_reference, "Turn the inline link under the cursor into a reference link (JetBrains Convert to Reference)",
+        md_insert_menu, "Insert a markdown link, image, table or table of contents (JetBrains Insert)",
+        md_export, "Export this markdown file to HTML, PDF or DOCX with pandoc (JetBrains Export Markdown File To)",
+        md_import_docx, "Convert a Word document to markdown with pandoc (JetBrains Import Word Document)",
         md_toggle_bold, "Toggle markdown bold around the selection or word (JetBrains Bold)",
         md_toggle_italic, "Toggle markdown italic around the selection or word (JetBrains Italic)",
         md_toggle_code_span, "Toggle a markdown code span around the selection or word (JetBrains Code)",
@@ -12164,7 +12169,11 @@ fn md_table_select_column(cx: &mut Context) {
 /// JetBrains "Insert Table" (`Markdown.InsertEmptyTable`): an empty table,
 /// `COLUMNSxROWS` body rows, at the cursor's line.
 fn md_insert_table(cx: &mut Context) {
-    prompt_then(cx, "table size (columns x rows): ", |cx, size| {
+    cx.push_layer(Box::new(md_table_prompt()));
+}
+
+fn md_table_prompt() -> crate::ui::prompt::Prompt {
+    validated_prompt("table size (columns x rows): ", |cx, size| {
         let mut parts = size.split(['x', 'X', '*', ' ']).filter(|p| !p.is_empty());
         let columns = parts.next().and_then(|c| c.parse::<usize>().ok()).unwrap_or(2);
         let rows = parts.next().and_then(|r| r.parse::<usize>().ok()).unwrap_or(2);
@@ -12177,7 +12186,7 @@ fn md_insert_table(cx: &mut Context) {
         let transaction = Transaction::insert(text, &Selection::point(at), insert.as_str().into())
             .with_selection(Selection::point(at + 2));
         doc.apply(&transaction, view.id);
-    });
+    })
 }
 
 /// Toggle `marker` around each selection, or around the word under a cursor:
@@ -12232,6 +12241,170 @@ fn md_toggle_code_span(cx: &mut Context) {
 /// JetBrains markdown "Strikethrough" (`ToggleStrikethroughAction`).
 fn md_toggle_strikethrough(cx: &mut Context) {
     md_toggle_wrap(cx, "~~");
+}
+
+/// JetBrains markdown "Insert Image" (`InsertImageAction`): `![alt](path)` at
+/// the cursor, the path from the prompt and the alt text from its file name.
+fn md_insert_image(cx: &mut Context) {
+    cx.push_layer(Box::new(md_image_prompt()));
+}
+
+fn md_image_prompt() -> crate::ui::prompt::Prompt {
+    validated_prompt("image path: ", |cx, path| {
+        let alt = Path::new(path)
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let (view, doc) = current!(cx.editor);
+        let transaction = Transaction::insert(
+            doc.text(),
+            doc.selection(view.id),
+            format!("![{alt}]({path})").into(),
+        );
+        doc.apply(&transaction, view.id);
+    })
+}
+
+/// `[text](url)` links in `line` as `(start, end, text, url)` char spans.
+/// Pure — unit tested.
+fn md_inline_links(line: &str) -> Vec<(usize, usize, String, String)> {
+    let chars: Vec<char> = line.chars().collect();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '[' && (i == 0 || chars[i - 1] != '!') {
+            if let Some(close) = (i + 1..chars.len()).find(|&j| chars[j] == ']') {
+                if chars.get(close + 1) == Some(&'(') {
+                    if let Some(end) = (close + 2..chars.len()).find(|&j| chars[j] == ')') {
+                        let text: String = chars[i + 1..close].iter().collect();
+                        let url: String = chars[close + 2..end].iter().collect();
+                        out.push((i, end + 1, text, url));
+                        i = end + 1;
+                        continue;
+                    }
+                }
+            }
+        }
+        i += 1;
+    }
+    out
+}
+
+/// JetBrains markdown "Convert to Reference"
+/// (`MarkdownIntroduceLinkReferenceAction`): the inline link under the cursor
+/// becomes `[text][ref]`, and `[ref]: url` goes at the end of the document.
+fn md_link_to_reference(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let line = text.char_to_line(cursor);
+    let line_start = text.line_to_char(line);
+    let column = cursor - line_start;
+    let Some((start, end, label, url)) = md_inline_links(&text.line(line).to_string())
+        .into_iter()
+        .find(|(s, e, _, _)| (*s..*e).contains(&column))
+    else {
+        cx.editor.set_status("no inline link under the cursor");
+        return;
+    };
+    let reference: String = label
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect();
+    let len = text.len_chars();
+    let tail = if text.chars_at(len).reversed().next() == Some('\n') { "" } else { "\n" };
+    let definition = format!("{tail}\n[{reference}]: {url}\n");
+    let transaction = Transaction::change(
+        doc.text(),
+        [
+            (line_start + start, line_start + end, Some(format!("[{label}][{reference}]").into())),
+            (len, len, Some(definition.into())),
+        ]
+        .into_iter(),
+    );
+    doc.apply(&transaction, view.id);
+}
+
+/// JetBrains markdown "Insert" (`Markdown.Insert`): the insert menu — link,
+/// image, table, table of contents.
+fn md_insert_menu(cx: &mut Context) {
+    let items = vec!["Link", "Image", "Table", "Table of Contents"];
+    let columns = [PickerColumn::new("insert", |i: &&'static str, _: &()| (*i).into())];
+    let picker = Picker::new(columns, 0, items, (), |cx, item: &&'static str, _| match *item {
+        "Link" => typed::run_command_line(cx, "markdown-link"),
+        "Table of Contents" => {
+            let mut cx = Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            insert_toc(&mut cx);
+        }
+        prompted => {
+            // The image and table steps ask a question first; their prompt has
+            // to reach the compositor, which a picker callback cannot touch.
+            let image = prompted == "Image";
+            let call: job::Callback = Callback::EditorCompositor(Box::new(move |_editor, compositor| {
+                compositor.push(Box::new(if image { md_image_prompt() } else { md_table_prompt() }));
+            }));
+            cx.jobs.callback(async move { Ok(call) });
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Run pandoc with `args`, reporting its outcome on the status line.
+fn run_pandoc(cx: &mut crate::compositor::Context, args: &[&str], done: &str) -> bool {
+    match std::process::Command::new("pandoc").args(args).output() {
+        Ok(out) if out.status.success() => {
+            cx.editor.set_status(done.to_string());
+            true
+        }
+        Ok(out) => {
+            cx.editor.set_error(format!(
+                "pandoc: {}",
+                String::from_utf8_lossy(&out.stderr).lines().next().unwrap_or("failed")
+            ));
+            false
+        }
+        Err(e) => {
+            cx.editor.set_error(format!("pandoc: {e} (install pandoc)"));
+            false
+        }
+    }
+}
+
+/// JetBrains markdown "Export Markdown File To" (`Markdown.Export`): this
+/// file to HTML, PDF or DOCX — the format from the target's extension — with
+/// pandoc.
+fn md_export(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(Path::to_path_buf) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let suggested = path.with_extension("html");
+    prompt_then(cx, "export to (.html .pdf .docx): ", move |cx, target| {
+        let target = if target.is_empty() { suggested.display().to_string() } else { target.to_string() };
+        run_pandoc(cx, &[&path.display().to_string(), "-s", "-o", &target], &format!("exported to {target}"));
+    });
+}
+
+/// JetBrains markdown "Import Word Document" (`Markdown.ImportFromDocx`): a
+/// .docx converted to markdown with pandoc, opened beside it.
+fn md_import_docx(cx: &mut Context) {
+    prompt_then(cx, "Word document: ", |cx, docx| {
+        let target = Path::new(docx).with_extension("md");
+        let target_str = target.display().to_string();
+        if run_pandoc(cx, &[docx, "-t", "gfm", "-o", &target_str], &format!("imported to {target_str}")) {
+            if let Err(e) = cx.editor.open(&target, Action::Replace) {
+                cx.editor.set_error(format!("{target_str}: {e}"));
+            }
+        }
+    });
 }
 
 /// The ATX heading level of a line: the `#`s before a space or the line end.
@@ -12314,7 +12487,13 @@ fn md_set_header_style(cx: &mut Context) {
 
 #[cfg(test)]
 mod md_heading_tests {
-    use super::{md_heading_level, md_with_heading_level};
+    use super::{md_heading_level, md_inline_links, md_with_heading_level};
+
+    #[test]
+    fn inline_links_but_not_images() {
+        let links = md_inline_links("see [docs](https://x.io) and ![pic](p.png)");
+        assert_eq!(vec![(4, 24, "docs".to_string(), "https://x.io".to_string())], links);
+    }
 
     #[test]
     fn a_heading_needs_a_space_after_its_hashes() {
@@ -55815,7 +55994,16 @@ fn prompt_then<F>(cx: &mut Context, label: &'static str, f: F)
 where
     F: Fn(&mut crate::compositor::Context, &str) + 'static,
 {
-    let prompt = crate::ui::prompt::Prompt::new(
+    cx.push_layer(Box::new(validated_prompt(label, f)));
+}
+
+/// A prompt that runs `f` with the trimmed input on Enter, ignoring an empty
+/// answer. [`prompt_then`] pushes one; a compositor callback can push one too.
+fn validated_prompt<F>(label: &'static str, f: F) -> crate::ui::prompt::Prompt
+where
+    F: Fn(&mut crate::compositor::Context, &str) + 'static,
+{
+    crate::ui::prompt::Prompt::new(
         label.into(),
         None,
         ui::completers::none,
@@ -55829,8 +56017,7 @@ where
             }
             f(cx, input);
         },
-    );
-    cx.push_layer(Box::new(prompt));
+    )
 }
 
 /// Run a read-only `git` command in the workspace root and show its output in a

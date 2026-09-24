@@ -25,6 +25,7 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "move_down_and_scroll" => keymap!({ "Normal mode" "Z" => move_down_and_scroll, }),
         "editor_escape" => keymap!({ "Normal mode" "Z" => editor_escape, }),
         "surround_with_emmet" => keymap!({ "Normal mode" "Z" => surround_with_emmet, }),
+        "md_link_to_reference" => keymap!({ "Normal mode" "Z" => md_link_to_reference, }),
         other => panic!("no binding for {other}"),
     };
     config.keys.insert(Mode::Normal, keys);
@@ -650,6 +651,22 @@ async fn surround_with_emmet_wraps_the_selection() -> anyhow::Result<()> {
         vec![(
             Some("Zdiv.box<ret>"),
             Some(&|app| assert_eq!("<div class=\"box\">hello</div>\n", text(app))),
+        )],
+        false,
+    )
+    .await
+}
+
+/// Convert to Reference swaps the inline link for a reference and defines it
+/// at the end of the document.
+#[tokio::test(flavor = "multi_thread")]
+async fn md_inline_link_becomes_a_reference() -> anyhow::Result<()> {
+    let mut app = app_with("see [#[D|]#ocs](https://x.io)\n", "md_link_to_reference")?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Z"),
+            Some(&|app| assert_eq!("see [Docs][docs]\n\n[docs]: https://x.io\n", text(app))),
         )],
         false,
     )
