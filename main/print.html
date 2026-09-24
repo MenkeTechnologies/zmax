@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-9fe8d5d7.js";
+            window.path_to_searchindex_js = "searchindex-236ba51f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -5121,6 +5121,29 @@ without scrolling.</p>
 <tr><td><code>to_hex_selection</code></td><td>Encode the selection as hex bytes</td><td></td></tr>
 <tr><td><code>from_hex_selection</code></td><td>Decode hex bytes in the selection back to text</td><td></td></tr>
 <tr><td><code>format_table_selection</code></td><td>Align the selected markdown table’s columns</td><td></td></tr>
+<tr><td><code>md_table_insert_row_above</code></td><td>Insert an empty row above in the markdown table (JetBrains Insert Row Above)</td><td></td></tr>
+<tr><td><code>md_table_insert_row_below</code></td><td>Insert an empty row below in the markdown table (JetBrains Insert Row Below)</td><td></td></tr>
+<tr><td><code>md_table_remove_row</code></td><td>Remove the markdown table row under the cursor (JetBrains Remove Row)</td><td></td></tr>
+<tr><td><code>md_table_move_row_up</code></td><td>Swap the markdown table row with the one above (JetBrains Move Row Up)</td><td></td></tr>
+<tr><td><code>md_table_move_row_down</code></td><td>Swap the markdown table row with the one below (JetBrains Move Row Down)</td><td></td></tr>
+<tr><td><code>md_table_insert_column_left</code></td><td>Insert an empty markdown table column to the left (JetBrains Insert Column Left)</td><td></td></tr>
+<tr><td><code>md_table_insert_column_right</code></td><td>Insert an empty markdown table column to the right (JetBrains Insert Column Right)</td><td></td></tr>
+<tr><td><code>md_table_remove_column</code></td><td>Remove the markdown table column under the cursor (JetBrains Remove Column)</td><td></td></tr>
+<tr><td><code>md_table_move_column_left</code></td><td>Swap the markdown table column with the one to its left (JetBrains Move Column Left)</td><td></td></tr>
+<tr><td><code>md_table_move_column_right</code></td><td>Swap the markdown table column with the one to its right (JetBrains Move Column Right)</td><td></td></tr>
+<tr><td><code>md_table_align_left</code></td><td>Left-align the markdown table column (JetBrains Align Left)</td><td></td></tr>
+<tr><td><code>md_table_align_center</code></td><td>Center the markdown table column (JetBrains Align Center)</td><td></td></tr>
+<tr><td><code>md_table_align_right</code></td><td>Right-align the markdown table column (JetBrains Align Right)</td><td></td></tr>
+<tr><td><code>md_table_select_row</code></td><td>Select the markdown table row (JetBrains Select Row)</td><td></td></tr>
+<tr><td><code>md_table_select_column</code></td><td>Select every content cell of the markdown table column (JetBrains Select Column Cells)</td><td></td></tr>
+<tr><td><code>md_insert_table</code></td><td>Insert an empty markdown table of a given size (JetBrains Insert Table)</td><td></td></tr>
+<tr><td><code>md_toggle_bold</code></td><td>Toggle markdown bold around the selection or word (JetBrains Bold)</td><td></td></tr>
+<tr><td><code>md_toggle_italic</code></td><td>Toggle markdown italic around the selection or word (JetBrains Italic)</td><td></td></tr>
+<tr><td><code>md_toggle_code_span</code></td><td>Toggle a markdown code span around the selection or word (JetBrains Code)</td><td></td></tr>
+<tr><td><code>md_toggle_strikethrough</code></td><td>Toggle markdown strikethrough around the selection or word (JetBrains Strikethrough)</td><td></td></tr>
+<tr><td><code>md_heading_up</code></td><td>One # fewer on the markdown heading (JetBrains Increase Header Level)</td><td></td></tr>
+<tr><td><code>md_heading_down</code></td><td>One # more on the markdown heading (JetBrains Decrease Header Level)</td><td></td></tr>
+<tr><td><code>md_set_header_style</code></td><td>Pick plain text or a heading level for this line (JetBrains Set Header Style)</td><td></td></tr>
 <tr><td><code>csv_to_table_selection</code></td><td>Convert the selected CSV/TSV to a markdown table</td><td></td></tr>
 <tr><td><code>table_to_csv_selection</code></td><td>Convert the selected markdown table to CSV</td><td></td></tr>
 <tr><td><code>json_pretty_selection</code></td><td>Pretty-print the selected JSON (preserves key order)</td><td></td></tr>
@@ -9762,11 +9785,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9558</strong> (80.1%)</li>
+<li>Ported: <strong>9581</strong> (80.3%)</li>
 <li>Partial: <strong>699</strong> (5.9%)</li>
-<li>Absent: <strong>1669</strong></li>
+<li>Absent: <strong>1646</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2760 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2783 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9829,7 +9852,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">596</td><td style="text-align: right">116</td><td style="text-align: right">29.8%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">619</td><td style="text-align: right">116</td><td style="text-align: right">30.9%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9924,7 +9947,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>vcs</td><td style="text-align: right">16</td><td style="text-align: right">16</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">2</td><td style="text-align: right">1</td><td style="text-align: right">5.0%</td></tr>
+<tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">62.5%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">434</td><td style="text-align: right">95</td><td style="text-align: right">27.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">81</td><td style="text-align: right">0</td><td style="text-align: right">80.2%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
