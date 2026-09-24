@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-a409e427.js";
+            window.path_to_searchindex_js = "searchindex-785ee49a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -5056,6 +5056,12 @@ without scrolling.</p>
 <tr><td><code>align_view_bottom</code></td><td>Align view bottom</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zb</code>, select: <code>zb</code><br><strong>helix</strong> — normal: <code>Zb</code>, <code>zb</code>, select: <code>Zb</code>, <code>zb</code><br><strong>kakoune</strong> — normal: <code>Vb</code>, <code>vb</code></td></tr>
 <tr><td><code>recenter_top_bottom</code></td><td>Cycle the cursor line to the middle, then top, then bottom of the window (emacs recenter-top-bottom, nano cycle)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-l&gt;</code></td></tr>
 <tr><td><code>scroll_up</code></td><td>Scroll view up</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-y&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-y&gt;</code><br><strong>helix</strong> — normal: <code>Zk</code>, <code>zk</code>, <code>Z&lt;up&gt;</code>, <code>z&lt;up&gt;</code>, select: <code>Zk</code>, <code>zk</code>, <code>Z&lt;up&gt;</code>, <code>z&lt;up&gt;</code><br><strong>kakoune</strong> — normal: <code>Vk</code>, <code>vk</code>, <code>V&lt;up&gt;</code>, <code>v&lt;up&gt;</code></td></tr>
+<tr><td><code>move_up_and_scroll</code></td><td>Move up a line and scroll with it, keeping the screen row (JetBrains Move Up and Scroll)</td><td></td></tr>
+<tr><td><code>move_down_and_scroll</code></td><td>Move down a line and scroll with it, keeping the screen row (JetBrains Move Down and Scroll)</td><td></td></tr>
+<tr><td><code>extend_up_and_scroll</code></td><td>Extend up a line and scroll with it (JetBrains Move Up and Scroll with Selection)</td><td></td></tr>
+<tr><td><code>extend_down_and_scroll</code></td><td>Extend down a line and scroll with it (JetBrains Move Down and Scroll with Selection)</td><td></td></tr>
+<tr><td><code>editor_escape</code></td><td>Back to one cursor, no selection, normal mode (JetBrains Escape)</td><td></td></tr>
+<tr><td><code>show_gutter_info</code></td><td>Describe the gutter marks on this line (JetBrains Show Gutter Icon Tooltip)</td><td></td></tr>
 <tr><td><code>scroll_down</code></td><td>Scroll view down</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-e&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-e&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-e&gt;</code><br><strong>helix</strong> — normal: <code>Zj</code>, <code>zj</code>, <code>Z&lt;down&gt;</code>, <code>z&lt;down&gt;</code>, select: <code>Zj</code>, <code>zj</code>, <code>Z&lt;down&gt;</code>, <code>z&lt;down&gt;</code><br><strong>kakoune</strong> — normal: <code>Vj</code>, <code>vj</code>, <code>V&lt;down&gt;</code>, <code>v&lt;down&gt;</code></td></tr>
 <tr><td><code>scroll_column_left</code></td><td>Scroll view left one column (zh)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zh</code>, <code>z&lt;left&gt;</code>, select: <code>zh</code>, <code>z&lt;left&gt;</code></td></tr>
 <tr><td><code>scroll_column_right</code></td><td>Scroll view right one column (zl)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zl</code>, <code>z&lt;right&gt;</code>, select: <code>zl</code>, <code>z&lt;right&gt;</code></td></tr>
@@ -9820,11 +9826,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9623</strong> (80.7%)</li>
+<li>Ported: <strong>9629</strong> (80.7%)</li>
 <li>Partial: <strong>700</strong> (5.9%)</li>
-<li>Absent: <strong>1603</strong></li>
+<li>Absent: <strong>1597</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2818 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2824 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9887,7 +9893,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">661</td><td style="text-align: right">117</td><td style="text-align: right">33.0%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">667</td><td style="text-align: right">117</td><td style="text-align: right">33.3%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9983,7 +9989,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">62.5%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">470</td><td style="text-align: right">96</td><td style="text-align: right">29.2%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">476</td><td style="text-align: right">96</td><td style="text-align: right">29.6%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">86</td><td style="text-align: right">0</td><td style="text-align: right">85.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">4</td><td style="text-align: right">2</td><td style="text-align: right">25.0%</td></tr>
