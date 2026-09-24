@@ -1,6 +1,7 @@
 /// Passphrase (age) encryption for the `:encrypt` / `:decrypt` builtins.
 pub(crate) mod crypt;
 pub(crate) mod dap;
+pub(crate) mod gh_actions;
 /// Client bridge to the `zwire-host` universal local host (system stats,
 /// filesystem crawl, command exec, kv store, …). The `:zwire-*` commands in
 /// [`typed`] route through here to the shared daemon.
@@ -35,6 +36,7 @@ pub(crate) mod typed;
 pub(crate) mod vim_options_data;
 
 pub use dap::*;
+pub use gh_actions::*;
 use futures_util::FutureExt;
 pub use lsp::*;
 pub use syntax::*;
@@ -1311,6 +1313,14 @@ impl MappableCommand {
         resolve_conflicts, "Resolve merge conflicts (3-way)",
         git_status, "Magit status",
         github_browser, "GitHub browser (CI runs, PRs, issues, releases)",
+        github_create_gist, "Create a secret gist of the selection or buffer and yank its URL (JetBrains Create Gist)",
+        github_create_pull_request, "Open a pull request from the current branch (JetBrains Create Pull Request)",
+        github_open_branch_pr, "Open the current branch's pull request in the browser (JetBrains View Pull Request in Browser)",
+        github_copy_branch_pr_url, "Yank the URL of the current branch's pull request (JetBrains Copy Pull Request URL)",
+        github_show_pull_request, "Show a pull request's details by number (JetBrains Github.PullRequest.Show)",
+        github_submit_review, "Approve, comment on or request changes to the current branch's pull request (JetBrains Github.PullRequest.Review.Submit)",
+        github_share, "Create a GitHub repository for the project and push to it (JetBrains Share Project on GitHub)",
+        github_sync_fork, "Rebase the current branch onto the fork's parent (JetBrains Sync Fork)",
         git_push, "Push the current branch to its remote (SPC g P)",
         git_pull, "Fast-forward pull from upstream (SPC g u)",
         git_fetch, "Fetch all remotes (SPC g F)",

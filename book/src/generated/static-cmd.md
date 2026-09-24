@@ -920,6 +920,14 @@
 | `resolve_conflicts` | Resolve merge conflicts (3-way) | **spacemacs, hybrid** — normal: `` <space>gm ``, `` <space>gcr ``, select: `` <space>gm ``, `` <space>gcr `` |
 | `git_status` | Magit status | **spacemacs** — normal: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, select: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, insert: `` <C-x>vd ``<br>**hybrid** — normal: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, select: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv `` |
 | `github_browser` | GitHub browser (CI runs, PRs, issues, releases) |  |
+| `github_create_gist` | Create a secret gist of the selection or buffer and yank its URL (JetBrains Create Gist) |  |
+| `github_create_pull_request` | Open a pull request from the current branch (JetBrains Create Pull Request) |  |
+| `github_open_branch_pr` | Open the current branch's pull request in the browser (JetBrains View Pull Request in Browser) |  |
+| `github_copy_branch_pr_url` | Yank the URL of the current branch's pull request (JetBrains Copy Pull Request URL) |  |
+| `github_show_pull_request` | Show a pull request's details by number (JetBrains Github.PullRequest.Show) |  |
+| `github_submit_review` | Approve, comment on or request changes to the current branch's pull request (JetBrains Github.PullRequest.Review.Submit) |  |
+| `github_share` | Create a GitHub repository for the project and push to it (JetBrains Share Project on GitHub) |  |
+| `github_sync_fork` | Rebase the current branch onto the fork's parent (JetBrains Sync Fork) |  |
 | `git_push` | Push the current branch to its remote (SPC g P) | **spacemacs** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP ``, insert: `` <C-x>vP ``<br>**hybrid** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP `` |
 | `git_pull` | Fast-forward pull from upstream (SPC g u) | **spacemacs** — normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu ``, insert: `` <C-x>v+ ``<br>**hybrid** — normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu `` |
 | `git_fetch` | Fetch all remotes (SPC g F) | **spacemacs, hybrid** — normal: `` <space>gF ``, select: `` <space>gF `` |

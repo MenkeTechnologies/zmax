@@ -84546,5 +84546,69 @@
    "static:git_cleanup_branches"
   ],
   "note": "Git.Cleanup.Branches (Clean Up Branches) ~ zmax `git_cleanup_branches`: the same table (branch, last commit date, tracked branch, merged into HEAD) and safe delete, but one branch per pick where the IDE deletes a multi-selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.Create.Gist",
+  "status": "ported",
+  "evidence": [
+   "static:github_create_gist"
+  ],
+  "note": "Github.Create.Gist = zmax `github_create_gist` over the GitHub API (zmax-term/src/commands/gh_actions.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.Create.Pull.Request",
+  "status": "ported",
+  "evidence": [
+   "static:github_create_pull_request"
+  ],
+  "note": "Github.Create.Pull.Request = zmax `github_create_pull_request` over the GitHub API (zmax-term/src/commands/gh_actions.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.PullRequest.Review.Submit",
+  "status": "ported",
+  "evidence": [
+   "static:github_submit_review"
+  ],
+  "note": "Github.PullRequest.Review.Submit = zmax `github_submit_review` over the GitHub API (zmax-term/src/commands/gh_actions.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.PullRequest.Show",
+  "status": "ported",
+  "evidence": [
+   "static:github_show_pull_request"
+  ],
+  "note": "Github.PullRequest.Show = zmax `github_show_pull_request` over the GitHub API (zmax-term/src/commands/gh_actions.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.Share",
+  "status": "ported",
+  "evidence": [
+   "static:github_share"
+  ],
+  "note": "Github.Share = zmax `github_share` over the GitHub API (zmax-term/src/commands/gh_actions.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.Sync.Fork",
+  "status": "ported",
+  "evidence": [
+   "static:github_sync_fork"
+  ],
+  "note": "Github.Sync.Fork = zmax `github_sync_fork` over the GitHub API (zmax-term/src/commands/gh_actions.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.PullRequest.Open.Link",
+  "status": "partial",
+  "evidence": [
+   "static:github_open_branch_pr"
+  ],
+  "note": "View Pull Request in Browser ~ zmax `github_open_branch_pr`: opens the current branch's pull request; the IDE opens the one selected in its pull-request list."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.PullRequest.Copy.Link",
+  "status": "partial",
+  "evidence": [
+   "static:github_copy_branch_pr_url"
+  ],
+  "note": "Copy Pull Request URL ~ zmax `github_copy_branch_pr_url`: the current branch's pull request, not a list selection."
  }
 ]
