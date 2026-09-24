@@ -84298,5 +84298,45 @@
    "static:show_gutter_info"
   ],
   "note": "EditorShowGutterIconTooltip = zmax `show_gutter_info`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ActivityView.CreatePatch",
+  "status": "ported",
+  "evidence": [
+   "static:local_history_create_patch"
+  ],
+  "note": "ActivityView.CreatePatch = zmax `local_history_create_patch` over the Local History store (zmax-term/src/local_history.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ActivityView.RevertDifferences",
+  "status": "ported",
+  "evidence": [
+   "static:local_history_revert_selection"
+  ],
+  "note": "ActivityView.RevertDifferences = zmax `local_history_revert_selection` over the Local History store (zmax-term/src/local_history.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.LocalHistory.PutLabel",
+  "status": "ported",
+  "evidence": [
+   "static:local_history_put_label"
+  ],
+  "note": "LocalHistory.PutLabel = zmax `local_history_put_label` over the Local History store (zmax-term/src/local_history.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.LocalHistory.ShowProjectHistory",
+  "status": "ported",
+  "evidence": [
+   "static:local_history_project"
+  ],
+  "note": "LocalHistory.ShowProjectHistory = zmax `local_history_project` over the Local History store (zmax-term/src/local_history.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.LocalHistory.ShowSelectionHistory",
+  "status": "ported",
+  "evidence": [
+   "static:local_history_selection"
+  ],
+  "note": "LocalHistory.ShowSelectionHistory = zmax `local_history_selection` over the Local History store (zmax-term/src/local_history.rs)."
  }
 ]

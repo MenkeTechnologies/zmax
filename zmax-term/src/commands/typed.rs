@@ -30957,34 +30957,59 @@ fn ex_diff_buffer_with_file(
             path.display()
         );
     }
+    match unified_diff(&path, &text, None).map_err(|e| anyhow!("diff-buffer-with-file: {e}"))? {
+        None => cx.editor.set_status(format!(
+            "diff-buffer-with-file: no differences ({})",
+            path.display()
+        )),
+        Some(diff) => super::show_text_in_scratch(cx.editor, &diff),
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod unified_diff_tests {
+    use super::unified_diff;
+
+    #[test]
+    fn labels_name_the_sides_and_equal_text_is_none() {
+        let old = std::env::temp_dir().join(format!("zmax-udiff-{}.txt", std::process::id()));
+        std::fs::write(&old, "a\n").unwrap();
+        let patch = unified_diff(&old, "b\n", Some(("a/x", "b/x"))).unwrap().unwrap();
+        assert!(patch.starts_with("--- a/x\n+++ b/x\n"), "{patch}");
+        assert!(patch.contains("-a\n+b\n"), "{patch}");
+        assert_eq!(None, unified_diff(&old, "a\n", None).unwrap());
+        let _ = std::fs::remove_file(old);
+    }
+}
+
+/// `diff -u` from the file `old` to the text `new`: `None` when they match.
+/// `labels` names the two sides in the `---`/`+++` header; without them the
+/// header shows `old`'s path and a temporary file's.
+pub(crate) fn unified_diff(
+    old: &std::path::Path,
+    new: &str,
+    labels: Option<(&str, &str)>,
+) -> Result<Option<String>, String> {
     // A unique temp path (pid + a monotonic counter — no clock/rng needed).
     static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let tmp = std::env::temp_dir().join(format!("zmax-diff-{}-{n}.tmp", std::process::id()));
-    if let Err(err) = std::fs::write(&tmp, text.as_bytes()) {
-        bail!("diff-buffer-with-file: cannot write temp file: {err}");
+    std::fs::write(&tmp, new.as_bytes()).map_err(|e| format!("cannot write temp file: {e}"))?;
+    let mut command = std::process::Command::new("diff");
+    command.arg("-u");
+    if let Some((from, to)) = labels {
+        command.args(["--label", from, "--label", to]);
     }
-    let out = std::process::Command::new("diff")
-        .arg("-u")
-        .arg(&path)
-        .arg(&tmp)
-        .output();
+    let out = command.arg(old).arg(&tmp).output();
     let _ = std::fs::remove_file(&tmp);
     match out {
         // diff exits 0 (identical) or 1 (differences); >1 is an error.
-        Ok(o) if o.status.code() == Some(0) => {
-            cx.editor.set_status(format!(
-                "diff-buffer-with-file: no differences ({})",
-                path.display()
-            ));
-        }
-        Ok(o) if o.status.code() == Some(1) => {
-            super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&o.stdout));
-        }
-        Ok(o) => bail!("diff: {}", String::from_utf8_lossy(&o.stderr).trim()),
-        Err(err) => bail!("diff: {err} (install diffutils)"),
+        Ok(o) if o.status.code() == Some(0) => Ok(None),
+        Ok(o) if o.status.code() == Some(1) => Ok(Some(String::from_utf8_lossy(&o.stdout).into_owned())),
+        Ok(o) => Err(String::from_utf8_lossy(&o.stderr).trim().to_string()),
+        Err(err) => Err(format!("{err} (install diffutils)")),
     }
-    Ok(())
 }
 
 /// emacs `doc-view-open-text`: extract the document text (`pdftotext`, or

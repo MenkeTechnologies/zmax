@@ -2814,6 +2814,11 @@ impl MappableCommand {
         error_description, "Show the full text of the diagnostic under the cursor (JetBrains Error Description)",
         context_info, "Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)",
         local_history_revert, "Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert)",
+        local_history_put_label, "Label the buffer as it is now in Local History (JetBrains Put Label)",
+        local_history_project, "Every Local History snapshot of every file (JetBrains Show Project History)",
+        local_history_selection, "Local History snapshots in which the selected lines differ (JetBrains Show History for Selection)",
+        local_history_revert_selection, "Put the selected lines back as a Local History snapshot has them (JetBrains Revert Selection)",
+        local_history_create_patch, "Diff from a Local History snapshot to the buffer (JetBrains Create Patch)",
         pin_tab, "Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab)",
         git_history_for_selection, "Commits that touched the selected lines (JetBrains Show History for Selection)",
         git_compare_with_branch, "Diff this file against a branch you pick (JetBrains Compare with Branch)",
@@ -73523,6 +73528,217 @@ fn local_history_revert(cx: &mut Context) {
     })
     .with_preview(|_editor, snap: &Snap| Some((snap.path.as_path().into(), None)));
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// A snapshot's age, and its label when "Put Label" gave it one.
+fn snapshot_title(ts: u64, snapshot: &Path) -> String {
+    let age = crate::recent_files::humanize_age(crate::recent_files::age_since(ts));
+    match crate::local_history::label(snapshot) {
+        Some(label) => format!("{age} — {label}"),
+        None => age,
+    }
+}
+
+/// JetBrains Local History "Put Label" (`LocalHistory.PutLabel`): remember the
+/// buffer as it is now under a name, to find it again in the history.
+fn local_history_put_label(cx: &mut Context) {
+    if doc!(cx.editor).path().is_none() {
+        cx.editor.set_error("local-history: the buffer is not visiting a file");
+        return;
+    }
+    prompt_then(cx, "label: ", |cx, name| {
+        let doc = doc!(cx.editor);
+        let Some(path) = doc.path().map(Path::to_path_buf) else {
+            return;
+        };
+        match crate::local_history::put_label(&path, doc.text(), name) {
+            Ok(()) => cx.editor.set_status(format!("local-history: labelled \"{name}\"")),
+            Err(e) => cx.editor.set_error(format!("local-history: {e}")),
+        }
+    });
+}
+
+/// JetBrains "Show Project History" (`LocalHistory.ShowProjectHistory`): every
+/// Local History snapshot of every file, newest first. Enter opens the file;
+/// the preview is the snapshot.
+fn local_history_project(cx: &mut Context) {
+    struct Entry {
+        title: String,
+        file: PathBuf,
+        snapshot: PathBuf,
+    }
+    let items: Vec<Entry> = crate::local_history::all()
+        .into_iter()
+        .map(|(ts, file, snapshot)| Entry {
+            title: snapshot_title(ts, &snapshot),
+            file,
+            snapshot,
+        })
+        .collect();
+    if items.is_empty() {
+        cx.editor
+            .set_status("no local history yet — snapshots are taken on save");
+        return;
+    }
+    let root = zmax_loader::find_workspace().0;
+    let columns = [
+        ui::PickerColumn::new("when", |e: &Entry, _: &PathBuf| e.title.as_str().into()),
+        ui::PickerColumn::new("file", |e: &Entry, root: &PathBuf| {
+            e.file.strip_prefix(root).unwrap_or(&e.file).display().to_string().into()
+        }),
+    ];
+    let picker = Picker::new(columns, 1, items, root, |cx, entry: &Entry, action| {
+        if let Err(e) = cx.editor.open(&entry.file, action) {
+            cx.editor.set_error(format!("{}: {e}", entry.file.display()));
+        }
+    })
+    .with_preview(|_editor, entry: &Entry| Some((entry.snapshot.as_path().into(), None)));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// The edits that would turn the buffer back into `snapshot`, in buffer
+/// coordinates, keeping only those `keep` accepts. Pure over its inputs.
+fn snapshot_changes(
+    current: &Rope,
+    snapshot: &Rope,
+    keep: impl Fn(usize, usize) -> bool,
+) -> Vec<(usize, usize, Option<Tendril>)> {
+    zmax_core::diff::compare_ropes(current, snapshot)
+        .changes_iter()
+        .filter(|(from, to, _)| keep(*from, *to))
+        .collect()
+}
+
+/// The primary selection's whole lines, as a char range.
+fn selected_lines(doc: &Document, view: &View) -> (usize, usize) {
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let (first, last) = range.line_range(text);
+    (text.line_to_char(first), text.line_to_char((last + 1).min(text.len_lines())))
+}
+
+#[cfg(test)]
+mod snapshot_changes_tests {
+    use super::{snapshot_changes, touches};
+    use zmax_core::{Rope, Transaction};
+
+    #[test]
+    fn only_the_selected_lines_go_back_to_the_snapshot() {
+        let current = Rope::from("a\nB\nc\nD\n");
+        let snapshot = Rope::from("a\nb\nc\nd\n");
+        // Line 1 ("B\n") is selected.
+        let span = (2, 4);
+        let changes = snapshot_changes(&current, &snapshot, |f, t| touches(span, f, t));
+        let mut text = current.clone();
+        Transaction::change(&current, changes.into_iter()).apply(&mut text);
+        assert_eq!("a\nb\nc\nD\n", text.to_string());
+    }
+}
+
+/// Whether an edit over `[from, to)` touches the char range `span`.
+fn touches(span: (usize, usize), from: usize, to: usize) -> bool {
+    from <= span.1 && to >= span.0
+}
+
+/// Pick one of this buffer's snapshots, the ones `keep` accepts, and hand it to
+/// `on_pick`.
+fn pick_snapshot(
+    cx: &mut Context,
+    keep: impl Fn(&Rope) -> bool,
+    empty: &'static str,
+    on_pick: impl Fn(&mut crate::compositor::Context, &Path) + 'static,
+) {
+    let Some(path) = doc!(cx.editor).path().map(Path::to_path_buf) else {
+        cx.editor.set_error("local-history: the buffer is not visiting a file");
+        return;
+    };
+    struct Snap {
+        title: String,
+        path: PathBuf,
+    }
+    let items: Vec<Snap> = crate::local_history::snapshots(&path)
+        .into_iter()
+        .filter(|(_, snap)| {
+            std::fs::read_to_string(snap).is_ok_and(|text| keep(&Rope::from_str(&text)))
+        })
+        .map(|(ts, snap)| Snap {
+            title: snapshot_title(ts, &snap),
+            path: snap,
+        })
+        .collect();
+    if items.is_empty() {
+        cx.editor.set_status(empty);
+        return;
+    }
+    let columns = [ui::PickerColumn::new("when", |s: &Snap, _: &()| s.title.as_str().into())];
+    let picker = Picker::new(columns, 0, items, (), move |cx, snap: &Snap, _| on_pick(cx, &snap.path))
+        .with_preview(|_editor, snap: &Snap| Some((snap.path.as_path().into(), None)));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Show History for Selection" (`LocalHistory.ShowSelectionHistory`):
+/// the snapshots in which the selected lines read differently from now.
+fn local_history_selection(cx: &mut Context) {
+    let (current, span) = {
+        let (view, doc) = current_ref!(cx.editor);
+        (doc.text().clone(), selected_lines(doc, view))
+    };
+    pick_snapshot(
+        cx,
+        move |snapshot| !snapshot_changes(&current, snapshot, |f, t| touches(span, f, t)).is_empty(),
+        "local-history: no snapshot changes the selected lines",
+        |cx, snapshot| {
+            if let Err(e) = cx.editor.open(snapshot, Action::Replace) {
+                cx.editor.set_error(format!("local-history: {e}"));
+            }
+        },
+    );
+}
+
+/// JetBrains "Revert Selection" in Local History (`ActivityView.RevertDifferences`):
+/// put the selected lines back as a picked snapshot has them, leaving the rest
+/// of the buffer alone. It is an ordinary edit, so `u` takes it back.
+fn local_history_revert_selection(cx: &mut Context) {
+    let (current, span) = {
+        let (view, doc) = current_ref!(cx.editor);
+        (doc.text().clone(), selected_lines(doc, view))
+    };
+    pick_snapshot(
+        cx,
+        move |snapshot| !snapshot_changes(&current, snapshot, |f, t| touches(span, f, t)).is_empty(),
+        "local-history: no snapshot changes the selected lines",
+        move |cx, snapshot| {
+            let Ok(text) = std::fs::read_to_string(snapshot) else {
+                return;
+            };
+            let (view, doc) = current!(cx.editor);
+            let changes = snapshot_changes(doc.text(), &Rope::from_str(&text), |f, t| touches(span, f, t));
+            let transaction = Transaction::change(doc.text(), changes.into_iter());
+            doc.apply(&transaction, view.id);
+            doc.append_changes_to_history(view);
+            cx.editor.set_status("local-history: selection reverted (undo to come back)");
+        },
+    );
+}
+
+/// JetBrains "Create Patch" from Local History (`ActivityView.CreatePatch`):
+/// the diff from a picked snapshot to the buffer as it is now.
+fn local_history_create_patch(cx: &mut Context) {
+    pick_snapshot(cx, |_| true, "no local history yet — snapshots are taken on save", |cx, snapshot| {
+        let doc = doc!(cx.editor);
+        let name = doc
+            .path()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let text = doc.text().to_string();
+        let (from, to) = (format!("a/{name}"), format!("b/{name}"));
+        match typed::unified_diff(snapshot, &text, Some((&from, &to))) {
+            Ok(Some(patch)) => show_text_in_scratch(cx.editor, &patch),
+            Ok(None) => cx.editor.set_status("local-history: the buffer matches that snapshot"),
+            Err(e) => cx.editor.set_error(format!("local-history: {e}")),
+        }
+    });
 }
 
 /// The directory holding the file templates (JetBrains File and Code Templates).

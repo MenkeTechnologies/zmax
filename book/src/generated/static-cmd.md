@@ -2423,6 +2423,11 @@
 | `error_description` | Show the full text of the diagnostic under the cursor (JetBrains Error Description) |  |
 | `context_info` | Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q) | **spacemacs, hybrid** — normal: `` <space>lQ ``, select: `` <space>lQ `` |
 | `local_history_revert` | Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert) | **spacemacs, hybrid** — normal: `` <space>fV ``, select: `` <space>fV `` |
+| `local_history_put_label` | Label the buffer as it is now in Local History (JetBrains Put Label) |  |
+| `local_history_project` | Every Local History snapshot of every file (JetBrains Show Project History) |  |
+| `local_history_selection` | Local History snapshots in which the selected lines differ (JetBrains Show History for Selection) |  |
+| `local_history_revert_selection` | Put the selected lines back as a Local History snapshot has them (JetBrains Revert Selection) |  |
+| `local_history_create_patch` | Diff from a Local History snapshot to the buffer (JetBrains Create Patch) |  |
 | `pin_tab` | Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab) | **spacemacs, hybrid** — normal: `` <space>bt ``, select: `` <space>bt `` |
 | `git_history_for_selection` | Commits that touched the selected lines (JetBrains Show History for Selection) | **spacemacs, hybrid** — normal: `` <space>gfL ``, select: `` <space>gfL `` |
 | `git_compare_with_branch` | Diff this file against a branch you pick (JetBrains Compare with Branch) | **spacemacs, hybrid** — normal: `` <space>gC ``, select: `` <space>gC `` |

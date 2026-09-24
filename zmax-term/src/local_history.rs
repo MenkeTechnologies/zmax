@@ -48,15 +48,8 @@ pub fn recent(limit: usize) -> Vec<(u64, PathBuf, PathBuf)> {
             let key = entry.file_name().to_string_lossy().into_owned();
             let file = root.join(path_from_key(&key));
             // Newest snapshot in this file's directory.
-            let (ts, snap) = std::fs::read_dir(entry.path())
+            let (ts, snap) = snapshots_in(&entry.path())
                 .into_iter()
-                .flatten()
-                .flatten()
-                .filter_map(|e| {
-                    let p = e.path();
-                    let ts: u64 = p.file_stem()?.to_str()?.parse().ok()?;
-                    Some((ts, p))
-                })
                 .max_by_key(|(ts, _)| *ts)?;
             Some((ts, file, snap))
         })
@@ -66,21 +59,84 @@ pub fn recent(limit: usize) -> Vec<(u64, PathBuf, PathBuf)> {
     out
 }
 
-/// Snapshots for `path`, newest first: `(unix_timestamp, snapshot_path)`.
-pub fn snapshots(path: &Path) -> Vec<(u64, PathBuf)> {
-    let dir = dir_for(path);
-    let mut v: Vec<(u64, PathBuf)> = std::fs::read_dir(&dir)
+/// The `(timestamp, path)` of every snapshot in `dir`. A snapshot is a
+/// `<unix-ts>.snap`; its label, if it has one, is the `<unix-ts>.label` beside it.
+fn snapshots_in(dir: &Path) -> Vec<(u64, PathBuf)> {
+    std::fs::read_dir(dir)
         .into_iter()
         .flatten()
         .flatten()
         .filter_map(|e| {
             let p = e.path();
+            if p.extension()? != "snap" {
+                return None;
+            }
             let ts: u64 = p.file_stem()?.to_str()?.parse().ok()?;
             Some((ts, p))
         })
-        .collect();
+        .collect()
+}
+
+/// Snapshots for `path`, newest first: `(unix_timestamp, snapshot_path)`.
+pub fn snapshots(path: &Path) -> Vec<(u64, PathBuf)> {
+    let mut v = snapshots_in(&dir_for(path));
     v.sort_by_key(|b| std::cmp::Reverse(b.0));
     v
+}
+
+/// Every snapshot of every file in the project, newest first: `(timestamp,
+/// absolute file path, snapshot path)` — JetBrains "Show Project History".
+pub fn all() -> Vec<(u64, PathBuf, PathBuf)> {
+    let root = zmax_loader::find_workspace().0;
+    let store = crate::run_config::project_dir().join("local-history");
+    let mut out: Vec<(u64, PathBuf, PathBuf)> = std::fs::read_dir(&store)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .flat_map(|entry| {
+            let file = root.join(path_from_key(&entry.file_name().to_string_lossy()));
+            snapshots_in(&entry.path())
+                .into_iter()
+                .map(move |(ts, snap)| (ts, file.clone(), snap))
+        })
+        .collect();
+    out.sort_by_key(|(ts, _, _)| std::cmp::Reverse(*ts));
+    out
+}
+
+/// The label a snapshot was given by "Put Label", if any.
+pub fn label(snapshot: &Path) -> Option<String> {
+    std::fs::read_to_string(snapshot.with_extension("label"))
+        .ok()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+}
+
+/// JetBrains Local History "Put Label": record the buffer as it is now under
+/// `name`. When the text matches the newest snapshot, that snapshot takes the
+/// label rather than a copy being written.
+pub fn put_label(path: &Path, text: &Rope, name: &str) -> std::io::Result<()> {
+    let content = text.slice(..).to_string();
+    let dir = dir_for(path);
+    std::fs::create_dir_all(&dir)?;
+    let snapshot = match snapshots(path).first() {
+        Some((_, latest)) if std::fs::read_to_string(latest).is_ok_and(|s| s == content) => {
+            latest.clone()
+        }
+        _ => {
+            let snapshot = dir.join(format!("{}.snap", now()));
+            std::fs::write(&snapshot, content)?;
+            snapshot
+        }
+    };
+    std::fs::write(snapshot.with_extension("label"), name)
+}
+
+fn now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 /// Record a snapshot of `text` for `path` (called on save). Skips a write when
@@ -97,13 +153,10 @@ pub fn record(path: &Path, text: &Rope) {
             return; // unchanged since the last snapshot
         }
     }
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let _ = std::fs::write(dir.join(format!("{ts}.snap")), content);
-    // Prune: keep the newest MAX_SNAPSHOTS.
+    let _ = std::fs::write(dir.join(format!("{}.snap", now())), content);
+    // Prune: keep the newest MAX_SNAPSHOTS, and their labels with them.
     for (_, old) in snapshots(path).into_iter().skip(MAX_SNAPSHOTS) {
+        let _ = std::fs::remove_file(old.with_extension("label"));
         let _ = std::fs::remove_file(old);
     }
 }
