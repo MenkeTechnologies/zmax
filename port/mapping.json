@@ -12179,9 +12179,9 @@
   "spec_id": "emacs.command.open_line",
   "status": "ported",
   "evidence": [
-   "key:normal:o"
+   "static:split_line"
   ],
-  "note": ""
+  "note": "open-line inserts a newline after point and leaves point before it = zmax `split_line`. (Was mapped to vim `o`, which opens a line below and moves to it.)"
  },
  {
   "spec_id": "emacs.command.open_rectangle",
@@ -82834,5 +82834,61 @@
    "static:frame_zoom_out"
   ],
   "note": "ZoomOutIdeAction (Zoom Out IDE) = zmax `frame_zoom_out`: steps the whole UI's font size down via OSC 50."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorSplitLine",
+  "status": "ported",
+  "evidence": [
+   "static:split_line"
+  ],
+  "note": "EditorSplitLine (Split Line) = zmax `split_line`: breaks the line at each cursor and leaves the cursor before the break."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCutLineEnd",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_line_end"
+  ],
+  "note": "EditorCutLineEnd (Cut up to Line End) = zmax `cut_to_line_end`: cursor to end of line into the clipboard; on the break, the break."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCutLineBackward",
+  "status": "ported",
+  "evidence": [
+   "static:cut_to_line_start"
+  ],
+  "note": "EditorCutLineBackward (Cut Line Backward) = zmax `cut_to_line_start`: start of line to the cursor into the clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCodeBlockStartWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_block_start"
+  ],
+  "note": "EditorCodeBlockStartWithSelection = zmax `extend_to_block_start`: extends to the enclosing `{` in any mode."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCodeBlockEndWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_block_end"
+  ],
+  "note": "EditorCodeBlockEndWithSelection = zmax `extend_to_block_end`: extends to the enclosing `}` in any mode."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMoveToPageTopWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_window_top"
+  ],
+  "note": "EditorMoveToPageTopWithSelection = zmax `extend_to_window_top`: extends to the first visible line in any mode."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMoveToPageBottomWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_to_window_bottom"
+  ],
+  "note": "EditorMoveToPageBottomWithSelection = zmax `extend_to_window_bottom`: extends to the last visible line in any mode."
  }
 ]

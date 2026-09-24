@@ -812,6 +812,8 @@
 | `move_to_window_line_top_bottom` | Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r) | **spacemacs** — normal: `` <A-r> ``<br>**hybrid, emacs, cua, micro** — normal: `` <A-r> ``, insert: `` <A-r> `` |
 | `goto_window_center` | Goto window center | **spacemacs, hybrid, vim** — normal: `` M ``<br>**helix, kakoune** — normal: `` gc ``, select: `` gc `` |
 | `goto_window_bottom` | Goto window bottom | **spacemacs, hybrid, vim** — normal: `` L ``<br>**helix, kakoune** — normal: `` gb ``, select: `` gb `` |
+| `extend_to_window_top` | Extend the selection to the first visible line (JetBrains Move Caret to Page Top with Selection) |  |
+| `extend_to_window_bottom` | Extend the selection to the last visible line (JetBrains Move Caret to Page Bottom with Selection) |  |
 | `goto_last_accessed_file` | Goto last accessed file | **spacemacs, hybrid** — normal: `` <C-^> ``, `` <C-w>^ ``, `` g<tab> ``, `` <space>w^ ``, `` <C-w><C-^> ``, `` <C-w>g<tab> ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> ``, select: `` <space>w^ ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> ``<br>**vim** — normal: `` <C-^> ``, `` <C-w>^ ``, `` g<tab> ``, `` <C-w><C-^> ``, `` <C-w>g<tab> ``<br>**helix, kakoune** — normal: `` ga ``, select: `` ga `` |
 | `cycle_buffer_backward` | Cycle back through this window's visited buffers (C-TAB) | **spacemacs, hybrid, vim** — normal: `` <C-tab> `` |
 | `cycle_buffer_forward` | Cycle forward through this window's visited buffers (C-S-TAB) | **spacemacs, hybrid, vim** — normal: `` <A-C-tab> `` |
@@ -963,6 +965,9 @@
 | `insert_kill_entered_vim` | Delete the text entered this insert session (vim i_CTRL-U) | **spacemacs, vim** — insert: `` <C-u> `` |
 | `kill_to_line_start` | Delete till start of line | **helix, kakoune** — insert: `` <C-u> `` |
 | `kill_to_line_end` | Delete till end of line | **hybrid, helix, kakoune** — insert: `` <C-k> ``<br>**emacs, cua, nano** — normal: `` <C-k> ``, insert: `` <C-k> `` |
+| `cut_to_line_end` | Cut from the cursor to the end of the line into the clipboard (JetBrains Cut up to Line End) |  |
+| `cut_to_line_start` | Cut from the start of the line to the cursor into the clipboard (JetBrains Cut Line Backward) |  |
+| `split_line` | Break the line at the cursor, leaving the cursor before the break (JetBrains Split Line, emacs open-line) |  |
 | `undo` | Undo change | **spacemacs, hybrid** — normal: `` u ``, `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``, `` <space>ku ``, select: `` <C-x>u ``, `` <space>ku ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``<br>**vim** — normal: `` u ``<br>**helix, kakoune** — normal: `` u ``, select: `` u ``<br>**emacs** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-x>u ``<br>**cua** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, `` <C-x>u ``, select: `` <C-X>u ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, `` <C-x>u ``<br>**micro** — normal: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``, insert: `` <C-/> ``, `` <C-_> ``, `` <C-z> ``<br>**nano** — normal: `` <A-u> ``, `` <C-/> ``, insert: `` <A-u> ``, `` <C-/> `` |
 | `undo_line` | Undo all latest changes on one line (vim U) | **spacemacs, hybrid, vim** — normal: `` U `` |
 | `redo` | Redo change | **spacemacs, hybrid** — normal: `` <C-r> ``, `` <space>k<C-r> ``, select: `` <space>k<C-r> ``<br>**vim** — normal: `` <C-r> ``<br>**helix, kakoune** — normal: `` U ``, select: `` U ``<br>**micro** — normal: `` <C-y> ``, insert: `` <C-y> ``<br>**nano** — normal: `` <A-e> ``, insert: `` <A-e> `` |
@@ -1666,6 +1671,8 @@
 | `goto_prev_unmatched_brace` | Goto previous unmatched { ([{) | **spacemacs, hybrid, vim** — normal: `` [{ `` |
 | `goto_next_unmatched_paren` | Goto next unmatched ) (]) | **spacemacs, hybrid, vim** — normal: `` ]) `` |
 | `goto_next_unmatched_brace` | Goto next unmatched } (]}) | **spacemacs, hybrid, vim** — normal: `` ]} `` |
+| `extend_to_block_start` | Extend the selection to the start of the enclosing code block (JetBrains Move Caret to Code Block Start with Selection) |  |
+| `extend_to_block_end` | Extend the selection to the end of the enclosing code block (JetBrains Move Caret to Code Block End with Selection) |  |
 | `goto_prev_preproc` | Goto previous unmatched #if/#else ([#) | **spacemacs, hybrid, vim** — normal: `` [# `` |
 | `goto_next_preproc` | Goto next unmatched #endif/#else (]#) | **spacemacs, hybrid, vim** — normal: `` ]# `` |
 | `vim_sleep` | Sleep for {count} seconds (vim gs) | **spacemacs, hybrid, vim** — normal: `` gs `` |

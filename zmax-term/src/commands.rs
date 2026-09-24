@@ -1203,6 +1203,8 @@ impl MappableCommand {
         move_to_window_line_top_bottom, "Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)",
         goto_window_center, "Goto window center",
         goto_window_bottom, "Goto window bottom",
+        extend_to_window_top, "Extend the selection to the first visible line (JetBrains Move Caret to Page Top with Selection)",
+        extend_to_window_bottom, "Extend the selection to the last visible line (JetBrains Move Caret to Page Bottom with Selection)",
         goto_last_accessed_file, "Goto last accessed file",
         cycle_buffer_backward, "Cycle back through this window's visited buffers (C-TAB)",
         cycle_buffer_forward, "Cycle forward through this window's visited buffers (C-S-TAB)",
@@ -1354,6 +1356,9 @@ impl MappableCommand {
         insert_kill_entered_vim, "Delete the text entered this insert session (vim i_CTRL-U)",
         kill_to_line_start, "Delete till start of line",
         kill_to_line_end, "Delete till end of line",
+        cut_to_line_end, "Cut from the cursor to the end of the line into the clipboard (JetBrains Cut up to Line End)",
+        cut_to_line_start, "Cut from the start of the line to the cursor into the clipboard (JetBrains Cut Line Backward)",
+        split_line, "Break the line at the cursor, leaving the cursor before the break (JetBrains Split Line, emacs open-line)",
         undo, "Undo change",
         undo_line, "Undo all latest changes on one line (vim U)",
         redo, "Redo change",
@@ -2057,6 +2062,8 @@ impl MappableCommand {
         goto_prev_unmatched_brace, "Goto previous unmatched { ([{)",
         goto_next_unmatched_paren, "Goto next unmatched ) (])",
         goto_next_unmatched_brace, "Goto next unmatched } (]})",
+        extend_to_block_start, "Extend the selection to the start of the enclosing code block (JetBrains Move Caret to Code Block Start with Selection)",
+        extend_to_block_end, "Extend the selection to the end of the enclosing code block (JetBrains Move Caret to Code Block End with Selection)",
         goto_prev_preproc, "Goto previous unmatched #if/#else ([#)",
         goto_next_preproc, "Goto next unmatched #endif/#else (]#)",
         vim_sleep, "Sleep for {count} seconds (vim gs)",
@@ -4289,6 +4296,78 @@ fn kill_to_line_end(cx: &mut Context) {
     );
 }
 
+/// JetBrains "Cut up to Line End" (`EditorCutLineEnd`): the text from the
+/// cursor to the end of its line goes to the clipboard and out of the buffer.
+/// On the line break itself the break is what goes, so repeating the command
+/// pulls the next line up, as the IDE's does.
+fn cut_to_line_end(cx: &mut Context) {
+    cut_ranges(cx, |text, range| {
+        let line = range.cursor_line(text);
+        let end = line_end_char_index(&text, line);
+        let pos = range.cursor(text);
+        if pos == end {
+            (pos, text.line_to_char(line + 1))
+        } else {
+            (pos, end)
+        }
+    });
+}
+
+/// JetBrains "Cut Line Backward" (`EditorCutLineBackward`): the text from the
+/// start of the line up to the cursor goes to the clipboard and out of the
+/// buffer.
+fn cut_to_line_start(cx: &mut Context) {
+    cut_ranges(cx, |text, range| {
+        let line_start = text.line_to_char(range.cursor_line(text));
+        (line_start, range.cursor(text))
+    });
+}
+
+/// Select `span(range)` for every range, then cut the selection to the
+/// clipboard. Cursors whose span is empty are left where they are.
+fn cut_ranges(cx: &mut Context, span: impl Fn(RopeSlice, &Range) -> (usize, usize)) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let spans: Vec<_> = doc
+        .selection(view.id)
+        .iter()
+        .map(|range| span(text, range))
+        .filter(|(from, to)| from < to)
+        .collect();
+    if spans.is_empty() {
+        return;
+    }
+    let ranges = spans.into_iter().map(|(from, to)| Range::new(from, to)).collect();
+    doc.set_selection(view.id, Selection::new(ranges, 0));
+    cut_to_clipboard(cx);
+}
+
+/// JetBrains "Split Line" (`EditorSplitLine`, Cmd-Enter), emacs `open-line`:
+/// break the line at each cursor and leave the cursor where it was, before the
+/// break, so the text after it drops to a line of its own.
+fn split_line(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let line_ending = doc.line_ending.as_str();
+    let width = line_ending.chars().count();
+    let selection = doc.selection(view.id);
+
+    let positions: Vec<usize> = selection.iter().map(|range| range.cursor(text)).collect();
+    let cursors = positions
+        .iter()
+        .enumerate()
+        .map(|(i, pos)| Range::point(pos + i * width))
+        .collect();
+    let transaction = Transaction::change(
+        doc.text(),
+        positions
+            .iter()
+            .map(|&pos| (pos, pos, Some(line_ending.into()))),
+    )
+    .with_selection(Selection::new(cursors, selection.primary_index()));
+    doc.apply(&transaction, view.id);
+}
+
 fn goto_first_nonwhitespace(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
 
@@ -4520,10 +4599,32 @@ fn find_unmatched_bracket(
 }
 
 fn goto_unmatched_bracket(cx: &mut Context, open: char, close: char, forward: bool) {
+    let extend = cx.editor.mode == Mode::Select;
+    goto_unmatched_bracket_impl(cx, open, close, forward, extend)
+}
+
+/// JetBrains "Move Caret to Code Block Start with Selection": `[{` that always
+/// extends, whatever the mode.
+fn extend_to_block_start(cx: &mut Context) {
+    goto_unmatched_bracket_impl(cx, '{', '}', false, true)
+}
+
+/// JetBrains "Move Caret to Code Block End with Selection": `]}` that always
+/// extends, whatever the mode.
+fn extend_to_block_end(cx: &mut Context) {
+    goto_unmatched_bracket_impl(cx, '{', '}', true, true)
+}
+
+fn goto_unmatched_bracket_impl(
+    cx: &mut Context,
+    open: char,
+    close: char,
+    forward: bool,
+    extend: bool,
+) {
     let count = cx.count();
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
-    let extend = cx.editor.mode == Mode::Select;
     let selection = doc.selection(view.id).clone().transform(|range| {
         let cursor = range.cursor(text);
         match find_unmatched_bracket(text, cursor, open, close, forward, count) {
@@ -6238,6 +6339,11 @@ fn align_selections(cx: &mut Context) {
 }
 
 fn goto_window(cx: &mut Context, align: Align) {
+    let extend = cx.editor.mode == Mode::Select;
+    goto_window_impl(cx, align, extend)
+}
+
+fn goto_window_impl(cx: &mut Context, align: Align, extend: bool) {
     let count = cx.count() - 1;
     let (view, doc) = current!(cx.editor);
     let view_offset = doc.view_offset(view.id);
@@ -6272,7 +6378,7 @@ fn goto_window(cx: &mut Context, align: Align) {
     let selection = doc
         .selection(view.id)
         .clone()
-        .transform(|range| range.put_cursor(text, pos, cx.editor.mode == Mode::Select));
+        .transform(|range| range.put_cursor(text, pos, extend));
     // vim `H`/`M`/`L` are jump commands: record the position we are leaving.
     push_jump(view, doc);
     doc.set_selection(view.id, selection);
@@ -6280,6 +6386,18 @@ fn goto_window(cx: &mut Context, align: Align) {
 
 fn goto_window_top(cx: &mut Context) {
     goto_window(cx, Align::Top)
+}
+
+/// JetBrains "Move Caret to Page Top with Selection": `H` that always extends,
+/// whatever the mode.
+fn extend_to_window_top(cx: &mut Context) {
+    goto_window_impl(cx, Align::Top, true)
+}
+
+/// JetBrains "Move Caret to Page Bottom with Selection": `L` that always
+/// extends, whatever the mode.
+fn extend_to_window_bottom(cx: &mut Context) {
+    goto_window_impl(cx, Align::Bottom, true)
 }
 
 fn goto_window_center(cx: &mut Context) {

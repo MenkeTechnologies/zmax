@@ -29,6 +29,7 @@ mod test {
     mod git_gutter;
     mod hi_lock;
     mod injection;
+    mod jetbrains_editor;
     mod mode_abbrev;
     mod movement;
     mod operator_count;
