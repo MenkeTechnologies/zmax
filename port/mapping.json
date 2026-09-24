@@ -84682,5 +84682,13 @@
    "static:dap_set_variable"
   ],
   "note": "XDebugger.SetValue = zmax `dap_set_variable` (zmax-term/src/commands/dap.rs); watches evaluate in the selected frame, variables come from its scopes."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.FoldersAlwaysOnTop",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_toggle_folders_first"
+  ],
+  "note": "ProjectView.FoldersAlwaysOnTop = zmax `project_tree_toggle_folders_first`: directories first (the default) or ordered among the files."
  }
 ]

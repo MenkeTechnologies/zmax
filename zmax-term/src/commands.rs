@@ -2059,6 +2059,7 @@ impl MappableCommand {
         project_tree_collapse_node, "Collapse the selected project tree directory (JetBrains Collapse)",
         project_tree_expand_recursively, "Expand the selected directory and everything under it (JetBrains Expand Recursively)",
         project_tree_sort_by_name, "Order the project tree by name (JetBrains Sort by Name)",
+        project_tree_toggle_folders_first, "List directories before files in the project tree, or mixed in (JetBrains Folders Always on Top)",
         project_tree_open_selected, "Open the file selected in the project tree (JetBrains Jump to Source)",
         sort_tree_by_time_oldest, "Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time)",
         structural_search, "Find code by shape with a tree-sitter query (JetBrains Search Structurally)",
@@ -54821,6 +54822,13 @@ fn project_tree_collapse_node(cx: &mut Context) {
 /// everything under it.
 fn project_tree_expand_recursively(cx: &mut Context) {
     project_tree_action(cx, "subtree expanded", |tree| tree.expand_recursively());
+}
+
+/// JetBrains "Folders Always on Top" (`ProjectView.FoldersAlwaysOnTop`).
+fn project_tree_toggle_folders_first(cx: &mut Context) {
+    project_tree_action(cx, "folders on top toggled", |tree| {
+        tree.toggle_folders_first();
+    });
 }
 
 /// JetBrains "Sort by Name" (`ProjectView.SortByName`): back to plain name

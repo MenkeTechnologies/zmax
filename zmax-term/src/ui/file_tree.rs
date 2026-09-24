@@ -34,6 +34,9 @@ pub struct FileTree {
     /// JetBrains "Compact Directories" (`ProjectView.CompactDirectories`): draw
     /// a chain of single-child directories as one row, `a/b/c`. Off by default.
     compact_dirs: bool,
+    /// JetBrains "Folders Always on Top" (`ProjectView.FoldersAlwaysOnTop`):
+    /// directories before files. On by default, as in the IDE.
+    folders_first: bool,
     /// How a directory's files are ordered (JetBrains' Sort by Name / Type /
     /// Modification Time). Directories come first whatever this says.
     sort: TreeSort,
@@ -75,6 +78,7 @@ impl FileTree {
         let mut tree = Self {
             details: false,
             compact_dirs: false,
+            folders_first: true,
             sort: TreeSort::Name,
             root: root.clone(),
             expanded: HashSet::new(),
@@ -110,11 +114,12 @@ impl FileTree {
         dir: &Path,
         show_hidden: bool,
         sort: TreeSort,
+        folders_first: bool,
     ) -> Vec<(PathBuf, String, bool)> {
         if let Some(v) = cache.get(dir) {
             return v.clone();
         }
-        let v = Self::read_dir_sorted(dir, show_hidden, sort);
+        let v = Self::read_dir_sorted(dir, show_hidden, sort, folders_first);
         cache.insert(dir.to_path_buf(), v.clone());
         v
     }
@@ -138,12 +143,14 @@ impl FileTree {
         self.rebuild();
     }
 
-    /// Directory entries, dirs first, then case-insensitive by name. Dotfiles are
-    /// included unless `show_hidden` is false (`editor.file-explorer.hidden`).
+    /// Directory entries, dirs first unless `folders_first` is off, then by
+    /// `sort`, then case-insensitive by name. Dotfiles are included unless
+    /// `show_hidden` is false (`editor.file-explorer.hidden`).
     fn read_dir_sorted(
         dir: &Path,
         show_hidden: bool,
         sort: TreeSort,
+        folders_first: bool,
     ) -> Vec<(PathBuf, String, bool)> {
         let mut entries: Vec<(PathBuf, String, bool, std::time::SystemTime)> =
             std::fs::read_dir(dir)
@@ -163,11 +170,12 @@ impl FileTree {
                 .filter(|(_, name, _, _)| show_hidden || !name.starts_with('.'))
                 .collect();
         entries.sort_by(|a, b| {
-            // Directories first whatever the sort is; the sort then decides the
-            // order among equals, and the name is always the last word so the
-            // listing is stable.
-            b.2.cmp(&a.2)
-                .then_with(|| match sort {
+            // Directories first whatever the sort is (JetBrains "Folders Always
+            // on Top", on by default); the sort then decides the order among
+            // equals, and the name is always the last word so the listing is
+            // stable.
+            let kind = if folders_first { b.2.cmp(&a.2) } else { std::cmp::Ordering::Equal };
+            kind.then_with(|| match sort {
                     TreeSort::Name => std::cmp::Ordering::Equal,
                     TreeSort::Type => file_extension(&a.1).cmp(&file_extension(&b.1)),
                     TreeSort::TimeNewest => b.3.cmp(&a.3),
@@ -193,6 +201,7 @@ impl FileTree {
         let show_hidden = self.show_hidden;
         let sort = self.sort;
         let compact = self.compact_dirs;
+        let folders_first = self.folders_first;
         #[allow(clippy::too_many_arguments)]
         fn walk(
             cache: &mut HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
@@ -203,14 +212,15 @@ impl FileTree {
             show_hidden: bool,
             sort: TreeSort,
             compact: bool,
+            folders_first: bool,
         ) {
-            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, sort) {
+            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, sort, folders_first) {
                 // "Compact Directories": a directory whose only child is another
                 // directory is drawn as one row, `a/b/c`, and the walk continues
                 // from the end of the chain — the empty package levels the IDE
                 // folds away.
                 let (path, name) = if compact && is_dir {
-                    FileTree::compact_chain(cache, path, name, show_hidden, sort)
+                    FileTree::compact_chain(cache, path, name, show_hidden, sort, folders_first)
                 } else {
                     (path, name)
                 };
@@ -232,6 +242,7 @@ impl FileTree {
                         show_hidden,
                         sort,
                         compact,
+                        folders_first,
                     );
                 }
             }
@@ -269,7 +280,7 @@ impl FileTree {
                 return false;
             }
             let mut any = false;
-            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, TreeSort::Name) {
+            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, TreeSort::Name, true) {
                 if is_dir {
                     let name_match = fuzzy(&name, q);
                     let mut kids = Vec::new();
@@ -314,6 +325,7 @@ impl FileTree {
                 show_hidden,
                 sort,
                 compact,
+                folders_first,
             );
         } else {
             walk_filtered(&mut self.dir_cache, &root, 0, &q, &mut rows, show_hidden);
@@ -677,10 +689,11 @@ impl FileTree {
         mut name: String,
         show_hidden: bool,
         sort: TreeSort,
+        folders_first: bool,
     ) -> (PathBuf, String) {
         const MAX: usize = 32;
         for _ in 0..MAX {
-            let children = FileTree::cached_children(cache, &path, show_hidden, sort);
+            let children = FileTree::cached_children(cache, &path, show_hidden, sort, folders_first);
             match children.as_slice() {
                 [(child_path, child_name, true)] => {
                     name = format!("{name}/{child_name}");
@@ -690,6 +703,16 @@ impl FileTree {
             }
         }
         (path, name)
+    }
+
+    /// JetBrains "Folders Always on Top" (`ProjectView.FoldersAlwaysOnTop`):
+    /// directories before files, or all entries in one order. Returns the new
+    /// state.
+    pub fn toggle_folders_first(&mut self) -> bool {
+        self.folders_first = !self.folders_first;
+        self.dir_cache.clear();
+        self.rebuild();
+        self.folders_first
     }
 
     /// JetBrains "Compact Directories": collapse chains of single-child
@@ -970,6 +993,24 @@ mod tests {
         tree.set_sort(TreeSort::TimeOldest);
         let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
         assert_eq!(names, vec!["c_old.rs", "b_mid.rs", "a_new.rs"]);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn folders_first_off_orders_directories_among_files() {
+        let root = std::env::temp_dir().join(format!("zmax_folders_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("b_dir")).unwrap();
+        std::fs::write(root.join("a.txt"), "").unwrap();
+        std::fs::write(root.join("c.txt"), "").unwrap();
+
+        let mut tree = FileTree::new(root.clone());
+        let names = |t: &FileTree| t.rows.iter().map(|r| r.name.clone()).collect::<Vec<_>>();
+        let first = names(&tree);
+        assert_eq!("b_dir", first[0], "directories on top by default: {first:?}");
+        assert!(!tree.toggle_folders_first());
+        assert_eq!(vec!["a.txt", "b_dir", "c.txt"], names(&tree));
 
         let _ = std::fs::remove_dir_all(&root);
     }

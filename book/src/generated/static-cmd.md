@@ -1666,6 +1666,7 @@
 | `project_tree_collapse_node` | Collapse the selected project tree directory (JetBrains Collapse) |  |
 | `project_tree_expand_recursively` | Expand the selected directory and everything under it (JetBrains Expand Recursively) |  |
 | `project_tree_sort_by_name` | Order the project tree by name (JetBrains Sort by Name) |  |
+| `project_tree_toggle_folders_first` | List directories before files in the project tree, or mixed in (JetBrains Folders Always on Top) |  |
 | `project_tree_open_selected` | Open the file selected in the project tree (JetBrains Jump to Source) |  |
 | `sort_tree_by_time_oldest` | Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time) |  |
 | `structural_search` | Find code by shape with a tree-sitter query (JetBrains Search Structurally) | **spacemacs, hybrid** — normal: `` <space>st ``, select: `` <space>st `` |
