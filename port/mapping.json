@@ -28590,33 +28590,33 @@
   "spec_id": "jetbrains.coding-assistance.move-line-down",
   "status": "ported",
   "evidence": [
-   "static:move_line_down"
+   "static:shift_line_down"
   ],
-  "note": ""
+  "note": "Move Line Down = zmax `shift_line_down`, which swaps the line with the one below. `move_line_down` only moves the cursor."
  },
  {
   "spec_id": "jetbrains.coding-assistance.move-line-up",
   "status": "ported",
   "evidence": [
-   "static:move_line_up"
+   "static:shift_line_up"
   ],
-  "note": ""
+  "note": "Move Line Up = zmax `shift_line_up` (zmax-term/src/commands.rs:12830), which swaps the line with the one above. `move_line_up` only moves the cursor."
  },
  {
   "spec_id": "jetbrains.coding-assistance.move-statement-down",
   "status": "ported",
   "evidence": [
-   "static:move_line_down"
+   "static:move_statement_down"
   ],
-  "note": ""
+  "note": "Move Statement Down = zmax `move_statement_down`, which moves the statement over its syntax-tree sibling."
  },
  {
   "spec_id": "jetbrains.coding-assistance.move-statement-up",
   "status": "ported",
   "evidence": [
-   "static:move_line_up"
+   "static:move_statement_up"
   ],
-  "note": ""
+  "note": "Move Statement Up = zmax `move_statement_up` (zmax-term/src/commands.rs:44995), which moves the statement over its syntax-tree sibling."
  },
  {
   "spec_id": "jetbrains.coding-assistance.optimize-imports",
@@ -28719,19 +28719,19 @@
  },
  {
   "spec_id": "jetbrains.diff.next-difference",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "static:goto_next_change"
   ],
-  "note": ""
+  "note": "`goto_next_change` jumps between VCS hunks in the buffer, not between differences in a diff viewer."
  },
  {
   "spec_id": "jetbrains.diff.previous-difference",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "static:goto_prev_change"
   ],
-  "note": ""
+  "note": "`goto_prev_change` jumps between VCS hunks in the buffer, not between differences in a diff viewer."
  },
  {
   "spec_id": "jetbrains.diff.resolve-conflicts",
@@ -28887,11 +28887,11 @@
  },
  {
   "spec_id": "jetbrains.editing.scratch-file",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "typable:new"
   ],
-  "note": "new scratch buffer"
+  "note": "`:new` opens an unnamed scratch buffer; Scratch File also prompts for a language and keeps the scratch as a file."
  },
  {
   "spec_id": "jetbrains.editing.start-new-line",
@@ -29024,11 +29024,11 @@
  },
  {
   "spec_id": "jetbrains.navigate-from-symbol.go-to-declaration-or-usages",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "static:goto_definition"
   ],
-  "note": ""
+  "note": "`goto_definition` (zmax-term/src/commands/lsp.rs:1250) jumps to the declaration but, invoked on the declaration itself, does not fall back to listing usages the way Cmd B does."
  },
  {
   "spec_id": "jetbrains.navigate-from-symbol.go-to-implementation-s",
@@ -29081,12 +29081,12 @@
  },
  {
   "spec_id": "jetbrains.navigate-from-symbol.type-hierarchy",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:space g T",
    "static:type_hierarchy_supertypes"
   ],
-  "note": "Type Hierarchy (Ctrl-H) = type_hierarchy_supertypes/subtypes: real LSP prepareTypeHierarchy + supertypes/subtypes (SPC g T / g U), jump picker. Added type_hierarchy_provider to lsp-types + client methods + TypeHierarchy feature."
+  "note": "zmax has separate supertypes/subtypes pickers, not one hierarchy tree."
  },
  {
   "spec_id": "jetbrains.navigation.back",
@@ -29106,11 +29106,11 @@
  },
  {
   "spec_id": "jetbrains.navigation.go-to-class",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "static:workspace_symbol_picker"
   ],
-  "note": "workspace symbol = class navigation"
+  "note": "`workspace_symbol_picker` searches every workspace symbol; Go to Class restricts the search to classes."
  },
  {
   "spec_id": "jetbrains.navigation.go-to-line-column",
@@ -29178,19 +29178,19 @@
  },
  {
   "spec_id": "jetbrains.navigation.next-occurrence",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "static:search_next"
   ],
-  "note": ""
+  "note": "`search_next` steps through editor search matches only; Next Occurrence also steps through Find/Usages tool-window results."
  },
  {
   "spec_id": "jetbrains.navigation.previous-occurrence",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "static:search_prev"
   ],
-  "note": ""
+  "note": "`search_prev` steps through editor search matches only; Previous Occurrence also steps through Find/Usages tool-window results."
  },
  {
   "spec_id": "jetbrains.navigation.recent-files",
@@ -29314,11 +29314,11 @@
  },
  {
   "spec_id": "jetbrains.refactoring.move",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "static:move_file_refactor"
   ],
-  "note": "git mv (else rename) the file and repoint the buffer"
+  "note": "`move_file_refactor` moves files; the F6 Move refactoring also moves symbols between files/classes."
  },
  {
   "spec_id": "jetbrains.refactoring.pull-members-up",
@@ -29698,14 +29698,6 @@
    "static:focus_bookmarks"
   ],
   "note": "jetbrains tool window"
- },
- {
-  "spec_id": "jetbrains.tool-windows.show-find-window",
-  "status": "ported",
-  "evidence": [
-   "static:focus_run_console"
-  ],
-  "note": "project search results render in the Run console panel"
  },
  {
   "spec_id": "jetbrains.tool-windows.show-project-window",
