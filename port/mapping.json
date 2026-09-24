@@ -84778,5 +84778,29 @@
    "static:clear_undo_history"
   ],
   "note": "UndoClearAction = zmax `clear_undo_history`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleScrollToResultsDuringTypingAction",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_search_preview"
+  ],
+  "note": "Scroll to Results During Typing = zmax `toggle_search_preview`: the search prompt moves to the match on each keystroke, or only on Enter."
+ },
+ {
+  "spec_id": "jetbrains-actions.HippieBackwardCompletion",
+  "status": "ported",
+  "evidence": [
+   "static:dabbrev_expand_backward"
+  ],
+  "note": "Cyclic Expand Word (Backward) = zmax `dabbrev_expand_backward`: candidates after the cursor first, each side nearest-first."
+ },
+ {
+  "spec_id": "jetbrains-actions.TogglePopupHints",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_popup_hints"
+  ],
+  "note": "Toggle Popup Hints for Current File ~ zmax `toggle_popup_hints`: switches signature-help popups for every buffer, not for the current file alone."
  }
 ]

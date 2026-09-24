@@ -2255,6 +2255,9 @@ pub struct Editor {
     pub current_tab: usize,
     /// Recently closed tabs, most-recent last — reopened by emacs `tab-undo`.
     pub closed_tabs: Vec<TabPage>,
+    /// JetBrains "Scroll to Results During Typing": whether the search prompt
+    /// moves to the first match on every keystroke, or only on Enter.
+    pub search_preview: bool,
     /// JetBrains "Maximize Editor in Split": the window layout parked while one
     /// window is shown alone, put back by the next toggle.
     pub maximized_split: Option<TabPage>,
@@ -2716,6 +2719,7 @@ impl Editor {
             current_tab: 0,
             closed_tabs: Vec::new(),
             maximized_split: None,
+            search_preview: true,
             tab_back: Vec::new(),
             tab_forward: Vec::new(),
             tab_history_mode: true,

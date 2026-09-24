@@ -617,3 +617,25 @@ async fn new_html_file_beside_the_buffer() -> anyhow::Result<()> {
     assert!(page.starts_with("<!DOCTYPE html>") && page.contains("<title>page</title>"), "{page}");
     Ok(())
 }
+
+/// With Scroll to Results During Typing off, typing a pattern leaves the
+/// cursor where it was until Enter.
+#[tokio::test(flavor = "multi_thread")]
+async fn search_preview_off_waits_for_enter() -> anyhow::Result<()> {
+    let mut config = Config::default();
+    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => toggle_search_preview, }));
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_input_text("#[a|]#bc\nxyz\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("Z/xy"), Some(&|app| assert_eq!(0, cursor_line(app), "no move while typing"))),
+            (Some("<ret>"), Some(&|app| assert_eq!(1, cursor_line(app), "moved on Enter"))),
+            (Some("Z"), None),
+        ],
+        false,
+    )
+    .await
+}

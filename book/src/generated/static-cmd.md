@@ -1655,6 +1655,8 @@
 | `toggle_problems_by_severity` | Order the Problems panel by severity, errors first (JetBrains Sort by Severity) |  |
 | `problems_jump_to_source` | Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source) |  |
 | `problems_quick_fixes` | Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes) |  |
+| `toggle_search_preview` | Move to the match while typing a search, or only on Enter (JetBrains Scroll to Results During Typing) |  |
+| `toggle_popup_hints` | Turn signature-help popups on or off (JetBrains Toggle Popup Hints) |  |
 | `zen_mode` | Distraction Free and full screen together (JetBrains Toggle Zen Mode) |  |
 | `change_view_mode` | Pick a view mode: distraction free, zen, full screen, focus (JetBrains View Mode) |  |
 | `keymap_to_csv` | Export every key binding as mode,keys,command CSV (JetBrains Export Keymap to CSV) |  |
@@ -2464,6 +2466,7 @@
 | `minibuffer_choose_completion` | Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion) |  |
 | `minibuffer_complete_history` | Complete the minibuffer input against its history (emacs minibuffer-complete-history) |  |
 | `dabbrev_expand` | Expand the word before point from the buffer's other words (emacs dabbrev-expand, JetBrains Cyclic Expand Word) | **hybrid** — insert: `` <A-/> ``<br>**emacs, cua, micro** — normal: `` <A-/> ``, insert: `` <A-/> `` |
+| `dabbrev_expand_backward` | Expand the word before point, trying the words after it first (JetBrains Cyclic Expand Word (Backward)) |  |
 | `dabbrev_completion` | List the buffer words that could expand the word before point (emacs dabbrev-completion) | **spacemacs, hybrid** — normal: `` <A-C-/> `` |
 | `copy_reference` | Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference) |  |
 | `error_description` | Show the full text of the diagnostic under the cursor (JetBrains Error Description) |  |

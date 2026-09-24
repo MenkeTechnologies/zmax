@@ -2048,6 +2048,8 @@ impl MappableCommand {
         toggle_problems_by_severity, "Order the Problems panel by severity, errors first (JetBrains Sort by Severity)",
         problems_jump_to_source, "Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source)",
         problems_quick_fixes, "Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes)",
+        toggle_search_preview, "Move to the match while typing a search, or only on Enter (JetBrains Scroll to Results During Typing)",
+        toggle_popup_hints, "Turn signature-help popups on or off (JetBrains Toggle Popup Hints)",
         zen_mode, "Distraction Free and full screen together (JetBrains Toggle Zen Mode)",
         change_view_mode, "Pick a view mode: distraction free, zen, full screen, focus (JetBrains View Mode)",
         keymap_to_csv, "Export every key binding as mode,keys,command CSV (JetBrains Export Keymap to CSV)",
@@ -2857,6 +2859,7 @@ impl MappableCommand {
         minibuffer_choose_completion, "Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion)",
         minibuffer_complete_history, "Complete the minibuffer input against its history (emacs minibuffer-complete-history)",
         dabbrev_expand, "Expand the word before point from the buffer's other words (emacs dabbrev-expand, JetBrains Cyclic Expand Word)",
+        dabbrev_expand_backward, "Expand the word before point, trying the words after it first (JetBrains Cyclic Expand Word (Backward))",
         dabbrev_completion, "List the buffer words that could expand the word before point (emacs dabbrev-completion)",
         copy_reference, "Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference)",
         error_description, "Show the full text of the diagnostic under the cursor (JetBrains Error Description)",
@@ -14872,7 +14875,7 @@ fn searcher(cx: &mut Context, direction: Direction) {
                     let (_, offset) = split_search_offset(input);
                     apply_search_offset(cx.editor, offset, mat);
                 }
-            } else if event == PromptEvent::Update {
+            } else if event == PromptEvent::Update && cx.editor.search_preview {
                 search_impl(
                     cx.editor,
                     &regex,
@@ -14885,6 +14888,29 @@ fn searcher(cx: &mut Context, direction: Direction) {
             }
         },
     );
+}
+
+/// JetBrains "Scroll to Results During Typing"
+/// (`ToggleScrollToResultsDuringTypingAction`).
+fn toggle_search_preview(cx: &mut Context) {
+    cx.editor.search_preview = !cx.editor.search_preview;
+    let on = cx.editor.search_preview;
+    cx.editor.set_status(if on {
+        "search: moves to the match while typing"
+    } else {
+        "search: moves on Enter only"
+    });
+}
+
+/// JetBrains "Toggle Popup Hints for Current File" (`TogglePopupHints`):
+/// signature-help popups on or off.
+fn toggle_popup_hints(cx: &mut Context) {
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    typed::run_command_line(&mut bridge, "toggle-option lsp.auto-signature-help");
 }
 
 /// Split a vim search input into `(pattern, offset)`: the offset is everything
@@ -72302,6 +72328,13 @@ fn dabbrev_word_char(c: char) -> bool {
 /// `cursor`, then nearest-first going forward. The word *containing* the cursor
 /// is the prefix being expanded, so it never suggests itself.
 fn dabbrev_candidates(text: &str, prefix: &str, cursor: usize) -> Vec<String> {
+    dabbrev_candidates_ordered(text, prefix, cursor, false)
+}
+
+/// [`dabbrev_candidates`], with the words after the cursor first when
+/// `forward_first` — the order JetBrains' "Cyclic Expand Word (Backward)"
+/// offers them in. Each side is still nearest-first. Pure — unit tested.
+fn dabbrev_candidates_ordered(text: &str, prefix: &str, cursor: usize, forward_first: bool) -> Vec<String> {
     if prefix.is_empty() {
         return Vec::new();
     }
@@ -72337,8 +72370,9 @@ fn dabbrev_candidates(text: &str, prefix: &str, cursor: usize) -> Vec<String> {
         }
     }
     before.reverse(); // nearest match behind point first
+    let (first, second) = if forward_first { (after, before) } else { (before, after) };
     let mut out: Vec<String> = Vec::new();
-    for w in before.into_iter().chain(after) {
+    for w in first.into_iter().chain(second) {
         let w = w.to_string();
         if !out.contains(&w) {
             out.push(w);
@@ -72366,6 +72400,16 @@ fn replace_range_at_cursor(cx: &mut Context, start: usize, end: usize, text: &st
 /// Invoking it again immediately after (point still sitting at the end of the
 /// expansion) swaps in the next candidate, cycling back to the first.
 fn dabbrev_expand(cx: &mut Context) {
+    dabbrev_expand_impl(cx, false)
+}
+
+/// JetBrains "Cyclic Expand Word (Backward)" (`HippieBackwardCompletion`): the
+/// same expansion, offering the candidates in the opposite order.
+fn dabbrev_expand_backward(cx: &mut Context) {
+    dabbrev_expand_impl(cx, true)
+}
+
+fn dabbrev_expand_impl(cx: &mut Context, backward: bool) {
     let (doc_id, cursor, text) = {
         let (view, doc) = current_ref!(cx.editor);
         let slice = doc.text().slice(..);
@@ -72419,7 +72463,7 @@ fn dabbrev_expand(cx: &mut Context) {
         cx.editor.set_error("dabbrev: no word before point");
         return;
     }
-    let candidates = dabbrev_candidates(&text, &prefix, byte_cursor);
+    let candidates = dabbrev_candidates_ordered(&text, &prefix, byte_cursor, backward);
     let Some(first) = candidates.first().cloned() else {
         cx.editor
             .set_error(format!("dabbrev: no expansion for `{prefix}`"));
@@ -87828,6 +87872,11 @@ Content-Type: application/json
             got,
             vec!["value_two", "value_one", "value_three", "value_four"],
             "backward matches (nearest first), then forward matches"
+        );
+        // Cyclic Expand Word (Backward): the forward side first, still nearest-first.
+        assert_eq!(
+            super::dabbrev_candidates_ordered(text, "value_", cursor, true),
+            vec!["value_three", "value_four", "value_two", "value_one"]
         );
     }
 
