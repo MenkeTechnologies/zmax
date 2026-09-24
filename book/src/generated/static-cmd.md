@@ -962,6 +962,15 @@
 | `git_reset_to_commit` | Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here) |  |
 | `git_revert_commit` | Commit the inverse of a picked commit (JetBrains Revert Commit) |  |
 | `git_push_up_to_commit` | Push the current branch only up to a picked commit (JetBrains Push All up to Here) |  |
+| `vcs_get_version` | Replace this file with its content at a revision (JetBrains Get) |  |
+| `git_annotate_at_commit` | Blame this file as it stood at a picked commit (JetBrains Annotate) |  |
+| `git_diff_before_with_local` | Diff the version before a picked commit with this file (JetBrains Compare Before with Local) |  |
+| `git_compare_commits` | Diff two picked commits (JetBrains Compare Versions) |  |
+| `commit_message_history` | Insert a recent commit message at the cursor (JetBrains Commit Message History) |  |
+| `git_run_commit_checks` | Run the pre-commit hook without committing (JetBrains Run Commit Checks) |  |
+| `git_remove_deleted` | Stage the removal of tracked files already deleted from disk (JetBrains Remove from VCS) |  |
+| `show_change_under_caret` | Show the change on this line with the text it replaced (JetBrains Change Under Caret) |  |
+| `show_diff_for_lines` | Diff of the changes the selected lines take part in (JetBrains Show Diff for Lines) |  |
 | `git_acp` | Stage all, commit, and push in one shot (C-x v c) | **spacemacs** — normal: `` <C-x>vc ``, select: `` <C-x>vc ``, insert: `` <C-x>vc ``<br>**hybrid** — normal: `` <C-x>vc ``, select: `` <C-x>vc `` |
 | `vc_print_log` | VC log for the current file (emacs vc-print-log) | **spacemacs** — normal: `` <C-x>vl ``, select: `` <C-x>vl ``, insert: `` <C-x>vl ``<br>**hybrid** — normal: `` <C-x>vl ``, select: `` <C-x>vl `` |
 | `vc_print_root_log` | VC log for the whole repository (emacs vc-print-root-log) | **spacemacs** — normal: `` <C-x>vL ``, select: `` <C-x>vL ``, insert: `` <C-x>vL ``<br>**hybrid** — normal: `` <C-x>vL ``, select: `` <C-x>vL `` |

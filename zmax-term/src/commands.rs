@@ -1353,6 +1353,15 @@ impl MappableCommand {
         git_reset_to_commit, "Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)",
         git_revert_commit, "Commit the inverse of a picked commit (JetBrains Revert Commit)",
         git_push_up_to_commit, "Push the current branch only up to a picked commit (JetBrains Push All up to Here)",
+        vcs_get_version, "Replace this file with its content at a revision (JetBrains Get)",
+        git_annotate_at_commit, "Blame this file as it stood at a picked commit (JetBrains Annotate)",
+        git_diff_before_with_local, "Diff the version before a picked commit with this file (JetBrains Compare Before with Local)",
+        git_compare_commits, "Diff two picked commits (JetBrains Compare Versions)",
+        commit_message_history, "Insert a recent commit message at the cursor (JetBrains Commit Message History)",
+        git_run_commit_checks, "Run the pre-commit hook without committing (JetBrains Run Commit Checks)",
+        git_remove_deleted, "Stage the removal of tracked files already deleted from disk (JetBrains Remove from VCS)",
+        show_change_under_caret, "Show the change on this line with the text it replaced (JetBrains Change Under Caret)",
+        show_diff_for_lines, "Diff of the changes the selected lines take part in (JetBrains Show Diff for Lines)",
         git_acp, "Stage all, commit, and push in one shot (C-x v c)",
         vc_print_log, "VC log for the current file (emacs vc-print-log)",
         vc_print_root_log, "VC log for the whole repository (emacs vc-print-root-log)",
@@ -38497,6 +38506,123 @@ fn goto_first_change_impl(cx: &mut Context, reverse: bool) {
     }
 }
 
+/// A hunk as unified-diff text: its `@@` header, the lines it removes from
+/// `base`, then the lines it puts in `doc`. Unit tested.
+fn render_hunk(base: RopeSlice, doc: RopeSlice, hunk: &Hunk) -> String {
+    let mut out = format!(
+        "@@ -{},{} +{},{} @@\n",
+        hunk.before.start + 1,
+        hunk.before.len(),
+        hunk.after.start + 1,
+        hunk.after.len()
+    );
+    let mut push = |sign: char, line: RopeSlice| {
+        out.push(sign);
+        out.push_str(line.to_string().trim_end_matches(['\n', '\r']));
+        out.push('\n');
+    };
+    for line in hunk.before.clone() {
+        push('-', base.line(line as usize));
+    }
+    for line in hunk.after.clone() {
+        push('+', doc.line(line as usize));
+    }
+    out
+}
+
+#[cfg(test)]
+mod render_hunk_tests {
+    use super::{render_hunk, Hunk};
+    use zmax_core::Rope;
+
+    #[test]
+    fn removed_then_added_lines_under_a_one_based_header() {
+        let base = Rope::from("a\nold\nc\n");
+        let doc = Rope::from("a\nnew\nnewer\nc\n");
+        let hunk = Hunk {
+            before: 1..2,
+            after: 1..3,
+        };
+        assert_eq!(
+            "@@ -2,1 +2,2 @@\n-old\n+new\n+newer\n",
+            render_hunk(base.slice(..), doc.slice(..), &hunk)
+        );
+    }
+
+    #[test]
+    fn a_pure_insertion_has_no_removed_lines() {
+        let base = Rope::from("a\n");
+        let doc = Rope::from("a\nb\n");
+        let hunk = Hunk {
+            before: 1..1,
+            after: 1..2,
+        };
+        assert_eq!(
+            "@@ -2,0 +2,1 @@\n+b\n",
+            render_hunk(base.slice(..), doc.slice(..), &hunk)
+        );
+    }
+}
+
+/// JetBrains "Change Under Caret" (`VcsShowCurrentChangeMarker`): the change
+/// the gutter marks on this line, with the text it replaced, in a popup.
+fn show_change_under_caret(cx: &mut Context) {
+    let body = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+        match doc.diff_handle() {
+            None => Err("This file has no version-control diff"),
+            Some(handle) => {
+                let diff = handle.load();
+                match diff.hunk_at(line as u32, true) {
+                    None => Err("No change on this line"),
+                    Some(index) => Ok(render_hunk(
+                        diff.diff_base().slice(..),
+                        text,
+                        &diff.nth_hunk(index),
+                    )),
+                }
+            }
+        }
+    };
+    match body {
+        Ok(body) => {
+            let popup = ui::Popup::new("change-under-caret", ui::Text::new(body));
+            cx.replace_or_push_layer("change-under-caret", popup);
+        }
+        Err(msg) => cx.editor.set_status(msg),
+    }
+}
+
+/// JetBrains "Show Diff for Lines" (`Vcs.ShowDiffChangedLines`): the changes
+/// the selected lines take part in, against the version the gutter compares
+/// with.
+fn show_diff_for_lines(cx: &mut Context) {
+    let body = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        doc.diff_handle().map(|handle| {
+            let diff = handle.load();
+            let base = diff.diff_base().slice(..);
+            let hunks: String = diff
+                .hunks_intersecting_line_ranges(doc.selection(view.id).line_ranges(text))
+                .map(|hunk| render_hunk(base, text, hunk))
+                .collect();
+            let header = doc
+                .path()
+                .map(|p| format!("--- {0}\n+++ {0}\n", p.display()))
+                .unwrap_or_default();
+            (!hunks.is_empty()).then(|| format!("{header}{hunks}"))
+        })
+    };
+    match body {
+        None => cx.editor.set_status("This file has no version-control diff"),
+        Some(None) => cx.editor.set_status("The selected lines are unchanged"),
+        Some(Some(body)) => show_text_in_scratch(cx.editor, &body),
+    }
+}
+
 /// True if a line begins with a git merge-conflict marker.
 fn is_conflict_marker(line: RopeSlice) -> bool {
     let prefix: String = line.chars().take(7).collect();
@@ -71816,6 +71942,142 @@ fn git_revert_commit(cx: &mut Context) {
     git_pick_commit(cx, "revert", |cx, sha| {
         git_run_cx(cx, &["revert", "--no-edit", sha], &format!("Reverted {sha}"), true)
     });
+}
+
+/// JetBrains "Get" (`Vcs.GetVersion`): replace this file in the working tree
+/// with its content at a revision.
+fn vcs_get_version(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    prompt_then(cx, "get revision: ", move |cx, rev| {
+        git_run_cx(cx, &["checkout", rev, "--", &rel], &format!("{rel} is now at {rev}"), true)
+    });
+}
+
+/// Pick a commit that touched `rel`; `on_pick` gets its hash.
+fn git_pick_file_commit<F>(cx: &mut Context, header: &'static str, rel: String, on_pick: F)
+where
+    F: Fn(&mut crate::compositor::Context, &str, &str) + 'static,
+{
+    let commits = git_lines(&["log", "--format=%h %s", "-500", "--", &rel]);
+    git_pick(cx, header, commits, "No commits touch this file", move |cx, line| {
+        on_pick(cx, line.split(' ').next().unwrap_or(line), &rel)
+    });
+}
+
+/// JetBrains "Annotate" on a log revision (`Vcs.Log.AnnotateRevisionAction`):
+/// blame this file as it stood at a picked commit.
+fn git_annotate_at_commit(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_pick_file_commit(cx, "annotate at", rel, |cx, sha, rel| {
+        git_output_to_scratch_cx(cx, &["blame", sha, "--", rel], "Nothing to annotate")
+    });
+}
+
+/// JetBrains "Compare Before with Local" (`Vcs.ShowDiffWithLocal.Before`):
+/// diff the version before a picked commit with the working-tree file.
+fn git_diff_before_with_local(cx: &mut Context) {
+    let Some(rel) = git_rel_path(cx) else {
+        return;
+    };
+    git_pick_file_commit(cx, "compare before", rel, |cx, sha, rel| {
+        git_output_to_scratch_cx(
+            cx,
+            &["diff", &format!("{sha}^"), "--", rel],
+            "The file is the same as before that commit",
+        )
+    });
+}
+
+/// JetBrains "Compare Versions" (`Vcs.Log.CompareRevisions`): diff two picked
+/// commits.
+fn git_compare_commits(cx: &mut Context) {
+    git_pick_commit(cx, "compare from", |cx, older| {
+        let older = older.to_string();
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let commits = git_lines(&["log", "--format=%h %s", "-500"]);
+                let columns = [PickerColumn::new("compare to", |c: &String, _: &()| {
+                    c.as_str().into()
+                })];
+                let older = older.clone();
+                let picker = Picker::new(columns, 0, commits, (), move |cx, line: &String, _| {
+                    let newer = line.split(' ').next().unwrap_or(line);
+                    git_output_to_scratch_cx(
+                        cx,
+                        &["diff", &older, newer],
+                        "The two versions are identical",
+                    )
+                });
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+/// JetBrains "Commit Message History" (`Vcs.ShowMessageHistory`): pick one of
+/// the repository's recent commit messages and insert it at the cursor.
+fn commit_message_history(cx: &mut Context) {
+    let messages: Vec<String> = git_exec(&["log", "-200", "--format=%x1e%B"])
+        .unwrap_or_default()
+        .split('\u{1e}')
+        .map(|m| m.trim().to_string())
+        .filter(|m| !m.is_empty())
+        .collect();
+    if messages.is_empty() {
+        cx.editor.set_status("No commit messages");
+        return;
+    }
+    let columns = [PickerColumn::new("message", |m: &String, _: &()| {
+        m.lines().next().unwrap_or("").into()
+    })];
+    let picker = Picker::new(columns, 0, messages, (), |cx, message: &String, _| {
+        let (view, doc) = current!(cx.editor);
+        let transaction = Transaction::insert(
+            doc.text(),
+            doc.selection(view.id),
+            message.as_str().into(),
+        );
+        doc.apply(&transaction, view.id);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Run Commit Checks" (`Vcs.RunCommitChecks`): run the repository's
+/// pre-commit hook against what is staged, without committing.
+fn git_run_commit_checks(cx: &mut Context) {
+    git_async_args(
+        cx,
+        "running commit checks…",
+        &["hook", "run", "--ignore-missing", "pre-commit"],
+        "commit checks passed",
+        false,
+    )
+}
+
+/// JetBrains "Remove from VCS" for deleted files (`ChangesView.RemoveDeleted`):
+/// stage the removal of every tracked file already gone from disk.
+fn git_remove_deleted(cx: &mut Context) {
+    let deleted = git_lines(&["ls-files", "--deleted"]);
+    if deleted.is_empty() {
+        cx.editor.set_status("No deleted files to remove");
+        return;
+    }
+    let mut args = vec!["rm", "--cached", "--quiet", "--"];
+    args.extend(deleted.iter().map(String::as_str));
+    match git_exec(&args) {
+        Ok(_) => cx
+            .editor
+            .set_status(format!("Removed {} deleted file(s) from git", deleted.len())),
+        Err(e) => cx.editor.set_error(format!(
+            "git rm: {}",
+            e.lines().next().unwrap_or("failed")
+        )),
+    }
 }
 
 /// JetBrains "Push All up to Here" (`Git.PushUpToCommit`): push the current

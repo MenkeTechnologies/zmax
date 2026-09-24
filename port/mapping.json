@@ -83538,5 +83538,77 @@
    "static:git_squash_into_commit"
   ],
   "note": "Git.Squash.Into.Commit = zmax `git_squash_into_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.RemoveDeleted",
+  "status": "ported",
+  "evidence": [
+   "static:git_remove_deleted"
+  ],
+  "note": "ChangesView.RemoveDeleted = zmax `git_remove_deleted`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.GetVersion",
+  "status": "ported",
+  "evidence": [
+   "static:vcs_get_version"
+  ],
+  "note": "Vcs.GetVersion = zmax `vcs_get_version`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.AnnotateRevisionAction",
+  "status": "ported",
+  "evidence": [
+   "static:git_annotate_at_commit"
+  ],
+  "note": "Vcs.Log.AnnotateRevisionAction = zmax `git_annotate_at_commit`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.CompareRevisions",
+  "status": "ported",
+  "evidence": [
+   "static:git_compare_commits"
+  ],
+  "note": "Vcs.Log.CompareRevisions = zmax `git_compare_commits`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.RunCommitChecks",
+  "status": "ported",
+  "evidence": [
+   "static:git_run_commit_checks"
+  ],
+  "note": "Vcs.RunCommitChecks = zmax `git_run_commit_checks`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ShowDiffChangedLines",
+  "status": "ported",
+  "evidence": [
+   "static:show_diff_for_lines"
+  ],
+  "note": "Vcs.ShowDiffChangedLines = zmax `show_diff_for_lines`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ShowDiffWithLocal.Before",
+  "status": "ported",
+  "evidence": [
+   "static:git_diff_before_with_local"
+  ],
+  "note": "Vcs.ShowDiffWithLocal.Before = zmax `git_diff_before_with_local`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ShowMessageHistory",
+  "status": "ported",
+  "evidence": [
+   "static:commit_message_history"
+  ],
+  "note": "Vcs.ShowMessageHistory = zmax `commit_message_history`; revisions the IDE takes from a list selection come from a picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.VcsShowCurrentChangeMarker",
+  "status": "ported",
+  "evidence": [
+   "static:show_change_under_caret"
+  ],
+  "note": "VcsShowCurrentChangeMarker = zmax `show_change_under_caret`; revisions the IDE takes from a list selection come from a picker."
  }
 ]
