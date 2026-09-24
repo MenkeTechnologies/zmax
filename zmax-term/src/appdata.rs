@@ -48,6 +48,7 @@ pub struct BreakpointData {
     pub condition: Option<String>,
     pub hit_condition: Option<String>,
     pub log_message: Option<String>,
+    pub disabled: bool,
 }
 
 /// All breakpoints set in one file.

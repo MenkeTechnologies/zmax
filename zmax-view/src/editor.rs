@@ -1606,6 +1606,9 @@ pub struct Breakpoint {
     pub condition: Option<String>,
     pub hit_condition: Option<String>,
     pub log_message: Option<String>,
+    /// JetBrains "Enable/Disable Breakpoint": a disabled breakpoint keeps its
+    /// place and settings but is not sent to the debug adapter.
+    pub disabled: bool,
 }
 
 use futures_util::stream::{Flatten, Once};

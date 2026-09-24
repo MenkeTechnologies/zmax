@@ -256,3 +256,47 @@ async fn md_heading_up_removes_a_hash() -> anyhow::Result<()> {
     )
     .await
 }
+
+/// Breakpoints on this buffer's file, as `(line, disabled)`.
+fn breakpoints(app: &Application) -> Vec<(usize, bool)> {
+    let doc = app.editor.documents().next().unwrap();
+    let path = doc.path().unwrap();
+    app.editor
+        .breakpoints
+        .get(path)
+        .map(|bs| bs.iter().map(|b| (b.line, b.disabled)).collect())
+        .unwrap_or_default()
+}
+
+/// Disabling keeps a breakpoint in place; removing every breakpoint in the
+/// file and restoring brings back the last one removed, disabled as it was.
+#[tokio::test(flavor = "multi_thread")]
+async fn breakpoints_disable_remove_and_restore() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".txt").tempfile()?;
+    std::fs::write(file.path(), "a\nb\nc\n")?;
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => dap_toggle_breakpoint,
+            "Q" => dap_toggle_breakpoint_enabled,
+            "M" => dap_remove_breakpoints_in_file,
+            "R" => dap_restore_breakpoint,
+        }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("ZjZQ"), Some(&|app| assert_eq!(vec![(0, false), (1, true)], breakpoints(app)))),
+            (Some("M"), Some(&|app| assert_eq!(Vec::<(usize, bool)>::new(), breakpoints(app)))),
+            (Some("R"), Some(&|app| assert_eq!(vec![(1, true)], breakpoints(app)))),
+        ],
+        false,
+    )
+    .await
+}

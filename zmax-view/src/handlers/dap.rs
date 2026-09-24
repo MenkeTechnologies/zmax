@@ -166,11 +166,22 @@ pub fn clear_temporary_breakpoint(editor: &mut Editor, id: dap::registry::DebugA
     }
 }
 
+/// JetBrains "Mute Breakpoints": while set, no breakpoint is sent to the debug
+/// adapter, though every one keeps its place and settings.
+pub static BREAKPOINTS_MUTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+pub fn breakpoints_muted() -> bool {
+    BREAKPOINTS_MUTED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 pub fn breakpoints_changed(
     debugger: &mut dap::Client,
     path: PathBuf,
     breakpoints: &mut [Breakpoint],
 ) -> Result<(), anyhow::Error> {
+    let muted = breakpoints_muted();
+    let sent = |breakpoint: &Breakpoint| !muted && !breakpoint.disabled;
     if let Some(caps) = debugger.caps.as_ref() {
         if breakpoints.iter().any(|b| b.condition.is_some())
             && !caps.supports_conditional_breakpoints.unwrap_or_default()
@@ -192,6 +203,7 @@ pub fn breakpoints_changed(
     }
     let source_breakpoints = breakpoints
         .iter()
+        .filter(|breakpoint| sent(breakpoint))
         .map(|breakpoint| zmax_dap::SourceBreakpoint {
             line: breakpoint.line + 1, // convert from 0-indexing to 1-indexing (TODO: could set debugger to 0-indexing on init)
             column: breakpoint.column,
@@ -204,7 +216,9 @@ pub fn breakpoints_changed(
     let request = debugger.set_breakpoints(path, source_breakpoints);
     match block_on(request) {
         Ok(Some(dap_breakpoints)) => {
-            for (breakpoint, dap_breakpoint) in breakpoints.iter_mut().zip(dap_breakpoints) {
+            // The adapter answers for the breakpoints it was sent, in order.
+            let answered = breakpoints.iter_mut().filter(|breakpoint| sent(breakpoint));
+            for (breakpoint, dap_breakpoint) in answered.zip(dap_breakpoints) {
                 breakpoint.id = dap_breakpoint.id;
                 breakpoint.verified = dap_breakpoint.verified;
                 breakpoint.message = dap_breakpoint.message;

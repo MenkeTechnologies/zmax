@@ -422,7 +422,8 @@ pub fn dap_toggle_breakpoint_impl(cx: &mut Context, path: PathBuf, line: usize) 
         .iter()
         .position(|breakpoint| breakpoint.line == line)
     {
-        breakpoints.remove(pos);
+        let removed = breakpoints.remove(pos);
+        REMOVED_BREAKPOINTS.lock().unwrap().push((path.clone(), removed));
     } else {
         breakpoints.push(Breakpoint {
             line,
@@ -723,6 +724,201 @@ pub fn dap_quick_evaluate(cx: &mut Context) {
     dap_eval_popup(cx, expr);
 }
 
+/// Breakpoints removed by the JetBrains removal commands, newest last, for
+/// "Restore Breakpoint".
+static REMOVED_BREAKPOINTS: std::sync::Mutex<Vec<(PathBuf, Breakpoint)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// Send every file's breakpoints to the active debug adapter again, after a
+/// change that spans files. Without a session the change stays in the model
+/// and goes out when one starts.
+fn resync_all_breakpoints(editor: &mut Editor) {
+    let files: Vec<PathBuf> = editor.breakpoints.keys().cloned().collect();
+    for path in files {
+        let mut breakpoints = editor.breakpoints.get(&path).cloned().unwrap_or_default();
+        let Some(debugger) = editor.debug_adapters.get_active_client_mut() else {
+            return;
+        };
+        if let Err(e) = breakpoints_changed(debugger, path.clone(), &mut breakpoints) {
+            editor.set_error(format!("Failed to set breakpoints: {e}"));
+            return;
+        }
+        editor.breakpoints.insert(path, breakpoints);
+    }
+}
+
+/// The current buffer's path and cursor line, or an error on the status line.
+fn breakpoint_site(editor: &mut Editor) -> Option<(PathBuf, usize)> {
+    let (view, doc) = current!(editor);
+    let line = doc.selection(view.id).primary().cursor_line(doc.text().slice(..));
+    match doc.path() {
+        Some(path) => Some((path.to_owned(), line)),
+        None => {
+            editor.set_error("This buffer has no file");
+            None
+        }
+    }
+}
+
+/// JetBrains "Enable/Disable Breakpoint" (`ToggleBreakpointEnabled`): keep the
+/// breakpoint on this line but stop, or start again, sending it to the adapter.
+pub fn dap_toggle_breakpoint_enabled(cx: &mut Context) {
+    let Some((path, line)) = breakpoint_site(cx.editor) else {
+        return;
+    };
+    let Some(breakpoint) = cx
+        .editor
+        .breakpoints
+        .get_mut(&path)
+        .and_then(|bs| bs.iter_mut().find(|b| b.line == line))
+    else {
+        cx.editor.set_status("No breakpoint on this line");
+        return;
+    };
+    breakpoint.disabled = !breakpoint.disabled;
+    let state = if breakpoint.disabled { "disabled" } else { "enabled" };
+    resync_all_breakpoints(cx.editor);
+    cx.editor.set_status(format!("Breakpoint {state}"));
+}
+
+/// JetBrains "Mute Breakpoints" (`XDebugger.MuteBreakpoints`): run past every
+/// breakpoint without removing any.
+pub fn dap_mute_breakpoints(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let muted = !zmax_view::handlers::dap::BREAKPOINTS_MUTED.fetch_xor(true, Ordering::Relaxed);
+    resync_all_breakpoints(cx.editor);
+    cx.editor
+        .set_status(if muted { "Breakpoints muted" } else { "Breakpoints unmuted" });
+}
+
+/// JetBrains "Disable All Except This" (`XDebugger.DisableAllButThisBreakpoint`).
+pub fn dap_disable_all_but_this(cx: &mut Context) {
+    let Some((here, line)) = breakpoint_site(cx.editor) else {
+        return;
+    };
+    for (path, breakpoints) in cx.editor.breakpoints.iter_mut() {
+        for breakpoint in breakpoints {
+            breakpoint.disabled = !(*path == here && breakpoint.line == line);
+        }
+    }
+    resync_all_breakpoints(cx.editor);
+}
+
+/// Remove the breakpoints `drop` picks, remembering them for Restore
+/// Breakpoint. Returns how many went.
+/// A file left with no breakpoints keeps its (empty) entry, so the resync
+/// still tells the adapter to clear that file.
+fn remove_breakpoints_where(editor: &mut Editor, pick: impl Fn(&PathBuf, &Breakpoint) -> bool) -> usize {
+    let mut removed = REMOVED_BREAKPOINTS.lock().unwrap();
+    let mut count = 0;
+    for (path, breakpoints) in editor.breakpoints.iter_mut() {
+        breakpoints.retain(|breakpoint| {
+            if pick(path, breakpoint) {
+                removed.push((path.clone(), breakpoint.clone()));
+                count += 1;
+                false
+            } else {
+                true
+            }
+        });
+    }
+    count
+}
+
+/// JetBrains "Remove All Except This" (`XDebugger.RemoveAllButThisBreakpoint`).
+pub fn dap_remove_all_but_this(cx: &mut Context) {
+    let Some((here, line)) = breakpoint_site(cx.editor) else {
+        return;
+    };
+    let count = remove_breakpoints_where(cx.editor, |path, b| !(*path == here && b.line == line));
+    resync_all_breakpoints(cx.editor);
+    cx.editor.set_status(format!("Removed {count} breakpoint(s)"));
+}
+
+/// JetBrains "Remove All Breakpoints in the File"
+/// (`Debugger.RemoveAllBreakpointsInFile`).
+pub fn dap_remove_breakpoints_in_file(cx: &mut Context) {
+    let Some((here, _)) = breakpoint_site(cx.editor) else {
+        return;
+    };
+    let count = remove_breakpoints_where(cx.editor, |path, _| *path == here);
+    resync_all_breakpoints(cx.editor);
+    cx.editor.set_status(format!("Removed {count} breakpoint(s)"));
+}
+
+/// JetBrains "Restore Breakpoint" (`Debugger.RestoreBreakpoint`): put back the
+/// breakpoint removed last, with its condition and log message.
+pub fn dap_restore_breakpoint(cx: &mut Context) {
+    let Some((path, breakpoint)) = REMOVED_BREAKPOINTS.lock().unwrap().pop() else {
+        cx.editor.set_status("No removed breakpoint to restore");
+        return;
+    };
+    let line = breakpoint.line;
+    let breakpoints = cx.editor.breakpoints.entry(path.clone()).or_default();
+    if !breakpoints.iter().any(|b| b.line == line) {
+        breakpoints.push(Breakpoint {
+            id: None,
+            verified: false,
+            ..breakpoint
+        });
+    }
+    resync_all_breakpoints(cx.editor);
+    cx.editor
+        .set_status(format!("Restored breakpoint at {}:{}", path.display(), line + 1));
+}
+
+/// Set a breakpoint on this line if there is none.
+fn ensure_breakpoint_here(cx: &mut Context) -> bool {
+    let Some((path, line)) = breakpoint_site(cx.editor) else {
+        return false;
+    };
+    let breakpoints = cx.editor.breakpoints.entry(path).or_default();
+    if !breakpoints.iter().any(|b| b.line == line) {
+        breakpoints.push(Breakpoint {
+            line,
+            ..Default::default()
+        });
+    }
+    true
+}
+
+/// JetBrains "Add Conditional Breakpoint" (`AddConditionalBreakpoint`): a
+/// breakpoint on this line, then its condition.
+pub fn dap_add_conditional_breakpoint(cx: &mut Context) {
+    if ensure_breakpoint_here(cx) {
+        dap_edit_condition(cx);
+    }
+}
+
+/// JetBrains "Add Logging Breakpoint" (`AddLoggingBreakpoint`): a breakpoint on
+/// this line, then the message it logs.
+pub fn dap_add_log_breakpoint(cx: &mut Context) {
+    if ensure_breakpoint_here(cx) {
+        dap_edit_log(cx);
+    }
+}
+
+/// JetBrains "Copy Stack" (`Debugger.CopyStack`): the stopped thread's frames,
+/// one per line, to the clipboard.
+pub fn dap_copy_stack(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+    let Some(thread_id) = debugger.thread_id else {
+        cx.editor.set_status("No stopped thread");
+        return;
+    };
+    let rows = stack_rows(debugger, thread_id);
+    let stack: String = rows
+        .iter()
+        .map(|row| match &row.location {
+            Some(location) => format!("{} ({location})\n", row.name),
+            None => format!("{}\n", row.name),
+        })
+        .collect();
+    let count = rows.len();
+    let _ = cx.editor.registers.write('+', vec![stack]);
+    cx.editor.set_status(format!("Copied {count} frame(s)"));
+}
+
 /// Emacs `gud-remove` (`C-x C-a C-d`): sends `clear %f:%l`, an unconditional
 /// remove. Unlike `dap_toggle_breakpoint` this never sets a breakpoint, so on a
 /// line that has none it is a no-op.
@@ -749,7 +945,8 @@ pub fn dap_remove_breakpoint_impl(cx: &mut Context, path: PathBuf, line: usize) 
         // `clear` on a line without a breakpoint changes nothing.
         return;
     };
-    breakpoints.remove(pos);
+    let removed = breakpoints.remove(pos);
+    REMOVED_BREAKPOINTS.lock().unwrap().push((path.clone(), removed));
 
     let debugger = debugger!(cx.editor);
 

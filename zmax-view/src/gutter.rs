@@ -8,7 +8,7 @@ use zmax_core::syntax::config::LanguageServerFeature;
 
 use crate::{
     editor::GutterType,
-    graphics::{Style, UnderlineStyle},
+    graphics::{Modifier, Style, UnderlineStyle},
     Document, Editor, Theme, View,
 };
 
@@ -652,6 +652,13 @@ pub fn breakpoints<'doc>(
                 breakpoint_style
             };
 
+            // A disabled or muted breakpoint is drawn dimmed: still there, not
+            // armed.
+            let style = if breakpoint.disabled || crate::handlers::dap::breakpoints_muted() {
+                style.add_modifier(Modifier::DIM)
+            } else {
+                style
+            };
             let sym = if breakpoint.verified { "●" } else { "◯" };
             write!(out, "{}", sym).unwrap();
             Some(style)

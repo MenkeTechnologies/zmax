@@ -83906,5 +83906,77 @@
    "static:md_toggle_strikethrough"
   ],
   "note": "org.intellij.plugins.markdown.ui.actions.styling.ToggleStrikethroughAction = zmax `md_toggle_strikethrough` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.AddConditionalBreakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_add_conditional_breakpoint"
+  ],
+  "note": "AddConditionalBreakpoint = zmax `dap_add_conditional_breakpoint` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.AddLoggingBreakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_add_log_breakpoint"
+  ],
+  "note": "AddLoggingBreakpoint = zmax `dap_add_log_breakpoint` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.CopyStack",
+  "status": "ported",
+  "evidence": [
+   "static:dap_copy_stack"
+  ],
+  "note": "Debugger.CopyStack = zmax `dap_copy_stack` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.RemoveAllBreakpointsInFile",
+  "status": "ported",
+  "evidence": [
+   "static:dap_remove_breakpoints_in_file"
+  ],
+  "note": "Debugger.RemoveAllBreakpointsInFile = zmax `dap_remove_breakpoints_in_file` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.RestoreBreakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_restore_breakpoint"
+  ],
+  "note": "Debugger.RestoreBreakpoint = zmax `dap_restore_breakpoint` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBreakpointEnabled",
+  "status": "ported",
+  "evidence": [
+   "static:dap_toggle_breakpoint_enabled"
+  ],
+  "note": "ToggleBreakpointEnabled = zmax `dap_toggle_breakpoint_enabled` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.DisableAllButThisBreakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_disable_all_but_this"
+  ],
+  "note": "XDebugger.DisableAllButThisBreakpoint = zmax `dap_disable_all_but_this` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.MuteBreakpoints",
+  "status": "ported",
+  "evidence": [
+   "static:dap_mute_breakpoints"
+  ],
+  "note": "XDebugger.MuteBreakpoints = zmax `dap_mute_breakpoints` (zmax-term/src/commands/dap.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.RemoveAllButThisBreakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_remove_all_but_this"
+  ],
+  "note": "XDebugger.RemoveAllButThisBreakpoint = zmax `dap_remove_all_but_this` (zmax-term/src/commands/dap.rs)."
  }
 ]

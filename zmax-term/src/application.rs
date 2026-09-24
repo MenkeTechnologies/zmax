@@ -2698,6 +2698,7 @@ impl Application {
                         condition: b.condition.clone(),
                         hit_condition: b.hit_condition.clone(),
                         log_message: b.log_message.clone(),
+                        disabled: b.disabled,
                     })
                     .collect(),
             })
@@ -2769,6 +2770,7 @@ fn restore_session(appdata: Option<&crate::appdata::AppData>, editor: &mut Edito
                 condition: b.condition.clone(),
                 hit_condition: b.hit_condition.clone(),
                 log_message: b.log_message.clone(),
+                disabled: b.disabled,
             })
             .collect();
         if !bps.is_empty() {
