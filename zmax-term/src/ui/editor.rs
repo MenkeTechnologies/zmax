@@ -714,6 +714,11 @@ impl EditorView {
         self.ide.as_mut().map(|ide| ide.toggle_compact_dirs())
     }
 
+    /// Show, hide or flip the workbench minimap; `None` without a workbench.
+    pub fn set_minimap(&mut self, show: Option<bool>) -> Option<bool> {
+        self.ide.as_mut().map(|ide| ide.set_minimap(show))
+    }
+
     /// Run `f` on the workbench's project tree; `None` without a workbench.
     pub fn with_project_tree<R>(
         &mut self,

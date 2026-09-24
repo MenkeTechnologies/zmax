@@ -2006,6 +2006,9 @@ impl MappableCommand {
         export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
         recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
+        toggle_minimap, "Show or hide the workbench minimap (JetBrains Show Minimap)",
+        enable_minimap, "Show the workbench minimap (JetBrains EnableMinimap)",
+        disable_minimap, "Hide the workbench minimap (JetBrains DisableMinimap)",
         project_tree_collapse_all, "Collapse every directory in the project tree (JetBrains Collapse All)",
         project_tree_expand_all, "Expand every directory in the project tree (JetBrains Expand All)",
         project_tree_expand_node, "Expand the selected project tree directory (JetBrains Expand)",
@@ -54393,6 +54396,34 @@ fn project_tree_action(
         cx.editor
             .set_status(if ran.is_some() { done } else { "no project tree" });
     }));
+}
+
+fn set_minimap(cx: &mut Context, show: Option<bool>) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let shown = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.set_minimap(show));
+        cx.editor.set_status(match shown {
+            Some(true) => "minimap shown",
+            Some(false) => "minimap hidden",
+            None => "no workbench",
+        });
+    }));
+}
+
+/// JetBrains "Show Minimap" (`ToggleMinimap`).
+fn toggle_minimap(cx: &mut Context) {
+    set_minimap(cx, None);
+}
+
+/// JetBrains `EnableMinimap`.
+fn enable_minimap(cx: &mut Context) {
+    set_minimap(cx, Some(true));
+}
+
+/// JetBrains `DisableMinimap`.
+fn disable_minimap(cx: &mut Context) {
+    set_minimap(cx, Some(false));
 }
 
 /// JetBrains "Collapse All" (`CollapseAll`) in the project tree.

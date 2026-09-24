@@ -1022,6 +1022,15 @@ impl Ide {
         self.project = FileTree::new(root);
     }
 
+    /// JetBrains "Show Minimap" (`ToggleMinimap`, `EnableMinimap`,
+    /// `DisableMinimap`): show the minimap stripe, hide it, or flip it when
+    /// `show` is `None`. Returns whether it is shown.
+    pub fn set_minimap(&mut self, show: Option<bool>) -> bool {
+        self.visible = true;
+        self.fold_minimap = !show.unwrap_or(self.fold_minimap);
+        !self.fold_minimap
+    }
+
     /// Toggle a panel's fold state (context-menu "Fold"): project / structure /
     /// problems (bottom drawer) / minimap.
     pub fn toggle_fold_panel(&mut self, which: &str) {

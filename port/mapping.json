@@ -84058,5 +84058,29 @@
    "static:project_tree_expand_all"
   ],
   "note": "TreeExpandAll = zmax `project_tree_expand_all`, acting on the workbench project tree (ui/file_tree.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DisableMinimap",
+  "status": "ported",
+  "evidence": [
+   "static:disable_minimap"
+  ],
+  "note": "DisableMinimap = zmax `disable_minimap`: the workbench minimap stripe (ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EnableMinimap",
+  "status": "ported",
+  "evidence": [
+   "static:enable_minimap"
+  ],
+  "note": "EnableMinimap = zmax `enable_minimap`: the workbench minimap stripe (ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleMinimap",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_minimap"
+  ],
+  "note": "ToggleMinimap = zmax `toggle_minimap`: the workbench minimap stripe (ui/ide.rs)."
  }
 ]
