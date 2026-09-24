@@ -1460,6 +1460,29 @@
 | `to_hex_selection` | Encode the selection as hex bytes |  |
 | `from_hex_selection` | Decode hex bytes in the selection back to text |  |
 | `format_table_selection` | Align the selected markdown table's columns |  |
+| `md_table_insert_row_above` | Insert an empty row above in the markdown table (JetBrains Insert Row Above) |  |
+| `md_table_insert_row_below` | Insert an empty row below in the markdown table (JetBrains Insert Row Below) |  |
+| `md_table_remove_row` | Remove the markdown table row under the cursor (JetBrains Remove Row) |  |
+| `md_table_move_row_up` | Swap the markdown table row with the one above (JetBrains Move Row Up) |  |
+| `md_table_move_row_down` | Swap the markdown table row with the one below (JetBrains Move Row Down) |  |
+| `md_table_insert_column_left` | Insert an empty markdown table column to the left (JetBrains Insert Column Left) |  |
+| `md_table_insert_column_right` | Insert an empty markdown table column to the right (JetBrains Insert Column Right) |  |
+| `md_table_remove_column` | Remove the markdown table column under the cursor (JetBrains Remove Column) |  |
+| `md_table_move_column_left` | Swap the markdown table column with the one to its left (JetBrains Move Column Left) |  |
+| `md_table_move_column_right` | Swap the markdown table column with the one to its right (JetBrains Move Column Right) |  |
+| `md_table_align_left` | Left-align the markdown table column (JetBrains Align Left) |  |
+| `md_table_align_center` | Center the markdown table column (JetBrains Align Center) |  |
+| `md_table_align_right` | Right-align the markdown table column (JetBrains Align Right) |  |
+| `md_table_select_row` | Select the markdown table row (JetBrains Select Row) |  |
+| `md_table_select_column` | Select every content cell of the markdown table column (JetBrains Select Column Cells) |  |
+| `md_insert_table` | Insert an empty markdown table of a given size (JetBrains Insert Table) |  |
+| `md_toggle_bold` | Toggle markdown bold around the selection or word (JetBrains Bold) |  |
+| `md_toggle_italic` | Toggle markdown italic around the selection or word (JetBrains Italic) |  |
+| `md_toggle_code_span` | Toggle a markdown code span around the selection or word (JetBrains Code) |  |
+| `md_toggle_strikethrough` | Toggle markdown strikethrough around the selection or word (JetBrains Strikethrough) |  |
+| `md_heading_up` | One # fewer on the markdown heading (JetBrains Increase Header Level) |  |
+| `md_heading_down` | One # more on the markdown heading (JetBrains Decrease Header Level) |  |
+| `md_set_header_style` | Pick plain text or a heading level for this line (JetBrains Set Header Style) |  |
 | `csv_to_table_selection` | Convert the selected CSV/TSV to a markdown table |  |
 | `table_to_csv_selection` | Convert the selected markdown table to CSV |  |
 | `json_pretty_selection` | Pretty-print the selected JSON (preserves key order) |  |

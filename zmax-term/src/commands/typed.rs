@@ -16627,24 +16627,14 @@ fn code_fence_cmd(
 /// column to its widest cell, and regenerates the `---` separator row to match
 /// (honoring `:` alignment markers — left/right/center). Returns the input
 /// unchanged if the second line isn't a separator row. Pure — unit tested.
-fn format_md_table(s: &str) -> String {
+pub(crate) fn format_md_table(s: &str) -> String {
     let lines: Vec<&str> = s.lines().filter(|l| l.contains('|')).collect();
     if lines.len() < 2 {
         return s.to_string();
     }
-    let split_row = |line: &str| -> Vec<String> {
-        let t = line.trim();
-        let t = t.strip_prefix('|').unwrap_or(t);
-        let t = t.strip_suffix('|').unwrap_or(t);
-        t.split('|').map(|c| c.trim().to_string()).collect()
-    };
-    let rows: Vec<Vec<String>> = lines.iter().map(|l| split_row(l)).collect();
-    let is_sep_cell = |c: &str| {
-        let c = c.trim();
-        c.contains('-') && c.chars().all(|ch| ch == '-' || ch == ':')
-    };
+    let rows: Vec<Vec<String>> = lines.iter().map(|l| crate::md_table::parse_row(l)).collect();
     let sep_idx = 1;
-    if !rows[sep_idx].iter().all(|c| is_sep_cell(c)) {
+    if !crate::md_table::is_separator(&rows[sep_idx]) {
         return s.to_string();
     }
     let ncols = rows.iter().map(|r| r.len()).max().unwrap_or(0);

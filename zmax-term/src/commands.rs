@@ -1851,6 +1851,29 @@ impl MappableCommand {
         to_hex_selection, "Encode the selection as hex bytes",
         from_hex_selection, "Decode hex bytes in the selection back to text",
         format_table_selection, "Align the selected markdown table's columns",
+        md_table_insert_row_above, "Insert an empty row above in the markdown table (JetBrains Insert Row Above)",
+        md_table_insert_row_below, "Insert an empty row below in the markdown table (JetBrains Insert Row Below)",
+        md_table_remove_row, "Remove the markdown table row under the cursor (JetBrains Remove Row)",
+        md_table_move_row_up, "Swap the markdown table row with the one above (JetBrains Move Row Up)",
+        md_table_move_row_down, "Swap the markdown table row with the one below (JetBrains Move Row Down)",
+        md_table_insert_column_left, "Insert an empty markdown table column to the left (JetBrains Insert Column Left)",
+        md_table_insert_column_right, "Insert an empty markdown table column to the right (JetBrains Insert Column Right)",
+        md_table_remove_column, "Remove the markdown table column under the cursor (JetBrains Remove Column)",
+        md_table_move_column_left, "Swap the markdown table column with the one to its left (JetBrains Move Column Left)",
+        md_table_move_column_right, "Swap the markdown table column with the one to its right (JetBrains Move Column Right)",
+        md_table_align_left, "Left-align the markdown table column (JetBrains Align Left)",
+        md_table_align_center, "Center the markdown table column (JetBrains Align Center)",
+        md_table_align_right, "Right-align the markdown table column (JetBrains Align Right)",
+        md_table_select_row, "Select the markdown table row (JetBrains Select Row)",
+        md_table_select_column, "Select every content cell of the markdown table column (JetBrains Select Column Cells)",
+        md_insert_table, "Insert an empty markdown table of a given size (JetBrains Insert Table)",
+        md_toggle_bold, "Toggle markdown bold around the selection or word (JetBrains Bold)",
+        md_toggle_italic, "Toggle markdown italic around the selection or word (JetBrains Italic)",
+        md_toggle_code_span, "Toggle a markdown code span around the selection or word (JetBrains Code)",
+        md_toggle_strikethrough, "Toggle markdown strikethrough around the selection or word (JetBrains Strikethrough)",
+        md_heading_up, "One # fewer on the markdown heading (JetBrains Increase Header Level)",
+        md_heading_down, "One # more on the markdown heading (JetBrains Decrease Header Level)",
+        md_set_header_style, "Pick plain text or a heading level for this line (JetBrains Set Header Style)",
         csv_to_table_selection, "Convert the selected CSV/TSV to a markdown table",
         table_to_csv_selection, "Convert the selected markdown table to CSV",
         json_pretty_selection, "Pretty-print the selected JSON (preserves key order)",
@@ -11731,34 +11754,18 @@ fn from_hex_selection(cx: &mut Context) {
     });
 }
 
-/// Is `cells` a markdown table separator row (e.g. `---`, `:--`, `:-:`)?
-fn is_table_separator(cells: &[String]) -> bool {
-    !cells.is_empty()
-        && cells.iter().all(|c| {
-            let t = c.trim();
-            !t.is_empty() && t.contains('-') && t.chars().all(|ch| ch == '-' || ch == ':')
-        })
-}
+use crate::md_table::{is_separator as is_table_separator, parse_row as parse_table_row};
 
 /// Re-align a markdown pipe table: pad every column to its widest cell, normalize
 /// the `| a | b |` spacing, and rebuild the separator row to match (preserving
 /// alignment colons). Left-aligns data cells. Pure — unit tested.
-fn format_markdown_table(block: &str) -> String {
+pub(crate) fn format_markdown_table(block: &str) -> String {
     let had_trailing = block.ends_with('\n');
     let mut lines: Vec<&str> = block.split('\n').collect();
     if had_trailing {
         lines.pop();
     }
-    // Parse each row into trimmed cells, dropping the empty edges from outer pipes.
-    let rows: Vec<Vec<String>> = lines
-        .iter()
-        .map(|line| {
-            let t = line.trim();
-            let t = t.strip_prefix('|').unwrap_or(t);
-            let t = t.strip_suffix('|').unwrap_or(t);
-            t.split('|').map(|c| c.trim().to_string()).collect()
-        })
-        .collect();
+    let rows: Vec<Vec<String>> = lines.iter().map(|line| parse_table_row(line)).collect();
     let ncol = rows.iter().map(|r| r.len()).max().unwrap_or(0);
     if ncol == 0 {
         return block.to_string();
@@ -11804,6 +11811,360 @@ fn format_markdown_table(block: &str) -> String {
         format!("{out}\n")
     } else {
         out
+    }
+}
+
+/// The markdown table under the cursor, with the cursor's row and column in
+/// it. `None` when the cursor is not on a table line.
+fn md_table_at_cursor(doc: &Document, view: &View) -> Option<(crate::md_table::Table, usize, usize)> {
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let line = text.char_to_line(cursor);
+    let line_text = |i: usize| text.line(i).to_string().trim_end_matches(['\n', '\r']).to_string();
+    let is_row = |i: usize| line_text(i).trim_start().starts_with('|');
+    if !is_row(line) {
+        return None;
+    }
+    let first = (0..=line).rev().take_while(|&i| is_row(i)).last()?;
+    let last = (line..text.len_lines()).take_while(|&i| is_row(i)).last()?;
+    let lines: Vec<String> = (first..=last).map(line_text).collect();
+    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+    let mut table = crate::md_table::find(&refs, line - first)?;
+    table.first_line = first;
+    let column = crate::md_table::column_at(&lines[line - first], cursor - text.line_to_char(line));
+    Some((table, line - first, column))
+}
+
+/// Edit the markdown table under the cursor: `edit` gets the table and the
+/// cursor's row and column, changes the table and returns the cell the cursor
+/// should end in, or `None` when the edit does not apply there. The table is
+/// written back aligned by `format_md_table`, which pads each column by its
+/// alignment.
+fn md_table_edit(
+    cx: &mut Context,
+    edit: impl FnOnce(&mut crate::md_table::Table, usize, usize) -> Option<(usize, usize)>,
+) {
+    let (view, doc) = current!(cx.editor);
+    let Some((mut table, row, column)) = md_table_at_cursor(doc, view) else {
+        cx.editor.set_status("Not in a markdown table");
+        return;
+    };
+    let old_rows = table.rows.len();
+    let Some((row, column)) = edit(&mut table, row, column) else {
+        cx.editor.set_status("Not possible here");
+        return;
+    };
+    let rendered = typed::format_md_table(&table.to_text());
+    let text = doc.text();
+    let start = text.line_to_char(table.first_line);
+    let end = line_end_char_index(&text.slice(..), table.first_line + old_rows - 1);
+    let lines: Vec<&str> = rendered.lines().collect();
+    let row = row.min(lines.len().saturating_sub(1));
+    let before: usize = lines[..row].iter().map(|l| l.chars().count() + 1).sum();
+    let cursor = start + before + crate::md_table::cell_offset(lines[row], column);
+    let transaction = Transaction::change(text, std::iter::once((start, end, Some(rendered.as_str().into()))))
+        .with_selection(Selection::point(cursor));
+    doc.apply(&transaction, view.id);
+}
+
+/// JetBrains "Insert Row Above" in a markdown table.
+fn md_table_insert_row_above(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| Some((t.insert_row(row), column)));
+}
+
+/// JetBrains "Insert Row Below" in a markdown table.
+fn md_table_insert_row_below(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| Some((t.insert_row(row + 1), column)));
+}
+
+/// JetBrains "Remove Row" in a markdown table. The separator row stays.
+fn md_table_remove_row(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| t.remove_row(row).then_some((row, column)));
+}
+
+/// JetBrains "Move Row Up" in a markdown table.
+fn md_table_move_row_up(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| t.move_row(row, false).map(|to| (to, column)));
+}
+
+/// JetBrains "Move Row Down" in a markdown table.
+fn md_table_move_row_down(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| t.move_row(row, true).map(|to| (to, column)));
+}
+
+/// JetBrains "Insert Column Left" in a markdown table.
+fn md_table_insert_column_left(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| {
+        t.insert_column(column);
+        Some((row, column))
+    });
+}
+
+/// JetBrains "Insert Column Right" in a markdown table.
+fn md_table_insert_column_right(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| {
+        t.insert_column(column + 1);
+        Some((row, column + 1))
+    });
+}
+
+/// JetBrains "Remove Column" in a markdown table. The last column stays.
+fn md_table_remove_column(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| {
+        t.remove_column(column)
+            .then(|| (row, column.min(t.columns().saturating_sub(1))))
+    });
+}
+
+/// JetBrains "Move Column Left" in a markdown table.
+fn md_table_move_column_left(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| t.move_column(column, false).map(|to| (row, to)));
+}
+
+/// JetBrains "Move Column Right" in a markdown table.
+fn md_table_move_column_right(cx: &mut Context) {
+    md_table_edit(cx, |t, row, column| t.move_column(column, true).map(|to| (row, to)));
+}
+
+fn md_table_align(cx: &mut Context, align: crate::md_table::Align) {
+    md_table_edit(cx, |t, row, column| t.set_alignment(column, align).then_some((row, column)));
+}
+
+/// JetBrains "Align Left" for a markdown table column.
+fn md_table_align_left(cx: &mut Context) {
+    md_table_align(cx, crate::md_table::Align::Left);
+}
+
+/// JetBrains "Align Center" for a markdown table column.
+fn md_table_align_center(cx: &mut Context) {
+    md_table_align(cx, crate::md_table::Align::Center);
+}
+
+/// JetBrains "Align Right" for a markdown table column.
+fn md_table_align_right(cx: &mut Context) {
+    md_table_align(cx, crate::md_table::Align::Right);
+}
+
+/// JetBrains "Select Row" in a markdown table: the row's whole line.
+fn md_table_select_row(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some((table, row, _)) = md_table_at_cursor(doc, view) else {
+        cx.editor.set_status("Not in a markdown table");
+        return;
+    };
+    let text = doc.text().slice(..);
+    let line = table.first_line + row;
+    let range = Range::new(text.line_to_char(line), line_end_char_index(&text, line));
+    doc.set_selection(view.id, Selection::single(range.anchor, range.head));
+}
+
+/// JetBrains "Select Column Cells" in a markdown table: one selection per
+/// content cell of the column, the header and the separator row left out.
+fn md_table_select_column(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some((table, _, column)) = md_table_at_cursor(doc, view) else {
+        cx.editor.set_status("Not in a markdown table");
+        return;
+    };
+    let text = doc.text().slice(..);
+    let first_body = table
+        .rows
+        .iter()
+        .position(|r| crate::md_table::is_separator(r))
+        .map_or(0, |sep| sep + 1);
+    let ranges: SmallVec<[Range; 1]> = (first_body..table.rows.len())
+        .filter_map(|row| {
+            let line = table.first_line + row;
+            let line_text = text.line(line).to_string();
+            let pipes: Vec<usize> = line_text
+                .chars()
+                .enumerate()
+                .filter(|&(_, c)| c == '|')
+                .map(|(i, _)| i)
+                .collect();
+            let (open, close) = (*pipes.get(column)?, *pipes.get(column + 1)?);
+            let cell: String = line_text.chars().skip(open + 1).take(close - open - 1).collect();
+            let lead = cell.chars().take_while(|c| c.is_whitespace()).count();
+            let width = cell.trim().chars().count();
+            let from = text.line_to_char(line) + open + 1 + lead;
+            Some(Range::new(from, from + width.max(1)))
+        })
+        .collect();
+    if ranges.is_empty() {
+        cx.editor.set_status("The column has no content cells");
+        return;
+    }
+    doc.set_selection(view.id, Selection::new(ranges, 0));
+}
+
+/// JetBrains "Insert Table" (`Markdown.InsertEmptyTable`): an empty table,
+/// `COLUMNSxROWS` body rows, at the cursor's line.
+fn md_insert_table(cx: &mut Context) {
+    prompt_then(cx, "table size (columns x rows): ", |cx, size| {
+        let mut parts = size.split(['x', 'X', '*', ' ']).filter(|p| !p.is_empty());
+        let columns = parts.next().and_then(|c| c.parse::<usize>().ok()).unwrap_or(2);
+        let rows = parts.next().and_then(|r| r.parse::<usize>().ok()).unwrap_or(2);
+        let table = typed::format_md_table(&crate::md_table::empty(columns, rows).to_text());
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let line = text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..)));
+        let at = text.line_to_char(line);
+        let insert = format!("{table}{}", doc.line_ending.as_str());
+        let transaction = Transaction::insert(text, &Selection::point(at), insert.as_str().into())
+            .with_selection(Selection::point(at + 2));
+        doc.apply(&transaction, view.id);
+    });
+}
+
+/// Toggle `marker` around each selection, or around the word under a cursor:
+/// JetBrains' markdown Bold / Italic / Code / Strikethrough. A selection that
+/// is already wrapped, inside or just outside, loses the marker.
+fn md_toggle_wrap(cx: &mut Context, marker: &str) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let width = marker.chars().count();
+    let changes: Vec<_> = doc
+        .selection(view.id)
+        .iter()
+        .map(|range| {
+            let range = if range.len() <= 1 {
+                textobject::textobject_word(text, *range, textobject::TextObject::Inside, 1, false)
+            } else {
+                *range
+            };
+            let (from, to) = (range.from(), range.to());
+            let inner: String = text.slice(from..to).into();
+            let before: String = text.slice(from.saturating_sub(width)..from).into();
+            let after: String = text.slice(to..(to + width).min(text.len_chars())).into();
+            if inner.len() >= 2 * marker.len() && inner.starts_with(marker) && inner.ends_with(marker) {
+                let unwrapped = &inner[marker.len()..inner.len() - marker.len()];
+                (from, to, Some(unwrapped.into()))
+            } else if before == marker && after == marker {
+                (from - width, to + width, Some(inner.into()))
+            } else {
+                (from, to, Some(format!("{marker}{inner}{marker}").into()))
+            }
+        })
+        .collect();
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+}
+
+/// JetBrains markdown "Bold" (`ToggleBoldAction`).
+fn md_toggle_bold(cx: &mut Context) {
+    md_toggle_wrap(cx, "**");
+}
+
+/// JetBrains markdown "Italic" (`ToggleItalicAction`).
+fn md_toggle_italic(cx: &mut Context) {
+    md_toggle_wrap(cx, "_");
+}
+
+/// JetBrains markdown "Code" (`ToggleCodeSpanAction`).
+fn md_toggle_code_span(cx: &mut Context) {
+    md_toggle_wrap(cx, "`");
+}
+
+/// JetBrains markdown "Strikethrough" (`ToggleStrikethroughAction`).
+fn md_toggle_strikethrough(cx: &mut Context) {
+    md_toggle_wrap(cx, "~~");
+}
+
+/// The ATX heading level of a line: the `#`s before a space or the line end.
+/// 0 for a line that is not a heading. Unit tested.
+fn md_heading_level(line: &str) -> usize {
+    let hashes = line.chars().take_while(|&c| c == '#').count();
+    let rest = &line[hashes..];
+    if (1..=6).contains(&hashes) && (rest.is_empty() || rest.starts_with([' ', '\t', '\n', '\r'])) {
+        hashes
+    } else {
+        0
+    }
+}
+
+/// `line` as a heading of `level` (0: plain text). Unit tested.
+fn md_with_heading_level(line: &str, level: usize) -> String {
+    let current = md_heading_level(line);
+    let body = line[current..].trim_start_matches([' ', '\t']);
+    if level == 0 {
+        body.to_string()
+    } else {
+        format!("{} {body}", "#".repeat(level))
+    }
+}
+
+/// Set the heading level of the cursor's line from its current one.
+fn md_set_heading(cx: &mut Context, level_of: impl Fn(usize) -> Option<usize>) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+    let old = text.line(line).to_string();
+    let old = old.trim_end_matches(['\n', '\r']);
+    let Some(level) = level_of(md_heading_level(old)) else {
+        cx.editor.set_status("Not possible on this line");
+        return;
+    };
+    let start = text.line_to_char(line);
+    let end = start + old.chars().count();
+    let new = md_with_heading_level(old, level);
+    let transaction = Transaction::change(doc.text(), std::iter::once((start, end, Some(new.into()))));
+    doc.apply(&transaction, view.id);
+}
+
+/// JetBrains "Increase Header Level" (`HeaderUpAction`): one `#` fewer — the
+/// IDE's level function is `level - 1` — so a level-1 heading becomes text.
+fn md_heading_up(cx: &mut Context) {
+    md_set_heading(cx, |level| (level > 0).then(|| level - 1));
+}
+
+/// JetBrains "Decrease Header Level" (`HeaderDownAction`): one `#` more, up to
+/// six; plain text becomes a level-1 heading.
+fn md_heading_down(cx: &mut Context) {
+    md_set_heading(cx, |level| (level < 6).then_some(level + 1));
+}
+
+/// JetBrains "Set Header Style" (`Markdown.Styling.SetHeaderLevel`): pick
+/// plain text or a heading level for the cursor's line.
+fn md_set_header_style(cx: &mut Context) {
+    let styles: Vec<String> = std::iter::once("Normal text".to_string())
+        .chain((1..=6).map(|n| format!("Header {n}")))
+        .collect();
+    let columns = [PickerColumn::new("style", |s: &String, _: &()| s.as_str().into())];
+    let picker = Picker::new(columns, 0, styles, (), |cx, style: &String, _| {
+        let level = style
+            .strip_prefix("Header ")
+            .and_then(|n| n.parse::<usize>().ok())
+            .unwrap_or(0);
+        let mut cx = Context {
+            register: None,
+            count: None,
+            editor: cx.editor,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        };
+        md_set_heading(&mut cx, |_| Some(level));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+#[cfg(test)]
+mod md_heading_tests {
+    use super::{md_heading_level, md_with_heading_level};
+
+    #[test]
+    fn a_heading_needs_a_space_after_its_hashes() {
+        assert_eq!(2, md_heading_level("## Title"));
+        assert_eq!(0, md_heading_level("#hashtag"));
+        assert_eq!(0, md_heading_level("####### seven"));
+        assert_eq!(1, md_heading_level("#"));
+    }
+
+    #[test]
+    fn levels_rewrite_the_hashes_and_zero_is_text() {
+        assert_eq!("### Title", md_with_heading_level("# Title", 3));
+        assert_eq!("Title", md_with_heading_level("## Title", 0));
+        assert_eq!("# Plain", md_with_heading_level("Plain", 1));
     }
 }
 

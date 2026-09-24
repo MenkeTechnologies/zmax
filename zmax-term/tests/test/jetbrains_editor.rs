@@ -17,6 +17,11 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "extend_to_block_start" => keymap!({ "Normal mode" "Z" => extend_to_block_start, }),
         "extend_to_block_end" => keymap!({ "Normal mode" "Z" => extend_to_block_end, }),
         "extend_to_window_bottom" => keymap!({ "Normal mode" "Z" => extend_to_window_bottom, }),
+        "md_table_insert_row_below" => keymap!({ "Normal mode" "Z" => md_table_insert_row_below, }),
+        "md_table_move_column_right" => keymap!({ "Normal mode" "Z" => md_table_move_column_right, }),
+        "md_table_align_right" => keymap!({ "Normal mode" "Z" => md_table_align_right, }),
+        "md_toggle_bold" => keymap!({ "Normal mode" "Z" => md_toggle_bold, }),
+        "md_heading_up" => keymap!({ "Normal mode" "Z" => md_heading_up, }),
         other => panic!("no binding for {other}"),
     };
     config.keys.insert(Mode::Normal, keys);
@@ -174,6 +179,79 @@ async fn mnemonic_bookmark_moves_and_toggles_off() -> anyhow::Result<()> {
                 }),
             ),
         ],
+        false,
+    )
+    .await
+}
+
+/// A markdown table edit rewrites the table aligned and leaves the cursor in
+/// the cell the edit is about.
+#[tokio::test(flavor = "multi_thread")]
+async fn md_table_row_below_is_aligned_and_takes_the_cursor() -> anyhow::Result<()> {
+    let mut app = app_with("| a | bb |\n|---|---|\n| #[1|]# | 2 |\n", "md_table_insert_row_below")?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Z"),
+            Some(&|app| {
+                assert_eq!(
+                    "| a   | bb  |\n| --- | --- |\n| 1   | 2   |\n|     |     |\n",
+                    text(app)
+                );
+                assert_eq!(3, cursor_line(app));
+            }),
+        )],
+        false,
+    )
+    .await
+}
+
+/// Moving a column carries every row's cell, the separator row included.
+#[tokio::test(flavor = "multi_thread")]
+async fn md_table_column_moves_right_with_its_cells() -> anyhow::Result<()> {
+    let mut app = app_with("| #[a|]# | b |\n| --- | --: |\n| 1 | 2 |\n", "md_table_move_column_right")?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Z"),
+            Some(&|app| assert_eq!("|   b | a   |\n| --: | --- |\n|   2 | 1   |\n", text(app))),
+        )],
+        false,
+    )
+    .await
+}
+
+/// Right alignment pads the column's cells on the left.
+#[tokio::test(flavor = "multi_thread")]
+async fn md_table_align_right_pads_on_the_left() -> anyhow::Result<()> {
+    let mut app = app_with("| #[a|]# |\n| --- |\n| 1 |\n", "md_table_align_right")?;
+    test_key_sequences(
+        &mut app,
+        vec![(Some("Z"), Some(&|app| assert_eq!("|   a |\n| --: |\n|   1 |\n", text(app))))],
+        false,
+    )
+    .await
+}
+
+/// Bold wraps the word under a cursor.
+#[tokio::test(flavor = "multi_thread")]
+async fn md_bold_wraps_the_word_under_the_cursor() -> anyhow::Result<()> {
+    let mut app = app_with("say h#[e|]#llo\n", "md_toggle_bold")?;
+    test_key_sequences(
+        &mut app,
+        vec![(Some("Z"), Some(&|app| assert_eq!("say **hello**\n", text(app))))],
+        false,
+    )
+    .await
+}
+
+/// Increase Header Level takes a `#` away, as the IDE's `level - 1` does.
+#[tokio::test(flavor = "multi_thread")]
+async fn md_heading_up_removes_a_hash() -> anyhow::Result<()> {
+    let mut app = app_with("## T#[i|]#tle\n", "md_heading_up")?;
+    test_key_sequences(
+        &mut app,
+        vec![(Some("Z"), Some(&|app| assert_eq!("# Title\n", text(app))))],
         false,
     )
     .await

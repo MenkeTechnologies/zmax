@@ -83722,5 +83722,189 @@
    "static:terminal_new_predefined_session"
   ],
   "note": "TerminalNewPredefinedSession = zmax `terminal_new_predefined_session`, acting on the integrated terminal panel (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.InsertEmptyTable",
+  "status": "ported",
+  "evidence": [
+   "static:md_insert_table"
+  ],
+  "note": "Markdown.InsertEmptyTable = zmax `md_insert_table` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Styling.SetHeaderLevel",
+  "status": "ported",
+  "evidence": [
+   "static:md_set_header_style"
+  ],
+  "note": "Markdown.Styling.SetHeaderLevel = zmax `md_set_header_style` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.InsertRow.InsertAbove",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_insert_row_above"
+  ],
+  "note": "Markdown.Table.InsertRow.InsertAbove = zmax `md_table_insert_row_above` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.InsertRow.InsertBelow",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_insert_row_below"
+  ],
+  "note": "Markdown.Table.InsertRow.InsertBelow = zmax `md_table_insert_row_below` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.InsertTableColumn.InsertAfter",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_insert_column_right"
+  ],
+  "note": "Markdown.Table.InsertTableColumn.InsertAfter = zmax `md_table_insert_column_right` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.InsertTableColumn.InsertBefore",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_insert_column_left"
+  ],
+  "note": "Markdown.Table.InsertTableColumn.InsertBefore = zmax `md_table_insert_column_left` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.RemoveCurrentColumn",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_remove_column"
+  ],
+  "note": "Markdown.Table.RemoveCurrentColumn = zmax `md_table_remove_column` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.RemoveCurrentRow",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_remove_row"
+  ],
+  "note": "Markdown.Table.RemoveCurrentRow = zmax `md_table_remove_row` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SelectCurrentColumn.SelectContentCells",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_select_column"
+  ],
+  "note": "Markdown.Table.SelectCurrentColumn.SelectContentCells = zmax `md_table_select_column` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SelectRow",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_select_row"
+  ],
+  "note": "Markdown.Table.SelectRow = zmax `md_table_select_row` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SetColumnAlignment.Center",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_align_center"
+  ],
+  "note": "Markdown.Table.SetColumnAlignment.Center = zmax `md_table_align_center` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SetColumnAlignment.Left",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_align_left"
+  ],
+  "note": "Markdown.Table.SetColumnAlignment.Left = zmax `md_table_align_left` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SetColumnAlignment.Right",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_align_right"
+  ],
+  "note": "Markdown.Table.SetColumnAlignment.Right = zmax `md_table_align_right` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SwapColumns.SwapWithLeftColumn",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_move_column_left"
+  ],
+  "note": "Markdown.Table.SwapColumns.SwapWithLeftColumn = zmax `md_table_move_column_left` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SwapColumns.SwapWithRightColumn",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_move_column_right"
+  ],
+  "note": "Markdown.Table.SwapColumns.SwapWithRightColumn = zmax `md_table_move_column_right` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SwapRows.SwapWithAbove",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_move_row_up"
+  ],
+  "note": "Markdown.Table.SwapRows.SwapWithAbove = zmax `md_table_move_row_up` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Table.SwapRows.SwapWithBelow",
+  "status": "ported",
+  "evidence": [
+   "static:md_table_move_row_down"
+  ],
+  "note": "Markdown.Table.SwapRows.SwapWithBelow = zmax `md_table_move_row_down` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.styling.HeaderDownAction",
+  "status": "ported",
+  "evidence": [
+   "static:md_heading_down"
+  ],
+  "note": "org.intellij.plugins.markdown.ui.actions.styling.HeaderDownAction = zmax `md_heading_down` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.styling.HeaderUpAction",
+  "status": "ported",
+  "evidence": [
+   "static:md_heading_up"
+  ],
+  "note": "org.intellij.plugins.markdown.ui.actions.styling.HeaderUpAction = zmax `md_heading_up` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.styling.ToggleBoldAction",
+  "status": "ported",
+  "evidence": [
+   "static:md_toggle_bold"
+  ],
+  "note": "org.intellij.plugins.markdown.ui.actions.styling.ToggleBoldAction = zmax `md_toggle_bold` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.styling.ToggleCodeSpanAction",
+  "status": "ported",
+  "evidence": [
+   "static:md_toggle_code_span"
+  ],
+  "note": "org.intellij.plugins.markdown.ui.actions.styling.ToggleCodeSpanAction = zmax `md_toggle_code_span` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.styling.ToggleItalicAction",
+  "status": "ported",
+  "evidence": [
+   "static:md_toggle_italic"
+  ],
+  "note": "org.intellij.plugins.markdown.ui.actions.styling.ToggleItalicAction = zmax `md_toggle_italic` (zmax-term/src/md_table.rs for the table model)."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.styling.ToggleStrikethroughAction",
+  "status": "ported",
+  "evidence": [
+   "static:md_toggle_strikethrough"
+  ],
+  "note": "org.intellij.plugins.markdown.ui.actions.styling.ToggleStrikethroughAction = zmax `md_toggle_strikethrough` (zmax-term/src/md_table.rs for the table model)."
  }
 ]
