@@ -2346,6 +2346,10 @@
 | `goto_next_tabstop` | Goto next snippet placeholder |  |
 | `goto_prev_tabstop` | Goto next snippet placeholder |  |
 | `emmet_expand` | Expand emmet/zen HTML abbreviation (or Tab) | **hybrid, helix, kakoune, emacs, cua, micro, nano** — insert: `` <tab> `` |
+| `emmet_preview` | Show what the abbreviation before the cursor expands to (JetBrains Emmet Preview) |  |
+| `emmet_next_edit_point` | Jump to the next empty attribute value or empty element (JetBrains Next Emmet Edit Point) |  |
+| `emmet_prev_edit_point` | Jump to the previous empty attribute value or empty element (JetBrains Previous Emmet Edit Point) |  |
+| `surround_with_emmet` | Wrap the selection in the expansion of an emmet abbreviation (JetBrains Surround with Emmet) |  |
 | `snippet_expand` | Expand the user snippet whose trigger precedes the cursor |  |
 | `rotate_selections_first` | Make the first selection your primary one |  |
 | `rotate_selections_last` | Make the last selection your primary one |  |

@@ -84802,5 +84802,45 @@
    "static:toggle_popup_hints"
   ],
   "note": "Toggle Popup Hints for Current File ~ zmax `toggle_popup_hints`: switches signature-help popups for every buffer, not for the current file alone."
+ },
+ {
+  "spec_id": "jetbrains-actions.EmmetNextEditPoint",
+  "status": "ported",
+  "evidence": [
+   "static:emmet_next_edit_point"
+  ],
+  "note": "EmmetNextEditPoint = zmax `emmet_next_edit_point` over the emmet engine in zmax-term/src/emmet.rs."
+ },
+ {
+  "spec_id": "jetbrains-actions.EmmetPreview",
+  "status": "ported",
+  "evidence": [
+   "static:emmet_preview"
+  ],
+  "note": "EmmetPreview = zmax `emmet_preview` over the emmet engine in zmax-term/src/emmet.rs."
+ },
+ {
+  "spec_id": "jetbrains-actions.EmmetPreviousEditPoint",
+  "status": "ported",
+  "evidence": [
+   "static:emmet_prev_edit_point"
+  ],
+  "note": "EmmetPreviousEditPoint = zmax `emmet_prev_edit_point` over the emmet engine in zmax-term/src/emmet.rs."
+ },
+ {
+  "spec_id": "jetbrains-actions.SurroundWithEmmet",
+  "status": "ported",
+  "evidence": [
+   "static:surround_with_emmet"
+  ],
+  "note": "SurroundWithEmmet = zmax `surround_with_emmet` over the emmet engine in zmax-term/src/emmet.rs."
+ },
+ {
+  "spec_id": "jetbrains-actions.AddBom",
+  "status": "partial",
+  "evidence": [
+   "typable:set"
+  ],
+  "note": "AddBom (Add BOM) = zmax `:set bomb`: writes a byte-order mark on the next save of the buffer, as RemoveBom maps; the IDE adds it to selected files immediately."
  }
 ]

@@ -24,6 +24,7 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "md_heading_up" => keymap!({ "Normal mode" "Z" => md_heading_up, }),
         "move_down_and_scroll" => keymap!({ "Normal mode" "Z" => move_down_and_scroll, }),
         "editor_escape" => keymap!({ "Normal mode" "Z" => editor_escape, }),
+        "surround_with_emmet" => keymap!({ "Normal mode" "Z" => surround_with_emmet, }),
         other => panic!("no binding for {other}"),
     };
     config.keys.insert(Mode::Normal, keys);
@@ -635,6 +636,21 @@ async fn search_preview_off_waits_for_enter() -> anyhow::Result<()> {
             (Some("<ret>"), Some(&|app| assert_eq!(1, cursor_line(app), "moved on Enter"))),
             (Some("Z"), None),
         ],
+        false,
+    )
+    .await
+}
+
+/// Surround with Emmet puts the selection in the expansion's first slot.
+#[tokio::test(flavor = "multi_thread")]
+async fn surround_with_emmet_wraps_the_selection() -> anyhow::Result<()> {
+    let mut app = app_with("#[hello|]#\n", "surround_with_emmet")?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Zdiv.box<ret>"),
+            Some(&|app| assert_eq!("<div class=\"box\">hello</div>\n", text(app))),
+        )],
         false,
     )
     .await

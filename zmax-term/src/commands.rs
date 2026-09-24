@@ -2739,6 +2739,10 @@ impl MappableCommand {
         goto_next_tabstop, "Goto next snippet placeholder",
         goto_prev_tabstop, "Goto next snippet placeholder",
         emmet_expand, "Expand emmet/zen HTML abbreviation (or Tab)",
+        emmet_preview, "Show what the abbreviation before the cursor expands to (JetBrains Emmet Preview)",
+        emmet_next_edit_point, "Jump to the next empty attribute value or empty element (JetBrains Next Emmet Edit Point)",
+        emmet_prev_edit_point, "Jump to the previous empty attribute value or empty element (JetBrains Previous Emmet Edit Point)",
+        surround_with_emmet, "Wrap the selection in the expansion of an emmet abbreviation (JetBrains Surround with Emmet)",
         snippet_expand, "Expand the user snippet whose trigger precedes the cursor",
         rotate_selections_first, "Make the first selection your primary one",
         rotate_selections_last, "Make the last selection your primary one",
@@ -66124,6 +66128,178 @@ fn emmet_expand(cx: &mut Context) {
     }
     // No abbreviation to expand — behave like a normal smart Tab.
     smart_tab(cx);
+}
+
+/// An LSP snippet body as the text it inserts: `${1:x}` keeps `x`, bare
+/// tabstops vanish, `\$` `\}` `\\` unescape. Pure — unit tested.
+fn snippet_plain(snippet: &str) -> String {
+    let mut out = String::with_capacity(snippet.len());
+    let mut chars = snippet.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                if let Some(next) = chars.next() {
+                    out.push(next);
+                }
+            }
+            '$' if chars.peek() == Some(&'{') => {
+                chars.next();
+                while chars.peek().is_some_and(char::is_ascii_digit) {
+                    chars.next();
+                }
+                if chars.peek() == Some(&':') {
+                    chars.next();
+                    for d in chars.by_ref() {
+                        if d == '}' {
+                            break;
+                        }
+                        out.push(d);
+                    }
+                } else if chars.peek() == Some(&'}') {
+                    chars.next();
+                }
+            }
+            '$' if chars.peek().is_some_and(char::is_ascii_digit) => {
+                while chars.peek().is_some_and(char::is_ascii_digit) {
+                    chars.next();
+                }
+            }
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// The emmet expansion of the abbreviation before the cursor, as a snippet,
+/// with where the abbreviation starts. `None` outside HTML/CSS or without one.
+fn emmet_expansion_at_cursor(editor: &Editor) -> Option<(usize, usize, String)> {
+    let loader = editor.syn_loader.load();
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let lang = doc
+        .language_config_at(&loader, text.char_to_byte(cursor.saturating_sub(1)))
+        .map(|c| c.language_id.as_str());
+    let line_start = text.line_to_char(text.char_to_line(cursor));
+    let before: String = text.slice(line_start..cursor).into();
+    let (start, snippet) = if crate::emmet::is_css_like(lang) {
+        let (start, abbr) = crate::emmet::extract_css_abbreviation(&before)?;
+        (start, crate::emmet::expand_css(&abbr)?)
+    } else if crate::emmet::is_html_like(lang) {
+        let (start, abbr) = crate::emmet::extract_abbreviation(&before)?;
+        let indent: String = before.chars().take_while(|c| *c == ' ' || *c == '\t').collect();
+        (start, crate::emmet::expand(&abbr, doc.indent_style.as_str(), &indent)?)
+    } else {
+        return None;
+    };
+    Some((line_start + start, cursor, snippet))
+}
+
+/// JetBrains "Emmet Preview" (`EmmetPreview`): what the abbreviation before
+/// the cursor would expand to, without expanding it.
+fn emmet_preview(cx: &mut Context) {
+    match emmet_expansion_at_cursor(cx.editor) {
+        Some((_, _, snippet)) => {
+            let popup = ui::Popup::new("emmet-preview", ui::Text::new(snippet_plain(&snippet)));
+            cx.replace_or_push_layer("emmet-preview", popup);
+        }
+        None => cx.editor.set_status("no emmet abbreviation before the cursor"),
+    }
+}
+
+/// The next (or previous) emmet edit point from char `from`: between the
+/// quotes of an empty attribute value, or between the tags of an empty
+/// element. Pure — unit tested.
+fn emmet_edit_point(text: &[char], from: usize, forward: bool) -> Option<usize> {
+    let is_point = |p: usize| {
+        p >= 2
+            && p < text.len()
+            && ((text[p - 1] == '"' && text[p] == '"' && text[p - 2] == '=')
+                || (text[p - 1] == '>' && text[p] == '<' && text.get(p + 1) == Some(&'/')))
+    };
+    if forward {
+        (from + 1..text.len()).find(|&p| is_point(p))
+    } else {
+        (0..from).rev().find(|&p| is_point(p))
+    }
+}
+
+fn goto_emmet_edit_point(cx: &mut Context, forward: bool) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let chars: Vec<char> = text.chars().collect();
+    match emmet_edit_point(&chars, cursor, forward) {
+        Some(pos) => doc.set_selection(view.id, Selection::point(pos)),
+        None => cx.editor.set_status("no edit point that way"),
+    }
+}
+
+/// JetBrains "Next Emmet Edit Point" (`EmmetNextEditPoint`).
+fn emmet_next_edit_point(cx: &mut Context) {
+    goto_emmet_edit_point(cx, true);
+}
+
+/// JetBrains "Previous Emmet Edit Point" (`EmmetPreviousEditPoint`).
+fn emmet_prev_edit_point(cx: &mut Context) {
+    goto_emmet_edit_point(cx, false);
+}
+
+/// JetBrains "Surround with Emmet" (`SurroundWithEmmet`): wrap the selection
+/// in the expansion of a prompted abbreviation, the selection going where the
+/// expansion's first empty slot is.
+fn surround_with_emmet(cx: &mut Context) {
+    prompt_then(cx, "wrap with abbreviation: ", |cx, abbr| {
+        let (view, doc) = current!(cx.editor);
+        let range = doc.selection(view.id).primary();
+        let text = doc.text().slice(..);
+        let inner: String = range.fragment(text).into_owned();
+        let line_start = text.line_to_char(text.char_to_line(range.from()));
+        let indent: String = text
+            .slice(line_start..range.from())
+            .chars()
+            .take_while(|c| *c == ' ' || *c == '\t')
+            .collect();
+        let Some(snippet) = crate::emmet::expand(abbr, doc.indent_style.as_str(), &indent) else {
+            cx.editor.set_error(format!("not an emmet abbreviation: {abbr}"));
+            return;
+        };
+        // The first empty slot takes the selection; `$0` when there is no other.
+        let slot = ["${1}", "$1", "$0"].iter().find_map(|s| snippet.find(s).map(|at| (at, s.len())));
+        let wrapped = match slot {
+            Some((at, len)) => format!(
+                "{}{}{}",
+                snippet_plain(&snippet[..at]),
+                inner,
+                snippet_plain(&snippet[at + len..])
+            ),
+            None => format!("{}{inner}", snippet_plain(&snippet)),
+        };
+        let transaction = Transaction::change(
+            doc.text(),
+            std::iter::once((range.from(), range.to(), Some(wrapped.into()))),
+        );
+        doc.apply(&transaction, view.id);
+    });
+}
+
+#[cfg(test)]
+mod emmet_command_tests {
+    use super::{emmet_edit_point, snippet_plain};
+
+    #[test]
+    fn snippets_render_as_the_text_they_insert() {
+        assert_eq!("<a href=\"x\"></a>", snippet_plain("<a href=\"${1:x}\">${2}</a>$0"));
+        assert_eq!("cost: $5", snippet_plain("cost: \\$5"));
+    }
+
+    #[test]
+    fn edit_points_are_empty_values_and_empty_elements() {
+        let text: Vec<char> = "<a href=\"\"><b></b></a>".chars().collect();
+        assert_eq!(Some(9), emmet_edit_point(&text, 0, true), "inside href=\"\"");
+        assert_eq!(Some(14), emmet_edit_point(&text, 9, true), "between <b> and </b>");
+        assert_eq!(Some(9), emmet_edit_point(&text, 14, false));
+    }
 }
 
 /// Expand the user-defined snippet whose trigger is the word before the cursor,
