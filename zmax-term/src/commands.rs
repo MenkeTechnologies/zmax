@@ -1142,6 +1142,79 @@ impl MappableCommand {
         harpoon_next, "Open the next harpoon mark",
         harpoon_prev, "Open the previous harpoon mark",
         bookmark_toggle, "Toggle a line bookmark (JetBrains F11)",
+        toggle_bookmark_with_mnemonic, "Toggle a mnemonic bookmark on this line; the next key names it (JetBrains Toggle Bookmark Mnemonic)",
+        toggle_bookmark_0, "Toggle mnemonic bookmark 0 on this line (JetBrains Toggle Bookmark 0)",
+        toggle_bookmark_1, "Toggle mnemonic bookmark 1 on this line (JetBrains Toggle Bookmark 1)",
+        toggle_bookmark_2, "Toggle mnemonic bookmark 2 on this line (JetBrains Toggle Bookmark 2)",
+        toggle_bookmark_3, "Toggle mnemonic bookmark 3 on this line (JetBrains Toggle Bookmark 3)",
+        toggle_bookmark_4, "Toggle mnemonic bookmark 4 on this line (JetBrains Toggle Bookmark 4)",
+        toggle_bookmark_5, "Toggle mnemonic bookmark 5 on this line (JetBrains Toggle Bookmark 5)",
+        toggle_bookmark_6, "Toggle mnemonic bookmark 6 on this line (JetBrains Toggle Bookmark 6)",
+        toggle_bookmark_7, "Toggle mnemonic bookmark 7 on this line (JetBrains Toggle Bookmark 7)",
+        toggle_bookmark_8, "Toggle mnemonic bookmark 8 on this line (JetBrains Toggle Bookmark 8)",
+        toggle_bookmark_9, "Toggle mnemonic bookmark 9 on this line (JetBrains Toggle Bookmark 9)",
+        toggle_bookmark_a, "Toggle mnemonic bookmark A on this line (JetBrains Toggle Bookmark A)",
+        toggle_bookmark_b, "Toggle mnemonic bookmark B on this line (JetBrains Toggle Bookmark B)",
+        toggle_bookmark_c, "Toggle mnemonic bookmark C on this line (JetBrains Toggle Bookmark C)",
+        toggle_bookmark_d, "Toggle mnemonic bookmark D on this line (JetBrains Toggle Bookmark D)",
+        toggle_bookmark_e, "Toggle mnemonic bookmark E on this line (JetBrains Toggle Bookmark E)",
+        toggle_bookmark_f, "Toggle mnemonic bookmark F on this line (JetBrains Toggle Bookmark F)",
+        toggle_bookmark_g, "Toggle mnemonic bookmark G on this line (JetBrains Toggle Bookmark G)",
+        toggle_bookmark_h, "Toggle mnemonic bookmark H on this line (JetBrains Toggle Bookmark H)",
+        toggle_bookmark_i, "Toggle mnemonic bookmark I on this line (JetBrains Toggle Bookmark I)",
+        toggle_bookmark_j, "Toggle mnemonic bookmark J on this line (JetBrains Toggle Bookmark J)",
+        toggle_bookmark_k, "Toggle mnemonic bookmark K on this line (JetBrains Toggle Bookmark K)",
+        toggle_bookmark_l, "Toggle mnemonic bookmark L on this line (JetBrains Toggle Bookmark L)",
+        toggle_bookmark_m, "Toggle mnemonic bookmark M on this line (JetBrains Toggle Bookmark M)",
+        toggle_bookmark_n, "Toggle mnemonic bookmark N on this line (JetBrains Toggle Bookmark N)",
+        toggle_bookmark_o, "Toggle mnemonic bookmark O on this line (JetBrains Toggle Bookmark O)",
+        toggle_bookmark_p, "Toggle mnemonic bookmark P on this line (JetBrains Toggle Bookmark P)",
+        toggle_bookmark_q, "Toggle mnemonic bookmark Q on this line (JetBrains Toggle Bookmark Q)",
+        toggle_bookmark_r, "Toggle mnemonic bookmark R on this line (JetBrains Toggle Bookmark R)",
+        toggle_bookmark_s, "Toggle mnemonic bookmark S on this line (JetBrains Toggle Bookmark S)",
+        toggle_bookmark_t, "Toggle mnemonic bookmark T on this line (JetBrains Toggle Bookmark T)",
+        toggle_bookmark_u, "Toggle mnemonic bookmark U on this line (JetBrains Toggle Bookmark U)",
+        toggle_bookmark_v, "Toggle mnemonic bookmark V on this line (JetBrains Toggle Bookmark V)",
+        toggle_bookmark_w, "Toggle mnemonic bookmark W on this line (JetBrains Toggle Bookmark W)",
+        toggle_bookmark_x, "Toggle mnemonic bookmark X on this line (JetBrains Toggle Bookmark X)",
+        toggle_bookmark_y, "Toggle mnemonic bookmark Y on this line (JetBrains Toggle Bookmark Y)",
+        toggle_bookmark_z, "Toggle mnemonic bookmark Z on this line (JetBrains Toggle Bookmark Z)",
+        goto_bookmark_0, "Jump to mnemonic bookmark 0, in whatever file it is (JetBrains Go to Bookmark 0)",
+        goto_bookmark_1, "Jump to mnemonic bookmark 1, in whatever file it is (JetBrains Go to Bookmark 1)",
+        goto_bookmark_2, "Jump to mnemonic bookmark 2, in whatever file it is (JetBrains Go to Bookmark 2)",
+        goto_bookmark_3, "Jump to mnemonic bookmark 3, in whatever file it is (JetBrains Go to Bookmark 3)",
+        goto_bookmark_4, "Jump to mnemonic bookmark 4, in whatever file it is (JetBrains Go to Bookmark 4)",
+        goto_bookmark_5, "Jump to mnemonic bookmark 5, in whatever file it is (JetBrains Go to Bookmark 5)",
+        goto_bookmark_6, "Jump to mnemonic bookmark 6, in whatever file it is (JetBrains Go to Bookmark 6)",
+        goto_bookmark_7, "Jump to mnemonic bookmark 7, in whatever file it is (JetBrains Go to Bookmark 7)",
+        goto_bookmark_8, "Jump to mnemonic bookmark 8, in whatever file it is (JetBrains Go to Bookmark 8)",
+        goto_bookmark_9, "Jump to mnemonic bookmark 9, in whatever file it is (JetBrains Go to Bookmark 9)",
+        goto_bookmark_a, "Jump to mnemonic bookmark A, in whatever file it is (JetBrains Go to Bookmark A)",
+        goto_bookmark_b, "Jump to mnemonic bookmark B, in whatever file it is (JetBrains Go to Bookmark B)",
+        goto_bookmark_c, "Jump to mnemonic bookmark C, in whatever file it is (JetBrains Go to Bookmark C)",
+        goto_bookmark_d, "Jump to mnemonic bookmark D, in whatever file it is (JetBrains Go to Bookmark D)",
+        goto_bookmark_e, "Jump to mnemonic bookmark E, in whatever file it is (JetBrains Go to Bookmark E)",
+        goto_bookmark_f, "Jump to mnemonic bookmark F, in whatever file it is (JetBrains Go to Bookmark F)",
+        goto_bookmark_g, "Jump to mnemonic bookmark G, in whatever file it is (JetBrains Go to Bookmark G)",
+        goto_bookmark_h, "Jump to mnemonic bookmark H, in whatever file it is (JetBrains Go to Bookmark H)",
+        goto_bookmark_i, "Jump to mnemonic bookmark I, in whatever file it is (JetBrains Go to Bookmark I)",
+        goto_bookmark_j, "Jump to mnemonic bookmark J, in whatever file it is (JetBrains Go to Bookmark J)",
+        goto_bookmark_k, "Jump to mnemonic bookmark K, in whatever file it is (JetBrains Go to Bookmark K)",
+        goto_bookmark_l, "Jump to mnemonic bookmark L, in whatever file it is (JetBrains Go to Bookmark L)",
+        goto_bookmark_m, "Jump to mnemonic bookmark M, in whatever file it is (JetBrains Go to Bookmark M)",
+        goto_bookmark_n, "Jump to mnemonic bookmark N, in whatever file it is (JetBrains Go to Bookmark N)",
+        goto_bookmark_o, "Jump to mnemonic bookmark O, in whatever file it is (JetBrains Go to Bookmark O)",
+        goto_bookmark_p, "Jump to mnemonic bookmark P, in whatever file it is (JetBrains Go to Bookmark P)",
+        goto_bookmark_q, "Jump to mnemonic bookmark Q, in whatever file it is (JetBrains Go to Bookmark Q)",
+        goto_bookmark_r, "Jump to mnemonic bookmark R, in whatever file it is (JetBrains Go to Bookmark R)",
+        goto_bookmark_s, "Jump to mnemonic bookmark S, in whatever file it is (JetBrains Go to Bookmark S)",
+        goto_bookmark_t, "Jump to mnemonic bookmark T, in whatever file it is (JetBrains Go to Bookmark T)",
+        goto_bookmark_u, "Jump to mnemonic bookmark U, in whatever file it is (JetBrains Go to Bookmark U)",
+        goto_bookmark_v, "Jump to mnemonic bookmark V, in whatever file it is (JetBrains Go to Bookmark V)",
+        goto_bookmark_w, "Jump to mnemonic bookmark W, in whatever file it is (JetBrains Go to Bookmark W)",
+        goto_bookmark_x, "Jump to mnemonic bookmark X, in whatever file it is (JetBrains Go to Bookmark X)",
+        goto_bookmark_y, "Jump to mnemonic bookmark Y, in whatever file it is (JetBrains Go to Bookmark Y)",
+        goto_bookmark_z, "Jump to mnemonic bookmark Z, in whatever file it is (JetBrains Go to Bookmark Z)",
         bookmark_open_tabs, "Bookmark the cursor line of every open buffer (JetBrains Bookmark Open Tabs)",
         open_bookmarked_files, "Open every file that holds a line bookmark (JetBrains Open All Bookmarked Files)",
         bookmarks_view, "List every line bookmark, grouped by file (JetBrains Bookmarks tool window)",
@@ -35481,6 +35554,153 @@ fn open_bookmarked_files(cx: &mut Context) {
 /// JetBrains "Previous Bookmark": jump to the previous line bookmark (wraps).
 fn bookmark_prev(cx: &mut Context) {
     bookmark_cycle(cx, false);
+}
+
+/// JetBrains mnemonic bookmarks (`ToggleBookmark0`–`9`/`A`–`Z`,
+/// `GotoBookmark0`–`9`/`A`–`Z`): a line bookmark that also answers to one digit
+/// or letter. A mnemonic is unique across the project, so setting it on a
+/// second line moves it there, and a line holds at most one mnemonic.
+///
+/// ne's numbered slots (`set_numbered_bookmark`) are per document, which is
+/// why these keep a list of their own. Each entry is also a line bookmark in
+/// `BOOKMARKS`, so it appears in the Bookmarks view and in next/previous.
+static MNEMONIC_BOOKMARKS: std::sync::Mutex<Vec<(char, std::path::PathBuf, usize)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// Mnemonics are digits and capitals, as the IDE shows them.
+fn bookmark_mnemonic(ch: char) -> Option<char> {
+    let ch = ch.to_ascii_uppercase();
+    (ch.is_ascii_digit() || ch.is_ascii_uppercase()).then_some(ch)
+}
+
+fn toggle_mnemonic_bookmark(cx: &mut Context, mnemonic: char) {
+    let Some((path, line)) = current_file_line(cx) else {
+        cx.editor.set_error("Cannot bookmark a scratch buffer");
+        return;
+    };
+    let mut mnemonics = MNEMONIC_BOOKMARKS.lock().unwrap();
+    let mut marks = BOOKMARKS.lock().unwrap();
+    let here = |p: &std::path::PathBuf, l: usize| *p == path && l == line;
+
+    if mnemonics
+        .iter()
+        .any(|(m, p, l)| *m == mnemonic && here(p, *l))
+    {
+        mnemonics.retain(|(m, _, _)| *m != mnemonic);
+        marks.retain(|(p, l)| !here(p, *l));
+        cx.editor.set_status(format!("Bookmark {mnemonic} removed"));
+        return;
+    }
+
+    // The mnemonic leaves the line it was on, bookmark and all, and this line
+    // gives up whatever mnemonic it had.
+    if let Some((_, old_path, old_line)) = mnemonics.iter().find(|(m, _, _)| *m == mnemonic) {
+        let (old_path, old_line) = (old_path.clone(), *old_line);
+        marks.retain(|(p, l)| !(*p == old_path && *l == old_line));
+    }
+    mnemonics.retain(|(m, p, l)| *m != mnemonic && !here(p, *l));
+    mnemonics.push((mnemonic, path.clone(), line));
+    if !marks.iter().any(|(p, l)| here(p, *l)) {
+        marks.push((path.clone(), line));
+        marks.sort();
+    }
+    cx.editor.set_status(format!(
+        "Bookmark {mnemonic} set ({}:{})",
+        path.display(),
+        line + 1
+    ));
+}
+
+fn goto_mnemonic_bookmark(cx: &mut Context, mnemonic: char) {
+    let target = MNEMONIC_BOOKMARKS
+        .lock()
+        .unwrap()
+        .iter()
+        .find(|(m, _, _)| *m == mnemonic)
+        .map(|(_, p, l)| (p.clone(), *l));
+    let Some((path, line)) = target else {
+        cx.editor.set_status(format!("No bookmark {mnemonic}"));
+        return;
+    };
+    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+        cx.editor
+            .set_error(format!("unable to open \"{}\": {e}", path.display()));
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    push_jump(view, doc);
+    let line = line.min(doc.text().len_lines().saturating_sub(1));
+    let pos = doc.text().line_to_char(line);
+    doc.set_selection(view.id, Selection::point(pos));
+    align_view(doc, view, Align::Center);
+}
+
+/// JetBrains "Toggle Bookmark Mnemonic" (`ToggleBookmarkWithMnemonic`):
+/// the next key names the mnemonic.
+fn toggle_bookmark_with_mnemonic(cx: &mut Context) {
+    cx.editor.autoinfo = Some(Info::new(
+        "Toggle bookmark",
+        &[("0-9 A-Z", "toggle that mnemonic bookmark on this line")],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(mnemonic) = event.char().and_then(bookmark_mnemonic) {
+            toggle_mnemonic_bookmark(cx, mnemonic);
+        }
+    })
+}
+
+/// One toggle and one goto command per mnemonic, as the IDE registers them.
+macro_rules! mnemonic_bookmark_commands {
+    ($($mnemonic:literal => $toggle:ident, $goto:ident;)*) => {
+        $(
+            fn $toggle(cx: &mut Context) {
+                toggle_mnemonic_bookmark(cx, $mnemonic)
+            }
+            fn $goto(cx: &mut Context) {
+                goto_mnemonic_bookmark(cx, $mnemonic)
+            }
+        )*
+    };
+}
+
+mnemonic_bookmark_commands! {
+    '0' => toggle_bookmark_0, goto_bookmark_0;
+    '1' => toggle_bookmark_1, goto_bookmark_1;
+    '2' => toggle_bookmark_2, goto_bookmark_2;
+    '3' => toggle_bookmark_3, goto_bookmark_3;
+    '4' => toggle_bookmark_4, goto_bookmark_4;
+    '5' => toggle_bookmark_5, goto_bookmark_5;
+    '6' => toggle_bookmark_6, goto_bookmark_6;
+    '7' => toggle_bookmark_7, goto_bookmark_7;
+    '8' => toggle_bookmark_8, goto_bookmark_8;
+    '9' => toggle_bookmark_9, goto_bookmark_9;
+    'A' => toggle_bookmark_a, goto_bookmark_a;
+    'B' => toggle_bookmark_b, goto_bookmark_b;
+    'C' => toggle_bookmark_c, goto_bookmark_c;
+    'D' => toggle_bookmark_d, goto_bookmark_d;
+    'E' => toggle_bookmark_e, goto_bookmark_e;
+    'F' => toggle_bookmark_f, goto_bookmark_f;
+    'G' => toggle_bookmark_g, goto_bookmark_g;
+    'H' => toggle_bookmark_h, goto_bookmark_h;
+    'I' => toggle_bookmark_i, goto_bookmark_i;
+    'J' => toggle_bookmark_j, goto_bookmark_j;
+    'K' => toggle_bookmark_k, goto_bookmark_k;
+    'L' => toggle_bookmark_l, goto_bookmark_l;
+    'M' => toggle_bookmark_m, goto_bookmark_m;
+    'N' => toggle_bookmark_n, goto_bookmark_n;
+    'O' => toggle_bookmark_o, goto_bookmark_o;
+    'P' => toggle_bookmark_p, goto_bookmark_p;
+    'Q' => toggle_bookmark_q, goto_bookmark_q;
+    'R' => toggle_bookmark_r, goto_bookmark_r;
+    'S' => toggle_bookmark_s, goto_bookmark_s;
+    'T' => toggle_bookmark_t, goto_bookmark_t;
+    'U' => toggle_bookmark_u, goto_bookmark_u;
+    'V' => toggle_bookmark_v, goto_bookmark_v;
+    'W' => toggle_bookmark_w, goto_bookmark_w;
+    'X' => toggle_bookmark_x, goto_bookmark_x;
+    'Y' => toggle_bookmark_y, goto_bookmark_y;
+    'Z' => toggle_bookmark_z, goto_bookmark_z;
 }
 
 /// Fuzzy menu of the project's harpoon marks; Enter opens, and the order is the

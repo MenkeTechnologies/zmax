@@ -751,6 +751,79 @@
 | `harpoon_next` | Open the next harpoon mark | **spacemacs, hybrid** — normal: `` <space>Hn ``, select: `` <space>Hn `` |
 | `harpoon_prev` | Open the previous harpoon mark | **spacemacs, hybrid** — normal: `` <space>Hp ``, select: `` <space>Hp `` |
 | `bookmark_toggle` | Toggle a line bookmark (JetBrains F11) | **spacemacs, hybrid** — normal: `` <space>rt ``, select: `` <space>rt `` |
+| `toggle_bookmark_with_mnemonic` | Toggle a mnemonic bookmark on this line; the next key names it (JetBrains Toggle Bookmark Mnemonic) |  |
+| `toggle_bookmark_0` | Toggle mnemonic bookmark 0 on this line (JetBrains Toggle Bookmark 0) |  |
+| `toggle_bookmark_1` | Toggle mnemonic bookmark 1 on this line (JetBrains Toggle Bookmark 1) |  |
+| `toggle_bookmark_2` | Toggle mnemonic bookmark 2 on this line (JetBrains Toggle Bookmark 2) |  |
+| `toggle_bookmark_3` | Toggle mnemonic bookmark 3 on this line (JetBrains Toggle Bookmark 3) |  |
+| `toggle_bookmark_4` | Toggle mnemonic bookmark 4 on this line (JetBrains Toggle Bookmark 4) |  |
+| `toggle_bookmark_5` | Toggle mnemonic bookmark 5 on this line (JetBrains Toggle Bookmark 5) |  |
+| `toggle_bookmark_6` | Toggle mnemonic bookmark 6 on this line (JetBrains Toggle Bookmark 6) |  |
+| `toggle_bookmark_7` | Toggle mnemonic bookmark 7 on this line (JetBrains Toggle Bookmark 7) |  |
+| `toggle_bookmark_8` | Toggle mnemonic bookmark 8 on this line (JetBrains Toggle Bookmark 8) |  |
+| `toggle_bookmark_9` | Toggle mnemonic bookmark 9 on this line (JetBrains Toggle Bookmark 9) |  |
+| `toggle_bookmark_a` | Toggle mnemonic bookmark A on this line (JetBrains Toggle Bookmark A) |  |
+| `toggle_bookmark_b` | Toggle mnemonic bookmark B on this line (JetBrains Toggle Bookmark B) |  |
+| `toggle_bookmark_c` | Toggle mnemonic bookmark C on this line (JetBrains Toggle Bookmark C) |  |
+| `toggle_bookmark_d` | Toggle mnemonic bookmark D on this line (JetBrains Toggle Bookmark D) |  |
+| `toggle_bookmark_e` | Toggle mnemonic bookmark E on this line (JetBrains Toggle Bookmark E) |  |
+| `toggle_bookmark_f` | Toggle mnemonic bookmark F on this line (JetBrains Toggle Bookmark F) |  |
+| `toggle_bookmark_g` | Toggle mnemonic bookmark G on this line (JetBrains Toggle Bookmark G) |  |
+| `toggle_bookmark_h` | Toggle mnemonic bookmark H on this line (JetBrains Toggle Bookmark H) |  |
+| `toggle_bookmark_i` | Toggle mnemonic bookmark I on this line (JetBrains Toggle Bookmark I) |  |
+| `toggle_bookmark_j` | Toggle mnemonic bookmark J on this line (JetBrains Toggle Bookmark J) |  |
+| `toggle_bookmark_k` | Toggle mnemonic bookmark K on this line (JetBrains Toggle Bookmark K) |  |
+| `toggle_bookmark_l` | Toggle mnemonic bookmark L on this line (JetBrains Toggle Bookmark L) |  |
+| `toggle_bookmark_m` | Toggle mnemonic bookmark M on this line (JetBrains Toggle Bookmark M) |  |
+| `toggle_bookmark_n` | Toggle mnemonic bookmark N on this line (JetBrains Toggle Bookmark N) |  |
+| `toggle_bookmark_o` | Toggle mnemonic bookmark O on this line (JetBrains Toggle Bookmark O) |  |
+| `toggle_bookmark_p` | Toggle mnemonic bookmark P on this line (JetBrains Toggle Bookmark P) |  |
+| `toggle_bookmark_q` | Toggle mnemonic bookmark Q on this line (JetBrains Toggle Bookmark Q) |  |
+| `toggle_bookmark_r` | Toggle mnemonic bookmark R on this line (JetBrains Toggle Bookmark R) |  |
+| `toggle_bookmark_s` | Toggle mnemonic bookmark S on this line (JetBrains Toggle Bookmark S) |  |
+| `toggle_bookmark_t` | Toggle mnemonic bookmark T on this line (JetBrains Toggle Bookmark T) |  |
+| `toggle_bookmark_u` | Toggle mnemonic bookmark U on this line (JetBrains Toggle Bookmark U) |  |
+| `toggle_bookmark_v` | Toggle mnemonic bookmark V on this line (JetBrains Toggle Bookmark V) |  |
+| `toggle_bookmark_w` | Toggle mnemonic bookmark W on this line (JetBrains Toggle Bookmark W) |  |
+| `toggle_bookmark_x` | Toggle mnemonic bookmark X on this line (JetBrains Toggle Bookmark X) |  |
+| `toggle_bookmark_y` | Toggle mnemonic bookmark Y on this line (JetBrains Toggle Bookmark Y) |  |
+| `toggle_bookmark_z` | Toggle mnemonic bookmark Z on this line (JetBrains Toggle Bookmark Z) |  |
+| `goto_bookmark_0` | Jump to mnemonic bookmark 0, in whatever file it is (JetBrains Go to Bookmark 0) |  |
+| `goto_bookmark_1` | Jump to mnemonic bookmark 1, in whatever file it is (JetBrains Go to Bookmark 1) |  |
+| `goto_bookmark_2` | Jump to mnemonic bookmark 2, in whatever file it is (JetBrains Go to Bookmark 2) |  |
+| `goto_bookmark_3` | Jump to mnemonic bookmark 3, in whatever file it is (JetBrains Go to Bookmark 3) |  |
+| `goto_bookmark_4` | Jump to mnemonic bookmark 4, in whatever file it is (JetBrains Go to Bookmark 4) |  |
+| `goto_bookmark_5` | Jump to mnemonic bookmark 5, in whatever file it is (JetBrains Go to Bookmark 5) |  |
+| `goto_bookmark_6` | Jump to mnemonic bookmark 6, in whatever file it is (JetBrains Go to Bookmark 6) |  |
+| `goto_bookmark_7` | Jump to mnemonic bookmark 7, in whatever file it is (JetBrains Go to Bookmark 7) |  |
+| `goto_bookmark_8` | Jump to mnemonic bookmark 8, in whatever file it is (JetBrains Go to Bookmark 8) |  |
+| `goto_bookmark_9` | Jump to mnemonic bookmark 9, in whatever file it is (JetBrains Go to Bookmark 9) |  |
+| `goto_bookmark_a` | Jump to mnemonic bookmark A, in whatever file it is (JetBrains Go to Bookmark A) |  |
+| `goto_bookmark_b` | Jump to mnemonic bookmark B, in whatever file it is (JetBrains Go to Bookmark B) |  |
+| `goto_bookmark_c` | Jump to mnemonic bookmark C, in whatever file it is (JetBrains Go to Bookmark C) |  |
+| `goto_bookmark_d` | Jump to mnemonic bookmark D, in whatever file it is (JetBrains Go to Bookmark D) |  |
+| `goto_bookmark_e` | Jump to mnemonic bookmark E, in whatever file it is (JetBrains Go to Bookmark E) |  |
+| `goto_bookmark_f` | Jump to mnemonic bookmark F, in whatever file it is (JetBrains Go to Bookmark F) |  |
+| `goto_bookmark_g` | Jump to mnemonic bookmark G, in whatever file it is (JetBrains Go to Bookmark G) |  |
+| `goto_bookmark_h` | Jump to mnemonic bookmark H, in whatever file it is (JetBrains Go to Bookmark H) |  |
+| `goto_bookmark_i` | Jump to mnemonic bookmark I, in whatever file it is (JetBrains Go to Bookmark I) |  |
+| `goto_bookmark_j` | Jump to mnemonic bookmark J, in whatever file it is (JetBrains Go to Bookmark J) |  |
+| `goto_bookmark_k` | Jump to mnemonic bookmark K, in whatever file it is (JetBrains Go to Bookmark K) |  |
+| `goto_bookmark_l` | Jump to mnemonic bookmark L, in whatever file it is (JetBrains Go to Bookmark L) |  |
+| `goto_bookmark_m` | Jump to mnemonic bookmark M, in whatever file it is (JetBrains Go to Bookmark M) |  |
+| `goto_bookmark_n` | Jump to mnemonic bookmark N, in whatever file it is (JetBrains Go to Bookmark N) |  |
+| `goto_bookmark_o` | Jump to mnemonic bookmark O, in whatever file it is (JetBrains Go to Bookmark O) |  |
+| `goto_bookmark_p` | Jump to mnemonic bookmark P, in whatever file it is (JetBrains Go to Bookmark P) |  |
+| `goto_bookmark_q` | Jump to mnemonic bookmark Q, in whatever file it is (JetBrains Go to Bookmark Q) |  |
+| `goto_bookmark_r` | Jump to mnemonic bookmark R, in whatever file it is (JetBrains Go to Bookmark R) |  |
+| `goto_bookmark_s` | Jump to mnemonic bookmark S, in whatever file it is (JetBrains Go to Bookmark S) |  |
+| `goto_bookmark_t` | Jump to mnemonic bookmark T, in whatever file it is (JetBrains Go to Bookmark T) |  |
+| `goto_bookmark_u` | Jump to mnemonic bookmark U, in whatever file it is (JetBrains Go to Bookmark U) |  |
+| `goto_bookmark_v` | Jump to mnemonic bookmark V, in whatever file it is (JetBrains Go to Bookmark V) |  |
+| `goto_bookmark_w` | Jump to mnemonic bookmark W, in whatever file it is (JetBrains Go to Bookmark W) |  |
+| `goto_bookmark_x` | Jump to mnemonic bookmark X, in whatever file it is (JetBrains Go to Bookmark X) |  |
+| `goto_bookmark_y` | Jump to mnemonic bookmark Y, in whatever file it is (JetBrains Go to Bookmark Y) |  |
+| `goto_bookmark_z` | Jump to mnemonic bookmark Z, in whatever file it is (JetBrains Go to Bookmark Z) |  |
 | `bookmark_open_tabs` | Bookmark the cursor line of every open buffer (JetBrains Bookmark Open Tabs) |  |
 | `open_bookmarked_files` | Open every file that holds a line bookmark (JetBrains Open All Bookmarked Files) |  |
 | `bookmarks_view` | List every line bookmark, grouped by file (JetBrains Bookmarks tool window) | **spacemacs, hybrid** — normal: `` <space>rL ``, select: `` <space>rL `` |

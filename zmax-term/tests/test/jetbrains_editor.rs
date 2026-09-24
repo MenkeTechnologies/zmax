@@ -132,3 +132,49 @@ async fn window_bottom_selection_extends_in_normal_mode() -> anyhow::Result<()> 
     )
     .await
 }
+
+fn cursor_line(app: &Application) -> usize {
+    let (view, doc) = zmax_view::current_ref!(app.editor);
+    let text = doc.text().slice(..);
+    text.char_to_line(doc.selection(view.id).primary().cursor(text))
+}
+
+/// Mnemonic bookmarks: toggling sets one, a second line takes the mnemonic
+/// over, toggling on its own line removes it, and goto follows it.
+#[tokio::test(flavor = "multi_thread")]
+async fn mnemonic_bookmark_moves_and_toggles_off() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".txt").tempfile()?;
+    std::fs::write(file.path(), "a\nb\nc\n")?;
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => toggle_bookmark_7,
+            "Q" => goto_bookmark_7,
+            "M" => toggle_bookmark_with_mnemonic,
+        }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("jjZggQ"), Some(&|app| assert_eq!(2, cursor_line(app)))),
+            // The prompt form moves 7 to line 0.
+            (Some("ggM7jjQ"), Some(&|app| assert_eq!(0, cursor_line(app)))),
+            (
+                Some("ZjQ"),
+                Some(&|app| {
+                    assert_eq!(1, cursor_line(app), "goto did not move");
+                    let (status, _) = app.editor.get_status().expect("a status");
+                    assert_eq!("No bookmark 7", status);
+                }),
+            ),
+        ],
+        false,
+    )
+    .await
+}

@@ -80554,291 +80554,291 @@
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark0",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_0"
   ],
-  "note": "GotoBookmark0 (GotoBookmark0) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `0` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark0 = zmax `goto_bookmark_0`: opens the file holding mnemonic bookmark 0 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_1"
   ],
-  "note": "GotoBookmark1 (GotoBookmark1) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `1` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark1 = zmax `goto_bookmark_1`: opens the file holding mnemonic bookmark 1 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark2",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_2"
   ],
-  "note": "GotoBookmark2 (GotoBookmark2) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `2` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark2 = zmax `goto_bookmark_2`: opens the file holding mnemonic bookmark 2 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_3"
   ],
-  "note": "GotoBookmark3 (GotoBookmark3) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `3` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark3 = zmax `goto_bookmark_3`: opens the file holding mnemonic bookmark 3 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark4",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_4"
   ],
-  "note": "GotoBookmark4 (GotoBookmark4) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `4` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark4 = zmax `goto_bookmark_4`: opens the file holding mnemonic bookmark 4 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark5",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_5"
   ],
-  "note": "GotoBookmark5 (GotoBookmark5) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `5` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark5 = zmax `goto_bookmark_5`: opens the file holding mnemonic bookmark 5 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark6",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_6"
   ],
-  "note": "GotoBookmark6 (GotoBookmark6) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `6` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark6 = zmax `goto_bookmark_6`: opens the file holding mnemonic bookmark 6 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark7",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_7"
   ],
-  "note": "GotoBookmark7 (GotoBookmark7) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `7` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark7 = zmax `goto_bookmark_7`: opens the file holding mnemonic bookmark 7 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark8",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_8"
   ],
-  "note": "GotoBookmark8 (GotoBookmark8) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `8` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark8 = zmax `goto_bookmark_8`: opens the file holding mnemonic bookmark 8 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmark9",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_9"
   ],
-  "note": "GotoBookmark9 (GotoBookmark9) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `9` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmark9 = zmax `goto_bookmark_9`: opens the file holding mnemonic bookmark 9 and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkA",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_a"
   ],
-  "note": "GotoBookmarkA (GotoBookmarkA) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `a` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkA = zmax `goto_bookmark_a`: opens the file holding mnemonic bookmark A and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkB",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_b"
   ],
-  "note": "GotoBookmarkB (GotoBookmarkB) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `b` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkB = zmax `goto_bookmark_b`: opens the file holding mnemonic bookmark B and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkC",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_c"
   ],
-  "note": "GotoBookmarkC (GotoBookmarkC) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `c` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkC = zmax `goto_bookmark_c`: opens the file holding mnemonic bookmark C and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkD",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_d"
   ],
-  "note": "GotoBookmarkD (GotoBookmarkD) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `d` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkD = zmax `goto_bookmark_d`: opens the file holding mnemonic bookmark D and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkE",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_e"
   ],
-  "note": "GotoBookmarkE (GotoBookmarkE) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `e` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkE = zmax `goto_bookmark_e`: opens the file holding mnemonic bookmark E and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkF",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_f"
   ],
-  "note": "GotoBookmarkF (GotoBookmarkF) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `f` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkF = zmax `goto_bookmark_f`: opens the file holding mnemonic bookmark F and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkG",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_g"
   ],
-  "note": "GotoBookmarkG (GotoBookmarkG) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `g` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkG = zmax `goto_bookmark_g`: opens the file holding mnemonic bookmark G and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkH",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_h"
   ],
-  "note": "GotoBookmarkH (GotoBookmarkH) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `h` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkH = zmax `goto_bookmark_h`: opens the file holding mnemonic bookmark H and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkI",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_i"
   ],
-  "note": "GotoBookmarkI (GotoBookmarkI) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `i` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkI = zmax `goto_bookmark_i`: opens the file holding mnemonic bookmark I and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkJ",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_j"
   ],
-  "note": "GotoBookmarkJ (GotoBookmarkJ) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `j` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkJ = zmax `goto_bookmark_j`: opens the file holding mnemonic bookmark J and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkK",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_k"
   ],
-  "note": "GotoBookmarkK (GotoBookmarkK) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `k` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkK = zmax `goto_bookmark_k`: opens the file holding mnemonic bookmark K and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkL",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_l"
   ],
-  "note": "GotoBookmarkL (GotoBookmarkL) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `l` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkL = zmax `goto_bookmark_l`: opens the file holding mnemonic bookmark L and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkM",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_m"
   ],
-  "note": "GotoBookmarkM (GotoBookmarkM) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `m` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkM = zmax `goto_bookmark_m`: opens the file holding mnemonic bookmark M and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkN",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_n"
   ],
-  "note": "GotoBookmarkN (GotoBookmarkN) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `n` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkN = zmax `goto_bookmark_n`: opens the file holding mnemonic bookmark N and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkO",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_o"
   ],
-  "note": "GotoBookmarkO (GotoBookmarkO) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `o` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkO = zmax `goto_bookmark_o`: opens the file holding mnemonic bookmark O and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkP",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_p"
   ],
-  "note": "GotoBookmarkP (GotoBookmarkP) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `p` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkP = zmax `goto_bookmark_p`: opens the file holding mnemonic bookmark P and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkQ",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_q"
   ],
-  "note": "GotoBookmarkQ (GotoBookmarkQ) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `q` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkQ = zmax `goto_bookmark_q`: opens the file holding mnemonic bookmark Q and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkR",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_r"
   ],
-  "note": "GotoBookmarkR (GotoBookmarkR) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `r` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkR = zmax `goto_bookmark_r`: opens the file holding mnemonic bookmark R and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkS",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_s"
   ],
-  "note": "GotoBookmarkS (GotoBookmarkS) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `s` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkS = zmax `goto_bookmark_s`: opens the file holding mnemonic bookmark S and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkT",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_t"
   ],
-  "note": "GotoBookmarkT (GotoBookmarkT) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `t` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkT = zmax `goto_bookmark_t`: opens the file holding mnemonic bookmark T and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_u"
   ],
-  "note": "GotoBookmarkU (GotoBookmarkU) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `u` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkU = zmax `goto_bookmark_u`: opens the file holding mnemonic bookmark U and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkV",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_v"
   ],
-  "note": "GotoBookmarkV (GotoBookmarkV) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `v` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkV = zmax `goto_bookmark_v`: opens the file holding mnemonic bookmark V and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkW",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_w"
   ],
-  "note": "GotoBookmarkW (GotoBookmarkW) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `w` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkW = zmax `goto_bookmark_w`: opens the file holding mnemonic bookmark W and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkX",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_x"
   ],
-  "note": "GotoBookmarkX (GotoBookmarkX) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `x` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkX = zmax `goto_bookmark_x`: opens the file holding mnemonic bookmark X and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkY",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_y"
   ],
-  "note": "GotoBookmarkY (GotoBookmarkY) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `y` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkY = zmax `goto_bookmark_y`: opens the file holding mnemonic bookmark Y and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoBookmarkZ",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_numbered_bookmark"
+   "static:goto_bookmark_z"
   ],
-  "note": "GotoBookmarkZ (GotoBookmarkZ) ~ zmax `goto_numbered_bookmark`: `goto_numbered_bookmark` then `z` jumps to that slot, but zmax slots (0-9, a-z) are per-document while JetBrains mnemonic bookmarks are project-wide"
+  "note": "GotoBookmarkZ = zmax `goto_bookmark_z`: opens the file holding mnemonic bookmark Z and jumps to its line. Mnemonics are project-wide, as in the IDE."
  },
  {
   "spec_id": "jetbrains-actions.GotoChangedFile",
@@ -82890,5 +82890,301 @@
    "static:extend_to_window_bottom"
   ],
   "note": "EditorMoveToPageBottomWithSelection = zmax `extend_to_window_bottom`: extends to the last visible line in any mode."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark0",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_0"
+  ],
+  "note": "ToggleBookmark0 (Toggle Bookmark 0) = zmax `toggle_bookmark_0`: sets mnemonic bookmark 0 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark1",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_1"
+  ],
+  "note": "ToggleBookmark1 (Toggle Bookmark 1) = zmax `toggle_bookmark_1`: sets mnemonic bookmark 1 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark2",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_2"
+  ],
+  "note": "ToggleBookmark2 (Toggle Bookmark 2) = zmax `toggle_bookmark_2`: sets mnemonic bookmark 2 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark3",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_3"
+  ],
+  "note": "ToggleBookmark3 (Toggle Bookmark 3) = zmax `toggle_bookmark_3`: sets mnemonic bookmark 3 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark4",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_4"
+  ],
+  "note": "ToggleBookmark4 (Toggle Bookmark 4) = zmax `toggle_bookmark_4`: sets mnemonic bookmark 4 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark5",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_5"
+  ],
+  "note": "ToggleBookmark5 (Toggle Bookmark 5) = zmax `toggle_bookmark_5`: sets mnemonic bookmark 5 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark6",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_6"
+  ],
+  "note": "ToggleBookmark6 (Toggle Bookmark 6) = zmax `toggle_bookmark_6`: sets mnemonic bookmark 6 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark7",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_7"
+  ],
+  "note": "ToggleBookmark7 (Toggle Bookmark 7) = zmax `toggle_bookmark_7`: sets mnemonic bookmark 7 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark8",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_8"
+  ],
+  "note": "ToggleBookmark8 (Toggle Bookmark 8) = zmax `toggle_bookmark_8`: sets mnemonic bookmark 8 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmark9",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_9"
+  ],
+  "note": "ToggleBookmark9 (Toggle Bookmark 9) = zmax `toggle_bookmark_9`: sets mnemonic bookmark 9 on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkA",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_a"
+  ],
+  "note": "ToggleBookmarkA (Toggle Bookmark A) = zmax `toggle_bookmark_a`: sets mnemonic bookmark A on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkB",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_b"
+  ],
+  "note": "ToggleBookmarkB (Toggle Bookmark B) = zmax `toggle_bookmark_b`: sets mnemonic bookmark B on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkC",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_c"
+  ],
+  "note": "ToggleBookmarkC (Toggle Bookmark C) = zmax `toggle_bookmark_c`: sets mnemonic bookmark C on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkD",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_d"
+  ],
+  "note": "ToggleBookmarkD (Toggle Bookmark D) = zmax `toggle_bookmark_d`: sets mnemonic bookmark D on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkE",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_e"
+  ],
+  "note": "ToggleBookmarkE (Toggle Bookmark E) = zmax `toggle_bookmark_e`: sets mnemonic bookmark E on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkF",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_f"
+  ],
+  "note": "ToggleBookmarkF (Toggle Bookmark F) = zmax `toggle_bookmark_f`: sets mnemonic bookmark F on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkG",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_g"
+  ],
+  "note": "ToggleBookmarkG (Toggle Bookmark G) = zmax `toggle_bookmark_g`: sets mnemonic bookmark G on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkH",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_h"
+  ],
+  "note": "ToggleBookmarkH (Toggle Bookmark H) = zmax `toggle_bookmark_h`: sets mnemonic bookmark H on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkI",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_i"
+  ],
+  "note": "ToggleBookmarkI (Toggle Bookmark I) = zmax `toggle_bookmark_i`: sets mnemonic bookmark I on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkJ",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_j"
+  ],
+  "note": "ToggleBookmarkJ (Toggle Bookmark J) = zmax `toggle_bookmark_j`: sets mnemonic bookmark J on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkK",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_k"
+  ],
+  "note": "ToggleBookmarkK (Toggle Bookmark K) = zmax `toggle_bookmark_k`: sets mnemonic bookmark K on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkL",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_l"
+  ],
+  "note": "ToggleBookmarkL (Toggle Bookmark L) = zmax `toggle_bookmark_l`: sets mnemonic bookmark L on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkM",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_m"
+  ],
+  "note": "ToggleBookmarkM (Toggle Bookmark M) = zmax `toggle_bookmark_m`: sets mnemonic bookmark M on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkN",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_n"
+  ],
+  "note": "ToggleBookmarkN (Toggle Bookmark N) = zmax `toggle_bookmark_n`: sets mnemonic bookmark N on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkO",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_o"
+  ],
+  "note": "ToggleBookmarkO (Toggle Bookmark O) = zmax `toggle_bookmark_o`: sets mnemonic bookmark O on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkP",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_p"
+  ],
+  "note": "ToggleBookmarkP (Toggle Bookmark P) = zmax `toggle_bookmark_p`: sets mnemonic bookmark P on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkQ",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_q"
+  ],
+  "note": "ToggleBookmarkQ (Toggle Bookmark Q) = zmax `toggle_bookmark_q`: sets mnemonic bookmark Q on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkR",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_r"
+  ],
+  "note": "ToggleBookmarkR (Toggle Bookmark R) = zmax `toggle_bookmark_r`: sets mnemonic bookmark R on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkS",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_s"
+  ],
+  "note": "ToggleBookmarkS (Toggle Bookmark S) = zmax `toggle_bookmark_s`: sets mnemonic bookmark S on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkT",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_t"
+  ],
+  "note": "ToggleBookmarkT (Toggle Bookmark T) = zmax `toggle_bookmark_t`: sets mnemonic bookmark T on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkU",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_u"
+  ],
+  "note": "ToggleBookmarkU (Toggle Bookmark U) = zmax `toggle_bookmark_u`: sets mnemonic bookmark U on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkV",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_v"
+  ],
+  "note": "ToggleBookmarkV (Toggle Bookmark V) = zmax `toggle_bookmark_v`: sets mnemonic bookmark V on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkW",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_w"
+  ],
+  "note": "ToggleBookmarkW (Toggle Bookmark W) = zmax `toggle_bookmark_w`: sets mnemonic bookmark W on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkX",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_x"
+  ],
+  "note": "ToggleBookmarkX (Toggle Bookmark X) = zmax `toggle_bookmark_x`: sets mnemonic bookmark X on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkY",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_y"
+  ],
+  "note": "ToggleBookmarkY (Toggle Bookmark Y) = zmax `toggle_bookmark_y`: sets mnemonic bookmark Y on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkZ",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_z"
+  ],
+  "note": "ToggleBookmarkZ (Toggle Bookmark Z) = zmax `toggle_bookmark_z`: sets mnemonic bookmark Z on the line, moving it off any other line, or removes it when it is already here."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleBookmarkWithMnemonic",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_with_mnemonic"
+  ],
+  "note": "ToggleBookmarkWithMnemonic (Toggle Bookmark Mnemonic) = zmax `toggle_bookmark_with_mnemonic`: the next key (0-9, A-Z) names the mnemonic to toggle on the line."
  }
 ]
