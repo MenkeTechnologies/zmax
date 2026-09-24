@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-40dda59f.js";
+            window.path_to_searchindex_js = "searchindex-7a38d65f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4473,6 +4473,8 @@ without scrolling.</p>
 <tr><td><code>move_to_window_line_top_bottom</code></td><td>Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-r&gt;</code><br><strong>hybrid, emacs, cua, micro</strong> — normal: <code>&lt;A-r&gt;</code>, insert: <code>&lt;A-r&gt;</code></td></tr>
 <tr><td><code>goto_window_center</code></td><td>Goto window center</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>M</code><br><strong>helix, kakoune</strong> — normal: <code>gc</code>, select: <code>gc</code></td></tr>
 <tr><td><code>goto_window_bottom</code></td><td>Goto window bottom</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>L</code><br><strong>helix, kakoune</strong> — normal: <code>gb</code>, select: <code>gb</code></td></tr>
+<tr><td><code>extend_to_window_top</code></td><td>Extend the selection to the first visible line (JetBrains Move Caret to Page Top with Selection)</td><td></td></tr>
+<tr><td><code>extend_to_window_bottom</code></td><td>Extend the selection to the last visible line (JetBrains Move Caret to Page Bottom with Selection)</td><td></td></tr>
 <tr><td><code>goto_last_accessed_file</code></td><td>Goto last accessed file</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;space&gt;w^</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code>, select: <code>&lt;space&gt;w^</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>ga</code>, select: <code>ga</code></td></tr>
 <tr><td><code>cycle_buffer_backward</code></td><td>Cycle back through this window’s visited buffers (C-TAB)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>&lt;C-tab&gt;</code></td></tr>
 <tr><td><code>cycle_buffer_forward</code></td><td>Cycle forward through this window’s visited buffers (C-S-TAB)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>&lt;A-C-tab&gt;</code></td></tr>
@@ -4624,6 +4626,9 @@ without scrolling.</p>
 <tr><td><code>insert_kill_entered_vim</code></td><td>Delete the text entered this insert session (vim i_CTRL-U)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-u&gt;</code></td></tr>
 <tr><td><code>kill_to_line_start</code></td><td>Delete till start of line</td><td><strong>helix, kakoune</strong> — insert: <code>&lt;C-u&gt;</code></td></tr>
 <tr><td><code>kill_to_line_end</code></td><td>Delete till end of line</td><td><strong>hybrid, helix, kakoune</strong> — insert: <code>&lt;C-k&gt;</code><br><strong>emacs, cua, nano</strong> — normal: <code>&lt;C-k&gt;</code>, insert: <code>&lt;C-k&gt;</code></td></tr>
+<tr><td><code>cut_to_line_end</code></td><td>Cut from the cursor to the end of the line into the clipboard (JetBrains Cut up to Line End)</td><td></td></tr>
+<tr><td><code>cut_to_line_start</code></td><td>Cut from the start of the line to the cursor into the clipboard (JetBrains Cut Line Backward)</td><td></td></tr>
+<tr><td><code>split_line</code></td><td>Break the line at the cursor, leaving the cursor before the break (JetBrains Split Line, emacs open-line)</td><td></td></tr>
 <tr><td><code>undo</code></td><td>Undo change</td><td><strong>spacemacs, hybrid</strong> — normal: <code>u</code>, <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-x&gt;u</code>, <code>&lt;space&gt;ku</code>, select: <code>&lt;C-x&gt;u</code>, <code>&lt;space&gt;ku</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-x&gt;u</code><br><strong>vim</strong> — normal: <code>u</code><br><strong>helix, kakoune</strong> — normal: <code>u</code>, select: <code>u</code><br><strong>emacs</strong> — normal: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-x&gt;u</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-x&gt;u</code><br><strong>cua</strong> — normal: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-z&gt;</code>, <code>&lt;C-x&gt;u</code>, select: <code>&lt;C-X&gt;u</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-z&gt;</code>, <code>&lt;C-x&gt;u</code><br><strong>micro</strong> — normal: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-z&gt;</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-z&gt;</code><br><strong>nano</strong> — normal: <code>&lt;A-u&gt;</code>, <code>&lt;C-/&gt;</code>, insert: <code>&lt;A-u&gt;</code>, <code>&lt;C-/&gt;</code></td></tr>
 <tr><td><code>undo_line</code></td><td>Undo all latest changes on one line (vim U)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>U</code></td></tr>
 <tr><td><code>redo</code></td><td>Redo change</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-r&gt;</code>, <code>&lt;space&gt;k&lt;C-r&gt;</code>, select: <code>&lt;space&gt;k&lt;C-r&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-r&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>U</code>, select: <code>U</code><br><strong>micro</strong> — normal: <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-y&gt;</code><br><strong>nano</strong> — normal: <code>&lt;A-e&gt;</code>, insert: <code>&lt;A-e&gt;</code></td></tr>
@@ -5327,6 +5332,8 @@ without scrolling.</p>
 <tr><td><code>goto_prev_unmatched_brace</code></td><td>Goto previous unmatched { ([{)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>[{</code></td></tr>
 <tr><td><code>goto_next_unmatched_paren</code></td><td>Goto next unmatched ) (])</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>])</code></td></tr>
 <tr><td><code>goto_next_unmatched_brace</code></td><td>Goto next unmatched } (]})</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>]}</code></td></tr>
+<tr><td><code>extend_to_block_start</code></td><td>Extend the selection to the start of the enclosing code block (JetBrains Move Caret to Code Block Start with Selection)</td><td></td></tr>
+<tr><td><code>extend_to_block_end</code></td><td>Extend the selection to the end of the enclosing code block (JetBrains Move Caret to Code Block End with Selection)</td><td></td></tr>
 <tr><td><code>goto_prev_preproc</code></td><td>Goto previous unmatched #if/#else ([#)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>[#</code></td></tr>
 <tr><td><code>goto_next_preproc</code></td><td>Goto next unmatched #endif/#else (]#)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>]#</code></td></tr>
 <tr><td><code>vim_sleep</code></td><td>Sleep for {count} seconds (vim gs)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>gs</code></td></tr>
@@ -9617,11 +9624,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9413</strong> (78.9%)</li>
+<li>Ported: <strong>9420</strong> (79.0%)</li>
 <li>Partial: <strong>733</strong> (6.1%)</li>
-<li>Absent: <strong>1780</strong></li>
+<li>Absent: <strong>1773</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2615 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2622 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9684,7 +9691,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">451</td><td style="text-align: right">150</td><td style="text-align: right">22.5%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">458</td><td style="text-align: right">150</td><td style="text-align: right">22.9%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9780,7 +9787,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">2</td><td style="text-align: right">1</td><td style="text-align: right">5.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">418</td><td style="text-align: right">95</td><td style="text-align: right">26.0%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">425</td><td style="text-align: right">95</td><td style="text-align: right">26.4%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">8</td><td style="text-align: right">36</td><td style="text-align: right">7.9%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">4</td><td style="text-align: right">2</td><td style="text-align: right">25.0%</td></tr>
