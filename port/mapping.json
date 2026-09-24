@@ -83466,5 +83466,77 @@
    "static:git_worktree_remove"
   ],
   "note": "Git.WorkingTrees.Remove = zmax `git_worktree_remove`: same git operation; the IDE dialog or list selection is a picker or prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.CreateNewBranch.FromCommit",
+  "status": "ported",
+  "evidence": [
+   "static:git_branch_at_commit"
+  ],
+  "note": "Git.CreateNewBranch.FromCommit = zmax `git_branch_at_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Drop.Commits",
+  "status": "partial",
+  "evidence": [
+   "static:git_drop_commit"
+  ],
+  "note": "Git.Drop.Commits = zmax `git_drop_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection. One commit per run; the IDE acts on a multi-selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Fixup.To.Commit",
+  "status": "ported",
+  "evidence": [
+   "static:git_fixup_commit"
+  ],
+  "note": "Git.Fixup.To.Commit = zmax `git_fixup_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.New.Branch.In.Log",
+  "status": "ported",
+  "evidence": [
+   "static:git_branch_at_commit"
+  ],
+  "note": "Git.New.Branch.In.Log = zmax `git_branch_at_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.PushUpToCommit",
+  "status": "ported",
+  "evidence": [
+   "static:git_push_up_to_commit"
+  ],
+  "note": "Git.PushUpToCommit = zmax `git_push_up_to_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Reset.In.Log",
+  "status": "ported",
+  "evidence": [
+   "static:git_reset_to_commit"
+  ],
+  "note": "Git.Reset.In.Log = zmax `git_reset_to_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Revert.In.Log",
+  "status": "partial",
+  "evidence": [
+   "static:git_revert_commit"
+  ],
+  "note": "Git.Revert.In.Log = zmax `git_revert_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection. One commit per run; the IDE acts on a multi-selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Reword.Commit",
+  "status": "ported",
+  "evidence": [
+   "static:git_reword_commit"
+  ],
+  "note": "Git.Reword.Commit = zmax `git_reword_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Squash.Into.Commit",
+  "status": "ported",
+  "evidence": [
+   "static:git_squash_into_commit"
+  ],
+  "note": "Git.Squash.Into.Commit = zmax `git_squash_into_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection."
  }
 ]

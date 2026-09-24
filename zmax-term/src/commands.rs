@@ -1345,6 +1345,14 @@ impl MappableCommand {
         git_diff_local_staged, "Diff this file against its staged version (JetBrains Compare with Staged Version)",
         git_diff_staged_local, "Diff the staged version of this file against the working tree (JetBrains Compare with Local Version)",
         git_show_staged, "Show this file as the index holds it (JetBrains Show Staged Version)",
+        git_fixup_commit, "Commit the staged changes as a fixup! of a picked commit (JetBrains Fixup)",
+        git_squash_into_commit, "Commit the staged changes as a squash! of a picked commit (JetBrains Squash Into)",
+        git_drop_commit, "Remove a picked commit from the branch (JetBrains Drop Commits)",
+        git_reword_commit, "Change the message of a picked commit (JetBrains Edit Commit Message)",
+        git_branch_at_commit, "Create a branch at a picked commit and switch to it (JetBrains New Branch)",
+        git_reset_to_commit, "Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)",
+        git_revert_commit, "Commit the inverse of a picked commit (JetBrains Revert Commit)",
+        git_push_up_to_commit, "Push the current branch only up to a picked commit (JetBrains Push All up to Here)",
         git_acp, "Stage all, commit, and push in one shot (C-x v c)",
         vc_print_log, "VC log for the current file (emacs vc-print-log)",
         vc_print_root_log, "VC log for the whole repository (emacs vc-print-root-log)",
@@ -71673,26 +71681,155 @@ fn git_rename_branch(cx: &mut Context) {
 /// Soft / Mixed / Hard / Keep does.
 fn git_reset_head(cx: &mut Context) {
     prompt_then(cx, "reset HEAD to: ", |cx, target| {
-        let target = target.to_string();
-        let call: job::Callback = Callback::EditorCompositor(Box::new(
-            move |_editor: &mut Editor, compositor: &mut Compositor| {
-                let modes = ["mixed", "soft", "hard", "keep"].map(String::from).to_vec();
-                let columns = [PickerColumn::new("reset mode", |m: &String, _: &()| {
-                    m.as_str().into()
-                })];
-                let target = target.clone();
-                let picker = Picker::new(columns, 0, modes, (), move |cx, mode: &String, _| {
-                    git_run_cx(
-                        cx,
-                        &["reset", &format!("--{mode}"), &target],
-                        &format!("HEAD reset to {target} ({mode})"),
-                        true,
-                    )
-                });
-                compositor.push(Box::new(overlaid(picker)));
-            },
-        ));
-        cx.jobs.callback(async move { Ok(call) });
+        git_reset_mode_picker(cx, target.to_string())
+    });
+}
+
+/// Ask for the reset mode, then reset HEAD to `target`.
+fn git_reset_mode_picker(cx: &mut crate::compositor::Context, target: String) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let modes = ["mixed", "soft", "hard", "keep"].map(String::from).to_vec();
+            let columns = [PickerColumn::new("reset mode", |m: &String, _: &()| {
+                m.as_str().into()
+            })];
+            let target = target.clone();
+            let picker = Picker::new(columns, 0, modes, (), move |cx, mode: &String, _| {
+                git_run_cx(
+                    cx,
+                    &["reset", &format!("--{mode}"), &target],
+                    &format!("HEAD reset to {target} ({mode})"),
+                    true,
+                )
+            });
+            compositor.push(Box::new(overlaid(picker)));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Pick a commit from the current branch's log; `on_pick` gets its hash.
+fn git_pick_commit<F>(cx: &mut Context, header: &'static str, on_pick: F)
+where
+    F: Fn(&mut crate::compositor::Context, &str) + 'static,
+{
+    let commits = git_lines(&["log", "--format=%h %s", "-500"]);
+    git_pick(cx, header, commits, "No commits", move |cx, line| {
+        on_pick(cx, line.split(' ').next().unwrap_or(line))
+    });
+}
+
+/// JetBrains "Fixup" (`Git.Fixup.To.Commit`): commit the staged changes as a
+/// `fixup!` of a picked commit, for a later autosquash.
+fn git_fixup_commit(cx: &mut Context) {
+    git_pick_commit(cx, "fixup of", |cx, sha| {
+        git_run_cx(cx, &["commit", &format!("--fixup={sha}")], &format!("Created fixup! of {sha}"), false)
+    });
+}
+
+/// JetBrains "Squash Into" (`Git.Squash.Into.Commit`): commit the staged
+/// changes as a `squash!` of a picked commit.
+fn git_squash_into_commit(cx: &mut Context) {
+    git_pick_commit(cx, "squash into", |cx, sha| {
+        git_run_cx(
+            cx,
+            &["commit", &format!("--squash={sha}"), "--no-edit"],
+            &format!("Created squash! of {sha}"),
+            false,
+        )
+    });
+}
+
+/// JetBrains "Drop Commits" (`Git.Drop.Commits`): remove a picked commit from
+/// the branch, replaying the ones after it.
+fn git_drop_commit(cx: &mut Context) {
+    git_pick_commit(cx, "drop commit", |cx, sha| {
+        git_run_cx(
+            cx,
+            &["rebase", "--onto", &format!("{sha}^"), sha],
+            &format!("Dropped {sha}"),
+            true,
+        )
+    });
+}
+
+/// JetBrains "Edit Commit Message" (`Git.Reword.Commit`): amend for HEAD, a
+/// `reword` rebase for an older commit, as the IDE describes it. The rebase
+/// runs without a terminal: its sequence editor turns the first `pick`, the
+/// picked commit, into `reword`, and its editor writes the new message.
+fn git_reword_commit(cx: &mut Context) {
+    git_pick_commit(cx, "edit message of", |cx, sha| {
+        let sha = sha.to_string();
+        prompt_then_cx(cx, "new message: ", move |cx, message| {
+            let full = |rev: &str| git_exec(&["rev-parse", rev]).ok();
+            if full("HEAD").is_some() && full("HEAD") == full(&sha) {
+                git_run_cx(cx, &["commit", "--amend", "--only", "-m", message], "Reworded HEAD", false);
+                return;
+            }
+            let root = zmax_loader::find_workspace().0;
+            let result = std::process::Command::new("git")
+                .arg("-C")
+                .arg(&root)
+                .args(["rebase", "-i", &format!("{sha}^")])
+                .env("GIT_TERMINAL_PROMPT", "0")
+                .env("GIT_SEQUENCE_EDITOR", "perl -i -pe 's/^pick /reword / if $. == 1'")
+                .env(
+                    "GIT_EDITOR",
+                    "perl -e 'open my $f, q(>), $ARGV[0] or die; print $f $ENV{ZMAX_REWORD_MSG}'",
+                )
+                .env("ZMAX_REWORD_MSG", message)
+                .output();
+            match result {
+                Ok(out) if out.status.success() => {
+                    crate::commands::typed::reload_open_docs(cx);
+                    cx.editor.set_status(format!("Reworded {sha}"));
+                }
+                Ok(out) => cx.editor.set_error(format!(
+                    "reword {sha}: {}",
+                    String::from_utf8_lossy(&out.stderr).lines().next().unwrap_or("failed")
+                )),
+                Err(e) => cx.editor.set_error(format!("git: {e}")),
+            }
+        });
+    });
+}
+
+/// JetBrains "New Branch" from a log commit (`Git.CreateNewBranch.FromCommit`):
+/// create a branch at a picked commit and switch to it.
+fn git_branch_at_commit(cx: &mut Context) {
+    git_pick_commit(cx, "branch from", |cx, sha| {
+        let sha = sha.to_string();
+        prompt_then_cx(cx, "new branch: ", move |cx, name| {
+            git_run_cx(cx, &["switch", "-c", name, &sha], &format!("Switched to new branch {name} at {sha}"), true)
+        });
+    });
+}
+
+/// JetBrains "Reset Current Branch to Here" (`Git.Reset.In.Log`).
+fn git_reset_to_commit(cx: &mut Context) {
+    git_pick_commit(cx, "reset to", |cx, sha| git_reset_mode_picker(cx, sha.to_string()));
+}
+
+/// JetBrains "Revert Commit" (`Git.Revert.In.Log`): a new commit undoing a
+/// picked one.
+fn git_revert_commit(cx: &mut Context) {
+    git_pick_commit(cx, "revert", |cx, sha| {
+        git_run_cx(cx, &["revert", "--no-edit", sha], &format!("Reverted {sha}"), true)
+    });
+}
+
+/// JetBrains "Push All up to Here" (`Git.PushUpToCommit`): push the current
+/// branch only as far as a picked commit.
+fn git_push_up_to_commit(cx: &mut Context) {
+    git_pick_commit(cx, "push up to", |cx, sha| {
+        let branch = git_exec(&["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_default();
+        git_async_cx(
+            cx,
+            "pushing…",
+            vec!["push".into(), git_push_remote(), format!("{sha}:refs/heads/{branch}")],
+            "pushed",
+            false,
+        )
     });
 }
 

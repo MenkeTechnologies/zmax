@@ -954,6 +954,14 @@
 | `git_diff_local_staged` | Diff this file against its staged version (JetBrains Compare with Staged Version) |  |
 | `git_diff_staged_local` | Diff the staged version of this file against the working tree (JetBrains Compare with Local Version) |  |
 | `git_show_staged` | Show this file as the index holds it (JetBrains Show Staged Version) |  |
+| `git_fixup_commit` | Commit the staged changes as a fixup! of a picked commit (JetBrains Fixup) |  |
+| `git_squash_into_commit` | Commit the staged changes as a squash! of a picked commit (JetBrains Squash Into) |  |
+| `git_drop_commit` | Remove a picked commit from the branch (JetBrains Drop Commits) |  |
+| `git_reword_commit` | Change the message of a picked commit (JetBrains Edit Commit Message) |  |
+| `git_branch_at_commit` | Create a branch at a picked commit and switch to it (JetBrains New Branch) |  |
+| `git_reset_to_commit` | Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here) |  |
+| `git_revert_commit` | Commit the inverse of a picked commit (JetBrains Revert Commit) |  |
+| `git_push_up_to_commit` | Push the current branch only up to a picked commit (JetBrains Push All up to Here) |  |
 | `git_acp` | Stage all, commit, and push in one shot (C-x v c) | **spacemacs** — normal: `` <C-x>vc ``, select: `` <C-x>vc ``, insert: `` <C-x>vc ``<br>**hybrid** — normal: `` <C-x>vc ``, select: `` <C-x>vc `` |
 | `vc_print_log` | VC log for the current file (emacs vc-print-log) | **spacemacs** — normal: `` <C-x>vl ``, select: `` <C-x>vl ``, insert: `` <C-x>vl ``<br>**hybrid** — normal: `` <C-x>vl ``, select: `` <C-x>vl `` |
 | `vc_print_root_log` | VC log for the whole repository (emacs vc-print-root-log) | **spacemacs** — normal: `` <C-x>vL ``, select: `` <C-x>vL ``, insert: `` <C-x>vL ``<br>**hybrid** — normal: `` <C-x>vL ``, select: `` <C-x>vL `` |
