@@ -267,6 +267,16 @@ struct ProblemRow {
     header: bool,
 }
 
+/// Errors first, then warnings, information and hints.
+fn severity_rank(severity: Severity) -> u8 {
+    match severity {
+        Severity::Error => 0,
+        Severity::Warning => 1,
+        Severity::Info => 2,
+        Severity::Hint => 3,
+    }
+}
+
 /// The problems list broken up by the checker that reported each one, with a
 /// header row per source — JetBrains "Group by Inspection"
 /// (`ProblemsView.GroupByToolId`). Pure — unit tested.
@@ -350,6 +360,9 @@ pub struct Ide {
     /// JetBrains "Group by Inspection" (`ProblemsView.GroupByToolId`): the
     /// problems list broken up by the checker that reported each one.
     group_problems: bool,
+    /// JetBrains "Sort by Severity" (`ProblemsView.SortBySeverity`): errors
+    /// first, then warnings, then the rest, each in line order.
+    problems_by_severity: bool,
     problems_sel: usize,
     problems_state: ratatui::widgets::TableState,
     ci_state: ratatui::widgets::TableState,
@@ -532,6 +545,7 @@ impl Ide {
             structure_searching: false,
             problems: Vec::new(),
             group_problems: false,
+            problems_by_severity: false,
             problems_sel: 0,
             problems_state: ratatui::widgets::TableState::default(),
             ci_state: ratatui::widgets::TableState::default(),
@@ -792,6 +806,24 @@ impl Ide {
         self.fold_problems = false;
         self.problems_sel = 0;
         self.group_problems
+    }
+
+    /// JetBrains "Sort by Severity" (`ProblemsView.SortBySeverity`). Returns
+    /// the new state.
+    pub fn toggle_problems_by_severity(&mut self) -> bool {
+        self.problems_by_severity = !self.problems_by_severity;
+        self.visible = true;
+        self.fold_problems = false;
+        self.problems_sel = 0;
+        self.problems_by_severity
+    }
+
+    /// The char range of the diagnostic selected in the Problems panel.
+    pub fn selected_problem(&self) -> Option<(usize, usize)> {
+        self.problems
+            .get(self.problems_sel)
+            .filter(|p| !p.header)
+            .map(|p| (p.start, p.end))
     }
 
     /// Run `f` on the project tree, showing the workbench so the result is
@@ -3024,6 +3056,10 @@ impl Ide {
                 header: false,
             })
             .collect();
+        if self.problems_by_severity {
+            // Stable, so each severity keeps its line order.
+            self.problems.sort_by_key(|p| severity_rank(p.sev));
+        }
         if self.group_problems {
             self.problems = group_problems_by_source(std::mem::take(&mut self.problems));
         }
@@ -5452,7 +5488,7 @@ fn git_churn(dir: &std::path::Path) -> Vec<u64> {
 mod parse_tests {
     use super::{
         git_is_conflict, group_problems_by_source, parse_file_line, parse_percent,
-        parse_test_progress, todo_marker, todo_marker_scope, ProblemRow, Severity,
+        parse_test_progress, severity_rank, todo_marker, todo_marker_scope, ProblemRow, Severity,
     };
 
     #[test]
@@ -5666,5 +5702,18 @@ mod parse_tests {
     #[test]
     fn group_problems_by_source_is_a_no_op_on_nothing() {
         assert!(group_problems_by_source(Vec::new()).is_empty());
+    }
+
+    #[test]
+    fn severity_order_puts_errors_first_and_keeps_line_order() {
+        let mut sevs = vec![
+            (Severity::Hint, 1),
+            (Severity::Error, 2),
+            (Severity::Warning, 3),
+            (Severity::Error, 4),
+        ];
+        sevs.sort_by_key(|(s, _)| severity_rank(*s));
+        let lines: Vec<usize> = sevs.iter().map(|(_, l)| *l).collect();
+        assert_eq!(vec![2, 4, 3, 1], lines);
     }
 }

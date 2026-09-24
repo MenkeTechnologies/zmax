@@ -84210,5 +84210,45 @@
    "static:toggle_statusline"
   ],
   "note": "ViewStatusBar = zmax `toggle_statusline`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.EditSource",
+  "status": "ported",
+  "evidence": [
+   "static:problems_jump_to_source"
+  ],
+  "note": "ProblemsView.Frontend.EditSource = zmax `problems_jump_to_source`, on the workbench Problems panel (ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.QuickFixes",
+  "status": "ported",
+  "evidence": [
+   "static:problems_quick_fixes"
+  ],
+  "note": "ProblemsView.Frontend.QuickFixes = zmax `problems_quick_fixes`, on the workbench Problems panel (ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.SortBySeverity",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_by_severity"
+  ],
+  "note": "ProblemsView.Frontend.SortBySeverity = zmax `toggle_problems_by_severity`, on the workbench Problems panel (ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.QuickFixes",
+  "status": "ported",
+  "evidence": [
+   "static:problems_quick_fixes"
+  ],
+  "note": "ProblemsView.QuickFixes = zmax `problems_quick_fixes`, on the workbench Problems panel (ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.SortBySeverity",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_by_severity"
+  ],
+  "note": "ProblemsView.SortBySeverity = zmax `toggle_problems_by_severity`, on the workbench Problems panel (ui/ide.rs)."
  }
 ]

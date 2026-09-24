@@ -714,6 +714,11 @@ impl EditorView {
         self.ide.as_mut().map(|ide| ide.toggle_compact_dirs())
     }
 
+    /// Run `f` on the workbench; `None` without one.
+    pub fn with_ide<R>(&mut self, f: impl FnOnce(&mut crate::ui::ide::Ide) -> R) -> Option<R> {
+        self.ide.as_mut().map(f)
+    }
+
     /// Show, hide or flip the workbench minimap; `None` without a workbench.
     pub fn set_minimap(&mut self, show: Option<bool>) -> Option<bool> {
         self.ide.as_mut().map(|ide| ide.set_minimap(show))

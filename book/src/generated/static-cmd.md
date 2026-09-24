@@ -1622,6 +1622,9 @@
 | `export_to_scratch` | Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File) | **spacemacs, hybrid** — normal: `` <space>bE ``, select: `` <space>bE `` |
 | `recent_tests` | Pick one of the test runs that have finished and run it again (JetBrains Recent Tests) | **spacemacs, hybrid** — normal: `` <space>cH ``, select: `` <space>cH `` |
 | `sort_tree_by_time_newest` | Order the project tree by modification time, newest first (JetBrains Sort by Modification Time) |  |
+| `toggle_problems_by_severity` | Order the Problems panel by severity, errors first (JetBrains Sort by Severity) |  |
+| `problems_jump_to_source` | Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source) |  |
+| `problems_quick_fixes` | Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes) |  |
 | `toggle_maximize_split` | Show the focused window alone, or restore every window (JetBrains Maximize Editor in Split) |  |
 | `toggle_statusline` | Show or hide the status line (JetBrains Status Bar) |  |
 | `toggle_minimap` | Show or hide the workbench minimap (JetBrains Show Minimap) |  |

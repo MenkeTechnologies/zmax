@@ -2013,6 +2013,9 @@ impl MappableCommand {
         export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
         recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
+        toggle_problems_by_severity, "Order the Problems panel by severity, errors first (JetBrains Sort by Severity)",
+        problems_jump_to_source, "Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source)",
+        problems_quick_fixes, "Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes)",
         toggle_maximize_split, "Show the focused window alone, or restore every window (JetBrains Maximize Editor in Split)",
         toggle_statusline, "Show or hide the status line (JetBrains Status Bar)",
         toggle_minimap, "Show or hide the workbench minimap (JetBrains Show Minimap)",
@@ -54560,6 +54563,68 @@ fn project_tree_action(
         cx.editor
             .set_status(if ran.is_some() { done } else { "no project tree" });
     }));
+}
+
+/// JetBrains "Sort by Severity" in the Problems panel
+/// (`ProblemsView.SortBySeverity`): errors first, then warnings and the rest.
+fn toggle_problems_by_severity(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let on = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_ide(|ide| ide.toggle_problems_by_severity()));
+        cx.editor.set_status(match on {
+            Some(true) => "problems: by severity",
+            Some(false) => "problems: in line order",
+            None => "no workbench",
+        });
+    }));
+}
+
+/// Select the diagnostic chosen in the Problems panel in the editor, then run
+/// `then` on it.
+fn with_selected_problem(cx: &mut Context, then: fn(&mut Context)) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let range = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_ide(|ide| ide.selected_problem()))
+            .flatten();
+        let Some((from, to)) = range else {
+            cx.editor.set_status("no problem selected");
+            return;
+        };
+        let (view, doc) = current!(cx.editor);
+        let len = doc.text().len_chars();
+        doc.set_selection(view.id, Selection::single(from.min(len), to.min(len)));
+        // `then` may queue compositor callbacks of its own (a picker, a
+        // popup); they run here, where the compositor is at hand.
+        let callbacks = {
+            let mut inner = Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            then(&mut inner);
+            std::mem::take(&mut inner.callback)
+        };
+        for callback in callbacks {
+            callback(compositor, cx);
+        }
+    }));
+}
+
+/// JetBrains "Jump to Source" from the Problems panel
+/// (`ProblemsView.Frontend.EditSource`): select the chosen diagnostic.
+fn problems_jump_to_source(cx: &mut Context) {
+    with_selected_problem(cx, |_| {});
+}
+
+/// JetBrains "Show Quick Fixes" from the Problems panel
+/// (`ProblemsView.QuickFixes`): the code actions for the chosen diagnostic.
+fn problems_quick_fixes(cx: &mut Context) {
+    with_selected_problem(cx, code_action);
 }
 
 /// JetBrains "Maximize Editor in Split" (`MaximizeEditorInSplit`): the focused

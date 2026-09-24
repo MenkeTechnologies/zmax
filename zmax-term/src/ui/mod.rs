@@ -48,7 +48,7 @@ pub mod hanoi;
 pub mod help;
 pub mod hex;
 pub mod icons;
-mod ide;
+pub(crate) mod ide;
 pub mod image;
 mod info;
 pub mod invaders;
