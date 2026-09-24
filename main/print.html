@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-f6616c96.js";
+            window.path_to_searchindex_js = "searchindex-1bc11ca5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4627,6 +4627,13 @@ without scrolling.</p>
 <tr><td><code>git_reset_to_commit</code></td><td>Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)</td><td></td></tr>
 <tr><td><code>git_revert_commit</code></td><td>Commit the inverse of a picked commit (JetBrains Revert Commit)</td><td></td></tr>
 <tr><td><code>git_push_up_to_commit</code></td><td>Push the current branch only up to a picked commit (JetBrains Push All up to Here)</td><td></td></tr>
+<tr><td><code>shelf_apply</code></td><td>Apply a shelved patch, keeping it on the shelf (JetBrains Shelf / Unshelve)</td><td></td></tr>
+<tr><td><code>shelf_pop</code></td><td>Apply a shelved patch and take it off the shelf (JetBrains Unshelve and Remove)</td><td></td></tr>
+<tr><td><code>shelf_drop</code></td><td>Take a patch off the shelf, recoverably (JetBrains Drop)</td><td></td></tr>
+<tr><td><code>shelf_restore</code></td><td>Bring a dropped patch back onto the shelf (JetBrains Restore)</td><td></td></tr>
+<tr><td><code>shelf_rename</code></td><td>Rename a shelf entry (JetBrains Rename)</td><td></td></tr>
+<tr><td><code>shelf_import</code></td><td>Put a patch file on the shelf (JetBrains Import Patches)</td><td></td></tr>
+<tr><td><code>shelf_save_keep</code></td><td>Shelve the working tree’s changes and keep them in the tree (JetBrains Save to Shelf)</td><td></td></tr>
 <tr><td><code>git_revert_into_worktree</code></td><td>Apply the reverse of a picked commit without committing (JetBrains Revert Changes)</td><td></td></tr>
 <tr><td><code>git_compare_with_upstream</code></td><td>Diff this file against its upstream version (JetBrains Compare with Latest Repository Version)</td><td></td></tr>
 <tr><td><code>git_show_file_at_commit</code></td><td>Show this file as it was at a picked commit (JetBrains Show Current Revision)</td><td></td></tr>
@@ -9835,11 +9842,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9638</strong> (80.8%)</li>
+<li>Ported: <strong>9651</strong> (80.9%)</li>
 <li>Partial: <strong>700</strong> (5.9%)</li>
-<li>Absent: <strong>1588</strong></li>
+<li>Absent: <strong>1575</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2833 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2840 static commands, 3190 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9902,7 +9909,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">676</td><td style="text-align: right">117</td><td style="text-align: right">33.8%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">689</td><td style="text-align: right">117</td><td style="text-align: right">34.4%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -9998,10 +10005,10 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">62.5%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">484</td><td style="text-align: right">96</td><td style="text-align: right">30.1%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">494</td><td style="text-align: right">96</td><td style="text-align: right">30.7%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">86</td><td style="text-align: right">0</td><td style="text-align: right">85.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">1</td><td style="text-align: right">0</td><td style="text-align: right">2.7%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">4</td><td style="text-align: right">2</td><td style="text-align: right">25.0%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">7</td><td style="text-align: right">2</td><td style="text-align: right">43.8%</td></tr>
 <tr><td>jetbrains-actions</td><td>terminal</td><td style="text-align: right">59</td><td style="text-align: right">14</td><td style="text-align: right">0</td><td style="text-align: right">23.7%</td></tr>
 <tr><td>jetbrains-actions</td><td>vcs-git</td><td style="text-align: right">118</td><td style="text-align: right">61</td><td style="text-align: right">17</td><td style="text-align: right">51.7%</td></tr>
 <tr><td>jetbrains-actions</td><td>vcs-github</td><td style="text-align: right">24</td><td style="text-align: right">1</td><td style="text-align: right">1</td><td style="text-align: right">4.2%</td></tr>
