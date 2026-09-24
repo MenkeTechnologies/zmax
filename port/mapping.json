@@ -84250,5 +84250,53 @@
    "static:toggle_problems_by_severity"
   ],
   "note": "ProblemsView.SortBySeverity = zmax `toggle_problems_by_severity`, on the workbench Problems panel (ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorEscape",
+  "status": "ported",
+  "evidence": [
+   "static:editor_escape"
+  ],
+  "note": "EditorEscape = zmax `editor_escape`."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMoveDownAndScroll",
+  "status": "ported",
+  "evidence": [
+   "static:move_down_and_scroll"
+  ],
+  "note": "EditorMoveDownAndScroll = zmax `move_down_and_scroll`."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMoveDownAndScrollWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_down_and_scroll"
+  ],
+  "note": "EditorMoveDownAndScrollWithSelection = zmax `extend_down_and_scroll`."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMoveUpAndScroll",
+  "status": "ported",
+  "evidence": [
+   "static:move_up_and_scroll"
+  ],
+  "note": "EditorMoveUpAndScroll = zmax `move_up_and_scroll`."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorMoveUpAndScrollWithSelection",
+  "status": "ported",
+  "evidence": [
+   "static:extend_up_and_scroll"
+  ],
+  "note": "EditorMoveUpAndScrollWithSelection = zmax `extend_up_and_scroll`."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorShowGutterIconTooltip",
+  "status": "ported",
+  "evidence": [
+   "static:show_gutter_info"
+  ],
+  "note": "EditorShowGutterIconTooltip = zmax `show_gutter_info`."
  }
 ]

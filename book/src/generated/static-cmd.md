@@ -1395,6 +1395,12 @@
 | `align_view_bottom` | Align view bottom | **spacemacs, hybrid, vim** — normal: `` zb ``, select: `` zb ``<br>**helix** — normal: `` Zb ``, `` zb ``, select: `` Zb ``, `` zb ``<br>**kakoune** — normal: `` Vb ``, `` vb `` |
 | `recenter_top_bottom` | Cycle the cursor line to the middle, then top, then bottom of the window (emacs recenter-top-bottom, nano cycle) | **spacemacs, hybrid** — normal: `` <C-l> `` |
 | `scroll_up` | Scroll view up | **spacemacs, hybrid** — normal: `` <C-y> ``<br>**vim** — normal: `` <C-y> ``, insert: `` <C-x><C-y> ``<br>**helix** — normal: `` Zk ``, `` zk ``, `` Z<up> ``, `` z<up> ``, select: `` Zk ``, `` zk ``, `` Z<up> ``, `` z<up> ``<br>**kakoune** — normal: `` Vk ``, `` vk ``, `` V<up> ``, `` v<up> `` |
+| `move_up_and_scroll` | Move up a line and scroll with it, keeping the screen row (JetBrains Move Up and Scroll) |  |
+| `move_down_and_scroll` | Move down a line and scroll with it, keeping the screen row (JetBrains Move Down and Scroll) |  |
+| `extend_up_and_scroll` | Extend up a line and scroll with it (JetBrains Move Up and Scroll with Selection) |  |
+| `extend_down_and_scroll` | Extend down a line and scroll with it (JetBrains Move Down and Scroll with Selection) |  |
+| `editor_escape` | Back to one cursor, no selection, normal mode (JetBrains Escape) |  |
+| `show_gutter_info` | Describe the gutter marks on this line (JetBrains Show Gutter Icon Tooltip) |  |
 | `scroll_down` | Scroll view down | **spacemacs, hybrid** — normal: `` <C-e> ``<br>**vim** — normal: `` <C-e> ``, insert: `` <C-x><C-e> ``<br>**helix** — normal: `` Zj ``, `` zj ``, `` Z<down> ``, `` z<down> ``, select: `` Zj ``, `` zj ``, `` Z<down> ``, `` z<down> ``<br>**kakoune** — normal: `` Vj ``, `` vj ``, `` V<down> ``, `` v<down> `` |
 | `scroll_column_left` | Scroll view left one column (zh) | **spacemacs, hybrid, vim** — normal: `` zh ``, `` z<left> ``, select: `` zh ``, `` z<left> `` |
 | `scroll_column_right` | Scroll view right one column (zl) | **spacemacs, hybrid, vim** — normal: `` zl ``, `` z<right> ``, select: `` zl ``, `` z<right> `` |

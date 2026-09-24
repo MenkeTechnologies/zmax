@@ -1786,6 +1786,12 @@ impl MappableCommand {
         align_view_bottom, "Align view bottom",
         recenter_top_bottom, "Cycle the cursor line to the middle, then top, then bottom of the window (emacs recenter-top-bottom, nano cycle)",
         scroll_up, "Scroll view up",
+        move_up_and_scroll, "Move up a line and scroll with it, keeping the screen row (JetBrains Move Up and Scroll)",
+        move_down_and_scroll, "Move down a line and scroll with it, keeping the screen row (JetBrains Move Down and Scroll)",
+        extend_up_and_scroll, "Extend up a line and scroll with it (JetBrains Move Up and Scroll with Selection)",
+        extend_down_and_scroll, "Extend down a line and scroll with it (JetBrains Move Down and Scroll with Selection)",
+        editor_escape, "Back to one cursor, no selection, normal mode (JetBrains Escape)",
+        show_gutter_info, "Describe the gutter marks on this line (JetBrains Show Gutter Icon Tooltip)",
         scroll_down, "Scroll view down",
         scroll_column_left, "Scroll view left one column (zh)",
         scroll_column_right, "Scroll view right one column (zl)",
@@ -12551,6 +12557,17 @@ fn xml_pretty_selection(cx: &mut Context) {
 }
 
 pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor: bool) {
+    let sync = sync_cursor.then(|| match cx.editor.mode {
+        Mode::Select => Movement::Extend,
+        _ => Movement::Move,
+    });
+    scroll_with(cx, offset, direction, sync)
+}
+
+/// Scroll the view by `offset` lines. With `sync`, the cursor moves the same
+/// number of lines that way (so it keeps its screen row); without it, the
+/// cursor moves only as far as it must to stay in view.
+fn scroll_with(cx: &mut Context, offset: usize, direction: Direction, sync: Option<Movement>) {
     use Direction::*;
     let config = cx.editor.config();
     let (view, doc) = current!(cx.editor);
@@ -12585,11 +12602,7 @@ pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor
     let doc_text = doc.text().slice(..);
     let mut annotations = view.text_annotations(&*doc, None);
 
-    if sync_cursor {
-        let movement = match cx.editor.mode {
-            Mode::Select => Movement::Extend,
-            _ => Movement::Move,
-        };
+    if let Some(movement) = sync {
         // TODO: When inline diagnostics gets merged- 1. move_vertically_visual removes
         // line annotations/diagnostics so the cursor may jump further than the view.
         // 2. If the cursor lands on a complete line of virtual text, the cursor will
@@ -39124,6 +39137,67 @@ mod render_hunk_tests {
     }
 }
 
+/// JetBrains "Show Gutter Icon Tooltip" (`EditorShowGutterIconTooltip`): what
+/// the gutter marks on the cursor line — diagnostics, a breakpoint, a change
+/// against version control — as text, for a gutter that only shows a glyph.
+fn show_gutter_info(cx: &mut Context) {
+    let body = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+        let mut rows = Vec::new();
+        for diagnostic in doc.diagnostics().iter().filter(|d| d.line == line) {
+            let severity = match diagnostic.severity {
+                Some(zmax_core::diagnostic::Severity::Error) => "error",
+                Some(zmax_core::diagnostic::Severity::Warning) => "warning",
+                Some(zmax_core::diagnostic::Severity::Info) => "info",
+                _ => "hint",
+            };
+            rows.push(format!("{severity}: {}", diagnostic.message));
+        }
+        if let Some(breakpoint) = doc
+            .path()
+            .and_then(|path| cx.editor.breakpoints.get(path))
+            .and_then(|bs| bs.iter().find(|b| b.line == line))
+        {
+            let mut row = String::from("breakpoint");
+            if breakpoint.disabled {
+                row.push_str(" (disabled)");
+            }
+            if let Some(condition) = &breakpoint.condition {
+                row.push_str(&format!(", when {condition}"));
+            }
+            if let Some(message) = &breakpoint.log_message {
+                row.push_str(&format!(", logs {message}"));
+            }
+            rows.push(row);
+        }
+        if let Some(handle) = doc.diff_handle() {
+            let diff = handle.load();
+            if let Some(index) = diff.hunk_at(line as u32, true) {
+                let hunk = diff.nth_hunk(index);
+                rows.push(
+                    if hunk.before.is_empty() {
+                        "added line"
+                    } else if hunk.after.is_empty() {
+                        "lines removed here"
+                    } else {
+                        "modified line"
+                    }
+                    .to_string(),
+                );
+            }
+        }
+        rows.join("\n")
+    };
+    if body.is_empty() {
+        cx.editor.set_status("Nothing in the gutter on this line");
+        return;
+    }
+    let popup = ui::Popup::new("gutter-info", ui::Text::new(body));
+    cx.replace_or_push_layer("gutter-info", popup);
+}
+
 /// JetBrains "Change Under Caret" (`VcsShowCurrentChangeMarker`): the change
 /// the gutter marks on this line, with the text it replaced, in a popup.
 fn show_change_under_caret(cx: &mut Context) {
@@ -63299,6 +63373,37 @@ fn subword_extend_ge(cx: &mut Context) {
 
 fn scroll_up(cx: &mut Context) {
     scroll(cx, cx.count(), Direction::Backward, false);
+}
+
+/// JetBrains "Move Up and Scroll" (`EditorMoveUpAndScroll`): the cursor and the
+/// view go up a line together, so the cursor keeps its screen row.
+fn move_up_and_scroll(cx: &mut Context) {
+    scroll_with(cx, cx.count(), Direction::Backward, Some(Movement::Move));
+}
+
+/// JetBrains "Move Down and Scroll" (`EditorMoveDownAndScroll`).
+fn move_down_and_scroll(cx: &mut Context) {
+    scroll_with(cx, cx.count(), Direction::Forward, Some(Movement::Move));
+}
+
+/// JetBrains "Move Up and Scroll with Selection"
+/// (`EditorMoveUpAndScrollWithSelection`): the same, extending in any mode.
+fn extend_up_and_scroll(cx: &mut Context) {
+    scroll_with(cx, cx.count(), Direction::Backward, Some(Movement::Extend));
+}
+
+/// JetBrains "Move Down and Scroll with Selection"
+/// (`EditorMoveDownAndScrollWithSelection`).
+fn extend_down_and_scroll(cx: &mut Context) {
+    scroll_with(cx, cx.count(), Direction::Forward, Some(Movement::Extend));
+}
+
+/// JetBrains "Escape" (`EditorEscape`): one cursor, no selection, normal mode —
+/// the state the IDE's Escape returns the editor to.
+fn editor_escape(cx: &mut Context) {
+    normal_mode(cx);
+    keep_primary_selection(cx);
+    collapse_selection(cx);
 }
 
 fn scroll_down(cx: &mut Context) {

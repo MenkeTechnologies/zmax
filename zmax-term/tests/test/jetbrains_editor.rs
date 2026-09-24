@@ -22,6 +22,8 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "md_table_align_right" => keymap!({ "Normal mode" "Z" => md_table_align_right, }),
         "md_toggle_bold" => keymap!({ "Normal mode" "Z" => md_toggle_bold, }),
         "md_heading_up" => keymap!({ "Normal mode" "Z" => md_heading_up, }),
+        "move_down_and_scroll" => keymap!({ "Normal mode" "Z" => move_down_and_scroll, }),
+        "editor_escape" => keymap!({ "Normal mode" "Z" => editor_escape, }),
         other => panic!("no binding for {other}"),
     };
     config.keys.insert(Mode::Normal, keys);
@@ -352,6 +354,48 @@ async fn maximize_split_and_restore() -> anyhow::Result<()> {
             (Some("Z"), Some(&|app| assert_eq!(3, windows(app)))),
             (Some("Q"), Some(&|app| assert!(!app.editor.config().render_statusline))),
         ],
+        false,
+    )
+    .await
+}
+
+/// Move Down and Scroll moves the cursor and the top of the view by the same
+/// line, so the cursor keeps its screen row.
+#[tokio::test(flavor = "multi_thread")]
+async fn move_down_and_scroll_keeps_the_screen_row() -> anyhow::Result<()> {
+    let lines: String = (0..200).map(|i| format!("line {i}\n")).collect();
+    let mut app = app_with(&format!("#[l|]#{}", &lines[1..]), "move_down_and_scroll")?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("jjjjZ"),
+            Some(&|app| {
+                assert_eq!(5, cursor_line(app));
+                let (view, doc) = zmax_view::current_ref!(app.editor);
+                let top = doc.text().char_to_line(doc.view_offset(view.id).anchor);
+                assert_eq!(1, top, "the view scrolled one line with the cursor");
+            }),
+        )],
+        false,
+    )
+    .await
+}
+
+/// Escape leaves one cursor with no selection.
+#[tokio::test(flavor = "multi_thread")]
+async fn escape_keeps_one_collapsed_cursor() -> anyhow::Result<()> {
+    let mut app = app_with("#[ab|]# #(cd|)#\n", "editor_escape")?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Z"),
+            Some(&|app| {
+                let (view, doc) = zmax_view::current_ref!(app.editor);
+                let selection = doc.selection(view.id);
+                assert_eq!(1, selection.len());
+                assert!(selection.primary().len() <= 1, "collapsed");
+            }),
+        )],
         false,
     )
     .await
