@@ -738,3 +738,46 @@ async fn fold_code_block_folds_the_block_around_the_caret() -> anyhow::Result<()
     )
     .await
 }
+
+/// Bookmark lists: a line goes into a second list, keeps its description
+/// there, and Move Up reorders it within its lists.
+#[tokio::test(flavor = "multi_thread")]
+async fn bookmark_lists_descriptions_and_order() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".txt").tempfile()?;
+    std::fs::write(file.path(), "a\nb\nc\n")?;
+    let path = file.path().to_path_buf();
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => bookmark_toggle,
+            "W" => bookmark_list_create,
+            "E" => bookmark_add_to_list,
+            "R" => bookmark_edit_description,
+            "U" => bookmark_move_up,
+        }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(file.path(), None)
+        .build()?;
+    let status = |app: &Application| app.editor.get_status().map(|(s, _)| s.to_string()).unwrap_or_default();
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("ZWreview<ret>Ereview<ret>Rfirst line<ret>"), None),
+            (
+                Some("jjZU"),
+                Some(&|app| assert!(status(app).starts_with("Bookmark moved"), "{}", status(app))),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    let lists = zmax_term::line_bookmarks::lists_of(&path, 0);
+    assert!(lists.contains(&"review".to_owned()), "{lists:?}");
+    let mark = zmax_term::line_bookmarks::get(&path, 0).expect("line 0 is bookmarked");
+    assert_eq!(Some("first line".to_owned()), mark.description);
+    Ok(())
+}

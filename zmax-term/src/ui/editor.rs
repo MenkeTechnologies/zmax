@@ -919,6 +919,15 @@ impl EditorView {
                 context.editor.set_status(format!("opened {url}"));
                 None
             }
+            IdeAction::OpenBookmark { path, line } => {
+                crate::commands::open_bookmark(
+                    context.editor,
+                    &path,
+                    line,
+                    zmax_view::editor::Action::Replace,
+                );
+                None
+            }
             IdeAction::OpenFileAt { path, line } => {
                 let opened = context
                     .editor

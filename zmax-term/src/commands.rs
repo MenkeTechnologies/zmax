@@ -1150,6 +1150,19 @@ impl MappableCommand {
         harpoon_4, "Jump to harpoon mark 4",
         harpoon_next, "Open the next harpoon mark",
         harpoon_prev, "Open the previous harpoon mark",
+        bookmark_add_to_list, "Put the line's bookmark in another bookmark list too (JetBrains Add Bookmark to Another List)",
+        bookmark_list_create, "Create an empty bookmark list (JetBrains Create Bookmark List)",
+        bookmark_list_set_default, "Choose the list new bookmarks go into (JetBrains Mark as Default List)",
+        bookmark_list_delete, "Delete a bookmark list and its bookmarks (JetBrains Delete Bookmark List)",
+        toggle_bookmark_list_delete_confirm, "Ask before deleting a bookmark list, or not (JetBrains Ask Before Deleting Lists)",
+        toggle_bookmark_mnemonic_confirm, "Ask before moving a mnemonic from another line, or not (JetBrains Ask Before Rewriting Mnemonic)",
+        toggle_bookmarks_sort, "List bookmarks by file and line, or in list order (JetBrains Sort Bookmarks by Type and Name)",
+        toggle_bookmarks_autoscroll_from_source, "Make the Bookmarks tool window select the bookmark under the cursor (JetBrains Always Select Opened Element)",
+        toggle_bookmarks_autoscroll_to_source, "Open bookmarks as the Bookmarks tool window selection moves (JetBrains Navigate with Single Click)",
+        toggle_bookmarks_preview_tab, "Open bookmarks from the views in one reused buffer (JetBrains Enable Preview Tab)",
+        bookmark_edit_description, "Set the description of the line's bookmark (JetBrains Edit Bookmark Description)",
+        bookmark_move_up, "Move the line's bookmark up its list (JetBrains Move Up in Bookmarks)",
+        bookmark_move_down, "Move the line's bookmark down its list (JetBrains Move Down in Bookmarks)",
         bookmark_toggle, "Toggle a line bookmark (JetBrains F11)",
         toggle_bookmark_with_mnemonic, "Toggle a mnemonic bookmark on this line; the next key names it (JetBrains Toggle Bookmark Mnemonic)",
         remove_bookmark_mnemonic, "Drop the mnemonic of the bookmark on this line, keeping the bookmark (JetBrains Remove Mnemonic)",
@@ -36189,10 +36202,10 @@ fn harpoon_prev(cx: &mut Context) {
     harpoon_cycle(cx, false);
 }
 
-/// Line-level bookmarks (JetBrains Bookmarks): an ordered global list of `(file, line)`, distinct
-/// from the file-level harpoon pins. Line numbers are captured at toggle time.
-static BOOKMARKS: std::sync::Mutex<Vec<(std::path::PathBuf, usize)>> =
-    std::sync::Mutex::new(Vec::new());
+// Line-level bookmarks (JetBrains Bookmarks) live in `crate::line_bookmarks`,
+// distinct from the file-level harpoon pins. Line numbers are captured at
+// toggle time.
+use crate::line_bookmarks;
 
 /// The current `(file, 0-based line)` under the cursor, if the buffer has a path.
 fn current_file_line(cx: &Context) -> Option<(std::path::PathBuf, usize)> {
@@ -36209,19 +36222,20 @@ fn bookmark_toggle(cx: &mut Context) {
         cx.editor.set_error("Cannot bookmark a scratch buffer");
         return;
     };
-    let mut marks = BOOKMARKS.lock().unwrap();
-    if let Some(pos) = marks.iter().position(|(p, l)| *p == path && *l == line) {
-        marks.remove(pos);
+    if line_bookmarks::remove(&path, line) {
         cx.editor.set_status(format!(
             "Bookmark removed ({}:{})",
             path.display(),
             line + 1
         ));
     } else {
-        marks.push((path.clone(), line));
-        marks.sort();
-        cx.editor
-            .set_status(format!("Bookmark set ({}:{})", path.display(), line + 1));
+        line_bookmarks::add(&path, line);
+        cx.editor.set_status(format!(
+            "Bookmark set in {} ({}:{})",
+            line_bookmarks::default_list(),
+            path.display(),
+            line + 1
+        ));
     }
 }
 
@@ -36244,9 +36258,10 @@ fn bookmarks_view(cx: &mut Context) {
         display: String,
         line: usize,
         text: String,
+        lists: String,
+        description: String,
     }
-    let mut marks = BOOKMARKS.lock().unwrap().clone();
-    marks.sort();
+    let marks = line_bookmarks::all();
     if marks.is_empty() {
         cx.editor
             .set_status("No bookmarks set (toggle one with bookmark_toggle)");
@@ -36256,31 +36271,20 @@ fn bookmarks_view(cx: &mut Context) {
     let items: Vec<Bookmark> = marks
         .into_iter()
         .map(|(path, line)| {
-            let text = cx
-                .editor
-                .document_by_path(&path)
-                .map(|doc| {
-                    let rope = doc.text();
-                    rope.get_line(line)
-                        .map(|l| l.to_string())
-                        .unwrap_or_default()
-                })
-                .or_else(|| {
-                    std::fs::read_to_string(&path)
-                        .ok()
-                        .and_then(|s| s.lines().nth(line).map(str::to_string))
-                })
-                .unwrap_or_default();
+            let text = bookmark_line_text(cx.editor, &path, line);
             let display = path
                 .strip_prefix(&root)
                 .unwrap_or(&path)
                 .display()
                 .to_string();
+            let mark = line_bookmarks::get(&path, line);
             Bookmark {
+                lists: line_bookmarks::lists_of(&path, line).join(", "),
+                description: mark.and_then(|m| m.description).unwrap_or_default(),
                 path,
                 display,
                 line,
-                text: text.trim().to_string(),
+                text,
             }
         })
         .collect();
@@ -36288,21 +36292,11 @@ fn bookmarks_view(cx: &mut Context) {
         PickerColumn::new("file", |b: &Bookmark, _: &()| b.display.as_str().into()),
         PickerColumn::new("line", |b: &Bookmark, _: &()| (b.line + 1).to_string().into()),
         PickerColumn::new("text", |b: &Bookmark, _: &()| b.text.as_str().into()),
+        PickerColumn::new("description", |b: &Bookmark, _: &()| b.description.as_str().into()),
+        PickerColumn::new("list", |b: &Bookmark, _: &()| b.lists.as_str().into()),
     ];
     let picker = Picker::new(columns, 0, items, (), |cx, bookmark: &Bookmark, action| {
-        match cx.editor.open(&bookmark.path, action) {
-            Ok(_) => {
-                let (view, doc) = current!(cx.editor);
-                let text = doc.text();
-                let line = bookmark.line.min(text.len_lines().saturating_sub(1));
-                let pos = text.line_to_char(line);
-                doc.set_selection(view.id, Selection::point(pos));
-                align_view(doc, view, Align::Center);
-            }
-            Err(e) => cx
-                .editor
-                .set_error(format!("{}: {e}", bookmark.path.display())),
-        }
+        open_bookmark(cx.editor, &bookmark.path, bookmark.line, action);
     })
     .with_preview(|_editor, bookmark: &Bookmark| {
         Some((
@@ -36313,8 +36307,59 @@ fn bookmarks_view(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
+/// The text of a bookmarked line: from the open buffer when the file is open,
+/// else from disk, so a bookmark in a closed file still shows what it marks.
+pub(crate) fn bookmark_line_text(editor: &Editor, path: &Path, line: usize) -> String {
+    editor
+        .document_by_path(path)
+        .and_then(|doc| doc.text().get_line(line).map(|l| l.to_string()))
+        .or_else(|| {
+            std::fs::read_to_string(path)
+                .ok()
+                .and_then(|s| s.lines().nth(line).map(str::to_string))
+        })
+        .unwrap_or_default()
+        .trim()
+        .to_string()
+}
+
+/// The buffer the last bookmark opened under JetBrains "Enable Preview Tab",
+/// which the next one replaces unless it was edited or shown elsewhere since.
+static BOOKMARK_PREVIEW: std::sync::Mutex<Option<DocumentId>> = std::sync::Mutex::new(None);
+
+/// Open a bookmark from the Bookmarks views, honouring the preview-tab option.
+pub(crate) fn open_bookmark(editor: &mut Editor, path: &Path, line: usize, action: Action) {
+    let preview = line_bookmarks::options().preview_tab;
+    let was_open = editor.document_by_path(path).map(|d| d.id());
+    let previous = BOOKMARK_PREVIEW.lock().unwrap().take();
+    match editor.open(path, action) {
+        Ok(id) => {
+            let (view, doc) = current!(editor);
+            let text = doc.text();
+            let line = line.min(text.len_lines().saturating_sub(1));
+            let pos = text.line_to_char(line);
+            doc.set_selection(view.id, Selection::point(pos));
+            align_view(doc, view, Align::Center);
+            if preview {
+                if let Some(old) = previous.filter(|old| *old != id) {
+                    let shown = editor.tree.views().any(|(v, _)| v.doc == old);
+                    let modified = editor.document(old).is_some_and(|d| d.is_modified());
+                    if !shown && !modified {
+                        let _ = editor.close_document(old, false);
+                    }
+                }
+                // A buffer that was open already is not the preview's to close.
+                *BOOKMARK_PREVIEW.lock().unwrap() = was_open.is_none().then_some(id);
+            }
+        }
+        Err(e) => editor.set_error(format!("{}: {e}", path.display())),
+    }
+}
+
 fn bookmark_cycle(cx: &mut Context, forward: bool) {
-    let marks = BOOKMARKS.lock().unwrap().clone();
+    // Next and previous go by position in the files, whatever the lists' order.
+    let mut marks = line_bookmarks::all();
+    marks.sort();
     if marks.is_empty() {
         cx.editor
             .set_status("No bookmarks set (toggle with bookmark_toggle)");
@@ -36377,28 +36422,18 @@ fn bookmark_open_tabs(cx: &mut Context) {
         cx.editor.set_status("no file buffers to bookmark");
         return;
     }
-    let mut marks = BOOKMARKS.lock().unwrap();
-    let mut added = 0;
-    for (path, line) in lines {
-        if !marks.iter().any(|(p, l)| *p == path && *l == line) {
-            marks.push((path, line));
-            added += 1;
-        }
-    }
-    marks.sort();
-    drop(marks);
+    let added = lines
+        .into_iter()
+        .filter(|(path, line)| line_bookmarks::add(path, *line))
+        .count();
     cx.editor.set_status(format!("bookmarked {added} tab(s)"));
 }
 
 /// JetBrains "Open All Bookmarked Files" (`OpenBookmarkGroup`): open every file
 /// that holds a line bookmark, leaving the focus where it was.
 fn open_bookmarked_files(cx: &mut Context) {
-    let mut paths: Vec<std::path::PathBuf> = BOOKMARKS
-        .lock()
-        .unwrap()
-        .iter()
-        .map(|(p, _)| p.clone())
-        .collect();
+    let mut paths: Vec<std::path::PathBuf> =
+        line_bookmarks::all().into_iter().map(|(p, _)| p).collect();
     paths.sort();
     paths.dedup();
     if paths.is_empty() {
@@ -36425,6 +36460,193 @@ fn open_bookmarked_files(cx: &mut Context) {
     }
 }
 
+/// Prompt completion over the bookmark lists' names.
+fn bookmark_list_completer(_editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
+    line_bookmarks::list_names()
+        .into_iter()
+        .filter(|name| name.to_lowercase().starts_with(&input.to_lowercase()))
+        .map(|name| (0.., name.into()))
+        .collect()
+}
+
+/// A prompt for a bookmark list's name, completing the existing ones.
+fn bookmark_list_prompt(
+    label: &'static str,
+    f: impl Fn(&mut compositor::Context, &str) + 'static,
+) -> crate::ui::prompt::Prompt {
+    crate::ui::prompt::Prompt::new(
+        label.into(),
+        None,
+        bookmark_list_completer,
+        move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            let input = input.trim();
+            if event == PromptEvent::Validate && !input.is_empty() {
+                f(cx, input);
+            }
+        },
+    )
+}
+
+/// JetBrains "Add Bookmark to Another List" (`AddAnotherBookmark`): put the
+/// cursor line's bookmark in one more list, making the list if it is new.
+fn bookmark_add_to_list(cx: &mut Context) {
+    let Some((path, line)) = current_file_line(cx) else {
+        cx.editor.set_error("Cannot bookmark a scratch buffer");
+        return;
+    };
+    cx.push_layer(Box::new(bookmark_list_prompt("add bookmark to list:", move |cx, list| {
+        cx.editor.set_status(if line_bookmarks::add_to(list, &path, line) {
+            format!("Bookmark added to {list}")
+        } else {
+            format!("Already in {list}")
+        });
+    })));
+}
+
+/// JetBrains "Create Bookmark List…" (`BookmarksView.Create`).
+fn bookmark_list_create(cx: &mut Context) {
+    prompt_then(cx, "new bookmark list:", |cx, name| {
+        cx.editor.set_status(if line_bookmarks::create_list(name) {
+            format!("Bookmark list {name} created")
+        } else {
+            format!("There is a list named {name} already")
+        });
+    });
+}
+
+/// JetBrains "Mark as Default List" (`BookmarksView.DefaultGroup`): the list
+/// Toggle Bookmark puts new bookmarks in.
+fn bookmark_list_set_default(cx: &mut Context) {
+    cx.push_layer(Box::new(bookmark_list_prompt("default bookmark list:", |cx, name| {
+        if line_bookmarks::set_default_list(name) {
+            cx.editor.set_status(format!("New bookmarks go into {name}"));
+        } else {
+            cx.editor.set_error(format!("No bookmark list named {name}"));
+        }
+    })));
+}
+
+/// JetBrains "Delete" on a bookmark list: remove the list and its
+/// bookmarks, asking first while "Ask Before Deleting Lists" is on.
+fn bookmark_list_delete(cx: &mut Context) {
+    cx.push_layer(Box::new(bookmark_list_prompt("delete bookmark list:", |cx, name| {
+        let name = name.to_owned();
+        if !line_bookmarks::list_names().contains(&name) {
+            cx.editor.set_error(format!("No bookmark list named {name}"));
+            return;
+        }
+        let delete = move |cx: &mut compositor::Context| {
+            line_bookmarks::delete_list(&name);
+            cx.editor.set_status(format!("Bookmark list {name} deleted"));
+        };
+        if line_bookmarks::options().confirm_list_delete {
+            let question = "Delete the bookmark list and its bookmarks? (y/n)".to_string();
+            let confirm = crate::ui::confirm::Confirm::new(question, "list kept", delete);
+            crate::compositor::defer([Box::new(move |compositor: &mut Compositor, _: &mut compositor::Context| {
+                compositor.push(Box::new(confirm));
+            }) as compositor::Callback]);
+        } else {
+            delete(cx);
+        }
+    })));
+}
+
+/// JetBrains "Ask Before Deleting Lists" (`BookmarksView.AskBeforeDeletingLists`).
+fn toggle_bookmark_list_delete_confirm(cx: &mut Context) {
+    let on = line_bookmarks::set_options(|o| o.confirm_list_delete = !o.confirm_list_delete).confirm_list_delete;
+    cx.editor.set_status(format!("ask before deleting bookmark lists: {}", if on { "on" } else { "off" }));
+}
+
+/// JetBrains "Ask Before Rewriting Mnemonic" (`BookmarksView.RewriteBookmarkType`).
+fn toggle_bookmark_mnemonic_confirm(cx: &mut Context) {
+    let on = line_bookmarks::set_options(|o| o.confirm_mnemonic_move = !o.confirm_mnemonic_move)
+        .confirm_mnemonic_move;
+    cx.editor.set_status(format!("ask before moving a mnemonic: {}", if on { "on" } else { "off" }));
+}
+
+/// JetBrains "Sort Bookmarks by Type && Name" (`BookmarksView.SortGroupBookmarks`):
+/// list bookmarks by file and line, or in the order they were added and moved.
+fn toggle_bookmarks_sort(cx: &mut Context) {
+    let on = line_bookmarks::set_options(|o| o.sort = !o.sort).sort;
+    cx.editor.set_status(if on { "bookmarks sorted by file and line" } else { "bookmarks in list order" });
+}
+
+/// JetBrains "Always Select Opened Element" (`BookmarksView.AutoscrollFromSource`):
+/// the Bookmarks tool window selects the bookmark the cursor is on.
+fn toggle_bookmarks_autoscroll_from_source(cx: &mut Context) {
+    let on = line_bookmarks::set_options(|o| o.autoscroll_from_source = !o.autoscroll_from_source)
+        .autoscroll_from_source;
+    cx.editor.set_status(format!("bookmarks follow the editor: {}", if on { "on" } else { "off" }));
+}
+
+/// JetBrains "Navigate with Single Click" (`BookmarksView.AutoscrollToSource`):
+/// moving the selection in the Bookmarks tool window opens the bookmark.
+fn toggle_bookmarks_autoscroll_to_source(cx: &mut Context) {
+    let on = line_bookmarks::set_options(|o| o.autoscroll_to_source = !o.autoscroll_to_source)
+        .autoscroll_to_source;
+    cx.editor.set_status(format!("open bookmarks on selection: {}", if on { "on" } else { "off" }));
+}
+
+/// JetBrains "Enable Preview Tab" (`BookmarksView.OpenInPreviewTab`): a
+/// bookmark opened from the Bookmarks views replaces the buffer the previous
+/// one opened, when nothing else has touched it.
+fn toggle_bookmarks_preview_tab(cx: &mut Context) {
+    let on = line_bookmarks::set_options(|o| o.preview_tab = !o.preview_tab).preview_tab;
+    cx.editor.set_status(format!("bookmark preview tab: {}", if on { "on" } else { "off" }));
+}
+
+/// JetBrains "Edit Bookmark Description" (`BookmarksView.Rename`): the text
+/// the Bookmarks views show beside the cursor line's bookmark.
+fn bookmark_edit_description(cx: &mut Context) {
+    let Some((path, line)) = current_file_line(cx) else {
+        return;
+    };
+    let Some(mark) = line_bookmarks::get(&path, line) else {
+        cx.editor.set_error("No bookmark on this line");
+        return;
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "bookmark description:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event == PromptEvent::Validate {
+                let text = input.trim();
+                line_bookmarks::set_description(&path, line, (!text.is_empty()).then(|| text.to_owned()));
+                cx.editor.set_status("Bookmark description set");
+            }
+        },
+    )
+    .with_line(mark.description.unwrap_or_default(), cx.editor);
+    cx.push_layer(Box::new(prompt));
+}
+
+/// JetBrains "Move Up" / "Move Down" in the Bookmarks view: shift the cursor
+/// line's bookmark one place in its lists. The order shows with sorting off.
+fn bookmark_move(cx: &mut Context, up: bool) {
+    let Some((path, line)) = current_file_line(cx) else {
+        return;
+    };
+    if !line_bookmarks::contains(&path, line) {
+        cx.editor.set_error("No bookmark on this line");
+        return;
+    }
+    let moved = line_bookmarks::move_mark(&path, line, up);
+    cx.editor.set_status(match (moved, line_bookmarks::options().sort) {
+        (false, _) => "The bookmark is at that end of its list already",
+        (true, true) => "Bookmark moved; turn sorting off to list them in this order",
+        (true, false) => "Bookmark moved",
+    });
+}
+
+fn bookmark_move_up(cx: &mut Context) {
+    bookmark_move(cx, true);
+}
+
+fn bookmark_move_down(cx: &mut Context) {
+    bookmark_move(cx, false);
+}
+
 /// JetBrains "Previous Bookmark": jump to the previous line bookmark (wraps).
 fn bookmark_prev(cx: &mut Context) {
     bookmark_cycle(cx, false);
@@ -36437,7 +36659,7 @@ fn bookmark_prev(cx: &mut Context) {
 ///
 /// ne's numbered slots (`set_numbered_bookmark`) are per document, which is
 /// why these keep a list of their own. Each entry is also a line bookmark in
-/// `BOOKMARKS`, so it appears in the Bookmarks view and in next/previous.
+/// `line_bookmarks`, so it appears in the Bookmarks view and in next/previous.
 static MNEMONIC_BOOKMARKS: std::sync::Mutex<Vec<(char, std::path::PathBuf, usize)>> =
     std::sync::Mutex::new(Vec::new());
 
@@ -36447,38 +36669,65 @@ fn bookmark_mnemonic(ch: char) -> Option<char> {
     (ch.is_ascii_digit() || ch.is_ascii_uppercase()).then_some(ch)
 }
 
+/// Ask a one-key yes/no question (`ui::confirm::Confirm`) and run `on_yes`
+/// on yes; `on_no` is the status a no leaves.
+fn ask_then(
+    cx: &mut Context,
+    question: String,
+    on_no: &'static str,
+    on_yes: impl FnOnce(&mut compositor::Context) + 'static,
+) {
+    cx.callback.push(Box::new(move |compositor, _| {
+        compositor.push(Box::new(crate::ui::confirm::Confirm::new(question, on_no, on_yes)));
+    }));
+}
+
 fn toggle_mnemonic_bookmark(cx: &mut Context, mnemonic: char) {
     let Some((path, line)) = current_file_line(cx) else {
         cx.editor.set_error("Cannot bookmark a scratch buffer");
         return;
     };
-    let mut mnemonics = MNEMONIC_BOOKMARKS.lock().unwrap();
-    let mut marks = BOOKMARKS.lock().unwrap();
-    let here = |p: &std::path::PathBuf, l: usize| *p == path && l == line;
-
+    let mnemonics = MNEMONIC_BOOKMARKS.lock().unwrap().clone();
     if mnemonics
         .iter()
-        .any(|(m, p, l)| *m == mnemonic && here(p, *l))
+        .any(|(m, p, l)| *m == mnemonic && *p == path && *l == line)
     {
-        mnemonics.retain(|(m, _, _)| *m != mnemonic);
-        marks.retain(|(p, l)| !here(p, *l));
+        MNEMONIC_BOOKMARKS
+            .lock()
+            .unwrap()
+            .retain(|(m, _, _)| *m != mnemonic);
+        line_bookmarks::remove(&path, line);
         cx.editor.set_status(format!("Bookmark {mnemonic} removed"));
         return;
     }
+    // JetBrains "Ask Before Rewriting Mnemonic": the mnemonic is on another
+    // line, and moving it takes that line's bookmark away.
+    let elsewhere = mnemonics.iter().find(|(m, _, _)| *m == mnemonic);
+    if let Some((_, old_path, old_line)) = elsewhere.filter(|_| line_bookmarks::options().confirm_mnemonic_move) {
+        let question = format!(
+            "Bookmark {mnemonic} is on {}:{}; move it here? (y/n)",
+            old_path.display(),
+            old_line + 1
+        );
+        ask_then(cx, question, "bookmark unchanged", move |cx| {
+            set_mnemonic_bookmark(cx.editor, mnemonic, path, line)
+        });
+        return;
+    }
+    set_mnemonic_bookmark(cx.editor, mnemonic, path, line);
+}
 
-    // The mnemonic leaves the line it was on, bookmark and all, and this line
-    // gives up whatever mnemonic it had.
+/// Put `mnemonic` on `path:line`. The mnemonic leaves the line it was on,
+/// bookmark and all, and this line gives up whatever mnemonic it had.
+fn set_mnemonic_bookmark(editor: &mut Editor, mnemonic: char, path: PathBuf, line: usize) {
+    let mut mnemonics = MNEMONIC_BOOKMARKS.lock().unwrap();
     if let Some((_, old_path, old_line)) = mnemonics.iter().find(|(m, _, _)| *m == mnemonic) {
-        let (old_path, old_line) = (old_path.clone(), *old_line);
-        marks.retain(|(p, l)| !(*p == old_path && *l == old_line));
+        line_bookmarks::remove(old_path, *old_line);
     }
-    mnemonics.retain(|(m, p, l)| *m != mnemonic && !here(p, *l));
+    mnemonics.retain(|(m, p, l)| *m != mnemonic && !(*p == path && *l == line));
     mnemonics.push((mnemonic, path.clone(), line));
-    if !marks.iter().any(|(p, l)| here(p, *l)) {
-        marks.push((path.clone(), line));
-        marks.sort();
-    }
-    cx.editor.set_status(format!(
+    line_bookmarks::add(&path, line);
+    editor.set_status(format!(
         "Bookmark {mnemonic} set ({}:{})",
         path.display(),
         line + 1
@@ -36565,12 +36814,10 @@ fn bookmark_cycle_in_file(cx: &mut Context, forward: bool) {
     let Some((path, line)) = current_file_line(cx) else {
         return;
     };
-    let mut lines: Vec<usize> = BOOKMARKS
-        .lock()
-        .unwrap()
-        .iter()
+    let mut lines: Vec<usize> = line_bookmarks::all()
+        .into_iter()
         .filter(|(p, _)| *p == path)
-        .map(|(_, l)| *l)
+        .map(|(_, l)| l)
         .collect();
     lines.sort_unstable();
     let target = if forward {

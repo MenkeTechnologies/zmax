@@ -757,6 +757,19 @@
 | `harpoon_4` | Jump to harpoon mark 4 | **spacemacs, hybrid** — normal: `` <space>H4 ``, select: `` <space>H4 `` |
 | `harpoon_next` | Open the next harpoon mark | **spacemacs, hybrid** — normal: `` <space>Hn ``, select: `` <space>Hn `` |
 | `harpoon_prev` | Open the previous harpoon mark | **spacemacs, hybrid** — normal: `` <space>Hp ``, select: `` <space>Hp `` |
+| `bookmark_add_to_list` | Put the line's bookmark in another bookmark list too (JetBrains Add Bookmark to Another List) |  |
+| `bookmark_list_create` | Create an empty bookmark list (JetBrains Create Bookmark List) |  |
+| `bookmark_list_set_default` | Choose the list new bookmarks go into (JetBrains Mark as Default List) |  |
+| `bookmark_list_delete` | Delete a bookmark list and its bookmarks (JetBrains Delete Bookmark List) |  |
+| `toggle_bookmark_list_delete_confirm` | Ask before deleting a bookmark list, or not (JetBrains Ask Before Deleting Lists) |  |
+| `toggle_bookmark_mnemonic_confirm` | Ask before moving a mnemonic from another line, or not (JetBrains Ask Before Rewriting Mnemonic) |  |
+| `toggle_bookmarks_sort` | List bookmarks by file and line, or in list order (JetBrains Sort Bookmarks by Type and Name) |  |
+| `toggle_bookmarks_autoscroll_from_source` | Make the Bookmarks tool window select the bookmark under the cursor (JetBrains Always Select Opened Element) |  |
+| `toggle_bookmarks_autoscroll_to_source` | Open bookmarks as the Bookmarks tool window selection moves (JetBrains Navigate with Single Click) |  |
+| `toggle_bookmarks_preview_tab` | Open bookmarks from the views in one reused buffer (JetBrains Enable Preview Tab) |  |
+| `bookmark_edit_description` | Set the description of the line's bookmark (JetBrains Edit Bookmark Description) |  |
+| `bookmark_move_up` | Move the line's bookmark up its list (JetBrains Move Up in Bookmarks) |  |
+| `bookmark_move_down` | Move the line's bookmark down its list (JetBrains Move Down in Bookmarks) |  |
 | `bookmark_toggle` | Toggle a line bookmark (JetBrains F11) | **spacemacs, hybrid** — normal: `` <space>rt ``, select: `` <space>rt `` |
 | `toggle_bookmark_with_mnemonic` | Toggle a mnemonic bookmark on this line; the next key names it (JetBrains Toggle Bookmark Mnemonic) |  |
 | `remove_bookmark_mnemonic` | Drop the mnemonic of the bookmark on this line, keeping the bookmark (JetBrains Remove Mnemonic) |  |

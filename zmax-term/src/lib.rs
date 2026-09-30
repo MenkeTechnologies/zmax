@@ -59,6 +59,7 @@ pub mod fzf_arb;
 pub mod github;
 pub mod gnus;
 pub mod gud;
+pub mod line_bookmarks;
 pub mod harpoon;
 pub mod health;
 pub mod hi_lock;

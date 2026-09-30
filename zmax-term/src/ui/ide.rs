@@ -158,6 +158,17 @@ impl BottomTab {
     }
 }
 
+/// One row of the Bookmarks tool window.
+#[derive(Clone, PartialEq, Eq)]
+enum BookmarkRow {
+    /// A harpoon file pin (a JetBrains file bookmark).
+    Pin(PathBuf),
+    /// A line bookmark list's header.
+    List { name: String, default: bool, count: usize },
+    /// A line bookmark: the line (0-based) and what the row shows.
+    Line { path: PathBuf, line: usize, label: String },
+}
+
 #[derive(Clone, Copy)]
 enum BottomHit {
     TabProblems,
@@ -181,6 +192,11 @@ pub enum IdeAction {
     OpenFile(PathBuf),
     /// Open a URL in the system browser (CI run links).
     OpenUrl(String),
+    /// Open a line bookmark (0-based line) the way the Bookmarks views do.
+    OpenBookmark {
+        path: PathBuf,
+        line: usize,
+    },
     /// Open a file and place the cursor on a 1-based line (run-output jump).
     OpenFileAt {
         path: PathBuf,
@@ -377,6 +393,12 @@ pub struct Ide {
     recent_times: Vec<u64>,
     /// Harpoon marks for the current project (pin order).
     harpoon_rows: Vec<PathBuf>,
+    /// The Bookmarks tool window's rows: the harpoon file pins, then each line
+    /// bookmark list with its bookmarks.
+    bookmark_rows: Vec<BookmarkRow>,
+    /// Where the editor was when "Always Select Opened Element" last followed
+    /// it, so the selection moves only when the editor does.
+    bookmark_followed: Option<(PathBuf, usize)>,
     bottom_tab: BottomTab, // mirror of the focused column's active tab (keeps existing key/mouse logic working)
     bottom_tabs: [BottomTab; 3], // active tab in each of the three columns
     bottom_focus_col: usize, // which column has keyboard focus (0 | 1 | 2)
@@ -557,6 +579,8 @@ impl Ide {
             recent_rows: Vec::new(),
             recent_times: Vec::new(),
             harpoon_rows: Vec::new(),
+            bookmark_rows: Vec::new(),
+            bookmark_followed: None,
             bottom_tab: BottomTab::Problems,
             bottom_tabs: [BottomTab::Problems, BottomTab::Marks, BottomTab::Ci],
             bottom_focus_col: 0,
@@ -1560,7 +1584,7 @@ impl Ide {
             BottomTab::Marks => self.marks_list.len(),
             BottomTab::Jumplist => self.jumplist_rows.len(),
             BottomTab::Recent => self.recent_rows.len(),
-            BottomTab::Harpoon => self.harpoon_rows.len(),
+            BottomTab::Harpoon => self.bookmark_rows.len(),
             BottomTab::Ci => crate::ci::snapshot().len(),
             _ => 0,
         }
@@ -1603,18 +1627,71 @@ impl Ide {
                 }
                 _ => IdeAction::None,
             },
-            BottomTab::Harpoon => match self.harpoon_rows.get(self.aux_sel) {
-                Some(path) if path.is_file() => {
+            BottomTab::Harpoon => {
+                let action = self.bookmark_row_action(self.aux_sel);
+                if !matches!(action, IdeAction::None) {
                     self.focus = Focus::Editor;
-                    IdeAction::OpenFile(path.clone())
                 }
-                _ => IdeAction::None,
-            },
+                action
+            }
             BottomTab::Ci => crate::ci::snapshot()
                 .get(self.aux_sel)
                 .map(|r| IdeAction::OpenUrl(r.html_url.clone()))
                 .unwrap_or(IdeAction::None),
             _ => IdeAction::None,
+        }
+    }
+
+    /// What opening Bookmarks row `idx` does; a list header opens nothing.
+    fn bookmark_row_action(&self, idx: usize) -> IdeAction {
+        match self.bookmark_rows.get(idx) {
+            Some(BookmarkRow::Pin(path)) if path.is_file() => IdeAction::OpenFile(path.clone()),
+            Some(BookmarkRow::Line { path, line, .. }) => IdeAction::OpenBookmark {
+                path: path.clone(),
+                line: *line,
+            },
+            _ => IdeAction::None,
+        }
+    }
+
+    /// Rebuild the Bookmarks rows, and under "Always Select Opened Element"
+    /// select the bookmark the editor has moved onto.
+    fn refresh_bookmark_rows(&mut self, editor: &zmax_view::Editor, here: Option<(PathBuf, usize)>) {
+        let default = crate::line_bookmarks::default_list();
+        let mut rows: Vec<BookmarkRow> = self.harpoon_rows.iter().cloned().map(BookmarkRow::Pin).collect();
+        for list in crate::line_bookmarks::lists() {
+            rows.push(BookmarkRow::List {
+                default: list.name == default,
+                count: list.marks.len(),
+                name: list.name,
+            });
+            for mark in list.marks {
+                let name = mark.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                // Text only from open buffers: this runs every frame.
+                let text = editor
+                    .document_by_path(&mark.path)
+                    .and_then(|doc| doc.text().get_line(mark.line).map(|l| l.to_string()))
+                    .unwrap_or_default();
+                let mut label = format!("{name}:{}  {}", mark.line + 1, text.trim());
+                if let Some(description) = mark.description {
+                    label = format!("{description} — {label}");
+                }
+                rows.push(BookmarkRow::Line { path: mark.path, line: mark.line, label });
+            }
+        }
+        self.bookmark_rows = rows;
+        if crate::line_bookmarks::options().autoscroll_from_source && here != self.bookmark_followed {
+            if let Some((path, line)) = &here {
+                if let Some(i) = self.bookmark_rows.iter().position(|row| {
+                    matches!(row, BookmarkRow::Line { path: p, line: l, .. } if p == path && l == line)
+                }) {
+                    self.aux_sel = i;
+                }
+            }
+            self.bookmark_followed = here;
+        }
+        if self.bottom_tab == BottomTab::Harpoon {
+            self.aux_sel = self.aux_sel.min(self.bookmark_rows.len().saturating_sub(1));
         }
     }
 
@@ -1829,15 +1906,19 @@ impl Ide {
             && matches!(key.code, KeyCode::Char('K') | KeyCode::Char('J'))
         {
             let up = matches!(key.code, KeyCode::Char('K'));
-            if let Some(path) = self.harpoon_rows.get(self.aux_sel).cloned() {
-                if crate::harpoon::move_mark(&path, up) {
-                    self.harpoon_rows = crate::harpoon::list();
-                    self.aux_sel = if up {
-                        self.aux_sel.saturating_sub(1)
-                    } else {
-                        (self.aux_sel + 1).min(self.harpoon_rows.len().saturating_sub(1))
-                    };
+            let moved = match self.bookmark_rows.get(self.aux_sel).cloned() {
+                Some(BookmarkRow::Pin(path)) => crate::harpoon::move_mark(&path, up),
+                Some(BookmarkRow::Line { path, line, .. }) => {
+                    crate::line_bookmarks::move_mark(&path, line, up)
                 }
+                _ => false,
+            };
+            if moved {
+                self.aux_sel = if up {
+                    self.aux_sel.saturating_sub(1)
+                } else {
+                    (self.aux_sel + 1).min(self.bookmark_rows.len().saturating_sub(1))
+                };
             }
             return IdeAction::None;
         }
@@ -1855,6 +1936,7 @@ impl Ide {
             )
         {
             let len = self.aux_len();
+            let before = self.aux_sel;
             match key.code {
                 KeyCode::Char('j') | KeyCode::Down => {
                     if self.aux_sel + 1 < len {
@@ -1866,6 +1948,14 @@ impl Ide {
                 KeyCode::Char('G') | KeyCode::End => self.aux_sel = len.saturating_sub(1),
                 KeyCode::Enter => return self.activate_aux(),
                 _ => {}
+            }
+            // JetBrains "Navigate with Single Click" in the Bookmarks tool
+            // window: the selection opens as it moves, the focus staying here.
+            if self.bottom_tab == BottomTab::Harpoon
+                && self.aux_sel != before
+                && crate::line_bookmarks::options().autoscroll_to_source
+            {
+                return self.bookmark_row_action(self.aux_sel);
             }
             return IdeAction::None;
         }
@@ -2282,12 +2372,13 @@ impl Ide {
                     && self.bottom_tab == BottomTab::Harpoon
                 {
                     let idx = (row - self.problems_rect.y - 1) as usize;
-                    if let Some(path) = self.harpoon_rows.get(idx) {
+                    if idx < self.bookmark_rows.len() {
                         self.aux_sel = idx;
-                        if path.is_file() {
+                        let action = self.bookmark_row_action(idx);
+                        if !matches!(action, IdeAction::None) {
                             self.focus = Focus::Editor;
-                            return IdeAction::OpenFile(path.clone());
                         }
+                        return action;
                     }
                     return IdeAction::None;
                 }
@@ -2782,7 +2873,7 @@ impl Ide {
                     BottomTab::Run => " j/k/g/G scroll · y copy · [ ] tabs ",
                     BottomTab::Registers => " ↵ paste register · [ ] tabs ",
                     BottomTab::Problems => " ↵ jump · [ ] tabs ",
-                    BottomTab::Harpoon => " ↵ open · K/J reorder · [ ] tabs ",
+                    BottomTab::Harpoon => " ↵ open · K/J move · [ ] tabs ",
                     _ => " ↵ open · [ ] tabs ",
                 };
                 let maxw = (w / 2).saturating_sub(2);
@@ -3115,6 +3206,12 @@ impl Ide {
                 .position(|m| *m == cp)
                 .map(|i| i + 1)
         });
+        let here = {
+            let text = doc.text().slice(..);
+            let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+            self.current_doc_path.clone().map(|p| (p, line))
+        };
+        self.refresh_bookmark_rows(cx.editor, here);
 
         // status-bar snapshot (JetBrains bottom bar): Ln/Col, selection count, language, LSP, encoding
         let text = doc.text().slice(..);
@@ -4017,11 +4114,11 @@ impl Ide {
         if height == 0 {
             return;
         }
-        if self.harpoon_rows.is_empty() {
+        if self.bookmark_rows.is_empty() {
             surface.set_stringn(
                 body.x,
                 body.y,
-                "  no marks — pin with SPC H a",
+                "  no bookmarks — pin a file with SPC H a, a line with bookmark_toggle",
                 body.width as usize,
                 theme.get("comment"),
             );
@@ -4029,32 +4126,47 @@ impl Ide {
         }
         let base = theme.get("ui.text");
         let slot_style = theme.get("keyword");
+        let header = theme.get("ui.text.focus");
         let focused = self.focus == Focus::Problems && self.bottom_tab == BottomTab::Harpoon;
-        for (i, path) in self.harpoon_rows.iter().enumerate() {
-            if i >= height {
+        let top = self.aux_sel.saturating_sub(height.saturating_sub(1));
+        let mut slot = 0;
+        for (i, row) in self.bookmark_rows.iter().enumerate() {
+            if matches!(row, BookmarkRow::Pin(_)) {
+                slot += 1;
+            }
+            if i < top {
+                continue;
+            }
+            if i - top >= height {
                 break;
             }
-            let y = body.y + i as u16;
+            let y = body.y + (i - top) as u16;
             if focused && i == self.aux_sel {
                 surface.set_style(
                     Rect::new(body.x, y, body.width, 1),
                     theme.get("ui.selection"),
                 );
             }
-            // slot number (1-based) then the file name
-            surface.set_stringn(body.x + 1, y, &format!("{}", i + 1), 2, slot_style);
-            let name = path
-                .file_name()
-                .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_default();
-            let glyph = crate::ui::icons::file_icon(&name);
-            surface.set_stringn(
-                body.x + 3,
-                y,
-                &format!("{glyph} {name}"),
-                body.width.saturating_sub(3) as usize,
-                base,
-            );
+            let width = body.width.saturating_sub(3) as usize;
+            match row {
+                BookmarkRow::Pin(path) => {
+                    // slot number (1-based) then the file name
+                    surface.set_stringn(body.x + 1, y, &format!("{slot}"), 2, slot_style);
+                    let name = path
+                        .file_name()
+                        .map(|s| s.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    let glyph = crate::ui::icons::file_icon(&name);
+                    surface.set_stringn(body.x + 3, y, &format!("{glyph} {name}"), width, base);
+                }
+                BookmarkRow::List { name, default, count } => {
+                    let star = if *default { " (default)" } else { "" };
+                    surface.set_stringn(body.x + 1, y, &format!("▾ {name}{star}  {count}"), width + 2, header);
+                }
+                BookmarkRow::Line { label, .. } => {
+                    surface.set_stringn(body.x + 3, y, &format!("◆ {label}"), width, base);
+                }
+            }
         }
     }
 

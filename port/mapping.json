@@ -84964,11 +84964,12 @@
  },
  {
   "spec_id": "jetbrains-actions.BookmarksView.Delete",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:bookmark_list_delete",
    "static:bookmark_toggle"
   ],
-  "note": "BookmarksView.Delete (Delete) = zmax `bookmark_toggle`: removes the bookmark on the cursor line; there is no delete key on a row selected in the `bookmarks_view` picker."
+  "note": "BookmarksView.Delete = zmax `bookmark_list_delete` for a list (with its bookmarks, asking first while the option is on) and `bookmark_toggle` for the line's bookmark."
  },
  {
   "spec_id": "jetbrains-actions.BookmarksView.ShowPreview",
@@ -84980,11 +84981,11 @@
  },
  {
   "spec_id": "jetbrains-actions.BookmarksView.SortGroupBookmarks",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:bookmarks_view"
+   "static:toggle_bookmarks_sort"
   ],
-  "note": "BookmarksView.SortGroupBookmarks (Sort Bookmarks by Type && Name) = zmax `bookmarks_view`: always lists bookmarks sorted by path then line (commands.rs:36167); no type (mnemonic) ordering and no user order to sort from."
+  "note": "BookmarksView.SortGroupBookmarks = zmax `toggle_bookmarks_sort`: the views list by file and line, or in each list's own order."
  },
  {
   "spec_id": "jetbrains-actions.CallHierarchy.BaseOnThisMethod",
@@ -87304,5 +87305,93 @@
    "static:introduce_parameter_object"
   ],
   "note": "IntroduceParameterObject = zmax `introduce_parameter_object`: applies the server's parameter-object refactoring (e.g. TypeScript's \"Convert parameters to destructured object\"), as the other pinned LSP refactors do."
+ },
+ {
+  "spec_id": "jetbrains-actions.AddAnotherBookmark",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_add_to_list"
+  ],
+  "note": "AddAnotherBookmark (Add Bookmark to Another List) = zmax `bookmark_add_to_list`: puts the line's bookmark in one more named list (zmax-term/src/line_bookmarks.rs), making the list if it is new."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.Create",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_list_create"
+  ],
+  "note": "BookmarksView.Create (Create Bookmark List) = zmax `bookmark_list_create`."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.DefaultGroup",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_list_set_default"
+  ],
+  "note": "BookmarksView.DefaultGroup (Mark as Default List) = zmax `bookmark_list_set_default`: bookmark_toggle puts new bookmarks in that list."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.AskBeforeDeletingLists",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_list_delete_confirm"
+  ],
+  "note": "BookmarksView.AskBeforeDeletingLists = zmax `toggle_bookmark_list_delete_confirm`."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.RewriteBookmarkType",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_mnemonic_confirm"
+  ],
+  "note": "BookmarksView.RewriteBookmarkType (Ask Before Rewriting Mnemonic) = zmax `toggle_bookmark_mnemonic_confirm`: with it on, moving a mnemonic from another line asks y/n first."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.MoveUp",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_move_up"
+  ],
+  "note": "BookmarksView.MoveUp = zmax `bookmark_move_up` (and K in the Bookmarks tool window): one place up in the bookmark's lists."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.MoveDown",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_move_down"
+  ],
+  "note": "BookmarksView.MoveDown = zmax `bookmark_move_down` (and J in the Bookmarks tool window)."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.Rename",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_edit_description"
+  ],
+  "note": "BookmarksView.Rename (Edit Bookmark Description) = zmax `bookmark_edit_description`: shown in the bookmarks picker and the Bookmarks tool window."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.AutoscrollFromSource",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmarks_autoscroll_from_source"
+  ],
+  "note": "BookmarksView.AutoscrollFromSource = zmax `toggle_bookmarks_autoscroll_from_source`: the Bookmarks tool window selects the bookmark the cursor moves onto."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.AutoscrollToSource",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmarks_autoscroll_to_source"
+  ],
+  "note": "BookmarksView.AutoscrollToSource (Navigate with Single Click) = zmax `toggle_bookmarks_autoscroll_to_source`: moving the tool window's selection opens the bookmark, the focus staying in the panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.OpenInPreviewTab",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmarks_preview_tab"
+  ],
+  "note": "BookmarksView.OpenInPreviewTab = zmax `toggle_bookmarks_preview_tab`: a bookmark opened from the views replaces the buffer the previous one opened, unless it was edited, is shown elsewhere or was open before."
  }
 ]
