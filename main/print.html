@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-8b3fb3b5.js";
+            window.path_to_searchindex_js = "searchindex-42684f29.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4502,6 +4502,7 @@ without scrolling.</p>
 <tr><td><code>harpoon_remove</code></td><td>Unpin the current file from harpoon</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Hd</code>, select: <code>&lt;space&gt;Hd</code></td></tr>
 <tr><td><code>select_references_to_symbol_under_cursor</code></td><td>Select symbol references</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code>, select: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;h</code>, select: <code>&lt;space&gt;h</code></td></tr>
 <tr><td><code>workspace_symbol_picker</code></td><td>Open workspace symbol picker</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-.&gt;</code>, <code>&lt;C-c&gt;,J</code>, <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code>, select: <code>&lt;C-c&gt;,J</code>, <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code>, insert: <code>&lt;C-c&gt;,J</code><br><strong>hybrid</strong> — normal: <code>&lt;A-C-.&gt;</code>, <code>&lt;C-c&gt;,J</code>, <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code>, select: <code>&lt;C-c&gt;,J</code>, <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code></td></tr>
+<tr><td><code>goto_class</code></td><td>Search the workspace for a class, struct, interface or enum (JetBrains Go to Class, Cmd O)</td><td></td></tr>
 <tr><td><code>syntax_workspace_symbol_picker</code></td><td>Open workspace symbol picker from syntax information</td><td></td></tr>
 <tr><td><code>lsp_or_syntax_workspace_symbol_picker</code></td><td>Open workspace symbol picker from LSP or syntax information</td><td><strong>helix</strong> — normal: <code>&lt;space&gt;S</code>, select: <code>&lt;space&gt;S</code></td></tr>
 <tr><td><code>diagnostics_picker</code></td><td>Open diagnostic picker</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;el</code>, <code>&lt;space&gt;enl</code>, <code>&lt;space&gt;epl</code>, select: <code>&lt;space&gt;el</code>, <code>&lt;space&gt;enl</code>, <code>&lt;space&gt;epl</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;d</code>, select: <code>&lt;space&gt;d</code></td></tr>
@@ -4524,6 +4525,7 @@ without scrolling.</p>
 <tr><td><code>peek_definition</code></td><td>Peek the definition in a popup without navigating (JetBrains Quick Definition)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lq</code>, select: <code>&lt;space&gt;lq</code></td></tr>
 <tr><td><code>peek_type_definition</code></td><td>Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;ly</code>, select: <code>&lt;space&gt;ly</code></td></tr>
 <tr><td><code>copy_quick_doc</code></td><td>Copy the symbol’s hover documentation to the clipboard (JetBrains Copy Quick Doc)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lY</code>, select: <code>&lt;space&gt;lY</code></td></tr>
+<tr><td><code>goto_declaration_or_usages</code></td><td>Go to the declaration, or list the usages when already on it (JetBrains Go to Declaration or Usages, Cmd B)</td><td></td></tr>
 <tr><td><code>goto_declaration</code></td><td>Goto declaration</td><td><strong>spacemacs, hybrid</strong> — normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code>, select: <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code><br><strong>vim</strong> — normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>gD</code>, select: <code>gD</code></td></tr>
 <tr><td><code>add_newline_above</code></td><td>Add newline above</td><td><strong>helix</strong> — normal: <code>[&lt;space&gt;</code>, select: <code>[&lt;space&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-O&gt;</code>, <code>[&lt;space&gt;</code>, select: <code>[&lt;space&gt;</code></td></tr>
 <tr><td><code>add_newline_below</code></td><td>Add newline below</td><td><strong>helix</strong> — normal: <code>]&lt;space&gt;</code>, select: <code>]&lt;space&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-o&gt;</code>, <code>]&lt;space&gt;</code>, select: <code>]&lt;space&gt;</code></td></tr>
@@ -4542,6 +4544,7 @@ without scrolling.</p>
 <tr><td><code>goto_reference</code></td><td>Goto references</td><td><strong>spacemacs, vim</strong> — normal: <code>gr</code><br><strong>hybrid</strong> — normal: <code>gr</code>, insert: <code>&lt;A-?&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>gr</code>, select: <code>gr</code><br><strong>emacs, cua, micro, nano</strong> — normal: <code>&lt;A-?&gt;</code>, insert: <code>&lt;A-?&gt;</code></td></tr>
 <tr><td><code>call_hierarchy_incoming_calls</code></td><td>Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gh</code>, select: <code>&lt;space&gt;gh</code></td></tr>
 <tr><td><code>call_hierarchy_outgoing_calls</code></td><td>Call hierarchy: what the symbol calls</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gO</code>, select: <code>&lt;space&gt;gO</code></td></tr>
+<tr><td><code>type_hierarchy</code></td><td>The type at the cursor with its supertypes above and subtypes below (JetBrains Type Hierarchy, Ctrl H)</td><td></td></tr>
 <tr><td><code>type_hierarchy_supertypes</code></td><td>Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gT</code>, select: <code>&lt;space&gt;gT</code></td></tr>
 <tr><td><code>type_hierarchy_subtypes</code></td><td>Type hierarchy: subtypes of the symbol</td><td></td></tr>
 <tr><td><code>goto_super_method</code></td><td>Go to the method this one overrides (JetBrains Go to Super Method, Cmd U)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;g^</code>, select: <code>&lt;space&gt;g^</code></td></tr>
@@ -4980,6 +4983,8 @@ without scrolling.</p>
 <tr><td><code>windmove_display_new_tab</code></td><td>Display the next buffer in a new tab (emacs windmove-display-new-tab)</td><td></td></tr>
 <tr><td><code>windmove_display_default_keybindings</code></td><td>Bind M-S-<arrow> to display the next buffer in that direction (emacs windmove-display-default-keybindings)</arrow></td><td></td></tr>
 <tr><td><code>transpose_view</code></td><td>Transpose splits</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-w&gt;M</code>, <code>&lt;C-w&gt;x</code>, <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;C-w&gt;&lt;C-x&gt;</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code>, select: <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-w&gt;M</code>, <code>&lt;C-w&gt;x</code>, <code>&lt;C-w&gt;&lt;C-x&gt;</code><br><strong>helix</strong> — normal: <code>&lt;C-w&gt;t</code>, <code>&lt;space&gt;wt</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code>, select: <code>&lt;C-w&gt;t</code>, <code>&lt;space&gt;wt</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;C-w&gt;t</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, select: <code>&lt;C-w&gt;t</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code></td></tr>
+<tr><td><code>next_occurrence</code></td><td>Next result of the last Find in Path or Find Usages, else the next search match (JetBrains Next Occurrence)</td><td></td></tr>
+<tr><td><code>previous_occurrence</code></td><td>Previous result of the last Find in Path or Find Usages, else the previous search match (JetBrains Previous Occurrence)</td><td></td></tr>
 <tr><td><code>quickfix_next</code></td><td>Quickfix: jump to next entry (:cnext)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>]q</code></td></tr>
 <tr><td><code>quickfix_prev</code></td><td>Quickfix: jump to previous entry (:cprev)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>[q</code></td></tr>
 <tr><td><code>quickfix_first</code></td><td>Quickfix: jump to first entry (:cfirst)</td><td></td></tr>
@@ -5366,6 +5371,7 @@ without scrolling.</p>
 <tr><td><code>show_vcs_console</code></td><td>Every git command the editor has run this session (JetBrains Show VCS Console)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;g!</code>, select: <code>&lt;space&gt;g!</code></td></tr>
 <tr><td><code>clear_vcs_console</code></td><td>Empty the VCS console</td><td></td></tr>
 <tr><td><code>reveal_directory_in_tree</code></td><td>Reveal the current file’s directory in the project tree (JetBrains Select Directory in Project View)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;jT</code>, select: <code>&lt;space&gt;jT</code></td></tr>
+<tr><td><code>new_scratch_file</code></td><td>Pick a language and open a new scratch file of it, kept across sessions (JetBrains Scratch File, Cmd Shift N)</td><td></td></tr>
 <tr><td><code>show_scratch_files</code></td><td>Pick among the scratch buffers (JetBrains Show Scratch Files)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;b&lt;C-s&gt;</code>, select: <code>&lt;space&gt;b&lt;C-s&gt;</code></td></tr>
 <tr><td><code>reveal_in_tree</code></td><td>Reveal the current file in the project tree</td><td></td></tr>
 <tr><td><code>toggle_auto_reveal</code></td><td>Toggle always-select-opened-file (autoscroll from source)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pV</code>, select: <code>&lt;space&gt;pV</code></td></tr>
@@ -9896,11 +9902,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9700</strong> (81.3%)</li>
-<li>Partial: <strong>705</strong> (5.9%)</li>
-<li>Absent: <strong>1521</strong></li>
+<li>Ported: <strong>9716</strong> (81.5%)</li>
+<li>Partial: <strong>691</strong> (5.8%)</li>
+<li>Absent: <strong>1519</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2890 static commands, 3198 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2896 static commands, 3198 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -9962,8 +9968,8 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">2887</td><td style="text-align: right">113</td><td style="text-align: right">95.9%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
-<tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">738</td><td style="text-align: right">122</td><td style="text-align: right">36.9%</td></tr>
+<tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">745</td><td style="text-align: right">116</td><td style="text-align: right">37.2%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10045,21 +10051,21 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>code-analysis</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>code-folding</td><td style="text-align: right">8</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>coding-assistance</td><td style="text-align: right">21</td><td style="text-align: right">21</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>jetbrains</td><td>diff</td><td style="text-align: right">7</td><td style="text-align: right">5</td><td style="text-align: right">2</td><td style="text-align: right">71.4%</td></tr>
-<tr><td>jetbrains</td><td>editing</td><td style="text-align: right">25</td><td style="text-align: right">24</td><td style="text-align: right">1</td><td style="text-align: right">96.0%</td></tr>
+<tr><td>jetbrains</td><td>diff</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>jetbrains</td><td>editing</td><td style="text-align: right">25</td><td style="text-align: right">25</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>multiple-carets</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>jetbrains</td><td>navigate-from-symbol</td><td style="text-align: right">10</td><td style="text-align: right">8</td><td style="text-align: right">2</td><td style="text-align: right">80.0%</td></tr>
-<tr><td>jetbrains</td><td>navigation</td><td style="text-align: right">21</td><td style="text-align: right">18</td><td style="text-align: right">3</td><td style="text-align: right">85.7%</td></tr>
+<tr><td>jetbrains</td><td>navigate-from-symbol</td><td style="text-align: right">10</td><td style="text-align: right">10</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>jetbrains</td><td>navigation</td><td style="text-align: right">21</td><td style="text-align: right">21</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>refactoring</td><td style="text-align: right">13</td><td style="text-align: right">12</td><td style="text-align: right">1</td><td style="text-align: right">92.3%</td></tr>
 <tr><td>jetbrains</td><td>run-debug</td><td style="text-align: right">21</td><td style="text-align: right">21</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>search</td><td style="text-align: right">12</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>selection</td><td style="text-align: right">3</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>jetbrains</td><td>tool-windows</td><td style="text-align: right">12</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">91.7%</td></tr>
+<tr><td>jetbrains</td><td>tool-windows</td><td style="text-align: right">12</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>vcs</td><td style="text-align: right">16</td><td style="text-align: right">16</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">30</td><td style="text-align: right">1</td><td style="text-align: right">75.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">526</td><td style="text-align: right">98</td><td style="text-align: right">32.7%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">533</td><td style="text-align: right">92</td><td style="text-align: right">33.2%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">86</td><td style="text-align: right">0</td><td style="text-align: right">85.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">1</td><td style="text-align: right">0</td><td style="text-align: right">2.7%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">7</td><td style="text-align: right">2</td><td style="text-align: right">43.8%</td></tr>
@@ -10173,9 +10179,9 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline-1"><a class="header" href="#headline-1">Headline</a></h2>
 <ul>
 <li>Cited keybindings (denominator): <strong>3113</strong></li>
-<li>Ported: <strong>3040</strong> (97.7%)</li>
-<li>Partial: <strong>68</strong> (2.2%)</li>
-<li>Absent: <strong>5</strong></li>
+<li>Ported: <strong>3049</strong> (97.9%)</li>
+<li>Partial: <strong>60</strong> (1.9%)</li>
+<li>Absent: <strong>4</strong></li>
 </ul>
 <h2 id="by-source"><a class="header" href="#by-source">By source</a></h2>
 <div class="table-wrapper">
@@ -10185,7 +10191,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>emacs</td><td style="text-align: right">1127</td><td style="text-align: right">1083</td><td style="text-align: right">40</td><td style="text-align: right">96.1%</td></tr>
-<tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">208</td><td style="text-align: right">9</td><td style="text-align: right">95.4%</td></tr>
+<tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
 <tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">698</td><td style="text-align: right">17</td><td style="text-align: right">97.6%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1053</td><td style="text-align: right">1051</td><td style="text-align: right">2</td><td style="text-align: right">99.8%</td></tr>
 </tbody>
@@ -10203,16 +10209,16 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>code-analysis</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>code-folding</td><td style="text-align: right">8</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>coding-assistance</td><td style="text-align: right">21</td><td style="text-align: right">21</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>jetbrains</td><td>diff</td><td style="text-align: right">7</td><td style="text-align: right">5</td><td style="text-align: right">2</td><td style="text-align: right">71.4%</td></tr>
-<tr><td>jetbrains</td><td>editing</td><td style="text-align: right">25</td><td style="text-align: right">24</td><td style="text-align: right">1</td><td style="text-align: right">96.0%</td></tr>
+<tr><td>jetbrains</td><td>diff</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>jetbrains</td><td>editing</td><td style="text-align: right">25</td><td style="text-align: right">25</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>multiple-carets</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>jetbrains</td><td>navigate-from-symbol</td><td style="text-align: right">10</td><td style="text-align: right">8</td><td style="text-align: right">2</td><td style="text-align: right">80.0%</td></tr>
-<tr><td>jetbrains</td><td>navigation</td><td style="text-align: right">21</td><td style="text-align: right">18</td><td style="text-align: right">3</td><td style="text-align: right">85.7%</td></tr>
+<tr><td>jetbrains</td><td>navigate-from-symbol</td><td style="text-align: right">10</td><td style="text-align: right">10</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>jetbrains</td><td>navigation</td><td style="text-align: right">21</td><td style="text-align: right">21</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>refactoring</td><td style="text-align: right">13</td><td style="text-align: right">12</td><td style="text-align: right">1</td><td style="text-align: right">92.3%</td></tr>
 <tr><td>jetbrains</td><td>run-debug</td><td style="text-align: right">21</td><td style="text-align: right">21</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>search</td><td style="text-align: right">12</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>selection</td><td style="text-align: right">3</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>jetbrains</td><td>tool-windows</td><td style="text-align: right">12</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">91.7%</td></tr>
+<tr><td>jetbrains</td><td>tool-windows</td><td style="text-align: right">12</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>vcs</td><td style="text-align: right">16</td><td style="text-align: right">16</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
