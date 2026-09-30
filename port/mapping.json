@@ -84882,5 +84882,29 @@
    "static:md_link_to_reference"
   ],
   "note": "org.intellij.plugins.markdown.ui.actions.styling.MarkdownIntroduceLinkReferenceAction = zmax `md_link_to_reference`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.RunTask",
+  "status": "ported",
+  "evidence": [
+   "static:run_build_task"
+  ],
+  "note": "ExternalSystem.RunTask = zmax `run_build_task`: picks a task of the root's build files (cargo, npm scripts, make targets, just recipes, gradle, maven, cmake) and runs it in the Run window."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.OpenConfig",
+  "status": "ported",
+  "evidence": [
+   "static:open_build_file"
+  ],
+  "note": "ExternalSystem.OpenConfig = zmax `open_build_file`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ValidateXml",
+  "status": "ported",
+  "evidence": [
+   "static:validate_xml"
+  ],
+  "note": "ValidateXml = zmax `validate_xml`: xmllint well-formedness check, and DTD validation when the file declares a DOCTYPE."
  }
 ]

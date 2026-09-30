@@ -672,3 +672,22 @@ async fn md_inline_link_becomes_a_reference() -> anyhow::Result<()> {
     )
     .await
 }
+
+/// A command run from the command palette gets to open its prompt. The
+/// palette used to drop the layers a command queued, so the prompt never
+/// appeared and the answer was typed into the buffer as keys.
+#[tokio::test(flavor = "multi_thread")]
+async fn palette_commands_open_their_prompts() -> anyhow::Result<()> {
+    let mut config = Config::default();
+    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => command_palette, }));
+    let mut app = AppBuilder::new().with_config(config).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Zmd_insert_image<ret>a.png<ret>"),
+            Some(&|app| assert_eq!("![a](a.png)\n", text(app))),
+        )],
+        false,
+    )
+    .await
+}

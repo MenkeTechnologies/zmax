@@ -9,6 +9,24 @@ use tui::buffer::Buffer as Surface;
 pub type Callback = Box<dyn FnOnce(&mut Compositor, &mut Context)>;
 pub type SyncCallback = Box<dyn FnOnce(&mut Compositor, &mut Context) + Sync>;
 
+thread_local! {
+    static DEFERRED: std::cell::RefCell<Vec<Callback>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Hand compositor callbacks to the compositor from code that holds only a
+/// [`Context`] — a picker or prompt callback running a command, whose queued
+/// layers (a prompt, a picker, a popup) would otherwise be dropped with the
+/// command's own context. They run once the current event has been handled,
+/// after the handling layer's own callback, so a picker closes before the
+/// prompt its choice opened is pushed.
+pub fn defer(callbacks: impl IntoIterator<Item = Callback>) {
+    DEFERRED.with(|d| d.borrow_mut().extend(callbacks));
+}
+
+fn take_deferred() -> Vec<Callback> {
+    DEFERRED.with(|d| std::mem::take(&mut *d.borrow_mut()))
+}
+
 // Cursive-inspired
 pub enum EventResult {
     Ignored(Option<Callback>),
@@ -187,6 +205,9 @@ impl Compositor {
         }
 
         for callback in callbacks {
+            callback(self, cx)
+        }
+        for callback in take_deferred() {
             callback(self, cx)
         }
 

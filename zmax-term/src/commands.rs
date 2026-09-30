@@ -2029,6 +2029,9 @@ impl MappableCommand {
         delete_run_config, "Delete a picked run configuration (JetBrains Delete Run Configuration)",
         copy_run_config, "Duplicate a picked run configuration (JetBrains Copy Configuration)",
         rerun_tests, "Run the most recent test run again (JetBrains Rerun Tests)",
+        run_build_task, "Pick a task of the project's build files and run it (JetBrains Run Task)",
+        open_build_file, "Open the project's build file (JetBrains Open Config)",
+        validate_xml, "Check the XML file is well formed and valid against its DTD (JetBrains Validate)",
         stop_run, "Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2)",
         clear_run_output, "Clear the Run tool window output",
         open_log_file, "Open zmax's own log file (JetBrains Show Log)",
@@ -12255,13 +12258,7 @@ fn md_image_prompt() -> crate::ui::prompt::Prompt {
             .file_stem()
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let (view, doc) = current!(cx.editor);
-        let transaction = Transaction::insert(
-            doc.text(),
-            doc.selection(view.id),
-            format!("![{alt}]({path})").into(),
-        );
-        doc.apply(&transaction, view.id);
+        insert_at_cursors(cx.editor, &format!("![{alt}]({path})"));
     })
 }
 
@@ -37131,6 +37128,10 @@ fn command_palette_filtered(
                 if let Some(previous) = restore {
                     let _ = zmax_stdx::env::set_current_working_dir(previous);
                 }
+                // A command that opens a prompt, picker or popup queues it on its
+                // context; hand those to the compositor, which this callback has no
+                // way to reach.
+                crate::compositor::defer(std::mem::take(&mut ctx.callback));
 
                 if ctx.editor.tree.contains(focus) {
                     let config = ctx.editor.config();
@@ -58805,6 +58806,155 @@ fn copy_run_config(cx: &mut Context) {
     });
 }
 
+/// The build files a project root holds, in the order the IDE's build-tool
+/// panel would list their projects.
+const BUILD_FILES: [&str; 8] = [
+    "Cargo.toml",
+    "package.json",
+    "Makefile",
+    "justfile",
+    "build.gradle.kts",
+    "build.gradle",
+    "pom.xml",
+    "CMakeLists.txt",
+];
+
+/// The tasks a build file offers, as the shell commands that run them.
+/// `contents` is the file's text, read where a tool's own listing would be
+/// slow or need the tool installed. Pure — unit tested.
+fn build_file_tasks(file: &str, contents: &str) -> Vec<String> {
+    let each = |tool: &str, tasks: &[&str]| tasks.iter().map(|t| format!("{tool} {t}")).collect::<Vec<_>>();
+    match file {
+        "Cargo.toml" => each("cargo", &["build", "check", "test", "run", "clippy", "doc", "bench", "clean"]),
+        "package.json" => serde_json::from_str::<serde_json::Value>(contents)
+            .ok()
+            .and_then(|json| json["scripts"].as_object().cloned())
+            .map(|scripts| scripts.keys().map(|s| format!("npm run {s}")).collect())
+            .unwrap_or_default(),
+        "Makefile" => contents
+            .lines()
+            .filter_map(|line| {
+                let (target, _) = line.split_once(':')?;
+                let valid = !target.is_empty()
+                    && !target.starts_with(['.', '\t', ' ', '#'])
+                    && !line[target.len()..].starts_with(":=")
+                    && target.chars().all(|c| c.is_alphanumeric() || "-_/.".contains(c));
+                valid.then(|| format!("make {target}"))
+            })
+            .collect(),
+        "justfile" => contents
+            .lines()
+            .filter_map(|line| {
+                let name = line.split([':', ' ']).next()?;
+                let valid = !name.is_empty()
+                    && line.contains(':')
+                    && !line.contains(":=")
+                    && name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_');
+                valid.then(|| format!("just {name}"))
+            })
+            .collect(),
+        "build.gradle.kts" | "build.gradle" => each("./gradlew", &["build", "test", "clean", "assemble", "check"]),
+        "pom.xml" => each("mvn", &["compile", "test", "package", "verify", "install", "clean"]),
+        "CMakeLists.txt" => vec!["cmake -S . -B build".into(), "cmake --build build".into()],
+        _ => Vec::new(),
+    }
+}
+
+/// JetBrains "Run Task" in the build-tool panel (`ExternalSystem.RunTask`):
+/// pick a task of the project's build files and run it in the Run window.
+fn run_build_task(cx: &mut Context) {
+    let root = zmax_loader::find_workspace().0;
+    let tasks: Vec<String> = BUILD_FILES
+        .iter()
+        .filter_map(|file| {
+            let contents = std::fs::read_to_string(root.join(file)).ok()?;
+            Some(build_file_tasks(file, &contents))
+        })
+        .flatten()
+        .collect();
+    if tasks.is_empty() {
+        cx.editor.set_status("no build file with tasks at the project root");
+        return;
+    }
+    let columns = [PickerColumn::new("task", |t: &String, _: &()| t.as_str().into())];
+    let picker = Picker::new(columns, 0, tasks, (), move |_cx, task: &String, _| {
+        let (task, root) = (task.clone(), root.clone());
+        crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut crate::compositor::Context| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                view.start_run(cx, task, root);
+            }
+        }) as crate::compositor::Callback]);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Open Config" in the build-tool panel (`ExternalSystem.OpenConfig`):
+/// the project's build file, picked when there is more than one.
+fn open_build_file(cx: &mut Context) {
+    let root = zmax_loader::find_workspace().0;
+    let files: Vec<PathBuf> = BUILD_FILES.iter().map(|f| root.join(f)).filter(|p| p.is_file()).collect();
+    match files.as_slice() {
+        [] => cx.editor.set_status("no build file at the project root"),
+        [only] => {
+            if let Err(e) = cx.editor.open(only, Action::Replace) {
+                cx.editor.set_error(format!("{}: {e}", only.display()));
+            }
+        }
+        _ => {
+            let columns = [PickerColumn::new("build file", |p: &PathBuf, _: &()| {
+                p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default().into()
+            })];
+            let picker = Picker::new(columns, 0, files, (), |cx, path: &PathBuf, action| {
+                if let Err(e) = cx.editor.open(path, action) {
+                    cx.editor.set_error(format!("{}: {e}", path.display()));
+                }
+            });
+            cx.push_layer(Box::new(overlaid(picker)));
+        }
+    }
+}
+
+#[cfg(test)]
+mod build_task_tests {
+    use super::build_file_tasks;
+
+    #[test]
+    fn npm_scripts_make_targets_and_just_recipes() {
+        assert_eq!(
+            vec!["npm run build", "npm run test"],
+            build_file_tasks("package.json", r#"{"scripts":{"build":"tsc","test":"jest"}}"#)
+        );
+        let makefile = "CC := cc\nall: app\n\tcc -o app\n.PHONY: all\nclean:\n\trm app\n";
+        assert_eq!(vec!["make all", "make clean"], build_file_tasks("Makefile", makefile));
+        let justfile = "set shell := [\"zsh\"]\ntest arg:\n    cargo test {{arg}}\nfmt:\n    cargo fmt\n";
+        assert_eq!(vec!["just test", "just fmt"], build_file_tasks("justfile", justfile));
+    }
+}
+
+/// JetBrains "Validate" for XML (`ValidateXml`): check the file is well formed,
+/// and valid against its DTD when it declares one, with `xmllint`.
+fn validate_xml(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(Path::to_path_buf) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let has_dtd = doc!(cx.editor).text().to_string().contains("<!DOCTYPE");
+    let mut command = std::process::Command::new("xmllint");
+    command.arg("--noout");
+    if has_dtd {
+        command.arg("--valid");
+    }
+    match command.arg(&path).output() {
+        Ok(out) if out.status.success() => cx.editor.set_status(if has_dtd {
+            "XML is well formed and valid against its DTD"
+        } else {
+            "XML is well formed"
+        }),
+        Ok(out) => show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&out.stderr)),
+        Err(e) => cx.editor.set_error(format!("xmllint: {e} (install libxml2)")),
+    }
+}
+
 /// JetBrains "Rerun Tests" (`RerunTests`): run the most recent test run again,
 /// from the test history, whatever has run in the console since.
 fn rerun_tests(cx: &mut Context) {
@@ -73923,13 +74073,7 @@ fn commit_message_history(cx: &mut Context) {
         m.lines().next().unwrap_or("").into()
     })];
     let picker = Picker::new(columns, 0, messages, (), |cx, message: &String, _| {
-        let (view, doc) = current!(cx.editor);
-        let transaction = Transaction::insert(
-            doc.text(),
-            doc.selection(view.id),
-            message.as_str().into(),
-        );
-        doc.apply(&transaction, view.id);
+        insert_at_cursors(cx.editor, message);
     });
     cx.push_layer(Box::new(overlaid(picker)));
 }

@@ -1636,6 +1636,9 @@
 | `delete_run_config` | Delete a picked run configuration (JetBrains Delete Run Configuration) |  |
 | `copy_run_config` | Duplicate a picked run configuration (JetBrains Copy Configuration) |  |
 | `rerun_tests` | Run the most recent test run again (JetBrains Rerun Tests) |  |
+| `run_build_task` | Pick a task of the project's build files and run it (JetBrains Run Task) |  |
+| `open_build_file` | Open the project's build file (JetBrains Open Config) |  |
+| `validate_xml` | Check the XML file is well formed and valid against its DTD (JetBrains Validate) |  |
 | `stop_run` | Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2) | **spacemacs, hybrid** — normal: `` <space>px ``, select: `` <space>px `` |
 | `clear_run_output` | Clear the Run tool window output | **spacemacs, hybrid** — normal: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck ``, select: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck `` |
 | `open_log_file` | Open zmax's own log file (JetBrains Show Log) | **spacemacs, hybrid** — normal: `` <space>hL ``, select: `` <space>hL `` |
