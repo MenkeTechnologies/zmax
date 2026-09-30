@@ -84920,5 +84920,2285 @@
    "static:quickfix_open"
   ],
   "note": "ActivateFindToolWindow (Find) = zmax `quickfix_open`: the results of the last Find in Path, Find in Files or Find Usages, kept as the quickfix list."
+ },
+ {
+  "spec_id": "jetbrains-actions.ActivateHierarchyToolWindow",
+  "status": "partial",
+  "evidence": [
+   "static:call_hierarchy_incoming_calls",
+   "static:type_hierarchy_supertypes"
+  ],
+  "note": "ActivateHierarchyToolWindow (Hierarchy) = zmax `call_hierarchy_incoming_calls` / `type_hierarchy_supertypes`: open a one-level LSP hierarchy picker for the symbol (commands/lsp.rs:1612); no persistent Hierarchy tool window to re-activate."
+ },
+ {
+  "spec_id": "jetbrains-actions.AddBreakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_set_breakpoint"
+  ],
+  "note": "AddBreakpoint (Add Breakpoint) = zmax `dap_set_breakpoint`: sets a line breakpoint on the current line, leaving an existing one alone (commands.rs:84960)."
+ },
+ {
+  "spec_id": "jetbrains-actions.AllRunConfigurationsToggle",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_picker"
+  ],
+  "note": "AllRunConfigurationsToggle (Toggle All Run/Debug Configurations) = zmax `run_config_picker`: always lists every run configuration; there is no recent-only vs all toggle in a run widget."
+ },
+ {
+  "spec_id": "jetbrains-actions.AttachProject",
+  "status": "partial",
+  "evidence": [
+   "typable:attach-dir"
+  ],
+  "note": "AttachProject (Attach Project\u2026) = zmax `:attach-dir`: adds a directory as a second content root searched with the workspace (commands/typed.rs:25302); the attached root does not bring its own project settings/run configs as an attached IDE project does."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.ChooseType",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_bookmark_with_mnemonic"
+  ],
+  "note": "BookmarksView.ChooseType (Change Mnemonic\u2026) = zmax `toggle_bookmark_with_mnemonic`: on a bookmarked line, the next key assigns a new mnemonic, replacing the line's old one (toggle_mnemonic_bookmark, commands.rs:36370-36396); acts on the cursor line rather than a node selected in the view."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.Delete",
+  "status": "partial",
+  "evidence": [
+   "static:bookmark_toggle"
+  ],
+  "note": "BookmarksView.Delete (Delete) = zmax `bookmark_toggle`: removes the bookmark on the cursor line; there is no delete key on a row selected in the `bookmarks_view` picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.ShowPreview",
+  "status": "partial",
+  "evidence": [
+   "static:bookmarks_view"
+  ],
+  "note": "BookmarksView.ShowPreview (Open Editor Preview) = zmax `bookmarks_view`: the bookmark picker shows the file preview pane for the highlighted bookmark; it is the picker's preview, not a toggle on a persistent Bookmarks tool window."
+ },
+ {
+  "spec_id": "jetbrains-actions.BookmarksView.SortGroupBookmarks",
+  "status": "partial",
+  "evidence": [
+   "static:bookmarks_view"
+  ],
+  "note": "BookmarksView.SortGroupBookmarks (Sort Bookmarks by Type && Name) = zmax `bookmarks_view`: always lists bookmarks sorted by path then line (commands.rs:36167); no type (mnemonic) ordering and no user order to sort from."
+ },
+ {
+  "spec_id": "jetbrains-actions.CallHierarchy.BaseOnThisMethod",
+  "status": "partial",
+  "evidence": [
+   "static:call_hierarchy_incoming_calls"
+  ],
+  "note": "CallHierarchy.BaseOnThisMethod (Base on This Method) = zmax `call_hierarchy_incoming_calls`: jump to a caller from the hierarchy picker and run it again to re-root there; the picker is one level deep with no in-place re-rooting (commands/lsp.rs:1621)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CallSaul",
+  "status": "partial",
+  "evidence": [
+   "typable:lsp-restart",
+   "typable:projectile-invalidate-cache"
+  ],
+  "note": "CallSaul (Repair IDE) = zmax `:lsp-restart` + `:projectile-invalidate-cache`: restart the language servers (which re-index) and drop the cached project file list; no guided multi-step cache diagnostic."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeIdeScale",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_set",
+   "static:frame_zoom_in"
+  ],
+  "note": "ChangeIdeScale (Zoom) = zmax `text_scale_set` / `frame_zoom_in`: set or step the terminal font size by escape sequence (commands.rs:48257, 80616); zoom levels depend on terminal support and there is no percentage popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.EditSource",
+  "status": "partial",
+  "evidence": [
+   "static:focus_git_panel"
+  ],
+  "note": "ChangesView.EditSource (Jump to Source) = zmax `focus_git_panel`: Enter on a change row opens the file (ui/ide.rs:1786); a panel key, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.ShelveSilently",
+  "status": "partial",
+  "evidence": [
+   "typable:shelve"
+  ],
+  "note": "ChangesView.ShelveSilently (Shelve Silently) = zmax `:shelve` with no name: shelves without a dialog under a timestamp name (commands/typed.rs:25557); it shelves the whole tree as one patch rather than one shelf per changelist."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.ShowCommitOptions",
+  "status": "partial",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "ChangesView.ShowCommitOptions (Show Commit Options) = zmax `git_status`: Magit status offers commit (`c`) and amend (`a`); there is no options popup for sign-off/author/hooks."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.SingleClickPreview",
+  "status": "partial",
+  "evidence": [
+   "static:focus_git_panel"
+  ],
+  "note": "ChangesView.SingleClickPreview (Preview Diff) = zmax `focus_git_panel`: `d` on a change row opens its diff (ui/ide.rs:1769); there is no diff preview pane that follows the selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.UnshelveSilently",
+  "status": "partial",
+  "evidence": [
+   "typable:unshelve"
+  ],
+  "note": "ChangesView.UnshelveSilently (Unshelve Silently) = zmax `:unshelve NAME`: applies a shelf entry without a dialog (commands/typed.rs:25608); it needs the entry name and does not restore changelist membership."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangeToolWindowLayout",
+  "status": "partial",
+  "evidence": [
+   "static:restore_default_layout"
+  ],
+  "note": "ChangeToolWindowLayout (Layout) = zmax `restore_default_layout`: resets the workbench drawers to the default layout (commands.rs:55359); there are no named saved tool-window layouts to pick from."
+ },
+ {
+  "spec_id": "jetbrains-actions.CheckForUpdate",
+  "status": "partial",
+  "evidence": [
+   "static:package_upgrade_all"
+  ],
+  "note": "CheckForUpdate (Check for Updates\u2026) = zmax `package_upgrade_all`: refreshes the package archive and installs newer package versions (commands.rs:89380); zmax does not check for a newer zmax binary."
+ },
+ {
+  "spec_id": "jetbrains-actions.CheckStatusForFiles",
+  "status": "partial",
+  "evidence": [
+   "static:vc_log_incoming"
+  ],
+  "note": "CheckStatusForFiles (Check Status) = zmax `vc_log_incoming`: lists commits incoming from upstream (commands.rs:56198); not a per-file/directory remote status check."
+ },
+ {
+  "spec_id": "jetbrains-actions.ClassNameCompletion",
+  "status": "partial",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "ClassNameCompletion (Second Basic Completion) = zmax `completion`: LSP completion, which includes not-yet-imported symbols only when the language server offers them; no second-invocation widening."
+ },
+ {
+  "spec_id": "jetbrains-actions.ClickLink",
+  "status": "ported",
+  "evidence": [
+   "static:open_url_under_cursor"
+  ],
+  "note": "ClickLink (Click Link) = zmax `open_url_under_cursor`: opens the URL or bug reference under the cursor (commands.rs:5564)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseActiveTab",
+  "status": "partial",
+  "evidence": [
+   "static:hide_active_tool_window"
+  ],
+  "note": "CloseActiveTab (Close Active Tab) = zmax `hide_active_tool_window`: hides the active tool window; zmax's bottom tabs are fixed, so there is no content tab to close."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllNotifications",
+  "status": "ported",
+  "evidence": [
+   "typable:messages-clear"
+  ],
+  "note": "CloseAllNotifications (Close All) = zmax `:messages-clear`: empties the message log (commands/typed.rs:4650)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseAllProjects",
+  "status": "partial",
+  "evidence": [
+   "typable:buffer-close-all"
+  ],
+  "note": "CloseAllProjects (Close All Projects) = zmax `:buffer-close-all`: closes every buffer; zmax runs one workspace per process, so there are no project windows to close."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseDiffEditor",
+  "status": "ported",
+  "evidence": [
+   "typable:diffoff"
+  ],
+  "note": "CloseDiffEditor (Close Diff Editor) = zmax `:diffoff`: removes the side-by-side diff overlay."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseProject",
+  "status": "partial",
+  "evidence": [
+   "typable:projectile-kill-buffers"
+  ],
+  "note": "CloseProject (Close Project) = zmax `:projectile-kill-buffers`: closes this project's buffers; the editor process stays open on the same workspace."
+ },
+ {
+  "spec_id": "jetbrains-actions.Code.Review.Editor.Show.Diff",
+  "status": "partial",
+  "evidence": [
+   "static:git_compare_with_branch"
+  ],
+  "note": "Code.Review.Editor.Show.Diff (Show Diff) = zmax `git_compare_with_branch`: diffs this file against a picked branch such as the PR base (commands.rs:73687); it is not tied to a review session's base automatically."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeFloatingToolbar.GotoNextMenu",
+  "status": "partial",
+  "evidence": [
+   "static:context_menu_open"
+  ],
+  "note": "CodeFloatingToolbar.GotoNextMenu (Go to Next Toolbar Menu) = zmax `context_menu_open`: selection actions come from a context menu popped at point (commands.rs:86900); there is no floating toolbar with several menus to cycle."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeFloatingToolbar.GotoPrevMenu",
+  "status": "partial",
+  "evidence": [
+   "static:context_menu_open"
+  ],
+  "note": "CodeFloatingToolbar.GotoPrevMenu (Go to Previous Toolbar Menu) = zmax `context_menu_open`: selection actions come from a context menu at point; no floating toolbar menus to cycle."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeInspection.OnEditor",
+  "status": "partial",
+  "evidence": [
+   "static:workspace_diagnostics_picker"
+  ],
+  "note": "CodeInspection.OnEditor (Inspect Code with Editor Settings) = zmax `workspace_diagnostics_picker`: lists the diagnostics the language servers published; there is no batch inspection run over a chosen scope."
+ },
+ {
+  "spec_id": "jetbrains-actions.CommittedChanges.Details",
+  "status": "partial",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "CommittedChanges.Details (Show Details) = zmax `git_repo_log_picker`: picks a commit from history and shows it; no separate details pane beside a committed-changes list."
+ },
+ {
+  "spec_id": "jetbrains-actions.CommittedChanges.Filter",
+  "status": "partial",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "CommittedChanges.Filter (Filter) = zmax `git_repo_log_picker`: fuzzy-filters the commit list by text; no structured user/date/path filter criteria."
+ },
+ {
+  "spec_id": "jetbrains-actions.CommittedChanges.Refresh",
+  "status": "partial",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "CommittedChanges.Refresh (Refresh) = zmax `git_repo_log_picker`: re-reads history each time it opens; no refresh inside an open list."
+ },
+ {
+  "spec_id": "jetbrains-actions.CommitView.ShowOnDoubleClick.EditorPreview",
+  "status": "partial",
+  "evidence": [
+   "static:focus_git_panel"
+  ],
+  "note": "CommitView.ShowOnDoubleClick.EditorPreview (Show Diff on Double-Click) = zmax `focus_git_panel`: `d` on a change shows its diff while Enter opens source; the two are fixed keys, not a configurable double-click choice."
+ },
+ {
+  "spec_id": "jetbrains-actions.CommitView.ShowOnDoubleClick.Source",
+  "status": "partial",
+  "evidence": [
+   "static:focus_git_panel"
+  ],
+  "note": "CommitView.ShowOnDoubleClick.Source (Show Source on Double-Click) = zmax `focus_git_panel`: Enter on a change opens its source file (ui/ide.rs:1786); fixed key rather than a configurable double-click choice."
+ },
+ {
+  "spec_id": "jetbrains-actions.CompareFileWithEditor",
+  "status": "partial",
+  "evidence": [
+   "static:ediff_file"
+  ],
+  "note": "CompareFileWithEditor (Compare File with Editor) = zmax `ediff_file`: diffs a prompted file against the current buffer (commands.rs:19809); the file is typed, not the one selected in the project tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConfigureEditorTabs",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-group"
+  ],
+  "note": "ConfigureEditorTabs (Configure Editor Tabs\u2026) = zmax `:customize-group`: opens Settings filtered to a group such as the bufferline options; no dedicated tabs page."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConfigureInspectionsAction",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-group",
+   "typable:diagnostics-severity"
+  ],
+  "note": "ConfigureInspectionsAction (Configure Inspections\u2026) = zmax `:customize-group` / `:diagnostics-severity`: edit diagnostics/LSP settings and the drawn severity floor; individual checks are configured in each language server, not per inspection."
+ },
+ {
+  "spec_id": "jetbrains-actions.ConfigureSoftWraps",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-group"
+  ],
+  "note": "ConfigureSoftWraps (Configure Soft Wraps\u2026) = zmax `:customize-group`: opens Settings filtered to the soft-wrap group; no per-file-type wrap page."
+ },
+ {
+  "spec_id": "jetbrains-actions.Console.Execute.Multiline",
+  "status": "partial",
+  "evidence": [
+   "static:repl_send_statement"
+  ],
+  "note": "Console.Execute.Multiline (Execute Current Statement in Multiline Console) = zmax `repl_send_statement`: sends the selection or current line to the language REPL; a multi-line statement must be selected first."
+ },
+ {
+  "spec_id": "jetbrains-actions.Console.History.Next",
+  "status": "ported",
+  "evidence": [
+   "static:repl"
+  ],
+  "note": "Console.History.Next (Next Entry in Console History) = zmax `repl`: in the REPL, Down / C-n step to the next history entry (ui/repl.rs:644-646)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Console.History.Previous",
+  "status": "ported",
+  "evidence": [
+   "static:repl"
+  ],
+  "note": "Console.History.Previous (Previous Entry in Console History) = zmax `repl`: in the REPL, Up / C-p step to the previous history entry (ui/repl.rs:643-645)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Console.Open",
+  "status": "partial",
+  "evidence": [
+   "static:repl"
+  ],
+  "note": "Console.Open (Open Console) = zmax `repl`: opens the language REPL; there is no console bound to a selected database data source."
+ },
+ {
+  "spec_id": "jetbrains-actions.Console.SplitLine",
+  "status": "ported",
+  "evidence": [
+   "static:repl"
+  ],
+  "note": "Console.SplitLine (Split Line) = zmax `repl`: Alt-Enter inserts a newline into the REPL input without evaluating (ui/repl.rs:633)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ContextHelp",
+  "status": "partial",
+  "evidence": [
+   "static:help",
+   "static:describe_bindings"
+  ],
+  "note": "ContextHelp (Context Help) = zmax `help` / `describe_bindings`: open the help browser or the current mode's bindings; help is not scoped to the focused panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.CopySourceRootPath",
+  "status": "partial",
+  "evidence": [
+   "static:yank_file_path_from_workspace"
+  ],
+  "note": "CopySourceRootPath (Path from Source Root) = zmax `yank_file_path_from_workspace`: yanks the path relative to the workspace root (commands.rs:5298); zmax has no source-root (e.g. src/main/java) concept."
+ },
+ {
+  "spec_id": "jetbrains-actions.CustomizeUI",
+  "status": "partial",
+  "evidence": [
+   "static:preferences"
+  ],
+  "note": "CustomizeUI (Customize\u2026) = zmax `preferences`: opens the unified Preferences window (commands.rs:53034) for theme and UI options; no separate appearance-customization dialog."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.AddInlineWatch",
+  "status": "partial",
+  "evidence": [
+   "static:dap_add_watch"
+  ],
+  "note": "Debugger.AddInlineWatch (Add Inline Watch) = zmax `dap_add_watch`: adds a watch expression shown in the Watches list (commands/dap.rs:1235); the value is not rendered inline at the line."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.EvaluateInConsole",
+  "status": "partial",
+  "evidence": [
+   "static:dap_evaluate_expression",
+   "typable:debug-eval"
+  ],
+  "note": "Debugger.EvaluateInConsole (Evaluate in Console) = zmax `dap_evaluate_expression` / `:debug-eval`: evaluate an expression in the selected frame (commands/dap.rs:673); the result is shown in a popup/status, not appended to a debug console transcript."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.FreezeActiveThreadAction",
+  "status": "partial",
+  "evidence": [
+   "static:dap_pause"
+  ],
+  "note": "Debugger.FreezeActiveThreadAction (Suspend Thread) = zmax `dap_pause`: pauses a thread picked from the thread list (commands/dap.rs:1024); it asks for the thread rather than acting on the active one."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.FreezeSelectedThreads",
+  "status": "partial",
+  "evidence": [
+   "static:dap_pause"
+  ],
+  "note": "Debugger.FreezeSelectedThreads (Suspend Threads) = zmax `dap_pause`: pauses the thread picked in the thread picker (commands/dap.rs:1024); one thread per invocation, no multi-select."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.ThawActiveThreadAction",
+  "status": "partial",
+  "evidence": [
+   "static:dap_continue"
+  ],
+  "note": "Debugger.ThawActiveThreadAction (Resume Thread) = zmax `dap_continue`: sends DAP continue for the active thread (commands/dap.rs:959) without `singleThread`, so adapters usually resume all threads."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.ThawAllThreadsAction",
+  "status": "partial",
+  "evidence": [
+   "static:dap_continue"
+  ],
+  "note": "Debugger.ThawAllThreadsAction (Resume All Threads) = zmax `dap_continue`: DAP continue without `singleThread`, which adapters treat as resuming every thread; it fails when the active thread is not stopped (commands/dap.rs:972)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Debugger.Tree.EvaluateInConsole",
+  "status": "partial",
+  "evidence": [
+   "static:dap_evaluate_expression"
+  ],
+  "note": "Debugger.Tree.EvaluateInConsole (Evaluate In Console) = zmax `dap_evaluate_expression`: evaluates an expression in the selected frame; not launched from a variables-tree node and not appended to a debug console."
+ },
+ {
+  "spec_id": "jetbrains-actions.DelegateMethods",
+  "status": "partial",
+  "evidence": [
+   "static:generate_code"
+  ],
+  "note": "DelegateMethods (Delegate Methods\u2026) = zmax `generate_code`: offers the server's \"generate\" code actions (commands/lsp.rs:765), which include delegate-method generation where the server has it (e.g. rust-analyzer); not pinned to delegation alone."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.AppendLeftSide",
+  "status": "partial",
+  "evidence": [
+   "typable:conflict-both"
+  ],
+  "note": "Diff.AppendLeftSide (Append Left Side) = zmax `:conflict-both`: keeps both sides of the conflict at the cursor (ours then theirs); no append of one side after an already-applied other side."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.AppendRightSide",
+  "status": "partial",
+  "evidence": [
+   "typable:conflict-both"
+  ],
+  "note": "Diff.AppendRightSide (Append Right Side) = zmax `:conflict-both`: keeps both sides, ours then theirs; the order is fixed."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ApplyNonConflicts.Left",
+  "status": "partial",
+  "evidence": [
+   "static:resolve_conflicts"
+  ],
+  "note": "Diff.ApplyNonConflicts.Left (Apply Non-Conflicting Changes from the Left Side) = zmax `resolve_conflicts`: non-conflicting changes from both sides are merged when the view is built (ui/merge.rs:333); one side cannot be applied alone."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ApplyNonConflicts.Right",
+  "status": "partial",
+  "evidence": [
+   "static:resolve_conflicts"
+  ],
+  "note": "Diff.ApplyNonConflicts.Right (Apply Non-Conflicting Changes from the Right Side) = zmax `resolve_conflicts`: non-conflicting changes from both sides are merged up front (ui/merge.rs:333); no right-only apply."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ApplyNonConflicts",
+  "status": "partial",
+  "evidence": [
+   "static:resolve_conflicts"
+  ],
+  "note": "Diff.ApplyNonConflicts (Apply All Non-Conflicting Changes) = zmax `resolve_conflicts`: the 3-way resolver starts with non-conflicting changes already merged (diff3/resolve_region, ui/merge.rs:333-365, or git's own merge for conflict markers); there is no separate apply step."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.IgnoreLeftSide",
+  "status": "partial",
+  "evidence": [
+   "typable:conflict-theirs"
+  ],
+  "note": "Diff.IgnoreLeftSide (Ignore Left Side) = zmax `:conflict-theirs`: resolves the conflict at the cursor by keeping theirs, discarding the left change; ignoring both sides to fall back to base is not available."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.IgnoreRightSide",
+  "status": "partial",
+  "evidence": [
+   "typable:conflict-ours"
+  ],
+  "note": "Diff.IgnoreRightSide (Ignore Right Side) = zmax `:conflict-ours`: resolves the conflict at the cursor by keeping ours, discarding the right change; no fall-back to base."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ResolveConflict",
+  "status": "partial",
+  "evidence": [
+   "static:resolve_conflicts"
+  ],
+  "note": "Diff.ResolveConflict (Resolve Automatically) = zmax `resolve_conflicts`: the resolver's `m` key resolves blocks whose two sides agree (resolve_simple, ui/merge.rs:952); no word-level automatic merge of differing sides."
+ },
+ {
+  "spec_id": "jetbrains-actions.DisableDeclarativeInlayAction",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_inlay_hints"
+  ],
+  "note": "DisableDeclarativeInlayAction (Disable inlay hints of this type, from the hint's context menu) = zmax `toggle_inlay_hints`: turns all LSP inlay hints off/on (lsp.display_inlay_hints, commands.rs:19640); no per-hint-kind disable."
+ },
+ {
+  "spec_id": "jetbrains-actions.Documentation.ViewExternal",
+  "status": "partial",
+  "evidence": [
+   "static:dash_at_point"
+  ],
+  "note": "Documentation.ViewExternal (View External Documentation) = zmax `dash_at_point`: looks the symbol at point up in an external viewer (Dash/Zeal offline docsets, commands.rs:21826) rather than opening the element's external doc URL (e.g. docs.rs/javadoc) in a browser."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorBreadcrumbsShowAbove",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "EditorBreadcrumbsShowAbove (Breadcrumbs: Top) = zmax `toggle_breadcrumbs`: shows/hides the breadcrumb trail (commands.rs:19586, drawn in the workbench toolbar at ui/ide.rs:3403); its position is fixed, no above/below placement choice."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorBreadcrumbsShowBelow",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "EditorBreadcrumbsShowBelow (Breadcrumbs: Bottom) = zmax `toggle_breadcrumbs`: shows/hides the breadcrumb trail (commands.rs:19586); it is drawn only in the workbench toolbar (ui/ide.rs:3403), not below the editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorChooseLookupItem",
+  "status": "partial",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "EditorChooseLookupItem (Choose Lookup Item) = zmax `completion` popup: Enter accepts the selected item (zmax-term/src/ui/menu.rs:311); it is a key of the completion menu, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCreateRectangularSelection",
+  "status": "partial",
+  "evidence": [
+   "static:column_selection"
+  ],
+  "note": "EditorCreateRectangularSelection (Create Rectangular Selection, Alt+Shift+middle-click from caret to click) = zmax `column_selection`: turns the primary selection's anchor/head into a column block (commands.rs:13167); corners come from the selection, not a mouse click."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorFocusGutter",
+  "status": "partial",
+  "evidence": [
+   "static:show_gutter_info"
+  ],
+  "note": "EditorFocusGutter (Focus Gutter, accessibility) = zmax `show_gutter_info`: describes the gutter marks on the cursor line (commands.rs:39412); there is no keyboard focus mode that walks and activates gutter icons."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorPasteSimple",
+  "status": "ported",
+  "evidence": [
+   "static:paste_clipboard_after"
+  ],
+  "note": "EditorPasteSimple (Paste as Plain Text) = zmax `paste_clipboard_after`: inserts the clipboard text verbatim via paste_impl with no reformat/auto-import/escaping (commands.rs `paste_clipboard_after`, `paste`); re-indenting paste is the separate paste_after_reindent."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorStickyConfigure",
+  "status": "partial",
+  "evidence": [
+   "typable:sticky-lines"
+  ],
+  "note": "EditorStickyConfigure (Configure Sticky Lines) = zmax `:sticky-lines`: sets or reports how many scope headers are pinned (set_sticky_lines_limit, commands.rs ~19610); the IDE dialog also has per-language and other options."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditSourceInNewWindow",
+  "status": "partial",
+  "evidence": [
+   "static:find_file_other_frame"
+  ],
+  "note": "EditSourceInNewWindow (Open Tab in New Window) = zmax `find_file_other_frame`: opens a picked file in a new frame (pending_display = DisplayTarget::Frame); it does not take the item selected in a tab/tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditSourceNotInEditor",
+  "status": "partial",
+  "evidence": [
+   "static:project_tree_open_selected"
+  ],
+  "note": "EditSourceNotInEditor (Edit Source from a non-editor view) = zmax `project_tree_open_selected`: opens the item selected in the project tree; other tool-window lists use their own Enter keys."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExpressionTypeInfo",
+  "status": "partial",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": "ExpressionTypeInfo (Type Info) = zmax `hover`: LSP hover at the cursor shows the symbol's type/signature (lsp.rs:2102), but it sends no range, so the type of a selected sub-expression is not requested."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.AssignRunConfigurationShortcut",
+  "status": "partial",
+  "evidence": [
+   "typable:map"
+  ],
+  "note": "ExternalSystem.AssignRunConfigurationShortcut (Assign Shortcut to Run Configuration) = zmax `:map`: a key can be mapped to a command line that runs the configuration; there is no picker that binds the selected run configuration directly."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.AssignShortcut",
+  "status": "partial",
+  "evidence": [
+   "typable:map"
+  ],
+  "note": "ExternalSystem.AssignShortcut (Assign Shortcut to task) = zmax `:map`: bind a key to a `:run <task>` command line by hand; no direct bind-from-task-list."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.EditRunConfiguration",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "ExternalSystem.EditRunConfiguration (Edit Run Configuration) = zmax `run_config_manager`: CRUD over run configurations (ui/run_config.rs RunConfigPanel); it is not opened pre-selected on the build task's configuration."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.RemoveRunConfiguration",
+  "status": "partial",
+  "evidence": [
+   "static:delete_run_config"
+  ],
+  "note": "ExternalSystem.RemoveRunConfiguration (Remove Run Configuration) = zmax `delete_run_config`: deletes a picked run configuration (commands.rs:58779) rather than the one attached to the selected task."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExtractClass",
+  "status": "partial",
+  "evidence": [
+   "static:extract_refactor"
+  ],
+  "note": "ExtractClass (Extract Delegate) = zmax `extract_refactor`: lists the server's refactor.extract code actions (lsp.rs:631), which includes a delegate/class extraction only if the language server offers one; no dedicated command pinned to it (extract_function-style via code_action_filtered, lsp.rs:810)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExtractInterface",
+  "status": "partial",
+  "evidence": [
+   "static:extract_refactor"
+  ],
+  "note": "ExtractInterface (Extract Interface) = zmax `extract_refactor`: shows the server's refactor.extract actions (lsp.rs:631), which include \"Extract interface\" only where the server (e.g. jdtls, TS) provides it; not pinned like extract_function."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExtractModule",
+  "status": "partial",
+  "evidence": [
+   "static:extract_refactor"
+  ],
+  "note": "ExtractModule (Extract Module) = zmax `extract_refactor`: shows the server's refactor.extract actions (lsp.rs:631); rust-analyzer's \"Extract module\" appears there, but there is no dedicated command."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExtractSuperclass",
+  "status": "partial",
+  "evidence": [
+   "static:extract_refactor"
+  ],
+  "note": "ExtractSuperclass (Extract Superclass) = zmax `extract_refactor`: shows the server's refactor.extract actions (lsp.rs:631), which include a superclass extraction only if the server offers it."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.Delete",
+  "status": "partial",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "FileChooser.Delete (Delete in file chooser) = zmax `dired`: `D` deletes the marked/current entries (zmax-term/src/ui/dired.rs:3574); a Dired key, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.GoToParent",
+  "status": "partial",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "FileChooser.GoToParent (Parent Directory) = zmax `dired`: `^`/`-` go up one directory and reselect the child (up_dir, zmax-term/src/ui/dired.rs:3011); a Dired key, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.GotoProject",
+  "status": "partial",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "FileChooser.GotoProject (Project Directory) = zmax `dired`: opens a listing at the workspace root (find_workspace); it starts a new listing rather than navigating an open chooser."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.LightEditGotoOpenedFile",
+  "status": "partial",
+  "evidence": [
+   "static:dired_jump"
+  ],
+  "note": "FileChooser.LightEditGotoOpenedFile (Select Opened File) = zmax `dired_jump`: opens Dired on the current buffer's directory (dired_jump_dir/dired_open, commands.rs:34693/34701) but does not place the selection on the buffer's file."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.NewFile",
+  "status": "partial",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "FileChooser.NewFile (New File) = zmax `dired`: `M-+` creates an empty file in the listed directory (zmax-term/src/ui/dired.rs:3673); a Dired key, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.NewFolder",
+  "status": "partial",
+  "evidence": [
+   "static:dired",
+   "typable:mkdir"
+  ],
+  "note": "FileChooser.NewFolder (New Directory) = zmax `dired` `+` creates a directory in the listed directory (zmax-term/src/ui/dired.rs:3670); `:mkdir` creates one by path outside a listing."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.Refresh",
+  "status": "partial",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "FileChooser.Refresh (Refresh) = zmax `dired`: `g` re-reads the listing (revert, zmax-term/src/ui/dired.rs:3498); a Dired key, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.ShowHidden",
+  "status": "partial",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "FileChooser.ShowHidden (Show Hidden Files and Directories) = zmax `dired`: `z` toggles dotfile visibility and re-reads (show_hidden, zmax-term/src/ui/dired.rs:3607); a Dired key, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.TogglePathBar",
+  "status": "partial",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "FileChooser.TogglePathBar (Show/Hide Path Input Field) = zmax `dired`: the directory header is always drawn and `j` prompts for a path to go to (zmax-term/src/ui/dired.rs:3704); no toggle for a path field."
+ },
+ {
+  "spec_id": "jetbrains-actions.ForceStepInto",
+  "status": "partial",
+  "evidence": [
+   "static:dap_step_in"
+  ],
+  "note": "ForceStepInto (Force Step Into) = zmax `dap_step_in`: plain DAP stepIn (dap.rs:1035); zmax applies no stepping filters of its own, but adapter-side filters (e.g. justMyCode) are not overridden."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.EditSource",
+  "status": "partial",
+  "evidence": [
+   "static:focus_git_panel"
+  ],
+  "note": "Frontend.EditSource (Jump to Source from the Changes view) = zmax `focus_git_panel`: in the git panel, Enter opens the selected changed file (IdeAction::OpenFile, zmax-term/src/ui/ide.rs ~1787); a panel key, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Interactive.Rebase",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Git.Interactive.Rebase (Interactively Rebase from Here) ~ zmax `:magit` log view (`l`) then `r` on a commit: opens MagitRebase over the commits after it with pick/squash/fixup/drop and J/K reordering (ui/magit.rs:2834, 3290-3301); reword and edit are not modelled (ui/magit.rs:394-397) and it is not a single direct command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Log.Branches.Change.Branch.Filter",
+  "status": "partial",
+  "evidence": [
+   "static:vc_print_branch_log"
+  ],
+  "note": "Git.Log.Branches.Change.Branch.Filter (Update Branch Filter in Log) ~ zmax `vc_print_branch_log`: prompts for a branch and shows `git log --oneline -200 <branch>` in a scratch (commands.rs:56056); a typed single branch into a new buffer, not a filter applied to the open log view from a branch-pane selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Squash.Commits",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Git.Squash.Commits (Squash Commits) ~ zmax `:magit` log `r` then `s` on each commit to fold: MagitRebase sets `squash` todo verbs and runs the rebase (ui/magit.rs:3298, RebaseAction::Squash ui/magit.rs:415); the IDE squashes a multi-selection from the log and edits the combined message in one dialog, zmax keeps git's concatenated message."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Enable",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Git.Stage.Enable (Staging Area) ~ zmax `:magit`: the status view commits the native git index with per-file and per-hunk stage/unstage (ui/magit.rs:1079-1083, hunk `git apply --cached` :1411-1444); it is always available rather than a mode the commit tool switches to."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.Show.Local",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Git.Stage.Show.Local (Show Local Version) = zmax `:magit` Enter on a file: visit_callback opens the working-tree file in the editor (ui/magit.rs:1301-1311)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash.Refresh",
+  "status": "partial",
+  "evidence": [
+   "static:git_stash_list"
+  ],
+  "note": "Git.Stash.Refresh (Refresh Stashes) ~ zmax `git_stash_list`: re-reads `git stash list` every time it opens (git_stashes commands.rs:74525); there is no in-place refresh of an open stash list."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Toolbar.ShowMoreActions",
+  "status": "partial",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "Git.Toolbar.ShowMoreActions (VCS Operations) ~ zmax `git_status`: the Magit status view carries the quick operations (P push, F/p fetch/pull, c commit, l log, b branch, z stash; ui/magit.rs:1645-1684); a full view rather than a toolbar popup list."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.WorkingTrees.Refresh",
+  "status": "partial",
+  "evidence": [
+   "typable:projectile-switch-worktree"
+  ],
+  "note": "Git.WorkingTrees.Refresh (Refresh) ~ zmax `:projectile-switch-worktree`: re-runs `git worktree list` on each invocation; no persistent worktree list to refresh in place."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.Pull.Request.Branch.Update",
+  "status": "partial",
+  "evidence": [
+   "typable:github"
+  ],
+  "note": "Github.Pull.Request.Branch.Update (Update to Enable Review Mode\u2026) ~ zmax `:github` PRs tab `C`: `gh pr checkout <n>` puts the PR head on a local branch (ui/github.rs:1512-1531); there is no review mode it unlocks."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.Pull.Request.Show.In.Toolwindow",
+  "status": "partial",
+  "evidence": [
+   "static:github_show_pull_request"
+  ],
+  "note": "Github.Pull.Request.Show.In.Toolwindow (Show Pull Request) ~ zmax `github_show_pull_request`: renders a pull request's details into a scratch (commands/gh_actions.rs:197-215), but asks for the number instead of taking the current branch's PR."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.PullRequest.Details.Reload",
+  "status": "ported",
+  "evidence": [
+   "typable:github"
+  ],
+  "note": "Github.PullRequest.Details.Reload (Reload Details) = zmax `:github` PR detail view `r`: GithubTopic::refresh refetches the PR body, checks, files and reviews (ui/github.rs:3212, bound at :3528)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.PullRequest.List.Reload",
+  "status": "ported",
+  "evidence": [
+   "typable:github"
+  ],
+  "note": "Github.PullRequest.List.Reload (Reload List) = zmax `:github` PRs tab `r`: GithubBrowser::refresh refetches the current tab's list (ui/github.rs:694, bound at :2028)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.PullRequest.Timeline.Show",
+  "status": "partial",
+  "evidence": [
+   "typable:github"
+  ],
+  "note": "Github.PullRequest.Timeline.Show (Open Timeline) ~ zmax `:github` Enter on a PR: GithubTopic shows body, checks, files, reviews and comments (ui/github.rs:3185); grouped by section, not one chronological timeline."
+ },
+ {
+  "spec_id": "jetbrains-actions.Github.PullRequest.Timeline.Update",
+  "status": "ported",
+  "evidence": [
+   "typable:github"
+  ],
+  "note": "Github.PullRequest.Timeline.Update (Update Timeline) = zmax `:github` PR detail `r`: refetches the reviews and comments shown for the PR (ui/github.rs:3212, :3528)."
+ },
+ {
+  "spec_id": "jetbrains-actions.HideCoverage",
+  "status": "partial",
+  "evidence": [
+   "typable:sign"
+  ],
+  "note": "HideCoverage (Hide Coverage) ~ zmax `:sign`: gutter signs can be unplaced (ex_sign typed.rs:31410), but zmax has no coverage report layer to close; see ImportCoverage for the coverage importer this would pair with."
+ },
+ {
+  "spec_id": "jetbrains-actions.IdeScriptingConsole",
+  "status": "partial",
+  "evidence": [
+   "static:ielm",
+   "typable:elisp"
+  ],
+  "note": "IdeScriptingConsole (IDE Scripting Console) ~ zmax `ielm` / `:elisp`: an Emacs-Lisp REPL (ReplPanel ui/repl.rs:429, commands.rs:53203) and one-shot evaluation against the running editor (elisp_eval typed.rs:45367); the IDE console scripts the IDE's JVM API in Kotlin/Groovy/JS."
+ },
+ {
+  "spec_id": "jetbrains-actions.IncomingChanges.Refresh",
+  "status": "partial",
+  "evidence": [
+   "static:vc_log_incoming"
+  ],
+  "note": "IncomingChanges.Refresh (Refresh) ~ zmax `vc_log_incoming`: recomputes the upstream-incoming commit list each time it runs (commands.rs:56198); a new scratch, not an in-place refresh of an Incoming tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.InspectCode",
+  "status": "partial",
+  "evidence": [
+   "static:workspace_diagnostics_picker",
+   "typable:lint"
+  ],
+  "note": "InspectCode (Inspect Code\u2026) ~ zmax `workspace_diagnostics_picker` + `:lint`: lists the diagnostics language servers have published across the workspace (commands/lsp.rs:611) and runs an external checker over the file; no scoped batch inspection run over files not yet opened."
+ },
+ {
+  "spec_id": "jetbrains-actions.IntegrateFiles",
+  "status": "partial",
+  "evidence": [
+   "typable:p4"
+  ],
+  "note": "IntegrateFiles (Integrate) ~ zmax `:p4`: runs an arbitrary `p4` command, so `:p4 integrate <from> <to>` performs the Perforce integrate (typed.rs:51660); no dialog choosing source branch/revisions for the selected files."
+ },
+ {
+  "spec_id": "jetbrains-actions.InvalidateCaches",
+  "status": "partial",
+  "evidence": [
+   "typable:projectile-invalidate-cache-all",
+   "typable:lsp-restart"
+  ],
+  "note": "InvalidateCaches (Invalidate Caches\u2026) ~ zmax `:projectile-invalidate-cache-all` + `:lsp-restart`: drops every project file cache and restarts language servers so their indexes rebuild (lsp_restart typed.rs:26221); not one action, and no restart of the editor itself."
+ },
+ {
+  "spec_id": "jetbrains-actions.JumpToColorsAndFonts",
+  "status": "partial",
+  "evidence": [
+   "typable:tree-sitter-highlight-name",
+   "typable:customize-face"
+  ],
+  "note": "JumpToColorsAndFonts (Jump to Colors and Fonts) ~ zmax `:Inspect` + `:customize-face`: names the highlight capture under the cursor (typed.rs:26566) and opens the theme/face editor tab (typed.rs:42688); the editor opens on the tab, not pre-selected on that capture."
+ },
+ {
+  "spec_id": "jetbrains-actions.LogDebugConfigure",
+  "status": "partial",
+  "evidence": [
+   "typable:set",
+   "typable:log-open"
+  ],
+  "note": "LogDebugConfigure (Debug Log Settings\u2026) ~ zmax `:set verbose=N` + `:log-open`: raises the log level at runtime through log::set_max_level (typed.rs:28200, logging.rs:10-13) and opens the log file; one global level, no per-category enablement."
+ },
+ {
+  "spec_id": "jetbrains-actions.main.toolbar.Filename",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "main.toolbar.Filename (File Name Widget) ~ zmax `toggle_breadcrumbs`: the workbench toolbar shows the current file's path/symbol trail (ui/ide.rs:3400-3449) and this toggles it; not a separate file-name widget."
+ },
+ {
+  "spec_id": "jetbrains-actions.main.toolbar.git.Branches",
+  "status": "partial",
+  "evidence": [
+   "static:git_branch_picker"
+  ],
+  "note": "main.toolbar.git.Branches (VCS Widget) ~ zmax `git_branch_picker`: the branch popup the widget opens (checkout of a picked local branch, commands.rs:36664); the branch name itself is shown in the status area (ui/ide.rs:3152-3159) rather than a clickable toolbar widget."
+ },
+ {
+  "spec_id": "jetbrains-actions.main.toolbar.git.MergeRebase",
+  "status": "partial",
+  "evidence": [
+   "static:git_rebase_continue",
+   "static:git_rebase_abort",
+   "static:git_merge_commit",
+   "static:git_merge_abort"
+  ],
+  "note": "main.toolbar.git.MergeRebase (VCS Merge/Rebase Widget) ~ zmax `git_rebase_continue`/`git_rebase_abort`/`git_merge_commit`/`git_merge_abort`: the continue/abort operations the widget offers during a merge or rebase; no toolbar widget that appears only while one is in progress."
+ },
+ {
+  "spec_id": "jetbrains-actions.main.toolbar.Project",
+  "status": "partial",
+  "evidence": [
+   "static:recent_projects_picker"
+  ],
+  "note": "main.toolbar.Project (Project Widget) ~ zmax `recent_projects_picker`: the recent-projects switch list the widget opens (commands.rs:73532); no toolbar widget showing the project name."
+ },
+ {
+  "spec_id": "jetbrains-actions.MainMenuButton.ShowMenu",
+  "status": "ported",
+  "evidence": [
+   "static:menu_bar_open"
+  ],
+  "note": "MainMenuButton.ShowMenu (Show Collapsed Main Menu) = zmax `menu_bar_open`: opens the main menu as a keyboard-walkable popup without a permanent menu row (commands.rs:57080)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ManageRecentProjects",
+  "status": "partial",
+  "evidence": [
+   "static:recent_projects_picker",
+   "static:project_forget_project"
+  ],
+  "note": "ManageRecentProjects (Manage Projects\u2026) ~ zmax `recent_projects_picker` + `project_forget_project`: switch to a recent project (commands.rs:73532) and remove a project from the known-project list (commands.rs:57962); the two read different lists (run_config recent projects vs known projects), no single manager."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Preview.AdjustFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_adjust"
+  ],
+  "note": "Markdown.Preview.AdjustFontSize (Adjust Font Size\u2026) ~ zmax `text_scale_adjust`: steps the font with +/-/0 (commands.rs:80637) via OSC 50, which resizes the whole terminal, not only the rendered view."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Preview.DecreaseFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_decrease"
+  ],
+  "note": "Markdown.Preview.DecreaseFontSize (Decrease Preview Font Size) ~ zmax `text_scale_decrease`: OSC 50 font step for the whole terminal (emit_font_step commands.rs:48207), not preview-only."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Preview.Find",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_rendered_view",
+   "static:search"
+  ],
+  "note": "Markdown.Preview.Find (Find\u2026) ~ zmax `toggle_rendered_view` then `search`: the rendered markdown opens as a scratch buffer (commands.rs:11242) where the normal regex search works; two steps, not a find bar inside a preview pane."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Preview.IncreaseFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_increase"
+  ],
+  "note": "Markdown.Preview.IncreaseFontSize (Increase Preview Font Size) ~ zmax `text_scale_increase`: OSC 50 font step for the whole terminal (commands.rs:48230), not preview-only."
+ },
+ {
+  "spec_id": "jetbrains-actions.Markdown.Preview.ResetFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_reset"
+  ],
+  "note": "Markdown.Preview.ResetFontSize (Reset Preview Font Size) ~ zmax `text_scale_reset`: resets the terminal font via OSC 50, not preview-only."
+ },
+ {
+  "spec_id": "jetbrains-actions.MarkNotificationsAsRead",
+  "status": "partial",
+  "evidence": [
+   "typable:messages-clear"
+  ],
+  "note": "MarkNotificationsAsRead (Mark All Notifications as Read) ~ zmax `:messages-clear`: empties the message log (typed.rs:4650); zmax keeps no read/unread state, so clearing is the closest operation and it discards the entries."
+ },
+ {
+  "spec_id": "jetbrains-actions.MinimizeCurrentWindow",
+  "status": "ported",
+  "evidence": [
+   "static:iconify_or_deiconify_frame"
+  ],
+  "note": "MinimizeCurrentWindow (Minimize) = zmax `iconify_or_deiconify_frame`: sends XTWINOPS `CSI 2 t` to iconify the terminal window (emacs_frame.rs:57-60); a second call de-iconifies."
+ },
+ {
+  "spec_id": "jetbrains-actions.MoreRunToolbarActions",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "MoreRunToolbarActions (More run toolbar actions) ~ zmax `run_config_manager`: lists run configurations with run/edit (commands.rs:53212); a manager view rather than the run widget's overflow menu."
+ },
+ {
+  "spec_id": "jetbrains-actions.NavBarLocationHide",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "NavBarLocationHide (Don't Show) ~ zmax `toggle_breadcrumbs`: turns the toolbar trail off (commands.rs:19586) but as a toggle, not a set-hidden choice; `navigation_bar` still navigates."
+ },
+ {
+  "spec_id": "jetbrains-actions.NavBarLocationTop",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "NavBarLocationTop (Top) ~ zmax `toggle_breadcrumbs`: the trail zmax shows is on the top toolbar (ui/ide.rs:3400), so toggling it on gives the Top placement; a toggle rather than a location choice."
+ },
+ {
+  "spec_id": "jetbrains-actions.NewElement",
+  "status": "partial",
+  "evidence": [
+   "static:new_file_in_directory",
+   "typable:mkdir"
+  ],
+  "note": "NewElement (New\u2026) ~ zmax `new_file_in_directory` + `:mkdir`: create and open a named file next to the current one (commands.rs:73398) or create a directory; no single popup offering class/interface/file/directory templates."
+ },
+ {
+  "spec_id": "jetbrains-actions.NewUiRunWidget",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_picker",
+   "static:run_active_config",
+   "static:stop_run"
+  ],
+  "note": "NewUiRunWidget (Run Widget) = zmax `run_config_picker` + `run_active_config` + `stop_run`: pick the active run configuration, run it, stop it; no toolbar widget, the same operations are separate commands (run_config.rs persists the list)."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextProjectWindow",
+  "status": "partial",
+  "evidence": [
+   "static:other_frame",
+   "static:recent_projects_picker"
+  ],
+  "note": "NextProjectWindow (Next Project Window) = zmax `other_frame` cycles zmax frames (commands.rs:86001) and `recent_projects_picker` switches the project; zmax frames are not one-per-project, so cycling frames does not switch project the way IDE project windows do."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextWindow",
+  "status": "ported",
+  "evidence": [
+   "static:other_frame"
+  ],
+  "note": "NextWindow (Activate Next Window) = zmax `other_frame`: displays the next frame in the frame ring, count-aware and wrapping (commands.rs:86001-86009)."
+ },
+ {
+  "spec_id": "jetbrains-actions.OnlineDocAction",
+  "status": "partial",
+  "evidence": [
+   "typable:tutor",
+   "static:help"
+  ],
+  "note": "OnlineDocAction (Getting Started) = zmax `:tutor` opens the getting-started tutorial and `help` the inline Help browser; both are offline, the IDE opens the web documentation."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenBlankEditorInBlankDiffWindow",
+  "status": "partial",
+  "evidence": [
+   "static:vsplit_new",
+   "static:ediff_windows"
+  ],
+  "note": "OpenBlankEditorInBlankDiffWindow (Switch to Blank Editor) = zmax `vsplit_new` opens an empty scratch split and `ediff_windows` diffs the two front windows; no dedicated blank-diff window whose side can be swapped in place."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenFileEditorInBlankDiffWindow",
+  "status": "partial",
+  "evidence": [
+   "static:ediff_file"
+  ],
+  "note": "OpenFileEditorInBlankDiffWindow (Switch to a File...) = zmax `ediff_file`: diffs a prompted file against the current buffer; zmax builds a new diff rather than replacing one side of an open blank diff."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenMinimapSettings",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_minimap"
+  ],
+  "note": "OpenMinimapSettings = zmax `toggle_minimap`: the workbench minimap has only on/off; width is fixed (STRIPE_W ui/ide.rs:24) and there is no minimap settings page."
+ },
+ {
+  "spec_id": "jetbrains-actions.OpenMouseWheelSmoothScrollSettings",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_smooth_scrolling"
+  ],
+  "note": "OpenMouseWheelSmoothScrollSettings (Smooth Scroll Options) = zmax `toggle_smooth_scrolling`: on/off only (commands.rs:90168); the IDE page also tunes animation duration and curve."
+ },
+ {
+  "spec_id": "jetbrains-actions.PauseOutput",
+  "status": "partial",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": "PauseOutput = zmax Run console: scrolling up with j/k/PgUp in `focus_run_console` detaches tail-follow (ui/ide.rs:1624-1644, RunState.follow) so new output stops moving the view; output is still appended, the IDE freezes the console display entirely until resumed."
+ },
+ {
+  "spec_id": "jetbrains-actions.PlaySavedMacrosAction",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_name_last_macro",
+   "static:kmacro_menu"
+  ],
+  "note": "PlaySavedMacrosAction (Play Saved Macros...) = zmax `kmacro_name_last_macro` names a macro and makes it an invokable command (MappableCommand lookup commands.rs:3352), `kmacro_menu` lists the ring; there is no picker that plays a named macro, and named macros live in memory only (zmax-core/src/kmacro.rs:28)."
+ },
+ {
+  "spec_id": "jetbrains-actions.plugin.InstallFromDiskAction",
+  "status": "partial",
+  "evidence": [
+   "static:package_install_file"
+  ],
+  "note": "plugin.InstallFromDiskAction (Install Plugin from Disk) = zmax `package_install_file`: installs an elisp package from a .el/.tar on disk; zmax extensions are elisp packages, not IDE plugin zips."
+ },
+ {
+  "spec_id": "jetbrains-actions.PopupHector",
+  "status": "partial",
+  "evidence": [
+   "typable:diagnostics-severity",
+   "static:toggle_diagnostics",
+   "static:toggle_syntax_highlighting"
+  ],
+  "note": "PopupHector (Configure Current File Analysis...) = zmax `:diagnostics-severity` sets the lowest severity drawn, `toggle_diagnostics` turns diagnostics display off, `toggle_syntax_highlighting` turns highlighting off for the buffer; the IDE offers the None/Syntax/Essential/All level in one per-file popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.PopupMenu-cancel",
+  "status": "ported",
+  "evidence": [
+   "static:context_menu_open",
+   "static:menu_bar_open"
+  ],
+  "note": "PopupMenu-cancel (Close Context Menu) = zmax context menus (ui/context_menu.rs): Esc/q backs out of the open submenu or closes the menu (context_menu.rs:301, back())."
+ },
+ {
+  "spec_id": "jetbrains-actions.PopupMenu-return",
+  "status": "ported",
+  "evidence": [
+   "static:context_menu_open",
+   "static:menu_bar_open"
+  ],
+  "note": "PopupMenu-return (Invoke Selected Action) = zmax context menus: Enter opens the highlighted submenu or runs the item (ui/context_menu.rs:297, choose() :169)."
+ },
+ {
+  "spec_id": "jetbrains-actions.PopupMenu-selectChild",
+  "status": "ported",
+  "evidence": [
+   "static:context_menu_open",
+   "static:menu_bar_open"
+  ],
+  "note": "PopupMenu-selectChild (Select Child Menu Item) = zmax context menus: Right/l opens the highlighted submenu (ui/context_menu.rs:288-295)."
+ },
+ {
+  "spec_id": "jetbrains-actions.PopupMenu-selectNext",
+  "status": "ported",
+  "evidence": [
+   "static:context_menu_open",
+   "static:menu_bar_open"
+  ],
+  "note": "PopupMenu-selectNext (Select Next Menu Item) = zmax context menus: Down/j moves to the next selectable item (ui/context_menu.rs:280, step())."
+ },
+ {
+  "spec_id": "jetbrains-actions.PopupMenu-selectParent",
+  "status": "ported",
+  "evidence": [
+   "static:context_menu_open",
+   "static:menu_bar_open"
+  ],
+  "note": "PopupMenu-selectParent (Select Parent Menu Item) = zmax context menus: Left/h closes the submenu and returns to its parent row (ui/context_menu.rs:296, back() :196)."
+ },
+ {
+  "spec_id": "jetbrains-actions.PopupMenu-selectPrevious",
+  "status": "ported",
+  "evidence": [
+   "static:context_menu_open",
+   "static:menu_bar_open"
+  ],
+  "note": "PopupMenu-selectPrevious (Select Previous Menu Item) = zmax context menus: Up/k moves to the previous selectable item (ui/context_menu.rs:284)."
+ },
+ {
+  "spec_id": "jetbrains-actions.PreviousProjectWindow",
+  "status": "partial",
+  "evidence": [
+   "static:previous_frame",
+   "static:recent_projects_picker"
+  ],
+  "note": "PreviousProjectWindow (Previous Project Window) = zmax `previous_frame` walks the frame ring backwards (commands.rs:86015) and `recent_projects_picker` switches project; frames are not bound to projects."
+ },
+ {
+  "spec_id": "jetbrains-actions.PreviousWindow",
+  "status": "ported",
+  "evidence": [
+   "static:previous_frame"
+  ],
+  "note": "PreviousWindow (Activate Previous Window) = zmax `previous_frame`: displays the previous frame in the ring, count-aware and wrapping (commands.rs:86015-86023)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.AutoscrollToSource",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree",
+   "static:project_tree_open_selected"
+  ],
+  "note": "ProjectView.AutoscrollToSource (Open Files with Single Click) = zmax project tree: a single mouse click on a file opens it (FileTree::click_row ui/file_tree.rs:351-372) and `project_tree_open_selected` opens the selected file; keyboard selection changes (j/k) do not open files and there is no toggle."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.CustomizeTrees",
+  "status": "partial",
+  "evidence": [
+   "static:project_tree_toggle_folders_first",
+   "static:toggle_compact_directories",
+   "static:toggle_file_details",
+   "static:toggle_sort_by_type"
+  ],
+  "note": "ProjectView.CustomizeTrees (Customize Tree Views...) = zmax exposes the tree presentation options as separate toggles (folders first, compact directories, file details, sort by type); no single customization dialog."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.HideEmptyMiddlePackages",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_compact_directories"
+  ],
+  "note": "ProjectView.HideEmptyMiddlePackages = zmax `toggle_compact_directories`: draws single-child directory chains as one row (ui/file_tree.rs:721); IDE applies it to package nodes (and in flatten mode hides empty middle packages entirely)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.OpenDirectoriesWithSingleClick",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "ProjectView.OpenDirectoriesWithSingleClick = zmax project tree: a single click on a directory row toggles its expansion (FileTree::click_row ui/file_tree.rs:363-369); always on, no toggle."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.ShowExcludedFiles",
+  "status": "partial",
+  "evidence": [
+   "typable:toggle-option"
+  ],
+  "note": "ProjectView.ShowExcludedFiles = zmax `:toggle file-explorer.hidden` hides or shows dotfiles in the project tree (FileTree::set_show_hidden ui/file_tree.rs:102); the tree never hides .gitignore'd or excluded folders, and there is no IDE-style excluded-roots set."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.ShowScratchesAndConsoles",
+  "status": "partial",
+  "evidence": [
+   "static:show_scratch_files"
+  ],
+  "note": "ProjectView.ShowScratchesAndConsoles = zmax `show_scratch_files`: pick among scratch buffers (commands.rs:54687); scratches are not shown as a node in the project tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.QuickActionPopup",
+  "status": "partial",
+  "evidence": [
+   "static:context_menu_open"
+  ],
+  "note": "QuickActionPopup (Show Quick Actions Popup) = zmax `context_menu_open` pops up the context actions at point (commands.rs:86900); the IDE lists the focused component's toolbar quick actions."
+ },
+ {
+  "spec_id": "jetbrains-actions.Refresh",
+  "status": "partial",
+  "evidence": [
+   "typable:checktime"
+  ],
+  "note": "Refresh = zmax `:checktime` reloads buffers changed on disk; the project tree re-reads itself via FileTree::refresh (ui/file_tree.rs:195) from the watcher; there is no generic per-view Refresh command."
+ },
+ {
+  "spec_id": "jetbrains-actions.ResetIdeScaleAction",
+  "status": "ported",
+  "evidence": [
+   "static:frame_zoom_reset"
+  ],
+  "note": "ResetIdeScaleAction (Reset IDE Scale) = zmax `frame_zoom_reset`: resets the frame zoom to default, sending OSC 50 #0 to the terminal (commands.rs:48272, emit_font_step :48207)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RestoreDefaultLayout",
+  "status": "partial",
+  "evidence": [
+   "static:restore_default_layout"
+  ],
+  "note": "RestoreDefaultLayout (Restore Current Layout) = zmax `restore_default_layout`: resets drawer widths, folds and splits to the built-in default (ui/ide.rs:869-880); the IDE restores the currently selected named layout, zmax has no named workbench layouts."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.AddConfiguration",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "RunDashboard.AddConfiguration (Run Configuration...) = zmax `run_config_manager`: `a` adds a configuration (ui/run_config.rs:262); there is no Services view to add configuration types to."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.ClearConsole",
+  "status": "ported",
+  "evidence": [
+   "static:clear_run_output"
+  ],
+  "note": "RunDashboard.ClearConsole (Clear Console) = zmax `clear_run_output`: clears the Run tool window output (ui/editor.rs:688)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.ClearContent",
+  "status": "partial",
+  "evidence": [
+   "static:clear_run_output"
+  ],
+  "note": "RunDashboard.ClearContent (Clear Content) = zmax `clear_run_output` clears the console of the single run; the IDE removes the finished run's content from the Services node."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.Debug",
+  "status": "partial",
+  "evidence": [
+   "static:dap_launch",
+   "typable:debug-start"
+  ],
+  "note": "RunDashboard.Debug = zmax `dap_launch` / `:debug-start` start a debug session from a debugger template; they do not debug a named run configuration."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.DoubleClickRun",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "RunDashboard.DoubleClickRun = zmax `run_config_manager`: Enter/r on a configuration runs it (ui/run_config.rs:283-287); fixed behaviour, no toggle, no mouse double-click binding."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.EditConfiguration",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "RunDashboard.EditConfiguration (Edit Configuration) = zmax `run_config_manager`: `e`/Enter edits the selected configuration's Name/Command/Dir/Env form (ui/run_config.rs:274)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.Run",
+  "status": "ported",
+  "evidence": [
+   "static:run_active_config",
+   "static:run_config_manager"
+  ],
+  "note": "RunDashboard.Run (Run) = zmax `run_active_config` runs the active configuration (commands.rs:58975); in `run_config_manager` r/Enter runs the selected one (ui/run_config.rs:283-287)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.Stop",
+  "status": "ported",
+  "evidence": [
+   "static:stop_run"
+  ],
+  "note": "RunDashboard.Stop (Stop) = zmax `stop_run`: stops the process the Run tool window is running (commands.rs:73478)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarEditConfigurationAction",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "RunToolbarEditConfigurationAction (Edit Configuration...) = zmax `run_config_manager`: edit run configurations in the two-pane manager (commands.rs:53212)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarMainMultipleStopAction",
+  "status": "partial",
+  "evidence": [
+   "static:stop_run"
+  ],
+  "note": "RunToolbarMainMultipleStopAction (Stop) = zmax `stop_run` stops the one active run; the IDE widget stops one of several running processes or all of them."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarMainRunConfigurationsAction",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "RunToolbarMainRunConfigurationsAction (Add Configuration...) = zmax `run_config_manager`: `a` adds a new configuration (ui/run_config.rs:262)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarMainSlotActive",
+  "status": "partial",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": "RunToolbarMainSlotActive (Active Process) = zmax Run console shows the running command and its state (RunState.running/exit_code ui/run.rs:24-25); no toolbar slot."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarMainSlotInfoAction",
+  "status": "partial",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": "RunToolbarMainSlotInfoAction (Active Processes) = zmax `focus_run_console`: the single Run console shows the active process; the IDE lists every active slot."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarPauseAction",
+  "status": "ported",
+  "evidence": [
+   "static:dap_pause"
+  ],
+  "note": "RunToolbarPauseAction (Pause) = zmax `dap_pause`: pauses the debuggee."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarProcessStartedAction",
+  "status": "partial",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": "RunToolbarProcessStartedAction (Active Process) = zmax Run console reports the started process; no toolbar indicator."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarRerunAction",
+  "status": "ported",
+  "evidence": [
+   "static:rerun_last_run"
+  ],
+  "note": "RunToolbarRerunAction (Rerun) = zmax `rerun_last_run`: re-runs the last command in the Run console (ui/editor.rs:653)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarResumeAction",
+  "status": "ported",
+  "evidence": [
+   "static:dap_continue"
+  ],
+  "note": "RunToolbarResumeAction (Resume) = zmax `dap_continue`: continues the paused debuggee."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarRunConfigurationsAction",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "RunToolbarRunConfigurationsAction (Add Configuration...) = zmax `run_config_manager`: `a` adds a configuration (ui/run_config.rs:262)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarShowToolWindowTab",
+  "status": "ported",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": "RunToolbarShowToolWindowTab (Show the process tool window) = zmax `focus_run_console`: opens and focuses the Run console (commands.rs:54757)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarStopAction",
+  "status": "ported",
+  "evidence": [
+   "static:stop_run"
+  ],
+  "note": "RunToolbarStopAction (Stop) = zmax `stop_run`: stops the running process (commands.rs:73478)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunToolbarWidgetAction",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_picker",
+   "static:run_active_config",
+   "static:stop_run"
+  ],
+  "note": "RunToolbarWidgetAction (Run/Debug Widget) = zmax `run_config_picker` / `run_active_config` / `stop_run` as separate commands; no toolbar widget."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-scrollDown",
+  "status": "ported",
+  "evidence": [
+   "static:page_down"
+  ],
+  "note": "ScrollPane-scrollDown (Scroll Page Down) = zmax `page_down`: scrolls the view down one page (scroll(..., false) commands.rs:12936); panels bind PgDn themselves (Run console ui/ide.rs:1713)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-scrollEnd",
+  "status": "partial",
+  "evidence": [
+   "static:goto_last_line"
+  ],
+  "note": "ScrollPane-scrollEnd (Scroll End) = zmax `goto_last_line` moves the caret to the end, scrolling with it; panels bind G/End (ui/ide.rs:1715); no scroll-only to-end without moving the caret in the editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-scrollHome",
+  "status": "partial",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": "ScrollPane-scrollHome (Scroll Home) = zmax `goto_file_start` moves the caret to the top, scrolling with it; panels bind g/Home (ui/ide.rs:1716); no scroll-only to-top in the editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-scrollLeft",
+  "status": "partial",
+  "evidence": [
+   "static:scroll_half_column_left"
+  ],
+  "note": "ScrollPane-scrollLeft (Scroll Page Left) = zmax `scroll_half_column_left`: scrolls left half a screen width (commands.rs:48092); Swing scrolls a full visible width."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-scrollRight",
+  "status": "partial",
+  "evidence": [
+   "static:scroll_half_column_right"
+  ],
+  "note": "ScrollPane-scrollRight (Scroll Page Right) = zmax `scroll_half_column_right`: scrolls right half a screen width (commands.rs:48086); Swing scrolls a full visible width."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-scrollUp",
+  "status": "ported",
+  "evidence": [
+   "static:page_up"
+  ],
+  "note": "ScrollPane-scrollUp (Scroll Page Up) = zmax `page_up`: scrolls the view up one page; panels bind PgUp (ui/ide.rs:1714)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-unitScrollDown",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "ScrollPane-unitScrollDown (Scroll Down) = zmax `scroll_down`: scrolls the view down count lines without moving the caret unless it leaves the view (commands.rs:64162)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-unitScrollLeft",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_column_left"
+  ],
+  "note": "ScrollPane-unitScrollLeft (Scroll Left) = zmax `scroll_column_left`: scrolls the view left one column (commands.rs:48081)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-unitScrollRight",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_column_right"
+  ],
+  "note": "ScrollPane-unitScrollRight (Scroll Right) = zmax `scroll_column_right`: scrolls the view right one column."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollPane-unitScrollUp",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "ScrollPane-unitScrollUp (Scroll Up) = zmax `scroll_up`: scrolls the view up count lines."
+ },
+ {
+  "spec_id": "jetbrains-actions.SearchEverywhere.SelectItem",
+  "status": "partial",
+  "evidence": [
+   "static:search_everywhere"
+  ],
+  "note": "SearchEverywhere.SelectItem (Select Item) = zmax `search_everywhere`: Enter picks the source in the menu and then the item in that source's picker; two steps instead of one dialog."
+ },
+ {
+  "spec_id": "jetbrains-actions.SearchEverywhereNewToolbarAction",
+  "status": "ported",
+  "evidence": [
+   "static:search_everywhere"
+  ],
+  "note": "SearchEverywhereNewToolbarAction (Search Everywhere) = zmax `search_everywhere`: offers Files / Symbols / Text in Path / Actions / Open Buffers (commands.rs:36882-36888)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SendEOF",
+  "status": "partial",
+  "evidence": [
+   "static:comint_delchar_or_maybe_eof"
+  ],
+  "note": "SendEOF (Send EOF) = zmax `comint_delchar_or_maybe_eof` sends EOF to a comint process on empty input; the Run console spawns processes without stdin (ui/run.rs:169-176 pipes only stdout/stderr), so it has no EOF to send there."
+ },
+ {
+  "spec_id": "jetbrains-actions.SetCaretVisualAttributesInternalAction",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-variable"
+  ],
+  "note": "SetCaretVisualAttributesInternalAction (Set Caret Visual Attributes\u2026) = zmax `customize-variable`: `:customize-variable cursor-shape` opens Settings filtered to cursor-shape.normal/insert/select (block/bar/underline enums, ui/settings.rs ENUMS); the IDE internal action also sets caret colour and thickness per caret, which a terminal cursor cannot take."
+ },
+ {
+  "spec_id": "jetbrains-actions.SeverityEditorDialog",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-face"
+  ],
+  "note": "SeverityEditorDialog (Severities Editor) = zmax `customize-face`: opens the Color Scheme tab where the diagnostic.error/warning/info/hint scopes that style each severity are edited; JetBrains also lets you define new custom severity levels and reorder them, zmax has only the four fixed LSP severities."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShelvedChanges.ShowHideDeleted",
+  "status": "partial",
+  "evidence": [
+   "static:shelf_restore"
+  ],
+  "note": "ShelvedChanges.ShowHideDeleted (Show/Hide Applied Shelved Changes) = zmax `shelf_restore`: popped and dropped shelf entries move to the recycled shelf (shelf_recycle, commands.rs) and `shelf_restore` lists exactly those; JetBrains shows them greyed in the Shelf tree behind a toggle, zmax shows them in a separate picker."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowEditorHighlighterTokens",
+  "status": "partial",
+  "evidence": [
+   "typable:tree-sitter-highlight-name",
+   "typable:tree-sitter-subtree"
+  ],
+  "note": "ShowEditorHighlighterTokens (Show Editor Highlighter Tokens) = zmax `tree-sitter-highlight-name` / `tree-sitter-subtree`: report the highlight capture under the cursor and the syntax subtree for the selection; the IDE action overlays every lexer token in the file at once."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowFontsUsedByEditor",
+  "status": "partial",
+  "evidence": [
+   "typable:unicode-fonts",
+   "typable:unicode-fonts-char"
+  ],
+  "note": "ShowFontsUsedByEditor (Show Fonts Used by Editor) = zmax `unicode-fonts` / `unicode-fonts-char`: a Unicode block sample sheet and per-character width/block report to see what the terminal font covers; a TUI cannot query which fallback font the terminal emulator actually used."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowGutterIconsSettings",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-variable",
+   "static:toggle_gutter_icons"
+  ],
+  "note": "ShowGutterIconsSettings (Configure Gutter Icons\u2026) = zmax `customize-variable` + `toggle_gutter_icons`: `:customize-variable gutters` edits the gutter layout list (diagnostics, marks, fold, blame...) and `toggle_gutter_icons` hides/shows the icon columns; JetBrains lists every individual gutter-icon provider with its own checkbox."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowParameterHintsSettings",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-variable"
+  ],
+  "note": "ShowParameterHintsSettings (Hints Settings\u2026) = zmax `customize-variable`: `:customize-variable display-inlay-hints` opens Settings filtered to the lsp inlay-hint options; JetBrains' page has per-language, per-hint-kind switches and exclusion lists that zmax does not carry."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowPlugins",
+  "status": "partial",
+  "evidence": [
+   "typable:zmax-native"
+  ],
+  "note": "ShowPlugins (Plugins\u2026) = zmax `zmax-native` (alias `:plugin`): package manager for native plugins (add owner/repo, sync, remove, update, list); no marketplace browser UI with ratings and enable/disable checkboxes."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowReformatFileDialog",
+  "status": "partial",
+  "evidence": [
+   "typable:format",
+   "static:format_selections"
+  ],
+  "note": "ShowReformatFileDialog (Reformat File\u2026) = zmax `format` / `format_selections`: format the whole file or the selections through the formatter or language server; the IDE dialog also offers only-VCS-changed-text, optimize imports, rearrange code and code cleanup options."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowRegistry",
+  "status": "partial",
+  "evidence": [
+   "static:settings_page",
+   "typable:customize-apropos"
+  ],
+  "note": "ShowRegistry (Registry\u2026) = zmax `settings_page` / `customize-apropos`: the Settings page exposes every config leaf auto-generated from the live Config, and `:customize-apropos` filters it by name; zmax has no separate hidden advanced-key registry."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.NextWindow",
+  "status": "partial",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "SplitChooser.NextWindow (Next Split) = zmax `rotate_view`: moves focus to the next split in traversal order; there is no chooser mode, so focus moves immediately rather than moving a placement highlight."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.PreviousWindow",
+  "status": "partial",
+  "evidence": [
+   "static:rotate_view_reverse"
+  ],
+  "note": "SplitChooser.PreviousWindow (Previous Split) = zmax `rotate_view_reverse`: moves focus to the previous split; no chooser highlight, focus moves immediately."
+ },
+ {
+  "spec_id": "jetbrains-actions.StartNewUsersOnboarding",
+  "status": "partial",
+  "evidence": [
+   "typable:tutor"
+  ],
+  "note": "StartNewUsersOnboarding (New Users Onboarding) = zmax `tutor`: opens the interactive tutorial file; JetBrains' tour instead highlights parts of the live IDE window step by step."
+ },
+ {
+  "spec_id": "jetbrains-actions.SurroundWithLiveTemplate",
+  "status": "partial",
+  "evidence": [
+   "static:surround_with"
+  ],
+  "note": "SurroundWithLiveTemplate (Surround with Live Template\u2026) = zmax `surround_with`: wraps the selected lines in one of the language's block constructs and re-indents; JetBrains picks from user live templates containing $SELECTION$, zmax's list is built in (surround_templates) rather than drawn from the user snippet library."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwapSidesInDiffWindow",
+  "status": "partial",
+  "evidence": [
+   "static:compare_with_clipboard",
+   "static:ediff_windows"
+  ],
+  "note": "SwapSidesInDiffWindow (Swap Sides) = zmax `s` in the DiffView opened by `compare_with_clipboard` / `ediff_windows`: swaps left and right panes (ui/merge.rs:1021-1030); it is honoured only in read-only comparisons, not in the git-HEAD `:diff` view or a conflict resolution."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitcherBackwardFallback",
+  "status": "partial",
+  "evidence": [
+   "static:recent_files_switcher"
+  ],
+  "note": "SwitcherBackwardFallback (Iterate Switcher Backward) = zmax `recent_files_switcher`: k/Up inside the switcher moves the selection back (ui/switcher.rs:216); it stops at the top instead of wrapping and has no hold-modifier-and-release-to-open behaviour."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitcherForwardFallback",
+  "status": "partial",
+  "evidence": [
+   "static:recent_files_switcher"
+  ],
+  "note": "SwitcherForwardFallback (Iterate Switcher Forward) = zmax `recent_files_switcher`: j/Down inside the switcher moves the selection forward (ui/switcher.rs:203); no wrap-around and no Ctrl-Tab repeat-to-advance."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitcherIterateItemsFallback",
+  "status": "partial",
+  "evidence": [
+   "static:recent_files_switcher"
+  ],
+  "note": "SwitcherIterateItemsFallback (Iterate Recent Files) = zmax `recent_files_switcher`: j/k step through the recent-files column (ui/switcher.rs:203-221); re-invoking the command does not advance the selection as the IDE's repeated shortcut does."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitcherRecentEditedChangedToggleCheckBoxFallback",
+  "status": "ported",
+  "evidence": [
+   "static:recent_files_switcher"
+  ],
+  "note": "SwitcherRecentEditedChangedToggleCheckBoxFallback (Toggle Changed Only Files) = zmax `recent_files_switcher`: `e` (or clicking the checkbox) inside the switcher flips edited_only and filters the file list (ui/switcher.rs:186-189, 311)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitchIdeScaleAction",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_adjust",
+   "static:text_scale_set"
+  ],
+  "note": "SwitchIdeScaleAction (Zoom IDE) = zmax `text_scale_adjust` / `text_scale_set`: step or set the terminal font size via OSC 50, which scales the whole terminal including zmax; no percentage-preset popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.TemplateProjectProperties",
+  "status": "partial",
+  "evidence": [
+   "typable:config-open",
+   "typable:config-open-workspace"
+  ],
+  "note": "TemplateProjectProperties (Settings for New Projects) = zmax `config-open`: the global config.toml is what every workspace starts from unless its own `config-open-workspace` file overrides a key; there is no separate new-project template distinct from the global settings."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.CloseTab",
+  "status": "partial",
+  "evidence": [
+   "static:terminal_close_session"
+  ],
+  "note": "Terminal.CloseTab (Close Tab) = zmax `terminal_close_session`: ends the terminal's shell and closes its panel; zmax has no terminal tab strip, each session is its own panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.MoveToEditor",
+  "status": "partial",
+  "evidence": [
+   "static:terminal"
+  ],
+  "note": "Terminal.MoveToEditor (Move to Editor) = zmax `terminal`: the terminal already lives in an editor split pane (pinned to the pane it first renders in, ui/terminal.rs:149-154, 678), so there is no tool-window terminal to move into the editor area."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.NewTab",
+  "status": "partial",
+  "evidence": [
+   "static:terminal"
+  ],
+  "note": "Terminal.NewTab (New Tab) = zmax `terminal`: starts a new shell session as its own panel in the focused pane (compositor.push, commands.rs:53240); sessions are not grouped as tabs of one terminal window."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.Settings",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-variable"
+  ],
+  "note": "Terminal.Settings (Settings) = zmax `customize-variable`: `:customize-variable shell` opens Settings filtered to the shell used by terminals; zmax has no dedicated terminal settings page (prompt style, engine, cursor, copy-on-select)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.SwitchFocusToEditor",
+  "status": "partial",
+  "evidence": [
+   "static:jump_view_left",
+   "static:jump_view_right",
+   "static:jump_view_up",
+   "static:jump_view_down"
+  ],
+  "note": "Terminal.SwitchFocusToEditor (Switch Focus To Editor) = zmax `C-\\` then h/j/k/l in the terminal: runs editor.focus_direction to the neighbouring editor split (ui/terminal.rs:553-572, the same moves as jump_view_*); there is no single key that returns to the last editor regardless of direction."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.UseShellPrompt",
+  "status": "ported",
+  "evidence": [
+   "static:terminal"
+  ],
+  "note": "Terminal.UseShellPrompt (Shell Prompt (PS1)) = zmax `terminal`: the PTY panel always shows the shell's own PS1 (bytes pass straight through the vt100 parser, ui/terminal.rs), which is the mode this option selects."
+ },
+ {
+  "spec_id": "jetbrains-actions.TerminalDecreaseFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_decrease"
+  ],
+  "note": "TerminalDecreaseFontSize (Decrease Font Size) = zmax `text_scale_decrease`: steps the font down via OSC 50, which resizes the whole terminal emulator (editor and terminal panel alike), not the terminal panel alone."
+ },
+ {
+  "spec_id": "jetbrains-actions.TerminalIncreaseFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_increase"
+  ],
+  "note": "TerminalIncreaseFontSize (Increase Font Size) = zmax `text_scale_increase`: steps the font up via OSC 50 for the whole terminal emulator, not the terminal panel alone."
+ },
+ {
+  "spec_id": "jetbrains-actions.TerminalResetFontSize",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_reset"
+  ],
+  "note": "TerminalResetFontSize (Reset Font Size) = zmax `text_scale_reset`: resets the font via OSC 50 for the whole terminal emulator, not the terminal panel alone."
+ },
+ {
+  "spec_id": "jetbrains-actions.TextEditorWithPreview.Layout.EditorOnly",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_rendered_view"
+  ],
+  "note": "TextEditorWithPreview.Layout.EditorOnly (Editor Only) = zmax: the source buffer is the default view; `toggle_rendered_view` shows the rendered scratch and `q`/`:bd` returns to the editor-only source view (commands.rs:11242-11249)."
+ },
+ {
+  "spec_id": "jetbrains-actions.TextEditorWithPreview.Layout.PreviewOnly",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_rendered_view"
+  ],
+  "note": "TextEditorWithPreview.Layout.PreviewOnly (Preview Only) = zmax `toggle_rendered_view`: replaces the view with the markdown rendered as text in a scratch (commands.rs:11242); the render is a snapshot, not a live preview of further edits."
+ },
+ {
+  "spec_id": "jetbrains-actions.TogglePresentationAssistantAction",
+  "status": "partial",
+  "evidence": [
+   "static:command_log_mode"
+  ],
+  "note": "TogglePresentationAssistantAction (Presentation Assistant) = zmax `command_log_mode`: records each dispatched command with its keys (command_log_append, commands.rs:9138) into a *command-log* split buffer, where the IDE shows a transient popup naming the action and its shortcut."
+ },
+ {
+  "spec_id": "jetbrains-actions.TogglePresentationMode",
+  "status": "partial",
+  "evidence": [
+   "static:zen_mode",
+   "static:frame_zoom_in"
+  ],
+  "note": "TogglePresentationMode (Toggle Presentation Mode) = zmax `zen_mode` (distraction free + terminal full screen, commands.rs:54986) plus `frame_zoom_in` (OSC 50 font step); the IDE does both in one toggle with a configured presentation font size, zmax needs the two commands."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleThreeSideInBlankDiffWindow",
+  "status": "partial",
+  "evidence": [
+   "static:ediff_3_files"
+  ],
+  "note": "ToggleThreeSideInBlankDiffWindow (Toggle Three-Side Viewer) = zmax `ediff_3_files`: a separate read-only 3-way diff of three prompted files; the IDE flips its blank diff window between two and three panes in place."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectChild",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectChild (Select Child Node) = zmax project tree `l`/Right after `focus_file_tree`: expands a collapsed dir, or on an expanded dir moves to its first child (FileTree::handle_key, ui/file_tree.rs:640); a panel key, not a named command, and only in the project tree."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectFirst",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectFirst (Select First Node) = zmax project tree `g`/Home after `focus_file_tree` (ui/file_tree.rs:605); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectLast",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectLast (Select Last Node) = zmax project tree `G`/End after `focus_file_tree` (ui/file_tree.rs:609); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectNext",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectNext (Select Next Node) = zmax project tree `j`/Down after `focus_file_tree` (ui/file_tree.rs:594); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectParent",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectParent (Select Parent Node) = zmax project tree `h`/Left after `focus_file_tree`: collapses an expanded dir, else selects the parent directory (ui/file_tree.rs:625), the same collapse-or-parent rule; a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectPrevious",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectPrevious (Select Previous Node) = zmax project tree `k`/Up after `focus_file_tree` (ui/file_tree.rs:600); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.UndoDumpAction",
+  "status": "partial",
+  "evidence": [
+   "static:undo_tree"
+  ],
+  "note": "UndoDumpAction (Dump Undo History) = zmax `undo_tree`: shows the buffer's branching undo history in a browser; the IDE action dumps the undo stacks as text to the log."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageView.Rerun",
+  "status": "partial",
+  "evidence": [
+   "static:xref_find_references"
+  ],
+  "note": "UsageView.Rerun (Rerun) = zmax `xref_find_references` overlay key `g`: rescans the tree for the same symbol (Xref::rescan, ui/xref.rs:91/318); the search is textual grep, and the LSP references picker (goto_reference) has no rerun."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageView.ShowRecentFindUsages",
+  "status": "partial",
+  "evidence": [
+   "static:last_picker"
+  ],
+  "note": "UsageView.ShowRecentFindUsages (Recent Find Usages) = zmax `last_picker`: reopens only the most recently closed picker with its old results (commands.rs:37984); the IDE lists several past usage searches and re-runs the chosen one."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.CombinedDiff.CaretToNextBlock",
+  "status": "partial",
+  "evidence": [
+   "static:diffmode"
+  ],
+  "note": "Vcs.CombinedDiff.CaretToNextBlock (Next File) = zmax `diffmode` key `}` / M-n: next file section in the multi-file unified diff viewer (DiffMode::next_file, ui/diffmode.rs:127/374); a viewer key, unified rather than per-file side-by-side blocks."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.CombinedDiff.CaretToPrevBlock",
+  "status": "partial",
+  "evidence": [
+   "static:diffmode"
+  ],
+  "note": "Vcs.CombinedDiff.CaretToPrevBlock (Previous File) = zmax `diffmode` key `{` / M-p: previous file section in the multi-file diff viewer (ui/diffmode.rs:375); a viewer key, not a command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Commit.CloseDialog",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Commit.CloseDialog (Close Commit Dialog) = zmax `:magit` commit editor `C-c C-k`: cancels the commit message editor (MagitCommit handle_event, ui/magit.rs); a key inside the commit view, not a command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.EnableDisableCombinedDiff",
+  "status": "partial",
+  "evidence": [
+   "static:diffmode"
+  ],
+  "note": "Vcs.Diff.EnableDisableCombinedDiff (Show All Files in One Diff View) = zmax `diffmode`: all working-tree changes in one scrollable unified diff; zmax offers it as a separate viewer beside the per-file side-by-side `git_diff`, not as a preference that switches which one opens."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.ResolveConflictsInImports",
+  "status": "ported",
+  "evidence": [
+   "typable:conflict-imports"
+  ],
+  "note": "Vcs.Diff.ResolveConflictsInImports (Resolve Conflicts in Import Statements) = zmax `:conflict-imports`: replaces every conflict whose two sides are only imports with their sorted union, leaving other conflicts alone (conflict_imports, commands/typed.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.ShowCombinedDiff",
+  "status": "partial",
+  "evidence": [
+   "static:diffmode"
+  ],
+  "note": "Vcs.Diff.ShowCombinedDiff (Show Combined Diff) = zmax `diffmode`: the working tree `git diff` for every file in one unified viewer with per-file navigation; it always covers all changes rather than the selected ones, and is unified rather than side-by-side blocks."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.ToggleDiffAligningMode",
+  "status": "partial",
+  "evidence": [
+   "static:git_diff"
+  ],
+  "note": "Vcs.Diff.ToggleDiffAligningMode (Align Changes In Side-by-Side Diff) = zmax `git_diff`: the side-by-side DiffView always pads the shorter side so changes line up (align, ui/merge.rs:70); there is no toggle to turn alignment off."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.EditSource",
+  "status": "partial",
+  "evidence": [
+   "static:focus_git_panel"
+  ],
+  "note": "Vcs.EditSource (Edit Source) = zmax Git panel `Enter` after `focus_git_panel`: opens the selected changed file in the editor (Ide git tab, ui/ide.rs:1730+); a panel key, only in the changes list."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.IntegrateProject",
+  "status": "partial",
+  "evidence": [
+   "static:git_merge_branch"
+  ],
+  "note": "Vcs.IntegrateProject (Integrate Project) = zmax `git_merge_branch`: merges a picked branch into the current one; the IDE action is the SVN integrate (merge a branch range into the working copy without committing)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.FocusTextFilter",
+  "status": "partial",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "Vcs.Log.FocusTextFilter (Focus Text Filter) = zmax `git_repo_log_picker`: the commit list opens with its filter prompt already focused, fuzzy over hash/summary/author (git_log_picker, commands.rs:42617); there is no separate list to move focus back to."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.Refresh",
+  "status": "partial",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "Vcs.Log.Refresh (Refresh) = zmax `git_repo_log_picker`: each open walks history afresh (git_log_picker, commands.rs:42617); an open log (picker or :magit log view) has no refresh key."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.ShowDetailsAction",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.ShowDetailsAction (Show Details) = zmax `:magit` log view `Tab`: toggles the selected commit between one-line summary and full entry (author, date, message) inline (MagitLog::toggle_entry_display, ui/magit.rs); the IDE shows details in a side panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.ShowTooltip",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.ShowTooltip (Show Tooltip) = zmax `:magit` log view `Tab`: expands the selected commit to its full entry inline (MagitLog::toggle_entry_display, ui/magit.rs) instead of a hover tooltip."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Operations.Popup.Annotate",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_blame_annotate",
+   "static:git_blame_line"
+  ],
+  "note": "Vcs.Operations.Popup.Annotate (Annotated Line Operations) = zmax `toggle_blame_annotate` (blame gutter, commands.rs:59080) and `git_blame_line` (blame of the current line, :59094); the IDE groups the annotated-line operations in its VCS popup, zmax has them as separate commands outside git_file_dispatch."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.QuickListPopupAction",
+  "status": "partial",
+  "evidence": [
+   "static:git_file_dispatch"
+  ],
+  "note": "Vcs.QuickListPopupAction (VCS Operations Popup) = zmax `git_file_dispatch`: a one-key menu of common git operations on the current file (stage, unstage, diff, log, blame, status); fixed entries, not the IDE's context-aware list."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.RefreshFileHistory",
+  "status": "partial",
+  "evidence": [
+   "static:git_file_log_picker"
+  ],
+  "note": "Vcs.RefreshFileHistory (Refresh) = zmax `git_file_log_picker`: each open walks the file's history afresh (git_log_picker, commands.rs:42617); an open history list has no refresh key."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Toolbar.ShowMoreActions",
+  "status": "partial",
+  "evidence": [
+   "static:git_file_dispatch"
+  ],
+  "note": "Vcs.Toolbar.ShowMoreActions (VCS Operations) = zmax `git_file_dispatch`: a key menu of common git operations; reached by command rather than a toolbar dropdown."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewMainMenu",
+  "status": "ported",
+  "evidence": [
+   "static:menu_bar_mode"
+  ],
+  "note": "ViewMainMenu (Main Menu) = zmax `menu_bar_mode`: shows or hides the menu-bar row of menu titles (commands.rs:57291)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewNavigationBar",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "ViewNavigationBar (Navigation Bar) = zmax `toggle_breadcrumbs`: shows or hides the toolbar trail of directories, file and enclosing symbol (commands.rs:19586); navigation_bar jumps by it either way."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewNewToolbarAction",
+  "status": "partial",
+  "evidence": [
+   "static:tool_bar_mode"
+  ],
+  "note": "ViewNewToolbarAction (Toolbar) = zmax `tool_bar_mode`: toggles a row of command buttons (commands.rs:57313); the new-UI toolbar carries project/branch/run widgets, which zmax draws in the workbench toolbar row (ui/ide.rs:3331) that has no separate toggle."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewObsoleteNavBarAction",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_breadcrumbs"
+  ],
+  "note": "ViewObsoleteNavBarAction (Navigation Bar placement) = zmax `toggle_breadcrumbs`: on/off only; the IDE also chooses top / bottom / status-bar placement."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewObsoleteToolbarAction",
+  "status": "ported",
+  "evidence": [
+   "static:tool_bar_mode"
+  ],
+  "note": "ViewObsoleteToolbarAction (Toolbar Classic) = zmax `tool_bar_mode`: shows or hides the classic row of common-command buttons (commands.rs:57313)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewOfflineInspection",
+  "status": "partial",
+  "evidence": [
+   "typable:cfile"
+  ],
+  "note": "ViewOfflineInspection (View Offline Inspection Results) = zmax `:cfile`: loads a saved results file into the quickfix list for navigation; it reads compiler-style file:line lines, not the IDE's inspection XML."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewSource",
+  "status": "partial",
+  "evidence": [
+   "static:project_tree_open_selected",
+   "static:goto_definition"
+  ],
+  "note": "ViewSource (Show Source) = zmax `project_tree_open_selected` (tree selection) / `goto_definition` (symbol): open the source of the selected item; zmax moves focus to the editor, the IDE's Show Source keeps focus in the tool window."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewToolBar",
+  "status": "ported",
+  "evidence": [
+   "static:tool_bar_mode"
+  ],
+  "note": "ViewToolBar (Toolbar) = zmax `tool_bar_mode`: shows or hides the main tool-bar row of command buttons (commands.rs:57313)."
+ },
+ {
+  "spec_id": "jetbrains-actions.WelcomeScreen.Configure.Export",
+  "status": "ported",
+  "evidence": [
+   "typable:export-settings"
+  ],
+  "note": "WelcomeScreen.Configure.Export (Export Settings) = zmax `:export-settings DIR`: copies the config directory out, skipping runtime/caches/log (export_settings, commands/typed.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.WelcomeScreen.Configure.Import",
+  "status": "ported",
+  "evidence": [
+   "typable:import-settings"
+  ],
+  "note": "WelcomeScreen.Configure.Import (Import Settings) = zmax `:import-settings DIR`: copies an exported settings directory over the config directory and reloads the config (import_settings, commands/typed.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.WelcomeScreen.OpenDirectoryProject",
+  "status": "partial",
+  "evidence": [
+   "static:project_switch_project"
+  ],
+  "note": "WelcomeScreen.OpenDirectoryProject (Open) = zmax `project_switch_project`: opens any typed directory as a project, records it as known and shows its find-file overlay (project_switch_to, commands.rs:58007); prompt-driven, no welcome screen."
+ },
+ {
+  "spec_id": "jetbrains-actions.WelcomeScreen.OpenProject",
+  "status": "partial",
+  "evidence": [
+   "typable:open",
+   "static:project_switch_project"
+  ],
+  "note": "WelcomeScreen.OpenProject (Open or Import) = zmax `:open` for a file and `project_switch_project` for a directory; two commands rather than one open-file-or-project dialog, and no build-model import."
+ },
+ {
+  "spec_id": "jetbrains-actions.WelcomeScreen.OpenSelected",
+  "status": "partial",
+  "evidence": [
+   "static:project_switch_project"
+  ],
+  "note": "WelcomeScreen.OpenSelected (Open Selected) = zmax `project_switch_project`: completes over the known projects and opens the chosen one; a prompt instead of the selected welcome-screen row."
+ },
+ {
+  "spec_id": "jetbrains-actions.WelcomeScreen.RemoveSelected",
+  "status": "ported",
+  "evidence": [
+   "static:project_forget_project"
+  ],
+  "note": "WelcomeScreen.RemoveSelected (Remove from Recent Projects) = zmax `project_forget_project`: removes a project from the known-project list (commands.rs:57970)."
+ },
+ {
+  "spec_id": "jetbrains-actions.WelcomeScreen.RevealIn",
+  "status": "partial",
+  "evidence": [
+   "typable:RevealInFinder"
+  ],
+  "note": "WelcomeScreen.RevealIn (Reveal in Finder) = zmax `:RevealInFinder`: reveals the current file in the OS file manager; not a selected project from a recent-projects list."
+ },
+ {
+  "spec_id": "jetbrains-actions.WhatsNewAction",
+  "status": "ported",
+  "evidence": [
+   "static:browse_news"
+  ],
+  "note": "WhatsNewAction (What's New) = zmax `browse_news`: shows the embedded CHANGELOG release notes in a scratch buffer (commands.rs:23108)."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.JumpToSource",
+  "status": "partial",
+  "evidence": [
+   "static:dap_switch_stack_frame"
+  ],
+  "note": "XDebugger.JumpToSource (Jump to Source) = zmax `dap_switch_stack_frame`: picks a frame and jumps to its source line (commands/dap.rs:1610); covers the Frames view only, not jumping to a variable's declaration from Variables."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.SeparateWatches",
+  "status": "partial",
+  "evidence": [
+   "static:dap_show_watches"
+  ],
+  "note": "XDebugger.SeparateWatches (Separate Watches) = zmax `dap_show_watches`: watches are always shown apart from variables, in their own popup (commands/dap.rs:1253); there is no merged Variables+Watches view to switch from."
+ },
+ {
+  "spec_id": "jetbrains-actions.XDebugger.ToggleEvaluateExpressionField",
+  "status": "partial",
+  "evidence": [
+   "static:dap_evaluate_expression"
+  ],
+  "note": "XDebugger.ToggleEvaluateExpressionField (Show Evaluate Expression Field) = zmax `dap_evaluate_expression`: evaluates a typed expression in the selected frame through a prompt (commands/dap.rs:673); no field embedded in a Variables view."
+ },
+ {
+  "spec_id": "jetbrains-actions.TypeHierarchy.Class",
+  "status": "ported",
+  "evidence": [
+   "static:type_hierarchy"
+  ],
+  "note": "TypeHierarchy.Class (Class Hierarchy) = zmax `type_hierarchy`: the type with its supertypes above and subtypes below, in one indented list."
  }
 ]
