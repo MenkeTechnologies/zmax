@@ -126,7 +126,8 @@ pub fn smart_command(path: Option<&Path>) -> (String, PathBuf) {
         "py" => (format!("python3 {p}"), dir),
         "go" => ("go run .".to_string(), dir),
         "js" | "mjs" | "cjs" | "ts" => (format!("node {p}"), dir),
-        "sh" | "bash" | "zsh" => (format!("bash {p}"), dir),
+        "sh" | "bash" => (format!("bash {p}"), dir),
+        "zsh" => (format!("zsh {p}"), dir),
         "rb" => (format!("ruby {p}"), dir),
         _ => match find_up(&dir, "Cargo.toml") {
             Some(cwd) => ("cargo run".to_string(), cwd),

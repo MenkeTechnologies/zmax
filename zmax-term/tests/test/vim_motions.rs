@@ -1319,11 +1319,10 @@ async fn other_humps_delete_takes_a_single_hump() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// `%` on brackets the grammar could not pair. The bash grammar zsh files are
-/// parsed with fails on zsh glob qualifiers (`*(/)`), and its error recovery
-/// leaves the array's `( … )` and the qualifiers' parentheses without pair
-/// nodes; the match falls back to counting brackets in the text. The first
-/// line is from a real test driver: it parses, and `%` must still pair `$(`.
+/// `%` on brackets the grammar could not pair. The bash grammar fails on zsh
+/// glob qualifiers (`*(/)`) in a `.sh` file, and its error recovery closes the
+/// array `( … )` at a qualifier's `)`; around a parse error the match is
+/// counted in the text. The first line parses, and `%` must still pair `$(`.
 #[tokio::test(flavor = "multi_thread")]
 async fn percent_pairs_brackets_the_grammar_left_unpaired() -> anyhow::Result<()> {
     const LINES: [&str; 5] = [
@@ -1333,7 +1332,7 @@ async fn percent_pairs_brackets_the_grammar_left_unpaired() -> anyhow::Result<()
         "        $d/../Completion/*/*~*/CVS(/) )",
         "print ok",
     ];
-    let file = tempfile::Builder::new().suffix(".zsh").tempfile()?;
+    let file = tempfile::Builder::new().suffix(".sh").tempfile()?;
     std::fs::write(file.path(), LINES.join("\n") + "\n")?;
     let mut app = vim().with_file(file.path(), None).build()?;
     let cursor = |app: &zmax_term::application::Application| {
@@ -1359,4 +1358,26 @@ async fn percent_pairs_brackets_the_grammar_left_unpaired() -> anyhow::Result<()
         false,
     )
     .await
+}
+
+/// zsh files get the zsh grammar, which parses what bash cannot: glob
+/// qualifiers, anonymous functions, and `eval` strings holding zsh.
+#[tokio::test(flavor = "multi_thread")]
+async fn zsh_files_parse_with_the_zsh_grammar() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".zsh").tempfile()?;
+    std::fs::write(
+        file.path(),
+        "fpath=( $d/../Functions/*~*/CVS(/)\n        $d/../Completion/*/*~*/CVS(/) )\n\
+         () { eval ' modname=\"zsh/db/gdbm\"' } </dev/null\n\
+         print -ru2 -- \"<<STATUS:$?>>\"\n",
+    )?;
+    let app = vim().with_file(file.path(), None).build()?;
+    let doc = zmax_view::doc!(app.editor);
+    assert_eq!(Some("zsh"), doc.language_name());
+    let syntax = doc.syntax().expect("the zsh grammar is loaded");
+    fn has_error(node: &zmax_core::tree_sitter::Node) -> bool {
+        node.kind() == "ERROR" || node.is_missing() || node.children().any(|c| has_error(&c))
+    }
+    assert!(!has_error(&syntax.tree().root_node()), "the zsh grammar parses the file");
+    Ok(())
 }

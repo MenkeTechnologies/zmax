@@ -1351,7 +1351,7 @@ source = { path = "../runtime/grammars/sources/stryke" }
 [[language]]
 name = "bash"
 scope = "source.bash"
-injection-regex = "(shell|bash|zsh|sh)"
+injection-regex = "(shell|bash|sh)"
 file-types = [
   "sh",
   "bash",
@@ -1359,21 +1359,13 @@ file-types = [
   "dash",
   "ksh",
   "mksh",
-  "zsh",
-  "zshenv",
-  "zlogin",
-  "zlogout",
-  "zprofile",
-  "zshrc",
   "eclass",
   "ebuild",
   "bazelrc",
   "Renviron",
-  "zsh-theme",
   "cshrc",
   "tcshrc",
   "bashrc_Apple_Terminal",
-  "zshrc_Apple_Terminal",
   { glob = "i3/config" },
   { glob = "sway/config" },
   { glob = ".tmux.conf" },
@@ -1385,12 +1377,6 @@ file-types = [
   { glob = ".bash_profile" },
   { glob = ".bashrc" },
   { glob = ".profile" },
-  { glob = ".zshenv" },
-  { glob = ".zlogin" },
-  { glob = ".zlogout" },
-  { glob = ".zprofile" },
-  { glob = ".zshrc" },
-  { glob = ".zimrc" },
   { glob = "APKBUILD" },
   { glob = ".bash_aliases" },
   { glob = "bash_completion" },
@@ -1410,7 +1396,7 @@ file-types = [
   { glob = "xserverrc" }, # /etc/X11/xinit/xserverrc
   { glob = "direnvrc" }, # ~/.config/direnv/direnvrc
 ]
-shebangs = ["sh", "bash", "dash", "zsh"]
+shebangs = ["sh", "bash", "dash"]
 comment-token = "#"
 language-servers = [ "zshrs-lsp" ]
 indent = { tab-width = 2, unit = "  " }
@@ -1418,6 +1404,35 @@ indent = { tab-width = 2, unit = "  " }
 [[grammar]]
 name = "bash"
 source = { git = "https://github.com/tree-sitter/tree-sitter-bash", rev = "a06c2e4415e9bc0346c6b86d401879ffb44058f7" }
+
+[[language]]
+name = "zsh"
+scope = "source.zsh"
+injection-regex = "zsh"
+file-types = [
+  "zsh",
+  "zshenv",
+  "zlogin",
+  "zlogout",
+  "zprofile",
+  "zshrc",
+  "zsh-theme",
+  "zshrc_Apple_Terminal",
+  { glob = ".zshenv" },
+  { glob = ".zlogin" },
+  { glob = ".zlogout" },
+  { glob = ".zprofile" },
+  { glob = ".zshrc" },
+  { glob = ".zimrc" },
+]
+shebangs = ["zsh"]
+comment-token = "#"
+language-servers = [ "zshrs-lsp" ]
+indent = { tab-width = 2, unit = "  " }
+
+[[grammar]]
+name = "zsh"
+source = { git = "https://github.com/georgeharker/tree-sitter-zsh", rev = "7a593401efb5418ffdedbe3c0e4c61c6d240166d" }
 
 [[language]]
 name = "php"

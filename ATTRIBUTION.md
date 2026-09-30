@@ -23,3 +23,10 @@ license header; absent such a header, a file is treated as MPL-2.0.
 Helix itself is inspired by [Kakoune](https://github.com/mawww/kakoune) and
 [Neovim](https://github.com/neovim/neovim); its selection-first editing model is
 heavily based on Kakoune.
+
+## Third-party queries
+
+`runtime/queries/zsh/highlights.scm`, `injections.scm` and `locals.scm` are
+adapted from the queries of
+[tree-sitter-zsh](https://github.com/georgeharker/tree-sitter-zsh), under the
+MIT License, the grammar zmax parses zsh with.
