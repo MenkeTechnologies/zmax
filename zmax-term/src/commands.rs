@@ -46844,12 +46844,7 @@ fn match_brackets(cx: &mut Context) {
         } else {
             cursor
         };
-        let matched = doc
-            .syntax()
-            .map_or_else(
-                || match_brackets::find_matching_bracket_plaintext(text.slice(..), pos),
-                |syntax| match_brackets::find_matching_bracket_fuzzy(syntax, text.slice(..), pos),
-            )
+        let matched = match_brackets::find_matching_bracket_any(doc.syntax(), text_slice, pos)
             .or_else(|| matchpairs_match(text_slice, pos));
         if let Some(matched_pos) = matched {
             range.put_cursor(text_slice, matched_pos, is_select)
@@ -46880,12 +46875,7 @@ fn match_brackets_extend(cx: &mut Context) {
     let selection = doc.selection(view.id).clone().transform(|range| {
         let cursor = range.cursor(text_slice);
         let pos = percent_item_at_or_after(text_slice, cursor);
-        let matched = doc
-            .syntax()
-            .map_or_else(
-                || match_brackets::find_matching_bracket_plaintext(text.slice(..), pos),
-                |syntax| match_brackets::find_matching_bracket_fuzzy(syntax, text.slice(..), pos),
-            )
+        let matched = match_brackets::find_matching_bracket_any(doc.syntax(), text_slice, pos)
             .or_else(|| matchpairs_match(text_slice, pos));
         match matched {
             Some(matched_pos) => {

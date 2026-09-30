@@ -2968,12 +2968,15 @@ impl EditorView {
         if !crate::commands::show_paren_enabled(doc.id()) {
             return None;
         }
-        // Highlight matching braces
-        let syntax = doc.syntax()?;
+        // Highlight matching braces: the syntax tree's pair, or the plain-text
+        // count where the tree has none (see `find_matching_bracket_any`).
         let highlight = theme.find_highlight_exact("ui.cursor.match")?;
         let text = doc.text().slice(..);
         let pos = doc.selection(view.id).primary().cursor(text);
-        let pos = zmax_core::match_brackets::find_matching_bracket(syntax, text, pos)?;
+        let pos = doc
+            .syntax()
+            .and_then(|syntax| zmax_core::match_brackets::find_matching_bracket(syntax, text, pos))
+            .or_else(|| zmax_core::match_brackets::find_matching_bracket_plaintext(text, pos))?;
         Some(OverlayHighlights::single(highlight, pos..pos + 1))
     }
 
@@ -5234,17 +5237,10 @@ impl EditorView {
                                 // linewise when the match is an #if/#else/#endif
                                 // block; zmax's `%` has no preprocessor matching to
                                 // build that on.)
-                                let matched = doc.syntax().map_or_else(
-                                    || {
-                                        zmax_core::match_brackets::find_matching_bracket_plaintext(
-                                            text, pos,
-                                        )
-                                    },
-                                    |syntax| {
-                                        zmax_core::match_brackets::find_matching_bracket_fuzzy(
-                                            syntax, text, pos,
-                                        )
-                                    },
+                                let matched = zmax_core::match_brackets::find_matching_bracket_any(
+                                    doc.syntax(),
+                                    text,
+                                    pos,
                                 );
                                 match matched {
                                     Some(to) => Range::point(pos).put_cursor(text, to, true),

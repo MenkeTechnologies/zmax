@@ -85,6 +85,18 @@ fn find_pair(
     let root = syntax.tree_for_byte_range(pos, pos).root_node();
     let mut node = root.descendant_for_byte_range(pos, pos)?;
 
+    // Around a parse error the tree's pairs are the grammar's guess at
+    // recovery, not pairs in the text: under the bash grammar, a zsh array
+    // `( … CVS(/) )` ends at the glob qualifier's `)`. Count in the text.
+    if doc.get_char(pos_).is_some_and(is_valid_bracket)
+        && [Some(node.clone()), node.parent()]
+            .into_iter()
+            .flatten()
+            .any(|scope| scope.kind() == "ERROR" || has_error_inside(&scope))
+    {
+        return find_matching_bracket_plaintext(doc, pos_);
+    }
+
     loop {
         if node.is_named() && node.child_count() >= 2 {
             let open = node.child(0).unwrap();
@@ -152,6 +164,39 @@ fn find_pair(
     let node_start = doc.byte_to_char(node.start_byte() as usize);
     let node_text = doc.byte_slice(node.start_byte() as usize..node.end_byte() as usize);
     find_matching_bracket_plaintext(node_text, pos_ - node_start).map(|pos| pos + node_start)
+}
+
+/// Whether the parser recovered from an error somewhere inside `node`: an
+/// `ERROR` node or a token it made up. The walk stops after
+/// `MATCH_LIMIT * 64` nodes and reports no error, so a huge block costs no
+/// more than that.
+fn has_error_inside(node: &Node) -> bool {
+    let mut budget = MATCH_LIMIT * 64;
+    let mut stack: Vec<Node> = node.children().collect();
+    while let Some(child) = stack.pop() {
+        if child.kind() == "ERROR" || child.is_missing() {
+            return true;
+        }
+        budget = budget.saturating_sub(1);
+        if budget == 0 {
+            return false;
+        }
+        stack.extend(child.children());
+    }
+    false
+}
+
+/// The bracket matching the one at `pos`, through the syntax tree when there
+/// is one ([`find_matching_bracket_fuzzy`]), else by counting brackets in the
+/// plain text. The plain-text count also runs when the tree has no pair for
+/// the bracket, which is what a grammar's error recovery leaves behind — zsh
+/// glob qualifiers such as `*(/)` under the bash grammar leave the brackets
+/// around them unpaired, and `%` would otherwise do nothing on them.
+#[must_use]
+pub fn find_matching_bracket_any(syntax: Option<&Syntax>, doc: RopeSlice, pos: usize) -> Option<usize> {
+    syntax
+        .and_then(|syntax| find_matching_bracket_fuzzy(syntax, doc, pos))
+        .or_else(|| find_matching_bracket_plaintext(doc, pos))
 }
 
 /// Returns the position of the matching bracket under cursor.

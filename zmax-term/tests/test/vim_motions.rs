@@ -1318,3 +1318,45 @@ async fn other_humps_delete_takes_a_single_hump() -> anyhow::Result<()> {
     test_vim(("fooBarBaz#[|\n]#", "i<C-w><esc>", "#[|\n]#")).await?;
     Ok(())
 }
+
+/// `%` on brackets the grammar could not pair. The bash grammar zsh files are
+/// parsed with fails on zsh glob qualifiers (`*(/)`), and its error recovery
+/// leaves the array's `( … )` and the qualifiers' parentheses without pair
+/// nodes; the match falls back to counting brackets in the text. The first
+/// line is from a real test driver: it parses, and `%` must still pair `$(`.
+#[tokio::test(flavor = "multi_thread")]
+async fn percent_pairs_brackets_the_grammar_left_unpaired() -> anyhow::Result<()> {
+    const LINES: [&str; 5] = [
+        "work=$(mktemp -d \"${TMPDIR:-/tmp}/ztst.XXXXXX\")",
+        "fpath=( $d/../Functions/*~*/CVS(/)",
+        "        $d/../Completion",
+        "        $d/../Completion/*/*~*/CVS(/) )",
+        "print ok",
+    ];
+    let file = tempfile::Builder::new().suffix(".zsh").tempfile()?;
+    std::fs::write(file.path(), LINES.join("\n") + "\n")?;
+    let mut app = vim().with_file(file.path(), None).build()?;
+    let cursor = |app: &zmax_term::application::Application| {
+        let (view, doc) = zmax_view::current_ref!(app.editor);
+        let text = doc.text().slice(..);
+        let pos = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(pos);
+        (line, pos - text.line_to_char(line))
+    };
+    test_key_sequences(
+        &mut app,
+        vec![
+            // `$(` … `)`, around a `${…}` inside a string.
+            (Some("f(%"), Some(&|app| assert_eq!((0, LINES[0].len() - 1), cursor(app)))),
+            (Some("%"), Some(&|app| assert_eq!((0, 6), cursor(app)))),
+            // `fpath=(` to the `)` closing the array two lines down.
+            (Some("j0f(%"), Some(&|app| assert_eq!((3, LINES[3].len() - 1), cursor(app)))),
+            (Some("%"), Some(&|app| assert_eq!((1, 6), cursor(app)))),
+            // A glob qualifier's own parentheses.
+            (Some("$"), Some(&|app| assert_eq!((1, LINES[1].len() - 1), cursor(app)))),
+            (Some("%"), Some(&|app| assert_eq!((1, LINES[1].len() - 3), cursor(app)))),
+        ],
+        false,
+    )
+    .await
+}
