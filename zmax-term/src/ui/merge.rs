@@ -19,7 +19,7 @@
 //! single undoable transaction.
 //!
 //! Keys: `j`/`k`/arrows scroll a row, PageUp/PageDown (`ctrl-d`/`ctrl-u`) a
-//! screenful, `g`/`G` jump to top/bottom, `n`/`p` move the selected block,
+//! screenful, `g`/`G` jump to top/bottom, `n`/`p` (F7 / Shift-F7) move the selected block,
 //! `,`/`[`/`h` take HEAD, `.`/`]`/`l` take working, `L`/`R` resolve all,
 //! `Enter`/`a` apply, `q`/`Esc` cancel. Mouse wheel scrolls too.
 
@@ -30,7 +30,8 @@ use imara_diff::{sources::lines, Algorithm, Diff, InternedInput};
 
 use tui::buffer::Buffer as Surface;
 use zmax_view::graphics::{Rect, Style};
-use zmax_view::input::MouseEventKind;
+use zmax_view::input::{KeyEvent, MouseEventKind};
+use zmax_view::keyboard::{KeyCode, KeyModifiers};
 use zmax_view::DocumentId;
 
 use crate::{
@@ -1102,6 +1103,10 @@ impl Component for DiffView {
             key!('$') => self.hscroll = self.max_line_width(),
             key!('n') => self.next_change(),
             key!('p') => self.prev_change(),
+            // JetBrains Next / Previous Difference (F7 / Shift-F7). Function
+            // keys have no `key!` form.
+            KeyEvent { code: KeyCode::F(7), modifiers } if modifiers.is_empty() => self.next_change(),
+            KeyEvent { code: KeyCode::F(7), modifiers } if modifiers == KeyModifiers::SHIFT => self.prev_change(),
             // Resolve the selected block. `,`/`[`/`h` take ours (HEAD/left),
             // `.`/`]`/`l` take theirs (working/right).
             key!(',') | key!('[') | key!('h') => self.resolve_selected(Resolution::Left),

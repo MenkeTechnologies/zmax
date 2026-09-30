@@ -1230,6 +1230,7 @@ impl MappableCommand {
         harpoon_remove, "Unpin the current file from harpoon",
         select_references_to_symbol_under_cursor, "Select symbol references",
         workspace_symbol_picker, "Open workspace symbol picker",
+        goto_class, "Search the workspace for a class, struct, interface or enum (JetBrains Go to Class, Cmd O)",
         syntax_workspace_symbol_picker, "Open workspace symbol picker from syntax information",
         lsp_or_syntax_workspace_symbol_picker, "Open workspace symbol picker from LSP or syntax information",
         diagnostics_picker, "Open diagnostic picker",
@@ -1252,6 +1253,7 @@ impl MappableCommand {
         peek_definition, "Peek the definition in a popup without navigating (JetBrains Quick Definition)",
         peek_type_definition, "Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition)",
         copy_quick_doc, "Copy the symbol's hover documentation to the clipboard (JetBrains Copy Quick Doc)",
+        goto_declaration_or_usages, "Go to the declaration, or list the usages when already on it (JetBrains Go to Declaration or Usages, Cmd B)",
         goto_declaration, "Goto declaration",
         add_newline_above, "Add newline above",
         add_newline_below, "Add newline below",
@@ -1270,6 +1272,7 @@ impl MappableCommand {
         goto_reference, "Goto references",
         call_hierarchy_incoming_calls, "Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H)",
         call_hierarchy_outgoing_calls, "Call hierarchy: what the symbol calls",
+        type_hierarchy, "The type at the cursor with its supertypes above and subtypes below (JetBrains Type Hierarchy, Ctrl H)",
         type_hierarchy_supertypes, "Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H)",
         type_hierarchy_subtypes, "Type hierarchy: subtypes of the symbol",
         goto_super_method, "Go to the method this one overrides (JetBrains Go to Super Method, Cmd U)",
@@ -1708,6 +1711,8 @@ impl MappableCommand {
         windmove_display_new_tab, "Display the next buffer in a new tab (emacs windmove-display-new-tab)",
         windmove_display_default_keybindings, "Bind M-S-<arrow> to display the next buffer in that direction (emacs windmove-display-default-keybindings)",
         transpose_view, "Transpose splits",
+        next_occurrence, "Next result of the last Find in Path or Find Usages, else the next search match (JetBrains Next Occurrence)",
+        previous_occurrence, "Previous result of the last Find in Path or Find Usages, else the previous search match (JetBrains Previous Occurrence)",
         quickfix_next, "Quickfix: jump to next entry (:cnext)",
         quickfix_prev, "Quickfix: jump to previous entry (:cprev)",
         quickfix_first, "Quickfix: jump to first entry (:cfirst)",
@@ -2094,6 +2099,7 @@ impl MappableCommand {
         show_vcs_console, "Every git command the editor has run this session (JetBrains Show VCS Console)",
         clear_vcs_console, "Empty the VCS console",
         reveal_directory_in_tree, "Reveal the current file's directory in the project tree (JetBrains Select Directory in Project View)",
+        new_scratch_file, "Pick a language and open a new scratch file of it, kept across sessions (JetBrains Scratch File, Cmd Shift N)",
         show_scratch_files, "Pick among the scratch buffers (JetBrains Show Scratch Files)",
         reveal_in_tree, "Reveal the current file in the project tree",
         toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
@@ -26447,7 +26453,15 @@ fn build_global_search_picker(
              ..
          }| { Some((path.as_ref().into(), Some((*line_start, *line_end)))) },
     )
-    .with_history_register(Some(reg));
+    .with_history_register(Some(reg))
+    .with_quickfix(|result| {
+        Some(QfEntry {
+            path: zmax_stdx::env::current_working_dir().join(&result.path),
+            line: result.line_start,
+            col: 0,
+            text: String::new(),
+        })
+    });
     let picker = match seed {
         Some(q) if !q.is_empty() => picker.with_query(q, editor),
         _ => picker,
@@ -35734,6 +35748,27 @@ pub(crate) fn build_qf_picker(editor: &mut Editor, kind: QfKind) -> Box<dyn Comp
 }
 
 // --- Static (normal-mode-callable) quickfix commands ----------------------
+
+/// JetBrains "Next Occurrence" (`NextOccurence`, Cmd-Opt-Down): the next
+/// result of the Find tool window — the last Find in Path, Find Usages or
+/// quickfix list — or, with no results listed, the next search match.
+fn next_occurrence(cx: &mut Context) {
+    if cx.editor.quickfix.is_empty() {
+        search_next(cx);
+    } else {
+        qf_step(cx.editor, QfKind::Quickfix, 1);
+    }
+}
+
+/// JetBrains "Previous Occurrence" (`PreviousOccurence`, Cmd-Opt-Up); see
+/// [`next_occurrence`].
+fn previous_occurrence(cx: &mut Context) {
+    if cx.editor.quickfix.is_empty() {
+        search_prev(cx);
+    } else {
+        qf_step(cx.editor, QfKind::Quickfix, -1);
+    }
+}
 
 fn quickfix_next(cx: &mut Context) {
     qf_step(cx.editor, QfKind::Quickfix, 1);
@@ -54670,27 +54705,113 @@ fn reveal_directory_in_tree(cx: &mut Context) {
     }));
 }
 
+/// Where JetBrains "Scratch File" keeps its scratches: files that outlive the
+/// session, outside any project.
+fn scratch_dir() -> PathBuf {
+    zmax_loader::data_dir().join("scratches")
+}
+
+/// The first free `scratch.<ext>`, `scratch_1.<ext>`, … name in `dir`, as the
+/// IDE numbers them. Pure but for the existence check — unit tested.
+fn next_scratch_path(dir: &Path, ext: &str, exists: impl Fn(&Path) -> bool) -> PathBuf {
+    let dot = if ext.is_empty() { String::new() } else { format!(".{ext}") };
+    (0..)
+        .map(|n| match n {
+            0 => dir.join(format!("scratch{dot}")),
+            n => dir.join(format!("scratch_{n}{dot}")),
+        })
+        .find(|path| !exists(path))
+        .expect("an unbounded range has a free name")
+}
+
+/// JetBrains "Scratch File" (`NewScratchFile`, Cmd-Shift-N): pick a language
+/// and open a new file of it in the scratch directory, kept across sessions.
+fn new_scratch_file(cx: &mut Context) {
+    let mut languages: Vec<(String, String)> = {
+        let loader: &zmax_core::syntax::Loader = &cx.editor.syn_loader.load();
+        loader
+            .language_configs()
+            .map(|lc| {
+                let ext = lc.file_types.iter().find_map(|ft| match ft {
+                    zmax_core::syntax::config::FileType::Extension(ext) => Some(ext.clone()),
+                    _ => None,
+                });
+                (lc.language_id.clone(), ext.unwrap_or_default())
+            })
+            .collect()
+    };
+    languages.sort();
+    let columns = [
+        PickerColumn::new("language", |l: &(String, String), _: &()| l.0.as_str().into()),
+        PickerColumn::new("extension", |l: &(String, String), _: &()| l.1.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, languages, (), |cx, (language, ext): &(String, String), action| {
+        let dir = scratch_dir();
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+            cx.editor.set_error(format!("{}: {e}", dir.display()));
+            return;
+        }
+        let path = next_scratch_path(&dir, ext, Path::exists);
+        if let Err(e) = std::fs::write(&path, "") {
+            cx.editor.set_error(format!("{}: {e}", path.display()));
+            return;
+        }
+        match cx.editor.open(&path, action) {
+            Ok(id) => {
+                let loader = cx.editor.syn_loader.load();
+                let _ = doc_mut!(cx.editor, &id).set_language_by_language_id(language, &loader);
+            }
+            Err(e) => cx.editor.set_error(format!("{}: {e}", path.display())),
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// JetBrains "Show Scratch Files" (`Scratch.ShowFilesPopup`): a picker over
-/// the scratch buffers — the ones with no file behind them — since the buffer
-/// picker shows them by name among every other open file.
+/// the scratch buffers — the ones with no file behind them — and the scratch
+/// files [`new_scratch_file`] keeps, open or not.
 fn show_scratch_files(cx: &mut Context) {
+    enum Target {
+        Buffer(zmax_view::DocumentId),
+        File(PathBuf),
+    }
     struct Scratch {
-        id: zmax_view::DocumentId,
+        target: Target,
         name: String,
         lines: usize,
         modified: bool,
     }
-    let scratches: Vec<Scratch> = cx
+    let mut scratches: Vec<Scratch> = cx
         .editor
         .documents()
         .filter(|doc| doc.path().is_none())
         .map(|doc| Scratch {
-            id: doc.id(),
+            target: Target::Buffer(doc.id()),
             name: doc.display_name().into_owned(),
             lines: doc.text().len_lines(),
             modified: doc.is_modified(),
         })
         .collect();
+    let mut files: Vec<PathBuf> = std::fs::read_dir(scratch_dir())
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file())
+        .collect();
+    files.sort();
+    for path in files {
+        let open = cx.editor.document_by_path(&path);
+        scratches.push(Scratch {
+            name: path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+            lines: open.map_or_else(
+                || std::fs::read_to_string(&path).map_or(0, |t| t.lines().count()),
+                |doc| doc.text().len_lines(),
+            ),
+            modified: open.is_some_and(|doc| doc.is_modified()),
+            target: Target::File(path),
+        });
+    }
     if scratches.is_empty() {
         cx.editor
             .set_status("no scratch buffers — `:scratch` makes one");
@@ -54703,10 +54824,33 @@ fn show_scratch_files(cx: &mut Context) {
             if s.modified { "[+]" } else { "" }.into()
         }),
     ];
-    let picker = Picker::new(columns, 0, scratches, (), |cx, scratch: &Scratch, action| {
-        cx.editor.switch(scratch.id, action);
+    let picker = Picker::new(columns, 0, scratches, (), |cx, scratch: &Scratch, action| match &scratch.target {
+        Target::Buffer(id) => cx.editor.switch(*id, action),
+        Target::File(path) => {
+            if let Err(e) = cx.editor.open(path, action) {
+                cx.editor.set_error(format!("{}: {e}", path.display()));
+            }
+        }
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+#[cfg(test)]
+mod scratch_tests {
+    use super::next_scratch_path;
+    use std::path::Path;
+
+    #[test]
+    fn scratch_names_count_up_from_the_bare_name() {
+        let dir = Path::new("/s");
+        assert_eq!(Path::new("/s/scratch.rs"), next_scratch_path(dir, "rs", |_| false));
+        let taken = [Path::new("/s/scratch.rs"), Path::new("/s/scratch_1.rs")];
+        assert_eq!(
+            Path::new("/s/scratch_2.rs"),
+            next_scratch_path(dir, "rs", |p| taken.contains(&p))
+        );
+        assert_eq!(Path::new("/s/scratch"), next_scratch_path(dir, "", |_| false));
+    }
 }
 
 /// Toggle maximizing the bottom panel (read long logs/diffs/errors full-height).
@@ -56889,7 +57033,7 @@ fn imenu_add_menubar_index(cx: &mut Context) {
 
 /// Run a static command from a menu entry: build a [`Context`], execute it, then
 /// dispatch the compositor callbacks it queued (a picker's `push_layer`, say).
-fn menu_run(
+pub(crate) fn menu_run(
     compositor: &mut Compositor,
     cx: &mut compositor::Context,
     cmd: &dyn Fn(&mut Context),

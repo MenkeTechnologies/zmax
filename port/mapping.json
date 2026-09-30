@@ -28719,19 +28719,19 @@
  },
  {
   "spec_id": "jetbrains.diff.next-difference",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_change"
+   "key:merge:n"
   ],
-  "note": "`goto_next_change` jumps between VCS hunks in the buffer, not between differences in a diff viewer."
+  "note": "The diff viewer (`:diff`, ui/merge.rs) moves to the next difference with `n` and with F7 itself."
  },
  {
   "spec_id": "jetbrains.diff.previous-difference",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_prev_change"
+   "key:merge:p"
   ],
-  "note": "`goto_prev_change` jumps between VCS hunks in the buffer, not between differences in a diff viewer."
+  "note": "The diff viewer (`:diff`, ui/merge.rs) moves to the previous difference with `p` and with Shift-F7 itself."
  },
  {
   "spec_id": "jetbrains.diff.resolve-conflicts",
@@ -28887,11 +28887,11 @@
  },
  {
   "spec_id": "jetbrains.editing.scratch-file",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:new"
+   "static:new_scratch_file"
   ],
-  "note": "`:new` opens an unnamed scratch buffer; Scratch File also prompts for a language and keeps the scratch as a file."
+  "note": "`new_scratch_file` picks a language and opens a new `scratch.<ext>` file in zmax's data directory, kept across sessions and listed by `show_scratch_files`."
  },
  {
   "spec_id": "jetbrains.editing.start-new-line",
@@ -29024,11 +29024,11 @@
  },
  {
   "spec_id": "jetbrains.navigate-from-symbol.go-to-declaration-or-usages",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_definition"
+   "static:goto_declaration_or_usages"
   ],
-  "note": "`goto_definition` (zmax-term/src/commands/lsp.rs:1250) jumps to the declaration but, invoked on the declaration itself, does not fall back to listing usages the way Cmd B does."
+  "note": "`goto_declaration_or_usages` jumps to the definition, and when every definition found is the symbol under the cursor it lists that symbol's references instead, as Cmd B does on a declaration."
  },
  {
   "spec_id": "jetbrains.navigate-from-symbol.go-to-implementation-s",
@@ -29081,12 +29081,11 @@
  },
  {
   "spec_id": "jetbrains.navigate-from-symbol.type-hierarchy",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space g T",
-   "static:type_hierarchy_supertypes"
+   "static:type_hierarchy"
   ],
-  "note": "zmax has separate supertypes/subtypes pickers, not one hierarchy tree."
+  "note": "`type_hierarchy` lists the type at the cursor with its supertypes above and subtypes below, indented by level, walked through the LSP type hierarchy requests."
  },
  {
   "spec_id": "jetbrains.navigation.back",
@@ -29106,11 +29105,11 @@
  },
  {
   "spec_id": "jetbrains.navigation.go-to-class",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:workspace_symbol_picker"
+   "static:goto_class"
   ],
-  "note": "`workspace_symbol_picker` searches every workspace symbol; Go to Class restricts the search to classes."
+  "note": "`goto_class` runs the LSP workspace symbol search keeping only class, struct, interface, enum, type-parameter, module and namespace symbols."
  },
  {
   "spec_id": "jetbrains.navigation.go-to-line-column",
@@ -29178,19 +29177,19 @@
  },
  {
   "spec_id": "jetbrains.navigation.next-occurrence",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:search_next"
+   "static:next_occurrence"
   ],
-  "note": "`search_next` steps through editor search matches only; Next Occurrence also steps through Find/Usages tool-window results."
+  "note": "`next_occurrence` steps to the next entry of the Find tool window's results (the quickfix list the Find in Path, Find in Files and usages pickers leave behind), or to the next search match when there are none."
  },
  {
   "spec_id": "jetbrains.navigation.previous-occurrence",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:search_prev"
+   "static:previous_occurrence"
   ],
-  "note": "`search_prev` steps through editor search matches only; Previous Occurrence also steps through Find/Usages tool-window results."
+  "note": "`previous_occurrence` steps back through the Find tool window's results, or to the previous search match when there are none."
  },
  {
   "spec_id": "jetbrains.navigation.recent-files",
@@ -80850,11 +80849,11 @@
  },
  {
   "spec_id": "jetbrains-actions.GotoClass",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:workspace_symbol_picker"
+   "static:goto_class"
   ],
-  "note": "GotoClass (Go to Class) ~ zmax `workspace_symbol_picker`: searches all project symbols via LSP workspace symbols, not only classes/types"
+  "note": "GotoClass (Go to Class) = zmax `goto_class`: workspace symbol search narrowed to type declarations."
  },
  {
   "spec_id": "jetbrains-actions.GotoCustomRegion",
@@ -80866,11 +80865,11 @@
  },
  {
   "spec_id": "jetbrains-actions.GotoDeclaration",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_definition"
+   "static:goto_declaration_or_usages"
   ],
-  "note": "GotoDeclaration (Go to Declaration or Usages) ~ zmax `goto_definition`: jumps to the definition but does not fall back to showing usages when invoked on the declaration itself"
+  "note": "GotoDeclaration (Go to Declaration or Usages) = zmax `goto_declaration_or_usages`: the definition, or the usages when the cursor is on the declaration already."
  },
  {
   "spec_id": "jetbrains-actions.GotoDeclarationOnly",
@@ -81362,11 +81361,11 @@
  },
  {
   "spec_id": "jetbrains-actions.NewScratchFile",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:new"
+   "static:new_scratch_file"
   ],
-  "note": "NewScratchFile (Scratch File) = zmax `new`: `:new` creates an unnamed scratch buffer; IntelliJ prompts for a language and persists the scratch file."
+  "note": "NewScratchFile (Scratch File) = zmax `new_scratch_file`: pick a language, open a persisted scratch file of it."
  },
  {
   "spec_id": "jetbrains-actions.NextDiff",
@@ -81378,11 +81377,11 @@
  },
  {
   "spec_id": "jetbrains-actions.NextOccurence",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:search_next"
+   "static:next_occurrence"
   ],
-  "note": "NextOccurence (Next Occurrence) = zmax `search_next`: next match of the editor search only; IntelliJ also walks Find/Usages tool-window results."
+  "note": "NextOccurence (Next Occurrence) = zmax `next_occurrence`: next Find/usages result, else next search match."
  },
  {
   "spec_id": "jetbrains-actions.NextParameter",
@@ -81578,11 +81577,11 @@
  },
  {
   "spec_id": "jetbrains-actions.PreviousOccurence",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:search_prev"
+   "static:previous_occurrence"
   ],
-  "note": "PreviousOccurence (Previous Occurrence) = zmax `search_prev`: previous match of the editor search only; IntelliJ also walks Find/Usages tool-window results."
+  "note": "PreviousOccurence (Previous Occurrence) = zmax `previous_occurrence`: previous Find/usages result, else previous search match."
  },
  {
   "spec_id": "jetbrains-actions.PreviousTab",
@@ -82476,12 +82475,11 @@
  },
  {
   "spec_id": "jetbrains-actions.TypeHierarchy",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:type_hierarchy_supertypes",
-   "static:type_hierarchy_subtypes"
+   "static:type_hierarchy"
   ],
-  "note": "TypeHierarchy (Type Hierarchy) partial: zmax has separate supertypes/subtypes pickers, not one hierarchy tree view with switchable modes."
+  "note": "TypeHierarchy (Type Hierarchy) = zmax `type_hierarchy`: one indented list, supertypes above the type and subtypes below."
  },
  {
   "spec_id": "jetbrains-actions.ToggleInlineHintsAction",
@@ -84906,5 +84904,21 @@
    "static:validate_xml"
   ],
   "note": "ValidateXml = zmax `validate_xml`: xmllint well-formedness check, and DTD validation when the file declares a DOCTYPE."
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.show-find-window",
+  "status": "ported",
+  "evidence": [
+   "static:quickfix_open"
+  ],
+  "note": "`quickfix_open` shows the Find tool window's results: the Find in Path, Find in Files and usages pickers leave their matches as the quickfix list when they close, with the chosen match current."
+ },
+ {
+  "spec_id": "jetbrains-actions.ActivateFindToolWindow",
+  "status": "ported",
+  "evidence": [
+   "static:quickfix_open"
+  ],
+  "note": "ActivateFindToolWindow (Find) = zmax `quickfix_open`: the results of the last Find in Path, Find in Files or Find Usages, kept as the quickfix list."
  }
 ]

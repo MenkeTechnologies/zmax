@@ -26,6 +26,7 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "editor_escape" => keymap!({ "Normal mode" "Z" => editor_escape, }),
         "surround_with_emmet" => keymap!({ "Normal mode" "Z" => surround_with_emmet, }),
         "md_link_to_reference" => keymap!({ "Normal mode" "Z" => md_link_to_reference, }),
+        "next_occurrence" => keymap!({ "Normal mode" "Z" => next_occurrence, }),
         other => panic!("no binding for {other}"),
     };
     config.keys.insert(Mode::Normal, keys);
@@ -687,6 +688,22 @@ async fn palette_commands_open_their_prompts() -> anyhow::Result<()> {
             Some("Zmd_insert_image<ret>a.png<ret>"),
             Some(&|app| assert_eq!("![a](a.png)\n", text(app))),
         )],
+        false,
+    )
+    .await
+}
+
+/// With no Find in Path or Find Usages results listed, Next Occurrence steps
+/// through the matches of the editor search.
+#[tokio::test(flavor = "multi_thread")]
+async fn next_occurrence_without_results_is_the_next_match() -> anyhow::Result<()> {
+    let mut app = app_with("#[a|]# x y x\n", "next_occurrence")?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("/x<ret>"), Some(&|app| assert_eq!((2, 3), primary(app)))),
+            (Some("Z"), Some(&|app| assert_eq!((6, 7), primary(app)))),
+        ],
         false,
     )
     .await

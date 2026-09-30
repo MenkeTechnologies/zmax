@@ -2239,8 +2239,10 @@ pub struct Editor {
     pub vim_insert_collapse_pos: Option<usize>,
 
     /// The global vim quickfix list and the index of the current entry. Filled
-    /// by `:cgetexpr`/`:cbuffer`/`:Diagnostics`/`:make`, navigated with
-    /// `:cnext`/`:cprev`/`:cc`, displayed by `:copen`.
+    /// by `:cgetexpr`/`:cbuffer`/`:Diagnostics`/`:make`, and by the Find in
+    /// Path, Find in Files and usages pickers as they close (the JetBrains Find
+    /// tool window); navigated with `:cnext`/`:cprev`/`:cc` and Next / Previous
+    /// Occurrence, displayed by `:copen`.
     pub quickfix: Vec<QfEntry>,
     pub quickfix_idx: Option<usize>,
     /// Past quickfix lists for `:colder`/`:cnewer`/`:chistory` (vim keeps up to

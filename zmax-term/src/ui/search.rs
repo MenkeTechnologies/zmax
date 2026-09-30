@@ -267,6 +267,32 @@ impl SearchPanel {
         }
     }
 
+    /// Leave the results as the quickfix list, the Find tool window's
+    /// contents, which Next / Previous Occurrence step through from the
+    /// selected match on.
+    fn publish_quickfix(&self, editor: &mut zmax_view::Editor) {
+        let mut entries = Vec::new();
+        let mut current = None;
+        for (fi, hit) in self.hits.iter().enumerate() {
+            for (mi, m) in hit.matches.iter().enumerate() {
+                if matches!(self.rows.get(self.sel), Some(Row::Match(f, i)) if (*f, *i) == (fi, mi)) {
+                    current = Some(entries.len());
+                }
+                entries.push(zmax_view::editor::QfEntry {
+                    path: hit.path.clone(),
+                    line: m.line0,
+                    col: m.ranges.first().map_or(0, |r| r.0),
+                    text: m.text.trim().to_owned(),
+                });
+            }
+        }
+        if entries.is_empty() {
+            return;
+        }
+        crate::commands::qf_set_entries(editor, crate::commands::QfKind::Quickfix, entries, false);
+        editor.quickfix_idx = Some(current.unwrap_or(0));
+    }
+
     fn close() -> EventResult {
         EventResult::Consumed(Some(Box::new(|c: &mut Compositor, _| {
             c.pop();
@@ -296,7 +322,7 @@ impl SearchPanel {
 }
 
 impl Component for SearchPanel {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let key: KeyEvent = match event {
             Event::Key(k) => *k,
             Event::Mouse(ev) => return self.handle_mouse(ev.column, ev.row, ev.kind),
@@ -335,12 +361,14 @@ impl Component for SearchPanel {
 
         match key.code {
             KeyCode::Esc | KeyCode::Char('c') if matches!(key.code, KeyCode::Esc) || ctrl => {
-                return Self::close()
+                self.publish_quickfix(cx.editor);
+                return Self::close();
             }
             KeyCode::Enter => {
                 // In the results, open the selection; in the query field, search.
                 if let Some((p, l)) = self.selected_target() {
                     if !self.rows.is_empty() {
+                        self.publish_quickfix(cx.editor);
                         return Self::open(p, l);
                     }
                 }

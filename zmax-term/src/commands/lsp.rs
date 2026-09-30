@@ -450,6 +450,31 @@ pub fn symbol_picker(cx: &mut Context) {
 }
 
 pub fn workspace_symbol_picker(cx: &mut Context) {
+    workspace_symbol_picker_of(cx, None)
+}
+
+/// The symbol kinds JetBrains "Go to Class" (Cmd-O) lists: the type
+/// declarations, without their members or free functions.
+const CLASS_KINDS: &[lsp::SymbolKind] = &[
+    lsp::SymbolKind::CLASS,
+    lsp::SymbolKind::INTERFACE,
+    lsp::SymbolKind::STRUCT,
+    lsp::SymbolKind::ENUM,
+    lsp::SymbolKind::TYPE_PARAMETER,
+    lsp::SymbolKind::MODULE,
+    lsp::SymbolKind::NAMESPACE,
+];
+
+/// JetBrains "Go to Class" (`GotoClass`, Cmd-O): the workspace symbol search
+/// narrowed to classes, structs, interfaces, enums and modules.
+pub fn goto_class(cx: &mut Context) {
+    workspace_symbol_picker_of(cx, Some(CLASS_KINDS))
+}
+
+/// The symbol kinds a workspace symbol search keeps, or `None` for all.
+type SymbolKinds = Option<&'static [lsp::SymbolKind]>;
+
+fn workspace_symbol_picker_of(cx: &mut Context, kinds: SymbolKinds) {
     use crate::ui::picker::Injector;
 
     let doc = doc!(cx.editor);
@@ -463,7 +488,8 @@ pub fn workspace_symbol_picker(cx: &mut Context) {
         return;
     }
 
-    let get_symbols = |pattern: &str, editor: &mut Editor, _data, injector: &Injector<_, _>| {
+    let get_symbols = |pattern: &str, editor: &mut Editor, kinds: std::sync::Arc<SymbolKinds>, injector: &Injector<_, _>| {
+        let kinds = *kinds;
         let doc = doc!(editor);
         let mut seen_language_servers = HashSet::new();
         let mut futures: FuturesUnordered<_> = doc
@@ -485,6 +511,7 @@ pub fn workspace_symbol_picker(cx: &mut Context) {
 
                     let response: Vec<_> = symbols
                         .into_iter()
+                        .filter(|symbol| kinds.is_none_or(|kinds| kinds.contains(&symbol.kind)))
                         .filter_map(|symbol| {
                             let uri = match Uri::try_from(&symbol.location.uri) {
                                 Ok(uri) => uri,
@@ -560,7 +587,7 @@ pub fn workspace_symbol_picker(cx: &mut Context) {
         columns,
         1, // name column
         [],
-        (),
+        kinds,
         move |cx, item, action| {
             jump_to_location(cx.editor, &item.location, action);
         },
@@ -1167,10 +1194,21 @@ fn goto_impl(editor: &mut Editor, compositor: &mut Compositor, locations: Vec<Lo
                 crate::commands::xref_push_marker(cx.editor);
                 jump_to_location(cx.editor, location, action)
             })
-            .with_preview(|_editor, location| location_to_file_location(location));
+            .with_preview(|_editor, location| location_to_file_location(location))
+            .with_quickfix(location_to_qf_entry);
             compositor.push(Box::new(overlaid(picker)));
         }
     }
+}
+
+/// A location as a quickfix entry, for the Find tool window.
+fn location_to_qf_entry(location: &Location) -> Option<zmax_view::editor::QfEntry> {
+    Some(zmax_view::editor::QfEntry {
+        path: location.uri.as_path()?.to_path_buf(),
+        line: location.range.start.line as usize,
+        col: location.range.start.character as usize,
+        text: String::new(),
+    })
 }
 
 fn goto_single_impl<P, F>(cx: &mut Context, feature: LanguageServerFeature, request_provider: P)
@@ -1178,7 +1216,26 @@ where
     P: Fn(&Client, lsp::Position, lsp::TextDocumentIdentifier) -> Option<F>,
     F: Future<Output = zmax_lsp::Result<Option<lsp::GotoDefinitionResponse>>> + 'static + Send,
 {
+    goto_single_or(cx, feature, request_provider, None)
+}
+
+/// [`goto_single_impl`], running `on_target` instead of jumping when every
+/// location found is the symbol the cursor is already on.
+fn goto_single_or<P, F>(
+    cx: &mut Context,
+    feature: LanguageServerFeature,
+    request_provider: P,
+    on_target: Option<fn(&mut Context)>,
+) where
+    P: Fn(&Client, lsp::Position, lsp::TextDocumentIdentifier) -> Option<F>,
+    F: Future<Output = zmax_lsp::Result<Option<lsp::GotoDefinitionResponse>>> + 'static + Send,
+{
     let (view, doc) = current_ref!(cx.editor);
+    let here = doc.uri();
+    let cursor: Vec<(OffsetEncoding, lsp::Position)> = doc
+        .language_servers_with_feature(feature)
+        .map(|ls| (ls.offset_encoding(), doc.position(view.id, ls.offset_encoding())))
+        .collect();
     let mut futures: FuturesUnordered<_> = doc
         .language_servers_with_feature(feature)
         .map(|language_server| {
@@ -1231,12 +1288,37 @@ where
                     LanguageServerFeature::GotoImplementation => "No implementation found.",
                     _ => "No location found.",
                 });
+            } else if let Some(command) = on_target.filter(|_| {
+                locations.iter().all(|location| {
+                    Some(&location.uri) == here.as_ref()
+                        && cursor.iter().any(|(encoding, pos)| {
+                            *encoding == location.offset_encoding
+                                && location.range.start <= *pos
+                                && *pos <= location.range.end
+                        })
+                })
+            }) {
+                crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut crate::compositor::Context| {
+                    crate::commands::menu_run(compositor, cx, &command)
+                }) as crate::compositor::Callback]);
             } else {
                 goto_impl(editor, compositor, locations);
             }
         };
         Ok(Callback::EditorCompositor(Box::new(call)))
     });
+}
+
+/// JetBrains "Go to Declaration or Usages" (`GotoDeclaration`, Cmd-B): jump to
+/// the declaration of the symbol at the cursor, or, when the cursor is on that
+/// declaration already, list its usages.
+pub fn goto_declaration_or_usages(cx: &mut Context) {
+    goto_single_or(
+        cx,
+        LanguageServerFeature::GotoDefinition,
+        |ls, pos, doc_id| ls.goto_definition(doc_id, pos, None),
+        Some(goto_reference),
+    );
 }
 
 pub fn goto_declaration(cx: &mut Context) {
@@ -1693,6 +1775,131 @@ fn type_hierarchy_impl(cx: &mut Context, supertypes: bool) {
                 } else {
                     goto_impl(editor, compositor, locations);
                 }
+            },
+        )))
+    });
+}
+
+/// One row of the [`type_hierarchy`] view: a type, how many levels above
+/// (negative) or below (positive) the cursor's type it sits, and where it is.
+struct HierarchyRow {
+    depth: i32,
+    name: String,
+    kind: lsp::SymbolKind,
+    location: Location,
+}
+
+/// How far [`type_hierarchy`] walks up and down, and how many types it lists at
+/// most — a guard against servers that report a hierarchy through every
+/// trait implemented by `Object`-like roots.
+const HIERARCHY_MAX_DEPTH: i32 = 8;
+const HIERARCHY_MAX_ROWS: usize = 256;
+
+/// JetBrains "Type Hierarchy" (`TypeHierarchy`, Ctrl-H): the type at the cursor
+/// with its supertypes above it and its subtypes below, as one indented list.
+pub fn type_hierarchy(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let language_server =
+        language_server_with_feature!(cx.editor, doc, LanguageServerFeature::TypeHierarchy);
+    let ls_id = language_server.id();
+    let offset_encoding = language_server.offset_encoding();
+    let pos = doc.position(view.id, offset_encoding);
+    let Some(prepare) = language_server.prepare_type_hierarchy(doc.identifier(), pos) else {
+        cx.editor.set_error("Type hierarchy is not available here");
+        return;
+    };
+    let client = cx.editor.language_servers.get_by_id(ls_id).cloned();
+
+    cx.jobs.callback(async move {
+        let root = prepare.await?.and_then(|items| items.into_iter().next());
+        let (Some(root), Some(client)) = (root, client) else {
+            return Ok(Callback::EditorCompositor(Box::new(
+                |editor: &mut Editor, _: &mut Compositor| {
+                    editor.set_error("No type under cursor for type hierarchy");
+                },
+            )));
+        };
+
+        let row = |item: &lsp::TypeHierarchyItem, depth: i32| {
+            lsp_location_to_location(
+                lsp::Location::new(item.uri.clone(), item.selection_range),
+                offset_encoding,
+            )
+            .map(|location| HierarchyRow {
+                depth,
+                name: item.name.clone(),
+                kind: item.kind,
+                location,
+            })
+        };
+
+        // Depth-first each way, rows in pre-order, so every subtype sits under
+        // the type it extends. The upward walk is reversed, which puts each
+        // supertype above the types that extend it.
+        let mut rows = Vec::new();
+        for up in [true, false] {
+            let mut seen = HashSet::new();
+            let mut stack = vec![(root.clone(), 0)];
+            let mut found = Vec::new();
+            while let Some((item, depth)) = stack.pop() {
+                if depth != 0 {
+                    found.extend(row(&item, depth));
+                }
+                if depth.abs() >= HIERARCHY_MAX_DEPTH || rows.len() + found.len() >= HIERARCHY_MAX_ROWS {
+                    continue;
+                }
+                let related = if up {
+                    match client.type_hierarchy_supertypes(item) {
+                        Some(future) => future.await?,
+                        None => None,
+                    }
+                } else {
+                    match client.type_hierarchy_subtypes(item) {
+                        Some(future) => future.await?,
+                        None => None,
+                    }
+                };
+                let next = if up { depth - 1 } else { depth + 1 };
+                for related in related.into_iter().flatten().rev() {
+                    if seen.insert((related.uri.clone(), related.selection_range.start, related.name.clone())) {
+                        stack.push((related, next));
+                    }
+                }
+            }
+            if up {
+                found.reverse();
+                rows.extend(found);
+                rows.extend(row(&root, 0));
+            } else {
+                rows.extend(found);
+            }
+        }
+        let top = rows.iter().map(|r| r.depth).min().unwrap_or(0);
+
+        Ok(Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                if rows.len() <= 1 {
+                    editor.set_status("the type has no supertypes or subtypes");
+                    return;
+                }
+                let columns = [
+                    ui::PickerColumn::new("type", |row: &HierarchyRow, top: &i32| {
+                        let marker = if row.depth == 0 { "● " } else { "" };
+                        let indent = "  ".repeat((row.depth - top) as usize);
+                        format!("{indent}{marker}{}", row.name).into()
+                    }),
+                    ui::PickerColumn::new("kind", |row: &HierarchyRow, _| display_symbol_kind(row.kind).into()),
+                    ui::PickerColumn::new("path", |row: &HierarchyRow, _| {
+                        let path = row.location.uri.as_path().map(path::get_relative_path);
+                        let path = path.map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+                        format!("{path}:{}", row.location.range.start.line + 1).into()
+                    }),
+                ];
+                let picker = Picker::new(columns, 0, rows, top, |cx, row: &HierarchyRow, action| {
+                    jump_to_location(cx.editor, &row.location, action)
+                })
+                .with_preview(|_editor, row| location_to_file_location(&row.location));
+                compositor.push(Box::new(overlaid(picker)));
             },
         )))
     });

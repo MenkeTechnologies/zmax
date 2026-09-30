@@ -837,6 +837,7 @@
 | `harpoon_remove` | Unpin the current file from harpoon | **spacemacs, hybrid** — normal: `` <space>Hd ``, select: `` <space>Hd `` |
 | `select_references_to_symbol_under_cursor` | Select symbol references | **spacemacs, hybrid** — normal: `` <space>se ``, `` <space>sh ``, select: `` <space>se ``, `` <space>sh ``<br>**helix** — normal: `` <space>h ``, select: `` <space>h `` |
 | `workspace_symbol_picker` | Open workspace symbol picker | **spacemacs** — normal: `` <A-C-.> ``, `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, select: `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, insert: `` <C-c>,J ``<br>**hybrid** — normal: `` <A-C-.> ``, `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, select: `` <C-c>,J ``, `` <space>jI ``, `` <space>sS `` |
+| `goto_class` | Search the workspace for a class, struct, interface or enum (JetBrains Go to Class, Cmd O) |  |
 | `syntax_workspace_symbol_picker` | Open workspace symbol picker from syntax information |  |
 | `lsp_or_syntax_workspace_symbol_picker` | Open workspace symbol picker from LSP or syntax information | **helix** — normal: `` <space>S ``, select: `` <space>S `` |
 | `diagnostics_picker` | Open diagnostic picker | **spacemacs, hybrid** — normal: `` <space>el ``, `` <space>enl ``, `` <space>epl ``, select: `` <space>el ``, `` <space>enl ``, `` <space>epl ``<br>**helix** — normal: `` <space>d ``, select: `` <space>d `` |
@@ -859,6 +860,7 @@
 | `peek_definition` | Peek the definition in a popup without navigating (JetBrains Quick Definition) | **spacemacs, hybrid** — normal: `` <space>lq ``, select: `` <space>lq `` |
 | `peek_type_definition` | Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition) | **spacemacs, hybrid** — normal: `` <space>ly ``, select: `` <space>ly `` |
 | `copy_quick_doc` | Copy the symbol's hover documentation to the clipboard (JetBrains Copy Quick Doc) | **spacemacs, hybrid** — normal: `` <space>lY ``, select: `` <space>lY `` |
+| `goto_declaration_or_usages` | Go to the declaration, or list the usages when already on it (JetBrains Go to Declaration or Usages, Cmd B) |  |
 | `goto_declaration` | Goto declaration | **spacemacs, hybrid** — normal: `` gD ``, `` <C-w>i ``, `` <space>gD ``, `` <space>wi ``, `` <C-w><C-i> ``, `` <space>w<C-i> ``, select: `` <space>gD ``, `` <space>wi ``, `` <space>w<C-i> ``<br>**vim** — normal: `` gD ``, `` <C-w>i ``, `` <C-w><C-i> ``<br>**helix, kakoune** — normal: `` gD ``, select: `` gD `` |
 | `add_newline_above` | Add newline above | **helix** — normal: `` [<space> ``, select: `` [<space> ``<br>**kakoune** — normal: `` <A-O> ``, `` [<space> ``, select: `` [<space> `` |
 | `add_newline_below` | Add newline below | **helix** — normal: `` ]<space> ``, select: `` ]<space> ``<br>**kakoune** — normal: `` <A-o> ``, `` ]<space> ``, select: `` ]<space> `` |
@@ -877,6 +879,7 @@
 | `goto_reference` | Goto references | **spacemacs, vim** — normal: `` gr ``<br>**hybrid** — normal: `` gr ``, insert: `` <A-?> ``<br>**helix, kakoune** — normal: `` gr ``, select: `` gr ``<br>**emacs, cua, micro, nano** — normal: `` <A-?> ``, insert: `` <A-?> `` |
 | `call_hierarchy_incoming_calls` | Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H) | **spacemacs, hybrid** — normal: `` <space>gh ``, select: `` <space>gh `` |
 | `call_hierarchy_outgoing_calls` | Call hierarchy: what the symbol calls | **spacemacs, hybrid** — normal: `` <space>gO ``, select: `` <space>gO `` |
+| `type_hierarchy` | The type at the cursor with its supertypes above and subtypes below (JetBrains Type Hierarchy, Ctrl H) |  |
 | `type_hierarchy_supertypes` | Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H) | **spacemacs, hybrid** — normal: `` <space>gT ``, select: `` <space>gT `` |
 | `type_hierarchy_subtypes` | Type hierarchy: subtypes of the symbol |  |
 | `goto_super_method` | Go to the method this one overrides (JetBrains Go to Super Method, Cmd U) | **spacemacs, hybrid** — normal: `` <space>g^ ``, select: `` <space>g^ `` |
@@ -1315,6 +1318,8 @@
 | `windmove_display_new_tab` | Display the next buffer in a new tab (emacs windmove-display-new-tab) |  |
 | `windmove_display_default_keybindings` | Bind M-S-<arrow> to display the next buffer in that direction (emacs windmove-display-default-keybindings) |  |
 | `transpose_view` | Transpose splits | **spacemacs, hybrid** — normal: `` <C-w>M ``, `` <C-w>x ``, `` <space>wM ``, `` <space>wx ``, `` <C-w><C-x> ``, `` <space>w<C-x> ``, select: `` <space>wM ``, `` <space>wx ``, `` <space>w<C-x> ``<br>**vim** — normal: `` <C-w>M ``, `` <C-w>x ``, `` <C-w><C-x> ``<br>**helix** — normal: `` <C-w>t ``, `` <space>wt ``, `` <C-w><C-t> ``, `` <space>w<C-t> ``, select: `` <C-w>t ``, `` <space>wt ``, `` <C-w><C-t> ``, `` <space>w<C-t> ``<br>**kakoune** — normal: `` <C-w>t ``, `` <C-w><C-t> ``, select: `` <C-w>t ``, `` <C-w><C-t> `` |
+| `next_occurrence` | Next result of the last Find in Path or Find Usages, else the next search match (JetBrains Next Occurrence) |  |
+| `previous_occurrence` | Previous result of the last Find in Path or Find Usages, else the previous search match (JetBrains Previous Occurrence) |  |
 | `quickfix_next` | Quickfix: jump to next entry (:cnext) | **spacemacs, hybrid, vim** — normal: `` ]q `` |
 | `quickfix_prev` | Quickfix: jump to previous entry (:cprev) | **spacemacs, hybrid, vim** — normal: `` [q `` |
 | `quickfix_first` | Quickfix: jump to first entry (:cfirst) |  |
@@ -1701,6 +1706,7 @@
 | `show_vcs_console` | Every git command the editor has run this session (JetBrains Show VCS Console) | **spacemacs, hybrid** — normal: `` <space>g! ``, select: `` <space>g! `` |
 | `clear_vcs_console` | Empty the VCS console |  |
 | `reveal_directory_in_tree` | Reveal the current file's directory in the project tree (JetBrains Select Directory in Project View) | **spacemacs, hybrid** — normal: `` <space>jT ``, select: `` <space>jT `` |
+| `new_scratch_file` | Pick a language and open a new scratch file of it, kept across sessions (JetBrains Scratch File, Cmd Shift N) |  |
 | `show_scratch_files` | Pick among the scratch buffers (JetBrains Show Scratch Files) | **spacemacs, hybrid** — normal: `` <space>b<C-s> ``, select: `` <space>b<C-s> `` |
 | `reveal_in_tree` | Reveal the current file in the project tree |  |
 | `toggle_auto_reveal` | Toggle always-select-opened-file (autoscroll from source) | **spacemacs, hybrid** — normal: `` <space>pV ``, select: `` <space>pV `` |

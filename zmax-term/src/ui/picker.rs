@@ -32,7 +32,7 @@ use std::{
     borrow::Cow,
     collections::HashMap,
     io::Read,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
         atomic::{self, AtomicUsize},
         Arc,
@@ -332,6 +332,30 @@ pub struct Picker<T: 'static + Send + Sync, D: 'static> {
     on_abort: Option<AbortCallback>,
     /// Tracks the last highlighted (cursor, query) so `on_highlight` only fires on change.
     last_highlight: Option<(u32, Arc<str>)>,
+    /// Turns an item into a quickfix entry, for the pickers whose results are
+    /// the JetBrains Find tool window: on close, the matched items become the
+    /// quickfix list that Next / Previous Occurrence step through.
+    quickfix_fn: Option<QuickfixFn<T>>,
+}
+
+/// See [`Picker::with_quickfix`].
+pub type QuickfixFn<T> = fn(&T) -> Option<zmax_view::editor::QfEntry>;
+
+/// Fill in the text of the entries that have none with their line of the file,
+/// reading each file once.
+fn with_line_text(mut entries: Vec<zmax_view::editor::QfEntry>) -> Vec<zmax_view::editor::QfEntry> {
+    let mut files: HashMap<PathBuf, Vec<String>> = HashMap::new();
+    for entry in entries.iter_mut().filter(|e| e.text.is_empty()) {
+        let lines = files.entry(entry.path.clone()).or_insert_with(|| {
+            std::fs::read_to_string(&entry.path)
+                .map(|text| text.lines().map(str::to_owned).collect())
+                .unwrap_or_default()
+        });
+        if let Some(line) = lines.get(entry.line) {
+            entry.text = line.trim().to_owned();
+        }
+    }
+    entries
 }
 
 impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
@@ -463,7 +487,33 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             on_highlight: None,
             on_abort: None,
             last_highlight: None,
+            quickfix_fn: None,
         }
+    }
+
+    /// Keep the matched items as the quickfix list when the picker closes, the
+    /// entry under the cursor current (see [`Self::quickfix_fn`]).
+    pub fn with_quickfix(mut self, to_entry: QuickfixFn<T>) -> Self {
+        self.quickfix_fn = Some(to_entry);
+        self
+    }
+
+    fn publish_quickfix(&self, editor: &mut Editor) {
+        let Some(to_entry) = self.quickfix_fn else {
+            return;
+        };
+        let snapshot = self.matcher.snapshot();
+        let entries: Vec<_> = snapshot
+            .matched_items(..)
+            .filter_map(|item| to_entry(item.data))
+            .collect();
+        if entries.is_empty() {
+            return;
+        }
+        let entries = with_line_text(entries);
+        let current = (self.cursor as usize).min(entries.len() - 1);
+        crate::commands::qf_set_entries(editor, crate::commands::QfKind::Quickfix, entries, false);
+        editor.quickfix_idx = Some(current);
     }
 
     /// Register a live-preview callback fired whenever the highlighted item changes.
@@ -1203,7 +1253,8 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
             _ => return EventResult::Ignored(None),
         };
 
-        let close_fn = |picker: &mut Self| {
+        let close_fn = |picker: &mut Self, editor: &mut Editor| {
+            picker.publish_quickfix(editor);
             // if the picker is very large don't store it as last_picker to avoid
             // excessive memory consumption
             let callback: compositor::Callback =
@@ -1251,7 +1302,7 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
                 if let Some(on_abort) = self.on_abort.as_ref() {
                     on_abort(ctx);
                 }
-                return close_fn(self);
+                return close_fn(self, ctx.editor);
             }
             alt!(Enter) => {
                 if let Some(option) = self.selection() {
@@ -1290,20 +1341,20 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
                             ctx.editor.set_error(err.to_string());
                         }
                     }
-                    return close_fn(self);
+                    return close_fn(self, ctx.editor);
                 }
             }
             ctrl!('s') => {
                 if let Some(option) = self.selection() {
                     (self.callback_fn)(ctx, option, Action::HorizontalSplit);
                 }
-                return close_fn(self);
+                return close_fn(self, ctx.editor);
             }
             ctrl!('v') => {
                 if let Some(option) = self.selection() {
                     (self.callback_fn)(ctx, option, Action::VerticalSplit);
                 }
-                return close_fn(self);
+                return close_fn(self, ctx.editor);
             }
             ctrl!('t') => {
                 self.toggle_preview();
