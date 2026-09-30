@@ -67,6 +67,18 @@ fn scrolljump() -> usize {
     SCROLLJUMP.load(Ordering::Relaxed)
 }
 
+/// JetBrains "Toggle Center View": each window draws its text column — the
+/// buffer's `text-width` — centred, with the spare width left of it.
+static CENTER_VIEW: AtomicBool = AtomicBool::new(false);
+
+pub fn set_center_view(on: bool) {
+    CENTER_VIEW.store(on, Ordering::Relaxed);
+}
+
+pub fn center_view() -> bool {
+    CENTER_VIEW.load(Ordering::Relaxed)
+}
+
 /// vim `winbar`: a non-empty format string gives every window a bar on its top
 /// row, which is taken out of the window's text area (`:set winbar=%f`).
 pub fn set_winbar(on: bool) {
@@ -553,7 +565,7 @@ impl View {
     pub fn inner_area(&self, doc: &Document) -> Rect {
         self.area
             .clip_top(winbar_rows() + window_tool_bar_rows())
-            .clip_left(self.gutter_offset(doc) + scroll_bar_left_cols())
+            .clip_left(self.gutter_offset(doc) + scroll_bar_left_cols() + self.center_pad(doc))
             .clip_right(scroll_bar_right_cols())
             .clip_bottom(window_status_line_rows() + horizontal_scroll_bar_rows())
     }
@@ -568,9 +580,23 @@ impl View {
 
     pub fn inner_width(&self, doc: &Document) -> u16 {
         self.area
-            .clip_left(self.gutter_offset(doc) + scroll_bar_left_cols())
+            .clip_left(self.gutter_offset(doc) + scroll_bar_left_cols() + self.center_pad(doc))
             .clip_right(scroll_bar_right_cols())
             .width
+    }
+
+    /// Columns between the gutter and the text under [`center_view`]: half of
+    /// what the window has beyond the buffer's `text-width`.
+    fn center_pad(&self, doc: &Document) -> u16 {
+        if !center_view() {
+            return 0;
+        }
+        let text = self
+            .area
+            .width
+            .saturating_sub(self.gutter_offset(doc) + scroll_bar_left_cols() + scroll_bar_right_cols());
+        let wanted = u16::try_from(doc.text_width()).unwrap_or(u16::MAX);
+        text.saturating_sub(wanted) / 2
     }
 
     /// The row the vim `winbar` renders on (the window's top row); empty when the

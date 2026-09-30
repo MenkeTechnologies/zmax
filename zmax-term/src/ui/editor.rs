@@ -1660,7 +1660,7 @@ impl EditorView {
         // JetBrains "Show Sticky Lines" (`EditorGutterToggleGlobalStickyLines`):
         // the headers can be turned off, and the IDE's "Configure Sticky Lines…"
         // sets how many it will pin at once.
-        if !crate::commands::sticky_lines_enabled() {
+        if !crate::commands::sticky_lines_enabled(doc.language_name()) {
             return;
         }
         if inner.height < 6 || inner.width < 8 {
@@ -4334,6 +4334,26 @@ impl EditorView {
         Some(area)
     }
 
+    /// Hand `key` to the completion menu as if it had been typed, closing the
+    /// menu when the key accepts or aborts. `false` when no menu is open — the
+    /// bindable completion commands (JetBrains Lookup actions) run through here.
+    pub fn completion_key(&mut self, cx: &mut crate::compositor::Context, key: KeyEvent) -> bool {
+        let Some(completion) = &mut self.completion else {
+            return false;
+        };
+        if let EventResult::Consumed(Some(_close)) = completion.handle_event(&Event::Key(key), cx) {
+            if let Some(cb) = self.clear_completion(cx.editor) {
+                self.on_next_key = Some((cb, OnKeyCallbackKind::Fallback));
+            }
+        }
+        true
+    }
+
+    /// The open completion menu, if any.
+    pub fn completion_mut(&mut self) -> Option<&mut Completion> {
+        self.completion.as_mut()
+    }
+
     pub fn clear_completion(&mut self, editor: &mut Editor) -> Option<OnKeyCallback> {
         self.completion = None;
         let mut on_next_key: Option<OnKeyCallback> = None;
@@ -6240,9 +6260,12 @@ impl Component for EditorView {
                 } else {
                     match mode {
                         Mode::Insert => {
-                            // let completion swallow the event if necessary
+                            // let completion swallow the event if necessary, unless
+                            // the key runs a command meant for the menu itself
                             let mut consumed = false;
-                            if let Some(completion) = &mut self.completion {
+                            let menu_command =
+                                self.keymaps.runs_completion_command(Mode::Insert, key);
+                            if let Some(completion) = self.completion.as_mut().filter(|_| !menu_command) {
                                 let res = {
                                     // use a fake context here
                                     let mut cx = Context {

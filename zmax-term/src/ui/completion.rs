@@ -211,6 +211,9 @@ pub struct Completion {
     filter: String,
     // TODO: move to zmax-view/central handler struct in the future
     resolve_handler: ResolveHandler,
+    /// Set by [`Self::replace_on_accept`]: the next acceptance replaces the
+    /// word right of the cursor whatever `completion-replace` says.
+    replace_on_accept: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Completion {
@@ -219,11 +222,15 @@ impl Completion {
     pub fn new(editor: &Editor, items: Vec<CompletionItem>, trigger_offset: usize) -> Self {
         let preview_completion_insert = editor.config().preview_completion_insert;
         let replace_mode = editor.config().completion_replace;
+        let replace_on_accept = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let replace_flag = replace_on_accept.clone();
 
         let dir_style = editor.theme.get("ui.text.directory");
 
         // Then create the menu
         let menu = Menu::new(items, dir_style, move |editor: &mut Editor, item, event| {
+            let replace_mode =
+                replace_mode || replace_flag.load(std::sync::atomic::Ordering::Relaxed);
             let (view, doc) = current!(editor);
 
             macro_rules! language_server {
@@ -399,6 +406,7 @@ impl Completion {
             // and avoid allocation during matching
             filter: String::from(fragment),
             resolve_handler: ResolveHandler::new(),
+            replace_on_accept,
         };
 
         // need to recompute immediately in case start_offset != trigger_offset
@@ -533,6 +541,13 @@ impl Completion {
 
     pub fn is_empty(&self) -> bool {
         self.popup.contents().is_empty()
+    }
+
+    /// Make the next acceptance replace the identifier right of the cursor
+    /// (JetBrains Tab in the lookup), independent of `completion-replace`.
+    pub fn replace_on_accept(&self) {
+        self.replace_on_accept
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn replace_item(

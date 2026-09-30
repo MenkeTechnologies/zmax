@@ -692,6 +692,62 @@ pub fn extract_parameter(cx: &mut Context) {
     );
 }
 
+/// JetBrains "Extract Delegate" (`ExtractClass`): the server's extraction of
+/// members into a new class.
+pub fn extract_class(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["extract class", "extract delegate", "to class", "into class"]),
+        "No extract-class refactoring available here",
+    );
+}
+
+/// JetBrains "Extract Interface" (`ExtractInterface`): the server's
+/// extraction of an interface, or a trait, from the type.
+pub fn extract_interface(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["interface", "trait"]),
+        "No extract-interface refactoring available here",
+    );
+}
+
+/// JetBrains "Extract Superclass" (`ExtractSuperclass`): the server's
+/// extraction of a base class from the type.
+pub fn extract_superclass(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["superclass", "base class"]),
+        "No extract-superclass refactoring available here",
+    );
+}
+
+/// JetBrains "Extract Module" (`ExtractModule`): the server's extraction of
+/// the selected items into a module of their own.
+pub fn extract_module(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["module"]),
+        "No extract-module refactoring available here",
+    );
+}
+
+/// JetBrains "Introduce Parameter Object": the server's refactoring that turns
+/// a parameter list into one object or struct — TypeScript's "Convert
+/// parameters to destructured object", for one.
+pub fn introduce_parameter_object(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_REWRITE, CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["parameter object", "parameters to destructured object", "parameters struct", "parameters to object"]),
+        "No introduce-parameter-object refactoring available here",
+    );
+}
+
 /// Request only `refactor.inline` actions (Inline Variable/Method) — IntelliJ's
 /// Inline refactoring.
 pub fn inline_refactor(cx: &mut Context) {

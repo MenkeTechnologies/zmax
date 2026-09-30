@@ -85465,11 +85465,11 @@
  },
  {
   "spec_id": "jetbrains-actions.EditorChooseLookupItem",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:completion"
+   "static:completion_accept"
   ],
-  "note": "EditorChooseLookupItem (Choose Lookup Item) = zmax `completion` popup: Enter accepts the selected item (zmax-term/src/ui/menu.rs:311); it is a key of the completion menu, not a standalone command."
+  "note": "EditorChooseLookupItem (Choose Lookup Item) = zmax `completion_accept`: accepts the selected completion item."
  },
  {
   "spec_id": "jetbrains-actions.EditorCreateRectangularSelection",
@@ -85561,35 +85561,35 @@
  },
  {
   "spec_id": "jetbrains-actions.ExtractClass",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_class"
   ],
-  "note": "ExtractClass (Extract Delegate) = zmax `extract_refactor`: lists the server's refactor.extract code actions (lsp.rs:631), which includes a delegate/class extraction only if the language server offers one; no dedicated command pinned to it (extract_function-style via code_action_filtered, lsp.rs:810)."
+  "note": "ExtractClass (Extract Delegate) = zmax `extract_class`: applies the server's extract-class refactoring, pinned by title as `extract_function` is."
  },
  {
   "spec_id": "jetbrains-actions.ExtractInterface",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_interface"
   ],
-  "note": "ExtractInterface (Extract Interface) = zmax `extract_refactor`: shows the server's refactor.extract actions (lsp.rs:631), which include \"Extract interface\" only where the server (e.g. jdtls, TS) provides it; not pinned like extract_function."
+  "note": "ExtractInterface = zmax `extract_interface`: applies the server's extract-interface (or trait) refactoring."
  },
  {
   "spec_id": "jetbrains-actions.ExtractModule",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_module"
   ],
-  "note": "ExtractModule (Extract Module) = zmax `extract_refactor`: shows the server's refactor.extract actions (lsp.rs:631); rust-analyzer's \"Extract module\" appears there, but there is no dedicated command."
+  "note": "ExtractModule = zmax `extract_module`: applies the server's extract-module refactoring (rust-analyzer \"Extract module\")."
  },
  {
   "spec_id": "jetbrains-actions.ExtractSuperclass",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_superclass"
   ],
-  "note": "ExtractSuperclass (Extract Superclass) = zmax `extract_refactor`: shows the server's refactor.extract actions (lsp.rs:631), which include a superclass extraction only if the server offers it."
+  "note": "ExtractSuperclass = zmax `extract_superclass`: applies the server's extract-superclass refactoring."
  },
  {
   "spec_id": "jetbrains-actions.FileChooser.Delete",
@@ -87200,5 +87200,109 @@
    "static:type_hierarchy"
   ],
   "note": "TypeHierarchy.Class (Class Hierarchy) = zmax `type_hierarchy`: the type with its supertypes above and subtypes below, in one indented list."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollTop",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_to_top"
+  ],
+  "note": "EditorScrollTop (Scroll to Top) = zmax `scroll_to_top`: scrolls to the start of the file; the caret moves only as far as keeping it on screen takes."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorScrollBottom",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_to_bottom"
+  ],
+  "note": "EditorScrollBottom (Scroll to Bottom) = zmax `scroll_to_bottom`: scrolls until the last line is mid-window; the caret moves only as far as keeping it on screen takes."
+ },
+ {
+  "spec_id": "jetbrains-actions.CollapseBlock",
+  "status": "ported",
+  "evidence": [
+   "static:fold_code_block"
+  ],
+  "note": "CollapseBlock (Fold Code Block) = zmax `fold_code_block`: folds the innermost multi-line syntax block around the caret, creating the fold when the buffer has none."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLookupDown",
+  "status": "ported",
+  "evidence": [
+   "static:completion_select_next"
+  ],
+  "note": "EditorLookupDown = zmax `completion_select_next`: moves the open completion list's selection down; bindable, and a key bound to it reaches the list without accepting."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLookupSelectionDown",
+  "status": "ported",
+  "evidence": [
+   "static:completion_select_next"
+  ],
+  "note": "EditorLookupSelectionDown = zmax `completion_select_next`."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLookupUp",
+  "status": "ported",
+  "evidence": [
+   "static:completion_select_prev"
+  ],
+  "note": "EditorLookupUp = zmax `completion_select_prev`: moves the open completion list's selection up."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorLookupSelectionUp",
+  "status": "ported",
+  "evidence": [
+   "static:completion_select_prev"
+  ],
+  "note": "EditorLookupSelectionUp = zmax `completion_select_prev`."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorChooseLookupItemReplace",
+  "status": "ported",
+  "evidence": [
+   "static:completion_accept_replace"
+  ],
+  "note": "EditorChooseLookupItemReplace = zmax `completion_accept_replace`: accepts the item over the identifier right of the cursor, whatever `completion-replace` is set to."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorChooseLookupItemDot",
+  "status": "ported",
+  "evidence": [
+   "static:completion_accept_dot"
+  ],
+  "note": "EditorChooseLookupItemDot = zmax `completion_accept_dot`: accepts the item and types a dot at each cursor."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorChooseLookupItemCompleteStatement",
+  "status": "ported",
+  "evidence": [
+   "static:completion_accept_complete_statement"
+  ],
+  "note": "EditorChooseLookupItemCompleteStatement = zmax `completion_accept_complete_statement`: accepts the item, then runs `complete_current_statement`."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCenterView",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_center_view"
+  ],
+  "note": "EditorCenterView (Toggle Center View) = zmax `toggle_center_view`: every window draws its `text-width` column centred, the spare width between gutter and text."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorStickyLinesDisableForLang",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_sticky_lines_for_language"
+  ],
+  "note": "EditorStickyLinesDisableForLang = zmax `toggle_sticky_lines_for_language`: stops (or restarts) pinning scope headers in buffers of the current buffer's language."
+ },
+ {
+  "spec_id": "jetbrains-actions.IntroduceParameterObject",
+  "status": "ported",
+  "evidence": [
+   "static:introduce_parameter_object"
+  ],
+  "note": "IntroduceParameterObject = zmax `introduce_parameter_object`: applies the server's parameter-object refactoring (e.g. TypeScript's \"Convert parameters to destructured object\"), as the other pinned LSP refactors do."
  }
 ]

@@ -24833,7 +24833,7 @@ fn sticky_lines_limit_cmd(
             let n = super::sticky_lines_limit();
             cx.editor.set_status(format!(
                 "sticky lines: {}, at most {n}",
-                if super::sticky_lines_enabled() {
+                if super::sticky_lines_enabled(doc!(cx.editor).language_name()) {
                     "on"
                 } else {
                     "off"

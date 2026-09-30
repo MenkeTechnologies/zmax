@@ -27,6 +27,7 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "surround_with_emmet" => keymap!({ "Normal mode" "Z" => surround_with_emmet, }),
         "md_link_to_reference" => keymap!({ "Normal mode" "Z" => md_link_to_reference, }),
         "next_occurrence" => keymap!({ "Normal mode" "Z" => next_occurrence, }),
+        "fold_code_block" => keymap!({ "Normal mode" "Z" => fold_code_block, }),
         other => panic!("no binding for {other}"),
     };
     config.keys.insert(Mode::Normal, keys);
@@ -704,6 +705,35 @@ async fn next_occurrence_without_results_is_the_next_match() -> anyhow::Result<(
             (Some("/x<ret>"), Some(&|app| assert_eq!((2, 3), primary(app)))),
             (Some("Z"), Some(&|app| assert_eq!((6, 7), primary(app)))),
         ],
+        false,
+    )
+    .await
+}
+
+/// Fold Code Block makes the fold when the buffer has none, over the block the
+/// caret is in, and closes it: the body lines are hidden, the header shown.
+#[tokio::test(flavor = "multi_thread")]
+async fn fold_code_block_folds_the_block_around_the_caret() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".rs").tempfile()?;
+    std::fs::write(file.path(), "fn a() {\n    let x = 1;\n    let y = 2;\n}\nfn b() {}\n")?;
+    let mut config = Config::default();
+    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => fold_code_block, }));
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(file.path(), None)
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("jjZ"),
+            Some(&|app| {
+                let folds = zmax_view::doc!(app.editor).folds();
+                assert_eq!(1, folds.len());
+                assert!(!folds.is_line_hidden(0), "the header stays");
+                assert!(folds.is_line_hidden(2), "the body is folded");
+                assert!(!folds.is_line_hidden(4), "the next item is not");
+            }),
+        )],
         false,
     )
     .await

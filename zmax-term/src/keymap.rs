@@ -518,6 +518,22 @@ impl Keymaps {
         )
     }
 
+    /// Whether `key`, after the pending keys, runs one of the `completion_*`
+    /// commands. Those act on the open completion menu, so the menu must not
+    /// take the key first and accept its selection as it does for other keys.
+    pub fn runs_completion_command(&self, mode: Mode, key: KeyEvent) -> bool {
+        let keymaps = &*self.map();
+        let Some(keymap) = keymaps.get(&mode) else {
+            return false;
+        };
+        let mut keys = self.pending().to_vec();
+        keys.push(key);
+        matches!(
+            keymap.search(&keys),
+            Some(KeyTrie::MappableCommand(command)) if command.name().starts_with("completion_")
+        )
+    }
+
     /// The single keys that continue a chord under `prefix` in `mode` — the keys
     /// of the trie node `prefix` opens that are themselves leaves. This is the
     /// transient map Emacs `repeat-mode` shows in the echo area.
@@ -1070,5 +1086,29 @@ is_sticky = false
         ));
 
         assert_eq!(toml::from_str(keys), Ok(expectation));
+    }
+
+    /// A key bound to a `completion_*` command reaches the command with the
+    /// menu still open; any other key is left for the menu, which accepts.
+    #[test]
+    fn completion_commands_are_recognised_through_the_pending_keys() {
+        let mut map = default();
+        merge_keys(
+            &mut map,
+            hashmap! {
+                Mode::Insert => keymap!({ "Insert mode"
+                    "C-j" => completion_select_next,
+                    "C-k" => kill_to_line_end,
+                    "C-x" => { "prefix" "n" => completion_select_next, },
+                }),
+            },
+        );
+        let mut keymaps = Keymaps::new(Box::new(Constant(map)));
+        let ctrl = |c| KeyEvent { code: KeyCode::Char(c), modifiers: KeyModifiers::CONTROL };
+        assert!(keymaps.runs_completion_command(Mode::Insert, ctrl('j')));
+        assert!(!keymaps.runs_completion_command(Mode::Insert, ctrl('k')));
+        assert!(!keymaps.runs_completion_command(Mode::Insert, key!('n')));
+        keymaps.get(Mode::Insert, ctrl('x'));
+        assert!(keymaps.runs_completion_command(Mode::Insert, key!('n')));
     }
 }

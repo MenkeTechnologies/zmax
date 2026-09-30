@@ -410,6 +410,7 @@ impl MappableCommand {
         buffer_sort_by_relative_path, "Sort the buffer line by relative path (AstroNvim SPC b s r)",
         buffer_sort_by_number, "Sort the buffer line by buffer number (AstroNvim SPC b s i)",
         buffer_sort_by_last_used, "Sort the buffer line by last use (AstroNvim SPC b s m)",
+        fold_code_block, "Fold the code block around the caret, making the fold if there is none (JetBrains Fold Code Block)",
         fold_doc_comments, "Fold the doc comments, leaving other comments alone (JetBrains Collapse Doc Comments)",
         unfold_doc_comments, "Open the doc-comment folds (JetBrains Expand Doc Comments)",
         fold_custom_regions, "Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions)",
@@ -693,6 +694,7 @@ impl MappableCommand {
         toggle_focus_mode, "Dim everything outside the declaration the cursor is in (JetBrains Highlight Only Current Declaration)",
         toggle_completion_docs, "Show or hide the documentation beside the completion list (JetBrains Show Automatically During Completion)",
         toggle_breadcrumbs, "Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)",
+        toggle_sticky_lines_for_language, "Turn the sticky lines off, or back on, for the buffer's language (JetBrains Disable Sticky Lines for Language)",
         toggle_sticky_lines, "Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
@@ -1100,6 +1102,11 @@ impl MappableCommand {
         extract_variable, "Introduce Variable via LSP (IntelliJ Introduce Variable)",
         extract_constant, "Extract Constant via LSP (IntelliJ Extract Constant)",
         extract_field, "Introduce Field via LSP (IntelliJ Introduce Field)",
+        extract_class, "Extract members into a new class, when the server offers it (JetBrains Extract Delegate)",
+        extract_interface, "Extract an interface or trait from the type, when the server offers it (JetBrains Extract Interface)",
+        extract_superclass, "Extract a base class from the type, when the server offers it (JetBrains Extract Superclass)",
+        extract_module, "Move the selected items into a module of their own, when the server offers it (JetBrains Extract Module)",
+        introduce_parameter_object, "Replace the parameter list with one object, when the server offers it (JetBrains Introduce Parameter Object)",
         extract_parameter, "Introduce Parameter via LSP (IntelliJ Introduce Parameter)",
         inline_refactor, "Inline refactoring (variable/method) via LSP (IntelliJ Inline)",
         rewrite_refactor, "Rewrite refactoring (change signature etc.) via LSP",
@@ -1810,6 +1817,15 @@ impl MappableCommand {
         align_view_middle, "Align view middle",
         align_view_top, "Align view top",
         align_view_center, "Align view center",
+        completion_select_next, "Select the next item of the open completion list (JetBrains Lookup Down)",
+        completion_select_prev, "Select the previous item of the open completion list (JetBrains Lookup Up)",
+        completion_accept, "Accept the selected item of the open completion list (JetBrains Choose Lookup Item)",
+        completion_accept_replace, "Accept the completion over the identifier right of the cursor (JetBrains Replace, Tab in the lookup)",
+        completion_accept_dot, "Accept the completion and type a dot (JetBrains Choose Lookup Item and Insert Dot)",
+        completion_accept_complete_statement, "Accept the completion, then complete the statement (JetBrains Choose Lookup Item and Complete Statement)",
+        toggle_center_view, "Draw the text column in the middle of the window (JetBrains Toggle Center View)",
+        scroll_to_top, "Scroll to the start of the file, leaving the caret (JetBrains Scroll to Top)",
+        scroll_to_bottom, "Scroll the end of the file to mid-window, leaving the caret (JetBrains Scroll to Bottom)",
         align_view_bottom, "Align view bottom",
         recenter_top_bottom, "Cycle the cursor line to the middle, then top, then bottom of the window (emacs recenter-top-bottom, nano cycle)",
         scroll_up, "Scroll view up",
@@ -19599,9 +19615,41 @@ static STICKY_LINES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBo
 static STICKY_LINES_LIMIT: std::sync::atomic::AtomicUsize =
     std::sync::atomic::AtomicUsize::new(5);
 
-/// Whether the editor view should pin scope headers at the top.
-pub(crate) fn sticky_lines_enabled() -> bool {
+/// The languages whose buffers never pin scope headers — JetBrains "Disable
+/// for <language>" on the sticky-lines panel.
+static STICKY_LINES_OFF_FOR: std::sync::Mutex<std::collections::BTreeSet<String>> =
+    std::sync::Mutex::new(std::collections::BTreeSet::new());
+
+/// Whether the editor view should pin scope headers at the top of a buffer of
+/// `language`.
+pub(crate) fn sticky_lines_enabled(language: Option<&str>) -> bool {
     STICKY_LINES.load(std::sync::atomic::Ordering::Relaxed)
+        && !language.is_some_and(|lang| {
+            STICKY_LINES_OFF_FOR
+                .lock()
+                .is_ok_and(|off| off.contains(lang))
+        })
+}
+
+/// JetBrains "Disable for <language>" (`EditorStickyLinesDisableForLang`):
+/// stop pinning scope headers in buffers of the current buffer's language, or
+/// start again when they are off for it.
+fn toggle_sticky_lines_for_language(cx: &mut Context) {
+    let Some(language) = doc!(cx.editor).language_name().map(str::to_owned) else {
+        cx.editor.set_error("the buffer has no language");
+        return;
+    };
+    let Ok(mut off) = STICKY_LINES_OFF_FOR.lock() else {
+        return;
+    };
+    let now_off = off.insert(language.clone()) || {
+        off.remove(&language);
+        false
+    };
+    cx.editor.set_status(format!(
+        "sticky lines {} for {language}",
+        if now_off { "off" } else { "on" }
+    ));
 }
 
 /// The most headers to pin at once; the view still caps this at a third of its
@@ -47916,6 +47964,93 @@ fn copy_between_registers(cx: &mut Context) {
     });
 }
 
+/// Type `key` into the open completion menu from a command, as the JetBrains
+/// Lookup actions do (see [`crate::ui::EditorView::completion_key`]). With
+/// `replace`, an acceptance replaces the identifier right of the cursor; `then`
+/// runs after it, when a menu was open.
+fn completion_menu_key(cx: &mut Context, key: KeyEvent, replace: bool, then: Option<fn(&mut Context)>) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let Some(view) = compositor.find::<crate::ui::EditorView>() else {
+            return;
+        };
+        if let Some(completion) = view.completion_mut().filter(|_| replace) {
+            completion.replace_on_accept();
+        }
+        if !view.completion_key(cx, key) {
+            cx.editor.set_status("no completion list open");
+            return;
+        }
+        if let Some(then) = then {
+            menu_run(compositor, cx, &then);
+        }
+    }));
+}
+
+/// JetBrains "Down" in the lookup (`EditorLookupDown`,
+/// `EditorLookupSelectionDown`): select the next completion item.
+fn completion_select_next(cx: &mut Context) {
+    completion_menu_key(cx, crate::key!(Down), false, None);
+}
+
+/// JetBrains "Up" in the lookup (`EditorLookupUp`, `EditorLookupSelectionUp`):
+/// select the previous completion item.
+fn completion_select_prev(cx: &mut Context) {
+    completion_menu_key(cx, crate::key!(Up), false, None);
+}
+
+/// JetBrains "Choose Lookup Item" (`EditorChooseLookupItem`, Enter): accept
+/// the selected completion item.
+fn completion_accept(cx: &mut Context) {
+    completion_menu_key(cx, crate::key!(Enter), false, None);
+}
+
+/// JetBrains "Replace" in the lookup (`EditorChooseLookupItemReplace`, Tab):
+/// accept the item over the identifier right of the cursor.
+fn completion_accept_replace(cx: &mut Context) {
+    completion_menu_key(cx, crate::key!(Enter), true, None);
+}
+
+/// JetBrains `EditorChooseLookupItemDot`: accept the item and type a `.`.
+fn completion_accept_dot(cx: &mut Context) {
+    completion_menu_key(cx, crate::key!(Enter), false, Some(|cx| insert_at_cursors(cx.editor, ".")));
+}
+
+/// JetBrains "Complete Statement" in the lookup
+/// (`EditorChooseLookupItemCompleteStatement`, Cmd-Shift-Enter): accept the
+/// item, then complete the statement around it.
+fn completion_accept_complete_statement(cx: &mut Context) {
+    completion_menu_key(cx, crate::key!(Enter), false, Some(complete_current_statement));
+}
+
+/// JetBrains "Toggle Center View" (`EditorCenterView`): draw each window's
+/// text column, `text-width` wide, in the middle of the window.
+fn toggle_center_view(cx: &mut Context) {
+    let on = !zmax_view::view::center_view();
+    zmax_view::view::set_center_view(on);
+    cx.editor.set_status(if on { "center view on" } else { "center view off" });
+}
+
+/// JetBrains "Scroll to Top" (`EditorScrollTop`): show the start of the file
+/// without moving the caret, beyond what keeping it on screen takes.
+fn scroll_to_top(cx: &mut Context) {
+    let chars = doc!(cx.editor).text().len_chars();
+    scroll(cx, chars, Direction::Backward, false);
+}
+
+/// JetBrains "Scroll to Bottom" (`EditorScrollBottom`): scroll until the last
+/// line sits mid-window, the caret staying put unless it would leave the screen.
+fn scroll_to_bottom(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let top = text.char_to_line(doc.view_offset(view.id).anchor.min(text.len_chars()));
+    let target = text.len_lines().saturating_sub(1 + view.inner_height() / 2);
+    match target.cmp(&top) {
+        std::cmp::Ordering::Greater => scroll(cx, target - top, Direction::Forward, false),
+        std::cmp::Ordering::Less => scroll(cx, top - target, Direction::Backward, false),
+        std::cmp::Ordering::Equal => {}
+    }
+}
+
 fn align_view_top(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     align_view(doc, view, Align::Top);
@@ -60940,6 +61075,55 @@ fn fold_close(cx: &mut Context) {
         doc.folds_mut().clamp(last);
     }
     doc.folds_mut().close(line);
+    fold_snap_cursor(view, doc);
+}
+
+/// The lines of the innermost code block around `pos` spanning more than one
+/// line: a syntax node that opens with a bracket or is named as a block or a
+/// body, else any multi-line node.
+fn code_block_lines(doc: &zmax_view::Document, pos: usize) -> Option<(usize, usize)> {
+    let syntax = doc.syntax()?;
+    let text = doc.text().slice(..);
+    let byte = text.char_to_byte(pos) as u32;
+    let lines = |node: &zmax_core::tree_sitter::Node| {
+        let range = node.byte_range();
+        let start = text.byte_to_line(range.start as usize);
+        let end = text.byte_to_line((range.end as usize).saturating_sub(1).max(range.start as usize));
+        (start, end)
+    };
+    let mut node = syntax.descendant_for_byte_range(byte, byte);
+    let mut any_multiline = None;
+    while let Some(n) = node {
+        let (start, end) = lines(&n);
+        if end > start {
+            let kind = n.kind();
+            let opens = text
+                .get_byte_slice(n.byte_range().start as usize..)
+                .and_then(|rest| rest.chars().next())
+                .is_some_and(|c| matches!(c, '{' | '(' | '['));
+            if opens || kind.contains("block") || kind.contains("body") {
+                return Some((start, end));
+            }
+            any_multiline.get_or_insert((start, end));
+        }
+        node = n.parent();
+    }
+    any_multiline
+}
+
+/// JetBrains "Fold Code Block" (`CollapseBlock`, Cmd-Shift-.): fold the
+/// innermost code block around the caret, making the fold when there is none.
+fn fold_code_block(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let Some((start, end)) = code_block_lines(doc, pos) else {
+        cx.editor.set_status("no code block around the caret");
+        return;
+    };
+    let last = doc.text().len_lines().saturating_sub(1);
+    doc.folds_mut().create(start, end);
+    doc.folds_mut().clamp(last);
+    doc.folds_mut().close(start);
     fold_snap_cursor(view, doc);
 }
 

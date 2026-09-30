@@ -17,6 +17,7 @@
 | `buffer_sort_by_relative_path` | Sort the buffer line by relative path (AstroNvim SPC b s r) | **spacemacs, hybrid** — normal: `` <space>bor ``, select: `` <space>bor `` |
 | `buffer_sort_by_number` | Sort the buffer line by buffer number (AstroNvim SPC b s i) | **spacemacs, hybrid** — normal: `` <space>boi ``, select: `` <space>boi `` |
 | `buffer_sort_by_last_used` | Sort the buffer line by last use (AstroNvim SPC b s m) | **spacemacs, hybrid** — normal: `` <space>bom ``, select: `` <space>bom `` |
+| `fold_code_block` | Fold the code block around the caret, making the fold if there is none (JetBrains Fold Code Block) |  |
 | `fold_doc_comments` | Fold the doc comments, leaving other comments alone (JetBrains Collapse Doc Comments) | **spacemacs, hybrid** — normal: `` <space>cD ``, select: `` <space>cD `` |
 | `unfold_doc_comments` | Open the doc-comment folds (JetBrains Expand Doc Comments) | **spacemacs, hybrid** — normal: `` <space>cE ``, select: `` <space>cE `` |
 | `fold_custom_regions` | Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions) | **spacemacs, hybrid** — normal: `` <space>cR ``, select: `` <space>cR `` |
@@ -300,6 +301,7 @@
 | `toggle_focus_mode` | Dim everything outside the declaration the cursor is in (JetBrains Highlight Only Current Declaration) |  |
 | `toggle_completion_docs` | Show or hide the documentation beside the completion list (JetBrains Show Automatically During Completion) |  |
 | `toggle_breadcrumbs` | Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs) |  |
+| `toggle_sticky_lines_for_language` | Turn the sticky lines off, or back on, for the buffer's language (JetBrains Disable Sticky Lines for Language) |  |
 | `toggle_sticky_lines` | Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines) |  |
 | `toggle_indent_guides` | Toggle indentation guides (IntelliJ View > Show Indent Guides) |  |
 | `toggle_inlay_hints` | Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints) |  |
@@ -707,6 +709,11 @@
 | `extract_variable` | Introduce Variable via LSP (IntelliJ Introduce Variable) |  |
 | `extract_constant` | Extract Constant via LSP (IntelliJ Extract Constant) |  |
 | `extract_field` | Introduce Field via LSP (IntelliJ Introduce Field) |  |
+| `extract_class` | Extract members into a new class, when the server offers it (JetBrains Extract Delegate) |  |
+| `extract_interface` | Extract an interface or trait from the type, when the server offers it (JetBrains Extract Interface) |  |
+| `extract_superclass` | Extract a base class from the type, when the server offers it (JetBrains Extract Superclass) |  |
+| `extract_module` | Move the selected items into a module of their own, when the server offers it (JetBrains Extract Module) |  |
+| `introduce_parameter_object` | Replace the parameter list with one object, when the server offers it (JetBrains Introduce Parameter Object) |  |
 | `extract_parameter` | Introduce Parameter via LSP (IntelliJ Introduce Parameter) |  |
 | `inline_refactor` | Inline refactoring (variable/method) via LSP (IntelliJ Inline) |  |
 | `rewrite_refactor` | Rewrite refactoring (change signature etc.) via LSP |  |
@@ -1417,6 +1424,15 @@
 | `align_view_middle` | Align view middle | **helix** — normal: `` Zm ``, `` zm ``, select: `` Zm ``, `` zm ``<br>**kakoune** — normal: `` Vm ``, `` vm `` |
 | `align_view_top` | Align view top | **spacemacs, hybrid, vim** — normal: `` zt ``, select: `` zt ``<br>**helix** — normal: `` Zt ``, `` zt ``, select: `` Zt ``, `` zt ``<br>**kakoune** — normal: `` Vt ``, `` vt `` |
 | `align_view_center` | Align view center | **spacemacs** — normal: `` zz ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``, select: `` zz ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``<br>**hybrid** — normal: `` zz ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``, select: `` zz ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``, insert: `` <C-l> ``<br>**vim** — normal: `` zz ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, select: `` zz ``<br>**helix** — normal: `` Zc ``, `` Zz ``, `` zc ``, `` zz ``, select: `` Zc ``, `` Zz ``, `` zc ``, `` zz ``<br>**kakoune** — normal: `` Vc ``, `` Vv ``, `` vc ``, `` vv ``<br>**emacs, cua, micro, nano** — insert: `` <C-l> `` |
+| `completion_select_next` | Select the next item of the open completion list (JetBrains Lookup Down) |  |
+| `completion_select_prev` | Select the previous item of the open completion list (JetBrains Lookup Up) |  |
+| `completion_accept` | Accept the selected item of the open completion list (JetBrains Choose Lookup Item) |  |
+| `completion_accept_replace` | Accept the completion over the identifier right of the cursor (JetBrains Replace, Tab in the lookup) |  |
+| `completion_accept_dot` | Accept the completion and type a dot (JetBrains Choose Lookup Item and Insert Dot) |  |
+| `completion_accept_complete_statement` | Accept the completion, then complete the statement (JetBrains Choose Lookup Item and Complete Statement) |  |
+| `toggle_center_view` | Draw the text column in the middle of the window (JetBrains Toggle Center View) |  |
+| `scroll_to_top` | Scroll to the start of the file, leaving the caret (JetBrains Scroll to Top) |  |
+| `scroll_to_bottom` | Scroll the end of the file to mid-window, leaving the caret (JetBrains Scroll to Bottom) |  |
 | `align_view_bottom` | Align view bottom | **spacemacs, hybrid, vim** — normal: `` zb ``, select: `` zb ``<br>**helix** — normal: `` Zb ``, `` zb ``, select: `` Zb ``, `` zb ``<br>**kakoune** — normal: `` Vb ``, `` vb `` |
 | `recenter_top_bottom` | Cycle the cursor line to the middle, then top, then bottom of the window (emacs recenter-top-bottom, nano cycle) | **spacemacs, hybrid** — normal: `` <C-l> `` |
 | `scroll_up` | Scroll view up | **spacemacs, hybrid** — normal: `` <C-y> ``<br>**vim** — normal: `` <C-y> ``, insert: `` <C-x><C-y> ``<br>**helix** — normal: `` Zk ``, `` zk ``, `` Z<up> ``, `` z<up> ``, select: `` Zk ``, `` zk ``, `` Z<up> ``, `` z<up> ``<br>**kakoune** — normal: `` Vk ``, `` vk ``, `` V<up> ``, `` v<up> `` |
