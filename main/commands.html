@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-f3d876a7.js";
+            window.path_to_searchindex_js = "searchindex-941f1f49.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2161,6 +2161,7 @@
 <tr><td><code>buffer_sort_by_relative_path</code></td><td>Sort the buffer line by relative path (AstroNvim SPC b s r)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bor</code>, select: <code>&lt;space&gt;bor</code></td></tr>
 <tr><td><code>buffer_sort_by_number</code></td><td>Sort the buffer line by buffer number (AstroNvim SPC b s i)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;boi</code>, select: <code>&lt;space&gt;boi</code></td></tr>
 <tr><td><code>buffer_sort_by_last_used</code></td><td>Sort the buffer line by last use (AstroNvim SPC b s m)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bom</code>, select: <code>&lt;space&gt;bom</code></td></tr>
+<tr><td><code>fold_code_block</code></td><td>Fold the code block around the caret, making the fold if there is none (JetBrains Fold Code Block)</td><td></td></tr>
 <tr><td><code>fold_doc_comments</code></td><td>Fold the doc comments, leaving other comments alone (JetBrains Collapse Doc Comments)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cD</code>, select: <code>&lt;space&gt;cD</code></td></tr>
 <tr><td><code>unfold_doc_comments</code></td><td>Open the doc-comment folds (JetBrains Expand Doc Comments)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cE</code>, select: <code>&lt;space&gt;cE</code></td></tr>
 <tr><td><code>fold_custom_regions</code></td><td>Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions)</editor-fold></td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cR</code>, select: <code>&lt;space&gt;cR</code></td></tr>
@@ -2444,6 +2445,7 @@
 <tr><td><code>toggle_focus_mode</code></td><td>Dim everything outside the declaration the cursor is in (JetBrains Highlight Only Current Declaration)</td><td></td></tr>
 <tr><td><code>toggle_completion_docs</code></td><td>Show or hide the documentation beside the completion list (JetBrains Show Automatically During Completion)</td><td></td></tr>
 <tr><td><code>toggle_breadcrumbs</code></td><td>Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)</td><td></td></tr>
+<tr><td><code>toggle_sticky_lines_for_language</code></td><td>Turn the sticky lines off, or back on, for the buffer’s language (JetBrains Disable Sticky Lines for Language)</td><td></td></tr>
 <tr><td><code>toggle_sticky_lines</code></td><td>Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)</td><td></td></tr>
 <tr><td><code>toggle_indent_guides</code></td><td>Toggle indentation guides (IntelliJ View &gt; Show Indent Guides)</td><td></td></tr>
 <tr><td><code>toggle_inlay_hints</code></td><td>Toggle display of LSP inlay hints (IntelliJ View &gt; Inlay Hints)</td><td></td></tr>
@@ -2851,6 +2853,11 @@
 <tr><td><code>extract_variable</code></td><td>Introduce Variable via LSP (IntelliJ Introduce Variable)</td><td></td></tr>
 <tr><td><code>extract_constant</code></td><td>Extract Constant via LSP (IntelliJ Extract Constant)</td><td></td></tr>
 <tr><td><code>extract_field</code></td><td>Introduce Field via LSP (IntelliJ Introduce Field)</td><td></td></tr>
+<tr><td><code>extract_class</code></td><td>Extract members into a new class, when the server offers it (JetBrains Extract Delegate)</td><td></td></tr>
+<tr><td><code>extract_interface</code></td><td>Extract an interface or trait from the type, when the server offers it (JetBrains Extract Interface)</td><td></td></tr>
+<tr><td><code>extract_superclass</code></td><td>Extract a base class from the type, when the server offers it (JetBrains Extract Superclass)</td><td></td></tr>
+<tr><td><code>extract_module</code></td><td>Move the selected items into a module of their own, when the server offers it (JetBrains Extract Module)</td><td></td></tr>
+<tr><td><code>introduce_parameter_object</code></td><td>Replace the parameter list with one object, when the server offers it (JetBrains Introduce Parameter Object)</td><td></td></tr>
 <tr><td><code>extract_parameter</code></td><td>Introduce Parameter via LSP (IntelliJ Introduce Parameter)</td><td></td></tr>
 <tr><td><code>inline_refactor</code></td><td>Inline refactoring (variable/method) via LSP (IntelliJ Inline)</td><td></td></tr>
 <tr><td><code>rewrite_refactor</code></td><td>Rewrite refactoring (change signature etc.) via LSP</td><td></td></tr>
@@ -3561,6 +3568,15 @@
 <tr><td><code>align_view_middle</code></td><td>Align view middle</td><td><strong>helix</strong> — normal: <code>Zm</code>, <code>zm</code>, select: <code>Zm</code>, <code>zm</code><br><strong>kakoune</strong> — normal: <code>Vm</code>, <code>vm</code></td></tr>
 <tr><td><code>align_view_top</code></td><td>Align view top</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zt</code>, select: <code>zt</code><br><strong>helix</strong> — normal: <code>Zt</code>, <code>zt</code>, select: <code>Zt</code>, <code>zt</code><br><strong>kakoune</strong> — normal: <code>Vt</code>, <code>vt</code></td></tr>
 <tr><td><code>align_view_center</code></td><td>Align view center</td><td><strong>spacemacs</strong> — normal: <code>zz</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;C-w&gt;[z</code>, <code>&lt;C-w&gt;{z</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, <code>&lt;space&gt;w[z</code>, <code>&lt;space&gt;wc.</code>, <code>&lt;space&gt;w{z</code>, select: <code>zz</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, <code>&lt;space&gt;w[z</code>, <code>&lt;space&gt;wc.</code>, <code>&lt;space&gt;w{z</code><br><strong>hybrid</strong> — normal: <code>zz</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;C-w&gt;[z</code>, <code>&lt;C-w&gt;{z</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, <code>&lt;space&gt;w[z</code>, <code>&lt;space&gt;wc.</code>, <code>&lt;space&gt;w{z</code>, select: <code>zz</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, <code>&lt;space&gt;w[z</code>, <code>&lt;space&gt;wc.</code>, <code>&lt;space&gt;w{z</code>, insert: <code>&lt;C-l&gt;</code><br><strong>vim</strong> — normal: <code>zz</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;C-w&gt;[z</code>, <code>&lt;C-w&gt;{z</code>, select: <code>zz</code><br><strong>helix</strong> — normal: <code>Zc</code>, <code>Zz</code>, <code>zc</code>, <code>zz</code>, select: <code>Zc</code>, <code>Zz</code>, <code>zc</code>, <code>zz</code><br><strong>kakoune</strong> — normal: <code>Vc</code>, <code>Vv</code>, <code>vc</code>, <code>vv</code><br><strong>emacs, cua, micro, nano</strong> — insert: <code>&lt;C-l&gt;</code></td></tr>
+<tr><td><code>completion_select_next</code></td><td>Select the next item of the open completion list (JetBrains Lookup Down)</td><td></td></tr>
+<tr><td><code>completion_select_prev</code></td><td>Select the previous item of the open completion list (JetBrains Lookup Up)</td><td></td></tr>
+<tr><td><code>completion_accept</code></td><td>Accept the selected item of the open completion list (JetBrains Choose Lookup Item)</td><td></td></tr>
+<tr><td><code>completion_accept_replace</code></td><td>Accept the completion over the identifier right of the cursor (JetBrains Replace, Tab in the lookup)</td><td></td></tr>
+<tr><td><code>completion_accept_dot</code></td><td>Accept the completion and type a dot (JetBrains Choose Lookup Item and Insert Dot)</td><td></td></tr>
+<tr><td><code>completion_accept_complete_statement</code></td><td>Accept the completion, then complete the statement (JetBrains Choose Lookup Item and Complete Statement)</td><td></td></tr>
+<tr><td><code>toggle_center_view</code></td><td>Draw the text column in the middle of the window (JetBrains Toggle Center View)</td><td></td></tr>
+<tr><td><code>scroll_to_top</code></td><td>Scroll to the start of the file, leaving the caret (JetBrains Scroll to Top)</td><td></td></tr>
+<tr><td><code>scroll_to_bottom</code></td><td>Scroll the end of the file to mid-window, leaving the caret (JetBrains Scroll to Bottom)</td><td></td></tr>
 <tr><td><code>align_view_bottom</code></td><td>Align view bottom</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zb</code>, select: <code>zb</code><br><strong>helix</strong> — normal: <code>Zb</code>, <code>zb</code>, select: <code>Zb</code>, <code>zb</code><br><strong>kakoune</strong> — normal: <code>Vb</code>, <code>vb</code></td></tr>
 <tr><td><code>recenter_top_bottom</code></td><td>Cycle the cursor line to the middle, then top, then bottom of the window (emacs recenter-top-bottom, nano cycle)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-l&gt;</code></td></tr>
 <tr><td><code>scroll_up</code></td><td>Scroll view up</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-y&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-y&gt;</code><br><strong>helix</strong> — normal: <code>Zk</code>, <code>zk</code>, <code>Z&lt;up&gt;</code>, <code>z&lt;up&gt;</code>, select: <code>Zk</code>, <code>zk</code>, <code>Z&lt;up&gt;</code>, <code>z&lt;up&gt;</code><br><strong>kakoune</strong> — normal: <code>Vk</code>, <code>vk</code>, <code>V&lt;up&gt;</code>, <code>v&lt;up&gt;</code></td></tr>
