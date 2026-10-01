@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-79f7f3ec.js";
+            window.path_to_searchindex_js = "searchindex-8a1cac6e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4561,6 +4561,26 @@ without scrolling.</p>
 <tr><td><code>goto_file_readonly</code></td><td>Visit the file at point read-only (emacs ffap-read-only, C-x C-r)</td><td></td></tr>
 <tr><td><code>goto_file_new_tab</code></td><td>Visit the file at point in a new tab (emacs ffap-other-tab, C-x t C-f)</td><td></td></tr>
 <tr><td><code>goto_file_other_frame</code></td><td>Visit the file at point in a new frame (emacs ffap-other-frame, C-x 5 f)</td><td></td></tr>
+<tr><td><code>find_usages</code></td><td>The usages of the symbol in the grouped, filterable Usages view (JetBrains Find Usages, Alt F7)</td><td></td></tr>
+<tr><td><code>usages_group_by_type</code></td><td>Group usages by type: call, read, write, import, comment (JetBrains Group by Usage Type)</td><td></td></tr>
+<tr><td><code>usages_group_by_scope</code></td><td>Group usages into test and production code (JetBrains Group by Test/Production)</td><td></td></tr>
+<tr><td><code>usages_group_by_module</code></td><td>Group usages by module, the nearest package root (JetBrains Group by Module)</td><td></td></tr>
+<tr><td><code>usages_flatten_modules</code></td><td>Show nested modules flat in the Usages view (JetBrains Flatten Modules)</td><td></td></tr>
+<tr><td><code>usages_group_by_directory</code></td><td>Group usages by directory (JetBrains Group by Directory)</td><td></td></tr>
+<tr><td><code>usages_group_by_directory_tree</code></td><td>Group usages by directory tree (JetBrains Group by Directory Structure)</td><td></td></tr>
+<tr><td><code>usages_group_by_member</code></td><td>Group usages by the enclosing class or function (JetBrains Group by File Structure)</td><td></td></tr>
+<tr><td><code>usages_toggle_short_paths</code></td><td>Show file names only in the Usages view (JetBrains Show File Names Only)</td><td></td></tr>
+<tr><td><code>usages_toggle_comments</code></td><td>Show or hide usages in comments (JetBrains Show Comment Usages)</td><td></td></tr>
+<tr><td><code>usages_toggle_imports</code></td><td>Show or hide usages in imports (JetBrains Show Import Statements)</td><td></td></tr>
+<tr><td><code>usages_toggle_generated</code></td><td>Show or hide usages in generated code (JetBrains Show Usages in Generated Code)</td><td></td></tr>
+<tr><td><code>usages_toggle_read_access</code></td><td>Show only reads of the symbol, or all usages (JetBrains Show Read Access)</td><td></td></tr>
+<tr><td><code>usages_toggle_write_access</code></td><td>Show only writes to the symbol, or all usages (JetBrains Show Write Access)</td><td></td></tr>
+<tr><td><code>usages_rerun</code></td><td>Search the open Usages view’s symbol again (JetBrains Rerun)</td><td></td></tr>
+<tr><td><code>usages_recent</code></td><td>Pick a past Find Usages search and run it again (JetBrains Recent Find Usages)</td><td></td></tr>
+<tr><td><code>find_usages_with_settings</code></td><td>Choose where to look, then find the usages there (JetBrains Find Usages Settings)</td><td></td></tr>
+<tr><td><code>usages_exclude</code></td><td>Exclude or include the selected usage (JetBrains Exclude)</td><td></td></tr>
+<tr><td><code>usages_include</code></td><td>Include the selected usage again (JetBrains Include)</td><td></td></tr>
+<tr><td><code>usages_remove</code></td><td>Remove the selected usage from the Usages view (JetBrains Remove)</td><td></td></tr>
 <tr><td><code>goto_reference</code></td><td>Goto references</td><td><strong>spacemacs, vim</strong> — normal: <code>gr</code><br><strong>hybrid</strong> — normal: <code>gr</code>, insert: <code>&lt;A-?&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>gr</code>, select: <code>gr</code><br><strong>emacs, cua, micro, nano</strong> — normal: <code>&lt;A-?&gt;</code>, insert: <code>&lt;A-?&gt;</code></td></tr>
 <tr><td><code>call_hierarchy_incoming_calls</code></td><td>Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gh</code>, select: <code>&lt;space&gt;gh</code></td></tr>
 <tr><td><code>call_hierarchy_outgoing_calls</code></td><td>Call hierarchy: what the symbol calls</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gO</code>, select: <code>&lt;space&gt;gO</code></td></tr>
@@ -9945,11 +9965,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9821</strong> (82.3%)</li>
-<li>Partial: <strong>904</strong> (7.6%)</li>
-<li>Absent: <strong>1201</strong></li>
+<li>Ported: <strong>9840</strong> (82.5%)</li>
+<li>Partial: <strong>902</strong> (7.6%)</li>
+<li>Absent: <strong>1184</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2938 static commands, 3198 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2958 static commands, 3198 typable <code>:</code> commands, 4700 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10012,7 +10032,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">850</td><td style="text-align: right">329</td><td style="text-align: right">42.5%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">869</td><td style="text-align: right">327</td><td style="text-align: right">43.4%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10108,7 +10128,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">30</td><td style="text-align: right">6</td><td style="text-align: right">75.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">615</td><td style="text-align: right">277</td><td style="text-align: right">38.3%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">634</td><td style="text-align: right">275</td><td style="text-align: right">39.5%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">5</td><td style="text-align: right">4</td><td style="text-align: right">13.5%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">7</td><td style="text-align: right">3</td><td style="text-align: right">43.8%</td></tr>
