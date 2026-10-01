@@ -1553,6 +1553,99 @@ pub fn find_usages_in_file(cx: &mut Context) {
     goto_reference_impl(cx, true)
 }
 
+/// JetBrains "Find Usages" (`FindUsages`, Alt-F7): the references to the
+/// symbol at the cursor in the Usages view, grouped and filterable
+/// (`ui::usages`), where `goto_reference` is the IDE's Show Usages popup.
+pub fn find_usages(cx: &mut Context) {
+    find_usages_in(cx, ui::usages::UsageScope::Project)
+}
+
+/// [`find_usages`], keeping the usages in `scope` (JetBrains "Find Usages
+/// Settings…").
+pub fn find_usages_in(cx: &mut Context, scope: ui::usages::UsageScope) {
+    let config = cx.editor.config();
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let origin = doc.path().map(|path| {
+        let line = text.char_to_line(cursor);
+        (path.to_path_buf(), line, cursor - text.line_to_char(line))
+    });
+    let word = zmax_core::textobject::textobject_word(
+        text,
+        doc.selection(view.id).primary(),
+        zmax_core::textobject::TextObject::Inside,
+        1,
+        false,
+    );
+    let symbol = text.slice(word.from()..word.to()).to_string();
+
+    let mut futures: FuturesUnordered<_> = doc
+        .language_servers_with_feature(LanguageServerFeature::GotoReference)
+        .map(|language_server| {
+            let offset_encoding = language_server.offset_encoding();
+            let pos = doc.position(view.id, offset_encoding);
+            let future = language_server
+                .goto_reference(doc.identifier(), pos, config.lsp.goto_reference_include_declaration, None)
+                .unwrap();
+            async move { anyhow::Ok((future.await?, offset_encoding)) }
+        })
+        .collect();
+    if futures.is_empty() {
+        cx.editor.set_error("No configured language server supports find references");
+        return;
+    }
+
+    cx.jobs.callback(async move {
+        let mut locations = Vec::new();
+        while let Some(response) = futures.next().await {
+            match response {
+                Ok((lsp_locations, offset_encoding)) => locations.extend(
+                    lsp_locations
+                        .into_iter()
+                        .flatten()
+                        .flat_map(|location| lsp_location_to_location(location, offset_encoding)),
+                ),
+                Err(err) => log::error!("Error requesting references: {err}"),
+            }
+        }
+        let call = move |editor: &mut Editor, compositor: &mut Compositor| {
+            let usages: Vec<ui::usages::UsageLocation> = locations
+                .iter()
+                .filter_map(|location| {
+                    let path = location.uri.as_path()?.to_path_buf();
+                    if !scope.contains(editor, &path) {
+                        return None;
+                    }
+                    let (start, end) = (location.range.start, location.range.end);
+                    let len = if start.line == end.line {
+                        end.character.saturating_sub(start.character) as usize
+                    } else {
+                        0
+                    };
+                    Some(ui::usages::UsageLocation {
+                        path,
+                        line: start.line as usize,
+                        col: start.character as usize,
+                        len,
+                    })
+                })
+                .collect();
+            if usages.is_empty() {
+                editor.set_error(format!("No usages found in {}.", scope.label()));
+                return;
+            }
+            if let Some(origin) = origin.clone() {
+                ui::usages::remember_search(symbol.clone(), origin, scope.clone());
+            }
+            crate::commands::xref_push_marker(editor);
+            let view = ui::usages::UsagesView::new(editor, symbol, usages, origin);
+            compositor.push(Box::new(view));
+        };
+        Ok(Callback::EditorCompositor(Box::new(call)))
+    });
+}
+
 fn goto_reference_impl(cx: &mut Context, this_file_only: bool) {
     let config = cx.editor.config();
     let (view, doc) = current_ref!(cx.editor);

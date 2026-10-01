@@ -1289,6 +1289,26 @@ impl MappableCommand {
         goto_file_readonly, "Visit the file at point read-only (emacs ffap-read-only, C-x C-r)",
         goto_file_new_tab, "Visit the file at point in a new tab (emacs ffap-other-tab, C-x t C-f)",
         goto_file_other_frame, "Visit the file at point in a new frame (emacs ffap-other-frame, C-x 5 f)",
+        find_usages, "The usages of the symbol in the grouped, filterable Usages view (JetBrains Find Usages, Alt F7)",
+        usages_group_by_type, "Group usages by type: call, read, write, import, comment (JetBrains Group by Usage Type)",
+        usages_group_by_scope, "Group usages into test and production code (JetBrains Group by Test/Production)",
+        usages_group_by_module, "Group usages by module, the nearest package root (JetBrains Group by Module)",
+        usages_flatten_modules, "Show nested modules flat in the Usages view (JetBrains Flatten Modules)",
+        usages_group_by_directory, "Group usages by directory (JetBrains Group by Directory)",
+        usages_group_by_directory_tree, "Group usages by directory tree (JetBrains Group by Directory Structure)",
+        usages_group_by_member, "Group usages by the enclosing class or function (JetBrains Group by File Structure)",
+        usages_toggle_short_paths, "Show file names only in the Usages view (JetBrains Show File Names Only)",
+        usages_toggle_comments, "Show or hide usages in comments (JetBrains Show Comment Usages)",
+        usages_toggle_imports, "Show or hide usages in imports (JetBrains Show Import Statements)",
+        usages_toggle_generated, "Show or hide usages in generated code (JetBrains Show Usages in Generated Code)",
+        usages_toggle_read_access, "Show only reads of the symbol, or all usages (JetBrains Show Read Access)",
+        usages_toggle_write_access, "Show only writes to the symbol, or all usages (JetBrains Show Write Access)",
+        usages_rerun, "Search the open Usages view's symbol again (JetBrains Rerun)",
+        usages_recent, "Pick a past Find Usages search and run it again (JetBrains Recent Find Usages)",
+        find_usages_with_settings, "Choose where to look, then find the usages there (JetBrains Find Usages Settings)",
+        usages_exclude, "Exclude or include the selected usage (JetBrains Exclude)",
+        usages_include, "Include the selected usage again (JetBrains Include)",
+        usages_remove, "Remove the selected usage from the Usages view (JetBrains Remove)",
         goto_reference, "Goto references",
         call_hierarchy_incoming_calls, "Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H)",
         call_hierarchy_outgoing_calls, "Call hierarchy: what the symbol calls",
@@ -55520,6 +55540,180 @@ fn toggle_documentation_popup_first(cx: &mut Context) {
 fn toggle_documentation_auto_update(cx: &mut Context) {
     let on = crate::ui::ide::toggle_docs_auto_update();
     cx.editor.set_status(format!("documentation follows the caret: {}", if on { "on" } else { "off" }));
+}
+
+/// Change a Usages view option, re-laying an open view, and report `status`.
+fn usages_option(cx: &mut Context, f: fn(&mut ui::usages::UsageOptions), status: fn(&ui::usages::UsageOptions) -> String) {
+    let options = ui::usages::set_options(f);
+    cx.editor.set_status(status(&options));
+    cx.callback.push(Box::new(|compositor, _| {
+        if let Some(view) = compositor.find::<ui::usages::UsagesView>() {
+            view.refresh();
+        }
+    }));
+}
+
+fn on_off(on: bool) -> &'static str {
+    if on { "on" } else { "off" }
+}
+
+/// JetBrains "Group by Usage Type" (`UsageGrouping.UsageType`).
+fn usages_group_by_type(cx: &mut Context) {
+    usages_option(cx, |o| o.by_type = !o.by_type, |o| format!("usages by type: {}", on_off(o.by_type)));
+}
+/// JetBrains "Group by Test/Production" (`UsageGrouping.Scope`).
+fn usages_group_by_scope(cx: &mut Context) {
+    usages_option(cx, |o| o.by_scope = !o.by_scope, |o| format!("usages by scope: {}", on_off(o.by_scope)));
+}
+/// JetBrains "Group by Module" (`UsageGrouping.Module`): by the nearest
+/// package root (Cargo.toml, package.json, go.mod…).
+fn usages_group_by_module(cx: &mut Context) {
+    usages_option(cx, |o| o.by_module = !o.by_module, |o| format!("usages by module: {}", on_off(o.by_module)));
+}
+/// JetBrains "Flatten Modules" (`UsageGrouping.FlattenModules`).
+fn usages_flatten_modules(cx: &mut Context) {
+    usages_option(cx, |o| o.flatten_modules = !o.flatten_modules, |o| format!("flatten modules: {}", on_off(o.flatten_modules)));
+}
+/// JetBrains "Group by Directory" (`UsageGrouping.Directory`).
+fn usages_group_by_directory(cx: &mut Context) {
+    usages_option(cx, |o| o.by_directory = !o.by_directory, |o| format!("usages by directory: {}", on_off(o.by_directory)));
+}
+/// JetBrains "Group by Directory Structure" (`UsageGrouping.DirectoryStructure`).
+fn usages_group_by_directory_tree(cx: &mut Context) {
+    usages_option(cx, |o| o.directory_tree = !o.directory_tree, |o| format!("usages by directory tree: {}", on_off(o.directory_tree)));
+}
+/// JetBrains "Group by File Structure" (`UsageGrouping.FileStructure`): by the
+/// enclosing class or function.
+fn usages_group_by_member(cx: &mut Context) {
+    usages_option(cx, |o| o.by_member = !o.by_member, |o| format!("usages by file structure: {}", on_off(o.by_member)));
+}
+/// JetBrains "Show File Names Only" (`UsageGrouping.ShortFilePath`).
+fn usages_toggle_short_paths(cx: &mut Context) {
+    usages_option(cx, |o| o.short_paths = !o.short_paths, |o| format!("usages short paths: {}", on_off(o.short_paths)));
+}
+/// JetBrains "Show Comment Usages" (`UsageFiltering.Comments`).
+fn usages_toggle_comments(cx: &mut Context) {
+    usages_option(cx, |o| o.show_comments = !o.show_comments, |o| format!("usages in comments: {}", on_off(o.show_comments)));
+}
+/// JetBrains "Show Import Statements" (`UsageFiltering.Imports`).
+fn usages_toggle_imports(cx: &mut Context) {
+    usages_option(cx, |o| o.show_imports = !o.show_imports, |o| format!("usages in imports: {}", on_off(o.show_imports)));
+}
+/// JetBrains "Show Usages in Generated Code" (`UsageFiltering.GeneratedCode`).
+fn usages_toggle_generated(cx: &mut Context) {
+    usages_option(cx, |o| o.show_generated = !o.show_generated, |o| format!("usages in generated code: {}", on_off(o.show_generated)));
+}
+/// JetBrains "Show Read Access" (`UsageFiltering.ReadAccess`): only reads.
+fn usages_toggle_read_access(cx: &mut Context) {
+    use ui::usages::Access;
+    usages_option(
+        cx,
+        |o| o.access = if o.access == Access::Read { Access::All } else { Access::Read },
+        |o| format!("usages: {}", if o.access == Access::Read { "reads only" } else { "all" }),
+    );
+}
+/// JetBrains "Show Write Access" (`UsageFiltering.WriteAccess`): only writes.
+fn usages_toggle_write_access(cx: &mut Context) {
+    use ui::usages::Access;
+    usages_option(
+        cx,
+        |o| o.access = if o.access == Access::Write { Access::All } else { Access::Write },
+        |o| format!("usages: {}", if o.access == Access::Write { "writes only" } else { "all" }),
+    );
+}
+
+/// Run `f` on the open Usages view.
+fn with_usages_view(cx: &mut Context, f: fn(&mut ui::usages::UsagesView) -> &'static str) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let status = compositor.find::<ui::usages::UsagesView>().map(f).unwrap_or("no Usages view open");
+        cx.editor.set_status(status);
+    }));
+}
+
+/// JetBrains "Exclude" in the Usages view (`UsageView.Exclude`).
+fn usages_exclude(cx: &mut Context) {
+    with_usages_view(cx, |view| match view.toggle_exclude() {
+        Some(true) => "usage excluded",
+        Some(false) => "usage included",
+        None => "no usage selected",
+    });
+}
+/// JetBrains "Include" in the Usages view (`UsageView.Include`).
+fn usages_include(cx: &mut Context) {
+    with_usages_view(cx, |view| if view.include() { "usage included" } else { "the usage is not excluded" });
+}
+/// JetBrains "Rerun" in the Usages view (`UsageView.Rerun`): search again from
+/// where the open view's search was made.
+fn usages_rerun(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        match compositor.find::<ui::usages::UsagesView>().and_then(|view| view.rerun()) {
+            Some(rerun) => rerun(compositor, cx),
+            None => cx.editor.set_status("no Usages view to rerun"),
+        }
+    }));
+}
+
+/// Run a past Find Usages search again: go to where it was made and search
+/// its scope.
+fn rerun_usage_search(compositor: &mut Compositor, cx: &mut compositor::Context, search: ui::usages::UsageSearch) {
+    let (path, line, col) = search.origin;
+    open_at(cx.editor, &path, line, col, Action::Replace, false);
+    let scope = search.scope;
+    menu_run(compositor, cx, &move |cx: &mut Context| find_usages_in(cx, scope.clone()));
+}
+
+/// JetBrains "Recent Find Usages" (`UsageView.ShowRecentFindUsages`): pick a
+/// past search and run it again.
+fn usages_recent(cx: &mut Context) {
+    let searches = ui::usages::recent_searches();
+    if searches.is_empty() {
+        cx.editor.set_status("no Find Usages searches yet");
+        return;
+    }
+    let root = zmax_loader::find_workspace().0;
+    let columns = [
+        PickerColumn::new("symbol", |s: &ui::usages::UsageSearch, _: &PathBuf| s.symbol.as_str().into()),
+        PickerColumn::new("scope", |s: &ui::usages::UsageSearch, _: &PathBuf| s.scope.label().into()),
+        PickerColumn::new("from", |s: &ui::usages::UsageSearch, root: &PathBuf| {
+            let (path, line, _) = &s.origin;
+            format!("{}:{}", path.strip_prefix(root).unwrap_or(path).display(), line + 1).into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, searches, root, |_cx, search: &ui::usages::UsageSearch, _| {
+        let search = search.clone();
+        crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut compositor::Context| {
+            rerun_usage_search(compositor, cx, search)
+        }) as compositor::Callback]);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Find Usages Settings…" (`ShowSettingsAndFindUsages`,
+/// Cmd-Shift-Alt-F7): choose where to look, then find the usages there.
+fn find_usages_with_settings(cx: &mut Context) {
+    use ui::usages::UsageScope;
+    let doc = doc!(cx.editor);
+    let mut scopes = vec![UsageScope::Project, UsageScope::OpenFiles];
+    if let Some(path) = doc.path() {
+        scopes.push(UsageScope::File(path.to_path_buf()));
+        if let Some(dir) = path.parent() {
+            scopes.push(UsageScope::Directory(dir.to_path_buf()));
+        }
+    }
+    scopes.extend([UsageScope::Production, UsageScope::Test]);
+    let columns = [PickerColumn::new("find usages in", |s: &UsageScope, _: &()| s.label().into())];
+    let picker = Picker::new(columns, 0, scopes, (), |_cx, scope: &UsageScope, _| {
+        let scope = scope.clone();
+        crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut compositor::Context| {
+            menu_run(compositor, cx, &move |cx: &mut Context| find_usages_in(cx, scope.clone()))
+        }) as compositor::Callback]);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Remove" in the Usages view (`UsageView.Remove`).
+fn usages_remove(cx: &mut Context) {
+    with_usages_view(cx, |view| if view.remove() { "usage removed" } else { "no usage selected" });
 }
 
 /// Flip a Problems panel option and report it as `on` / `off`.

@@ -121,6 +121,7 @@ pub mod twentyfortyeight;
 pub mod undotree;
 pub mod videopoker;
 pub mod wordle;
+pub mod usages;
 pub mod xref;
 pub mod xwidget;
 pub mod yahtzee;

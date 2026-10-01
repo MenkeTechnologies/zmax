@@ -80050,9 +80050,9 @@
   "spec_id": "jetbrains-actions.FindUsages",
   "status": "ported",
   "evidence": [
-   "static:goto_reference"
+   "static:find_usages"
   ],
-  "note": "FindUsages (Find Usages) = zmax `goto_reference`: lists LSP references to the symbol at the cursor."
+  "note": "FindUsages (Find Usages, Alt F7) = zmax `find_usages`: the LSP references in the Usages view (ui/usages.rs), grouped and filterable; `goto_reference` is the Show Usages popup."
  },
  {
   "spec_id": "jetbrains-actions.FindUsagesInFile",
@@ -86889,19 +86889,19 @@
  },
  {
   "spec_id": "jetbrains-actions.UsageView.Rerun",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:xref_find_references"
+   "static:usages_rerun"
   ],
-  "note": "UsageView.Rerun (Rerun) = zmax `xref_find_references` overlay key `g`: rescans the tree for the same symbol (Xref::rescan, ui/xref.rs:91/318); the search is textual grep, and the LSP references picker (goto_reference) has no rerun."
+  "note": "UsageView.Rerun = zmax `usages_rerun` (r): the same search again from where it was made."
  },
  {
   "spec_id": "jetbrains-actions.UsageView.ShowRecentFindUsages",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:last_picker"
+   "static:usages_recent"
   ],
-  "note": "UsageView.ShowRecentFindUsages (Recent Find Usages) = zmax `last_picker`: reopens only the most recently closed picker with its old results (commands.rs:37984); the IDE lists several past usage searches and re-runs the chosen one."
+  "note": "UsageView.ShowRecentFindUsages (Recent Find Usages) = zmax `usages_recent`: the last 20 searches, with symbol, scope and origin; picking one runs it again."
  },
  {
   "spec_id": "jetbrains-actions.Vcs.CombinedDiff.CaretToNextBlock",
@@ -87523,5 +87523,141 @@
    "static:toggle_documentation_auto_update"
   ],
   "note": "Documentation.ToggleAutoUpdate = zmax `toggle_documentation_auto_update`: on idle, the Documentation tool window re-looks-up the symbol under the caret while it is on screen."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageGrouping.UsageType",
+  "status": "ported",
+  "evidence": [
+   "static:usages_group_by_type"
+  ],
+  "note": "UsageGrouping.UsageType = zmax `usages_group_by_type` (t in the Usages view): call, read, write, import and comment groups, classified from the usage's line (zmax-core/src/usage_kind.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageGrouping.Scope",
+  "status": "ported",
+  "evidence": [
+   "static:usages_group_by_scope"
+  ],
+  "note": "UsageGrouping.Scope = zmax `usages_group_by_scope` (s): test and production code, by path convention."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageGrouping.Module",
+  "status": "ported",
+  "evidence": [
+   "static:usages_group_by_module"
+  ],
+  "note": "UsageGrouping.Module = zmax `usages_group_by_module` (m): by the nearest package root (Cargo.toml, package.json, go.mod, \u2026), zmax's nearest equivalent of an IDE module."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageGrouping.FlattenModules",
+  "status": "ported",
+  "evidence": [
+   "static:usages_flatten_modules"
+  ],
+  "note": "UsageGrouping.FlattenModules = zmax `usages_flatten_modules` (M): nested module paths as one level or one level per directory."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageGrouping.Directory",
+  "status": "ported",
+  "evidence": [
+   "static:usages_group_by_directory"
+  ],
+  "note": "UsageGrouping.Directory = zmax `usages_group_by_directory` (D)."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageGrouping.DirectoryStructure",
+  "status": "ported",
+  "evidence": [
+   "static:usages_group_by_directory_tree"
+  ],
+  "note": "UsageGrouping.DirectoryStructure = zmax `usages_group_by_directory_tree` (T): a header level per directory."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageGrouping.FileStructure",
+  "status": "ported",
+  "evidence": [
+   "static:usages_group_by_member"
+  ],
+  "note": "UsageGrouping.FileStructure = zmax `usages_group_by_member` (f): by the innermost enclosing function or class, from the language's text objects."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageGrouping.ShortFilePath",
+  "status": "ported",
+  "evidence": [
+   "static:usages_toggle_short_paths"
+  ],
+  "note": "UsageGrouping.ShortFilePath = zmax `usages_toggle_short_paths` (P): file names instead of root-relative paths."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageFiltering.Comments",
+  "status": "ported",
+  "evidence": [
+   "static:usages_toggle_comments"
+  ],
+  "note": "UsageFiltering.Comments = zmax `usages_toggle_comments` (c): usages after the language's comment token or on a block-comment line."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageFiltering.Imports",
+  "status": "ported",
+  "evidence": [
+   "static:usages_toggle_imports"
+  ],
+  "note": "UsageFiltering.Imports = zmax `usages_toggle_imports` (i): lines opened by an import keyword."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageFiltering.GeneratedCode",
+  "status": "ported",
+  "evidence": [
+   "static:usages_toggle_generated"
+  ],
+  "note": "UsageFiltering.GeneratedCode = zmax `usages_toggle_generated` (G): build-output paths, generated names, or an @generated / DO NOT EDIT header."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageFiltering.ReadAccess",
+  "status": "ported",
+  "evidence": [
+   "static:usages_toggle_read_access"
+  ],
+  "note": "UsageFiltering.ReadAccess = zmax `usages_toggle_read_access` (R): only reads; access is read from the text after the usage (assignment, compound assignment, increment)."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageFiltering.WriteAccess",
+  "status": "ported",
+  "evidence": [
+   "static:usages_toggle_write_access"
+  ],
+  "note": "UsageFiltering.WriteAccess = zmax `usages_toggle_write_access` (W): only writes."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageView.Exclude",
+  "status": "ported",
+  "evidence": [
+   "static:usages_exclude"
+  ],
+  "note": "UsageView.Exclude = zmax `usages_exclude` (x): the usage stays listed, greyed and counted as excluded."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageView.Include",
+  "status": "ported",
+  "evidence": [
+   "static:usages_include"
+  ],
+  "note": "UsageView.Include = zmax `usages_include` (x again on an excluded usage)."
+ },
+ {
+  "spec_id": "jetbrains-actions.UsageView.Remove",
+  "status": "ported",
+  "evidence": [
+   "static:usages_remove"
+  ],
+  "note": "UsageView.Remove = zmax `usages_remove` (d): drops the usage, the cursor moving to the next."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowSettingsAndFindUsages",
+  "status": "ported",
+  "evidence": [
+   "static:find_usages_with_settings"
+  ],
+  "note": "ShowSettingsAndFindUsages (Find Usages Settings) = zmax `find_usages_with_settings`: choose the scope \u2014 project, open files, this file, this directory, production or test code \u2014 then Find Usages there."
  }
 ]

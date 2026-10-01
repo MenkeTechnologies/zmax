@@ -896,6 +896,26 @@
 | `goto_file_readonly` | Visit the file at point read-only (emacs ffap-read-only, C-x C-r) |  |
 | `goto_file_new_tab` | Visit the file at point in a new tab (emacs ffap-other-tab, C-x t C-f) |  |
 | `goto_file_other_frame` | Visit the file at point in a new frame (emacs ffap-other-frame, C-x 5 f) |  |
+| `find_usages` | The usages of the symbol in the grouped, filterable Usages view (JetBrains Find Usages, Alt F7) |  |
+| `usages_group_by_type` | Group usages by type: call, read, write, import, comment (JetBrains Group by Usage Type) |  |
+| `usages_group_by_scope` | Group usages into test and production code (JetBrains Group by Test/Production) |  |
+| `usages_group_by_module` | Group usages by module, the nearest package root (JetBrains Group by Module) |  |
+| `usages_flatten_modules` | Show nested modules flat in the Usages view (JetBrains Flatten Modules) |  |
+| `usages_group_by_directory` | Group usages by directory (JetBrains Group by Directory) |  |
+| `usages_group_by_directory_tree` | Group usages by directory tree (JetBrains Group by Directory Structure) |  |
+| `usages_group_by_member` | Group usages by the enclosing class or function (JetBrains Group by File Structure) |  |
+| `usages_toggle_short_paths` | Show file names only in the Usages view (JetBrains Show File Names Only) |  |
+| `usages_toggle_comments` | Show or hide usages in comments (JetBrains Show Comment Usages) |  |
+| `usages_toggle_imports` | Show or hide usages in imports (JetBrains Show Import Statements) |  |
+| `usages_toggle_generated` | Show or hide usages in generated code (JetBrains Show Usages in Generated Code) |  |
+| `usages_toggle_read_access` | Show only reads of the symbol, or all usages (JetBrains Show Read Access) |  |
+| `usages_toggle_write_access` | Show only writes to the symbol, or all usages (JetBrains Show Write Access) |  |
+| `usages_rerun` | Search the open Usages view's symbol again (JetBrains Rerun) |  |
+| `usages_recent` | Pick a past Find Usages search and run it again (JetBrains Recent Find Usages) |  |
+| `find_usages_with_settings` | Choose where to look, then find the usages there (JetBrains Find Usages Settings) |  |
+| `usages_exclude` | Exclude or include the selected usage (JetBrains Exclude) |  |
+| `usages_include` | Include the selected usage again (JetBrains Include) |  |
+| `usages_remove` | Remove the selected usage from the Usages view (JetBrains Remove) |  |
 | `goto_reference` | Goto references | **spacemacs, vim** — normal: `` gr ``<br>**hybrid** — normal: `` gr ``, insert: `` <A-?> ``<br>**helix, kakoune** — normal: `` gr ``, select: `` gr ``<br>**emacs, cua, micro, nano** — normal: `` <A-?> ``, insert: `` <A-?> `` |
 | `call_hierarchy_incoming_calls` | Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H) | **spacemacs, hybrid** — normal: `` <space>gh ``, select: `` <space>gh `` |
 | `call_hierarchy_outgoing_calls` | Call hierarchy: what the symbol calls | **spacemacs, hybrid** — normal: `` <space>gO ``, select: `` <space>gO `` |
