@@ -81609,19 +81609,19 @@
  },
  {
   "spec_id": "jetbrains-actions.ProblemsView.CopyProblemDescription",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:copy_diagnostic"
+   "static:problems_copy_description"
   ],
-  "note": "ProblemsView.CopyProblemDescription (Copy Problem Description) = zmax `copy_diagnostic`: copies the diagnostic message(s) on the cursor line in the editor, not a row selected in the Problems panel."
+  "note": "ProblemsView.CopyProblemDescription = zmax `problems_copy_description`: the selected Problems-panel message to the clipboard."
  },
  {
   "spec_id": "jetbrains-actions.ProblemsView.Frontend.CopyProblemDescription",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:copy_diagnostic"
+   "static:problems_copy_description"
   ],
-  "note": "ProblemsView.Frontend.CopyProblemDescription (Copy Problem Description) = zmax `copy_diagnostic`: copies the diagnostic message(s) on the cursor line in the editor, not a row selected in the Problems panel."
+  "note": "ProblemsView.Frontend.CopyProblemDescription = zmax `problems_copy_description`."
  },
  {
   "spec_id": "jetbrains-actions.ProblemsView.Frontend.GroupByToolId",
@@ -87393,5 +87393,135 @@
    "static:toggle_bookmarks_preview_tab"
   ],
   "note": "BookmarksView.OpenInPreviewTab = zmax `toggle_bookmarks_preview_tab`: a bookmark opened from the views replaces the buffer the previous one opened, unless it was edited, is shown elsewhere or was open before."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.SortByName",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_by_name"
+  ],
+  "note": "ProblemsView.SortByName = zmax `toggle_problems_by_name`: problems ordered by message within each file."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.SortByName",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_by_name"
+  ],
+  "note": "ProblemsView.Frontend.SortByName = zmax `toggle_problems_by_name`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.SortFoldersFirst",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_folders_first",
+   "static:toggle_problems_project"
+  ],
+  "note": "ProblemsView.SortFoldersFirst = zmax `toggle_problems_folders_first` on the project-wide Problems list (`toggle_problems_project`, every file's diagnostics under a header per file): a directory's subdirectories before its files."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.SortFoldersFirst",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_folders_first",
+   "static:toggle_problems_project"
+  ],
+  "note": "ProblemsView.Frontend.SortFoldersFirst = zmax `toggle_problems_folders_first`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.AutoscrollToSource",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_autoscroll"
+  ],
+  "note": "ProblemsView.AutoscrollToSource (Open Files with Single Click) = zmax `toggle_problems_autoscroll`: the editor follows the Problems selection, the focus staying in the panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.AutoscrollToSource",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_autoscroll"
+  ],
+  "note": "ProblemsView.Frontend.AutoscrollToSource = zmax `toggle_problems_autoscroll`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.ShowPreview",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_preview"
+  ],
+  "note": "ProblemsView.ShowPreview (Open Editor Preview) = zmax `toggle_problems_preview`: the lines around the selected problem beside the list, from the buffer or the file."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.ShowPreview",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_preview"
+  ],
+  "note": "ProblemsView.Frontend.ShowPreview = zmax `toggle_problems_preview`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.OpenInPreviewTab",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_preview_tab"
+  ],
+  "note": "ProblemsView.OpenInPreviewTab = zmax `toggle_problems_preview_tab`: files opened from the project-wide Problems list reuse one buffer until edited."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProblemsView.Frontend.OpenInPreviewTab",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_problems_preview_tab"
+  ],
+  "note": "ProblemsView.Frontend.OpenInPreviewTab = zmax `toggle_problems_preview_tab`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Documentation.Back",
+  "status": "ported",
+  "evidence": [
+   "static:documentation_back"
+  ],
+  "note": "Documentation.Back = zmax `documentation_back` (and b in the Documentation tool window): the previous lookup of the tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.Documentation.Forward",
+  "status": "ported",
+  "evidence": [
+   "static:documentation_forward"
+  ],
+  "note": "Documentation.Forward = zmax `documentation_forward` (and f in the tool window)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Documentation.KeepTab",
+  "status": "ported",
+  "evidence": [
+   "static:documentation_keep_tab"
+  ],
+  "note": "Documentation.KeepTab (Keep This Documentation) = zmax `documentation_keep_tab` (p in the tool window): the next lookup opens a new tab."
+ },
+ {
+  "spec_id": "jetbrains-actions.Documentation.EditSource",
+  "status": "ported",
+  "evidence": [
+   "static:documentation_jump_to_source"
+  ],
+  "note": "Documentation.EditSource (Jump to Source) = zmax `documentation_jump_to_source` (Enter in the tool window): goto_definition at the symbol the documentation was looked up for."
+ },
+ {
+  "spec_id": "jetbrains-actions.Documentation.ToggleShowInPopup",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_documentation_popup_first"
+  ],
+  "note": "Documentation.ToggleShowInPopup = zmax `toggle_documentation_popup_first`: `hover` shows the popup, or goes to the Documentation tool window (DOC tab of the workbench)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Documentation.ToggleAutoUpdate",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_documentation_auto_update"
+  ],
+  "note": "Documentation.ToggleAutoUpdate = zmax `toggle_documentation_auto_update`: on idle, the Documentation tool window re-looks-up the symbol under the caret while it is on screen."
  }
 ]

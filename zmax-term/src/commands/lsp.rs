@@ -2340,6 +2340,19 @@ pub fn signature_help(cx: &mut Context) {
 }
 
 pub fn hover(cx: &mut Context) {
+    hover_to(cx, !crate::ui::ide::docs_popup_first(), false);
+}
+
+/// JetBrains "Auto-Update from Source": refresh the Documentation tool window
+/// for the symbol under the cursor, saying nothing when there is none.
+pub fn documentation_follow_caret(cx: &mut Context) {
+    hover_to(cx, true, true);
+}
+
+/// The hover request behind Quick Documentation. `panel` shows the result in
+/// the Documentation tool window instead of the popup; `quiet` leaves the
+/// status line alone when there is nothing to show, and the focus where it is.
+fn hover_to(cx: &mut Context, panel: bool, quiet: bool) {
     use ui::lsp::hover::Hover;
 
     let (view, doc) = current!(cx.editor);
@@ -2348,10 +2361,29 @@ pub fn hover(cx: &mut Context) {
         .count()
         == 0
     {
-        cx.editor
-            .set_error("No configured language server supports hover");
+        if !quiet {
+            cx.editor
+                .set_error("No configured language server supports hover");
+        }
         return;
     }
+    let source = doc.path().map(|path| {
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        (path.to_path_buf(), line, cursor - text.line_to_char(line))
+    });
+    let title = {
+        let text = doc.text().slice(..);
+        let range = zmax_core::textobject::textobject_word(
+            text,
+            doc.selection(view.id).primary(),
+            zmax_core::textobject::TextObject::Inside,
+            1,
+            false,
+        );
+        text.slice(range.from()..range.to()).to_string()
+    };
 
     let mut seen_language_servers = HashSet::new();
     let mut futures: FuturesUnordered<_> = doc
@@ -2382,7 +2414,23 @@ pub fn hover(cx: &mut Context) {
 
         let call = move |editor: &mut Editor, compositor: &mut Compositor| {
             if hovers.is_empty() {
-                editor.set_status("No hover results available.");
+                if !quiet {
+                    editor.set_status("No hover results available.");
+                }
+                return;
+            }
+
+            if panel {
+                let body = hovers
+                    .iter()
+                    .map(|(_, hover)| crate::ui::lsp::hover::hover_contents_to_string(hover.contents.clone()))
+                    .collect::<Vec<_>>()
+                    .join("\n\n---\n\n");
+                let entry = crate::ui::ide::DocEntry { title, body, source };
+                let loader = editor.syn_loader.clone();
+                if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                    view.ide_or_create().show_documentation(entry, loader, !quiet);
+                }
                 return;
             }
 

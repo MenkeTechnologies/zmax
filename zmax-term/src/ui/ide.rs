@@ -5,7 +5,7 @@
 //!
 //! Keys: F2 toggle · Tab cycle focus · Esc → editor · j/k or wheel move · Enter/click activate.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use tui::buffer::Buffer as Surface;
 use zmax_core::{diagnostic::Severity, Selection};
@@ -121,6 +121,7 @@ enum BottomTab {
     Recent,
     Harpoon,
     Ci,
+    Docs,
 }
 
 impl BottomTab {
@@ -138,6 +139,7 @@ impl BottomTab {
             BottomTab::Recent => "recent",
             BottomTab::Harpoon => "harpoon",
             BottomTab::Ci => "ci",
+            BottomTab::Docs => "documentation",
         }
     }
     fn from_persist_name(s: &str) -> Option<Self> {
@@ -153,9 +155,56 @@ impl BottomTab {
             "recent" => BottomTab::Recent,
             "harpoon" => BottomTab::Harpoon,
             "ci" => BottomTab::Ci,
+            "documentation" => BottomTab::Docs,
             _ => return None,
         })
     }
+}
+
+/// One lookup in the Documentation tool window.
+#[derive(Clone)]
+pub struct DocEntry {
+    /// The symbol the documentation is for.
+    pub title: String,
+    /// The language servers' hover text (markdown).
+    pub body: String,
+    /// Where the lookup was made — the symbol's file, 0-based line and column —
+    /// for "Jump to Source".
+    pub source: Option<(PathBuf, usize, usize)>,
+}
+
+/// A Documentation tool window tab: its lookups, the one shown, and whether it
+/// is kept ("Keep This Documentation"), so new lookups go to another tab.
+#[derive(Clone, Default)]
+struct DocTab {
+    history: Vec<DocEntry>,
+    pos: usize,
+    kept: bool,
+}
+
+/// JetBrains "Show Documentation Popup First": Quick Documentation opens the
+/// popup, not the tool window. On, as the IDE ships it.
+static DOCS_POPUP_FIRST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+/// JetBrains "Auto-Update from Source": the Documentation tool window follows
+/// the caret.
+static DOCS_AUTO_UPDATE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn docs_popup_first() -> bool {
+    DOCS_POPUP_FIRST.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Flip "Show Documentation Popup First"; returns the new state.
+pub fn toggle_docs_popup_first() -> bool {
+    !DOCS_POPUP_FIRST.fetch_xor(true, std::sync::atomic::Ordering::Relaxed)
+}
+
+pub fn docs_auto_update() -> bool {
+    DOCS_AUTO_UPDATE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Flip "Auto-Update from Source"; returns the new state.
+pub fn toggle_docs_auto_update() -> bool {
+    !DOCS_AUTO_UPDATE.fetch_xor(true, std::sync::atomic::Ordering::Relaxed)
 }
 
 /// One row of the Bookmarks tool window.
@@ -182,6 +231,7 @@ enum BottomHit {
     TabRecent,
     TabHarpoon,
     TabCi,
+    TabDocs,
     Rerun,
     Stop,
     Clear,
@@ -192,6 +242,21 @@ pub enum IdeAction {
     OpenFile(PathBuf),
     /// Open a URL in the system browser (CI run links).
     OpenUrl(String),
+    /// Open a problem from the project-wide Problems list at its 0-based line
+    /// and column, reusing the preview buffer when `preview_tab` is on.
+    OpenProblem {
+        path: PathBuf,
+        line: usize,
+        col: usize,
+        preview_tab: bool,
+    },
+    /// JetBrains "Jump to Source" from the Documentation tool window: go to
+    /// the declaration of the symbol at this 0-based line and column.
+    DocumentationSource {
+        path: PathBuf,
+        line: usize,
+        col: usize,
+    },
     /// Open a line bookmark (0-based line) the way the Bookmarks views do.
     OpenBookmark {
         path: PathBuf,
@@ -281,6 +346,30 @@ struct ProblemRow {
     /// source rather than pointing at a diagnostic, so clicking it does not
     /// jump anywhere.
     header: bool,
+    /// The file, in the project-wide view (JetBrains "Project Errors"); the
+    /// current file's rows leave it `None` and jump by `start`/`end`.
+    path: Option<PathBuf>,
+    /// 0-based column of the problem's start, for a row with a `path`.
+    col: usize,
+}
+
+/// `a` before `b` with each directory's subdirectories ahead of its files —
+/// JetBrains "Folders Always on Top". Otherwise plain path order. Pure — unit
+/// tested.
+fn problem_path_order(a: &Path, b: &Path, folders_first: bool) -> std::cmp::Ordering {
+    if !folders_first {
+        return a.cmp(b);
+    }
+    let (a, b): (Vec<_>, Vec<_>) = (a.components().collect(), b.components().collect());
+    for i in 0..a.len().min(b.len()) {
+        if a[i] != b[i] {
+            // At the first difference, a directory (not the last component)
+            // comes before a file (the last).
+            let (a_dir, b_dir) = (i + 1 < a.len(), i + 1 < b.len());
+            return b_dir.cmp(&a_dir).then_with(|| a[i].cmp(&b[i]));
+        }
+    }
+    a.len().cmp(&b.len())
 }
 
 /// Errors first, then warnings, information and hints.
@@ -324,15 +413,103 @@ fn group_problems_by_source(rows: Vec<ProblemRow>) -> Vec<ProblemRow> {
             msg: format!("{source} ({})", rows.len()),
             source: Some(source),
             header: true,
+            path: None,
+            col: 0,
         });
         out.extend(rows);
     }
     out
 }
 
+/// Every file's diagnostics, a header row per file ahead of its problems —
+/// JetBrains "Project Errors". Files come in path order, or with folders
+/// first; each file's problems in line order.
+fn project_problems(editor: &zmax_view::Editor, folders_first: bool) -> Vec<ProblemRow> {
+    use zmax_lsp::lsp::DiagnosticSeverity as S;
+    let root = zmax_loader::find_workspace().0;
+    let mut files: Vec<(PathBuf, Vec<ProblemRow>)> = editor
+        .diagnostics
+        .iter()
+        .filter_map(|(uri, diagnostics)| {
+            let path = uri.as_path()?.to_path_buf();
+            let mut rows: Vec<ProblemRow> = diagnostics
+                .iter()
+                .map(|(d, _)| ProblemRow {
+                    line: d.range.start.line as usize,
+                    start: 0,
+                    end: 0,
+                    sev: match d.severity {
+                        Some(S::ERROR) => Severity::Error,
+                        Some(S::WARNING) => Severity::Warning,
+                        Some(S::INFORMATION) => Severity::Info,
+                        _ => Severity::Hint,
+                    },
+                    msg: d.message.clone(),
+                    source: d.source.clone(),
+                    header: false,
+                    path: Some(path.clone()),
+                    col: d.range.start.character as usize,
+                })
+                .collect();
+            rows.sort_by_key(|r| (r.line, r.col));
+            (!rows.is_empty()).then_some((path, rows))
+        })
+        .collect();
+    files.sort_by(|a, b| {
+        let rel = |p: &PathBuf| p.strip_prefix(&root).map(Path::to_path_buf).unwrap_or_else(|_| p.clone());
+        problem_path_order(&rel(&a.0), &rel(&b.0), folders_first)
+    });
+    let mut out = Vec::new();
+    for (path, rows) in files {
+        let shown = path.strip_prefix(&root).unwrap_or(&path).display().to_string();
+        out.push(ProblemRow {
+            line: 0,
+            start: 0,
+            end: 0,
+            sev: Severity::Hint,
+            msg: format!("{shown} ({})", rows.len()),
+            source: None,
+            header: true,
+            path: None,
+            col: 0,
+        });
+        out.extend(rows);
+    }
+    out
+}
+
+/// Run `sort` on each run of non-header rows, so a sort orders problems
+/// within a file and leaves the file headers where they are.
+fn sort_problem_runs(rows: &mut [ProblemRow], mut sort: impl FnMut(&mut [ProblemRow])) {
+    let mut start = 0;
+    while start < rows.len() {
+        if rows[start].header {
+            start += 1;
+            continue;
+        }
+        let end = rows[start..]
+            .iter()
+            .position(|r| r.header)
+            .map_or(rows.len(), |n| start + n);
+        sort(&mut rows[start..end]);
+        start = end;
+    }
+}
+
 /// Flattened Debug-tab row: `(kind, text, jump target)` where kind is
 /// 0=section header, 1=stack frame, 2=variable, 3=breakpoint.
 type DapLine = (u8, String, Option<(PathBuf, usize)>);
+
+/// The Problems panel's view options (see the fields they flip on [`Ide`]).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ProblemsOption {
+    ByName,
+    Project,
+    FoldersFirst,
+    Autoscroll,
+    Preview,
+    PreviewTab,
+}
 
 /// Which workbench edge a `stretch` moves (JetBrains Stretch to …).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -379,6 +556,25 @@ pub struct Ide {
     /// JetBrains "Sort by Severity" (`ProblemsView.SortBySeverity`): errors
     /// first, then warnings, then the rest, each in line order.
     problems_by_severity: bool,
+    /// JetBrains "Sort by Name" (`ProblemsView.SortByName`): by message text.
+    problems_by_name: bool,
+    /// JetBrains "Project Errors": every file's diagnostics, under a header
+    /// per file, rather than the current file's.
+    problems_project: bool,
+    /// JetBrains "Folders Always on Top" in the project-wide list.
+    problems_folders_first: bool,
+    /// JetBrains "Open Files with Single Click" (`ProblemsView.AutoscrollToSource`):
+    /// the editor follows the selection.
+    problems_autoscroll: bool,
+    /// JetBrains "Open Editor Preview" (`ProblemsView.ShowPreview`): the lines
+    /// around the selected problem, beside the list.
+    problems_preview: bool,
+    /// JetBrains "Enable Preview Tab" (`ProblemsView.OpenInPreviewTab`): files
+    /// opened from the project-wide list reuse one buffer.
+    problems_preview_tab: bool,
+    /// What the preview shows: the selected problem's file and line, and the
+    /// numbered lines around it.
+    problem_preview: (Option<(Option<PathBuf>, usize)>, Vec<(usize, String)>),
     problems_sel: usize,
     problems_state: ratatui::widgets::TableState,
     ci_state: ratatui::widgets::TableState,
@@ -393,6 +589,12 @@ pub struct Ide {
     recent_times: Vec<u64>,
     /// Harpoon marks for the current project (pin order).
     harpoon_rows: Vec<PathBuf>,
+    /// The Documentation tool window's tabs and the one shown.
+    docs_tabs: Vec<DocTab>,
+    docs_tab: usize,
+    docs_scroll: usize,
+    /// The editor's syntax loader, for highlighting code in documentation.
+    docs_loader: Option<std::sync::Arc<arc_swap::ArcSwap<zmax_core::syntax::Loader>>>,
     /// The Bookmarks tool window's rows: the harpoon file pins, then each line
     /// bookmark list with its bookmarks.
     bookmark_rows: Vec<BookmarkRow>,
@@ -568,6 +770,13 @@ impl Ide {
             problems: Vec::new(),
             group_problems: false,
             problems_by_severity: false,
+            problems_by_name: false,
+            problems_project: false,
+            problems_folders_first: true,
+            problems_autoscroll: false,
+            problems_preview: false,
+            problems_preview_tab: false,
+            problem_preview: (None, Vec::new()),
             problems_sel: 0,
             problems_state: ratatui::widgets::TableState::default(),
             ci_state: ratatui::widgets::TableState::default(),
@@ -580,6 +789,10 @@ impl Ide {
             recent_times: Vec::new(),
             harpoon_rows: Vec::new(),
             bookmark_rows: Vec::new(),
+            docs_tabs: Vec::new(),
+            docs_tab: 0,
+            docs_scroll: 0,
+            docs_loader: None,
             bookmark_followed: None,
             bottom_tab: BottomTab::Problems,
             bottom_tabs: [BottomTab::Problems, BottomTab::Marks, BottomTab::Ci],
@@ -840,6 +1053,33 @@ impl Ide {
         self.fold_problems = false;
         self.problems_sel = 0;
         self.problems_by_severity
+    }
+
+    /// Flip one of the Problems panel's options, showing the panel; returns
+    /// the new state.
+    pub fn toggle_problems_option(&mut self, option: ProblemsOption) -> bool {
+        let flag = match option {
+            ProblemsOption::ByName => &mut self.problems_by_name,
+            ProblemsOption::Project => &mut self.problems_project,
+            ProblemsOption::FoldersFirst => &mut self.problems_folders_first,
+            ProblemsOption::Autoscroll => &mut self.problems_autoscroll,
+            ProblemsOption::Preview => &mut self.problems_preview,
+            ProblemsOption::PreviewTab => &mut self.problems_preview_tab,
+        };
+        *flag = !*flag;
+        let on = *flag;
+        self.visible = true;
+        self.fold_problems = false;
+        self.problems_sel = 0;
+        on
+    }
+
+    /// The message of the problem selected in the Problems panel.
+    pub fn selected_problem_message(&self) -> Option<String> {
+        self.problems
+            .get(self.problems_sel)
+            .filter(|p| !p.header)
+            .map(|p| p.msg.clone())
     }
 
     /// The char range of the diagnostic selected in the Problems panel.
@@ -1150,6 +1390,11 @@ impl Ide {
             "ci" => {
                 self.fold_problems = false;
                 self.select_tab(BottomTab::Ci);
+                self.focus = Focus::Problems;
+            }
+            "documentation" | "docs" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Docs);
                 self.focus = Focus::Problems;
             }
             // Bottom-panel tool windows that already render as tabs but were not
@@ -1478,7 +1723,7 @@ impl Ide {
         match t {
             BottomTab::Problems | BottomTab::Run | BottomTab::Git | BottomTab::Debug => 0,
             BottomTab::Registers | BottomTab::Todo | BottomTab::Marks | BottomTab::Jumplist => 1,
-            BottomTab::Recent | BottomTab::Harpoon | BottomTab::Ci => 2,
+            BottomTab::Recent | BottomTab::Harpoon | BottomTab::Ci | BottomTab::Docs => 2,
         }
     }
 
@@ -1546,6 +1791,7 @@ impl Ide {
             BottomTab::Recent => self.render_recent_body(surface, theme, rect),
             BottomTab::Harpoon => self.render_harpoon_body(surface, theme, rect),
             BottomTab::Ci => self.render_ci_body(surface, theme, rect),
+            BottomTab::Docs => self.render_docs_body(surface, theme, rect),
         }
     }
 
@@ -1554,7 +1800,7 @@ impl Ide {
         use BottomTab::*;
         const G0: [BottomTab; 4] = [Problems, Run, Git, Debug];
         const G1: [BottomTab; 4] = [Registers, Todo, Marks, Jumplist];
-        const G2: [BottomTab; 3] = [Recent, Harpoon, Ci];
+        const G2: [BottomTab; 4] = [Recent, Harpoon, Ci, Docs];
         let col = self.bottom_focus_col;
         let order: &[BottomTab] = match col {
             0 => &G0,
@@ -1639,6 +1885,75 @@ impl Ide {
                 .map(|r| IdeAction::OpenUrl(r.html_url.clone()))
                 .unwrap_or(IdeAction::None),
             _ => IdeAction::None,
+        }
+    }
+
+    /// Show `entry` in the Documentation tool window: in the current tab, or
+    /// in a new one when the current tab is kept.
+    pub fn show_documentation(
+        &mut self,
+        entry: DocEntry,
+        loader: std::sync::Arc<arc_swap::ArcSwap<zmax_core::syntax::Loader>>,
+        focus: bool,
+    ) {
+        self.docs_loader = Some(loader);
+        if self.docs_tabs.get(self.docs_tab).is_none_or(|t| t.kept) {
+            self.docs_tab = self.docs_tabs.iter().position(|t| !t.kept).unwrap_or_else(|| {
+                self.docs_tabs.push(DocTab::default());
+                self.docs_tabs.len() - 1
+            });
+        }
+        let tab = &mut self.docs_tabs[self.docs_tab];
+        // A lookup after going back drops the entries ahead, as a browser does.
+        tab.history.truncate((tab.pos + 1).min(tab.history.len()));
+        tab.history.push(entry);
+        tab.pos = tab.history.len() - 1;
+        self.docs_scroll = 0;
+        self.visible = true;
+        self.fold_problems = false;
+        if focus {
+            self.select_tab(BottomTab::Docs);
+        } else {
+            self.bottom_tabs[Self::tab_col(BottomTab::Docs)] = BottomTab::Docs;
+            self.sync_bottom_tab();
+        }
+    }
+
+    /// The lookup the Documentation tool window shows.
+    pub fn docs_current(&self) -> Option<&DocEntry> {
+        let tab = self.docs_tabs.get(self.docs_tab)?;
+        tab.history.get(tab.pos)
+    }
+
+    /// Whether the Documentation tool window is on screen.
+    pub fn docs_shown(&self) -> bool {
+        self.visible && !self.fold_problems && self.bottom_tabs.contains(&BottomTab::Docs)
+    }
+
+    /// Back (`forward` false) or forward through the tab's lookups. `false`
+    /// at that end of the history.
+    pub fn docs_step(&mut self, forward: bool) -> bool {
+        let Some(tab) = self.docs_tabs.get_mut(self.docs_tab) else {
+            return false;
+        };
+        let next = if forward { tab.pos + 1 } else { tab.pos.wrapping_sub(1) };
+        if next >= tab.history.len() {
+            return false;
+        }
+        tab.pos = next;
+        self.docs_scroll = 0;
+        true
+    }
+
+    /// "Keep This Documentation": the tab stays as it is and the next lookup
+    /// opens another. `false` with nothing shown.
+    pub fn docs_keep_tab(&mut self) -> bool {
+        match self.docs_tabs.get_mut(self.docs_tab) {
+            Some(tab) if !tab.history.is_empty() => {
+                tab.kept = true;
+                true
+            }
+            _ => false,
         }
     }
 
@@ -1922,6 +2237,41 @@ impl Ide {
             }
             return IdeAction::None;
         }
+        // Documentation: j/k scroll, b/f back and forward, p keeps the tab,
+        // Tab moves between tabs, x closes one, Enter jumps to the source.
+        if !structure && self.bottom_tab == BottomTab::Docs {
+            match key.code {
+                KeyCode::Char('j') | KeyCode::Down => self.docs_scroll += 1,
+                KeyCode::Char('k') | KeyCode::Up => self.docs_scroll = self.docs_scroll.saturating_sub(1),
+                KeyCode::Char('g') | KeyCode::Home => self.docs_scroll = 0,
+                KeyCode::Char('b') | KeyCode::Left => {
+                    self.docs_step(false);
+                }
+                KeyCode::Char('f') | KeyCode::Right => {
+                    self.docs_step(true);
+                }
+                KeyCode::Char('p') => {
+                    self.docs_keep_tab();
+                }
+                KeyCode::Tab if !self.docs_tabs.is_empty() => {
+                    self.docs_tab = (self.docs_tab + 1) % self.docs_tabs.len();
+                    self.docs_scroll = 0;
+                }
+                KeyCode::Char('x') if !self.docs_tabs.is_empty() => {
+                    self.docs_tabs.remove(self.docs_tab);
+                    self.docs_tab = self.docs_tab.min(self.docs_tabs.len().saturating_sub(1));
+                    self.docs_scroll = 0;
+                }
+                KeyCode::Enter => {
+                    if let Some((path, line, col)) = self.docs_current().and_then(|d| d.source.clone()) {
+                        self.focus = Focus::Editor;
+                        return IdeAction::DocumentationSource { path, line, col };
+                    }
+                }
+                _ => {}
+            }
+            return IdeAction::None;
+        }
         // Simple list tabs (Todo/Marks/Jumps/Recent/Harpoon/CI): j/k select, Enter
         // activates (CI opens the run in the browser via activate_aux).
         if !structure
@@ -1969,23 +2319,28 @@ impl Ide {
         } else {
             &mut self.problems_sel
         };
+        let before = *sel;
         match key.code {
             KeyCode::Char('j') | KeyCode::Down => {
                 if *sel + 1 < len {
                     *sel += 1;
                 }
-                IdeAction::None
             }
             KeyCode::Char('k') | KeyCode::Up => {
                 *sel = sel.saturating_sub(1);
-                IdeAction::None
             }
             KeyCode::Enter => {
                 self.focus = Focus::Editor;
-                self.activate(structure)
+                return self.activate(structure);
             }
-            _ => IdeAction::None,
+            _ => {}
         }
+        // "Open Files with Single Click": the editor follows the selection,
+        // the focus staying in the panel.
+        if !structure && self.problems_autoscroll && self.problems_sel != before {
+            return self.activate(false);
+        }
+        IdeAction::None
     }
 
     fn activate(&self, structure: bool) -> IdeAction {
@@ -1998,15 +2353,59 @@ impl Ide {
                 })
                 .unwrap_or(IdeAction::None)
         } else {
-            self.problems
-                .get(self.problems_sel)
-                // A group header names a checker; there is nothing to jump to.
-                .filter(|p| !p.header)
-                .map(|p| IdeAction::Goto {
-                    from: p.start,
-                    to: p.end,
-                })
-                .unwrap_or(IdeAction::None)
+            self.problem_action(self.problems_sel)
+        }
+    }
+
+    /// Lines each side of the problem the preview shows.
+    const PREVIEW_CONTEXT: usize = 3;
+
+    /// Fill the preview for the selected problem: from the current buffer,
+    /// another open buffer, or the file on disk — read once per selection.
+    fn refresh_problem_preview(&mut self, editor: &zmax_view::Editor, doc: &zmax_view::Document) {
+        let Some(row) = self.problems.get(self.problems_sel).filter(|p| !p.header) else {
+            self.problem_preview = (None, Vec::new());
+            return;
+        };
+        let key = (row.path.clone(), row.line);
+        let from = row.line.saturating_sub(Self::PREVIEW_CONTEXT);
+        let around = |lines: &mut dyn Iterator<Item = String>| -> Vec<(usize, String)> {
+            lines
+                .enumerate()
+                .skip(from)
+                .take(Self::PREVIEW_CONTEXT * 2 + 1)
+                .map(|(i, l)| (i, l.trim_end().to_string()))
+                .collect()
+        };
+        let open = match &row.path {
+            None => Some(doc),
+            Some(path) => editor.document_by_path(path),
+        };
+        if let Some(open) = open {
+            let text = open.text();
+            self.problem_preview = (Some(key), around(&mut text.lines().map(|l| l.to_string())));
+        } else if self.problem_preview.0.as_ref() != Some(&key) {
+            let body = row.path.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).unwrap_or_default();
+            self.problem_preview = (Some(key), around(&mut body.lines().map(str::to_owned)));
+        }
+    }
+
+    /// Jump to problem `idx`: in this file by its range, in another file by
+    /// line and column. A header row names a file or a checker and goes nowhere.
+    fn problem_action(&self, idx: usize) -> IdeAction {
+        match self.problems.get(idx) {
+            Some(p) if p.header => IdeAction::None,
+            Some(ProblemRow { path: Some(path), line, col, .. }) => IdeAction::OpenProblem {
+                path: path.clone(),
+                line: *line,
+                col: *col,
+                preview_tab: self.problems_preview_tab,
+            },
+            Some(p) => IdeAction::Goto {
+                from: p.start,
+                to: p.end,
+            },
+            None => IdeAction::None,
         }
     }
 
@@ -2141,6 +2540,7 @@ impl Ide {
                         Some(BottomHit::TabRecent) => self.select_tab(BottomTab::Recent),
                         Some(BottomHit::TabHarpoon) => self.select_tab(BottomTab::Harpoon),
                         Some(BottomHit::TabCi) => self.select_tab(BottomTab::Ci),
+                        Some(BottomHit::TabDocs) => self.select_tab(BottomTab::Docs),
                         Some(BottomHit::Stop) => {
                             if let Some(r) = &self.run {
                                 crate::ui::run::stop(r);
@@ -2391,11 +2791,7 @@ impl Ide {
                         self.problems_state.offset() + (row - self.problems_rect.y - 1) as usize;
                     if idx < self.problems.len() {
                         self.problems_sel = idx;
-                        let p = &self.problems[idx];
-                        return IdeAction::Goto {
-                            from: p.start,
-                            to: p.end,
-                        };
+                        return self.problem_action(idx);
                     }
                 }
                 if in_rect(&self.stripe_rect, col, row) && self.stripe_rect.height > 0 {
@@ -3134,25 +3530,39 @@ impl Ide {
 
             self.minimap_key = mkey;
         }
-        self.problems = doc
-            .diagnostics()
-            .iter()
-            .map(|d| ProblemRow {
-                line: d.line,
-                start: d.range.start,
-                end: d.range.end,
-                sev: d.severity.unwrap_or(Severity::Hint),
-                msg: d.message.clone(),
-                source: d.source.clone(),
-                header: false,
-            })
-            .collect();
-        if self.problems_by_severity {
-            // Stable, so each severity keeps its line order.
-            self.problems.sort_by_key(|p| severity_rank(p.sev));
-        }
-        if self.group_problems {
+        self.problems = if self.problems_project {
+            project_problems(cx.editor, self.problems_folders_first)
+        } else {
+            doc.diagnostics()
+                .iter()
+                .map(|d| ProblemRow {
+                    line: d.line,
+                    start: d.range.start,
+                    end: d.range.end,
+                    sev: d.severity.unwrap_or(Severity::Hint),
+                    msg: d.message.clone(),
+                    source: d.source.clone(),
+                    header: false,
+                    path: None,
+                    col: 0,
+                })
+                .collect()
+        };
+        // Stable sorts within each file's run of rows, headers staying put.
+        sort_problem_runs(&mut self.problems, |rows| {
+            if self.problems_by_name {
+                rows.sort_by(|a, b| a.msg.cmp(&b.msg).then(a.line.cmp(&b.line)));
+            }
+            if self.problems_by_severity {
+                // Stable, so each severity keeps its line (or name) order.
+                rows.sort_by_key(|p| severity_rank(p.sev));
+            }
+        });
+        if self.group_problems && !self.problems_project {
             self.problems = group_problems_by_source(std::mem::take(&mut self.problems));
+        }
+        if self.problems_preview {
+            self.refresh_problem_preview(cx.editor, doc);
         }
         if self.problems_sel >= self.problems.len() {
             self.problems_sel = 0;
@@ -3869,6 +4279,23 @@ impl Ide {
             },
         );
         self.bottom_hits.push((x, x + ciw, BottomHit::TabCi));
+        x += ciw + 1;
+
+        // Documentation tool window
+        let dlabel = " DOC ";
+        let dw = dlabel.chars().count() as u16;
+        surface.set_stringn(
+            x,
+            area.y,
+            dlabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Docs {
+                on
+            } else {
+                off
+            },
+        );
+        self.bottom_hits.push((x, x + dw, BottomHit::TabDocs));
 
         if self.fold_problems {
             return;
@@ -4278,6 +4705,16 @@ impl Ide {
             );
             return;
         }
+        // "Open Editor Preview": the right part of the panel shows the lines
+        // around the selected problem.
+        let body = if self.problems_preview && body.width >= 60 {
+            let list_w = body.width / 2;
+            let preview = Rect::new(body.x + list_w + 1, body.y, body.width - list_w - 1, body.height);
+            self.render_problem_preview(surface, theme, preview);
+            Rect::new(body.x, body.y, list_w, body.height)
+        } else {
+            body
+        };
         let base = crate::ui::rat::to_rat_style(theme.get("ui.text"));
         let dim = crate::ui::rat::to_rat_style(theme.get("comment"));
         let sel = crate::ui::rat::to_rat_style(theme.get("ui.selection")).add_modifier(RMod::BOLD);
@@ -4332,6 +4769,66 @@ impl Ide {
                 .thumb_style(crate::ui::rat::to_rat_style(theme.get("ui.selection")))
                 .track_symbol(None);
             crate::ui::rat::render_stateful(sb, body, surface, &mut sbs);
+        }
+    }
+
+    fn render_docs_body(&mut self, surface: &mut Surface, theme: &zmax_view::Theme, body: Rect) {
+        if body.height == 0 {
+            return;
+        }
+        let dim = theme.get("comment");
+        let (Some(entry), Some(loader)) = (self.docs_current().cloned(), self.docs_loader.clone()) else {
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no documentation — Quick Documentation shows here with the popup off",
+                body.width as usize,
+                dim,
+            );
+            return;
+        };
+        // Header: the tabs, then where this lookup sits in its history.
+        let tab = &self.docs_tabs[self.docs_tab];
+        let mut header = String::new();
+        for (i, t) in self.docs_tabs.iter().enumerate() {
+            let title = t.history.get(t.pos).map_or("", |e| e.title.as_str());
+            let pin = if t.kept { "📌" } else { "" };
+            let mark = if i == self.docs_tab { "▸" } else { " " };
+            header.push_str(&format!("{mark}{pin}{title}  "));
+        }
+        header.push_str(&format!("({}/{})", tab.pos + 1, tab.history.len()));
+        surface.set_stringn(body.x + 1, body.y, &header, body.width.saturating_sub(1) as usize, theme.get("ui.text.focus"));
+        let markdown = crate::ui::Markdown::new(entry.body, loader);
+        let text = markdown.parse(Some(theme));
+        let height = body.height.saturating_sub(1) as usize;
+        self.docs_scroll = self.docs_scroll.min(text.lines.len().saturating_sub(1));
+        for (row, line) in text.lines.iter().skip(self.docs_scroll).take(height).enumerate() {
+            surface.set_spans(body.x + 1, body.y + 1 + row as u16, line, body.width.saturating_sub(1));
+        }
+    }
+
+    fn render_problem_preview(&self, surface: &mut Surface, theme: &zmax_view::Theme, area: Rect) {
+        let dim = theme.get("comment");
+        let text = theme.get("ui.text");
+        let focus = theme.get("ui.cursorline.primary").patch(theme.get("ui.text.focus"));
+        for y in area.y..area.bottom() {
+            surface.set_stringn(area.x.saturating_sub(1), y, "│", 1, dim);
+        }
+        let Some((_, line)) = &self.problem_preview.0 else {
+            return;
+        };
+        for (row, (i, content)) in self.problem_preview.1.iter().enumerate().take(area.height as usize) {
+            let y = area.y + row as u16;
+            let style = if i == line { focus } else { text };
+            let number = format!("{:>5} ", i + 1);
+            surface.set_stringn(area.x, y, &number, area.width as usize, dim);
+            surface.set_stringn(
+                area.x + 6,
+                y,
+                content,
+                area.width.saturating_sub(6) as usize,
+                style,
+            );
         }
     }
 
@@ -5600,7 +6097,8 @@ fn git_churn(dir: &std::path::Path) -> Vec<u64> {
 mod parse_tests {
     use super::{
         git_is_conflict, group_problems_by_source, parse_file_line, parse_percent,
-        parse_test_progress, severity_rank, todo_marker, todo_marker_scope, ProblemRow, Severity,
+        parse_test_progress, problem_path_order, severity_rank, sort_problem_runs, todo_marker,
+        todo_marker_scope, ProblemRow, Severity,
     };
 
     #[test]
@@ -5729,6 +6227,56 @@ mod parse_tests {
         assert_eq!(parse_test_progress(&empty), None);
     }
 
+    /// The Documentation tool window: back and forward through a tab's
+    /// lookups, a new lookup dropping the ones ahead, and a kept tab sending the
+    /// next lookup to a tab of its own.
+    #[test]
+    fn documentation_history_and_kept_tabs() {
+        use std::sync::Arc;
+        let loader = Arc::new(arc_swap::ArcSwap::from_pointee(zmax_core::config::default_lang_loader()));
+        let entry = |title: &str| super::DocEntry { title: title.into(), body: String::new(), source: None };
+        let mut ide = super::Ide::new();
+        let shown = |ide: &super::Ide| ide.docs_current().map(|d| d.title.clone());
+        ide.show_documentation(entry("a"), loader.clone(), true);
+        ide.show_documentation(entry("b"), loader.clone(), true);
+        assert!(ide.docs_step(false));
+        assert_eq!(Some("a".into()), shown(&ide));
+        assert!(!ide.docs_step(false), "a is the first");
+        ide.show_documentation(entry("c"), loader.clone(), true);
+        assert!(!ide.docs_step(true), "c replaced b ahead of a");
+        assert!(ide.docs_keep_tab());
+        ide.show_documentation(entry("d"), loader.clone(), true);
+        assert_eq!(Some("d".into()), shown(&ide));
+        assert!(!ide.docs_step(false), "d is alone in a new tab");
+    }
+
+    /// Folders Always on Top: at the first place two paths differ, the one
+    /// that goes on into a directory comes first.
+    #[test]
+    fn problem_paths_folders_first() {
+        use std::cmp::Ordering::*;
+        use std::path::Path;
+        let (sub, file) = (Path::new("a/z/x.rs"), Path::new("a/y.rs"));
+        assert_eq!(Less, problem_path_order(sub, file, true));
+        assert_eq!(Greater, problem_path_order(sub, file, false));
+        assert_eq!(Less, problem_path_order(Path::new("a/b.rs"), Path::new("a/c.rs"), true));
+        assert_eq!(Less, problem_path_order(Path::new("b/x.rs"), Path::new("c.rs"), true));
+    }
+
+    /// Sorting the project-wide list orders each file's problems and leaves
+    /// the file headers in place.
+    #[test]
+    fn problem_sorts_stay_within_a_file() {
+        let row = |msg: &str, header: bool| ProblemRow {
+            header,
+            ..problem(msg, None)
+        };
+        let mut rows = vec![row("one.rs", true), row("b", false), row("a", false), row("two.rs", true), row("d", false), row("c", false)];
+        sort_problem_runs(&mut rows, |run| run.sort_by(|x, y| x.msg.cmp(&y.msg)));
+        let msgs: Vec<&str> = rows.iter().map(|r| r.msg.as_str()).collect();
+        assert_eq!(vec!["one.rs", "a", "b", "two.rs", "c", "d"], msgs);
+    }
+
     #[test]
     fn todo_marker_word_boundary() {
         // real markers in comment context
@@ -5774,6 +6322,8 @@ mod parse_tests {
 
     fn problem(msg: &str, source: Option<&str>) -> ProblemRow {
         ProblemRow {
+            path: None,
+            col: 0,
             line: 0,
             start: 0,
             end: 0,

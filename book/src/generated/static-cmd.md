@@ -1694,6 +1694,19 @@
 | `export_to_scratch` | Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File) | **spacemacs, hybrid** — normal: `` <space>bE ``, select: `` <space>bE `` |
 | `recent_tests` | Pick one of the test runs that have finished and run it again (JetBrains Recent Tests) | **spacemacs, hybrid** — normal: `` <space>cH ``, select: `` <space>cH `` |
 | `sort_tree_by_time_newest` | Order the project tree by modification time, newest first (JetBrains Sort by Modification Time) |  |
+| `documentation_back` | Show the previous lookup in the Documentation tool window (JetBrains Back) |  |
+| `documentation_forward` | Show the next lookup in the Documentation tool window (JetBrains Forward) |  |
+| `documentation_keep_tab` | Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation) |  |
+| `documentation_jump_to_source` | Go to the declaration of the symbol the documentation shows (JetBrains Jump to Source) |  |
+| `toggle_documentation_popup_first` | Show Quick Documentation in the popup, or in the Documentation tool window (JetBrains Show Documentation Popup First) |  |
+| `toggle_documentation_auto_update` | Make the Documentation tool window follow the caret (JetBrains Auto-Update from Source) |  |
+| `problems_copy_description` | Copy the message of the problem selected in the Problems panel (JetBrains Copy Problem Description) |  |
+| `toggle_problems_by_name` | Order the Problems panel by message (JetBrains Sort by Name) |  |
+| `toggle_problems_project` | List every file's problems in the Problems panel, or the current file's (JetBrains Project Errors) |  |
+| `toggle_problems_folders_first` | In the project-wide Problems list, put directories before files (JetBrains Folders Always on Top) |  |
+| `toggle_problems_autoscroll` | Make the editor follow the Problems panel selection (JetBrains Open Files with Single Click) |  |
+| `toggle_problems_preview` | Show the lines around the selected problem beside the list (JetBrains Open Editor Preview) |  |
+| `toggle_problems_preview_tab` | Open files from the Problems panel in one reused buffer (JetBrains Enable Preview Tab) |  |
 | `toggle_problems_by_severity` | Order the Problems panel by severity, errors first (JetBrains Sort by Severity) |  |
 | `problems_jump_to_source` | Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source) |  |
 | `problems_quick_fixes` | Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes) |  |

@@ -2087,6 +2087,19 @@ impl MappableCommand {
         export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
         recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
+        documentation_back, "Show the previous lookup in the Documentation tool window (JetBrains Back)",
+        documentation_forward, "Show the next lookup in the Documentation tool window (JetBrains Forward)",
+        documentation_keep_tab, "Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation)",
+        documentation_jump_to_source, "Go to the declaration of the symbol the documentation shows (JetBrains Jump to Source)",
+        toggle_documentation_popup_first, "Show Quick Documentation in the popup, or in the Documentation tool window (JetBrains Show Documentation Popup First)",
+        toggle_documentation_auto_update, "Make the Documentation tool window follow the caret (JetBrains Auto-Update from Source)",
+        problems_copy_description, "Copy the message of the problem selected in the Problems panel (JetBrains Copy Problem Description)",
+        toggle_problems_by_name, "Order the Problems panel by message (JetBrains Sort by Name)",
+        toggle_problems_project, "List every file's problems in the Problems panel, or the current file's (JetBrains Project Errors)",
+        toggle_problems_folders_first, "In the project-wide Problems list, put directories before files (JetBrains Folders Always on Top)",
+        toggle_problems_autoscroll, "Make the editor follow the Problems panel selection (JetBrains Open Files with Single Click)",
+        toggle_problems_preview, "Show the lines around the selected problem beside the list (JetBrains Open Editor Preview)",
+        toggle_problems_preview_tab, "Open files from the Problems panel in one reused buffer (JetBrains Enable Preview Tab)",
         toggle_problems_by_severity, "Order the Problems panel by severity, errors first (JetBrains Sort by Severity)",
         problems_jump_to_source, "Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source)",
         problems_quick_fixes, "Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes)",
@@ -36323,21 +36336,24 @@ pub(crate) fn bookmark_line_text(editor: &Editor, path: &Path, line: usize) -> S
         .to_string()
 }
 
-/// The buffer the last bookmark opened under JetBrains "Enable Preview Tab",
-/// which the next one replaces unless it was edited or shown elsewhere since.
-static BOOKMARK_PREVIEW: std::sync::Mutex<Option<DocumentId>> = std::sync::Mutex::new(None);
+/// The buffer the last preview opened under JetBrains "Enable Preview Tab",
+/// which the next preview replaces unless it was edited or shown elsewhere
+/// since. One for the whole editor, as the IDE has one preview tab.
+static PREVIEW_TAB: std::sync::Mutex<Option<DocumentId>> = std::sync::Mutex::new(None);
 
-/// Open a bookmark from the Bookmarks views, honouring the preview-tab option.
-pub(crate) fn open_bookmark(editor: &mut Editor, path: &Path, line: usize, action: Action) {
-    let preview = line_bookmarks::options().preview_tab;
+/// Open `path` at 0-based `line` and `col`. With `preview`, the buffer the
+/// previous preview opened is closed, if nothing else holds it, and this one
+/// becomes the preview — unless it was open already.
+pub(crate) fn open_at(editor: &mut Editor, path: &Path, line: usize, col: usize, action: Action, preview: bool) {
     let was_open = editor.document_by_path(path).map(|d| d.id());
-    let previous = BOOKMARK_PREVIEW.lock().unwrap().take();
+    let previous = PREVIEW_TAB.lock().unwrap().take();
     match editor.open(path, action) {
         Ok(id) => {
             let (view, doc) = current!(editor);
             let text = doc.text();
             let line = line.min(text.len_lines().saturating_sub(1));
-            let pos = text.line_to_char(line);
+            let start = text.line_to_char(line);
+            let pos = (start + col).min(line_end_char_index(&text.slice(..), line));
             doc.set_selection(view.id, Selection::point(pos));
             align_view(doc, view, Align::Center);
             if preview {
@@ -36348,12 +36364,16 @@ pub(crate) fn open_bookmark(editor: &mut Editor, path: &Path, line: usize, actio
                         let _ = editor.close_document(old, false);
                     }
                 }
-                // A buffer that was open already is not the preview's to close.
-                *BOOKMARK_PREVIEW.lock().unwrap() = was_open.is_none().then_some(id);
+                *PREVIEW_TAB.lock().unwrap() = was_open.is_none().then_some(id);
             }
         }
         Err(e) => editor.set_error(format!("{}: {e}", path.display())),
     }
+}
+
+/// Open a bookmark from the Bookmarks views, honouring their preview-tab option.
+pub(crate) fn open_bookmark(editor: &mut Editor, path: &Path, line: usize, action: Action) {
+    open_at(editor, path, line, 0, action, line_bookmarks::options().preview_tab);
 }
 
 fn bookmark_cycle(cx: &mut Context, forward: bool) {
@@ -55435,6 +55455,136 @@ fn project_tree_action(
     }));
 }
 
+/// Run `f` on the workbench and report its answer, or that there is none.
+fn with_ide_status(
+    cx: &mut Context,
+    f: impl FnOnce(&mut crate::ui::ide::Ide) -> Option<String> + 'static,
+) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let status = compositor
+            .find::<crate::ui::EditorView>()
+            .map(|view| f(view.ide_or_create()));
+        match status {
+            Some(Some(status)) => cx.editor.set_status(status),
+            Some(None) => {}
+            None => cx.editor.set_status("no workbench"),
+        }
+    }));
+}
+
+/// JetBrains "Back" in the Documentation tool window (`Documentation.Back`).
+fn documentation_back(cx: &mut Context) {
+    with_ide_status(cx, |ide| (!ide.docs_step(false)).then(|| "no earlier documentation".to_string()));
+}
+
+/// JetBrains "Forward" in the Documentation tool window (`Documentation.Forward`).
+fn documentation_forward(cx: &mut Context) {
+    with_ide_status(cx, |ide| (!ide.docs_step(true)).then(|| "no later documentation".to_string()));
+}
+
+/// JetBrains "Keep This Documentation" (`Documentation.KeepTab`): the shown
+/// tab stays and the next lookup opens another.
+fn documentation_keep_tab(cx: &mut Context) {
+    with_ide_status(cx, |ide| {
+        Some(if ide.docs_keep_tab() { "documentation kept" } else { "no documentation shown" }.to_string())
+    });
+}
+
+/// JetBrains "Jump to Source" from the Documentation tool window
+/// (`Documentation.EditSource`): the declaration of the symbol shown.
+fn documentation_jump_to_source(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let source = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_ide(|ide| ide.docs_current().and_then(|d| d.source.clone())))
+            .flatten();
+        let Some((path, line, col)) = source else {
+            cx.editor.set_status("no documentation shown");
+            return;
+        };
+        open_at(cx.editor, &path, line, col, Action::Replace, false);
+        menu_run(compositor, cx, &goto_definition);
+    }));
+}
+
+/// JetBrains "Show Documentation Popup First"
+/// (`Documentation.ToggleShowInPopup`): Quick Documentation opens the popup,
+/// or goes straight to the Documentation tool window.
+fn toggle_documentation_popup_first(cx: &mut Context) {
+    let on = crate::ui::ide::toggle_docs_popup_first();
+    cx.editor.set_status(if on { "documentation: popup" } else { "documentation: tool window" });
+}
+
+/// JetBrains "Auto-Update from Source" (`Documentation.ToggleAutoUpdate`): the
+/// Documentation tool window follows the caret once the editor is idle.
+fn toggle_documentation_auto_update(cx: &mut Context) {
+    let on = crate::ui::ide::toggle_docs_auto_update();
+    cx.editor.set_status(format!("documentation follows the caret: {}", if on { "on" } else { "off" }));
+}
+
+/// Flip a Problems panel option and report it as `on` / `off`.
+fn toggle_problems_option(
+    cx: &mut Context,
+    option: crate::ui::ide::ProblemsOption,
+    on: &'static str,
+    off: &'static str,
+) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let state = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_ide(|ide| ide.toggle_problems_option(option)));
+        cx.editor.set_status(match state {
+            Some(true) => on,
+            Some(false) => off,
+            None => "no workbench",
+        });
+    }));
+}
+
+/// JetBrains "Sort by Name" in the Problems panel (`ProblemsView.SortByName`).
+fn toggle_problems_by_name(cx: &mut Context) {
+    use crate::ui::ide::ProblemsOption;
+    toggle_problems_option(cx, ProblemsOption::ByName, "problems: by message", "problems: in line order");
+}
+
+/// JetBrains "Project Errors": the Problems panel lists every file's
+/// diagnostics, under a header per file, instead of the current file's.
+fn toggle_problems_project(cx: &mut Context) {
+    use crate::ui::ide::ProblemsOption;
+    toggle_problems_option(cx, ProblemsOption::Project, "problems: whole project", "problems: current file");
+}
+
+/// JetBrains "Folders Always on Top" in the Problems panel
+/// (`ProblemsView.SortFoldersFirst`): in the project-wide list, a
+/// directory's subdirectories come before its files.
+fn toggle_problems_folders_first(cx: &mut Context) {
+    use crate::ui::ide::ProblemsOption;
+    toggle_problems_option(cx, ProblemsOption::FoldersFirst, "problems: folders first", "problems: in path order");
+}
+
+/// JetBrains "Open Files with Single Click" in the Problems panel
+/// (`ProblemsView.AutoscrollToSource`): the editor follows the selection.
+fn toggle_problems_autoscroll(cx: &mut Context) {
+    use crate::ui::ide::ProblemsOption;
+    toggle_problems_option(cx, ProblemsOption::Autoscroll, "problems: open on selection", "problems: open on Enter");
+}
+
+/// JetBrains "Open Editor Preview" in the Problems panel
+/// (`ProblemsView.ShowPreview`): the lines around the selected problem, beside
+/// the list.
+fn toggle_problems_preview(cx: &mut Context) {
+    use crate::ui::ide::ProblemsOption;
+    toggle_problems_option(cx, ProblemsOption::Preview, "problems: preview on", "problems: preview off");
+}
+
+/// JetBrains "Enable Preview Tab" in the Problems panel
+/// (`ProblemsView.OpenInPreviewTab`): files opened from the project-wide list
+/// reuse one buffer until it is edited.
+fn toggle_problems_preview_tab(cx: &mut Context) {
+    use crate::ui::ide::ProblemsOption;
+    toggle_problems_option(cx, ProblemsOption::PreviewTab, "problems: preview tab on", "problems: preview tab off");
+}
+
 /// JetBrains "Sort by Severity" in the Problems panel
 /// (`ProblemsView.SortBySeverity`): errors first, then warnings and the rest.
 fn toggle_problems_by_severity(cx: &mut Context) {
@@ -55489,6 +55639,24 @@ fn with_selected_problem(cx: &mut Context, then: fn(&mut Context)) {
 /// (`ProblemsView.Frontend.EditSource`): select the chosen diagnostic.
 fn problems_jump_to_source(cx: &mut Context) {
     with_selected_problem(cx, |_| {});
+}
+
+/// JetBrains "Copy Problem Description" (`ProblemsView.CopyProblemDescription`):
+/// the message of the problem selected in the Problems panel, to the clipboard.
+fn problems_copy_description(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let message = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_ide(|ide| ide.selected_problem_message()))
+            .flatten();
+        match message {
+            Some(message) => {
+                let _ = cx.editor.registers.write('+', vec![message]);
+                cx.editor.set_status("problem description copied");
+            }
+            None => cx.editor.set_status("no problem selected"),
+        }
+    }));
 }
 
 /// JetBrains "Show Quick Fixes" from the Problems panel

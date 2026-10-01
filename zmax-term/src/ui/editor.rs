@@ -500,7 +500,7 @@ impl EditorView {
     /// persisted layout (widths, folds, collapse/hide state) is applied, so every
     /// entry point (`:ide`, toggle, reveal, panel focus, …) restores the user's
     /// last arrangement instead of starting from defaults.
-    fn ide_or_create(&mut self) -> &mut Ide {
+    pub(crate) fn ide_or_create(&mut self) -> &mut Ide {
         if self.ide.is_none() {
             let mut ide = Ide::new();
             ide.apply_layout(&self.ide_layout);
@@ -919,6 +919,17 @@ impl EditorView {
                 context.editor.set_status(format!("opened {url}"));
                 None
             }
+            IdeAction::OpenProblem { path, line, col, preview_tab } => {
+                crate::commands::open_at(
+                    context.editor,
+                    &path,
+                    line,
+                    col,
+                    zmax_view::editor::Action::Replace,
+                    preview_tab,
+                );
+                None
+            }
             IdeAction::OpenBookmark { path, line } => {
                 crate::commands::open_bookmark(
                     context.editor,
@@ -1110,6 +1121,12 @@ impl EditorView {
                     }
                 }
                 None
+            }
+            IdeAction::DocumentationSource { path, line, col } => {
+                crate::commands::open_at(context.editor, &path, line, col, zmax_view::editor::Action::Replace, false);
+                Some(Box::new(|compositor, cx| {
+                    crate::commands::menu_run(compositor, cx, &crate::commands::goto_definition)
+                }))
             }
             IdeAction::RunConfigManager => Some(Box::new(|compositor, _cx| {
                 compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new(3)));
@@ -4401,6 +4418,12 @@ impl EditorView {
 
     pub fn handle_idle_timeout(&mut self, cx: &mut commands::Context) -> EventResult {
         commands::compute_inlay_hints_for_all_views(cx.editor, cx.jobs);
+
+        // JetBrains "Auto-Update from Source": the Documentation tool window
+        // follows the caret while it is on screen.
+        if crate::ui::ide::docs_auto_update() && self.ide.as_ref().is_some_and(|ide| ide.docs_shown()) {
+            commands::documentation_follow_caret(cx);
+        }
 
         // GitLens-style inline blame: show the current line's author/date/summary
         // as an idle status hint (cached per file).
