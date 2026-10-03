@@ -871,7 +871,13 @@ impl Application {
                     .set_error(format!("Can't open file {}", path.display()));
                 continue;
             }
-            if let Err(err) = crate::commands::typed::source_and_record(&mut cx, path) {
+            // With the compositor at hand the session's `normal! zt` runs in
+            // order, between its `exe s:l` and the cursor line that follows.
+            if let Err(err) = crate::commands::scripting::source_viml_file_with_compositor(
+                &mut cx,
+                &mut self.compositor,
+                path,
+            ) {
                 cx.editor.set_error(format!("{}: {err}", path.display()));
             }
         }

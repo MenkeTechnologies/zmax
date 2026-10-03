@@ -212,3 +212,26 @@ async fn session_winheight_measures_the_window() -> anyhow::Result<()> {
     let _ = std::fs::remove_dir_all(&dir);
     Ok(())
 }
+
+/// A session scrolls with `exe s:l | normal! zt` and then moves the cursor:
+/// the `zt` must run in script order, leaving line `s:l` at the top of the
+/// window with the cursor below it, as vim does.
+#[tokio::test(flavor = "multi_thread")]
+async fn session_normal_zt_scrolls_before_the_cursor_moves() -> anyhow::Result<()> {
+    let (app, dir) = boot_session(
+        "zt",
+        &[("notes.txt", 400)],
+        "set so=0\nexe 100\nnormal! zt\n110\nnormal! 0\n",
+    )?;
+
+    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+    let (view, doc) = zmax_view::current_ref!(app.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    assert_eq!(text.char_to_line(cursor), 109, "the session's `110`");
+    let top = text.char_to_line(doc.view_offset(view.id).anchor);
+    assert_eq!(top, 99, "`normal! zt` on line 100 puts it at the top");
+
+    let _ = std::fs::remove_dir_all(&dir);
+    Ok(())
+}

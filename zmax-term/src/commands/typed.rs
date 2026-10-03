@@ -35098,6 +35098,42 @@ fn feed_keys(
     }
 }
 
+/// Feed `keys` once at the cursor as `:normal` does, then the implicit <Esc>
+/// vim appends so a sequence ending in Insert/Select returns to Normal.
+fn feed_normal_keys(
+    editor: &mut Editor,
+    compositor: &mut Compositor,
+    jobs: &mut crate::job::Jobs,
+    keys: &[zmax_view::input::KeyEvent],
+) {
+    feed_keys(editor, compositor, jobs, keys);
+    if editor.mode != zmax_view::document::Mode::Normal {
+        let esc = zmax_view::input::parse_macro("<esc>").unwrap_or_default();
+        feed_keys(editor, compositor, jobs, &esc);
+    }
+}
+
+/// Run a script's `:normal {keys}` now, in script order, when the caller holds
+/// the compositor (a `-S` session at startup). `false` when the keys don't
+/// parse or a `:normal` replay is already running, leaving them to vimlrs.
+pub(crate) fn run_normal_keys_now(
+    editor: &mut Editor,
+    compositor: &mut Compositor,
+    jobs: &mut crate::job::Jobs,
+    raw: &str,
+) -> bool {
+    let Ok(keys) = zmax_view::input::parse_macro(raw) else {
+        return false;
+    };
+    if editor.macro_replaying.contains(&':') {
+        return false;
+    }
+    editor.macro_replaying.push(':');
+    feed_normal_keys(editor, compositor, jobs, &keys);
+    editor.macro_replaying.pop();
+    true
+}
+
 /// Replay `keys` for `:normal`. With `targets = None`, once at the current cursor.
 /// With a line list, once per line — the cursor is placed at each line's start and
 /// the lines are processed bottom-up so that inserting/deleting lines during replay
@@ -35134,12 +35170,7 @@ fn replay_normal_keys(
             // (e.g. `A;`) returns to Normal — essential when replaying per line.
             let esc = zmax_view::input::parse_macro("<esc>").unwrap_or_default();
             match targets {
-                None => {
-                    feed_keys(editor, compositor, &mut jobs, &keys);
-                    if editor.mode != zmax_view::document::Mode::Normal {
-                        feed_keys(editor, compositor, &mut jobs, &esc);
-                    }
-                }
+                None => feed_normal_keys(editor, compositor, &mut jobs, &keys),
                 Some(mut lines) => {
                     lines.sort_unstable();
                     lines.dedup();

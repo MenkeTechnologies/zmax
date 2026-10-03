@@ -58,6 +58,15 @@ pub fn source_viml_file(
     Err(DISABLED.to_string())
 }
 
+/// See [`crate::commands::scripting::source_viml_file_with_compositor`].
+pub fn source_viml_file_with_compositor(
+    _cx: &mut compositor::Context,
+    _compositor: &mut compositor::Compositor,
+    _path: &std::path::Path,
+) -> Result<(), String> {
+    Err(DISABLED.to_string())
+}
+
 /// See [`crate::commands::scripting::run_awk_filter`].
 pub fn run_awk_filter(_cx: &mut compositor::Context, _program: &str) -> Result<String, String> {
     Err(DISABLED.to_string())

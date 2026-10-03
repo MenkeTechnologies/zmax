@@ -67,6 +67,29 @@ impl Drop for CxGuard {
     }
 }
 
+thread_local! {
+    /// The compositor, while a script is sourced by a caller that owns it
+    /// ([`source_viml_file_with_compositor`]). A `:command` runs inside the
+    /// compositor's own event handling and can't feed it keys, so `:normal`
+    /// is otherwise deferred until the script ends.
+    static COMPOSITOR_PTR: Cell<*mut crate::compositor::Compositor> =
+        const { Cell::new(ptr::null_mut()) };
+}
+
+/// Source a Vimscript file with the compositor at hand, so its `:normal`
+/// keys run in script order — a session's `exe s:l | normal! zt | 40`
+/// scrolls before the cursor moves, as in vim. Used by `-S` at startup.
+pub fn source_viml_file_with_compositor(
+    cx: &mut compositor::Context,
+    compositor: &mut crate::compositor::Compositor,
+    path: &std::path::Path,
+) -> Result<(), String> {
+    let prev = COMPOSITOR_PTR.with(|c| c.replace(compositor));
+    let res = crate::commands::typed::source_and_record(cx, path);
+    COMPOSITOR_PTR.with(|c| c.set(prev));
+    res
+}
+
 /// Run `f` with the active editor context. Errors if called outside an eval.
 fn with_cx<R>(f: impl FnOnce(&mut compositor::Context) -> R) -> Result<R, String> {
     CX_PTR.with(|c| {
@@ -572,6 +595,22 @@ fn install_viml_host_hooks() {
             (view.inner_height() as i64, i64::from(view.inner_width(doc)))
         })
         .unwrap_or((-1, -1))
+    }));
+    // `:normal {keys}` with zmax's own Normal mode, when the compositor is at
+    // hand; otherwise vimlrs's bounded port runs them.
+    vimlrs::fusevm_bridge::install_normal_hook(Box::new(|keys: &str| {
+        let compositor = COMPOSITOR_PTR.with(|c| c.get());
+        if compositor.is_null() {
+            return false;
+        }
+        with_cx(|cx| {
+            // SAFETY: set by `source_viml_file_with_compositor` for the length
+            // of the synchronous source; the compositor is a separate value
+            // from the editor and jobs `cx` borrows.
+            let compositor = unsafe { &mut *compositor };
+            crate::commands::typed::run_normal_keys_now(cx.editor, compositor, cx.jobs, keys)
+        })
+        .unwrap_or(false)
     }));
     vimlrs::fusevm_bridge::install_set_hook(Box::new(|args: &str| {
         let _ = with_cx(|cx| {
