@@ -1273,6 +1273,15 @@ impl Ide {
         Some(run.lock().ok()?.running)
     }
 
+    /// The commands the Run window holds and whether each still runs, for
+    /// the Services view.
+    pub fn run_commands(&self) -> Vec<(String, bool)> {
+        self.run
+            .iter()
+            .filter_map(|r| r.lock().ok().map(|s| (s.cmd.clone(), s.running)))
+            .collect()
+    }
+
     /// Stop the active run (SIGTERM the process). No-op if nothing is running.
     pub fn stop_run(&mut self) {
         if let Some(r) = &self.run {

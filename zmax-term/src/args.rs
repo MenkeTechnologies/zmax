@@ -22,6 +22,8 @@ pub struct Args {
     pub config_file: Option<PathBuf>,
     pub files: IndexMap<PathBuf, Vec<Position>>,
     pub working_directory: Option<PathBuf>,
+    /// vim `-S {file}`: scripts sourced after the files are loaded, in order.
+    pub source_files: Vec<PathBuf>,
 }
 
 impl Args {
@@ -100,6 +102,18 @@ impl Args {
                         anyhow::bail!("--working-dir must specify an initial working directory")
                     }
                 },
+                // vim `-S {file}`: "{file} will be sourced after the first file has
+                // been read. ... If {file} is omitted "Session.vim" is used (only
+                // works when -S is the last argument)."
+                "-S" => {
+                    let file = argv
+                        .next_if(|opt| !opt.starts_with('-'))
+                        .unwrap_or_else(|| "Session.vim".to_string());
+                    // Resolved now, like the files: `-w` or a directory argument
+                    // changes the working directory before the script runs.
+                    args.source_files
+                        .push(zmax_stdx::path::canonicalize(PathBuf::from(file)));
+                }
                 arg if arg.starts_with("--") => {
                     anyhow::bail!("unexpected double dash argument: {}", arg)
                 }
@@ -318,6 +332,35 @@ mod test {
 
         let args = parse(&["--health", "--strict"]).unwrap();
         assert!(args.health && args.health_arg.is_none() && args.strict);
+    }
+
+    /// vim `-S {file}` takes its script, which is not a file to edit; repeated, the
+    /// scripts run in order; with no script, or followed by another flag, it is
+    /// `Session.vim`. The `+` and file of `zmax -S s.vim + f` keep their meaning.
+    #[test]
+    fn dash_s_collects_session_scripts() {
+        let args = parse(&["-S", "s.vim", "+", "f.txt"]).unwrap();
+        assert_eq!(args.source_files.len(), 1);
+        assert!(args.source_files[0].ends_with("s.vim"));
+        assert_eq!(args.files.len(), 1);
+        assert!(args.files.keys().next().unwrap().ends_with("f.txt"));
+        assert_eq!(args.files.values().next().unwrap()[0].row, usize::MAX);
+
+        let args = parse(&["-S", "a.vim", "-S", "b.vim"]).unwrap();
+        let names: Vec<_> = args
+            .source_files
+            .iter()
+            .map(|p| p.file_name().unwrap().to_str().unwrap())
+            .collect();
+        assert_eq!(names, ["a.vim", "b.vim"]);
+        assert!(args.files.is_empty());
+
+        for argv in [vec!["-S"], vec!["-S", "--strict"]] {
+            let args = parse(&argv).unwrap();
+            assert_eq!(args.source_files.len(), 1, "{argv:?}");
+            assert!(args.source_files[0].ends_with("Session.vim"), "{argv:?}");
+        }
+        assert!(parse(&["-S", "--strict"]).unwrap().strict);
     }
 
     /// Everything after `--` is a file, including a word that would otherwise

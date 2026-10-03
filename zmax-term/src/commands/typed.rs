@@ -5943,6 +5943,15 @@ fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         "k" | "C-k" | "up" => cx.editor.focus_direction(Direction::Up),
         "l" | "C-l" | "right" => cx.editor.focus_direction(Direction::Right),
         "w" | "C-w" => cx.editor.focus_next(),
+        // vim CTRL-W t / CTRL-W b: the top-left and bottom-right windows, the
+        // first and last in window-number order. `:mksession` writes `wincmd t`.
+        "t" | "C-t" | "b" | "C-b" => {
+            let mut ids = cx.editor.tree.traverse().map(|(id, _)| id);
+            let target = if arg.ends_with('t') { ids.next() } else { ids.last() };
+            if let Some(id) = target {
+                cx.editor.focus(id);
+            }
+        }
         "s" | "S" | "C-s" => {
             let action = split_mod(cx.editor, Action::HorizontalSplit);
             split(cx.editor, action)
@@ -9181,6 +9190,17 @@ pub(crate) fn open_diff(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
         editor.set_status("no changes against git HEAD");
         return;
     }
+    // The other changed files, for JetBrains "Compare Next / Previous File".
+    let path = editor.document(doc_id).and_then(|d| d.path().map(|p| p.to_path_buf()));
+    let files = path
+        .as_ref()
+        .and_then(|p| p.parent())
+        .map(|dir| crate::ui::merge::changed_files(&zmax_loader::find_workspace_in(dir).0))
+        .unwrap_or_default();
+    let view = match path.and_then(|p| files.iter().position(|f| *f == p)) {
+        Some(current) => view.with_files(files, current),
+        None => view,
+    };
 
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |_editor: &mut Editor, compositor: &mut Compositor| {
@@ -29118,7 +29138,7 @@ thread_local! {
 }
 
 /// Source a Vimscript file and record it for `:scriptnames`.
-fn source_and_record(
+pub(crate) fn source_and_record(
     cx: &mut compositor::Context,
     path: &std::path::Path,
 ) -> Result<(), std::string::String> {

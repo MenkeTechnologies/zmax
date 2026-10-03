@@ -124,6 +124,18 @@ Open the first file at line
 A bare
 .B +
 opens it at the last line.
+.TP
+.BI \-S " [file]"
+Source the Vimscript
+.I file
+after the init files and the files on the command line have loaded, as
+.B vim \-S
+does \(em typically a session written by
+.BR :mksession .
+Without
+.IR file ,
+.I Session.vim
+is sourced. Repeat to source several scripts in order.
 .SS System
 .TP
 .B \-v

@@ -72,6 +72,8 @@ async fn main_impl() -> Result<i32> {
     --vsplit                     \x1b[32m//\x1b[0m Split given files vertically into windows
     --hsplit                     \x1b[32m//\x1b[0m Split given files horizontally into windows
     +[N]                         \x1b[32m//\x1b[0m Open first file at line N (or last line)
+    -S [file]                    \x1b[32m//\x1b[0m Source a Vimscript file (a session) after
+                                 \x1b[32m//\x1b[0m loading; default Session.vim
 \x1b[36m  ── SYSTEM ─────────────────────────────────────────────\x1b[0m
     -v                           \x1b[32m//\x1b[0m Increase logging verbosity (up to 3 times)
     -V, --version                \x1b[32m//\x1b[0m Print version information
@@ -165,12 +167,16 @@ async fn main_impl() -> Result<i32> {
         zmax_core::config::default_lang_loader()
     });
 
+    let source_files = args.source_files.clone();
+
     // TODO: use the thread local executor to spawn the application task separately from the work pool
     let mut app = Application::new(args, config, lang_loader, workspace_trust)
         .context("unable to start Zmax")?;
 
     // Load embedded-scripting init files (~/.zmax/init.el) before the UI loop.
     app.load_init_scripts();
+    // vim `-S {file}`, after init and the command-line files.
+    app.source_startup_files(&source_files);
 
     let mut events = app.event_stream();
 

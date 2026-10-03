@@ -1715,6 +1715,12 @@
 | `export_to_scratch` | Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File) | **spacemacs, hybrid** — normal: `` <space>bE ``, select: `` <space>bE `` |
 | `recent_tests` | Pick one of the test runs that have finished and run it again (JetBrains Recent Tests) | **spacemacs, hybrid** — normal: `` <space>cH ``, select: `` <space>cH `` |
 | `sort_tree_by_time_newest` | Order the project tree by modification time, newest first (JetBrains Sort by Modification Time) |  |
+| `compare_directories_view` | Compare two directory trees file by file and synchronize them (JetBrains Compare Directories) |  |
+| `blank_diff_window` | Two empty buffers side by side, diffed as you type or paste (JetBrains Open Blank Diff Window) |  |
+| `blank_diff_toggle_three_side` | Add a third side to the blank diff window, or take it away (JetBrains Toggle Three-Side Mode) |  |
+| `blank_diff_open_blank` | Empty this side of the blank diff window (JetBrains Open Blank Editor) |  |
+| `blank_diff_open_file` | Show a file on this side of the blank diff window (JetBrains Open File) |  |
+| `git_diff_in_new_tab` | This file's changes against HEAD in a new tab, editable and diffed live (JetBrains Show Diff in a New Tab) |  |
 | `documentation_back` | Show the previous lookup in the Documentation tool window (JetBrains Back) |  |
 | `documentation_forward` | Show the next lookup in the Documentation tool window (JetBrains Forward) |  |
 | `documentation_keep_tab` | Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation) |  |
@@ -2572,6 +2578,20 @@
 | `goto_next_usage` | Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage) | **spacemacs, hybrid** — normal: `` <space>s<gt> ``, select: `` <space>s<gt> `` |
 | `goto_prev_usage` | Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage) | **spacemacs, hybrid** — normal: `` <space>s<lt> ``, select: `` <space>s<lt> `` |
 | `highlight_usages_in_file` | Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7) | **spacemacs, hybrid** — normal: `` <space>su ``, select: `` <space>su `` |
+| `services_view` | The run configurations with their state, grouped and hideable (JetBrains Services) |  |
+| `services_restore_all` | Show every hidden run configuration in the Services view again (JetBrains Restore Hidden Configurations) |  |
+| `manage_run_targets` | The run targets; pick one to remove it (JetBrains Manage Targets) |  |
+| `run_target_add` | Define a run target: SSH host, Docker image or running container (JetBrains Manage Targets) |  |
+| `choose_run_target` | Choose where the active run configuration runs (JetBrains Run Targets) |  |
+| `build_tool_window` | The build-tool window: the build files' projects, members and tasks (JetBrains Gradle/Maven/Cargo tool window) |  |
+| `build_sync` | Reload the build projects: run the sync triggers and restart the language servers (JetBrains Reload All Projects) |  |
+| `build_sync_project` | Reload the build project the file belongs to (JetBrains Reload Project) |  |
+| `build_hide_sync_notice` | Stop announcing the changed build files until they change again (JetBrains Hide Load Build Changes) |  |
+| `build_auto_sync` | Reload build files on every change, or only on build_sync (JetBrains Auto-Sync Settings) |  |
+| `build_tool_settings` | Open the build-tool window's saved settings (JetBrains Build Tool Settings) |  |
+| `build_task_trigger` | Run a build task before or after build, rebuild or sync (JetBrains Execute Before/After) |  |
+| `build_task_triggers` | The build task triggers; pick one to remove it (JetBrains Tasks Activation) |  |
+| `run_config_add_before_task` | Run a build task before the active run configuration (JetBrains Execute Before Run/Debug) |  |
 | `build_project` | Build the project with its own build tool (JetBrains Build Project, Ctrl F9) | **spacemacs, hybrid** — normal: `` <space>pB ``, select: `` <space>pB `` |
 | `rebuild_project` | Clean and build the project (JetBrains Rebuild, Ctrl Shift F9) | **spacemacs, hybrid** — normal: `` <space>pC ``, select: `` <space>pC `` |
 | `new_file_in_directory` | Create a file next to the current one and open it (JetBrains New in This Directory) | **spacemacs, hybrid** — normal: `` <space>fn ``, select: `` <space>fn `` |

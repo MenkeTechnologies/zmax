@@ -490,7 +490,11 @@ impl Application {
                     if editor.tree.try_get(editor.tree.focus).is_none() {
                         editor.new_file(Action::VerticalSplit);
                     }
-                    compositor.push(Box::new(ui::Startify::new()));
+                    // A `-S` session lays out its own buffers; the start screen
+                    // would only cover them.
+                    if args.source_files.is_empty() {
+                        compositor.push(Box::new(ui::Startify::new()));
+                    }
                 }
             }
         } else {
@@ -848,6 +852,29 @@ impl Application {
         crate::commands::scripting::load_init_scripts(&mut cx);
         self.load_exrc();
         self.load_plugins();
+    }
+
+    /// vim `-S {file}`: source each script after the init files, plugins and the
+    /// files named on the command line have loaded, as vim runs `-S` after
+    /// "the first file has been read". A session written by `:mksession` lays
+    /// out its buffers and cursor from there.
+    pub fn source_startup_files(&mut self, files: &[std::path::PathBuf]) {
+        for path in files {
+            let mut cx = crate::compositor::Context {
+                editor: &mut self.editor,
+                jobs: &mut self.jobs,
+                scroll: None,
+            };
+            if !path.is_file() {
+                // vim E484.
+                cx.editor
+                    .set_error(format!("Can't open file {}", path.display()));
+                continue;
+            }
+            if let Err(err) = crate::commands::typed::source_and_record(&mut cx, path) {
+                cx.editor.set_error(format!("{}: {err}", path.display()));
+            }
+        }
     }
 
     /// vim `loadplugins`: "when on the plugin scripts are loaded when starting

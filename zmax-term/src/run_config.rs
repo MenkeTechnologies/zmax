@@ -18,6 +18,66 @@ pub struct RunConfig {
     pub dir: String,
     /// Newline-separated `KEY=VALUE` environment overrides.
     pub env: String,
+    /// JetBrains "Before launch" build-tool tasks: shell commands run, in
+    /// order, before `command`, each in its own directory. The run stops at
+    /// the first that fails.
+    pub before: Vec<BeforeTask>,
+    /// The Services view folder the configuration is grouped in; empty for
+    /// none (JetBrains "Group Configurations").
+    pub folder: String,
+    /// Hidden from the Services view (JetBrains "Hide Configuration").
+    pub hidden: bool,
+    /// The run target (`run_targets`) the command executes on; empty runs it
+    /// here (JetBrains "Run on").
+    pub target: String,
+}
+
+/// A build-tool task run before a configuration.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BeforeTask {
+    pub dir: String,
+    pub command: String,
+}
+
+impl RunConfig {
+    /// The command line a run of this configuration executes: the before
+    /// tasks, each in its directory, then the configured command.
+    pub fn command_line(&self) -> String {
+        let env_prefix: String = self
+            .env
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty() && l.contains('='))
+            .map(|l| format!("{l} "))
+            .collect();
+        let mut steps: Vec<String> = self
+            .before
+            .iter()
+            .map(|t| format!("(cd '{}' && {})", t.dir.replace('\'', "'\\''"), t.command))
+            .collect();
+        steps.push(format!("{env_prefix}{}", self.command));
+        let line = steps.join(" && ");
+        match (!self.target.is_empty()).then(|| crate::run_targets::find(&self.target)).flatten() {
+            Some(target) => target.wrap(&zmax_loader::find_workspace().0, &resolve_dir(&self.dir), &line),
+            None => line,
+        }
+    }
+}
+
+/// JetBrains "Execute Before Run/Debug" (`ExternalSystem.BeforeRun`): add a
+/// build-tool task to the active configuration's before-launch steps.
+/// Returns the configuration's name, or `None` with no active configuration.
+pub fn add_before_task(dir: &std::path::Path, command: &str) -> Option<String> {
+    let mut data = load();
+    let config = data.configs.get_mut(data.active)?;
+    let task = BeforeTask { dir: dir.to_string_lossy().into_owned(), command: command.to_string() };
+    if !config.before.contains(&task) {
+        config.before.push(task);
+    }
+    let name = config.name.clone();
+    save(&data);
+    Some(name)
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -27,6 +87,9 @@ pub struct RunConfigs {
     pub active: usize,
     #[serde(rename = "config", default)]
     pub configs: Vec<RunConfig>,
+    /// Configuration types removed from the Services view (JetBrains "Remove
+    /// Type"): the programs their commands run.
+    pub removed_types: Vec<String>,
 }
 
 /// URL-safe base64 (no padding), dependency-free — for encoding a workspace path
@@ -173,6 +236,7 @@ pub fn upsert_active(name: String, command: String, dir: String) -> RunConfig {
             command,
             dir,
             env: String::new(),
+            ..Default::default()
         });
         data.active = data.configs.len() - 1;
     }
@@ -228,6 +292,7 @@ mod tests {
                     ..Default::default()
                 })
                 .collect(),
+            ..Default::default()
         };
         let mut data = named(&["a", "b", "c"]);
         data.active = 2;
@@ -239,5 +304,16 @@ mod tests {
         data.remove(1);
         assert_eq!(0, data.active, "the removed active one falls back to its neighbour");
         assert!(data.remove(5).is_none());
+    }
+
+    #[test]
+    fn before_tasks_run_first_in_their_directories() {
+        let config = super::RunConfig {
+            command: "cargo run".into(),
+            env: "RUST_LOG=debug".into(),
+            before: vec![super::BeforeTask { dir: "/w/tool".into(), command: "cargo fmt".into() }],
+            ..Default::default()
+        };
+        assert_eq!("(cd '/w/tool' && cargo fmt) && RUST_LOG=debug cargo run", config.command_line());
     }
 }

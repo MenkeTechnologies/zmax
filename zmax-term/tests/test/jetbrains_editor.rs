@@ -781,3 +781,32 @@ async fn bookmark_lists_descriptions_and_order() -> anyhow::Result<()> {
     assert_eq!(Some("first line".to_owned()), mark.description);
     Ok(())
 }
+
+/// The blank diff window: two empty sides, each diffed against the other as
+/// it is typed into.
+#[tokio::test(flavor = "multi_thread")]
+async fn blank_diff_sides_diff_against_each_other() -> anyhow::Result<()> {
+    let mut config = Config::default();
+    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => blank_diff_window, }));
+    let mut app = AppBuilder::new().with_config(config).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("Zia<ret>c<esc><C-w>hia<ret>b<esc>"),
+                Some(&|app| {
+                    let bases: Vec<String> = app
+                        .editor
+                        .documents()
+                        .filter_map(|d| d.diff_handle().map(|h| (d.text().to_string(), h.load().diff_base().to_string())))
+                        .map(|(text, base)| format!("{text}|{base}"))
+                        .collect();
+                    assert!(bases.contains(&"a\nc\n|a\nb\n".to_string()), "{bases:?}");
+                    assert!(bases.contains(&"a\nb\n|a\nc\n".to_string()), "{bases:?}");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await
+}

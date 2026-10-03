@@ -597,19 +597,22 @@ fn install_viml_host_hooks() {
     // flushed after sourcing (see `flush_viml_theme`).
     // Editor `:` commands vimlrs doesn't implement (`:edit`, `:cd`, `:badd`,
     // `:buffer`, …) → run them through zmax's own command dispatch, so a sourced
-    // vimrc / session file can drive the editor. Only claim a line whose first
-    // word is a known zmax typable command (name or alias); anything else is
-    // left to vimlrs's statement evaluation.
+    // vimrc / session file can drive the editor. Only claim a line whose command
+    // word, past any range, is a zmax typable command; anything else is left to
+    // vimlrs's statement evaluation.
     vimlrs::fusevm_bridge::install_excmd_hook(Box::new(|line: &str| {
-        let word = line
-            .trim_start_matches([':', ' '])
-            .split(|c: char| c.is_whitespace() || c == '!')
-            .next()
-            .unwrap_or("");
-        if word.is_empty() || !crate::commands::typed::TYPABLE_COMMAND_MAP.contains_key(word) {
+        let Some(line) = zmax_command_line(line) else {
+            return false;
+        };
+        // A line zmax hands back to vimlrs (its unknown-command fallback) must not
+        // come round to this hook again — that loops until the stack overflows.
+        if HOOK_LINES.with(|l| l.borrow().contains(&line)) {
             return false;
         }
-        with_cx(|cx| crate::commands::typed::run_command_line(cx, line.trim())).is_ok()
+        HOOK_LINES.with(|l| l.borrow_mut().push(line.clone()));
+        let ran = with_cx(|cx| crate::commands::typed::run_command_line(cx, &line)).is_ok();
+        HOOK_LINES.with(|l| l.borrow_mut().pop());
+        ran
     }));
     vimlrs::fusevm_bridge::add_colorscheme_dir(zmax_loader::config_dir());
     vimlrs::fusevm_bridge::install_highlight_hook(Box::new(|_args: &str| {
@@ -622,7 +625,35 @@ fn install_viml_host_hooks() {
     }));
 }
 
+/// The zmax command line a script's Ex command `line` runs as, or `None` when
+/// zmax has no such command. A vim abbreviation zmax doesn't list (`argdel`) is
+/// spelled out by vim's own rule — the first command in vim's table it begins —
+/// so a session written by vim reaches the command it names. A line opening
+/// with a range (`%argdel`, `1wincmd w`) is left to vimlrs: zmax's command
+/// parser reads its first word as the command, which a range is not.
+fn zmax_command_line(line: &str) -> Option<String> {
+    use crate::commands::typed::TYPABLE_COMMAND_MAP;
+    let line = line.trim().trim_start_matches([':', ' ']);
+    let end = line
+        .find(|c: char| c.is_whitespace() || c == '!')
+        .unwrap_or(line.len());
+    let (word, tail) = line.split_at(end);
+    if !word.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return None;
+    }
+    if TYPABLE_COMMAND_MAP.contains_key(word) {
+        return Some(line.to_string());
+    }
+    let full = vimlrs::ported::eval::funcs::CMDNAMES
+        .iter()
+        .find(|name| name.starts_with(word))
+        .filter(|name| TYPABLE_COMMAND_MAP.contains_key(**name))?;
+    Some(format!("{full}{tail}"))
+}
+
 thread_local! {
+    /// The command lines the vimlrs ex-command hook is running, innermost last.
+    static HOOK_LINES: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
     /// Set whenever a `:highlight` runs; a post-source flush rebuilds the theme
     /// so trailing `:highlight` overrides (outside a `:colorscheme`) still apply.
     static VIML_THEME_DIRTY: Cell<bool> = const { Cell::new(false) };
@@ -1105,6 +1136,22 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
 
 #[cfg(test)]
 mod tests {
+    /// What a sourced script's Ex command runs as in zmax: its own name, or a
+    /// vim abbreviation spelled out by vim's table; a ranged line or a command
+    /// zmax lacks is left to vimlrs.
+    #[test]
+    fn script_ex_commands_resolve_to_zmax_command_lines() {
+        assert_eq!(super::zmax_command_line("only").as_deref(), Some("only"));
+        assert_eq!(super::zmax_command_line(":cd ~/").as_deref(), Some("cd ~/"));
+        assert_eq!(
+            super::zmax_command_line("argdel *").as_deref(),
+            Some("argdelete *")
+        );
+        assert_eq!(super::zmax_command_line("%argdel"), None);
+        assert_eq!(super::zmax_command_line("1wincmd w"), None);
+        assert_eq!(super::zmax_command_line("notacommandxyz"), None);
+    }
+
     /// The embedded elisprs interpreter links and runs inside zmax-term.
     #[test]
     fn pure_eval_runs() {

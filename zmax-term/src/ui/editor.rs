@@ -843,14 +843,7 @@ impl EditorView {
     pub fn run_active(&mut self, context: &mut crate::compositor::Context) {
         match crate::run_config::active() {
             Some(c) if !c.command.trim().is_empty() => {
-                let env_prefix: String = c
-                    .env
-                    .lines()
-                    .map(str::trim)
-                    .filter(|l| !l.is_empty() && l.contains('='))
-                    .map(|l| format!("{l} "))
-                    .collect();
-                let cmd = format!("{env_prefix}{}", c.command);
+                let cmd = c.command_line();
                 let cwd = crate::run_config::resolve_dir(&c.dir);
                 self.start_run(context, cmd, cwd);
             }
@@ -4418,6 +4411,9 @@ impl EditorView {
 
     pub fn handle_idle_timeout(&mut self, cx: &mut commands::Context) -> EventResult {
         commands::compute_inlay_hints_for_all_views(cx.editor, cx.jobs);
+
+        // JetBrains "Load Build Changes": build files changed since the last sync.
+        commands::check_build_changes(cx);
 
         // JetBrains "Auto-Update from Source": the Documentation tool window
         // follows the caret while it is on screen.

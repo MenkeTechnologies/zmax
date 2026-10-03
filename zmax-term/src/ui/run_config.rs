@@ -222,14 +222,7 @@ impl RunConfigPanel {
         }
         self.data.active = self.selected;
         self.persist();
-        let env_prefix: String = c
-            .env
-            .lines()
-            .map(str::trim)
-            .filter(|l| !l.is_empty() && l.contains('='))
-            .map(|l| format!("{l} "))
-            .collect();
-        let cmd = format!("{env_prefix}{}", c.command);
+        let cmd = c.command_line();
         let cwd = run_config::resolve_dir(&c.dir);
         Some(Box::new(
             move |compositor: &mut Compositor, cx: &mut Context| {

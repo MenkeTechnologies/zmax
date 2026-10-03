@@ -36,7 +36,7 @@ use zmax_view::DocumentId;
 
 use crate::{
     compositor::{Callback, Component, Compositor, Context, Event, EventResult},
-    ctrl, key,
+    ctrl, key, shift,
 };
 
 /// What a single aligned row represents.
@@ -618,6 +618,188 @@ pub struct DiffView {
     /// `ediff-regions-wordwise`: refine a changed row at emacs's word
     /// granularity instead of per character.
     word_refine: bool,
+    /// JetBrains diff settings "Highlighting: Lines": changed rows are not
+    /// refined into the words or characters that differ.
+    no_inline: bool,
+    /// JetBrains diff settings "Ignore whitespaces": lines that differ only in
+    /// whitespace align as unchanged. Diff mode only.
+    ignore_whitespace: bool,
+    /// The texts the rows were aligned from, kept to re-align them when the
+    /// whitespace setting changes. Diff mode only.
+    texts: Option<(String, String)>,
+    /// Whether the settings box is shown (JetBrains diff settings popup).
+    settings_open: bool,
+    /// The caret row in each pane, and which pane has the focus (JetBrains
+    /// "Select Opposite Diff Pane"). Each pane keeps its own caret.
+    cursor_left: usize,
+    cursor_right: usize,
+    focus_right: bool,
+    /// The changed files a multi-file comparison steps through (JetBrains
+    /// "Compare Next / Previous File"), and which one is shown.
+    files: Vec<PathBuf>,
+    file_idx: usize,
+    /// Pane titles in place of HEAD / Working tree, for a comparison of two
+    /// other texts.
+    labels: Option<(String, String)>,
+    /// JetBrains "Change Three-Side Viewer Mode": what the conflict colouring
+    /// compares.
+    color_mode: ColorMode,
+}
+
+/// What a three-way view colours as changed (JetBrains
+/// `SwapThreeWayColorModeInDiffWindow`): ours against theirs, or one side
+/// against the common ancestor.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ColorMode {
+    OursTheirs,
+    OursBase,
+    BaseTheirs,
+}
+
+impl ColorMode {
+    fn next(self) -> Self {
+        match self {
+            ColorMode::OursTheirs => ColorMode::OursBase,
+            ColorMode::OursBase => ColorMode::BaseTheirs,
+            ColorMode::BaseTheirs => ColorMode::OursTheirs,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            ColorMode::OursTheirs => "ours vs theirs",
+            ColorMode::OursBase => "ours vs base",
+            ColorMode::BaseTheirs => "base vs theirs",
+        }
+    }
+}
+
+/// The files with uncommitted changes against HEAD in the repository at
+/// `root`, for a multi-file comparison. Empty outside a repository.
+pub fn changed_files(root: &std::path::Path) -> Vec<PathBuf> {
+    std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["diff", "--name-only", "HEAD"])
+        .output()
+        .ok()
+        .filter(|out| out.status.success())
+        .map(|out| {
+            String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .map(|l| root.join(l))
+                .filter(|p| p.is_file())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// `path` as HEAD has it, or empty for a file HEAD does not have.
+pub(crate) fn head_text(path: &std::path::Path) -> String {
+    let dir = path.parent().unwrap_or(std::path::Path::new("."));
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["show", &format!("HEAD:./{name}")])
+        .output()
+        .ok()
+        .filter(|out| out.status.success())
+        .map(|out| String::from_utf8_lossy(&out.stdout).into_owned())
+        .unwrap_or_default()
+}
+
+/// JetBrains "Show Diff in External Tool": write the two sides to temporary
+/// files and open them in the external diff program — `$ZMAX_DIFF_TOOL`, or
+/// FileMerge (`opendiff`) on macOS and Meld elsewhere. Returns the program
+/// started.
+fn open_external_diff(name: &str, left: &str, right: &str) -> Result<String, String> {
+    let dir = std::env::temp_dir().join(format!("zmax-diff-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    let base = name.rsplit('/').next().unwrap_or(name);
+    let (a, b) = (dir.join(format!("left-{base}")), dir.join(format!("right-{base}")));
+    std::fs::write(&a, left).map_err(|e| format!("{}: {e}", a.display()))?;
+    std::fs::write(&b, right).map_err(|e| format!("{}: {e}", b.display()))?;
+    let tool = std::env::var("ZMAX_DIFF_TOOL")
+        .unwrap_or_else(|_| if cfg!(target_os = "macos") { "opendiff" } else { "meld" }.to_string());
+    let mut words = tool.split_whitespace();
+    let program = words.next().ok_or("ZMAX_DIFF_TOOL is empty")?;
+    std::process::Command::new(program)
+        .args(words)
+        .arg(&a)
+        .arg(&b)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map(|_| tool.clone())
+        .map_err(|e| format!("{program}: {e} (set ZMAX_DIFF_TOOL)"))
+}
+
+/// Whitespace-insensitive form of a text: each line with its runs of
+/// whitespace dropped, so lines differing only there align as unchanged.
+/// Keeps the line count, so row indices still address the original lines.
+fn without_whitespace(text: &str) -> String {
+    text.split_inclusive('\n')
+        .map(|line| {
+            let ends = if line.ends_with('\n') { "\n" } else { "" };
+            let squeezed: String = line.chars().filter(|c| !c.is_whitespace()).collect();
+            squeezed + ends
+        })
+        .collect()
+}
+
+/// A unified diff (`diff -u`, three lines of context) of the aligned rows.
+/// Pure — unit tested.
+fn unified_diff(name: &str, rows: &[DiffRow], left: &[String], right: &[String]) -> String {
+    const CONTEXT: usize = 3;
+    let mut out = format!("--- a/{name}\n+++ b/{name}\n");
+    let changed: Vec<usize> = (0..rows.len()).filter(|&i| rows[i].kind != RowKind::Unchanged).collect();
+    let mut i = 0;
+    while i < changed.len() {
+        // A hunk runs while the gap to the next change fits in its context.
+        let start = changed[i].saturating_sub(CONTEXT);
+        let mut end = changed[i];
+        while i + 1 < changed.len() && changed[i + 1] <= end + 2 * CONTEXT + 1 {
+            i += 1;
+            end = changed[i];
+        }
+        let end = (end + CONTEXT + 1).min(rows.len());
+        i += 1;
+        let hunk = &rows[start..end];
+        let first = |pick: fn(&DiffRow) -> Option<usize>| {
+            rows[..end].iter().skip(start).find_map(pick).or_else(|| rows[..start].iter().rev().find_map(pick).map(|n| n + 1)).unwrap_or(0)
+        };
+        let (l0, r0) = (first(|r| r.left), first(|r| r.right));
+        let lcount = hunk.iter().filter(|r| r.left.is_some()).count();
+        let rcount = hunk.iter().filter(|r| r.right.is_some()).count();
+        let at = |start: usize, count: usize| if count == 0 { start } else { start + 1 };
+        out.push_str(&format!("@@ -{},{lcount} +{},{rcount} @@\n", at(l0, lcount), at(r0, rcount)));
+        // Within a run of changed rows, the removed lines come before the added.
+        let mut k = 0;
+        while k < hunk.len() {
+            if hunk[k].kind == RowKind::Unchanged {
+                if let Some(line) = hunk[k].right.and_then(|r| right.get(r)) {
+                    out.push_str(&format!(" {line}\n"));
+                }
+                k += 1;
+                continue;
+            }
+            let run_end = (k..hunk.len()).find(|&j| hunk[j].kind == RowKind::Unchanged).unwrap_or(hunk.len());
+            for row in &hunk[k..run_end] {
+                if let Some(line) = row.left.and_then(|l| left.get(l)) {
+                    out.push_str(&format!("-{line}\n"));
+                }
+            }
+            for row in &hunk[k..run_end] {
+                if let Some(line) = row.right.and_then(|r| right.get(r)) {
+                    out.push_str(&format!("+{line}\n"));
+                }
+            }
+            k = run_end;
+        }
+    }
+    out
 }
 
 impl DiffView {
@@ -631,7 +813,8 @@ impl DiffView {
         let rows = align(base, doc);
         let blocks = compute_blocks(&rows);
         let row_base = vec![None; rows.len()];
-        DiffView {
+        let texts = Some((base.to_string(), doc.to_string()));
+        let mut view = DiffView {
             kind: ViewKind::Diff,
             file_name,
             doc_id,
@@ -654,7 +837,21 @@ impl DiffView {
             auto_advance: false,
             skip_prefers: false,
             word_refine: false,
-        }
+            no_inline: false,
+            ignore_whitespace: false,
+            texts: None,
+            settings_open: false,
+            cursor_left: 0,
+            cursor_right: 0,
+            focus_right: true,
+            files: Vec::new(),
+            file_idx: 0,
+            labels: None,
+            color_mode: ColorMode::OursTheirs,
+        };
+        view.texts = texts;
+        view.place_cursors();
+        view
     }
 
     /// Construct a conflict resolver from the parsed [`Segment`]s of a
@@ -805,7 +1002,187 @@ impl DiffView {
             auto_advance: false,
             skip_prefers: false,
             word_refine: false,
+            no_inline: false,
+            ignore_whitespace: false,
+            texts: None,
+            settings_open: false,
+            cursor_left: 0,
+            cursor_right: 0,
+            focus_right: true,
+            files: Vec::new(),
+            file_idx: 0,
+            labels: None,
+            color_mode: ColorMode::OursTheirs,
         }
+    }
+
+    /// Name the two panes, for a comparison of texts other than HEAD and the
+    /// working tree.
+    pub fn with_labels(mut self, left: impl Into<String>, right: impl Into<String>) -> Self {
+        self.labels = Some((left.into(), right.into()));
+        self
+    }
+
+    /// Step through `files` with `}` / `{` (JetBrains "Compare Next / Previous
+    /// File"); the view shows the one at `current`.
+    pub fn with_files(mut self, files: Vec<PathBuf>, current: usize) -> Self {
+        self.file_idx = current.min(files.len().saturating_sub(1));
+        self.files = files;
+        self
+    }
+
+    /// Put both carets on the first change, or the first row.
+    fn place_cursors(&mut self) {
+        let first = self.blocks.first().map_or(0, |b| b.rows.start);
+        self.cursor_left = first;
+        self.cursor_right = first;
+    }
+
+    /// How row `i` of a pane is coloured. Against the base, a side's line is
+    /// changed when it differs from the ancestor's line on the row.
+    fn row_kind(&self, i: usize, left: bool) -> RowKind {
+        let row = &self.rows[i];
+        if self.kind != ViewKind::Conflict || self.color_mode == ColorMode::OursTheirs {
+            return row.kind;
+        }
+        let compared = match self.color_mode {
+            ColorMode::OursBase => left,
+            _ => !left,
+        };
+        if !compared {
+            return RowKind::Unchanged;
+        }
+        let line = if left {
+            row.left.and_then(|l| self.base_lines.get(l))
+        } else {
+            row.right.and_then(|r| self.doc_lines.get(r))
+        };
+        let base = self.row_base.get(i).copied().flatten().and_then(|b| self.base_pane_lines.get(b));
+        match (base, line) {
+            (Some(b), Some(l)) if b == l => RowKind::Unchanged,
+            (Some(_), Some(_)) => RowKind::Changed,
+            (None, Some(_)) => RowKind::Added,
+            (Some(_), None) => RowKind::Removed,
+            (None, None) => RowKind::Unchanged,
+        }
+    }
+
+    /// The caret row of the focused pane.
+    fn cursor(&self) -> usize {
+        if self.focus_right { self.cursor_right } else { self.cursor_left }
+    }
+
+    /// Move the focused pane's caret to `row`, scrolling it into view.
+    fn set_cursor(&mut self, row: usize) {
+        let row = row.min(self.rows.len().saturating_sub(1));
+        if self.focus_right {
+            self.cursor_right = row;
+        } else {
+            self.cursor_left = row;
+        }
+        if row < self.scroll {
+            self.scroll = row;
+        } else if row >= self.scroll + self.viewport {
+            self.scroll = row + 1 - self.viewport.max(1);
+        }
+        self.scroll = self.scroll.min(self.max_scroll());
+    }
+
+    fn move_cursor(&mut self, delta: isize) {
+        let row = (self.cursor() as isize + delta).max(0) as usize;
+        self.set_cursor(row);
+    }
+
+    /// JetBrains "Select Opposite Diff Pane" (`Diff.FocusOppositePane`): the
+    /// other pane takes the focus, at its own caret; with `follow`
+    /// (`Diff.FocusOppositePaneAndScroll`) its caret first moves to the row
+    /// matching this one, or the nearest row that pane has a line on.
+    fn focus_opposite(&mut self, follow: bool) {
+        let here = self.cursor();
+        self.focus_right = !self.focus_right;
+        if follow {
+            let right = self.focus_right;
+            let has_line = |r: &DiffRow| if right { r.right.is_some() } else { r.left.is_some() };
+            let target = (0..self.rows.len())
+                .filter(|&i| has_line(&self.rows[i]))
+                .min_by_key(|&i| i.abs_diff(here))
+                .unwrap_or(here);
+            self.set_cursor(target);
+        } else {
+            let row = self.cursor();
+            self.set_cursor(row);
+        }
+    }
+
+    /// The working-tree line (0-based) at the caret, or the nearest one above
+    /// it — where "Jump to Source" goes.
+    fn source_line(&self) -> usize {
+        let here = self.cursor();
+        self.rows[..=here.min(self.rows.len().saturating_sub(1))]
+            .iter()
+            .rev()
+            .find_map(|r| r.right)
+            .unwrap_or(0)
+    }
+
+    /// The whole diff as `diff -u` text (JetBrains "Open in Editor Tab").
+    pub fn unified(&self) -> String {
+        unified_diff(&self.file_name, &self.rows, &self.base_lines, &self.doc_lines)
+    }
+
+    /// JetBrains "Ignore whitespaces": re-align the rows with whitespace
+    /// ignored, or not. Only a diff view keeps the texts to re-align.
+    fn set_ignore_whitespace(&mut self, on: bool) -> bool {
+        let Some((base, doc)) = self.texts.clone() else {
+            return false;
+        };
+        self.ignore_whitespace = on;
+        self.rows = if on {
+            align(&without_whitespace(&base), &without_whitespace(&doc))
+        } else {
+            align(&base, &doc)
+        };
+        // Lines that differ only in whitespace pair as unchanged; the panes
+        // still show them as written.
+        self.blocks = compute_blocks(&self.rows);
+        self.row_base = vec![None; self.rows.len()];
+        self.selected = 0;
+        self.place_cursors();
+        true
+    }
+
+    /// The full text of each side of a conflict: ours, theirs, and the common
+    /// ancestor (context lines and each conflict's base section).
+    fn conflict_sides(&self) -> (String, String, String) {
+        let join = |lines: &[String]| lines.iter().map(|l| format!("{l}\n")).collect::<String>();
+        let mut base = String::new();
+        for segment in &self.segments {
+            match segment {
+                Segment::Context(lines) => base.push_str(&join(lines)),
+                Segment::Conflict { base: b, .. } => base.push_str(&join(b)),
+            }
+        }
+        (join(&self.base_lines), join(&self.doc_lines), base)
+    }
+
+    /// Load `files[idx]` into this view: HEAD on the left, the file — its open
+    /// buffer if there is one — on the right.
+    fn show_file(&mut self, editor: &mut zmax_view::Editor, idx: usize) -> Result<(), String> {
+        let path = self.files.get(idx).cloned().ok_or("no such file")?;
+        let doc_id = editor
+            .open(&path, zmax_view::editor::Action::Load)
+            .map_err(|e| format!("{}: {e}", path.display()))?;
+        let text = editor.document(doc_id).map(|d| d.text().to_string()).unwrap_or_default();
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let files = std::mem::take(&mut self.files);
+        let mut next = DiffView::new(name, doc_id, &head_text(&path), &text).with_files(files, idx);
+        next.read_only = self.read_only;
+        next.no_inline = self.no_inline;
+        if self.ignore_whitespace {
+            next.set_ignore_whitespace(true);
+        }
+        *self = next;
+        Ok(())
     }
 
     /// True when the two texts are identical (nothing to show).
@@ -899,6 +1276,9 @@ impl DiffView {
             self.selected = i;
         }
         self.scroll_to_selected();
+        if let Some(start) = self.blocks.get(self.selected).map(|b| b.rows.start) {
+            self.set_cursor(start);
+        }
     }
 
     /// Focus the previous change block and scroll it into view.
@@ -914,6 +1294,9 @@ impl DiffView {
             self.selected = i;
         }
         self.scroll_to_selected();
+        if let Some(start) = self.blocks.get(self.selected).map(|b| b.rows.start) {
+            self.set_cursor(start);
+        }
     }
 
     /// Emerge `emerge-auto-advance`: whether choosing a side moves on to the next
@@ -1089,12 +1472,104 @@ impl Component for DiffView {
                 });
                 return EventResult::Consumed(Some(apply));
             }
-            key!('j') | key!(Down) => self.scroll_by(1),
-            key!('k') | key!(Up) => self.scroll_by(-1),
-            key!(PageDown) | ctrl!('d') | ctrl!('f') => self.scroll_by(page),
-            key!(PageUp) | ctrl!('u') | ctrl!('b') => self.scroll_by(-page),
-            key!('g') | key!(Home) => self.scroll = 0,
-            key!('G') | key!(End) => self.scroll = self.max_scroll(),
+            key!('j') | key!(Down) => self.move_cursor(1),
+            key!('k') | key!(Up) => self.move_cursor(-1),
+            key!(PageDown) | ctrl!('d') | ctrl!('f') => self.move_cursor(page),
+            key!(PageUp) | ctrl!('u') | ctrl!('b') => self.move_cursor(-page),
+            key!('g') | key!(Home) => self.set_cursor(0),
+            key!('G') | key!(End) => self.set_cursor(self.rows.len()),
+            // JetBrains "Select Opposite Diff Pane" / "Select Position in
+            // Opposite Diff Pane".
+            key!(Tab) => self.focus_opposite(false),
+            shift!(Tab) => self.focus_opposite(true),
+            // JetBrains "Jump to Source" (F4): the working-tree line at the
+            // caret, in the editor.
+            key!('o') | KeyEvent { code: KeyCode::F(4), modifiers: KeyModifiers::NONE } => {
+                let line = self.source_line();
+                let doc_id = self.doc_id;
+                return EventResult::Consumed(Some(Box::new(move |compositor: &mut Compositor, cx| {
+                    compositor.pop();
+                    if cx.editor.document(doc_id).is_some() {
+                        cx.editor.switch(doc_id, zmax_view::editor::Action::Replace);
+                        let (view, doc) = current!(cx.editor);
+                        let text = doc.text();
+                        let pos = text.line_to_char(line.min(text.len_lines().saturating_sub(1)));
+                        doc.set_selection(view.id, zmax_core::Selection::point(pos));
+                        zmax_view::align_view(doc, view, zmax_view::Align::Center);
+                    }
+                })));
+            }
+            // JetBrains "Open in Editor Tab": the diff as `diff -u` text in a
+            // buffer of its own, which stays when the view closes.
+            key!('e') => {
+                let unified = self.unified();
+                return EventResult::Consumed(Some(Box::new(move |compositor: &mut Compositor, cx| {
+                    compositor.pop();
+                    crate::commands::show_text_in_scratch(cx.editor, &unified);
+                    let loader = cx.editor.syn_loader.load();
+                    let _ = doc_mut!(cx.editor).set_language_by_language_id("diff", &loader);
+                })));
+            }
+            // JetBrains "Show Diff in External Tool".
+            key!('X') => {
+                let (left, right) = (self.base_lines.join("\n") + "\n", self.doc_lines.join("\n") + "\n");
+                cx.editor.set_status(match open_external_diff(&self.file_name, &left, &right) {
+                    Ok(tool) => format!("opened in {tool}"),
+                    Err(e) => e,
+                });
+            }
+            // JetBrains diff settings: the box, whitespace, highlighting.
+            key!('S') => self.settings_open = !self.settings_open,
+            key!('w') if self.texts.is_some() => {
+                let on = !self.ignore_whitespace;
+                self.set_ignore_whitespace(on);
+            }
+            key!('i') => {
+                // Words → characters → lines → words.
+                (self.word_refine, self.no_inline) = match (self.word_refine, self.no_inline) {
+                    (true, false) => (false, false),
+                    (false, false) => (false, true),
+                    _ => (true, false),
+                };
+            }
+            // JetBrains "Compare Next / Previous File" in a multi-file diff.
+            key!('}') | key!('{') if !self.files.is_empty() => {
+                let forward = key == key!('}');
+                let n = self.files.len();
+                let idx = if forward { (self.file_idx + 1) % n } else { (self.file_idx + n - 1) % n };
+                if let Err(e) = self.show_file(cx.editor, idx) {
+                    cx.editor.set_error(e);
+                }
+            }
+            // JetBrains "Change Three-Side Viewer Mode".
+            key!('c') if self.kind == ViewKind::Conflict => {
+                self.color_mode = self.color_mode.next();
+                cx.editor.set_status(format!("colouring: {}", self.color_mode.label()));
+            }
+            // The merge viewer's comparisons of two of its texts:
+            // 1 ours/result, 2 result/theirs, 3 ours/theirs, 4 base/ours,
+            // 5 base/result, 6 base/theirs.
+            key!('1') | key!('2') | key!('3') | key!('4') | key!('5') | key!('6')
+                if self.kind == ViewKind::Conflict =>
+            {
+                let (ours, theirs, base) = self.conflict_sides();
+                let result = self.result_text();
+                let (l, r, left, right) = match key {
+                    key!('1') => ("Ours", "Result", ours, result),
+                    key!('2') => ("Result", "Theirs", result, theirs),
+                    key!('3') => ("Ours", "Theirs", ours, theirs),
+                    key!('4') => ("Base", "Ours", base, ours),
+                    key!('5') => ("Base", "Result", base, result),
+                    _ => ("Base", "Theirs", base, theirs),
+                };
+                let name = format!("{}: {l} ⇔ {r}", self.file_name);
+                let compare = DiffView::new(name, self.doc_id, &left, &right)
+                    .read_only()
+                    .with_labels(format!(" {l}"), format!(" {r}"));
+                return EventResult::Consumed(Some(Box::new(move |compositor: &mut Compositor, _| {
+                    compositor.push(Box::new(compare));
+                })));
+            }
             // Horizontal scroll (arrows so `h`/`l` stay conflict-accept keys).
             // `0`/`$` jump to the start / end of the longest line.
             key!(Right) => self.hscroll_by(4),
@@ -1244,7 +1719,7 @@ impl Component for DiffView {
             ViewKind::Diff => "change",
             ViewKind::Conflict => "conflict",
         };
-        let header = format!(
+        let mut header = format!(
             " {}  —  {} {}{} · {} resolved",
             self.file_name,
             count,
@@ -1252,6 +1727,9 @@ impl Component for DiffView {
             if count == 1 { "" } else { "s" },
             resolved,
         );
+        if !self.files.is_empty() {
+            header.push_str(&format!(" · file {}/{} (}} {{)", self.file_idx + 1, self.files.len()));
+        }
         let title_style = theme.get("ui.text.focus");
         surface.set_stringn(
             area.x,
@@ -1268,7 +1746,7 @@ impl Component for DiffView {
                 " Working tree",
             ),
             ViewKind::Diff => (
-                ", take HEAD   . take working   n/p nav   Enter apply   q cancel",
+                ", take HEAD   . take working   n/p nav   S settings   Enter apply   q cancel",
                 " HEAD",
                 " Working tree",
             ),
@@ -1278,6 +1756,9 @@ impl Component for DiffView {
                 " Incoming (theirs)",
             ),
         };
+        if let Some((left, right)) = &self.labels {
+            (left_label, right_label) = (left.as_str(), right.as_str());
+        }
         // The labels follow the panes, or a swapped view would lie about which
         // side is which.
         if self.swapped {
@@ -1358,7 +1839,7 @@ impl Component for DiffView {
             // old (left) and new (right) line so only the differing spans get
             // emphasised, instead of styling the whole line uniformly.
             let inline = match (row.kind, row.left, row.right) {
-                (RowKind::Changed, Some(li), Some(ri)) => {
+                (RowKind::Changed, Some(li), Some(ri)) if !self.no_inline => {
                     let old = self.base_lines.get(li).map(String::as_str).unwrap_or("");
                     let new = self.doc_lines.get(ri).map(String::as_str).unwrap_or("");
                     Some(if self.word_refine {
@@ -1390,7 +1871,7 @@ impl Component for DiffView {
             left_lines.push(pane_line(
                 row.left,
                 &self.base_lines,
-                row.kind,
+                self.row_kind(offset, true),
                 Side::Left,
                 gutter as usize,
                 left_inner,
@@ -1401,7 +1882,7 @@ impl Component for DiffView {
             right_lines.push(pane_line(
                 row.right,
                 &self.doc_lines,
-                row.kind,
+                self.row_kind(offset, false),
                 Side::Right,
                 gutter as usize,
                 right_inner,
@@ -1446,6 +1927,38 @@ impl Component for DiffView {
         crate::ui::rat::render(Paragraph::new(left_lines), left_rect, surface);
         crate::ui::rat::render(Paragraph::new(center_lines), center_rect, surface);
         crate::ui::rat::render(Paragraph::new(right_lines), right_rect, surface);
+
+        // The focused pane's caret row.
+        let caret = self.cursor();
+        if (self.scroll..self.scroll + body_h as usize).contains(&caret) {
+            let y = body_y + (caret - self.scroll) as u16;
+            let (x, w) = if self.focus_right { (right_x, right_w) } else { (left_x, left_w) };
+            surface.set_style(Rect::new(x, y, w, 1), theme.get("ui.cursorline.primary"));
+            surface.set_stringn(x, y, "▶", 1, theme.get("ui.cursor.primary"));
+        }
+
+        // JetBrains diff settings, as a box over the body.
+        if self.settings_open {
+            let highlight = match (self.word_refine, self.no_inline) {
+                (_, true) => "lines",
+                (true, false) => "words",
+                (false, false) => "characters",
+            };
+            let lines = [
+                " Diff settings (S closes)".to_string(),
+                format!(" w  ignore whitespace: {}", if self.ignore_whitespace { "on" } else { "off" }),
+                format!(" i  highlight: {highlight}"),
+                " Tab / S-Tab  other pane · o jump to source".to_string(),
+                " e  as a buffer · X external tool".to_string(),
+            ];
+            let w = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0) as u16 + 2;
+            let x = area.x + area.width.saturating_sub(w + 2);
+            let boxed = Rect::new(x, body_y, w.min(area.width), lines.len() as u16);
+            surface.clear_with(boxed, theme.get("ui.popup"));
+            for (i, line) in lines.iter().enumerate() {
+                surface.set_stringn(x, body_y + i as u16, line, w as usize, theme.get("ui.text"));
+            }
+        }
     }
 
     fn id(&self) -> Option<&'static str> {
@@ -2710,5 +3223,52 @@ let x = 2;
         assert_eq!(view.unresolved_count(), 1);
         // Running it again finds nothing new to do.
         assert_eq!(view.resolve_simple(), 0);
+    }
+
+    /// `diff -u` from the aligned rows: hunk headers count each side's lines,
+    /// and a changed run lists its removed lines before its added ones.
+    #[test]
+    fn unified_diff_hunks() {
+        let (base, doc) = ("a\nb\nc\n", "a\nB\nc\nd\n");
+        let rows = align(base, doc);
+        let out = unified_diff("f", &rows, &split_lines(base), &split_lines(doc));
+        assert_eq!("--- a/f\n+++ b/f\n@@ -1,3 +1,4 @@\n a\n-b\n+B\n c\n+d\n", out);
+    }
+
+    /// Ignoring whitespace pairs lines that differ only there as unchanged.
+    #[test]
+    fn whitespace_only_changes_align_as_unchanged() {
+        let rows = align(&without_whitespace("fn a() {\n  x\n}\n"), &without_whitespace("fn a(){\n    x\n}\n"));
+        assert!(rows.iter().all(|r| r.kind == RowKind::Unchanged));
+    }
+
+    /// The opposite pane takes the focus at its own caret, or — following —
+    /// at the nearest row it has a line on.
+    #[test]
+    fn opposite_pane_keeps_or_follows_the_caret() {
+        let mut view = DiffView::new("f".into(), DocumentId::default(), "a\nb\n", "a\nx\ny\nb\n");
+        view.viewport = 10;
+        view.set_cursor(2); // `y`, added: no line on the left
+        view.focus_opposite(false);
+        assert!(!view.focus_right);
+        assert_eq!(view.cursor_left, view.cursor(), "the left caret stays where it was");
+        view.focus_opposite(false);
+        view.focus_opposite(true);
+        let left_has_line = view.rows[view.cursor()].left.is_some();
+        assert!(left_has_line, "following lands on a row the left pane has");
+    }
+
+    /// Colouring against the base marks only the side that changed from it.
+    #[test]
+    fn colour_modes_compare_a_side_with_the_base() {
+        let text = "<<<<<<< ours\nsame\n||||||| base\nsame\n=======\nnew\n>>>>>>> theirs\n";
+        let segments = parse_conflicts(text).expect("one conflict");
+        let mut view = DiffView::from_conflicts("f".into(), DocumentId::default(), None, segments);
+        assert_eq!(RowKind::Changed, view.row_kind(0, true));
+        view.color_mode = ColorMode::OursBase;
+        assert_eq!(RowKind::Unchanged, view.row_kind(0, true), "ours kept the base line");
+        view.color_mode = ColorMode::BaseTheirs;
+        assert_eq!(RowKind::Changed, view.row_kind(0, false), "theirs changed it");
+        assert_eq!(RowKind::Unchanged, view.row_kind(0, true), "ours is not compared");
     }
 }

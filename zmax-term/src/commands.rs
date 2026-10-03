@@ -2108,6 +2108,12 @@ impl MappableCommand {
         export_to_scratch, "Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)",
         recent_tests, "Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)",
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
+        compare_directories_view, "Compare two directory trees file by file and synchronize them (JetBrains Compare Directories)",
+        blank_diff_window, "Two empty buffers side by side, diffed as you type or paste (JetBrains Open Blank Diff Window)",
+        blank_diff_toggle_three_side, "Add a third side to the blank diff window, or take it away (JetBrains Toggle Three-Side Mode)",
+        blank_diff_open_blank, "Empty this side of the blank diff window (JetBrains Open Blank Editor)",
+        blank_diff_open_file, "Show a file on this side of the blank diff window (JetBrains Open File)",
+        git_diff_in_new_tab, "This file's changes against HEAD in a new tab, editable and diffed live (JetBrains Show Diff in a New Tab)",
         documentation_back, "Show the previous lookup in the Documentation tool window (JetBrains Back)",
         documentation_forward, "Show the next lookup in the Documentation tool window (JetBrains Forward)",
         documentation_keep_tab, "Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation)",
@@ -2965,6 +2971,20 @@ impl MappableCommand {
         goto_next_usage, "Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage)",
         goto_prev_usage, "Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage)",
         highlight_usages_in_file, "Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)",
+        services_view, "The run configurations with their state, grouped and hideable (JetBrains Services)",
+        services_restore_all, "Show every hidden run configuration in the Services view again (JetBrains Restore Hidden Configurations)",
+        manage_run_targets, "The run targets; pick one to remove it (JetBrains Manage Targets)",
+        run_target_add, "Define a run target: SSH host, Docker image or running container (JetBrains Manage Targets)",
+        choose_run_target, "Choose where the active run configuration runs (JetBrains Run Targets)",
+        build_tool_window, "The build-tool window: the build files' projects, members and tasks (JetBrains Gradle/Maven/Cargo tool window)",
+        build_sync, "Reload the build projects: run the sync triggers and restart the language servers (JetBrains Reload All Projects)",
+        build_sync_project, "Reload the build project the file belongs to (JetBrains Reload Project)",
+        build_hide_sync_notice, "Stop announcing the changed build files until they change again (JetBrains Hide Load Build Changes)",
+        build_auto_sync, "Reload build files on every change, or only on build_sync (JetBrains Auto-Sync Settings)",
+        build_tool_settings, "Open the build-tool window's saved settings (JetBrains Build Tool Settings)",
+        build_task_trigger, "Run a build task before or after build, rebuild or sync (JetBrains Execute Before/After)",
+        build_task_triggers, "The build task triggers; pick one to remove it (JetBrains Tasks Activation)",
+        run_config_add_before_task, "Run a build task before the active run configuration (JetBrains Execute Before Run/Debug)",
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
         rebuild_project, "Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)",
         new_file_in_directory, "Create a file next to the current one and open it (JetBrains New in This Directory)",
@@ -55498,6 +55518,152 @@ fn with_ide_status(
     }));
 }
 
+/// JetBrains "Compare Directories": two directory trees file by file, with
+/// each row's synchronize operation, in the directory diff view
+/// (`ui::dirdiff`).
+fn compare_directories_view(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "compare directories (left right): ".into(),
+        None,
+        ui::completers::directory,
+        |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let dirs: Vec<PathBuf> = input
+                .split_whitespace()
+                .map(|d| zmax_stdx::path::expand_tilde(PathBuf::from(d)).into_owned())
+                .collect();
+            let [left, right] = dirs.as_slice() else {
+                cx.editor.set_error("give two directories, separated by a space");
+                return;
+            };
+            if !left.is_dir() || !right.is_dir() {
+                cx.editor.set_error("both must be directories");
+                return;
+            }
+            let view = ui::dirdiff::DirDiff::new(left.clone(), right.clone());
+            crate::compositor::defer([Box::new(move |compositor: &mut Compositor, _: &mut compositor::Context| {
+                compositor.push(Box::new(view));
+            }) as compositor::Callback]);
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// JetBrains "Open Blank Diff Window" (`ShowBlankDiffWindow`): two empty
+/// buffers side by side, each diffed against the other as you type or paste
+/// (`crate::live_diff`): the change gutter and next/previous change show
+/// where they differ.
+fn blank_diff_window(cx: &mut Context) {
+    let left = cx.editor.new_file(Action::Replace);
+    let right = cx.editor.new_file(Action::VerticalSplit);
+    crate::live_diff::link(cx.editor, vec![left, right]);
+    cx.editor.set_status("blank diff: paste or type into both sides");
+}
+
+/// JetBrains "Toggle Three-Side Mode" in the blank diff window
+/// (`ToggleThreeSideInBlankDiffWindow`): add a third side, diffed against the
+/// second, or take the third away again.
+fn blank_diff_toggle_three_side(cx: &mut Context) {
+    let doc = doc!(cx.editor).id();
+    let Some(group) = crate::live_diff::group_of(doc) else {
+        cx.editor.set_error("not in a blank diff window");
+        return;
+    };
+    if group.len() >= 3 {
+        let third = group[2];
+        crate::live_diff::unlink(third);
+        let views: Vec<ViewId> = cx.editor.tree.views().filter(|(v, _)| v.doc == third).map(|(v, _)| v.id).collect();
+        for view in views {
+            cx.editor.close(view);
+        }
+        cx.editor.set_status("blank diff: two sides");
+    } else {
+        let last = *group.last().expect("a group has two buffers");
+        let view = cx.editor.tree.views().find(|(v, _)| v.doc == last).map(|(v, _)| v.id);
+        if let Some(view) = view {
+            cx.editor.focus(view);
+        }
+        let third = cx.editor.new_file(Action::VerticalSplit);
+        crate::live_diff::join(cx.editor, last, third);
+        cx.editor.set_status("blank diff: three sides");
+    }
+}
+
+/// JetBrains "Open Blank Editor" in the blank diff window
+/// (`OpenBlankEditorInBlankDiffWindow`): this side starts again empty.
+fn blank_diff_open_blank(cx: &mut Context) {
+    let old = doc!(cx.editor).id();
+    if crate::live_diff::group_of(old).is_none() {
+        cx.editor.set_error("not in a blank diff window");
+        return;
+    }
+    let new = cx.editor.new_file(Action::Replace);
+    crate::live_diff::replace(cx.editor, old, new);
+}
+
+/// JetBrains "Open File" in the blank diff window
+/// (`OpenFileEditorInBlankDiffWindow`): this side shows a file instead,
+/// still diffed against the others.
+fn blank_diff_open_file(cx: &mut Context) {
+    let old = doc!(cx.editor).id();
+    if crate::live_diff::group_of(old).is_none() {
+        cx.editor.set_error("not in a blank diff window");
+        return;
+    }
+    let prompt = crate::ui::prompt::Prompt::new(
+        "open in this side: ".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = zmax_stdx::path::expand_tilde(PathBuf::from(input.trim()));
+            match cx.editor.open(&path, Action::Replace) {
+                Ok(new) => {
+                    crate::live_diff::replace(cx.editor, old, new);
+                }
+                Err(e) => cx.editor.set_error(format!("{}: {e}", path.display())),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// JetBrains "Show Diff in a New Tab" (`Diff.ShowStandaloneDiff`): this
+/// file's changes against HEAD in a tab of their own — HEAD on the left, the
+/// file editable on the right, diffed against each other as it changes —
+/// instead of the modal diff view.
+fn git_diff_in_new_tab(cx: &mut Context) {
+    let doc = doc!(cx.editor);
+    let (Some(path), id) = (doc.path().map(Path::to_path_buf), doc.id()) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let language = doc.language_name().map(str::to_owned);
+    let head = crate::ui::merge::head_text(&path);
+    cx.editor.new_tab_with_doc(id);
+    let left = cx.editor.new_file(Action::VerticalSplit);
+    {
+        let (view, doc) = current!(cx.editor);
+        doc.apply(
+            &Transaction::insert(doc.text(), doc.selection(view.id), head.into()),
+            view.id,
+        );
+        doc.reset_modified();
+        if let Some(language) = &language {
+            let loader = cx.editor.syn_loader.load();
+            let _ = doc_mut!(cx.editor).set_language_by_language_id(language, &loader);
+        }
+    }
+    // HEAD on the left, as the diff viewer has it.
+    cx.editor.tree.swap_split_in_direction(zmax_view::tree::Direction::Left);
+    crate::live_diff::link(cx.editor, vec![left, id]);
+    cx.editor.set_status(format!("{} against HEAD", path.display()));
+}
+
 /// JetBrains "Back" in the Documentation tool window (`Documentation.Back`).
 fn documentation_back(cx: &mut Context) {
     with_ide_status(cx, |ide| (!ide.docs_step(false)).then(|| "no earlier documentation".to_string()));
@@ -59691,59 +59857,7 @@ fn copy_run_config(cx: &mut Context) {
     });
 }
 
-/// The build files a project root holds, in the order the IDE's build-tool
-/// panel would list their projects.
-const BUILD_FILES: [&str; 8] = [
-    "Cargo.toml",
-    "package.json",
-    "Makefile",
-    "justfile",
-    "build.gradle.kts",
-    "build.gradle",
-    "pom.xml",
-    "CMakeLists.txt",
-];
-
-/// The tasks a build file offers, as the shell commands that run them.
-/// `contents` is the file's text, read where a tool's own listing would be
-/// slow or need the tool installed. Pure — unit tested.
-fn build_file_tasks(file: &str, contents: &str) -> Vec<String> {
-    let each = |tool: &str, tasks: &[&str]| tasks.iter().map(|t| format!("{tool} {t}")).collect::<Vec<_>>();
-    match file {
-        "Cargo.toml" => each("cargo", &["build", "check", "test", "run", "clippy", "doc", "bench", "clean"]),
-        "package.json" => serde_json::from_str::<serde_json::Value>(contents)
-            .ok()
-            .and_then(|json| json["scripts"].as_object().cloned())
-            .map(|scripts| scripts.keys().map(|s| format!("npm run {s}")).collect())
-            .unwrap_or_default(),
-        "Makefile" => contents
-            .lines()
-            .filter_map(|line| {
-                let (target, _) = line.split_once(':')?;
-                let valid = !target.is_empty()
-                    && !target.starts_with(['.', '\t', ' ', '#'])
-                    && !line[target.len()..].starts_with(":=")
-                    && target.chars().all(|c| c.is_alphanumeric() || "-_/.".contains(c));
-                valid.then(|| format!("make {target}"))
-            })
-            .collect(),
-        "justfile" => contents
-            .lines()
-            .filter_map(|line| {
-                let name = line.split([':', ' ']).next()?;
-                let valid = !name.is_empty()
-                    && line.contains(':')
-                    && !line.contains(":=")
-                    && name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_');
-                valid.then(|| format!("just {name}"))
-            })
-            .collect(),
-        "build.gradle.kts" | "build.gradle" => each("./gradlew", &["build", "test", "clean", "assemble", "check"]),
-        "pom.xml" => each("mvn", &["compile", "test", "package", "verify", "install", "clean"]),
-        "CMakeLists.txt" => vec!["cmake -S . -B build".into(), "cmake --build build".into()],
-        _ => Vec::new(),
-    }
-}
+use crate::build_tool::{build_file_tasks, BUILD_FILES};
 
 /// JetBrains "Run Task" in the build-tool panel (`ExternalSystem.RunTask`):
 /// pick a task of the project's build files and run it in the Run window.
@@ -59796,23 +59910,6 @@ fn open_build_file(cx: &mut Context) {
             });
             cx.push_layer(Box::new(overlaid(picker)));
         }
-    }
-}
-
-#[cfg(test)]
-mod build_task_tests {
-    use super::build_file_tasks;
-
-    #[test]
-    fn npm_scripts_make_targets_and_just_recipes() {
-        assert_eq!(
-            vec!["npm run build", "npm run test"],
-            build_file_tasks("package.json", r#"{"scripts":{"build":"tsc","test":"jest"}}"#)
-        );
-        let makefile = "CC := cc\nall: app\n\tcc -o app\n.PHONY: all\nclean:\n\trm app\n";
-        assert_eq!(vec!["make all", "make clean"], build_file_tasks("Makefile", makefile));
-        let justfile = "set shell := [\"zsh\"]\ntest arg:\n    cargo test {{arg}}\nfmt:\n    cargo fmt\n";
-        assert_eq!(vec!["just test", "just fmt"], build_file_tasks("justfile", justfile));
     }
 }
 
@@ -74298,6 +74395,13 @@ fn run_project_build(cx: &mut Context, rebuild: bool) {
         return;
     };
     let command = if rebuild { clean_build } else { build };
+    // The build-tool window's task triggers run around it.
+    let state = crate::build_tool::load();
+    let command = if rebuild {
+        state.wrap(crate::build_tool::When::BeforeRebuild, &command, crate::build_tool::When::AfterRebuild)
+    } else {
+        state.wrap(crate::build_tool::When::BeforeBuild, &command, crate::build_tool::When::AfterBuild)
+    };
     let mut bridge = crate::compositor::Context {
         editor: cx.editor,
         jobs: cx.jobs,
@@ -74306,6 +74410,280 @@ fn run_project_build(cx: &mut Context, rebuild: bool) {
     if let Err(e) = typed::run_compile_command(&mut bridge, &command) {
         bridge.editor.set_error(e.to_string());
     }
+}
+
+/// The build-tool window (JetBrains Gradle / Maven / Cargo tool window):
+/// the projects of the workspace's build files with their tasks.
+fn build_tool_window(cx: &mut Context) {
+    let root = zmax_loader::find_workspace().0;
+    cx.push_layer(Box::new(crate::ui::build_tool::BuildToolPanel::new(root)));
+}
+
+/// JetBrains "Sync" (`ExternalSystem.RefreshAllProjects`, and
+/// `ExternalSystem.RefreshProject` for `scope`): run the before-sync tasks,
+/// reload the language servers so they read the build files again, run the
+/// after-sync tasks, and record the build files as loaded.
+pub(crate) fn build_sync_now(_compositor: &mut Compositor, cx: &mut compositor::Context, scope: Option<PathBuf>) {
+    use crate::build_tool::When;
+    let root = zmax_loader::find_workspace().0;
+    let state = crate::build_tool::update(|state| {
+        crate::build_tool::mark_synced(state, &root);
+        state.clone()
+    });
+    let before = state.commands_at(When::BeforeSync);
+    let after = state.commands_at(When::AfterSync);
+    let tasks: Vec<String> = before.into_iter().chain(after).collect();
+    if !tasks.is_empty() {
+        if let Err(e) = typed::run_compile_command(cx, &tasks.join(" && ")) {
+            cx.editor.set_error(e.to_string());
+        }
+    }
+    typed::run_command_line(cx, "lsp-restart");
+    let what = scope.map_or_else(|| "all build projects".to_string(), |p| p.display().to_string());
+    cx.editor.set_status(format!("synced {what}"));
+    *BUILD_CHANGE_NOTICE.lock().unwrap() = None;
+}
+
+/// JetBrains "Reload All Projects" (`ExternalSystem.RefreshAllProjects`).
+fn build_sync(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| build_sync_now(compositor, cx, None)));
+}
+
+/// JetBrains "Reload Project" (`ExternalSystem.RefreshProject`): the build
+/// project the current file belongs to.
+fn build_sync_project(cx: &mut Context) {
+    let file = doc!(cx.editor).path().map(Path::to_path_buf);
+    let root = zmax_loader::find_workspace().0;
+    let project = file.and_then(|f| {
+        crate::build_tool::build_files(&root)
+            .into_iter()
+            .filter(|b| b.parent().is_some_and(|d| f.starts_with(d)))
+            .max_by_key(|b| b.components().count())
+    });
+    cx.callback.push(Box::new(move |compositor, cx| build_sync_now(compositor, cx, project)));
+}
+
+/// The build files changed since the last sync, as the notice last shown or
+/// hidden for them, so "Hide" lasts until the files change again.
+static BUILD_CHANGE_NOTICE: std::sync::Mutex<Option<Vec<PathBuf>>> = std::sync::Mutex::new(None);
+static BUILD_CHANGE_HIDDEN: std::sync::Mutex<Vec<PathBuf>> = std::sync::Mutex::new(Vec::new());
+/// When the build files were last looked at, so idle checks stay cheap.
+static BUILD_CHANGE_CHECKED: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
+
+/// JetBrains "Load Build Changes" (`ExternalSystem.ProjectRefreshAction`): on
+/// idle, notice build files changed since the last sync — sync with auto-sync
+/// on, else say so until synced or hidden. Looks at most every five seconds.
+pub(crate) fn check_build_changes(cx: &mut Context) {
+    {
+        let mut checked = BUILD_CHANGE_CHECKED.lock().unwrap();
+        if checked.is_some_and(|t| t.elapsed() < std::time::Duration::from_secs(5)) {
+            return;
+        }
+        *checked = Some(std::time::Instant::now());
+    }
+    let root = zmax_loader::find_workspace().0;
+    let state = crate::build_tool::load();
+    if state.synced.is_empty() {
+        // Never synced here: take the files as loaded rather than announcing
+        // every build file of a project opened for the first time.
+        crate::build_tool::update(|s| crate::build_tool::mark_synced(s, &root));
+        return;
+    }
+    let changed = crate::build_tool::changed_since_sync(&state, &root);
+    if changed.is_empty() || *BUILD_CHANGE_HIDDEN.lock().unwrap() == changed {
+        return;
+    }
+    if state.auto_sync == crate::build_tool::AutoSync::Any {
+        cx.callback.push(Box::new(|compositor, cx| build_sync_now(compositor, cx, None)));
+        return;
+    }
+    let names: Vec<String> = changed.iter().filter_map(|f| f.strip_prefix(&root).ok()).map(|f| f.display().to_string()).collect();
+    cx.editor.set_status(format!("build files changed ({}) — build_sync loads them", names.join(", ")));
+    *BUILD_CHANGE_NOTICE.lock().unwrap() = Some(changed);
+}
+
+/// JetBrains "Hide" on the Load Build Changes notice
+/// (`ExternalSystem.HideProjectRefreshAction`): no more notices until the
+/// build files change again.
+fn build_hide_sync_notice(cx: &mut Context) {
+    let notice = BUILD_CHANGE_NOTICE.lock().unwrap().take();
+    match notice {
+        Some(changed) => {
+            *BUILD_CHANGE_HIDDEN.lock().unwrap() = changed;
+            cx.editor.set_status("build changes notice hidden");
+        }
+        None => cx.editor.set_status("no build changes notice"),
+    }
+}
+
+/// JetBrains "Auto-Sync Settings" (`ExternalSystem.ShowCommonSettings`):
+/// reload on every build-file change, or only on build_sync.
+fn build_auto_sync(cx: &mut Context) {
+    let mode = crate::build_tool::update(|s| {
+        s.auto_sync = match s.auto_sync {
+            crate::build_tool::AutoSync::Off => crate::build_tool::AutoSync::Any,
+            crate::build_tool::AutoSync::Any => crate::build_tool::AutoSync::Off,
+        };
+        s.auto_sync
+    });
+    cx.editor.set_status(match mode {
+        crate::build_tool::AutoSync::Any => "build files reload when they change",
+        crate::build_tool::AutoSync::Off => "build files reload on build_sync",
+    });
+}
+
+/// JetBrains "Build Tool Settings" (`ExternalSystem.ShowSettings`): the
+/// build-tool window's saved state, as a file to edit.
+fn build_tool_settings(cx: &mut Context) {
+    crate::build_tool::update(|_| {});
+    let path = crate::run_config::project_dir().join("build-tool.toml");
+    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+        cx.editor.set_error(format!("{}: {e}", path.display()));
+    }
+}
+
+/// Pick one of the workspace's build tasks, then run `then` on its directory
+/// and command.
+fn pick_build_task(cx: &mut Context, then: fn(&mut compositor::Context, PathBuf, String)) {
+    let root = zmax_loader::find_workspace().0;
+    let mut tasks: Vec<(PathBuf, String)> = Vec::new();
+    for project in crate::build_tool::discover(&root) {
+        for member in std::iter::once(&project).chain(project.members.iter()) {
+            tasks.extend(member.tasks.iter().map(|t| (member.dir().to_path_buf(), t.clone())));
+        }
+    }
+    if tasks.is_empty() {
+        cx.editor.set_status("no build tasks at the project root");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("task", |t: &(PathBuf, String), _: &PathBuf| t.1.as_str().into()),
+        PickerColumn::new("in", |t: &(PathBuf, String), root: &PathBuf| t.0.strip_prefix(root).unwrap_or(&t.0).display().to_string().into()),
+    ];
+    let picker = Picker::new(columns, 0, tasks, root, move |cx, (dir, task): &(PathBuf, String), _| {
+        then(cx, dir.clone(), task.clone());
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Execute Before / After Build, Rebuild, Sync"
+/// (`ExternalSystem.BeforeCompile` … `AfterSync`): pick a task, then when it
+/// runs.
+fn build_task_trigger(cx: &mut Context) {
+    pick_build_task(cx, |_cx, dir, task| {
+        crate::compositor::defer([Box::new(move |compositor: &mut Compositor, _: &mut compositor::Context| {
+            let columns = [PickerColumn::new("run the task", |w: &crate::build_tool::When, _: &()| w.label().into())];
+            let picker = Picker::new(columns, 0, crate::build_tool::When::ALL, (), move |cx, when: &crate::build_tool::When, _| {
+                let trigger = crate::build_tool::Trigger { when: *when, dir: dir.clone(), task: task.clone() };
+                crate::build_tool::update(|s| {
+                    if !s.triggers.contains(&trigger) {
+                        s.triggers.push(trigger);
+                    }
+                });
+                cx.editor.set_status(format!("{task} runs {}", when.label()));
+            });
+            compositor.push(Box::new(overlaid(picker)));
+        }) as compositor::Callback]);
+    });
+}
+
+/// JetBrains "Tasks Activation" (`ExternalSystem.OpenTasksActivationManager`):
+/// the task triggers; picking one removes it.
+fn build_task_triggers(cx: &mut Context) {
+    match crate::ui::build_tool::triggers_manager() {
+        Some(callback) => cx.callback.push(callback),
+        None => cx.editor.set_status("no task triggers"),
+    }
+}
+
+/// JetBrains "Execute Before Run/Debug" (`ExternalSystem.BeforeRun`): pick a
+/// task to run before the active run configuration.
+fn run_config_add_before_task(cx: &mut Context) {
+    pick_build_task(cx, |cx, dir, task| {
+        cx.editor.set_status(match crate::run_config::add_before_task(&dir, &task) {
+            Some(name) => format!("{task} runs before {name}"),
+            None => "no active run configuration".to_string(),
+        });
+    });
+}
+
+/// JetBrains Services tool window (`RunDashboard.*`): the run configurations
+/// with their state, grouped and filtered (`ui::services`).
+fn services_view(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _| {
+        let runs = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_ide(|ide| ide.run_commands()))
+            .unwrap_or_default();
+        compositor.push(Box::new(crate::ui::services::ServicesView::new(runs)));
+    }));
+}
+
+/// JetBrains "Restore Hidden Configurations" (`RunDashboard.RestoreHiddenConfigurations`).
+fn services_restore_all(cx: &mut Context) {
+    let mut data = crate::run_config::load();
+    let n = data.configs.iter().filter(|c| c.hidden).count();
+    data.configs.iter_mut().for_each(|c| c.hidden = false);
+    crate::run_config::save(&data);
+    cx.editor.set_status(format!("{n} configuration(s) shown again"));
+}
+
+/// JetBrains "Manage Targets" (`ManageTargets`): the run targets; picking one
+/// removes it. `run_target_add` defines one.
+fn manage_run_targets(cx: &mut Context) {
+    let targets = crate::run_targets::load();
+    if targets.is_empty() {
+        cx.editor.set_status("no run targets — run_target_add defines one");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("target", |t: &crate::run_targets::RunTarget, _: &()| t.name.as_str().into()),
+        PickerColumn::new("runs on", |t: &crate::run_targets::RunTarget, _: &()| t.describe().into()),
+    ];
+    let picker = Picker::new(columns, 0, targets, (), |cx, target: &crate::run_targets::RunTarget, _| {
+        let mut targets = crate::run_targets::load();
+        targets.retain(|t| t.name != target.name);
+        crate::run_targets::save(targets);
+        cx.editor.set_status(format!("run target {} removed", target.name));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Define a run target: `NAME ssh HOST[:DIR]`, `NAME docker IMAGE` or
+/// `NAME container NAME` (JetBrains "Manage Targets" → add).
+fn run_target_add(cx: &mut Context) {
+    prompt_then(cx, "run target (NAME ssh HOST[:DIR] | docker IMAGE | container NAME):", |cx, spec| {
+        match crate::run_targets::parse(spec) {
+            Ok(target) => {
+                let mut targets = crate::run_targets::load();
+                targets.retain(|t| t.name != target.name);
+                cx.editor.set_status(format!("run target {}: {}", target.name, target.describe()));
+                targets.push(target);
+                crate::run_targets::save(targets);
+            }
+            Err(e) => cx.editor.set_error(e),
+        }
+    });
+}
+
+/// JetBrains run targets combo (`ExecutionTargets`): where the active run
+/// configuration runs — here, or on one of the run targets.
+fn choose_run_target(cx: &mut Context) {
+    let mut names = vec!["local".to_string()];
+    names.extend(crate::run_targets::load().into_iter().map(|t| t.name));
+    let columns = [PickerColumn::new("run on", |n: &String, _: &()| n.as_str().into())];
+    let picker = Picker::new(columns, 0, names, (), |cx, name: &String, _| {
+        let mut data = crate::run_config::load();
+        let Some(config) = data.configs.get_mut(data.active) else {
+            cx.editor.set_error("no active run configuration");
+            return;
+        };
+        config.target = if name == "local" { String::new() } else { name.clone() };
+        let config_name = config.name.clone();
+        crate::run_config::save(&data);
+        cx.editor.set_status(format!("{config_name} runs on {name}"));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// JetBrains Build Project (`Ctrl-F9`).
