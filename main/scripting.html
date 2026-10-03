@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-52629e1e.js";
+            window.path_to_searchindex_js = "searchindex-a1642e58.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -332,9 +332,10 @@ vim’s <code>:mksession</code> or the vim-session plugin restores its layout:</
 <p>A bare <code>-S</code> (last, or followed by another option) sources <code>Session.vim</code>; <code>-S</code>
 may be repeated. The session’s commands run through the same interpreter as
 <code>:source</code>: <code>badd +{lnum}</code> lists a buffer that is entered on <code>{lnum}</code>,
-<code>edit</code>/<code>tabedit</code>/<code>tabnext</code>/<code>wincmd</code> drive the windows and tab pages, and
-<code>winheight(0)</code>/<code>winwidth(0)</code> measure the current window so the session’s
-<code>normal! zt</code> scroll lands where vim puts it.</p>
+<code>edit</code>/<code>tabedit</code>/<code>tabnext</code>/<code>wincmd</code> drive the windows and tab pages,
+<code>winheight(0)</code>/<code>winwidth(0)</code> measure the current window, and <code>normal!</code> runs
+zmax’s own Normal mode in script order, so the session’s <code>exe s:l | normal! zt</code>
+scroll lands where vim puts it.</p>
 
                     </main>
 
