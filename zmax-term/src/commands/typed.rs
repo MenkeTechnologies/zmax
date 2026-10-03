@@ -64290,7 +64290,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "changelist",
-        aliases: &["cl"],
+        aliases: &[],
         doc: "Put this file in a named changelist, or report which one holds it (JetBrains changelists).",
         fun: changelist,
         completer: CommandCompleter::none(),

@@ -4250,8 +4250,7 @@ fn goto_problem_file(cx: &mut Context, direction: Direction) {
             with_problems
                 .iter()
                 .copied()
-                .filter(|id| order.iter().position(|o| o == id).unwrap_or(0) < here)
-                .next_back()
+                .rfind(|id| order.iter().position(|o| o == id).unwrap_or(0) < here)
                 .unwrap_or(with_problems[with_problems.len() - 1])
         }
     };
@@ -10555,7 +10554,7 @@ fn surround_with(cx: &mut Context) {
     let (has_selection, language) = {
         let (view, doc) = current_ref!(cx.editor);
         (
-            doc.selection(view.id).primary().len() > 0,
+            !doc.selection(view.id).primary().is_empty(),
             doc.language_name().map(str::to_string),
         )
     };
@@ -10661,7 +10660,7 @@ fn surround_with_tag_text(inner: &str, tag: &str) -> String {
 fn surround_with_tag(cx: &mut Context) {
     let has_selection = {
         let (view, doc) = current_ref!(cx.editor);
-        doc.selection(view.id).primary().len() > 0
+        !doc.selection(view.id).primary().is_empty()
     };
     if !has_selection {
         cx.editor.set_error("select the text to surround first");
@@ -12862,7 +12861,7 @@ fn xml_pretty_selection(cx: &mut Context) {
 }
 
 pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor: bool) {
-    let sync = sync_cursor.then(|| match cx.editor.mode {
+    let sync = sync_cursor.then_some(match cx.editor.mode {
         Mode::Select => Movement::Extend,
         _ => Movement::Move,
     });
@@ -55875,7 +55874,8 @@ fn zen_mode(cx: &mut Context) {
 
 /// JetBrains "View Mode" (`ChangeView`): pick how the editor is shown.
 fn change_view_mode(cx: &mut Context) {
-    let modes: Vec<(&'static str, fn(&mut Context))> = vec![
+    type ViewMode = (&'static str, fn(&mut Context));
+    let modes: Vec<ViewMode> = vec![
         ("Distraction Free Mode", distraction_free_mode),
         ("Zen Mode", zen_mode),
         ("Full Screen", toggle_frame_fullscreen),
@@ -57523,7 +57523,7 @@ fn structural_matches(editor: &Editor, source: &str) -> Result<Vec<StructuralHit
                 continue;
             }
             let start = text.byte_to_char(range.start);
-            let end = text.byte_to_char((range.end as usize).min(text.len_bytes()));
+            let end = text.byte_to_char(range.end.min(text.len_bytes()));
             let line = text.char_to_line(start);
             let snippet: String = text
                 .slice(start..end)

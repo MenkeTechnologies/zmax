@@ -520,6 +520,10 @@ pub enum StretchDir {
     Bottom,
 }
 
+/// The problem preview: the selected problem's file and line, and the
+/// numbered lines around it.
+type ProblemPreview = (Option<(Option<PathBuf>, usize)>, Vec<(usize, String)>);
+
 pub struct Ide {
     project: FileTree,
     focus: Focus,
@@ -574,7 +578,7 @@ pub struct Ide {
     problems_preview_tab: bool,
     /// What the preview shows: the selected problem's file and line, and the
     /// numbered lines around it.
-    problem_preview: (Option<(Option<PathBuf>, usize)>, Vec<(usize, String)>),
+    problem_preview: ProblemPreview,
     problems_sel: usize,
     problems_state: ratatui::widgets::TableState,
     ci_state: ratatui::widgets::TableState,
@@ -6368,7 +6372,7 @@ mod parse_tests {
 
     #[test]
     fn severity_order_puts_errors_first_and_keeps_line_order() {
-        let mut sevs = vec![
+        let mut sevs = [
             (Severity::Hint, 1),
             (Severity::Error, 2),
             (Severity::Warning, 3),

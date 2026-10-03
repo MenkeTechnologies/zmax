@@ -1245,7 +1245,7 @@
 | `:scope-delete` | Forget a saved scope. |
 | `:scopes` | List the saved search scopes (JetBrains Scopes). |
 | `:diagnostics-severity`, `:error-highlighting` | The lowest diagnostic severity the editor draws: error, warning, info, hint, off (JetBrains Error Highlighting). |
-| `:changelist`, `:cl` | Put this file in a named changelist, or report which one holds it (JetBrains changelists). |
+| `:changelist` | Put this file in a named changelist, or report which one holds it (JetBrains changelists). |
 | `:changelists`, `:cls` | List every changelist and the files in it (JetBrains Changes view). |
 | `:changelist-commit`, `:cl-commit` | Commit only the files in a changelist (JetBrains Commit changelist). |
 | `:changelist-new`, `:cl-new` | Create an empty changelist (JetBrains New Changelist). |

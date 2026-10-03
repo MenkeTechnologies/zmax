@@ -2170,62 +2170,6 @@ pub fn show_siblings(cx: &mut Context) {
     });
 }
 
-#[cfg(test)]
-mod siblings_tests {
-    use super::{lsp, siblings_at};
-
-    fn pos(line: u32) -> lsp::Position {
-        lsp::Position::new(line, 0)
-    }
-
-    #[allow(deprecated)]
-    fn symbol(name: &str, from: u32, to: u32, children: Vec<lsp::DocumentSymbol>) -> lsp::DocumentSymbol {
-        lsp::DocumentSymbol {
-            name: name.to_string(),
-            detail: None,
-            kind: lsp::SymbolKind::FUNCTION,
-            tags: None,
-            deprecated: None,
-            range: lsp::Range::new(pos(from), pos(to)),
-            selection_range: lsp::Range::new(pos(from), pos(from)),
-            children: if children.is_empty() {
-                None
-            } else {
-                Some(children)
-            },
-        }
-    }
-
-    fn names(symbols: &[lsp::DocumentSymbol]) -> Vec<&str> {
-        symbols.iter().map(|s| s.name.as_str()).collect()
-    }
-
-    #[test]
-    fn inside_a_type_the_siblings_are_its_members() {
-        let tree = vec![
-            symbol("A", 0, 20, vec![symbol("a1", 1, 5, vec![]), symbol("a2", 6, 10, vec![])]),
-            symbol("B", 21, 30, vec![]),
-        ];
-        assert_eq!(names(&siblings_at(&tree, pos(7))), vec!["a1", "a2"]);
-    }
-
-    #[test]
-    fn outside_every_member_the_siblings_are_the_types_themselves() {
-        let tree = vec![
-            symbol("A", 0, 20, vec![symbol("a1", 1, 5, vec![])]),
-            symbol("B", 21, 30, vec![]),
-        ];
-        // Line 15 is inside A but past its only member.
-        assert_eq!(names(&siblings_at(&tree, pos(15))), vec!["A", "B"]);
-    }
-
-    #[test]
-    fn a_position_in_no_symbol_has_no_siblings() {
-        let tree = vec![symbol("A", 0, 5, vec![])];
-        assert!(siblings_at(&tree, pos(9)).is_empty());
-    }
-}
-
 /// The innermost class/interface/struct/enum/trait whose range covers `pos`,
 /// as a flat walk over a `documentSymbol` response.
 fn enclosing_type_symbol(
@@ -2978,4 +2922,60 @@ fn compute_inlay_hints_for_view(
     );
 
     Some(callback)
+}
+
+#[cfg(test)]
+mod siblings_tests {
+    use super::{lsp, siblings_at};
+
+    fn pos(line: u32) -> lsp::Position {
+        lsp::Position::new(line, 0)
+    }
+
+    #[allow(deprecated)]
+    fn symbol(name: &str, from: u32, to: u32, children: Vec<lsp::DocumentSymbol>) -> lsp::DocumentSymbol {
+        lsp::DocumentSymbol {
+            name: name.to_string(),
+            detail: None,
+            kind: lsp::SymbolKind::FUNCTION,
+            tags: None,
+            deprecated: None,
+            range: lsp::Range::new(pos(from), pos(to)),
+            selection_range: lsp::Range::new(pos(from), pos(from)),
+            children: if children.is_empty() {
+                None
+            } else {
+                Some(children)
+            },
+        }
+    }
+
+    fn names(symbols: &[lsp::DocumentSymbol]) -> Vec<&str> {
+        symbols.iter().map(|s| s.name.as_str()).collect()
+    }
+
+    #[test]
+    fn inside_a_type_the_siblings_are_its_members() {
+        let tree = vec![
+            symbol("A", 0, 20, vec![symbol("a1", 1, 5, vec![]), symbol("a2", 6, 10, vec![])]),
+            symbol("B", 21, 30, vec![]),
+        ];
+        assert_eq!(names(&siblings_at(&tree, pos(7))), vec!["a1", "a2"]);
+    }
+
+    #[test]
+    fn outside_every_member_the_siblings_are_the_types_themselves() {
+        let tree = vec![
+            symbol("A", 0, 20, vec![symbol("a1", 1, 5, vec![])]),
+            symbol("B", 21, 30, vec![]),
+        ];
+        // Line 15 is inside A but past its only member.
+        assert_eq!(names(&siblings_at(&tree, pos(15))), vec!["A", "B"]);
+    }
+
+    #[test]
+    fn a_position_in_no_symbol_has_no_siblings() {
+        let tree = vec![symbol("A", 0, 5, vec![])];
+        assert!(siblings_at(&tree, pos(9)).is_empty());
+    }
 }

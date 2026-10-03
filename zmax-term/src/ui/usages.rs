@@ -473,7 +473,7 @@ fn enclosing_members(
             nodes
                 .map(|n| {
                     let r = n.byte_range();
-                    (slice.byte_to_line(r.start as usize), slice.byte_to_line((r.end as usize).min(slice.len_bytes())))
+                    (slice.byte_to_line(r.start), slice.byte_to_line(r.end.min(slice.len_bytes())))
                 })
                 .collect()
         })

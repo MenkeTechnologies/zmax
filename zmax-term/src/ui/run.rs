@@ -476,11 +476,11 @@ mod push_tests {
             "cargo test -- --nocapture a::b c::d"
         );
         assert_eq!(
-            rerun_failed_command("go test ./...", &vec!["TestA".into()]).unwrap(),
+            rerun_failed_command("go test ./...", &["TestA".into()]).unwrap(),
             "go test ./... -run '^(TestA)$'"
         );
         assert_eq!(
-            rerun_failed_command("pytest -q", &vec!["t.py::test_x".into()]).unwrap(),
+            rerun_failed_command("pytest -q", &["t.py::test_x".into()]).unwrap(),
             "pytest -q t.py::test_x"
         );
         // An unknown runner is refused rather than guessed at.
