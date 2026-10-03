@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-fa14c9d4.js";
+            window.path_to_searchindex_js = "searchindex-62ed1d57.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -336,7 +336,8 @@ may be repeated. The session’s commands run through the same interpreter as
 and <code>&amp;lines</code> report the area the windows share,
 <code>winheight(0)</code>/<code>winwidth(0)</code> measure the current window, and <code>normal!</code> runs
 zmax’s own Normal mode in script order, so the session’s <code>exe s:l | normal! zt</code>
-scroll lands where vim puts it.</p>
+scroll lands where vim puts it. <code>:source {session}</code> at the prompt restores the
+same way.</p>
 
                     </main>
 
