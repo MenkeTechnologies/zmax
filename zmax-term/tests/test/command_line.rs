@@ -308,6 +308,53 @@ async fn source_runs_a_scripts_normal_keys_in_order() -> anyhow::Result<()> {
     Ok(())
 }
 
+// The vimrc's sidebar-plugin commands (F1 `:NERDTreeToggle`, F3 `:TlistToggle`,
+// F4 `:MinimapToggle`, F5 `:LOTRToggle`) run on the workbench without error,
+// and NERDTree's start directory must exist, failing with NERDTree's message.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sidebar_plugin_commands_run() -> anyhow::Result<()> {
+    let mut app = AppBuilder::new().build()?;
+    for cmd in [
+        ":NERDTreeToggle<ret>",
+        ":NERDTreeToggle<ret>",
+        ":Tlist<ret>",
+        ":TlistClose<ret>",
+        ":MinimapToggle<ret>",
+        ":LOTRToggle<ret>",
+        ":NERDTree .<ret>",
+    ] {
+        test_key_sequence(
+            &mut app,
+            Some(cmd),
+            Some(&move |app| {
+                assert!(!app.editor.is_err(), "{cmd}: {:?}", app.editor.get_status());
+            }),
+            false,
+        )
+        .await?;
+    }
+    // A fresh app: `:NERDTree .` above moved the cursor into the tree, where
+    // `:` is not the command line.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":NERDTree zmax-no-such-directory<ret>"),
+        Some(&|app| {
+            let (status, _) = app.editor.get_status().expect("an error");
+            assert!(app.editor.is_err());
+            assert!(
+                status
+                    .as_ref()
+                    .ends_with("NERDTree: No bookmark or directory found for: zmax-no-such-directory"),
+                "{}",
+                status.as_ref()
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 // `:make` runs the make program, capturing output into the quickfix list and
 // setting a compilation status. `--version` keeps it deterministic and
 // cwd-independent (no Makefile needed): make prints its version and exits 0.

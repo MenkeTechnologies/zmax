@@ -100,6 +100,18 @@ fn parse_test_progress(lines: &[String]) -> Option<(u32, u32)> {
     (total > 0).then_some((passed, total))
 }
 
+/// What a vim plugin's window command does to its window
+/// ([`crate::ui::EditorView::tool_window`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToolWindowAction {
+    /// Show it; `focus` moves the cursor into it.
+    Open { focus: bool },
+    /// Take it off screen.
+    Close,
+    /// Close it when shown, else open it (with `focus` as for `Open`).
+    Toggle { focus: bool },
+}
+
 #[derive(PartialEq, Clone, Copy)]
 enum Focus {
     Editor,
@@ -1349,6 +1361,51 @@ impl Ide {
             "problems" => self.fold_problems = !self.fold_problems,
             "minimap" => self.fold_minimap = !self.fold_minimap,
             _ => {}
+        }
+    }
+
+    /// Whether tool window `which` (project / structure / minimap / registers)
+    /// is on screen: the workbench is up and the window's panel is unfolded.
+    pub fn tool_window_shown(&self, which: &str) -> bool {
+        self.visible
+            && match which {
+                "project" => !self.fold_project && !self.left_collapsed,
+                "structure" => !self.fold_structure && !self.left_collapsed,
+                "minimap" => !self.fold_minimap,
+                "registers" => !self.fold_problems && self.bottom_tab == BottomTab::Registers,
+                _ => false,
+            }
+    }
+
+    /// Put tool window `which` on screen, the way a vim plugin opens its
+    /// window: the cursor moves into it only with `focus` (NERDTree does,
+    /// `:TlistToggle` and the minimap leave it where it was).
+    pub fn open_tool_window(&mut self, which: &str, focus: bool) {
+        let before = if self.visible { self.focus } else { Focus::Editor };
+        match which {
+            "minimap" => {
+                self.set_minimap(Some(true));
+            }
+            other => self.focus_panel(other),
+        }
+        if !focus {
+            self.focus = before;
+        }
+    }
+
+    /// Take tool window `which` off screen, handing the cursor back to the
+    /// editor when it was in that window (vim closes the plugin's window).
+    pub fn close_tool_window(&mut self, which: &str) {
+        let (fold, owner) = match which {
+            "project" => (&mut self.fold_project, Focus::Project),
+            "structure" => (&mut self.fold_structure, Focus::Structure),
+            "minimap" => (&mut self.fold_minimap, Focus::Editor),
+            "registers" => (&mut self.fold_problems, Focus::Problems),
+            _ => return,
+        };
+        *fold = true;
+        if self.focus == owner && owner != Focus::Editor {
+            self.focus = Focus::Editor;
         }
     }
 
@@ -6390,5 +6447,77 @@ mod parse_tests {
         sevs.sort_by_key(|(s, _)| severity_rank(*s));
         let lines: Vec<usize> = sevs.iter().map(|(_, l)| *l).collect();
         assert_eq!(vec![2, 4, 3, 1], lines);
+    }
+}
+
+/// The vim plugin window commands (`:NERDTreeToggle`, `:TlistToggle`,
+/// `:MinimapToggle`, `:LOTRToggle`) on the workbench tool windows.
+#[cfg(test)]
+mod tool_window_tests {
+    use super::{BottomTab, Focus, Ide};
+
+    fn closed_workbench() -> Ide {
+        let mut ide = Ide::new();
+        for which in ["project", "structure", "minimap", "registers"] {
+            ide.close_tool_window(which);
+        }
+        ide.focus = Focus::Editor;
+        ide
+    }
+
+    /// Each window opens and closes on its own, as the plugins' windows do:
+    /// closing the tree leaves the tag list up.
+    #[test]
+    fn windows_open_and_close_independently() {
+        let mut ide = closed_workbench();
+        ide.open_tool_window("project", true);
+        ide.open_tool_window("structure", false);
+        assert!(ide.tool_window_shown("project") && ide.tool_window_shown("structure"));
+
+        ide.close_tool_window("project");
+        assert!(!ide.tool_window_shown("project"));
+        assert!(ide.tool_window_shown("structure"), "the tag list stays up");
+    }
+
+    /// NERDTree moves the cursor into the tree; `:TlistToggle` and the
+    /// minimap leave it in the editor. Closing the window the cursor is in
+    /// hands it back to the editor.
+    #[test]
+    fn focus_follows_each_plugins_rule() {
+        let mut ide = closed_workbench();
+        ide.open_tool_window("structure", false);
+        assert!(ide.focus == Focus::Editor, ":TlistToggle keeps the cursor");
+        ide.open_tool_window("minimap", false);
+        assert!(ide.focus == Focus::Editor, "the minimap keeps the cursor");
+
+        ide.open_tool_window("project", true);
+        assert!(ide.focus == Focus::Project, "NERDTree takes the cursor");
+        ide.close_tool_window("project");
+        assert!(ide.focus == Focus::Editor);
+    }
+
+    /// LOTR's window is the Registers tab: it counts as shown only while that
+    /// tab is the one the bottom drawer shows.
+    #[test]
+    fn registers_window_is_the_registers_tab() {
+        let mut ide = closed_workbench();
+        ide.open_tool_window("registers", false);
+        assert!(ide.tool_window_shown("registers"));
+        assert!(ide.focus == Focus::Editor, "g:lotr_focus_on_open is 0");
+
+        ide.select_tab(BottomTab::Problems);
+        assert!(!ide.tool_window_shown("registers"));
+    }
+
+    /// With the whole workbench hidden nothing counts as shown, so a toggle
+    /// brings the window back rather than closing it.
+    #[test]
+    fn a_hidden_workbench_shows_no_window() {
+        let mut ide = Ide::new();
+        assert!(ide.tool_window_shown("project"));
+        ide.toggle_visible();
+        assert!(!ide.tool_window_shown("project"));
+        ide.open_tool_window("project", true);
+        assert!(ide.visible() && ide.tool_window_shown("project"));
     }
 }

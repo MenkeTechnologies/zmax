@@ -856,6 +856,20 @@
 | `:line-ending` | Set the document's default line ending. Options: crlf, lf. |
 | `:earlier`, `:ear` | Jump back to an earlier point in edit history. Accepts a number of steps or a time span. |
 | `:later`, `:lat` | Jump to a later point in edit history. Accepts a number of steps or a time span. |
+| `:NERDTree` | Open the project tree, rooted at [dir], and move into it (NERDTree :NERDTree). |
+| `:NERDTreeToggle` | Close the project tree, or open it (rooted at [dir]) and move into it (NERDTree :NERDTreeToggle). |
+| `:NERDTreeFocus` | Open the project tree if it is closed and move into it (NERDTree :NERDTreeFocus). |
+| `:NERDTreeClose` | Close the project tree (NERDTree :NERDTreeClose). |
+| `:NERDTreeFind` | Reveal [path], else the current file, in the project tree (NERDTree :NERDTreeFind). |
+| `:TlistToggle`, `:Tlist` | Open or close the structure outline, leaving the cursor where it is (taglist :TlistToggle). |
+| `:TlistOpen` | Open the structure outline and move into it (taglist :TlistOpen). |
+| `:TlistClose` | Close the structure outline (taglist :TlistClose). |
+| `:Minimap` | Show the minimap (vim-minimap :Minimap). |
+| `:MinimapToggle` | Show or hide the minimap (vim-minimap :MinimapToggle). |
+| `:MinimapClose` | Hide the minimap (vim-minimap :MinimapClose). |
+| `:LOTROpen` | Show the registers tool window (vim-lotr :LOTROpen). |
+| `:LOTRToggle` | Show or hide the registers tool window (vim-lotr :LOTRToggle). |
+| `:LOTRClose` | Hide the registers tool window (vim-lotr :LOTRClose). |
 | `:undotree`, `:undo-tree`, `:UndotreeToggle` | Open the branching undo-history browser (vim undotree). |
 | `:undolist`, `:undol` | List the undo states as a text popup (vim :undolist). |
 | `:injections`, `:injection-rules` | List the active language-injection rules (defaults + injections.toml). |

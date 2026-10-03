@@ -531,6 +531,27 @@ impl EditorView {
         self.ide_or_create().focus_panel(name);
     }
 
+    /// Open, close or toggle a workbench tool window as a vim plugin command
+    /// does its window (`:NERDTreeToggle`, `:TlistToggle`, `:MinimapToggle`,
+    /// `:LOTRToggle`). Returns whether the window is on screen afterwards.
+    pub fn tool_window(&mut self, which: &str, action: super::ide::ToolWindowAction) -> bool {
+        use super::ide::ToolWindowAction;
+        let shown = self.ide.as_ref().is_some_and(|ide| ide.tool_window_shown(which));
+        match action {
+            ToolWindowAction::Close | ToolWindowAction::Toggle { .. } if shown => {
+                if let Some(ide) = self.ide.as_mut() {
+                    ide.close_tool_window(which);
+                }
+                false
+            }
+            ToolWindowAction::Close => false,
+            ToolWindowAction::Open { focus } | ToolWindowAction::Toggle { focus } => {
+                self.ide_or_create().open_tool_window(which, focus);
+                true
+            }
+        }
+    }
+
     /// JetBrains "Hide Active Tool Window" (Shift-Esc): return focus to the
     /// editor, defocusing whatever tool window was active.
     pub fn hide_active_tool_window(&mut self) {

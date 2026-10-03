@@ -9170,6 +9170,121 @@ fn ide(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+// --- vim plugin windows on the workbench tool windows ------------------------
+// The sidebar plugins a vimrc and its sessions drive — NERDTree, taglist,
+// vim-minimap, vim-lotr — each own one window. zmax's workbench has a tool
+// window for each: the project tree, the structure outline, the minimap and
+// the Registers tab. Each command keeps its plugin's open/close/focus rules
+// (from the plugins' own docs and source).
+
+/// Apply `action` to tool window `which` once the compositor is at hand, as
+/// `:ide` does; `root` re-roots the project tree as it opens.
+fn plugin_tool_window(
+    cx: &mut compositor::Context,
+    which: &'static str,
+    action: crate::ui::ide::ToolWindowAction,
+    root: Option<PathBuf>,
+) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                if view.tool_window(which, action) {
+                    if let Some(root) = root {
+                        view.set_project_root(root);
+                    }
+                }
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// NERDTree's `[<start-directory> | <bookmark>]`: the directory the tree is
+/// rooted at, when one is named. zmax has no NERDTree bookmarks, so a name
+/// that is not a directory fails as NERDTree's does for an unknown bookmark.
+fn nerdtree_root(args: &Args) -> anyhow::Result<Option<PathBuf>> {
+    let arg = args.join(" ");
+    let arg = arg.trim();
+    if arg.is_empty() {
+        return Ok(None);
+    }
+    let dir = zmax_stdx::path::expand_tilde(Path::new(arg)).into_owned();
+    if !dir.is_dir() {
+        bail!("NERDTree: No bookmark or directory found for: {arg}");
+    }
+    Ok(Some(zmax_stdx::path::canonicalize(dir)))
+}
+
+/// Define a vim plugin window command: tool window, action, and whether it
+/// takes NERDTree's start-directory argument.
+macro_rules! plugin_window_cmd {
+    ($fn:ident, $which:literal, $action:expr, root) => {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let root = nerdtree_root(&args)?;
+            plugin_tool_window(cx, $which, $action, root);
+            Ok(())
+        }
+    };
+    ($fn:ident, $which:literal, $action:expr) => {
+        fn $fn(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            plugin_tool_window(cx, $which, $action, None);
+            Ok(())
+        }
+    };
+}
+
+use crate::ui::ide::ToolWindowAction::{Close as TwClose, Open as TwOpen, Toggle as TwToggle};
+
+// NERDTree opens with the cursor in the tree (`_createTreeWin`).
+plugin_window_cmd!(ex_nerdtree, "project", TwOpen { focus: true }, root);
+plugin_window_cmd!(ex_nerdtree_toggle, "project", TwToggle { focus: true }, root);
+plugin_window_cmd!(ex_nerdtree_focus, "project", TwOpen { focus: true });
+plugin_window_cmd!(ex_nerdtree_close, "project", TwClose);
+// taglist: ":TlistToggle ... the cursor is not moved"; ":TlistOpen Open and
+// jump to the taglist window".
+plugin_window_cmd!(ex_tlist_toggle, "structure", TwToggle { focus: false });
+plugin_window_cmd!(ex_tlist_open, "structure", TwOpen { focus: true });
+plugin_window_cmd!(ex_tlist_close, "structure", TwClose);
+// vim-minimap hands the cursor back to the source window.
+plugin_window_cmd!(ex_minimap, "minimap", TwOpen { focus: false });
+plugin_window_cmd!(ex_minimap_toggle, "minimap", TwToggle { focus: false });
+plugin_window_cmd!(ex_minimap_close, "minimap", TwClose);
+// vim-lotr: `g:lotr_focus_on_open` defaults to 0.
+plugin_window_cmd!(ex_lotr_open, "registers", TwOpen { focus: false });
+plugin_window_cmd!(ex_lotr_toggle, "registers", TwToggle { focus: false });
+plugin_window_cmd!(ex_lotr_close, "registers", TwClose);
+
+/// NERDTree `:NERDTreeFind [<path>]`: reveal `path`, else the current file,
+/// in the tree.
+fn ex_nerdtree_find(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.join(" ");
+    let path = match arg.trim() {
+        "" => doc!(cx.editor)
+            .path()
+            .map(|p| p.to_path_buf())
+            .ok_or_else(|| anyhow!("NERDTree: no file for the active buffer"))?,
+        arg => zmax_stdx::path::canonicalize(zmax_stdx::path::expand_tilde(Path::new(arg))),
+    };
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                view.reveal_in_tree(&path);
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// `:diff` — open a read-only, full-screen side-by-side diff viewer comparing
 /// the focused buffer's git `HEAD` version (left) with the current working-tree
 /// buffer (right). Changed/added/removed lines are aligned and highlighted with
@@ -60195,6 +60310,160 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "NERDTree",
+        aliases: &[],
+        doc: "Open the project tree, rooted at [dir], and move into it (NERDTree :NERDTree).",
+        fun: ex_nerdtree,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "NERDTreeToggle",
+        aliases: &[],
+        doc: "Close the project tree, or open it (rooted at [dir]) and move into it (NERDTree :NERDTreeToggle).",
+        fun: ex_nerdtree_toggle,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "NERDTreeFocus",
+        aliases: &[],
+        doc: "Open the project tree if it is closed and move into it (NERDTree :NERDTreeFocus).",
+        fun: ex_nerdtree_focus,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "NERDTreeClose",
+        aliases: &[],
+        doc: "Close the project tree (NERDTree :NERDTreeClose).",
+        fun: ex_nerdtree_close,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "NERDTreeFind",
+        aliases: &[],
+        doc: "Reveal [path], else the current file, in the project tree (NERDTree :NERDTreeFind).",
+        fun: ex_nerdtree_find,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "TlistToggle",
+        aliases: &["Tlist"],
+        doc: "Open or close the structure outline, leaving the cursor where it is (taglist :TlistToggle).",
+        fun: ex_tlist_toggle,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "TlistOpen",
+        aliases: &[],
+        doc: "Open the structure outline and move into it (taglist :TlistOpen).",
+        fun: ex_tlist_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "TlistClose",
+        aliases: &[],
+        doc: "Close the structure outline (taglist :TlistClose).",
+        fun: ex_tlist_close,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "Minimap",
+        aliases: &[],
+        doc: "Show the minimap (vim-minimap :Minimap).",
+        fun: ex_minimap,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "MinimapToggle",
+        aliases: &[],
+        doc: "Show or hide the minimap (vim-minimap :MinimapToggle).",
+        fun: ex_minimap_toggle,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "MinimapClose",
+        aliases: &[],
+        doc: "Hide the minimap (vim-minimap :MinimapClose).",
+        fun: ex_minimap_close,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "LOTROpen",
+        aliases: &[],
+        doc: "Show the registers tool window (vim-lotr :LOTROpen).",
+        fun: ex_lotr_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "LOTRToggle",
+        aliases: &[],
+        doc: "Show or hide the registers tool window (vim-lotr :LOTRToggle).",
+        fun: ex_lotr_toggle,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "LOTRClose",
+        aliases: &[],
+        doc: "Hide the registers tool window (vim-lotr :LOTRClose).",
+        fun: ex_lotr_close,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
