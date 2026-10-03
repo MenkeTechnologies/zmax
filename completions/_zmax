@@ -22,6 +22,7 @@ _zmax() {
 		"--config[Specifies a file to use for configuration]" \
 		"-w[Specify initial working directory]" \
 		"--working-dir[Specify initial working directory]" \
+		"*-S[Source a Vimscript/session file after loading files]:session file:_files -g '*.vim'" \
 		"--log[Specifies a file to use for logging]" \
 		"*:file:_files"
 
