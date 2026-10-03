@@ -123,3 +123,92 @@ async fn dash_s_reports_a_missing_script() -> anyhow::Result<()> {
     Ok(())
 }
 
+
+/// Boot `zmax -S {session}` over `files` in a fresh `HOME` holding `files`,
+/// with `DIR` in the session replaced by that directory.
+fn boot_session(name: &str, files: &[(&str, usize)], session: &str) -> anyhow::Result<(Application, std::path::PathBuf)> {
+    let dir = std::env::temp_dir().join(format!("zmax-dash-s-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join(".zmax"))?;
+    std::env::set_var("HOME", &dir);
+    for (file, lines) in files {
+        let text: String = (1..=*lines).map(|n| format!("line {n}\n")).collect();
+        std::fs::write(dir.join(file), text)?;
+    }
+    let script = dir.join("sess.vim");
+    std::fs::write(&script, session.replace("DIR", &dir.to_string_lossy()))?;
+
+    let mut args = Args::default();
+    args.files.insert(dir.join(files[0].0), vec![Position::default()]);
+    args.source_files.push(script);
+    let source_files = args.source_files.clone();
+    let mut app = Application::new(
+        args,
+        test_config(),
+        test_syntax_loader(None),
+        WorkspaceTrust::fully_trusted(),
+    )?;
+    app.load_init_scripts();
+    app.source_startup_files(&source_files);
+    Ok((app, dir))
+}
+
+/// vim `:badd +lnum {fname}` — what a session writes for every buffer — lists
+/// the file and lands on `lnum` when it is entered. The `+lnum` is not a file:
+/// it must not become a buffer named `+30`.
+#[tokio::test(flavor = "multi_thread")]
+async fn session_badd_lnum_is_the_entry_line_not_a_buffer() -> anyhow::Result<()> {
+    let (mut app, dir) = boot_session(
+        "badd",
+        &[("notes.txt", 50), ("other.txt", 50)],
+        // Absolute paths: a `cd` would move the cwd under the parallel tests.
+        "badd +30 DIR/notes.txt\nbadd +7 DIR/other.txt\nbadd +0 DIR/notes.txt\nbuffer other.txt\n",
+    )?;
+
+    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+    let names: Vec<_> = app
+        .editor
+        .documents()
+        .filter_map(|d| d.path().map(|p| p.file_name().unwrap().to_string_lossy().into_owned()))
+        .collect();
+    assert!(
+        names.iter().all(|n| !n.starts_with('+')),
+        "a `+lnum` became a buffer: {names:?}"
+    );
+    let (view, doc) = zmax_view::current_ref!(app.editor);
+    assert_eq!(doc.path(), Some(dir.join("other.txt").as_path()));
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    assert_eq!(text.char_to_line(cursor), 6, "`badd +7` enters on line 7");
+
+    // The command-line file was showing when its `badd +30` ran: vim leaves
+    // a displayed buffer's cursor alone.
+    app.editor.switch(
+        app.editor.document_by_path(dir.join("notes.txt")).unwrap().id(),
+        zmax_view::editor::Action::Replace,
+    );
+    let (view, doc) = zmax_view::current_ref!(app.editor);
+    let text = doc.text().slice(..);
+    assert_eq!(text.char_to_line(doc.selection(view.id).primary().cursor(text)), 0);
+
+    let _ = std::fs::remove_dir_all(&dir);
+    Ok(())
+}
+
+/// `winheight(0)` is the window's text height, so a session's
+/// `let s:l = N - ((K * winheight(0) + …) / …)` scroll lands where vim's does.
+/// Standalone vimlrs answers -1, which collapsed every `s:l` to `N`.
+#[tokio::test(flavor = "multi_thread")]
+async fn session_winheight_measures_the_window() -> anyhow::Result<()> {
+    let (app, dir) = boot_session("winheight", &[("notes.txt", 400)], "exe winheight(0)\n")?;
+
+    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+    let (view, doc) = zmax_view::current_ref!(app.editor);
+    let text = doc.text().slice(..);
+    let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+    assert!(view.inner_height() > 1);
+    assert_eq!(line + 1, view.inner_height(), "`exe winheight(0)` goes to that line");
+
+    let _ = std::fs::remove_dir_all(&dir);
+    Ok(())
+}

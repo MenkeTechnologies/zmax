@@ -139,3 +139,20 @@ they exist, best-effort (errors surface on the status line):
 
 - `init.el` — evaluated as Emacs Lisp.
 - `init.vim` — evaluated as Vimscript.
+
+## Session files (`-S`)
+
+`zmax -S {file}` sources a Vimscript file after the init scripts, plugins and
+command-line files have loaded — vim's `-S` order — so a session written by
+vim's `:mksession` or the vim-session plugin restores its layout:
+
+```sh
+zmax -S ~/.vim/sessions/work.vim + notes.txt
+```
+
+A bare `-S` (last, or followed by another option) sources `Session.vim`; `-S`
+may be repeated. The session's commands run through the same interpreter as
+`:source`: `badd +{lnum}` lists a buffer that is entered on `{lnum}`,
+`edit`/`tabedit`/`tabnext`/`wincmd` drive the windows and tab pages, and
+`winheight(0)`/`winwidth(0)` measure the current window so the session's
+`normal! zt` scroll lands where vim puts it.

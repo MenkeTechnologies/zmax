@@ -564,6 +564,15 @@ fn install_viml_host_hooks() {
         // buffer to scripts, so 1 (matches `bufnr('')` on a normal buffer).
         buf_nr: Box::new(|| 1),
     });
+    // `winheight(0)` / `winwidth(0)`: the focused view's text area, which a
+    // `:mksession` script sizes its `normal! zt` scroll from.
+    vimlrs::fusevm_bridge::install_win_size_hook(Box::new(|| {
+        with_cx(|cx| {
+            let (view, doc) = current!(cx.editor);
+            (view.inner_height() as i64, i64::from(view.inner_width(doc)))
+        })
+        .unwrap_or((-1, -1))
+    }));
     vimlrs::fusevm_bridge::install_set_hook(Box::new(|args: &str| {
         let _ = with_cx(|cx| {
             crate::commands::typed::run_command_line(cx, &format!("set {args}"));

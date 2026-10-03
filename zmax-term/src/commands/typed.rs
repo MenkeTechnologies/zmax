@@ -5881,9 +5881,31 @@ fn buffer_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     if args.is_empty() {
         bail!("badd: needs a file");
     }
+    // vim `:badd [+lnum] {fname}`: "If 'lnum' is specified, the cursor will be
+    // positioned at that line when the buffer is first entered" (windows.txt).
+    // `+0` names no line. Sessions write `badd +30 file` for every buffer.
+    let mut lnum = 0;
     for arg in args.iter() {
+        if let Some(n) = arg.strip_prefix('+').and_then(|n| n.parse::<usize>().ok()) {
+            lnum = n;
+            continue;
+        }
         let path = zmax_stdx::path::expand_tilde(std::path::Path::new(arg.as_ref()));
-        cx.editor.open(&path, Action::Load)?;
+        let view_id = view!(cx.editor).id;
+        let shown = cx
+            .editor
+            .document_id_by_path(&path)
+            .is_some_and(|id| view!(cx.editor).doc == id);
+        let doc_id = cx.editor.open(&path, Action::Load)?;
+        // A buffer already in this window keeps its cursor, as vim's
+        // `buflist_setfpos` only records where the next entry lands.
+        if lnum > 0 && !shown {
+            let doc = doc_mut!(cx.editor, &doc_id);
+            let text = doc.text();
+            let pos = text.line_to_char((lnum - 1).min(text.len_lines().saturating_sub(1)));
+            doc.set_selection(view_id, Selection::point(pos));
+            doc.restore_position = Some(pos);
+        }
     }
     Ok(())
 }
