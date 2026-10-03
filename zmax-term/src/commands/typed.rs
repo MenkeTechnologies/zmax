@@ -29221,6 +29221,40 @@ fn source_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     if !path.exists() {
         bail!("source: {} does not exist", path.display());
     }
+    // Typed at the prompt, `:source` runs inside the compositor's own event
+    // handling, where a script's `:normal` keys can't be fed in order (a
+    // session's `exe s:l | normal! zt | 40`). Run it from a job callback that
+    // holds the compositor instead. A `:source` inside a running script (a
+    // session's `exe "source " . s:sx`) runs in place.
+    if !crate::commands::scripting::script_running() {
+        let call = job::Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                let mut jobs = crate::job::Jobs::new();
+                let mut cx = compositor::Context {
+                    editor,
+                    jobs: &mut jobs,
+                    scroll: None,
+                };
+                match crate::commands::scripting::source_viml_file_with_compositor(
+                    &mut cx, compositor, &path,
+                ) {
+                    Ok(()) => cx.editor.set_status(format!("sourced {}", path.display())),
+                    Err(e) => cx.editor.set_error(e),
+                }
+                // The script's wait-before-exit jobs still run, reporting
+                // through the shared job queue.
+                for future in jobs.wait_futures {
+                    tokio::spawn(async move {
+                        if let Ok(Some(callback)) = future.await {
+                            crate::job::dispatch_callback(callback).await;
+                        }
+                    });
+                }
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+        return Ok(());
+    }
     match source_and_record(cx, &path) {
         Ok(()) => {
             cx.editor.set_status(format!("sourced {}", path.display()));

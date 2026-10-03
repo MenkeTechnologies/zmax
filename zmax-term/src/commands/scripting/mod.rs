@@ -76,6 +76,12 @@ thread_local! {
         const { Cell::new(ptr::null_mut()) };
 }
 
+/// Whether a script is being evaluated on this thread right now — a
+/// `:source` met inside one runs in place rather than being rescheduled.
+pub fn script_running() -> bool {
+    !CX_PTR.with(|c| c.get()).is_null()
+}
+
 /// Source a Vimscript file with the compositor at hand, so its `:normal`
 /// keys run in script order — a session's `exe s:l | normal! zt | 40`
 /// scrolls before the cursor moves, as in vim. Used by `-S` at startup.

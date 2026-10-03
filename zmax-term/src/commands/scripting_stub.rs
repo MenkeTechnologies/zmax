@@ -58,6 +58,11 @@ pub fn source_viml_file(
     Err(DISABLED.to_string())
 }
 
+/// See [`crate::commands::scripting::script_running`].
+pub fn script_running() -> bool {
+    false
+}
+
 /// See [`crate::commands::scripting::source_viml_file_with_compositor`].
 pub fn source_viml_file_with_compositor(
     _cx: &mut compositor::Context,

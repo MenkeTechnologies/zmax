@@ -274,6 +274,40 @@ async fn source_vimscript_file() -> anyhow::Result<()> {
     Ok(())
 }
 
+// A session `:source`d at the prompt scrolls as vim does: its `normal! zt`
+// runs in script order, before the cursor line that follows it moves.
+#[tokio::test(flavor = "multi_thread")]
+async fn source_runs_a_scripts_normal_keys_in_order() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let notes = dir.path().join("notes.txt");
+    let text: String = (1..=400).map(|n| format!("line {n}\n")).collect();
+    std::fs::write(&notes, text)?;
+    let session = dir.path().join("sess.vim");
+    std::fs::write(
+        &session,
+        format!(
+            "set so=0\nedit {}\nexe 100\nnormal! zt\n110\nnormal! 0\n",
+            notes.display()
+        ),
+    )?;
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(&format!(":source {}<ret>", session.display())),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (view, doc) = zmax_view::current_ref!(app.editor);
+            let text = doc.text().slice(..);
+            let cursor = doc.selection(view.id).primary().cursor(text);
+            assert_eq!(text.char_to_line(cursor), 109, "the script's `110`");
+            let top = text.char_to_line(doc.view_offset(view.id).anchor);
+            assert_eq!(top, 99, "`normal! zt` ran on line 100");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 // `:make` runs the make program, capturing output into the quickfix list and
 // setting a compilation status. `--version` keeps it deterministic and
 // cwd-independent (no Makefile needed): make prints its version and exits 0.

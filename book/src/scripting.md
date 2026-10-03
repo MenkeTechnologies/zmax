@@ -158,4 +158,5 @@ may be repeated. The session's commands run through the same interpreter as
 and `&lines` report the area the windows share,
 `winheight(0)`/`winwidth(0)` measure the current window, and `normal!` runs
 zmax's own Normal mode in script order, so the session's `exe s:l | normal! zt`
-scroll lands where vim puts it.
+scroll lands where vim puts it. `:source {session}` at the prompt restores the
+same way.
