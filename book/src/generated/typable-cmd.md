@@ -785,6 +785,7 @@
 | `:blast`, `:bl` | Go to the last buffer in the buffer list (vim :blast). |
 | `:bmodified`, `:bm` | Go to the next modified buffer (vim :bmodified). |
 | `:ball`, `:sball`, `:unhide`, `:unh`, `:sunhide`, `:sun` | Open a window for each buffer in the buffer list (vim :ball; :unhide/:sunhide — every zmax buffer is loaded). |
+| `:file`, `:f`, `:fi`, `:fil` | Rename the current buffer to {name}, or show the file info (vim :file). |
 | `:badd` | Add a file to the buffer list without editing it (vim :badd). |
 | `:balt` | Add a file to the buffer list and set it as the alternate file (vim :balt). |
 | `:bufdo` | Run an Ex command in each listed buffer (vim :bufdo). |
@@ -1373,7 +1374,7 @@
 | `:normal`, `:norm`, `:normal!`, `:norm!` | Execute {commands} as normal-mode keystrokes (vim :normal[!]). |
 | `:mark`, `:k` | Set mark {x} at the cursor position (vim :mark / :k). |
 | `:buffer`, `:buf`, `:b` | Switch to the open buffer whose path contains {name} (vim :buffer / :b). |
-| `:resize`, `:res` | Adjust the current window height (vim :resize [+/-]{N}). |
+| `:resize`, `:res` | Adjust window N's (else the current window's) height, or width under :vertical (vim :[N]resize [+/-]{n}). |
 | `:let` | Set a vimscript variable via the embedded interpreter (:let x = 42). |
 | `:Files` | Fuzzy-find files with fzf and open the selection (fzf.vim :Files). |
 | `:GFiles`, `:GitFiles` | Fuzzy-find git-tracked files with fzf and open the pick (fzf.vim :GFiles). |

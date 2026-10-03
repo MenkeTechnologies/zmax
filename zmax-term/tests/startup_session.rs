@@ -259,3 +259,54 @@ async fn session_tabnext_restores_the_window_scroll() -> anyhow::Result<()> {
     let _ = std::fs::remove_dir_all(&dir);
     Ok(())
 }
+
+/// A session's split layout, as `:mksession` writes it: vsplits, then
+/// `vert {N}resize ((&columns * K + …) / …)` per window, `enew` + `file NAME`
+/// for a plugin window, and `{N}wincmd w` for the focus. `&columns` is the
+/// area the windows share, so each width is the formula's, as in vim.
+#[tokio::test(flavor = "multi_thread")]
+async fn session_split_layout_sizes_names_and_focuses_windows() -> anyhow::Result<()> {
+    let (app, dir) = boot_session(
+        "split",
+        &[("a.txt", 300), ("b.txt", 300)],
+        "edit DIR/b.txt\n\
+         set splitbelow splitright\n\
+         wincmd _ | wincmd |\n\
+         vsplit\n\
+         wincmd _ | wincmd |\n\
+         vsplit\n\
+         2wincmd h\n\
+         wincmd w\n\
+         wincmd w\n\
+         wincmd t\n\
+         exe 'vert 1resize ' . ((&columns * 50 + 99) / 199)\n\
+         exe 'vert 2resize ' . ((&columns * 59 + 99) / 199)\n\
+         edit DIR/a.txt\n\
+         wincmd w\n\
+         wincmd w\n\
+         enew\n\
+         file scratchname\n\
+         2wincmd w\n",
+    )?;
+
+    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+    let columns = u32::from(app.editor.tree.area().width);
+    let windows: Vec<_> = app.editor.tree.traverse().map(|(id, _)| id).collect();
+    assert_eq!(windows.len(), 3);
+    let width = |n: usize| u32::from(app.editor.tree.node_width(windows[n]));
+    assert_eq!(width(0), (columns * 50 + 99) / 199, "vert 1resize");
+    assert_eq!(width(1), (columns * 59 + 99) / 199, "vert 2resize");
+
+    let name = |n: usize| {
+        let doc = app.editor.tree.get(windows[n]).doc;
+        let doc = app.editor.document(doc).unwrap();
+        doc.path().map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+    };
+    assert_eq!(name(0).as_deref(), Some("a.txt"));
+    assert_eq!(name(1).as_deref(), Some("b.txt"));
+    assert_eq!(name(2).as_deref(), Some("scratchname"), "`file scratchname`");
+    assert_eq!(app.editor.tree.focus, windows[1], "`2wincmd w`");
+
+    let _ = std::fs::remove_dir_all(&dir);
+    Ok(())
+}

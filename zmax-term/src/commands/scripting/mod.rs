@@ -596,6 +596,16 @@ fn install_viml_host_hooks() {
         })
         .unwrap_or((-1, -1))
     }));
+    // `&lines` / `&columns`: the area the windows are laid out in (the IDE
+    // sidebar and the status/command rows are outside it), so a session's
+    // `vert {N}resize ((&columns * K + …) / …)` shares out exactly that space.
+    vimlrs::fusevm_bridge::install_screen_size_hook(Box::new(|| {
+        with_cx(|cx| {
+            let area = cx.editor.tree.area();
+            (i64::from(area.height), i64::from(area.width))
+        })
+        .unwrap_or((24, 80))
+    }));
     // `:normal {keys}` with zmax's own Normal mode, when the compositor is at
     // hand; otherwise vimlrs's bounded port runs them.
     vimlrs::fusevm_bridge::install_normal_hook(Box::new(|keys: &str| {
@@ -676,12 +686,16 @@ fn install_viml_host_hooks() {
 /// The zmax command line a script's Ex command `line` runs as, or `None` when
 /// zmax has no such command. A vim abbreviation zmax doesn't list (`argdel`) is
 /// spelled out by vim's own rule — the first command in vim's table it begins —
-/// so a session written by vim reaches the command it names. A line opening
-/// with a range (`%argdel`, `1wincmd w`) is left to vimlrs: zmax's command
-/// parser reads its first word as the command, which a range is not.
+/// so a session written by vim reaches the command it names. A window command
+/// with a count (`1wincmd w`, `2resize 30`) is zmax's too; any other line
+/// opening with a range (`%argdel`) is left to vimlrs: zmax's command parser
+/// reads its first word as the command, which a range is not.
 fn zmax_command_line(line: &str) -> Option<String> {
     use crate::commands::typed::TYPABLE_COMMAND_MAP;
     let line = line.trim().trim_start_matches([':', ' ']);
+    if crate::commands::typed::split_window_count(line).is_some() {
+        return Some(line.to_string());
+    }
     let end = line
         .find(|c: char| c.is_whitespace() || c == '!')
         .unwrap_or(line.len());
@@ -1185,8 +1199,8 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
 #[cfg(test)]
 mod tests {
     /// What a sourced script's Ex command runs as in zmax: its own name, or a
-    /// vim abbreviation spelled out by vim's table; a ranged line or a command
-    /// zmax lacks is left to vimlrs.
+    /// vim abbreviation spelled out by vim's table, or a counted window command;
+    /// any other ranged line, or a command zmax lacks, is left to vimlrs.
     #[test]
     fn script_ex_commands_resolve_to_zmax_command_lines() {
         assert_eq!(super::zmax_command_line("only").as_deref(), Some("only"));
@@ -1196,7 +1210,11 @@ mod tests {
             Some("argdelete *")
         );
         assert_eq!(super::zmax_command_line("%argdel"), None);
-        assert_eq!(super::zmax_command_line("1wincmd w"), None);
+        assert_eq!(
+            super::zmax_command_line("1wincmd w").as_deref(),
+            Some("1wincmd w")
+        );
+        assert_eq!(super::zmax_command_line("3d"), None);
         assert_eq!(super::zmax_command_line("notacommandxyz"), None);
     }
 

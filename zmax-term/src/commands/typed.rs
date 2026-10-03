@@ -5910,6 +5910,25 @@ fn buffer_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
+/// vim `:f[ile] [{name}]`: with a name, rename the current buffer to it (the
+/// buffer now writes there); without, show the file info, as CTRL-G does. A
+/// session names its plugin windows this way (`enew` then `file __Tag_List__`).
+fn ex_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        super::file_info(&mut editor_context(cx));
+        return Ok(());
+    }
+    let path = zmax_stdx::path::expand_tilde(std::path::Path::new(name));
+    let path = zmax_stdx::path::canonicalize(path);
+    doc_mut!(cx.editor).set_path(Some(&path));
+    Ok(())
+}
+
 /// `:bufdo {cmd}` — run an Ex command in each listed buffer.
 fn buffer_do(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -5949,22 +5968,81 @@ fn window_do(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
-/// `:wincmd {arg}` — run a window (CTRL-W) command by its key, e.g. `:wincmd h`
-/// focuses the window to the left. Covers the focus / split / move / close set;
-/// resize (`+`/`-`/`<`/`>`/`=`), rotate (`r`/`R`) and previous-window (`p`) are
-/// not supported yet and report an error rather than silently no-op.
+thread_local! {
+    /// The count written before a window command's name (`:2wincmd w`), set by
+    /// the dispatcher for the length of that one command.
+    static WINDOW_COUNT: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
+}
+
+/// The window commands vim lets a count precede, by canonical name.
+const WINDOW_COUNT_COMMANDS: &[&str] = &["wincmd", "resize"];
+
+/// Split `:{count}{cmd} …` into the count and the rest of the line when `cmd`
+/// is a window command that takes one (`2wincmd w` → `(2, "wincmd w")`).
+/// Anything else — a line range before an editing command — is `None`.
+pub(crate) fn split_window_count(line: &str) -> Option<(usize, &str)> {
+    let line = line.trim_start().trim_start_matches(':');
+    let digits = line.find(|c: char| !c.is_ascii_digit())?;
+    let rest = &line[digits..];
+    let word = rest
+        .split(|c: char| c.is_whitespace() || c == '!')
+        .next()
+        .unwrap_or("");
+    let cmd = TYPABLE_COMMAND_MAP.get(word)?;
+    if digits == 0 || !WINDOW_COUNT_COMMANDS.contains(&cmd.name) {
+        return None;
+    }
+    Some((line[..digits].parse().ok()?, rest))
+}
+
+/// Window `n` in vim's numbering (1 is the top-left, counting to the
+/// bottom-right), or `None` past the last.
+fn window_by_number(editor: &Editor, n: usize) -> Option<zmax_view::ViewId> {
+    editor.tree.traverse().map(|(id, _)| id).nth(n.checked_sub(1)?)
+}
+
+/// `:[N]wincmd {arg}` — run a window (CTRL-W) command by its key, e.g. `:wincmd h`
+/// focuses the window to the left. Covers the focus / split / move / close set
+/// and `_`/`|` sizing, with vim's count; resize (`+`/`-`/`<`/`>`/`=`), rotate
+/// (`r`/`R`) and previous-window (`p`) are not supported yet and report an error
+/// rather than silently no-op.
 fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     use zmax_view::tree::Direction;
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let arg = args.first().unwrap_or("");
+    // vim CTRL-W with a count: `{N}w` is window N, `{N}h` moves N windows,
+    // `{N}_`/`{N}|` set the height/width to N.
+    let count = WINDOW_COUNT.with(|c| c.take());
+    let steps = count.unwrap_or(1);
     match arg {
-        "h" | "C-h" | "left" => cx.editor.focus_direction(Direction::Left),
-        "j" | "C-j" | "down" => cx.editor.focus_direction(Direction::Down),
-        "k" | "C-k" | "up" => cx.editor.focus_direction(Direction::Up),
-        "l" | "C-l" | "right" => cx.editor.focus_direction(Direction::Right),
-        "w" | "C-w" => cx.editor.focus_next(),
+        "h" | "C-h" | "left" => (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Left)),
+        "j" | "C-j" | "down" => (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Down)),
+        "k" | "C-k" | "up" => (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Up)),
+        "l" | "C-l" | "right" => (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Right)),
+        "w" | "C-w" | "W" => match count {
+            // "Without count: move cursor to window below/right of the current
+            // one... With count: go to Nth window" — past the last, the last.
+            Some(n) => {
+                let last = cx.editor.tree.traverse().count();
+                if let Some(id) = window_by_number(cx.editor, n.min(last)) {
+                    cx.editor.focus(id);
+                }
+            }
+            None if arg == "W" => cx.editor.focus_prev(),
+            None => cx.editor.focus_next(),
+        },
+        // `CTRL-W _` / `CTRL-W |`: height / width to {count}, else as large as
+        // possible (`:mksession` writes `wincmd _ | wincmd |` before splitting).
+        "_" | "C-_" => {
+            let view = cx.editor.tree.focus;
+            cx.editor.tree.set_height(view, count.map_or(u16::MAX, |n| n as u16));
+        }
+        "|" => {
+            let view = cx.editor.tree.focus;
+            cx.editor.tree.set_width(view, count.map_or(u16::MAX, |n| n as u16));
+        }
         // vim CTRL-W t / CTRL-W b: the top-left and bottom-right windows, the
         // first and last in window-number order. `:mksession` writes `wincmd t`.
         "t" | "C-t" | "b" | "C-b" => {
@@ -35216,31 +35294,50 @@ fn replay_normal_keys(
     cx.jobs.callback(async move { Ok(call) });
 }
 
-/// vim `:resize [+/-]{N}` — adjust the current window's height. `+N`/`-N` grow or
-/// shrink relative; a bare `{N}` sets the height absolutely; bare `:resize` is a
-/// no-op (as in vim). `:vertical resize` still routes here (height) — width
-/// resizing via the `:vertical` modifier is best-effort.
+/// vim `:[N]resize [+/-]{n}` — adjust window N's (else the current window's)
+/// height; under `:vertical`, its width. `+n`/`-n` grow or shrink relative; a
+/// bare `{n}` sets the size, taking what the neighbour can give; bare `:resize`
+/// is a no-op (as in vim).
 fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let joined = args.join(" ");
     let a = joined.trim();
-    let view = cx.editor.tree.focus;
-    let delta: i16 = if let Some(n) = a.strip_prefix('+') {
-        n.trim().parse().unwrap_or(1)
+    // `:{N}resize` sizes window N (`:mksession` writes `1resize 66`), and
+    // `:vertical resize` the width rather than the height.
+    let view = match WINDOW_COUNT.with(|c| c.take()) {
+        Some(n) => match window_by_number(cx.editor, n) {
+            Some(id) => id,
+            None => bail!("E16: Invalid range"),
+        },
+        None => cx.editor.tree.focus,
+    };
+    let width = cmd_mods().split == Some(SplitDir::Vertical);
+    let current = if width {
+        cx.editor.tree.node_width(view)
+    } else {
+        cx.editor.tree.node_height(view)
+    } as i32;
+    let target = if let Some(n) = a.strip_prefix('+') {
+        current + n.trim().parse::<i32>().unwrap_or(1)
     } else if let Some(n) = a.strip_prefix('-') {
-        -(n.trim().parse::<i16>().unwrap_or(1))
+        current - n.trim().parse::<i32>().unwrap_or(1)
     } else if a.is_empty() {
         return Ok(());
-    } else if let Ok(target) = a.parse::<i16>() {
-        target - cx.editor.tree.node_height(view) as i16
+    } else if let Ok(target) = a.parse::<i32>() {
+        target
     } else {
         cx.editor
             .set_error(format!(":resize — invalid argument `{a}`"));
         return Ok(());
     };
-    cx.editor.tree.resize_vertical(view, delta);
+    let target = target.clamp(0, i32::from(u16::MAX)) as u16;
+    if width {
+        cx.editor.tree.set_width(view, target);
+    } else {
+        cx.editor.tree.set_height(view, target);
+    }
     Ok(())
 }
 
@@ -59284,6 +59381,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "file",
+        aliases: &["f", "fi", "fil"],
+        doc: "Rename the current buffer to {name}, or show the file info (vim :file).",
+        fun: ex_file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "badd",
         aliases: &[],
         doc: "Add a file to the buffer list without editing it (vim :badd).",
@@ -65400,7 +65508,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "resize",
         aliases: &["res"],
-        doc: "Adjust the current window height (vim :resize [+/-]{N}).",
+        doc: "Adjust window N's (else the current window's) height, or width under :vertical (vim :[N]resize [+/-]{n}).",
         fun: ex_resize,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -71992,6 +72100,17 @@ fn execute_command_line_inner(
     let (command, rest, _) = command_line::split(input);
     if command.is_empty() {
         return Ok(());
+    }
+
+    // vim's window commands take a count before the name (`:2wincmd w`,
+    // `:1resize 66`) — every `:mksession` writes them. The parser would read
+    // `2wincmd` as the command name, so the count is peeled off here and handed
+    // to the command through `WINDOW_COUNT`.
+    if let Some((count, line)) = split_window_count(input) {
+        let prev = WINDOW_COUNT.with(|c| c.replace(Some(count)));
+        let result = execute_command_line_inner(cx, line, event);
+        WINDOW_COUNT.with(|c| c.set(prev));
+        return result;
     }
 
     // If command is numeric, interpret as line number and go there.

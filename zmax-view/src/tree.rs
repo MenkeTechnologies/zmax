@@ -921,6 +921,46 @@ impl Tree {
         true
     }
 
+    /// vim `:vertical resize {W}` / `CTRL-W |`: make `view` `width` columns wide,
+    /// or as close as its neighbour allows — `win_setwidth` takes what it can
+    /// rather than refusing, and never takes a window below `winminwidth`.
+    /// Returns true if the layout changed.
+    pub fn set_width(&mut self, view: ViewId, width: u16) -> bool {
+        let delta = self.clamped_delta(view, width, Layout::Vertical);
+        self.resize_horizontal(view, delta)
+    }
+
+    /// vim `:resize {H}` / `CTRL-W _`: [`Self::set_width`] for the height.
+    pub fn set_height(&mut self, view: ViewId, height: u16) -> bool {
+        let delta = self.clamped_delta(view, height, Layout::Horizontal);
+        self.resize_vertical(view, delta)
+    }
+
+    /// The change that takes `view` toward `size` along the axis its parent
+    /// `layout` splits, limited by the `winmin*` floor on both windows.
+    fn clamped_delta(&self, view: ViewId, size: u16, layout: Layout) -> i16 {
+        let parent = self.nodes[view].parent;
+        let children = match &self.nodes[parent].content {
+            Content::Container(c) if c.layout == layout => c.children.clone(),
+            _ => return 0,
+        };
+        let Some(idx) = children.iter().position(|c| *c == view) else {
+            return 0;
+        };
+        let Some(donor) = sibling_donor(idx, children.len()) else {
+            return 0;
+        };
+        let (measure, min): (fn(&Self, ViewId) -> u16, u16) = match layout {
+            Layout::Vertical => (Self::node_width, win_min_width()),
+            Layout::Horizontal => (Self::node_height, win_min_height()),
+        };
+        let current = i32::from(measure(self, view));
+        let grow = i32::from(measure(self, children[donor])) - i32::from(min);
+        let shrink = current - i32::from(min);
+        let delta = (i32::from(size) - current).clamp(-shrink.max(0), grow.max(0));
+        delta as i16
+    }
+
     /// Resize the given view's height by `delta` rows, borrowing from the next
     /// sibling in a horizontally-laid-out (stacked) container — or from the
     /// previous one when the view is the bottom-most. Mirror of

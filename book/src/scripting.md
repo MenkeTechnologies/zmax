@@ -153,7 +153,9 @@ zmax -S ~/.vim/sessions/work.vim + notes.txt
 A bare `-S` (last, or followed by another option) sources `Session.vim`; `-S`
 may be repeated. The session's commands run through the same interpreter as
 `:source`: `badd +{lnum}` lists a buffer that is entered on `{lnum}`,
-`edit`/`tabedit`/`tabnext`/`wincmd` drive the windows and tab pages,
+`edit`/`tabedit`/`tabnext` drive the tab pages, `vsplit`, `{N}wincmd`, `vert
+{N}resize` and `file {name}` rebuild a split layout window by window, `&columns`
+and `&lines` report the area the windows share,
 `winheight(0)`/`winwidth(0)` measure the current window, and `normal!` runs
 zmax's own Normal mode in script order, so the session's `exe s:l | normal! zt`
 scroll lands where vim puts it.
