@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-c2fd04fe.js";
+            window.path_to_searchindex_js = "searchindex-e0166b1f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -3860,6 +3860,12 @@
 <tr><td><code>export_to_scratch</code></td><td>Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bE</code>, select: <code>&lt;space&gt;bE</code></td></tr>
 <tr><td><code>recent_tests</code></td><td>Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cH</code>, select: <code>&lt;space&gt;cH</code></td></tr>
 <tr><td><code>sort_tree_by_time_newest</code></td><td>Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)</td><td></td></tr>
+<tr><td><code>compare_directories_view</code></td><td>Compare two directory trees file by file and synchronize them (JetBrains Compare Directories)</td><td></td></tr>
+<tr><td><code>blank_diff_window</code></td><td>Two empty buffers side by side, diffed as you type or paste (JetBrains Open Blank Diff Window)</td><td></td></tr>
+<tr><td><code>blank_diff_toggle_three_side</code></td><td>Add a third side to the blank diff window, or take it away (JetBrains Toggle Three-Side Mode)</td><td></td></tr>
+<tr><td><code>blank_diff_open_blank</code></td><td>Empty this side of the blank diff window (JetBrains Open Blank Editor)</td><td></td></tr>
+<tr><td><code>blank_diff_open_file</code></td><td>Show a file on this side of the blank diff window (JetBrains Open File)</td><td></td></tr>
+<tr><td><code>git_diff_in_new_tab</code></td><td>This file’s changes against HEAD in a new tab, editable and diffed live (JetBrains Show Diff in a New Tab)</td><td></td></tr>
 <tr><td><code>documentation_back</code></td><td>Show the previous lookup in the Documentation tool window (JetBrains Back)</td><td></td></tr>
 <tr><td><code>documentation_forward</code></td><td>Show the next lookup in the Documentation tool window (JetBrains Forward)</td><td></td></tr>
 <tr><td><code>documentation_keep_tab</code></td><td>Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation)</td><td></td></tr>
@@ -4717,6 +4723,20 @@
 <tr><td><code>goto_next_usage</code></td><td>Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;s&lt;gt&gt;</code>, select: <code>&lt;space&gt;s&lt;gt&gt;</code></td></tr>
 <tr><td><code>goto_prev_usage</code></td><td>Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;s&lt;lt&gt;</code>, select: <code>&lt;space&gt;s&lt;lt&gt;</code></td></tr>
 <tr><td><code>highlight_usages_in_file</code></td><td>Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;su</code>, select: <code>&lt;space&gt;su</code></td></tr>
+<tr><td><code>services_view</code></td><td>The run configurations with their state, grouped and hideable (JetBrains Services)</td><td></td></tr>
+<tr><td><code>services_restore_all</code></td><td>Show every hidden run configuration in the Services view again (JetBrains Restore Hidden Configurations)</td><td></td></tr>
+<tr><td><code>manage_run_targets</code></td><td>The run targets; pick one to remove it (JetBrains Manage Targets)</td><td></td></tr>
+<tr><td><code>run_target_add</code></td><td>Define a run target: SSH host, Docker image or running container (JetBrains Manage Targets)</td><td></td></tr>
+<tr><td><code>choose_run_target</code></td><td>Choose where the active run configuration runs (JetBrains Run Targets)</td><td></td></tr>
+<tr><td><code>build_tool_window</code></td><td>The build-tool window: the build files’ projects, members and tasks (JetBrains Gradle/Maven/Cargo tool window)</td><td></td></tr>
+<tr><td><code>build_sync</code></td><td>Reload the build projects: run the sync triggers and restart the language servers (JetBrains Reload All Projects)</td><td></td></tr>
+<tr><td><code>build_sync_project</code></td><td>Reload the build project the file belongs to (JetBrains Reload Project)</td><td></td></tr>
+<tr><td><code>build_hide_sync_notice</code></td><td>Stop announcing the changed build files until they change again (JetBrains Hide Load Build Changes)</td><td></td></tr>
+<tr><td><code>build_auto_sync</code></td><td>Reload build files on every change, or only on build_sync (JetBrains Auto-Sync Settings)</td><td></td></tr>
+<tr><td><code>build_tool_settings</code></td><td>Open the build-tool window’s saved settings (JetBrains Build Tool Settings)</td><td></td></tr>
+<tr><td><code>build_task_trigger</code></td><td>Run a build task before or after build, rebuild or sync (JetBrains Execute Before/After)</td><td></td></tr>
+<tr><td><code>build_task_triggers</code></td><td>The build task triggers; pick one to remove it (JetBrains Tasks Activation)</td><td></td></tr>
+<tr><td><code>run_config_add_before_task</code></td><td>Run a build task before the active run configuration (JetBrains Execute Before Run/Debug)</td><td></td></tr>
 <tr><td><code>build_project</code></td><td>Build the project with its own build tool (JetBrains Build Project, Ctrl F9)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pB</code>, select: <code>&lt;space&gt;pB</code></td></tr>
 <tr><td><code>rebuild_project</code></td><td>Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pC</code>, select: <code>&lt;space&gt;pC</code></td></tr>
 <tr><td><code>new_file_in_directory</code></td><td>Create a file next to the current one and open it (JetBrains New in This Directory)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fn</code>, select: <code>&lt;space&gt;fn</code></td></tr>
