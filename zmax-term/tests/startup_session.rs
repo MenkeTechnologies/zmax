@@ -235,3 +235,27 @@ async fn session_normal_zt_scrolls_before_the_cursor_moves() -> anyhow::Result<(
     let _ = std::fs::remove_dir_all(&dir);
     Ok(())
 }
+
+/// A session lays out each tab page in turn and ends with `tabnext 1`: the
+/// first tab's window must come back at the top line its `normal! zt` gave
+/// it, not re-scrolled to its cursor, as vim restores each window's topline.
+#[tokio::test(flavor = "multi_thread")]
+async fn session_tabnext_restores_the_window_scroll() -> anyhow::Result<()> {
+    let (app, dir) = boot_session(
+        "tabs",
+        &[("notes.txt", 400), ("other.txt", 50)],
+        "set so=0\nedit DIR/notes.txt\nexe 100\nnormal! zt\n110\ntabedit DIR/other.txt\n5\ntabnext 1\n",
+    )?;
+
+    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+    let (view, doc) = zmax_view::current_ref!(app.editor);
+    assert_eq!(doc.path(), Some(dir.join("notes.txt").as_path()));
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    assert_eq!(text.char_to_line(cursor), 109);
+    let top = text.char_to_line(doc.view_offset(view.id).anchor);
+    assert_eq!(top, 99, "tab 1 keeps its `normal! zt` scroll across tabnext");
+
+    let _ = std::fs::remove_dir_all(&dir);
+    Ok(())
+}

@@ -1636,6 +1636,10 @@ pub struct QfEntry {
 pub struct TabPage {
     pub shape: crate::tree::TreeShape,
     pub selections: Vec<Selection>,
+    /// Each window's scroll, in the same leaf order: vim restores a tabpage's
+    /// windows at their own top lines. Missing entries (a fresh tab) leave the
+    /// view to scroll to its cursor.
+    pub offsets: Vec<ViewPosition>,
     /// User-assigned tab name (emacs `tab-rename` / `tab-switch`); `None` shows a
     /// default numbered label.
     pub name: Option<String>,
@@ -4042,7 +4046,7 @@ impl Editor {
         }
     }
 
-    /// Snapshot the live window tree (layout + each window's selection).
+    /// Snapshot the live window tree (layout + each window's selection and scroll).
     fn snapshot_current_tab(&self) -> TabPage {
         let shape = self.tree.shape();
         let selections = self
@@ -4057,11 +4061,25 @@ impl Editor {
                     .unwrap_or_else(|| Selection::point(0))
             })
             .collect();
+        let offsets = self
+            .tree
+            .leaf_ids()
+            .into_iter()
+            .map(|vid| {
+                let doc_id = self.tree.get(vid).doc;
+                self.documents
+                    .get(&doc_id)
+                    .filter(|d| d.selections().contains_key(&vid))
+                    .map(|d| d.view_offset(vid))
+                    .unwrap_or_default()
+            })
+            .collect();
         // Carry the current tab's user-assigned name across the snapshot.
         let name = self.tabs.get(self.current_tab).and_then(|t| t.name.clone());
         TabPage {
             shape,
             selections,
+            offsets,
             name,
         }
     }
@@ -4077,18 +4095,23 @@ impl Editor {
         }
     }
 
-    /// Rebuild the live tree from a parked tab and restore its selections.
+    /// Rebuild the live tree from a parked tab and restore its selections
+    /// and scroll.
     fn restore_tab(&mut self, tab: &TabPage) {
         let gutters = self.config().gutters.clone();
         let mut make = |doc| View::new(doc, gutters.clone());
         let new_ids = self.tree.build_from_shape(&tab.shape, &mut make);
-        for (vid, sel) in new_ids.iter().zip(tab.selections.iter()) {
+        for (i, (vid, sel)) in new_ids.iter().zip(tab.selections.iter()).enumerate() {
             let doc_id = self.tree.get(*vid).doc;
             if let Some(doc) = self.documents.get_mut(&doc_id) {
                 doc.ensure_view_init(*vid);
                 // Clamp the saved selection to the (possibly changed) buffer.
                 let sel = sel.clone().ensure_invariants(doc.text().slice(..));
                 doc.set_selection(*vid, sel);
+                if let Some(&offset) = tab.offsets.get(i) {
+                    let anchor = offset.anchor.min(doc.text().len_chars());
+                    doc.set_view_offset(*vid, ViewPosition { anchor, ..offset });
+                }
             }
         }
         let focus = self.tree.focus;
@@ -4271,6 +4294,7 @@ impl Editor {
                 focused: true,
             },
             selections: vec![Selection::point(0)],
+            offsets: Vec::new(),
             name: None,
         };
         let idx = self.current_tab + 1;
@@ -4296,6 +4320,7 @@ impl Editor {
                 focused: true,
             },
             selections: vec![Selection::point(0)],
+            offsets: Vec::new(),
             name: None,
         };
         let idx = self.current_tab + 1;
@@ -4505,6 +4530,7 @@ impl Editor {
         let tab = TabPage {
             shape: crate::tree::TreeShape::Leaf { doc, focused: true },
             selections: vec![selection],
+            offsets: Vec::new(),
             name: None,
         };
         let idx = self.frames.len();
