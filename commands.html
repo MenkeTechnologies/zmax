@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-91348a10.js";
+            window.path_to_searchindex_js = "searchindex-a38498ac.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -1076,6 +1076,9 @@
 <tr><td><code>:conflict-ours</code>, <code>:diffget-ours</code>, <code>:conflict-keep-ours</code></td><td>Resolve the merge conflict at the cursor by keeping OUR side (HEAD).</td></tr>
 <tr><td><code>:conflict-theirs</code>, <code>:diffget-theirs</code>, <code>:conflict-keep-theirs</code></td><td>Resolve the merge conflict at the cursor by keeping THEIR side (incoming).</td></tr>
 <tr><td><code>:conflict-both</code>, <code>:conflict-keep-both</code></td><td>Resolve the merge conflict at the cursor by keeping BOTH sides.</td></tr>
+<tr><td><code>:export-problems</code></td><td>Write every diagnostic to a file and open it (JetBrains Export to Text File).</td></tr>
+<tr><td><code>:export-test-results</code></td><td>Write the recorded test runs to a file and open it (JetBrains Export Test Results).</td></tr>
+<tr><td><code>:conflict-imports</code></td><td>Merge every conflict whose two sides are only import statements (JetBrains Resolve Conflicts in Import Statements).</td></tr>
 <tr><td><code>:conflict-next</code></td><td>Jump to the next merge-conflict marker.</td></tr>
 <tr><td><code>:conflict-prev</code></td><td>Jump to the previous merge-conflict marker.</td></tr>
 <tr><td><code>:theme-toggle</code>, <code>:toggle-theme</code>, <code>:light-dark</code></td><td>Toggle between a dark and light theme (<code>:theme-toggle [dark] [light]</code>).</td></tr>
@@ -1439,10 +1442,17 @@
 <tr><td><code>:vc-root-version-diff</code>, <code>:vc-root-diff</code></td><td>Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).</td></tr>
 <tr><td><code>:vc-revision-other-window</code></td><td>Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).</td></tr>
 <tr><td><code>:sticky-lines</code>, <code>:sticky-context</code></td><td>Set or report how many scope headers the window pins (JetBrains Configure Sticky Lines).</td></tr>
+<tr><td><code>:scope-define</code>, <code>:scope</code></td><td>Bind a name to a file glob for searches (JetBrains Edit Scopes).</td></tr>
+<tr><td><code>:scope-delete</code></td><td>Forget a saved scope.</td></tr>
+<tr><td><code>:scopes</code></td><td>List the saved search scopes (JetBrains Scopes).</td></tr>
 <tr><td><code>:diagnostics-severity</code>, <code>:error-highlighting</code></td><td>The lowest diagnostic severity the editor draws: error, warning, info, hint, off (JetBrains Error Highlighting).</td></tr>
 <tr><td><code>:changelist</code>, <code>:cl</code></td><td>Put this file in a named changelist, or report which one holds it (JetBrains changelists).</td></tr>
 <tr><td><code>:changelists</code>, <code>:cls</code></td><td>List every changelist and the files in it (JetBrains Changes view).</td></tr>
 <tr><td><code>:changelist-commit</code>, <code>:cl-commit</code></td><td>Commit only the files in a changelist (JetBrains Commit changelist).</td></tr>
+<tr><td><code>:changelist-new</code>, <code>:cl-new</code></td><td>Create an empty changelist (JetBrains New Changelist).</td></tr>
+<tr><td><code>:changelist-delete</code>, <code>:cl-delete</code></td><td>Delete a changelist, moving its files to the default list (JetBrains Delete Changelist).</td></tr>
+<tr><td><code>:changelist-rename</code>, <code>:cl-rename</code></td><td>Rename a changelist (JetBrains Rename Changelist).</td></tr>
+<tr><td><code>:changelist-default</code>, <code>:cl-default</code></td><td>Make a changelist the default, which also holds the changes no list claims (JetBrains Set Active Changelist).</td></tr>
 <tr><td><code>:fold-matching</code>, <code>:fold-lines-like-this</code></td><td>Fold every run of lines matching a regex (JetBrains Fold Lines Like This).</td></tr>
 <tr><td><code>:attach-dir</code>, <code>:attach-directory</code></td><td>Add a directory as a second content root, searched with the workspace (JetBrains Attach Directory to Project).</td></tr>
 <tr><td><code>:detach-dir</code>, <code>:detach-directory</code></td><td>Detach an attached directory, <code>*</code> for all, or list them (JetBrains Detach Directory from Project).</td></tr>
@@ -1626,6 +1636,7 @@
 <tr><td><code>:print-line-number</code>, <code>:=</code></td><td>Echo the line number of {line}, or of the buffer’s last line (vim/nvi :=).</td></tr>
 <tr><td><code>:version</code>, <code>:ver</code></td><td>Show the zmax version and compiled feature summary (vim :version).</td></tr>
 <tr><td><code>:intro</code>, <code>:int</code></td><td>Show the introductory message (vim :intro).</td></tr>
+<tr><td><code>:startify</code>, <code>:banner</code></td><td>Open the start screen: banner, recent files, project languages (vim-startify :Startify).</td></tr>
 <tr><td><code>:redrawstatus</code></td><td>Redraw the status line (vim :redrawstatus; approximated by a full redraw).</td></tr>
 <tr><td><code>:redrawtabline</code></td><td>Redraw the tab line (vim :redrawtabline; approximated by a full redraw).</td></tr>
 <tr><td><code>:silent</code>, <code>:sil</code></td><td>Run {cmd} silently (vim :silent[!]); message suppression is best-effort.</td></tr>
@@ -2151,6 +2162,7 @@
 <tr><td><code>buffer_sort_by_relative_path</code></td><td>Sort the buffer line by relative path (AstroNvim SPC b s r)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bor</code>, select: <code>&lt;space&gt;bor</code></td></tr>
 <tr><td><code>buffer_sort_by_number</code></td><td>Sort the buffer line by buffer number (AstroNvim SPC b s i)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;boi</code>, select: <code>&lt;space&gt;boi</code></td></tr>
 <tr><td><code>buffer_sort_by_last_used</code></td><td>Sort the buffer line by last use (AstroNvim SPC b s m)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bom</code>, select: <code>&lt;space&gt;bom</code></td></tr>
+<tr><td><code>fold_code_block</code></td><td>Fold the code block around the caret, making the fold if there is none (JetBrains Fold Code Block)</td><td></td></tr>
 <tr><td><code>fold_doc_comments</code></td><td>Fold the doc comments, leaving other comments alone (JetBrains Collapse Doc Comments)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cD</code>, select: <code>&lt;space&gt;cD</code></td></tr>
 <tr><td><code>unfold_doc_comments</code></td><td>Open the doc-comment folds (JetBrains Expand Doc Comments)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cE</code>, select: <code>&lt;space&gt;cE</code></td></tr>
 <tr><td><code>fold_custom_regions</code></td><td>Fold every //region and <editor-fold> block (JetBrains Collapse Custom Regions)</editor-fold></td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cR</code>, select: <code>&lt;space&gt;cR</code></td></tr>
@@ -2324,11 +2336,11 @@
 <tr><td><code>regex_emacs_to_rx_explain</code></td><td>Explain the selected Emacs regex as rx (SPC x r e /)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xre/</code>, select: <code>&lt;space&gt;xre/</code></td></tr>
 <tr><td><code>regex_pcre_to_rx_replace</code></td><td>Convert the selected PCRE regex to rx form (SPC x r x)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xrt</code>, <code>&lt;space&gt;xrx</code>, <code>&lt;space&gt;xrpx</code>, select: <code>&lt;space&gt;xrt</code>, <code>&lt;space&gt;xrx</code>, <code>&lt;space&gt;xrpx</code></td></tr>
 <tr><td><code>regex_pcre_to_rx_explain</code></td><td>Explain the selected PCRE regex as rx (SPC x r /)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xr/</code>, <code>&lt;space&gt;xrp/</code>, select: <code>&lt;space&gt;xr/</code>, <code>&lt;space&gt;xrp/</code></td></tr>
-<tr><td><code>justify_left</code></td><td>Left-justify (fill) the region (SPC x j l)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xjl</code>, select: <code>&lt;space&gt;xjl</code></td></tr>
-<tr><td><code>justify_right</code></td><td>Right-justify the region (SPC x j r)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xjr</code>, select: <code>&lt;space&gt;xjr</code></td></tr>
-<tr><td><code>justify_center</code></td><td>Center-justify the region (SPC x j c)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xjc</code>, select: <code>&lt;space&gt;xjc</code></td></tr>
-<tr><td><code>justify_full</code></td><td>Full-justify the region (SPC x j f)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xjf</code>, select: <code>&lt;space&gt;xjf</code></td></tr>
-<tr><td><code>justify_none</code></td><td>Remove justification / left-fill (SPC x j n)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xjn</code>, select: <code>&lt;space&gt;xjn</code></td></tr>
+<tr><td><code>justify_left</code></td><td>Left-justify (fill) the region (SPC x j l)</td><td></td></tr>
+<tr><td><code>justify_right</code></td><td>Right-justify the region (SPC x j r)</td><td></td></tr>
+<tr><td><code>justify_center</code></td><td>Center-justify the region (SPC x j c)</td><td></td></tr>
+<tr><td><code>justify_full</code></td><td>Full-justify the region (SPC x j f)</td><td></td></tr>
+<tr><td><code>justify_none</code></td><td>Remove justification / left-fill (SPC x j n)</td><td></td></tr>
 <tr><td><code>count_words_region</code></td><td>Count occurrences per word in the selection (SPC x w c)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xwc</code>, select: <code>&lt;space&gt;xwc</code><br><strong>nano</strong> — normal: <code>&lt;A-d&gt;</code>, insert: <code>&lt;A-d&gt;</code></td></tr>
 <tr><td><code>goto_next_close_paren</code></td><td>Go forward to next closing paren (SPC k j)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;kj</code>, select: <code>&lt;space&gt;kj</code></td></tr>
 <tr><td><code>goto_prev_open_paren</code></td><td>Go backward to previous opening paren (SPC k k)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;kk</code>, select: <code>&lt;space&gt;kk</code></td></tr>
@@ -2431,7 +2443,10 @@
 <tr><td><code>toggle_line_numbers</code></td><td>Toggle the line-numbers gutter (IntelliJ View &gt; Show Line Numbers)</td><td></td></tr>
 <tr><td><code>power_save_mode</code></td><td>Stop background analysis: completion, inlay hints, signature help, document highlight (JetBrains Power Save Mode)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;zp</code>, select: <code>&lt;space&gt;zp</code></td></tr>
 <tr><td><code>distraction_free_mode</code></td><td>Hide the tab bar, gutter and status line, leaving the text (JetBrains Distraction Free Mode)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;zd</code>, select: <code>&lt;space&gt;zd</code></td></tr>
+<tr><td><code>toggle_focus_mode</code></td><td>Dim everything outside the declaration the cursor is in (JetBrains Highlight Only Current Declaration)</td><td></td></tr>
+<tr><td><code>toggle_completion_docs</code></td><td>Show or hide the documentation beside the completion list (JetBrains Show Automatically During Completion)</td><td></td></tr>
 <tr><td><code>toggle_breadcrumbs</code></td><td>Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)</td><td></td></tr>
+<tr><td><code>toggle_sticky_lines_for_language</code></td><td>Turn the sticky lines off, or back on, for the buffer’s language (JetBrains Disable Sticky Lines for Language)</td><td></td></tr>
 <tr><td><code>toggle_sticky_lines</code></td><td>Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)</td><td></td></tr>
 <tr><td><code>toggle_indent_guides</code></td><td>Toggle indentation guides (IntelliJ View &gt; Show Indent Guides)</td><td></td></tr>
 <tr><td><code>toggle_inlay_hints</code></td><td>Toggle display of LSP inlay hints (IntelliJ View &gt; Inlay Hints)</td><td></td></tr>
@@ -2839,6 +2854,11 @@
 <tr><td><code>extract_variable</code></td><td>Introduce Variable via LSP (IntelliJ Introduce Variable)</td><td></td></tr>
 <tr><td><code>extract_constant</code></td><td>Extract Constant via LSP (IntelliJ Extract Constant)</td><td></td></tr>
 <tr><td><code>extract_field</code></td><td>Introduce Field via LSP (IntelliJ Introduce Field)</td><td></td></tr>
+<tr><td><code>extract_class</code></td><td>Extract members into a new class, when the server offers it (JetBrains Extract Delegate)</td><td></td></tr>
+<tr><td><code>extract_interface</code></td><td>Extract an interface or trait from the type, when the server offers it (JetBrains Extract Interface)</td><td></td></tr>
+<tr><td><code>extract_superclass</code></td><td>Extract a base class from the type, when the server offers it (JetBrains Extract Superclass)</td><td></td></tr>
+<tr><td><code>extract_module</code></td><td>Move the selected items into a module of their own, when the server offers it (JetBrains Extract Module)</td><td></td></tr>
+<tr><td><code>introduce_parameter_object</code></td><td>Replace the parameter list with one object, when the server offers it (JetBrains Introduce Parameter Object)</td><td></td></tr>
 <tr><td><code>extract_parameter</code></td><td>Introduce Parameter via LSP (IntelliJ Introduce Parameter)</td><td></td></tr>
 <tr><td><code>inline_refactor</code></td><td>Inline refactoring (variable/method) via LSP (IntelliJ Inline)</td><td></td></tr>
 <tr><td><code>rewrite_refactor</code></td><td>Rewrite refactoring (change signature etc.) via LSP</td><td></td></tr>
@@ -2882,15 +2902,107 @@
 <tr><td><code>harpoon_4</code></td><td>Jump to harpoon mark 4</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;H4</code>, select: <code>&lt;space&gt;H4</code></td></tr>
 <tr><td><code>harpoon_next</code></td><td>Open the next harpoon mark</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Hn</code>, select: <code>&lt;space&gt;Hn</code></td></tr>
 <tr><td><code>harpoon_prev</code></td><td>Open the previous harpoon mark</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Hp</code>, select: <code>&lt;space&gt;Hp</code></td></tr>
+<tr><td><code>bookmark_add_to_list</code></td><td>Put the line’s bookmark in another bookmark list too (JetBrains Add Bookmark to Another List)</td><td></td></tr>
+<tr><td><code>bookmark_list_create</code></td><td>Create an empty bookmark list (JetBrains Create Bookmark List)</td><td></td></tr>
+<tr><td><code>bookmark_list_set_default</code></td><td>Choose the list new bookmarks go into (JetBrains Mark as Default List)</td><td></td></tr>
+<tr><td><code>bookmark_list_delete</code></td><td>Delete a bookmark list and its bookmarks (JetBrains Delete Bookmark List)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_list_delete_confirm</code></td><td>Ask before deleting a bookmark list, or not (JetBrains Ask Before Deleting Lists)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_mnemonic_confirm</code></td><td>Ask before moving a mnemonic from another line, or not (JetBrains Ask Before Rewriting Mnemonic)</td><td></td></tr>
+<tr><td><code>toggle_bookmarks_sort</code></td><td>List bookmarks by file and line, or in list order (JetBrains Sort Bookmarks by Type and Name)</td><td></td></tr>
+<tr><td><code>toggle_bookmarks_autoscroll_from_source</code></td><td>Make the Bookmarks tool window select the bookmark under the cursor (JetBrains Always Select Opened Element)</td><td></td></tr>
+<tr><td><code>toggle_bookmarks_autoscroll_to_source</code></td><td>Open bookmarks as the Bookmarks tool window selection moves (JetBrains Navigate with Single Click)</td><td></td></tr>
+<tr><td><code>toggle_bookmarks_preview_tab</code></td><td>Open bookmarks from the views in one reused buffer (JetBrains Enable Preview Tab)</td><td></td></tr>
+<tr><td><code>bookmark_edit_description</code></td><td>Set the description of the line’s bookmark (JetBrains Edit Bookmark Description)</td><td></td></tr>
+<tr><td><code>bookmark_move_up</code></td><td>Move the line’s bookmark up its list (JetBrains Move Up in Bookmarks)</td><td></td></tr>
+<tr><td><code>bookmark_move_down</code></td><td>Move the line’s bookmark down its list (JetBrains Move Down in Bookmarks)</td><td></td></tr>
 <tr><td><code>bookmark_toggle</code></td><td>Toggle a line bookmark (JetBrains F11)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;rt</code>, select: <code>&lt;space&gt;rt</code></td></tr>
+<tr><td><code>toggle_bookmark_with_mnemonic</code></td><td>Toggle a mnemonic bookmark on this line; the next key names it (JetBrains Toggle Bookmark Mnemonic)</td><td></td></tr>
+<tr><td><code>remove_bookmark_mnemonic</code></td><td>Drop the mnemonic of the bookmark on this line, keeping the bookmark (JetBrains Remove Mnemonic)</td><td></td></tr>
+<tr><td><code>mnemonic_bookmarks_picker</code></td><td>Pick a mnemonic bookmark and jump to it (JetBrains Go to Mnemonic)</td><td></td></tr>
+<tr><td><code>bookmark_next_in_file</code></td><td>Next line bookmark in this file (JetBrains Next Line Bookmark in Editor)</td><td></td></tr>
+<tr><td><code>bookmark_prev_in_file</code></td><td>Previous line bookmark in this file (JetBrains Previous Line Bookmark in Editor)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_0</code></td><td>Toggle mnemonic bookmark 0 on this line (JetBrains Toggle Bookmark 0)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_1</code></td><td>Toggle mnemonic bookmark 1 on this line (JetBrains Toggle Bookmark 1)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_2</code></td><td>Toggle mnemonic bookmark 2 on this line (JetBrains Toggle Bookmark 2)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_3</code></td><td>Toggle mnemonic bookmark 3 on this line (JetBrains Toggle Bookmark 3)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_4</code></td><td>Toggle mnemonic bookmark 4 on this line (JetBrains Toggle Bookmark 4)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_5</code></td><td>Toggle mnemonic bookmark 5 on this line (JetBrains Toggle Bookmark 5)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_6</code></td><td>Toggle mnemonic bookmark 6 on this line (JetBrains Toggle Bookmark 6)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_7</code></td><td>Toggle mnemonic bookmark 7 on this line (JetBrains Toggle Bookmark 7)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_8</code></td><td>Toggle mnemonic bookmark 8 on this line (JetBrains Toggle Bookmark 8)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_9</code></td><td>Toggle mnemonic bookmark 9 on this line (JetBrains Toggle Bookmark 9)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_a</code></td><td>Toggle mnemonic bookmark A on this line (JetBrains Toggle Bookmark A)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_b</code></td><td>Toggle mnemonic bookmark B on this line (JetBrains Toggle Bookmark B)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_c</code></td><td>Toggle mnemonic bookmark C on this line (JetBrains Toggle Bookmark C)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_d</code></td><td>Toggle mnemonic bookmark D on this line (JetBrains Toggle Bookmark D)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_e</code></td><td>Toggle mnemonic bookmark E on this line (JetBrains Toggle Bookmark E)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_f</code></td><td>Toggle mnemonic bookmark F on this line (JetBrains Toggle Bookmark F)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_g</code></td><td>Toggle mnemonic bookmark G on this line (JetBrains Toggle Bookmark G)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_h</code></td><td>Toggle mnemonic bookmark H on this line (JetBrains Toggle Bookmark H)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_i</code></td><td>Toggle mnemonic bookmark I on this line (JetBrains Toggle Bookmark I)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_j</code></td><td>Toggle mnemonic bookmark J on this line (JetBrains Toggle Bookmark J)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_k</code></td><td>Toggle mnemonic bookmark K on this line (JetBrains Toggle Bookmark K)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_l</code></td><td>Toggle mnemonic bookmark L on this line (JetBrains Toggle Bookmark L)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_m</code></td><td>Toggle mnemonic bookmark M on this line (JetBrains Toggle Bookmark M)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_n</code></td><td>Toggle mnemonic bookmark N on this line (JetBrains Toggle Bookmark N)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_o</code></td><td>Toggle mnemonic bookmark O on this line (JetBrains Toggle Bookmark O)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_p</code></td><td>Toggle mnemonic bookmark P on this line (JetBrains Toggle Bookmark P)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_q</code></td><td>Toggle mnemonic bookmark Q on this line (JetBrains Toggle Bookmark Q)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_r</code></td><td>Toggle mnemonic bookmark R on this line (JetBrains Toggle Bookmark R)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_s</code></td><td>Toggle mnemonic bookmark S on this line (JetBrains Toggle Bookmark S)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_t</code></td><td>Toggle mnemonic bookmark T on this line (JetBrains Toggle Bookmark T)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_u</code></td><td>Toggle mnemonic bookmark U on this line (JetBrains Toggle Bookmark U)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_v</code></td><td>Toggle mnemonic bookmark V on this line (JetBrains Toggle Bookmark V)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_w</code></td><td>Toggle mnemonic bookmark W on this line (JetBrains Toggle Bookmark W)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_x</code></td><td>Toggle mnemonic bookmark X on this line (JetBrains Toggle Bookmark X)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_y</code></td><td>Toggle mnemonic bookmark Y on this line (JetBrains Toggle Bookmark Y)</td><td></td></tr>
+<tr><td><code>toggle_bookmark_z</code></td><td>Toggle mnemonic bookmark Z on this line (JetBrains Toggle Bookmark Z)</td><td></td></tr>
+<tr><td><code>goto_bookmark_0</code></td><td>Jump to mnemonic bookmark 0, in whatever file it is (JetBrains Go to Bookmark 0)</td><td></td></tr>
+<tr><td><code>goto_bookmark_1</code></td><td>Jump to mnemonic bookmark 1, in whatever file it is (JetBrains Go to Bookmark 1)</td><td></td></tr>
+<tr><td><code>goto_bookmark_2</code></td><td>Jump to mnemonic bookmark 2, in whatever file it is (JetBrains Go to Bookmark 2)</td><td></td></tr>
+<tr><td><code>goto_bookmark_3</code></td><td>Jump to mnemonic bookmark 3, in whatever file it is (JetBrains Go to Bookmark 3)</td><td></td></tr>
+<tr><td><code>goto_bookmark_4</code></td><td>Jump to mnemonic bookmark 4, in whatever file it is (JetBrains Go to Bookmark 4)</td><td></td></tr>
+<tr><td><code>goto_bookmark_5</code></td><td>Jump to mnemonic bookmark 5, in whatever file it is (JetBrains Go to Bookmark 5)</td><td></td></tr>
+<tr><td><code>goto_bookmark_6</code></td><td>Jump to mnemonic bookmark 6, in whatever file it is (JetBrains Go to Bookmark 6)</td><td></td></tr>
+<tr><td><code>goto_bookmark_7</code></td><td>Jump to mnemonic bookmark 7, in whatever file it is (JetBrains Go to Bookmark 7)</td><td></td></tr>
+<tr><td><code>goto_bookmark_8</code></td><td>Jump to mnemonic bookmark 8, in whatever file it is (JetBrains Go to Bookmark 8)</td><td></td></tr>
+<tr><td><code>goto_bookmark_9</code></td><td>Jump to mnemonic bookmark 9, in whatever file it is (JetBrains Go to Bookmark 9)</td><td></td></tr>
+<tr><td><code>goto_bookmark_a</code></td><td>Jump to mnemonic bookmark A, in whatever file it is (JetBrains Go to Bookmark A)</td><td></td></tr>
+<tr><td><code>goto_bookmark_b</code></td><td>Jump to mnemonic bookmark B, in whatever file it is (JetBrains Go to Bookmark B)</td><td></td></tr>
+<tr><td><code>goto_bookmark_c</code></td><td>Jump to mnemonic bookmark C, in whatever file it is (JetBrains Go to Bookmark C)</td><td></td></tr>
+<tr><td><code>goto_bookmark_d</code></td><td>Jump to mnemonic bookmark D, in whatever file it is (JetBrains Go to Bookmark D)</td><td></td></tr>
+<tr><td><code>goto_bookmark_e</code></td><td>Jump to mnemonic bookmark E, in whatever file it is (JetBrains Go to Bookmark E)</td><td></td></tr>
+<tr><td><code>goto_bookmark_f</code></td><td>Jump to mnemonic bookmark F, in whatever file it is (JetBrains Go to Bookmark F)</td><td></td></tr>
+<tr><td><code>goto_bookmark_g</code></td><td>Jump to mnemonic bookmark G, in whatever file it is (JetBrains Go to Bookmark G)</td><td></td></tr>
+<tr><td><code>goto_bookmark_h</code></td><td>Jump to mnemonic bookmark H, in whatever file it is (JetBrains Go to Bookmark H)</td><td></td></tr>
+<tr><td><code>goto_bookmark_i</code></td><td>Jump to mnemonic bookmark I, in whatever file it is (JetBrains Go to Bookmark I)</td><td></td></tr>
+<tr><td><code>goto_bookmark_j</code></td><td>Jump to mnemonic bookmark J, in whatever file it is (JetBrains Go to Bookmark J)</td><td></td></tr>
+<tr><td><code>goto_bookmark_k</code></td><td>Jump to mnemonic bookmark K, in whatever file it is (JetBrains Go to Bookmark K)</td><td></td></tr>
+<tr><td><code>goto_bookmark_l</code></td><td>Jump to mnemonic bookmark L, in whatever file it is (JetBrains Go to Bookmark L)</td><td></td></tr>
+<tr><td><code>goto_bookmark_m</code></td><td>Jump to mnemonic bookmark M, in whatever file it is (JetBrains Go to Bookmark M)</td><td></td></tr>
+<tr><td><code>goto_bookmark_n</code></td><td>Jump to mnemonic bookmark N, in whatever file it is (JetBrains Go to Bookmark N)</td><td></td></tr>
+<tr><td><code>goto_bookmark_o</code></td><td>Jump to mnemonic bookmark O, in whatever file it is (JetBrains Go to Bookmark O)</td><td></td></tr>
+<tr><td><code>goto_bookmark_p</code></td><td>Jump to mnemonic bookmark P, in whatever file it is (JetBrains Go to Bookmark P)</td><td></td></tr>
+<tr><td><code>goto_bookmark_q</code></td><td>Jump to mnemonic bookmark Q, in whatever file it is (JetBrains Go to Bookmark Q)</td><td></td></tr>
+<tr><td><code>goto_bookmark_r</code></td><td>Jump to mnemonic bookmark R, in whatever file it is (JetBrains Go to Bookmark R)</td><td></td></tr>
+<tr><td><code>goto_bookmark_s</code></td><td>Jump to mnemonic bookmark S, in whatever file it is (JetBrains Go to Bookmark S)</td><td></td></tr>
+<tr><td><code>goto_bookmark_t</code></td><td>Jump to mnemonic bookmark T, in whatever file it is (JetBrains Go to Bookmark T)</td><td></td></tr>
+<tr><td><code>goto_bookmark_u</code></td><td>Jump to mnemonic bookmark U, in whatever file it is (JetBrains Go to Bookmark U)</td><td></td></tr>
+<tr><td><code>goto_bookmark_v</code></td><td>Jump to mnemonic bookmark V, in whatever file it is (JetBrains Go to Bookmark V)</td><td></td></tr>
+<tr><td><code>goto_bookmark_w</code></td><td>Jump to mnemonic bookmark W, in whatever file it is (JetBrains Go to Bookmark W)</td><td></td></tr>
+<tr><td><code>goto_bookmark_x</code></td><td>Jump to mnemonic bookmark X, in whatever file it is (JetBrains Go to Bookmark X)</td><td></td></tr>
+<tr><td><code>goto_bookmark_y</code></td><td>Jump to mnemonic bookmark Y, in whatever file it is (JetBrains Go to Bookmark Y)</td><td></td></tr>
+<tr><td><code>goto_bookmark_z</code></td><td>Jump to mnemonic bookmark Z, in whatever file it is (JetBrains Go to Bookmark Z)</td><td></td></tr>
 <tr><td><code>bookmark_open_tabs</code></td><td>Bookmark the cursor line of every open buffer (JetBrains Bookmark Open Tabs)</td><td></td></tr>
 <tr><td><code>open_bookmarked_files</code></td><td>Open every file that holds a line bookmark (JetBrains Open All Bookmarked Files)</td><td></td></tr>
+<tr><td><code>bookmarks_view</code></td><td>List every line bookmark, grouped by file (JetBrains Bookmarks tool window)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;rL</code>, select: <code>&lt;space&gt;rL</code></td></tr>
 <tr><td><code>bookmark_next</code></td><td>Jump to the next line bookmark (JetBrains)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;rn</code>, select: <code>&lt;space&gt;rn</code></td></tr>
 <tr><td><code>bookmark_prev</code></td><td>Jump to the previous line bookmark (JetBrains)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;rN</code>, select: <code>&lt;space&gt;rN</code></td></tr>
 <tr><td><code>harpoon_menu</code></td><td>Open the harpoon marks menu</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code>, select: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code></td></tr>
 <tr><td><code>harpoon_remove</code></td><td>Unpin the current file from harpoon</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Hd</code>, select: <code>&lt;space&gt;Hd</code></td></tr>
 <tr><td><code>select_references_to_symbol_under_cursor</code></td><td>Select symbol references</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code>, select: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;h</code>, select: <code>&lt;space&gt;h</code></td></tr>
 <tr><td><code>workspace_symbol_picker</code></td><td>Open workspace symbol picker</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-.&gt;</code>, <code>&lt;C-c&gt;,J</code>, <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code>, select: <code>&lt;C-c&gt;,J</code>, <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code>, insert: <code>&lt;C-c&gt;,J</code><br><strong>hybrid</strong> — normal: <code>&lt;A-C-.&gt;</code>, <code>&lt;C-c&gt;,J</code>, <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code>, select: <code>&lt;C-c&gt;,J</code>, <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code></td></tr>
+<tr><td><code>goto_class</code></td><td>Search the workspace for a class, struct, interface or enum (JetBrains Go to Class, Cmd O)</td><td></td></tr>
 <tr><td><code>syntax_workspace_symbol_picker</code></td><td>Open workspace symbol picker from syntax information</td><td></td></tr>
 <tr><td><code>lsp_or_syntax_workspace_symbol_picker</code></td><td>Open workspace symbol picker from LSP or syntax information</td><td><strong>helix</strong> — normal: <code>&lt;space&gt;S</code>, select: <code>&lt;space&gt;S</code></td></tr>
 <tr><td><code>diagnostics_picker</code></td><td>Open diagnostic picker</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;el</code>, <code>&lt;space&gt;enl</code>, <code>&lt;space&gt;epl</code>, select: <code>&lt;space&gt;el</code>, <code>&lt;space&gt;enl</code>, <code>&lt;space&gt;epl</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;d</code>, select: <code>&lt;space&gt;d</code></td></tr>
@@ -2913,6 +3025,7 @@
 <tr><td><code>peek_definition</code></td><td>Peek the definition in a popup without navigating (JetBrains Quick Definition)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lq</code>, select: <code>&lt;space&gt;lq</code></td></tr>
 <tr><td><code>peek_type_definition</code></td><td>Peek the TYPE definition in a popup without navigating (JetBrains Quick Type Definition)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;ly</code>, select: <code>&lt;space&gt;ly</code></td></tr>
 <tr><td><code>copy_quick_doc</code></td><td>Copy the symbol’s hover documentation to the clipboard (JetBrains Copy Quick Doc)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lY</code>, select: <code>&lt;space&gt;lY</code></td></tr>
+<tr><td><code>goto_declaration_or_usages</code></td><td>Go to the declaration, or list the usages when already on it (JetBrains Go to Declaration or Usages, Cmd B)</td><td></td></tr>
 <tr><td><code>goto_declaration</code></td><td>Goto declaration</td><td><strong>spacemacs, hybrid</strong> — normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code>, select: <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code><br><strong>vim</strong> — normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>gD</code>, select: <code>gD</code></td></tr>
 <tr><td><code>add_newline_above</code></td><td>Add newline above</td><td><strong>helix</strong> — normal: <code>[&lt;space&gt;</code>, select: <code>[&lt;space&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-O&gt;</code>, <code>[&lt;space&gt;</code>, select: <code>[&lt;space&gt;</code></td></tr>
 <tr><td><code>add_newline_below</code></td><td>Add newline below</td><td><strong>helix</strong> — normal: <code>]&lt;space&gt;</code>, select: <code>]&lt;space&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;A-o&gt;</code>, <code>]&lt;space&gt;</code>, select: <code>]&lt;space&gt;</code></td></tr>
@@ -2928,9 +3041,30 @@
 <tr><td><code>goto_file_readonly</code></td><td>Visit the file at point read-only (emacs ffap-read-only, C-x C-r)</td><td></td></tr>
 <tr><td><code>goto_file_new_tab</code></td><td>Visit the file at point in a new tab (emacs ffap-other-tab, C-x t C-f)</td><td></td></tr>
 <tr><td><code>goto_file_other_frame</code></td><td>Visit the file at point in a new frame (emacs ffap-other-frame, C-x 5 f)</td><td></td></tr>
+<tr><td><code>find_usages</code></td><td>The usages of the symbol in the grouped, filterable Usages view (JetBrains Find Usages, Alt F7)</td><td></td></tr>
+<tr><td><code>usages_group_by_type</code></td><td>Group usages by type: call, read, write, import, comment (JetBrains Group by Usage Type)</td><td></td></tr>
+<tr><td><code>usages_group_by_scope</code></td><td>Group usages into test and production code (JetBrains Group by Test/Production)</td><td></td></tr>
+<tr><td><code>usages_group_by_module</code></td><td>Group usages by module, the nearest package root (JetBrains Group by Module)</td><td></td></tr>
+<tr><td><code>usages_flatten_modules</code></td><td>Show nested modules flat in the Usages view (JetBrains Flatten Modules)</td><td></td></tr>
+<tr><td><code>usages_group_by_directory</code></td><td>Group usages by directory (JetBrains Group by Directory)</td><td></td></tr>
+<tr><td><code>usages_group_by_directory_tree</code></td><td>Group usages by directory tree (JetBrains Group by Directory Structure)</td><td></td></tr>
+<tr><td><code>usages_group_by_member</code></td><td>Group usages by the enclosing class or function (JetBrains Group by File Structure)</td><td></td></tr>
+<tr><td><code>usages_toggle_short_paths</code></td><td>Show file names only in the Usages view (JetBrains Show File Names Only)</td><td></td></tr>
+<tr><td><code>usages_toggle_comments</code></td><td>Show or hide usages in comments (JetBrains Show Comment Usages)</td><td></td></tr>
+<tr><td><code>usages_toggle_imports</code></td><td>Show or hide usages in imports (JetBrains Show Import Statements)</td><td></td></tr>
+<tr><td><code>usages_toggle_generated</code></td><td>Show or hide usages in generated code (JetBrains Show Usages in Generated Code)</td><td></td></tr>
+<tr><td><code>usages_toggle_read_access</code></td><td>Show only reads of the symbol, or all usages (JetBrains Show Read Access)</td><td></td></tr>
+<tr><td><code>usages_toggle_write_access</code></td><td>Show only writes to the symbol, or all usages (JetBrains Show Write Access)</td><td></td></tr>
+<tr><td><code>usages_rerun</code></td><td>Search the open Usages view’s symbol again (JetBrains Rerun)</td><td></td></tr>
+<tr><td><code>usages_recent</code></td><td>Pick a past Find Usages search and run it again (JetBrains Recent Find Usages)</td><td></td></tr>
+<tr><td><code>find_usages_with_settings</code></td><td>Choose where to look, then find the usages there (JetBrains Find Usages Settings)</td><td></td></tr>
+<tr><td><code>usages_exclude</code></td><td>Exclude or include the selected usage (JetBrains Exclude)</td><td></td></tr>
+<tr><td><code>usages_include</code></td><td>Include the selected usage again (JetBrains Include)</td><td></td></tr>
+<tr><td><code>usages_remove</code></td><td>Remove the selected usage from the Usages view (JetBrains Remove)</td><td></td></tr>
 <tr><td><code>goto_reference</code></td><td>Goto references</td><td><strong>spacemacs, vim</strong> — normal: <code>gr</code><br><strong>hybrid</strong> — normal: <code>gr</code>, insert: <code>&lt;A-?&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>gr</code>, select: <code>gr</code><br><strong>emacs, cua, micro, nano</strong> — normal: <code>&lt;A-?&gt;</code>, insert: <code>&lt;A-?&gt;</code></td></tr>
 <tr><td><code>call_hierarchy_incoming_calls</code></td><td>Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gh</code>, select: <code>&lt;space&gt;gh</code></td></tr>
 <tr><td><code>call_hierarchy_outgoing_calls</code></td><td>Call hierarchy: what the symbol calls</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gO</code>, select: <code>&lt;space&gt;gO</code></td></tr>
+<tr><td><code>type_hierarchy</code></td><td>The type at the cursor with its supertypes above and subtypes below (JetBrains Type Hierarchy, Ctrl H)</td><td></td></tr>
 <tr><td><code>type_hierarchy_supertypes</code></td><td>Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gT</code>, select: <code>&lt;space&gt;gT</code></td></tr>
 <tr><td><code>type_hierarchy_subtypes</code></td><td>Type hierarchy: subtypes of the symbol</td><td></td></tr>
 <tr><td><code>goto_super_method</code></td><td>Go to the method this one overrides (JetBrains Go to Super Method, Cmd U)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;g^</code>, select: <code>&lt;space&gt;g^</code></td></tr>
@@ -2943,6 +3077,8 @@
 <tr><td><code>move_to_window_line_top_bottom</code></td><td>Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-r&gt;</code><br><strong>hybrid, emacs, cua, micro</strong> — normal: <code>&lt;A-r&gt;</code>, insert: <code>&lt;A-r&gt;</code></td></tr>
 <tr><td><code>goto_window_center</code></td><td>Goto window center</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>M</code><br><strong>helix, kakoune</strong> — normal: <code>gc</code>, select: <code>gc</code></td></tr>
 <tr><td><code>goto_window_bottom</code></td><td>Goto window bottom</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>L</code><br><strong>helix, kakoune</strong> — normal: <code>gb</code>, select: <code>gb</code></td></tr>
+<tr><td><code>extend_to_window_top</code></td><td>Extend the selection to the first visible line (JetBrains Move Caret to Page Top with Selection)</td><td></td></tr>
+<tr><td><code>extend_to_window_bottom</code></td><td>Extend the selection to the last visible line (JetBrains Move Caret to Page Bottom with Selection)</td><td></td></tr>
 <tr><td><code>goto_last_accessed_file</code></td><td>Goto last accessed file</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;space&gt;w^</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code>, select: <code>&lt;space&gt;w^</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>ga</code>, select: <code>ga</code></td></tr>
 <tr><td><code>cycle_buffer_backward</code></td><td>Cycle back through this window’s visited buffers (C-TAB)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>&lt;C-tab&gt;</code></td></tr>
 <tr><td><code>cycle_buffer_forward</code></td><td>Cycle forward through this window’s visited buffers (C-S-TAB)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>&lt;A-C-tab&gt;</code></td></tr>
@@ -2972,9 +3108,84 @@
 <tr><td><code>resolve_conflicts</code></td><td>Resolve merge conflicts (3-way)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code>, select: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code></td></tr>
 <tr><td><code>git_status</code></td><td>Magit status</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, select: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, insert: <code>&lt;C-x&gt;vd</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code>, select: <code>&lt;C-x&gt;vd</code>, <code>&lt;space&gt;gs</code>, <code>&lt;space&gt;pv</code></td></tr>
 <tr><td><code>github_browser</code></td><td>GitHub browser (CI runs, PRs, issues, releases)</td><td></td></tr>
+<tr><td><code>github_create_gist</code></td><td>Create a secret gist of the selection or buffer and yank its URL (JetBrains Create Gist)</td><td></td></tr>
+<tr><td><code>github_create_pull_request</code></td><td>Open a pull request from the current branch (JetBrains Create Pull Request)</td><td></td></tr>
+<tr><td><code>github_open_branch_pr</code></td><td>Open the current branch’s pull request in the browser (JetBrains View Pull Request in Browser)</td><td></td></tr>
+<tr><td><code>github_copy_branch_pr_url</code></td><td>Yank the URL of the current branch’s pull request (JetBrains Copy Pull Request URL)</td><td></td></tr>
+<tr><td><code>github_show_pull_request</code></td><td>Show a pull request’s details by number (JetBrains Github.PullRequest.Show)</td><td></td></tr>
+<tr><td><code>github_submit_review</code></td><td>Approve, comment on or request changes to the current branch’s pull request (JetBrains Github.PullRequest.Review.Submit)</td><td></td></tr>
+<tr><td><code>github_share</code></td><td>Create a GitHub repository for the project and push to it (JetBrains Share Project on GitHub)</td><td></td></tr>
+<tr><td><code>github_sync_fork</code></td><td>Rebase the current branch onto the fork’s parent (JetBrains Sync Fork)</td><td></td></tr>
 <tr><td><code>git_push</code></td><td>Push the current branch to its remote (SPC g P)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, insert: <code>&lt;C-x&gt;vP</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code></td></tr>
 <tr><td><code>git_pull</code></td><td>Fast-forward pull from upstream (SPC g u)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, insert: <code>&lt;C-x&gt;v+</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code></td></tr>
 <tr><td><code>git_fetch</code></td><td>Fetch all remotes (SPC g F)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gF</code>, select: <code>&lt;space&gt;gF</code></td></tr>
+<tr><td><code>git_cherry_pick_abort</code></td><td>Abort the cherry-pick in progress (JetBrains Abort Cherry-Pick)</td><td></td></tr>
+<tr><td><code>git_cherry_pick_continue</code></td><td>Continue the cherry-pick once conflicts are resolved (JetBrains Continue Cherry-Pick)</td><td></td></tr>
+<tr><td><code>git_merge_abort</code></td><td>Abort the merge in progress (JetBrains Abort Merge)</td><td></td></tr>
+<tr><td><code>git_merge_commit</code></td><td>Commit the merge once conflicts are resolved (JetBrains Commit merge)</td><td></td></tr>
+<tr><td><code>git_rebase_abort</code></td><td>Abort the rebase in progress (JetBrains Abort Rebase)</td><td></td></tr>
+<tr><td><code>git_rebase_continue</code></td><td>Continue the rebase once conflicts are resolved (JetBrains Continue Rebase)</td><td></td></tr>
+<tr><td><code>git_rebase_skip</code></td><td>Skip the commit the rebase stopped on (JetBrains Skip Commit)</td><td></td></tr>
+<tr><td><code>git_revert_abort</code></td><td>Abort the revert in progress (JetBrains Abort Revert)</td><td></td></tr>
+<tr><td><code>git_stage_all</code></td><td>Stage every change, untracked files included (JetBrains Stage All)</td><td></td></tr>
+<tr><td><code>git_stage_tracked</code></td><td>Stage changes to tracked files only (JetBrains Stage All Tracked)</td><td></td></tr>
+<tr><td><code>git_intent_to_add</code></td><td>git add -N this file: tracked, nothing staged (JetBrains Git.Stage.Add.No.Content)</td><td></td></tr>
+<tr><td><code>git_uncommit</code></td><td>Undo the last commit, keeping its changes staged (JetBrains Undo Commit)</td><td></td></tr>
+<tr><td><code>git_unshallow</code></td><td>Fetch the history a shallow clone left out (JetBrains Unshallow repository)</td><td></td></tr>
+<tr><td><code>git_worktree_prune</code></td><td>Forget working trees whose directories are gone (JetBrains Prune)</td><td></td></tr>
+<tr><td><code>git_stash_clear</code></td><td>Drop every stash (JetBrains Clear)</td><td></td></tr>
+<tr><td><code>git_open_exclude_file</code></td><td>Open the repository’s .git/info/exclude (JetBrains Git.OpenExcludeFile)</td><td></td></tr>
+<tr><td><code>git_merge_branch</code></td><td>Merge a picked branch into the current one (JetBrains Merge)</td><td></td></tr>
+<tr><td><code>git_rebase_onto</code></td><td>Rebase the current branch onto a picked one (JetBrains Rebase)</td><td></td></tr>
+<tr><td><code>git_checkout_and_update</code></td><td>Check out a picked branch and fast-forward it from upstream (JetBrains Checkout and Update)</td><td></td></tr>
+<tr><td><code>git_rename_branch</code></td><td>Rename a picked local branch (JetBrains Git.Rename.Local.Branch)</td><td></td></tr>
+<tr><td><code>git_reset_head</code></td><td>Reset HEAD to a commit, soft, mixed, hard or keep (JetBrains Reset HEAD)</td><td></td></tr>
+<tr><td><code>git_push_tag</code></td><td>Push a picked tag to the current branch’s remote (JetBrains Git.Tag.Push)</td><td></td></tr>
+<tr><td><code>git_stash_apply_picked</code></td><td>Apply a picked stash (JetBrains stash Apply)</td><td></td></tr>
+<tr><td><code>git_stash_drop_picked</code></td><td>Drop a picked stash (JetBrains stash Drop)</td><td></td></tr>
+<tr><td><code>git_unstash_as_branch</code></td><td>Pop a picked stash onto a new branch (JetBrains Unstash)</td><td></td></tr>
+<tr><td><code>git_stash_file</code></td><td>Stash the changes to this file only (JetBrains Git.Stage.Stash.Files)</td><td></td></tr>
+<tr><td><code>git_worktree_add</code></td><td>Create a linked worktree at a path, on a new branch or at HEAD (JetBrains New Worktree)</td><td></td></tr>
+<tr><td><code>git_worktree_remove</code></td><td>Remove a picked linked worktree (JetBrains worktree Delete)</td><td></td></tr>
+<tr><td><code>git_merged_branches</code></td><td>List local branches already merged into HEAD (JetBrains Find Merged Local Branches)</td><td></td></tr>
+<tr><td><code>git_diff_ref_with_local</code></td><td>Diff a picked branch against the working tree (JetBrains Git.Ref.Diff.With.Local)</td><td></td></tr>
+<tr><td><code>git_compare_ref</code></td><td>Commits and files that differ between a picked branch and HEAD (JetBrains Git.Ref.Compare.With)</td><td></td></tr>
+<tr><td><code>git_diff_staged_head</code></td><td>Diff the staged version of this file against HEAD (JetBrains Compare with HEAD Version)</td><td></td></tr>
+<tr><td><code>git_diff_local_staged</code></td><td>Diff this file against its staged version (JetBrains Compare with Staged Version)</td><td></td></tr>
+<tr><td><code>git_diff_staged_local</code></td><td>Diff the staged version of this file against the working tree (JetBrains Compare with Local Version)</td><td></td></tr>
+<tr><td><code>git_show_staged</code></td><td>Show this file as the index holds it (JetBrains Show Staged Version)</td><td></td></tr>
+<tr><td><code>git_fixup_commit</code></td><td>Commit the staged changes as a fixup! of a picked commit (JetBrains Fixup)</td><td></td></tr>
+<tr><td><code>git_squash_into_commit</code></td><td>Commit the staged changes as a squash! of a picked commit (JetBrains Squash Into)</td><td></td></tr>
+<tr><td><code>git_drop_commit</code></td><td>Remove a picked commit from the branch (JetBrains Drop Commits)</td><td></td></tr>
+<tr><td><code>git_reword_commit</code></td><td>Change the message of a picked commit (JetBrains Edit Commit Message)</td><td></td></tr>
+<tr><td><code>git_branch_at_commit</code></td><td>Create a branch at a picked commit and switch to it (JetBrains New Branch)</td><td></td></tr>
+<tr><td><code>git_reset_to_commit</code></td><td>Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)</td><td></td></tr>
+<tr><td><code>git_revert_commit</code></td><td>Commit the inverse of a picked commit (JetBrains Revert Commit)</td><td></td></tr>
+<tr><td><code>git_push_up_to_commit</code></td><td>Push the current branch only up to a picked commit (JetBrains Push All up to Here)</td><td></td></tr>
+<tr><td><code>git_stash_list</code></td><td>The stashes; picking one shows its patch (JetBrains Show Git Stash)</td><td></td></tr>
+<tr><td><code>git_manage_remotes</code></td><td>Add a remote, change a remote’s URL, or remove it (JetBrains Manage Remotes)</td><td></td></tr>
+<tr><td><code>git_cleanup_branches</code></td><td>Local branches with date, upstream and merged state; pick one to delete safely (JetBrains Clean Up Branches)</td><td></td></tr>
+<tr><td><code>git_browse_at_revision</code></td><td>Browse the repository’s files as they were at a picked commit (JetBrains Show Repository at Revision)</td><td></td></tr>
+<tr><td><code>git_unresolve_file</code></td><td>Put the conflict markers back in this file (JetBrains Revert Resolved)</td><td></td></tr>
+<tr><td><code>shelf_apply</code></td><td>Apply a shelved patch, keeping it on the shelf (JetBrains Shelf / Unshelve)</td><td></td></tr>
+<tr><td><code>shelf_pop</code></td><td>Apply a shelved patch and take it off the shelf (JetBrains Unshelve and Remove)</td><td></td></tr>
+<tr><td><code>shelf_drop</code></td><td>Take a patch off the shelf, recoverably (JetBrains Drop)</td><td></td></tr>
+<tr><td><code>shelf_restore</code></td><td>Bring a dropped patch back onto the shelf (JetBrains Restore)</td><td></td></tr>
+<tr><td><code>shelf_rename</code></td><td>Rename a shelf entry (JetBrains Rename)</td><td></td></tr>
+<tr><td><code>shelf_import</code></td><td>Put a patch file on the shelf (JetBrains Import Patches)</td><td></td></tr>
+<tr><td><code>shelf_save_keep</code></td><td>Shelve the working tree’s changes and keep them in the tree (JetBrains Save to Shelf)</td><td></td></tr>
+<tr><td><code>git_revert_into_worktree</code></td><td>Apply the reverse of a picked commit without committing (JetBrains Revert Changes)</td><td></td></tr>
+<tr><td><code>git_compare_with_upstream</code></td><td>Diff this file against its upstream version (JetBrains Compare with Latest Repository Version)</td><td></td></tr>
+<tr><td><code>git_show_file_at_commit</code></td><td>Show this file as it was at a picked commit (JetBrains Show Current Revision)</td><td></td></tr>
+<tr><td><code>vcs_get_version</code></td><td>Replace this file with its content at a revision (JetBrains Get)</td><td></td></tr>
+<tr><td><code>git_annotate_at_commit</code></td><td>Blame this file as it stood at a picked commit (JetBrains Annotate)</td><td></td></tr>
+<tr><td><code>git_diff_before_with_local</code></td><td>Diff the version before a picked commit with this file (JetBrains Compare Before with Local)</td><td></td></tr>
+<tr><td><code>git_compare_commits</code></td><td>Diff two picked commits (JetBrains Compare Versions)</td><td></td></tr>
+<tr><td><code>commit_message_history</code></td><td>Insert a recent commit message at the cursor (JetBrains Commit Message History)</td><td></td></tr>
+<tr><td><code>git_run_commit_checks</code></td><td>Run the pre-commit hook without committing (JetBrains Run Commit Checks)</td><td></td></tr>
+<tr><td><code>git_remove_deleted</code></td><td>Stage the removal of tracked files already deleted from disk (JetBrains Remove from VCS)</td><td></td></tr>
+<tr><td><code>show_change_under_caret</code></td><td>Show the change on this line with the text it replaced (JetBrains Change Under Caret)</td><td></td></tr>
+<tr><td><code>show_diff_for_lines</code></td><td>Diff of the changes the selected lines take part in (JetBrains Show Diff for Lines)</td><td></td></tr>
 <tr><td><code>git_acp</code></td><td>Stage all, commit, and push in one shot (C-x v c)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vc</code>, select: <code>&lt;C-x&gt;vc</code>, insert: <code>&lt;C-x&gt;vc</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vc</code>, select: <code>&lt;C-x&gt;vc</code></td></tr>
 <tr><td><code>vc_print_log</code></td><td>VC log for the current file (emacs vc-print-log)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vl</code>, select: <code>&lt;C-x&gt;vl</code>, insert: <code>&lt;C-x&gt;vl</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vl</code>, select: <code>&lt;C-x&gt;vl</code></td></tr>
 <tr><td><code>vc_print_root_log</code></td><td>VC log for the whole repository (emacs vc-print-root-log)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vL</code>, select: <code>&lt;C-x&gt;vL</code>, insert: <code>&lt;C-x&gt;vL</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vL</code>, select: <code>&lt;C-x&gt;vL</code></td></tr>
@@ -3089,11 +3300,14 @@
 <tr><td><code>delete_chars_forward_vim</code></td><td>Delete char(s) under cursor, line-bounded (vim x)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>x</code>, <code>&lt;del&gt;</code></td></tr>
 <tr><td><code>delete_chars_backward_vim</code></td><td>Delete char(s) before cursor, no line join (vim X)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>X</code></td></tr>
 <tr><td><code>replace_chars_vim</code></td><td>Replace char(s) under cursor, line-bounded (vim r)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>r</code></td></tr>
-<tr><td><code>delete_word_backward</code></td><td>Delete previous word</td><td><strong>spacemacs, vim, helix, kakoune</strong> — insert: <code>&lt;C-w&gt;</code>, <code>&lt;A-backspace&gt;</code><br><strong>hybrid, emacs, cua</strong> — insert: <code>&lt;C-w&gt;</code>, <code>&lt;A-backspace&gt;</code>, <code>&lt;A-C-backspace&gt;</code><br><strong>micro, nano</strong> — insert: <code>&lt;A-backspace&gt;</code>, <code>&lt;A-C-backspace&gt;</code></td></tr>
-<tr><td><code>delete_word_forward</code></td><td>Delete next word</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;A-d&gt;</code>, insert: <code>&lt;A-d&gt;</code><br><strong>vim, emacs, cua, micro</strong> — insert: <code>&lt;A-d&gt;</code><br><strong>helix, kakoune</strong> — insert: <code>&lt;A-d&gt;</code>, <code>&lt;A-del&gt;</code></td></tr>
+<tr><td><code>delete_word_backward</code></td><td>Delete previous word</td><td><strong>spacemacs, vim, helix, kakoune</strong> — insert: <code>&lt;C-w&gt;</code>, <code>&lt;A-backspace&gt;</code></td></tr>
+<tr><td><code>delete_word_forward</code></td><td>Delete next word</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-d&gt;</code>, insert: <code>&lt;A-d&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;A-d&gt;</code><br><strong>vim</strong> — insert: <code>&lt;A-d&gt;</code><br><strong>helix, kakoune</strong> — insert: <code>&lt;A-d&gt;</code>, <code>&lt;A-del&gt;</code></td></tr>
 <tr><td><code>insert_kill_entered_vim</code></td><td>Delete the text entered this insert session (vim i_CTRL-U)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;C-u&gt;</code></td></tr>
 <tr><td><code>kill_to_line_start</code></td><td>Delete till start of line</td><td><strong>helix, kakoune</strong> — insert: <code>&lt;C-u&gt;</code></td></tr>
 <tr><td><code>kill_to_line_end</code></td><td>Delete till end of line</td><td><strong>hybrid, helix, kakoune</strong> — insert: <code>&lt;C-k&gt;</code><br><strong>emacs, cua, nano</strong> — normal: <code>&lt;C-k&gt;</code>, insert: <code>&lt;C-k&gt;</code></td></tr>
+<tr><td><code>cut_to_line_end</code></td><td>Cut from the cursor to the end of the line into the clipboard (JetBrains Cut up to Line End)</td><td></td></tr>
+<tr><td><code>cut_to_line_start</code></td><td>Cut from the start of the line to the cursor into the clipboard (JetBrains Cut Line Backward)</td><td></td></tr>
+<tr><td><code>split_line</code></td><td>Break the line at the cursor, leaving the cursor before the break (JetBrains Split Line, emacs open-line)</td><td></td></tr>
 <tr><td><code>undo</code></td><td>Undo change</td><td><strong>spacemacs, hybrid</strong> — normal: <code>u</code>, <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-x&gt;u</code>, <code>&lt;space&gt;ku</code>, select: <code>&lt;C-x&gt;u</code>, <code>&lt;space&gt;ku</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-x&gt;u</code><br><strong>vim</strong> — normal: <code>u</code><br><strong>helix, kakoune</strong> — normal: <code>u</code>, select: <code>u</code><br><strong>emacs</strong> — normal: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-x&gt;u</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-x&gt;u</code><br><strong>cua</strong> — normal: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-z&gt;</code>, <code>&lt;C-x&gt;u</code>, select: <code>&lt;C-X&gt;u</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-z&gt;</code>, <code>&lt;C-x&gt;u</code><br><strong>micro</strong> — normal: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-z&gt;</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;C-z&gt;</code><br><strong>nano</strong> — normal: <code>&lt;A-u&gt;</code>, <code>&lt;C-/&gt;</code>, insert: <code>&lt;A-u&gt;</code>, <code>&lt;C-/&gt;</code></td></tr>
 <tr><td><code>undo_line</code></td><td>Undo all latest changes on one line (vim U)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>U</code></td></tr>
 <tr><td><code>redo</code></td><td>Redo change</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-r&gt;</code>, <code>&lt;space&gt;k&lt;C-r&gt;</code>, select: <code>&lt;space&gt;k&lt;C-r&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-r&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>U</code>, select: <code>U</code><br><strong>micro</strong> — normal: <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-y&gt;</code><br><strong>nano</strong> — normal: <code>&lt;A-e&gt;</code>, insert: <code>&lt;A-e&gt;</code></td></tr>
@@ -3289,6 +3503,8 @@
 <tr><td><code>windmove_display_new_tab</code></td><td>Display the next buffer in a new tab (emacs windmove-display-new-tab)</td><td></td></tr>
 <tr><td><code>windmove_display_default_keybindings</code></td><td>Bind M-S-<arrow> to display the next buffer in that direction (emacs windmove-display-default-keybindings)</arrow></td><td></td></tr>
 <tr><td><code>transpose_view</code></td><td>Transpose splits</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-w&gt;M</code>, <code>&lt;C-w&gt;x</code>, <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;C-w&gt;&lt;C-x&gt;</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code>, select: <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-w&gt;M</code>, <code>&lt;C-w&gt;x</code>, <code>&lt;C-w&gt;&lt;C-x&gt;</code><br><strong>helix</strong> — normal: <code>&lt;C-w&gt;t</code>, <code>&lt;space&gt;wt</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code>, select: <code>&lt;C-w&gt;t</code>, <code>&lt;space&gt;wt</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code><br><strong>kakoune</strong> — normal: <code>&lt;C-w&gt;t</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, select: <code>&lt;C-w&gt;t</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code></td></tr>
+<tr><td><code>next_occurrence</code></td><td>Next result of the last Find in Path or Find Usages, else the next search match (JetBrains Next Occurrence)</td><td></td></tr>
+<tr><td><code>previous_occurrence</code></td><td>Previous result of the last Find in Path or Find Usages, else the previous search match (JetBrains Previous Occurrence)</td><td></td></tr>
 <tr><td><code>quickfix_next</code></td><td>Quickfix: jump to next entry (:cnext)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>]q</code></td></tr>
 <tr><td><code>quickfix_prev</code></td><td>Quickfix: jump to previous entry (:cprev)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>[q</code></td></tr>
 <tr><td><code>quickfix_first</code></td><td>Quickfix: jump to first entry (:cfirst)</td><td></td></tr>
@@ -3386,9 +3602,24 @@
 <tr><td><code>align_view_middle</code></td><td>Align view middle</td><td><strong>helix</strong> — normal: <code>Zm</code>, <code>zm</code>, select: <code>Zm</code>, <code>zm</code><br><strong>kakoune</strong> — normal: <code>Vm</code>, <code>vm</code></td></tr>
 <tr><td><code>align_view_top</code></td><td>Align view top</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zt</code>, select: <code>zt</code><br><strong>helix</strong> — normal: <code>Zt</code>, <code>zt</code>, select: <code>Zt</code>, <code>zt</code><br><strong>kakoune</strong> — normal: <code>Vt</code>, <code>vt</code></td></tr>
 <tr><td><code>align_view_center</code></td><td>Align view center</td><td><strong>spacemacs</strong> — normal: <code>zz</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;C-w&gt;[z</code>, <code>&lt;C-w&gt;{z</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, <code>&lt;space&gt;w[z</code>, <code>&lt;space&gt;wc.</code>, <code>&lt;space&gt;w{z</code>, select: <code>zz</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, <code>&lt;space&gt;w[z</code>, <code>&lt;space&gt;wc.</code>, <code>&lt;space&gt;w{z</code><br><strong>hybrid</strong> — normal: <code>zz</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;C-w&gt;[z</code>, <code>&lt;C-w&gt;{z</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, <code>&lt;space&gt;w[z</code>, <code>&lt;space&gt;wc.</code>, <code>&lt;space&gt;w{z</code>, select: <code>zz</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, <code>&lt;space&gt;w[z</code>, <code>&lt;space&gt;wc.</code>, <code>&lt;space&gt;w{z</code>, insert: <code>&lt;C-l&gt;</code><br><strong>vim</strong> — normal: <code>zz</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;C-w&gt;[z</code>, <code>&lt;C-w&gt;{z</code>, select: <code>zz</code><br><strong>helix</strong> — normal: <code>Zc</code>, <code>Zz</code>, <code>zc</code>, <code>zz</code>, select: <code>Zc</code>, <code>Zz</code>, <code>zc</code>, <code>zz</code><br><strong>kakoune</strong> — normal: <code>Vc</code>, <code>Vv</code>, <code>vc</code>, <code>vv</code><br><strong>emacs, cua, micro, nano</strong> — insert: <code>&lt;C-l&gt;</code></td></tr>
+<tr><td><code>completion_select_next</code></td><td>Select the next item of the open completion list (JetBrains Lookup Down)</td><td></td></tr>
+<tr><td><code>completion_select_prev</code></td><td>Select the previous item of the open completion list (JetBrains Lookup Up)</td><td></td></tr>
+<tr><td><code>completion_accept</code></td><td>Accept the selected item of the open completion list (JetBrains Choose Lookup Item)</td><td></td></tr>
+<tr><td><code>completion_accept_replace</code></td><td>Accept the completion over the identifier right of the cursor (JetBrains Replace, Tab in the lookup)</td><td></td></tr>
+<tr><td><code>completion_accept_dot</code></td><td>Accept the completion and type a dot (JetBrains Choose Lookup Item and Insert Dot)</td><td></td></tr>
+<tr><td><code>completion_accept_complete_statement</code></td><td>Accept the completion, then complete the statement (JetBrains Choose Lookup Item and Complete Statement)</td><td></td></tr>
+<tr><td><code>toggle_center_view</code></td><td>Draw the text column in the middle of the window (JetBrains Toggle Center View)</td><td></td></tr>
+<tr><td><code>scroll_to_top</code></td><td>Scroll to the start of the file, leaving the caret (JetBrains Scroll to Top)</td><td></td></tr>
+<tr><td><code>scroll_to_bottom</code></td><td>Scroll the end of the file to mid-window, leaving the caret (JetBrains Scroll to Bottom)</td><td></td></tr>
 <tr><td><code>align_view_bottom</code></td><td>Align view bottom</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zb</code>, select: <code>zb</code><br><strong>helix</strong> — normal: <code>Zb</code>, <code>zb</code>, select: <code>Zb</code>, <code>zb</code><br><strong>kakoune</strong> — normal: <code>Vb</code>, <code>vb</code></td></tr>
 <tr><td><code>recenter_top_bottom</code></td><td>Cycle the cursor line to the middle, then top, then bottom of the window (emacs recenter-top-bottom, nano cycle)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-l&gt;</code></td></tr>
 <tr><td><code>scroll_up</code></td><td>Scroll view up</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-y&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-y&gt;</code><br><strong>helix</strong> — normal: <code>Zk</code>, <code>zk</code>, <code>Z&lt;up&gt;</code>, <code>z&lt;up&gt;</code>, select: <code>Zk</code>, <code>zk</code>, <code>Z&lt;up&gt;</code>, <code>z&lt;up&gt;</code><br><strong>kakoune</strong> — normal: <code>Vk</code>, <code>vk</code>, <code>V&lt;up&gt;</code>, <code>v&lt;up&gt;</code></td></tr>
+<tr><td><code>move_up_and_scroll</code></td><td>Move up a line and scroll with it, keeping the screen row (JetBrains Move Up and Scroll)</td><td></td></tr>
+<tr><td><code>move_down_and_scroll</code></td><td>Move down a line and scroll with it, keeping the screen row (JetBrains Move Down and Scroll)</td><td></td></tr>
+<tr><td><code>extend_up_and_scroll</code></td><td>Extend up a line and scroll with it (JetBrains Move Up and Scroll with Selection)</td><td></td></tr>
+<tr><td><code>extend_down_and_scroll</code></td><td>Extend down a line and scroll with it (JetBrains Move Down and Scroll with Selection)</td><td></td></tr>
+<tr><td><code>editor_escape</code></td><td>Back to one cursor, no selection, normal mode (JetBrains Escape)</td><td></td></tr>
+<tr><td><code>show_gutter_info</code></td><td>Describe the gutter marks on this line (JetBrains Show Gutter Icon Tooltip)</td><td></td></tr>
 <tr><td><code>scroll_down</code></td><td>Scroll view down</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;C-e&gt;</code><br><strong>vim</strong> — normal: <code>&lt;C-e&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-e&gt;</code><br><strong>helix</strong> — normal: <code>Zj</code>, <code>zj</code>, <code>Z&lt;down&gt;</code>, <code>z&lt;down&gt;</code>, select: <code>Zj</code>, <code>zj</code>, <code>Z&lt;down&gt;</code>, <code>z&lt;down&gt;</code><br><strong>kakoune</strong> — normal: <code>Vj</code>, <code>vj</code>, <code>V&lt;down&gt;</code>, <code>v&lt;down&gt;</code></td></tr>
 <tr><td><code>scroll_column_left</code></td><td>Scroll view left one column (zh)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zh</code>, <code>z&lt;left&gt;</code>, select: <code>zh</code>, <code>z&lt;left&gt;</code></td></tr>
 <tr><td><code>scroll_column_right</code></td><td>Scroll view right one column (zl)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zl</code>, <code>z&lt;right&gt;</code>, select: <code>zl</code>, <code>z&lt;right&gt;</code></td></tr>
@@ -3461,6 +3692,34 @@
 <tr><td><code>to_hex_selection</code></td><td>Encode the selection as hex bytes</td><td></td></tr>
 <tr><td><code>from_hex_selection</code></td><td>Decode hex bytes in the selection back to text</td><td></td></tr>
 <tr><td><code>format_table_selection</code></td><td>Align the selected markdown table’s columns</td><td></td></tr>
+<tr><td><code>md_table_insert_row_above</code></td><td>Insert an empty row above in the markdown table (JetBrains Insert Row Above)</td><td></td></tr>
+<tr><td><code>md_table_insert_row_below</code></td><td>Insert an empty row below in the markdown table (JetBrains Insert Row Below)</td><td></td></tr>
+<tr><td><code>md_table_remove_row</code></td><td>Remove the markdown table row under the cursor (JetBrains Remove Row)</td><td></td></tr>
+<tr><td><code>md_table_move_row_up</code></td><td>Swap the markdown table row with the one above (JetBrains Move Row Up)</td><td></td></tr>
+<tr><td><code>md_table_move_row_down</code></td><td>Swap the markdown table row with the one below (JetBrains Move Row Down)</td><td></td></tr>
+<tr><td><code>md_table_insert_column_left</code></td><td>Insert an empty markdown table column to the left (JetBrains Insert Column Left)</td><td></td></tr>
+<tr><td><code>md_table_insert_column_right</code></td><td>Insert an empty markdown table column to the right (JetBrains Insert Column Right)</td><td></td></tr>
+<tr><td><code>md_table_remove_column</code></td><td>Remove the markdown table column under the cursor (JetBrains Remove Column)</td><td></td></tr>
+<tr><td><code>md_table_move_column_left</code></td><td>Swap the markdown table column with the one to its left (JetBrains Move Column Left)</td><td></td></tr>
+<tr><td><code>md_table_move_column_right</code></td><td>Swap the markdown table column with the one to its right (JetBrains Move Column Right)</td><td></td></tr>
+<tr><td><code>md_table_align_left</code></td><td>Left-align the markdown table column (JetBrains Align Left)</td><td></td></tr>
+<tr><td><code>md_table_align_center</code></td><td>Center the markdown table column (JetBrains Align Center)</td><td></td></tr>
+<tr><td><code>md_table_align_right</code></td><td>Right-align the markdown table column (JetBrains Align Right)</td><td></td></tr>
+<tr><td><code>md_table_select_row</code></td><td>Select the markdown table row (JetBrains Select Row)</td><td></td></tr>
+<tr><td><code>md_table_select_column</code></td><td>Select every content cell of the markdown table column (JetBrains Select Column Cells)</td><td></td></tr>
+<tr><td><code>md_insert_table</code></td><td>Insert an empty markdown table of a given size (JetBrains Insert Table)</td><td></td></tr>
+<tr><td><code>md_insert_image</code></td><td>Insert a markdown image reference at the cursor (JetBrains Insert Image)</td><td></td></tr>
+<tr><td><code>md_link_to_reference</code></td><td>Turn the inline link under the cursor into a reference link (JetBrains Convert to Reference)</td><td></td></tr>
+<tr><td><code>md_insert_menu</code></td><td>Insert a markdown link, image, table or table of contents (JetBrains Insert)</td><td></td></tr>
+<tr><td><code>md_export</code></td><td>Export this markdown file to HTML, PDF or DOCX with pandoc (JetBrains Export Markdown File To)</td><td></td></tr>
+<tr><td><code>md_import_docx</code></td><td>Convert a Word document to markdown with pandoc (JetBrains Import Word Document)</td><td></td></tr>
+<tr><td><code>md_toggle_bold</code></td><td>Toggle markdown bold around the selection or word (JetBrains Bold)</td><td></td></tr>
+<tr><td><code>md_toggle_italic</code></td><td>Toggle markdown italic around the selection or word (JetBrains Italic)</td><td></td></tr>
+<tr><td><code>md_toggle_code_span</code></td><td>Toggle a markdown code span around the selection or word (JetBrains Code)</td><td></td></tr>
+<tr><td><code>md_toggle_strikethrough</code></td><td>Toggle markdown strikethrough around the selection or word (JetBrains Strikethrough)</td><td></td></tr>
+<tr><td><code>md_heading_up</code></td><td>One # fewer on the markdown heading (JetBrains Increase Header Level)</td><td></td></tr>
+<tr><td><code>md_heading_down</code></td><td>One # more on the markdown heading (JetBrains Decrease Header Level)</td><td></td></tr>
+<tr><td><code>md_set_header_style</code></td><td>Pick plain text or a heading level for this line (JetBrains Set Header Style)</td><td></td></tr>
 <tr><td><code>csv_to_table_selection</code></td><td>Convert the selected CSV/TSV to a markdown table</td><td></td></tr>
 <tr><td><code>table_to_csv_selection</code></td><td>Convert the selected markdown table to CSV</td><td></td></tr>
 <tr><td><code>json_pretty_selection</code></td><td>Pretty-print the selected JSON (preserves key order)</td><td></td></tr>
@@ -3526,7 +3785,8 @@
 <tr><td><code>global_tab_line_mode</code></td><td>Toggle the buffer tab line (emacs global-tab-line-mode)</td><td></td></tr>
 <tr><td><code>global_visual_wrap_prefix_mode</code></td><td>Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode)</td><td></td></tr>
 <tr><td><code>help</code></td><td>Open the inline Help browser</td><td><strong>spacemacs</strong> — normal: <code>&lt;F1&gt;</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, insert: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;F1&gt;</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, insert: <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code><br><strong>vim</strong> — normal: <code>&lt;F1&gt;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, select: <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, insert: <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code><br><strong>micro</strong> — normal: <code>&lt;C-g&gt;</code>, <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, select: <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, insert: <code>&lt;C-g&gt;</code>, <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code><br><strong>nano</strong> — normal: <code>&lt;C-g&gt;</code>, <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, select: <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;C-h&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, insert: <code>&lt;C-g&gt;</code>, <code>&lt;F1&gt;?</code>, <code>&lt;F1&gt;r</code>, <code>&lt;F1&gt;&lt;F1&gt;</code>, <code>&lt;F1&gt;&lt;C-h&gt;</code></td></tr>
-<tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bh</code>, select: <code>&lt;space&gt;bh</code></td></tr>
+<tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td></td></tr>
+<tr><td><code>startify</code></td><td>Open the start screen: banner, recent files, project languages (vim-startify :Startify, spacemacs home buffer)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bh</code>, select: <code>&lt;space&gt;bh</code></td></tr>
 <tr><td><code>search_in_files</code></td><td>Open the project-wide Find in Files panel</td><td></td></tr>
 <tr><td><code>terminal</code></td><td>Open an integrated terminal (PTY shell)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;p'</code>, select: <code>&lt;space&gt;p'</code></td></tr>
 <tr><td><code>comint_shell</code></td><td>Open a comint line-oriented shell buffer (emacs M-x shell)</td><td></td></tr>
@@ -3572,10 +3832,80 @@
 <tr><td><code>shell_backward_command</code></td><td>Move backward over a shell command on the input line (emacs shell-backward-command)</td><td></td></tr>
 <tr><td><code>run_config_manager</code></td><td>Manage run/debug configurations</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code>, select: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code></td></tr>
 <tr><td><code>run_active_config</code></td><td>Run the active run configuration</td><td><strong>spacemacs</strong> — normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, select: <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-c&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, select: <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code><br><strong>vim</strong> — normal: <code>&lt;F5&gt;</code></td></tr>
+<tr><td><code>run_config_picker</code></td><td>Pick the active run configuration (JetBrains Select Run/Debug Configuration)</td><td></td></tr>
+<tr><td><code>delete_run_config</code></td><td>Delete a picked run configuration (JetBrains Delete Run Configuration)</td><td></td></tr>
+<tr><td><code>copy_run_config</code></td><td>Duplicate a picked run configuration (JetBrains Copy Configuration)</td><td></td></tr>
+<tr><td><code>rerun_tests</code></td><td>Run the most recent test run again (JetBrains Rerun Tests)</td><td></td></tr>
+<tr><td><code>run_build_task</code></td><td>Pick a task of the project’s build files and run it (JetBrains Run Task)</td><td></td></tr>
+<tr><td><code>open_build_file</code></td><td>Open the project’s build file (JetBrains Open Config)</td><td></td></tr>
+<tr><td><code>validate_xml</code></td><td>Check the XML file is well formed and valid against its DTD (JetBrains Validate)</td><td></td></tr>
 <tr><td><code>stop_run</code></td><td>Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;px</code>, select: <code>&lt;space&gt;px</code></td></tr>
 <tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code>, select: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code></td></tr>
 <tr><td><code>open_log_file</code></td><td>Open zmax’s own log file (JetBrains Show Log)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;hL</code>, select: <code>&lt;space&gt;hL</code></td></tr>
 <tr><td><code>global_search_masked</code></td><td>Search the project, restricted to a file glob (JetBrains Find in Path file mask)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sm</code>, select: <code>&lt;space&gt;sm</code></td></tr>
+<tr><td><code>global_search_in_scope</code></td><td>Search the project inside a saved named scope (JetBrains scopes)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sM</code>, select: <code>&lt;space&gt;sM</code></td></tr>
+<tr><td><code>move_statement_up</code></td><td>Move the statement under the cursor above its previous sibling (JetBrains Move Statement Up)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xk</code>, select: <code>&lt;space&gt;xk</code></td></tr>
+<tr><td><code>move_statement_down</code></td><td>Move the statement under the cursor below its next sibling (JetBrains Move Statement Down)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xj</code>, select: <code>&lt;space&gt;xj</code></td></tr>
+<tr><td><code>word_next_other_humps</code></td><td>Next word start with the camel-hump setting inverted for this motion (JetBrains Move Caret to Next Word in Different CamelHumps Mode)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xww</code>, select: <code>&lt;space&gt;xww</code></td></tr>
+<tr><td><code>word_prev_other_humps</code></td><td>Previous word start with the camel-hump setting inverted for this motion (JetBrains Move Caret to Previous Word in Different CamelHumps Mode)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xwb</code>, select: <code>&lt;space&gt;xwb</code></td></tr>
+<tr><td><code>word_next_other_humps_extend</code></td><td>Extend to the next word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)</td><td></td></tr>
+<tr><td><code>word_prev_other_humps_extend</code></td><td>Extend to the previous word start with the camel-hump setting inverted (JetBrains Different CamelHumps Mode with Selection)</td><td></td></tr>
+<tr><td><code>show_siblings</code></td><td>List the symbols beside the one under the cursor (JetBrains Show Siblings)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lB</code>, select: <code>&lt;space&gt;lB</code></td></tr>
+<tr><td><code>delete_word_backward_other_humps</code></td><td>Delete to the word start with the camel-hump setting inverted (JetBrains Delete to Word Start in Different CamelHumps Mode)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;A-W&gt;</code></td></tr>
+<tr><td><code>delete_word_forward_other_humps</code></td><td>Delete to the word end with the camel-hump setting inverted (JetBrains Delete to Word End in Different CamelHumps Mode)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;A-D&gt;</code></td></tr>
+<tr><td><code>kill_word</code></td><td>Kill forward to the word end, onto the kill ring (emacs M-d, JetBrains Kill to Word End)</td><td><strong>hybrid, emacs, cua, micro</strong> — insert: <code>&lt;A-d&gt;</code></td></tr>
+<tr><td><code>backward_kill_word</code></td><td>Kill back to the word start, onto the kill ring (emacs M-DEL, JetBrains Kill to Word Start)</td><td><strong>hybrid, emacs, cua, micro, nano</strong> — insert: <code>&lt;A-backspace&gt;</code>, <code>&lt;A-C-backspace&gt;</code></td></tr>
+<tr><td><code>kill_region</code></td><td>Cut the region onto the kill ring (emacs C-w, JetBrains Kill Selected Region)</td><td><strong>hybrid, emacs, cua</strong> — insert: <code>&lt;C-w&gt;</code></td></tr>
+<tr><td><code>goto_test</code></td><td>Jump between a file and its test file (JetBrains Go to Test / Go to Test Subject)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fg</code>, select: <code>&lt;space&gt;fg</code></td></tr>
+<tr><td><code>export_to_scratch</code></td><td>Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bE</code>, select: <code>&lt;space&gt;bE</code></td></tr>
+<tr><td><code>recent_tests</code></td><td>Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cH</code>, select: <code>&lt;space&gt;cH</code></td></tr>
+<tr><td><code>sort_tree_by_time_newest</code></td><td>Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)</td><td></td></tr>
+<tr><td><code>documentation_back</code></td><td>Show the previous lookup in the Documentation tool window (JetBrains Back)</td><td></td></tr>
+<tr><td><code>documentation_forward</code></td><td>Show the next lookup in the Documentation tool window (JetBrains Forward)</td><td></td></tr>
+<tr><td><code>documentation_keep_tab</code></td><td>Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation)</td><td></td></tr>
+<tr><td><code>documentation_jump_to_source</code></td><td>Go to the declaration of the symbol the documentation shows (JetBrains Jump to Source)</td><td></td></tr>
+<tr><td><code>toggle_documentation_popup_first</code></td><td>Show Quick Documentation in the popup, or in the Documentation tool window (JetBrains Show Documentation Popup First)</td><td></td></tr>
+<tr><td><code>toggle_documentation_auto_update</code></td><td>Make the Documentation tool window follow the caret (JetBrains Auto-Update from Source)</td><td></td></tr>
+<tr><td><code>problems_copy_description</code></td><td>Copy the message of the problem selected in the Problems panel (JetBrains Copy Problem Description)</td><td></td></tr>
+<tr><td><code>toggle_problems_by_name</code></td><td>Order the Problems panel by message (JetBrains Sort by Name)</td><td></td></tr>
+<tr><td><code>toggle_problems_project</code></td><td>List every file’s problems in the Problems panel, or the current file’s (JetBrains Project Errors)</td><td></td></tr>
+<tr><td><code>toggle_problems_folders_first</code></td><td>In the project-wide Problems list, put directories before files (JetBrains Folders Always on Top)</td><td></td></tr>
+<tr><td><code>toggle_problems_autoscroll</code></td><td>Make the editor follow the Problems panel selection (JetBrains Open Files with Single Click)</td><td></td></tr>
+<tr><td><code>toggle_problems_preview</code></td><td>Show the lines around the selected problem beside the list (JetBrains Open Editor Preview)</td><td></td></tr>
+<tr><td><code>toggle_problems_preview_tab</code></td><td>Open files from the Problems panel in one reused buffer (JetBrains Enable Preview Tab)</td><td></td></tr>
+<tr><td><code>toggle_problems_by_severity</code></td><td>Order the Problems panel by severity, errors first (JetBrains Sort by Severity)</td><td></td></tr>
+<tr><td><code>problems_jump_to_source</code></td><td>Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source)</td><td></td></tr>
+<tr><td><code>problems_quick_fixes</code></td><td>Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes)</td><td></td></tr>
+<tr><td><code>toggle_search_preview</code></td><td>Move to the match while typing a search, or only on Enter (JetBrains Scroll to Results During Typing)</td><td></td></tr>
+<tr><td><code>toggle_popup_hints</code></td><td>Turn signature-help popups on or off (JetBrains Toggle Popup Hints)</td><td></td></tr>
+<tr><td><code>zen_mode</code></td><td>Distraction Free and full screen together (JetBrains Toggle Zen Mode)</td><td></td></tr>
+<tr><td><code>change_view_mode</code></td><td>Pick a view mode: distraction free, zen, full screen, focus (JetBrains View Mode)</td><td></td></tr>
+<tr><td><code>keymap_to_csv</code></td><td>Export every key binding as mode,keys,command CSV (JetBrains Export Keymap to CSV)</td><td></td></tr>
+<tr><td><code>new_html_file</code></td><td>Create an HTML5 page beside the current file (JetBrains HTML File)</td><td></td></tr>
+<tr><td><code>new_github_workflow</code></td><td>Create a GitHub workflow under .github/workflows (JetBrains GitHub Workflow)</td><td></td></tr>
+<tr><td><code>new_github_action</code></td><td>Create a GitHub action.yml in a directory (JetBrains GitHub Action)</td><td></td></tr>
+<tr><td><code>show_file_path</code></td><td>Open one of this file’s directories in the file manager (JetBrains File Path)</td><td></td></tr>
+<tr><td><code>clear_undo_history</code></td><td>Forget the buffer’s undo history (JetBrains Clear Undo History)</td><td></td></tr>
+<tr><td><code>revert_language_override</code></td><td>Detect the language from the file again, dropping one set by hand (JetBrains Revert File Type Override)</td><td></td></tr>
+<tr><td><code>open_in_opposite_group</code></td><td>Show this buffer in the neighbouring split too (JetBrains Open in Opposite Group)</td><td></td></tr>
+<tr><td><code>toggle_maximize_split</code></td><td>Show the focused window alone, or restore every window (JetBrains Maximize Editor in Split)</td><td></td></tr>
+<tr><td><code>toggle_statusline</code></td><td>Show or hide the status line (JetBrains Status Bar)</td><td></td></tr>
+<tr><td><code>toggle_minimap</code></td><td>Show or hide the workbench minimap (JetBrains Show Minimap)</td><td></td></tr>
+<tr><td><code>enable_minimap</code></td><td>Show the workbench minimap (JetBrains EnableMinimap)</td><td></td></tr>
+<tr><td><code>disable_minimap</code></td><td>Hide the workbench minimap (JetBrains DisableMinimap)</td><td></td></tr>
+<tr><td><code>project_tree_collapse_all</code></td><td>Collapse every directory in the project tree (JetBrains Collapse All)</td><td></td></tr>
+<tr><td><code>project_tree_expand_all</code></td><td>Expand every directory in the project tree (JetBrains Expand All)</td><td></td></tr>
+<tr><td><code>project_tree_expand_node</code></td><td>Expand the selected project tree directory (JetBrains Expand)</td><td></td></tr>
+<tr><td><code>project_tree_collapse_node</code></td><td>Collapse the selected project tree directory (JetBrains Collapse)</td><td></td></tr>
+<tr><td><code>project_tree_expand_recursively</code></td><td>Expand the selected directory and everything under it (JetBrains Expand Recursively)</td><td></td></tr>
+<tr><td><code>project_tree_sort_by_name</code></td><td>Order the project tree by name (JetBrains Sort by Name)</td><td></td></tr>
+<tr><td><code>project_tree_toggle_folders_first</code></td><td>List directories before files in the project tree, or mixed in (JetBrains Folders Always on Top)</td><td></td></tr>
+<tr><td><code>project_tree_open_selected</code></td><td>Open the file selected in the project tree (JetBrains Jump to Source)</td><td></td></tr>
+<tr><td><code>sort_tree_by_time_oldest</code></td><td>Order the project tree by modification time, oldest first (JetBrains Sort by Modification Time)</td><td></td></tr>
+<tr><td><code>structural_search</code></td><td>Find code by shape with a tree-sitter query (JetBrains Search Structurally)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;st</code>, select: <code>&lt;space&gt;st</code></td></tr>
+<tr><td><code>structural_replace</code></td><td>Rewrite what a tree-sitter query captures (JetBrains Replace Structurally)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sR</code>, select: <code>&lt;space&gt;sR</code></td></tr>
+<tr><td><code>goto_link_target</code></td><td>Open what the file in this buffer links to (JetBrains Go to Link Target)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;jL</code>, select: <code>&lt;space&gt;jL</code></td></tr>
+<tr><td><code>surround_with</code></td><td>Wrap the selected lines in one of the language’s block constructs (JetBrains Surround With)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xS</code>, select: <code>&lt;space&gt;xS</code></td></tr>
 <tr><td><code>rerun_failed_tests</code></td><td>Re-run only the tests that failed in the last run (JetBrains Rerun Failed Tests)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cf</code>, select: <code>&lt;space&gt;cf</code></td></tr>
 <tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-r&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, <code>&lt;C-c&gt;&lt;C-r&gt;</code></td></tr>
 <tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, insert: <code>&lt;C-x&gt;`</code><br><strong>hybrid</strong> — normal: <code>&lt;A-g&gt;n</code>, <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code>, <code>&lt;A-g&gt;&lt;A-n&gt;</code>, select: <code>&lt;C-x&gt;`</code>, <code>&lt;space&gt;Rn</code></td></tr>
@@ -3584,11 +3914,15 @@
 <tr><td><code>show_vcs_console</code></td><td>Every git command the editor has run this session (JetBrains Show VCS Console)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;g!</code>, select: <code>&lt;space&gt;g!</code></td></tr>
 <tr><td><code>clear_vcs_console</code></td><td>Empty the VCS console</td><td></td></tr>
 <tr><td><code>reveal_directory_in_tree</code></td><td>Reveal the current file’s directory in the project tree (JetBrains Select Directory in Project View)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;jT</code>, select: <code>&lt;space&gt;jT</code></td></tr>
+<tr><td><code>new_scratch_file</code></td><td>Pick a language and open a new scratch file of it, kept across sessions (JetBrains Scratch File, Cmd Shift N)</td><td></td></tr>
 <tr><td><code>show_scratch_files</code></td><td>Pick among the scratch buffers (JetBrains Show Scratch Files)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;b&lt;C-s&gt;</code>, select: <code>&lt;space&gt;b&lt;C-s&gt;</code></td></tr>
 <tr><td><code>reveal_in_tree</code></td><td>Reveal the current file in the project tree</td><td></td></tr>
 <tr><td><code>toggle_auto_reveal</code></td><td>Toggle always-select-opened-file (autoscroll from source)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pV</code>, select: <code>&lt;space&gt;pV</code></td></tr>
 <tr><td><code>focus_file_tree</code></td><td>Focus the project file tree panel</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code>, select: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code></td></tr>
 <tr><td><code>focus_structure</code></td><td>Focus the structure/symbol outline panel</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code>, select: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code></td></tr>
+<tr><td><code>toggle_group_problems</code></td><td>Group the Problems panel by the checker that reported each diagnostic (JetBrains Group by Inspection)</td><td></td></tr>
+<tr><td><code>toggle_compact_directories</code></td><td>Draw single-child directory chains as one row (JetBrains Compact Directories)</td><td></td></tr>
+<tr><td><code>toggle_sort_by_type</code></td><td>Order the project tree’s files by extension (JetBrains Sort by Type)</td><td></td></tr>
 <tr><td><code>toggle_file_details</code></td><td>Show or hide file sizes in the project tree (JetBrains File Details)</td><td></td></tr>
 <tr><td><code>restore_default_layout</code></td><td>Put the workbench drawers back to their default layout (JetBrains Restore Default Layout)</td><td></td></tr>
 <tr><td><code>hide_side_windows</code></td><td>Fold the workbench’s left column away (JetBrains Hide Side Tool Windows)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;WS</code>, select: <code>&lt;space&gt;WS</code></td></tr>
@@ -3674,6 +4008,12 @@
 <tr><td><code>fold_enable_on</code></td><td>Set ‘foldenable’: folds back to ‘foldlevel’ (vim zN)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zN</code></td></tr>
 <tr><td><code>fold_more</code></td><td>Fold more: close one more level of nested folds (zm)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zm</code></td></tr>
 <tr><td><code>fold_less</code></td><td>Fold less: open one more level of nested folds (zr)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zr</code></td></tr>
+<tr><td><code>fold_to_level</code></td><td>Set foldlevel to the count outright (JetBrains Expand to Level N)</td><td></td></tr>
+<tr><td><code>goto_next_problem_file</code></td><td>Go to the next open buffer that has diagnostics (JetBrains Select Next Problem File)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;b]</code>, select: <code>&lt;space&gt;b]</code></td></tr>
+<tr><td><code>goto_prev_problem_file</code></td><td>Go to the previous open buffer that has diagnostics (JetBrains Select Previous Problem File)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;b[</code>, select: <code>&lt;space&gt;b[</code></td></tr>
+<tr><td><code>fix_doc_comment</code></td><td>Write the doc comment for the definition at the cursor (JetBrains Fix Doc Comment)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;co</code>, select: <code>&lt;space&gt;co</code></td></tr>
+<tr><td><code>find_usages_in_file</code></td><td>References to the symbol at the cursor, in this file only (JetBrains Find Usages in File)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lu</code>, select: <code>&lt;space&gt;lu</code></td></tr>
+<tr><td><code>render_doc_comments</code></td><td>Show every doc comment in the buffer as rendered prose (JetBrains Render All Doc Comments)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;xV</code>, select: <code>&lt;space&gt;xV</code></td></tr>
 <tr><td><code>fold_delete</code></td><td>Delete fold under cursor (zd)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zd</code></td></tr>
 <tr><td><code>fold_delete_recursive</code></td><td>Delete the fold under the cursor and every fold nested in it (zD)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zD</code></td></tr>
 <tr><td><code>fold_delete_all</code></td><td>Delete all folds (zE)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zE</code></td></tr>
@@ -3766,6 +4106,8 @@
 <tr><td><code>goto_prev_unmatched_brace</code></td><td>Goto previous unmatched { ([{)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>[{</code></td></tr>
 <tr><td><code>goto_next_unmatched_paren</code></td><td>Goto next unmatched ) (])</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>])</code></td></tr>
 <tr><td><code>goto_next_unmatched_brace</code></td><td>Goto next unmatched } (]})</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>]}</code></td></tr>
+<tr><td><code>extend_to_block_start</code></td><td>Extend the selection to the start of the enclosing code block (JetBrains Move Caret to Code Block Start with Selection)</td><td></td></tr>
+<tr><td><code>extend_to_block_end</code></td><td>Extend the selection to the end of the enclosing code block (JetBrains Move Caret to Code Block End with Selection)</td><td></td></tr>
 <tr><td><code>goto_prev_preproc</code></td><td>Goto previous unmatched #if/#else ([#)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>[#</code></td></tr>
 <tr><td><code>goto_next_preproc</code></td><td>Goto next unmatched #endif/#else (]#)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>]#</code></td></tr>
 <tr><td><code>vim_sleep</code></td><td>Sleep for {count} seconds (vim gs)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>gs</code></td></tr>
@@ -3777,6 +4119,10 @@
 <tr><td><code>yank_file_name</code></td><td>Yank current file name to clipboard</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fyN</code>, <code>&lt;space&gt;fyn</code>, select: <code>&lt;space&gt;fyN</code>, <code>&lt;space&gt;fyn</code></td></tr>
 <tr><td><code>yank_file_path_with_line</code></td><td>Yank current file path:line to clipboard</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fyL</code>, <code>&lt;space&gt;fyl</code>, select: <code>&lt;space&gt;fyL</code>, <code>&lt;space&gt;fyl</code></td></tr>
 <tr><td><code>yank_file_path_with_line_col</code></td><td>Yank current file path:line:col to clipboard</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fyc</code>, select: <code>&lt;space&gt;fyc</code></td></tr>
+<tr><td><code>yank_file_path_from_workspace</code></td><td>Yank this file’s path relative to the workspace root (JetBrains Path from Content Root)</td><td></td></tr>
+<tr><td><code>yank_file_path_from_repo</code></td><td>Yank this file’s path relative to its git repository root (JetBrains Path From Repository Root)</td><td></td></tr>
+<tr><td><code>yank_url_at_cursor</code></td><td>Yank the URL under the cursor (JetBrains Copy URL)</td><td></td></tr>
+<tr><td><code>open_file_in_browser</code></td><td>Open this file in the system browser (JetBrains Open in Default Browser)</td><td></td></tr>
 <tr><td><code>yank_file_dir</code></td><td>Yank current file’s directory to clipboard</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fyD</code>, <code>&lt;space&gt;fyd</code>, select: <code>&lt;space&gt;fyD</code>, <code>&lt;space&gt;fyd</code></td></tr>
 <tr><td><code>copy_remote_url</code></td><td>Copy web permalink (host/blob/<sha>/path#Ln) for current line</sha></td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;glC</code>, <code>&lt;space&gt;glL</code>, <code>&lt;space&gt;glP</code>, select: <code>&lt;space&gt;glC</code>, <code>&lt;space&gt;glL</code>, <code>&lt;space&gt;glP</code></td></tr>
 <tr><td><code>open_remote_url</code></td><td>Open current line’s web permalink in the browser</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;glc</code>, <code>&lt;space&gt;gll</code>, <code>&lt;space&gt;glp</code>, select: <code>&lt;space&gt;glc</code>, <code>&lt;space&gt;gll</code>, <code>&lt;space&gt;glp</code></td></tr>
@@ -4143,6 +4489,26 @@
 <tr><td><code>dap_edit_condition</code></td><td>Edit breakpoint condition on current line</td><td><strong>helix</strong> — normal: <code>&lt;space&gt;G&lt;C-c&gt;</code>, select: <code>&lt;space&gt;G&lt;C-c&gt;</code></td></tr>
 <tr><td><code>dap_breakpoints_picker</code></td><td>View all breakpoints in a picker (JetBrains View Breakpoints)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dB</code>, select: <code>&lt;space&gt;dB</code></td></tr>
 <tr><td><code>dap_toggle_temporary_breakpoint</code></td><td>Toggle a breakpoint that clears on its first hit (JetBrains Toggle Temporary Line Breakpoint, gdb tbreak)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dt</code>, select: <code>&lt;space&gt;dt</code></td></tr>
+<tr><td><code>dap_toggle_breakpoint_enabled</code></td><td>Enable or disable the breakpoint on this line, keeping it (JetBrains Enable/Disable Breakpoint)</td><td></td></tr>
+<tr><td><code>dap_mute_breakpoints</code></td><td>Stop, or resume, sending any breakpoint to the debugger (JetBrains Mute Breakpoints)</td><td></td></tr>
+<tr><td><code>dap_disable_all_but_this</code></td><td>Disable every breakpoint except the one on this line (JetBrains Disable All Except This)</td><td></td></tr>
+<tr><td><code>dap_remove_all_but_this</code></td><td>Remove every breakpoint except the one on this line (JetBrains Remove All Except This)</td><td></td></tr>
+<tr><td><code>dap_remove_breakpoints_in_file</code></td><td>Remove every breakpoint in this file (JetBrains Remove All Breakpoints in the File)</td><td></td></tr>
+<tr><td><code>dap_restore_breakpoint</code></td><td>Put back the breakpoint removed last (JetBrains Restore Breakpoint)</td><td></td></tr>
+<tr><td><code>dap_add_conditional_breakpoint</code></td><td>Set a breakpoint here and edit its condition (JetBrains Add Conditional Breakpoint)</td><td></td></tr>
+<tr><td><code>dap_add_log_breakpoint</code></td><td>Set a breakpoint here and edit the message it logs (JetBrains Add Logging Breakpoint)</td><td></td></tr>
+<tr><td><code>dap_copy_stack</code></td><td>Copy the stopped thread’s stack frames to the clipboard (JetBrains Copy Stack)</td><td></td></tr>
+<tr><td><code>dap_add_watch</code></td><td>Add a watch expression (JetBrains New Watch)</td><td></td></tr>
+<tr><td><code>dap_show_watches</code></td><td>Show every watch with its value in the selected frame (JetBrains Watches)</td><td></td></tr>
+<tr><td><code>dap_remove_watch</code></td><td>Remove a picked watch (JetBrains Remove Watch)</td><td></td></tr>
+<tr><td><code>dap_remove_all_watches</code></td><td>Remove every watch (JetBrains Remove All Watches)</td><td></td></tr>
+<tr><td><code>dap_edit_watch</code></td><td>Edit a picked watch (JetBrains Edit Watch)</td><td></td></tr>
+<tr><td><code>dap_copy_watch</code></td><td>Duplicate a picked watch (JetBrains Duplicate Watch)</td><td></td></tr>
+<tr><td><code>dap_move_watch_up</code></td><td>Move a picked watch up (JetBrains Move Watch Up)</td><td></td></tr>
+<tr><td><code>dap_move_watch_down</code></td><td>Move a picked watch down (JetBrains Move Watch Down)</td><td></td></tr>
+<tr><td><code>dap_copy_variable_value</code></td><td>Yank a picked variable’s value (JetBrains Copy Value)</td><td></td></tr>
+<tr><td><code>dap_copy_variable_name</code></td><td>Yank a picked variable’s name (JetBrains Copy Name)</td><td></td></tr>
+<tr><td><code>dap_set_variable</code></td><td>Change a picked variable’s value in the debuggee (JetBrains Set Value)</td><td></td></tr>
 <tr><td><code>dap_attach_to_process</code></td><td>Attach the debugger to a running process (JetBrains Attach to Process, Ctrl Alt F5)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;da</code>, select: <code>&lt;space&gt;da</code></td></tr>
 <tr><td><code>dap_show_execution_point</code></td><td>Jump to where the program is stopped (JetBrains Show Execution Point, Alt F10)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;dx</code>, select: <code>&lt;space&gt;dx</code></td></tr>
 <tr><td><code>dap_evaluate_expression</code></td><td>Evaluate an expression in the selected frame (JetBrains Evaluate Expression, Alt F8)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;de</code>, select: <code>&lt;space&gt;de</code></td></tr>
@@ -4202,6 +4568,10 @@
 <tr><td><code>goto_next_tabstop</code></td><td>Goto next snippet placeholder</td><td></td></tr>
 <tr><td><code>goto_prev_tabstop</code></td><td>Goto next snippet placeholder</td><td></td></tr>
 <tr><td><code>emmet_expand</code></td><td>Expand emmet/zen HTML abbreviation (or Tab)</td><td><strong>hybrid, helix, kakoune, emacs, cua, micro, nano</strong> — insert: <code>&lt;tab&gt;</code></td></tr>
+<tr><td><code>emmet_preview</code></td><td>Show what the abbreviation before the cursor expands to (JetBrains Emmet Preview)</td><td></td></tr>
+<tr><td><code>emmet_next_edit_point</code></td><td>Jump to the next empty attribute value or empty element (JetBrains Next Emmet Edit Point)</td><td></td></tr>
+<tr><td><code>emmet_prev_edit_point</code></td><td>Jump to the previous empty attribute value or empty element (JetBrains Previous Emmet Edit Point)</td><td></td></tr>
+<tr><td><code>surround_with_emmet</code></td><td>Wrap the selection in the expansion of an emmet abbreviation (JetBrains Surround with Emmet)</td><td></td></tr>
 <tr><td><code>snippet_expand</code></td><td>Expand the user snippet whose trigger precedes the cursor</td><td></td></tr>
 <tr><td><code>rotate_selections_first</code></td><td>Make the first selection your primary one</td><td></td></tr>
 <tr><td><code>rotate_selections_last</code></td><td>Make the last selection your primary one</td><td></td></tr>
@@ -4322,11 +4692,17 @@
 <tr><td><code>minibuffer_choose_completion</code></td><td>Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion)</td><td></td></tr>
 <tr><td><code>minibuffer_complete_history</code></td><td>Complete the minibuffer input against its history (emacs minibuffer-complete-history)</td><td></td></tr>
 <tr><td><code>dabbrev_expand</code></td><td>Expand the word before point from the buffer’s other words (emacs dabbrev-expand, JetBrains Cyclic Expand Word)</td><td><strong>hybrid</strong> — insert: <code>&lt;A-/&gt;</code><br><strong>emacs, cua, micro</strong> — normal: <code>&lt;A-/&gt;</code>, insert: <code>&lt;A-/&gt;</code></td></tr>
+<tr><td><code>dabbrev_expand_backward</code></td><td>Expand the word before point, trying the words after it first (JetBrains Cyclic Expand Word (Backward))</td><td></td></tr>
 <tr><td><code>dabbrev_completion</code></td><td>List the buffer words that could expand the word before point (emacs dabbrev-completion)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;A-C-/&gt;</code></td></tr>
 <tr><td><code>copy_reference</code></td><td>Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference)</td><td></td></tr>
 <tr><td><code>error_description</code></td><td>Show the full text of the diagnostic under the cursor (JetBrains Error Description)</td><td></td></tr>
 <tr><td><code>context_info</code></td><td>Show the declarations enclosing the caret (JetBrains Show Element at Caret, Alt Q)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;lQ</code>, select: <code>&lt;space&gt;lQ</code></td></tr>
 <tr><td><code>local_history_revert</code></td><td>Revert this buffer to one of its Local History snapshots (JetBrains Local History Revert)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fV</code>, select: <code>&lt;space&gt;fV</code></td></tr>
+<tr><td><code>local_history_put_label</code></td><td>Label the buffer as it is now in Local History (JetBrains Put Label)</td><td></td></tr>
+<tr><td><code>local_history_project</code></td><td>Every Local History snapshot of every file (JetBrains Show Project History)</td><td></td></tr>
+<tr><td><code>local_history_selection</code></td><td>Local History snapshots in which the selected lines differ (JetBrains Show History for Selection)</td><td></td></tr>
+<tr><td><code>local_history_revert_selection</code></td><td>Put the selected lines back as a Local History snapshot has them (JetBrains Revert Selection)</td><td></td></tr>
+<tr><td><code>local_history_create_patch</code></td><td>Diff from a Local History snapshot to the buffer (JetBrains Create Patch)</td><td></td></tr>
 <tr><td><code>pin_tab</code></td><td>Pin or unpin this buffer, keeping it out of the bulk buffer closes (JetBrains Pin Tab)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bt</code>, select: <code>&lt;space&gt;bt</code></td></tr>
 <tr><td><code>git_history_for_selection</code></td><td>Commits that touched the selected lines (JetBrains Show History for Selection)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gfL</code>, select: <code>&lt;space&gt;gfL</code></td></tr>
 <tr><td><code>git_compare_with_branch</code></td><td>Diff this file against a branch you pick (JetBrains Compare with Branch)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gC</code>, select: <code>&lt;space&gt;gC</code></td></tr>
@@ -4539,6 +4915,19 @@
 <tr><td><code>shell_dynamic_complete_command</code></td><td>Shell buffer: complete the command name before point from PATH (emacs shell-dynamic-complete-command)</td><td></td></tr>
 <tr><td><code>term_char_mode</code></td><td>Terminal: send every key straight to the process (emacs term-char-mode)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-k&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-k&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-k&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;C-c&gt;&lt;C-k&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-k&gt;</code></td></tr>
 <tr><td><code>term_pager_toggle</code></td><td>Terminal: stop output after each screenful (emacs term-pager-toggle)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-q&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-q&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-q&gt;</code><br><strong>hybrid</strong> — normal: <code>&lt;C-c&gt;&lt;C-q&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-q&gt;</code></td></tr>
+<tr><td><code>terminal_clear</code></td><td>Clear the terminal screen and scrollback (JetBrains Clear Terminal)</td><td></td></tr>
+<tr><td><code>terminal_clear_prompt</code></td><td>Erase the command being typed in the terminal (JetBrains Clear Command Prompt)</td><td></td></tr>
+<tr><td><code>terminal_delete_previous_word</code></td><td>Delete the word before the terminal cursor (JetBrains Delete Previous Word)</td><td></td></tr>
+<tr><td><code>terminal_line_up</code></td><td>Scroll the terminal back one line (JetBrains Line Up)</td><td></td></tr>
+<tr><td><code>terminal_line_down</code></td><td>Scroll the terminal forward one line (JetBrains Line Down)</td><td></td></tr>
+<tr><td><code>terminal_page_up</code></td><td>Scroll the terminal back one page (JetBrains Page Up)</td><td></td></tr>
+<tr><td><code>terminal_page_down</code></td><td>Scroll the terminal forward one page (JetBrains Page Down)</td><td></td></tr>
+<tr><td><code>terminal_close_session</code></td><td>End the terminal’s shell and close its panel (JetBrains Close Session)</td><td></td></tr>
+<tr><td><code>terminal_paste</code></td><td>Paste the clipboard into the terminal (JetBrains Paste)</td><td></td></tr>
+<tr><td><code>terminal_paste_selection</code></td><td>Paste the primary selection into the terminal (JetBrains Paste From Selection Clipboard)</td><td></td></tr>
+<tr><td><code>open_in_terminal</code></td><td>Open a terminal in this file’s directory (JetBrains Open in Terminal)</td><td></td></tr>
+<tr><td><code>terminal_new_predefined_session</code></td><td>Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session)</td><td></td></tr>
+<tr><td><code>terminal_search_history</code></td><td>Type a command picked from the shell history at the terminal prompt (JetBrains Search in Command History)</td><td></td></tr>
 <tr><td><code>switch_to_completions</code></td><td>Move into the list of completions (emacs switch-to-completions)</td><td></td></tr>
 <tr><td><code>previous_matching_history_element</code></td><td>Read a regexp, then recall the newest older history entry matching it (emacs previous-matching-history-element)</td><td></td></tr>
 <tr><td><code>next_matching_history_element</code></td><td>Read a regexp, then recall the oldest newer history entry matching it (emacs next-matching-history-element)</td><td></td></tr>
