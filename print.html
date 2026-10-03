@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-a38498ac.js";
+            window.path_to_searchindex_js = "searchindex-f5f5c838.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2501,6 +2501,7 @@ without scrolling.</p>
 <tr><td><code>:blast</code>, <code>:bl</code></td><td>Go to the last buffer in the buffer list (vim :blast).</td></tr>
 <tr><td><code>:bmodified</code>, <code>:bm</code></td><td>Go to the next modified buffer (vim :bmodified).</td></tr>
 <tr><td><code>:ball</code>, <code>:sball</code>, <code>:unhide</code>, <code>:unh</code>, <code>:sunhide</code>, <code>:sun</code></td><td>Open a window for each buffer in the buffer list (vim :ball; :unhide/:sunhide — every zmax buffer is loaded).</td></tr>
+<tr><td><code>:file</code>, <code>:f</code>, <code>:fi</code>, <code>:fil</code></td><td>Rename the current buffer to {name}, or show the file info (vim :file).</td></tr>
 <tr><td><code>:badd</code></td><td>Add a file to the buffer list without editing it (vim :badd).</td></tr>
 <tr><td><code>:balt</code></td><td>Add a file to the buffer list and set it as the alternate file (vim :balt).</td></tr>
 <tr><td><code>:bufdo</code></td><td>Run an Ex command in each listed buffer (vim :bufdo).</td></tr>
@@ -2571,6 +2572,20 @@ without scrolling.</p>
 <tr><td><code>:line-ending</code></td><td>Set the document’s default line ending. Options: crlf, lf.</td></tr>
 <tr><td><code>:earlier</code>, <code>:ear</code></td><td>Jump back to an earlier point in edit history. Accepts a number of steps or a time span.</td></tr>
 <tr><td><code>:later</code>, <code>:lat</code></td><td>Jump to a later point in edit history. Accepts a number of steps or a time span.</td></tr>
+<tr><td><code>:NERDTree</code></td><td>Open the project tree, rooted at [dir], and move into it (NERDTree :NERDTree).</td></tr>
+<tr><td><code>:NERDTreeToggle</code></td><td>Close the project tree, or open it (rooted at [dir]) and move into it (NERDTree :NERDTreeToggle).</td></tr>
+<tr><td><code>:NERDTreeFocus</code></td><td>Open the project tree if it is closed and move into it (NERDTree :NERDTreeFocus).</td></tr>
+<tr><td><code>:NERDTreeClose</code></td><td>Close the project tree (NERDTree :NERDTreeClose).</td></tr>
+<tr><td><code>:NERDTreeFind</code></td><td>Reveal [path], else the current file, in the project tree (NERDTree :NERDTreeFind).</td></tr>
+<tr><td><code>:TlistToggle</code>, <code>:Tlist</code></td><td>Open or close the structure outline, leaving the cursor where it is (taglist :TlistToggle).</td></tr>
+<tr><td><code>:TlistOpen</code></td><td>Open the structure outline and move into it (taglist :TlistOpen).</td></tr>
+<tr><td><code>:TlistClose</code></td><td>Close the structure outline (taglist :TlistClose).</td></tr>
+<tr><td><code>:Minimap</code></td><td>Show the minimap (vim-minimap :Minimap).</td></tr>
+<tr><td><code>:MinimapToggle</code></td><td>Show or hide the minimap (vim-minimap :MinimapToggle).</td></tr>
+<tr><td><code>:MinimapClose</code></td><td>Hide the minimap (vim-minimap :MinimapClose).</td></tr>
+<tr><td><code>:LOTROpen</code></td><td>Show the registers tool window (vim-lotr :LOTROpen).</td></tr>
+<tr><td><code>:LOTRToggle</code></td><td>Show or hide the registers tool window (vim-lotr :LOTRToggle).</td></tr>
+<tr><td><code>:LOTRClose</code></td><td>Hide the registers tool window (vim-lotr :LOTRClose).</td></tr>
 <tr><td><code>:undotree</code>, <code>:undo-tree</code>, <code>:UndotreeToggle</code></td><td>Open the branching undo-history browser (vim undotree).</td></tr>
 <tr><td><code>:undolist</code>, <code>:undol</code></td><td>List the undo states as a text popup (vim :undolist).</td></tr>
 <tr><td><code>:injections</code>, <code>:injection-rules</code></td><td>List the active language-injection rules (defaults + injections.toml).</td></tr>
@@ -2967,7 +2982,7 @@ without scrolling.</p>
 <tr><td><code>:scope-delete</code></td><td>Forget a saved scope.</td></tr>
 <tr><td><code>:scopes</code></td><td>List the saved search scopes (JetBrains Scopes).</td></tr>
 <tr><td><code>:diagnostics-severity</code>, <code>:error-highlighting</code></td><td>The lowest diagnostic severity the editor draws: error, warning, info, hint, off (JetBrains Error Highlighting).</td></tr>
-<tr><td><code>:changelist</code>, <code>:cl</code></td><td>Put this file in a named changelist, or report which one holds it (JetBrains changelists).</td></tr>
+<tr><td><code>:changelist</code></td><td>Put this file in a named changelist, or report which one holds it (JetBrains changelists).</td></tr>
 <tr><td><code>:changelists</code>, <code>:cls</code></td><td>List every changelist and the files in it (JetBrains Changes view).</td></tr>
 <tr><td><code>:changelist-commit</code>, <code>:cl-commit</code></td><td>Commit only the files in a changelist (JetBrains Commit changelist).</td></tr>
 <tr><td><code>:changelist-new</code>, <code>:cl-new</code></td><td>Create an empty changelist (JetBrains New Changelist).</td></tr>
@@ -3095,7 +3110,7 @@ without scrolling.</p>
 <tr><td><code>:normal</code>, <code>:norm</code>, <code>:normal!</code>, <code>:norm!</code></td><td>Execute {commands} as normal-mode keystrokes (vim :normal[!]).</td></tr>
 <tr><td><code>:mark</code>, <code>:k</code></td><td>Set mark {x} at the cursor position (vim :mark / :k).</td></tr>
 <tr><td><code>:buffer</code>, <code>:buf</code>, <code>:b</code></td><td>Switch to the open buffer whose path contains {name} (vim :buffer / :b).</td></tr>
-<tr><td><code>:resize</code>, <code>:res</code></td><td>Adjust the current window height (vim :resize [+/-]{N}).</td></tr>
+<tr><td><code>:resize</code>, <code>:res</code></td><td>Adjust window N’s (else the current window’s) height, or width under :vertical (vim :[N]resize [+/-]{n}).</td></tr>
 <tr><td><code>:let</code></td><td>Set a vimscript variable via the embedded interpreter (:let x = 42).</td></tr>
 <tr><td><code>:Files</code></td><td>Fuzzy-find files with fzf and open the selection (fzf.vim :Files).</td></tr>
 <tr><td><code>:GFiles</code>, <code>:GitFiles</code></td><td>Fuzzy-find git-tracked files with fzf and open the pick (fzf.vim :GFiles).</td></tr>
@@ -5381,6 +5396,12 @@ without scrolling.</p>
 <tr><td><code>export_to_scratch</code></td><td>Copy the selection (or the buffer) into a scratch buffer of the same language (JetBrains Export to Scratch File)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;bE</code>, select: <code>&lt;space&gt;bE</code></td></tr>
 <tr><td><code>recent_tests</code></td><td>Pick one of the test runs that have finished and run it again (JetBrains Recent Tests)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;cH</code>, select: <code>&lt;space&gt;cH</code></td></tr>
 <tr><td><code>sort_tree_by_time_newest</code></td><td>Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)</td><td></td></tr>
+<tr><td><code>compare_directories_view</code></td><td>Compare two directory trees file by file and synchronize them (JetBrains Compare Directories)</td><td></td></tr>
+<tr><td><code>blank_diff_window</code></td><td>Two empty buffers side by side, diffed as you type or paste (JetBrains Open Blank Diff Window)</td><td></td></tr>
+<tr><td><code>blank_diff_toggle_three_side</code></td><td>Add a third side to the blank diff window, or take it away (JetBrains Toggle Three-Side Mode)</td><td></td></tr>
+<tr><td><code>blank_diff_open_blank</code></td><td>Empty this side of the blank diff window (JetBrains Open Blank Editor)</td><td></td></tr>
+<tr><td><code>blank_diff_open_file</code></td><td>Show a file on this side of the blank diff window (JetBrains Open File)</td><td></td></tr>
+<tr><td><code>git_diff_in_new_tab</code></td><td>This file’s changes against HEAD in a new tab, editable and diffed live (JetBrains Show Diff in a New Tab)</td><td></td></tr>
 <tr><td><code>documentation_back</code></td><td>Show the previous lookup in the Documentation tool window (JetBrains Back)</td><td></td></tr>
 <tr><td><code>documentation_forward</code></td><td>Show the next lookup in the Documentation tool window (JetBrains Forward)</td><td></td></tr>
 <tr><td><code>documentation_keep_tab</code></td><td>Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation)</td><td></td></tr>
@@ -6238,6 +6259,20 @@ without scrolling.</p>
 <tr><td><code>goto_next_usage</code></td><td>Jump to the next usage of the symbol at the caret (JetBrains Next Highlighted Usage)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;s&lt;gt&gt;</code>, select: <code>&lt;space&gt;s&lt;gt&gt;</code></td></tr>
 <tr><td><code>goto_prev_usage</code></td><td>Jump to the previous usage of the symbol at the caret (JetBrains Previous Highlighted Usage)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;s&lt;lt&gt;</code>, select: <code>&lt;space&gt;s&lt;lt&gt;</code></td></tr>
 <tr><td><code>highlight_usages_in_file</code></td><td>Highlight every occurrence of the symbol at the caret (JetBrains Highlight Usages in File, Ctrl Shift F7)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;su</code>, select: <code>&lt;space&gt;su</code></td></tr>
+<tr><td><code>services_view</code></td><td>The run configurations with their state, grouped and hideable (JetBrains Services)</td><td></td></tr>
+<tr><td><code>services_restore_all</code></td><td>Show every hidden run configuration in the Services view again (JetBrains Restore Hidden Configurations)</td><td></td></tr>
+<tr><td><code>manage_run_targets</code></td><td>The run targets; pick one to remove it (JetBrains Manage Targets)</td><td></td></tr>
+<tr><td><code>run_target_add</code></td><td>Define a run target: SSH host, Docker image or running container (JetBrains Manage Targets)</td><td></td></tr>
+<tr><td><code>choose_run_target</code></td><td>Choose where the active run configuration runs (JetBrains Run Targets)</td><td></td></tr>
+<tr><td><code>build_tool_window</code></td><td>The build-tool window: the build files’ projects, members and tasks (JetBrains Gradle/Maven/Cargo tool window)</td><td></td></tr>
+<tr><td><code>build_sync</code></td><td>Reload the build projects: run the sync triggers and restart the language servers (JetBrains Reload All Projects)</td><td></td></tr>
+<tr><td><code>build_sync_project</code></td><td>Reload the build project the file belongs to (JetBrains Reload Project)</td><td></td></tr>
+<tr><td><code>build_hide_sync_notice</code></td><td>Stop announcing the changed build files until they change again (JetBrains Hide Load Build Changes)</td><td></td></tr>
+<tr><td><code>build_auto_sync</code></td><td>Reload build files on every change, or only on build_sync (JetBrains Auto-Sync Settings)</td><td></td></tr>
+<tr><td><code>build_tool_settings</code></td><td>Open the build-tool window’s saved settings (JetBrains Build Tool Settings)</td><td></td></tr>
+<tr><td><code>build_task_trigger</code></td><td>Run a build task before or after build, rebuild or sync (JetBrains Execute Before/After)</td><td></td></tr>
+<tr><td><code>build_task_triggers</code></td><td>The build task triggers; pick one to remove it (JetBrains Tasks Activation)</td><td></td></tr>
+<tr><td><code>run_config_add_before_task</code></td><td>Run a build task before the active run configuration (JetBrains Execute Before Run/Debug)</td><td></td></tr>
 <tr><td><code>build_project</code></td><td>Build the project with its own build tool (JetBrains Build Project, Ctrl F9)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pB</code>, select: <code>&lt;space&gt;pB</code></td></tr>
 <tr><td><code>rebuild_project</code></td><td>Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;pC</code>, select: <code>&lt;space&gt;pC</code></td></tr>
 <tr><td><code>new_file_in_directory</code></td><td>Create a file next to the current one and open it (JetBrains New in This Directory)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;fn</code>, select: <code>&lt;space&gt;fn</code></td></tr>
@@ -6770,6 +6805,21 @@ they exist, best-effort (errors surface on the status line):</p>
 <li><code>init.el</code> — evaluated as Emacs Lisp.</li>
 <li><code>init.vim</code> — evaluated as Vimscript.</li>
 </ul>
+<h2 id="session-files--s"><a class="header" href="#session-files--s">Session files (<code>-S</code>)</a></h2>
+<p><code>zmax -S {file}</code> sources a Vimscript file after the init scripts, plugins and
+command-line files have loaded — vim’s <code>-S</code> order — so a session written by
+vim’s <code>:mksession</code> or the vim-session plugin restores its layout:</p>
+<pre><code class="language-sh">zmax -S ~/.vim/sessions/work.vim + notes.txt
+</code></pre>
+<p>A bare <code>-S</code> (last, or followed by another option) sources <code>Session.vim</code>; <code>-S</code>
+may be repeated. The session’s commands run through the same interpreter as
+<code>:source</code>: <code>badd +{lnum}</code> lists a buffer that is entered on <code>{lnum}</code>,
+<code>edit</code>/<code>tabedit</code>/<code>tabnext</code> drive the tab pages, <code>vsplit</code>, <code>{N}wincmd</code>, <code>vert {N}resize</code> and <code>file {name}</code> rebuild a split layout window by window, <code>&amp;columns</code>
+and <code>&amp;lines</code> report the area the windows share,
+<code>winheight(0)</code>/<code>winwidth(0)</code> measure the current window, and <code>normal!</code> runs
+zmax’s own Normal mode in script order, so the session’s <code>exe s:l | normal! zt</code>
+scroll lands where vim puts it. <code>:source {session}</code> at the prompt restores the
+same way.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="language-servers"><a class="header" href="#language-servers">Language servers</a></h1>
 <p>Zmax has built-in support for the <a href="https://microsoft.github.io/language-server-protocol/">Language Server Protocol</a>, providing
@@ -9971,7 +10021,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>902</strong> (7.6%)</li>
 <li>Absent: <strong>1184</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2959 static commands, 3200 typable <code>:</code> commands, 4700 default keybindings</li>
+<li>zmax source surface: 2979 static commands, 3219 typable <code>:</code> commands, 4717 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>

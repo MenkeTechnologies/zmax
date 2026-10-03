@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-a38498ac.js";
+            window.path_to_searchindex_js = "searchindex-f5f5c838.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -323,6 +323,21 @@ they exist, best-effort (errors surface on the status line):</p>
 <li><code>init.el</code> — evaluated as Emacs Lisp.</li>
 <li><code>init.vim</code> — evaluated as Vimscript.</li>
 </ul>
+<h2 id="session-files--s"><a class="header" href="#session-files--s">Session files (<code>-S</code>)</a></h2>
+<p><code>zmax -S {file}</code> sources a Vimscript file after the init scripts, plugins and
+command-line files have loaded — vim’s <code>-S</code> order — so a session written by
+vim’s <code>:mksession</code> or the vim-session plugin restores its layout:</p>
+<pre><code class="language-sh">zmax -S ~/.vim/sessions/work.vim + notes.txt
+</code></pre>
+<p>A bare <code>-S</code> (last, or followed by another option) sources <code>Session.vim</code>; <code>-S</code>
+may be repeated. The session’s commands run through the same interpreter as
+<code>:source</code>: <code>badd +{lnum}</code> lists a buffer that is entered on <code>{lnum}</code>,
+<code>edit</code>/<code>tabedit</code>/<code>tabnext</code> drive the tab pages, <code>vsplit</code>, <code>{N}wincmd</code>, <code>vert {N}resize</code> and <code>file {name}</code> rebuild a split layout window by window, <code>&amp;columns</code>
+and <code>&amp;lines</code> report the area the windows share,
+<code>winheight(0)</code>/<code>winwidth(0)</code> measure the current window, and <code>normal!</code> runs
+zmax’s own Normal mode in script order, so the session’s <code>exe s:l | normal! zt</code>
+scroll lands where vim puts it. <code>:source {session}</code> at the prompt restores the
+same way.</p>
 
                     </main>
 
