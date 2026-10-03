@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-62ed1d57.js";
+            window.path_to_searchindex_js = "searchindex-f5f5c838.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2572,6 +2572,20 @@ without scrolling.</p>
 <tr><td><code>:line-ending</code></td><td>Set the document’s default line ending. Options: crlf, lf.</td></tr>
 <tr><td><code>:earlier</code>, <code>:ear</code></td><td>Jump back to an earlier point in edit history. Accepts a number of steps or a time span.</td></tr>
 <tr><td><code>:later</code>, <code>:lat</code></td><td>Jump to a later point in edit history. Accepts a number of steps or a time span.</td></tr>
+<tr><td><code>:NERDTree</code></td><td>Open the project tree, rooted at [dir], and move into it (NERDTree :NERDTree).</td></tr>
+<tr><td><code>:NERDTreeToggle</code></td><td>Close the project tree, or open it (rooted at [dir]) and move into it (NERDTree :NERDTreeToggle).</td></tr>
+<tr><td><code>:NERDTreeFocus</code></td><td>Open the project tree if it is closed and move into it (NERDTree :NERDTreeFocus).</td></tr>
+<tr><td><code>:NERDTreeClose</code></td><td>Close the project tree (NERDTree :NERDTreeClose).</td></tr>
+<tr><td><code>:NERDTreeFind</code></td><td>Reveal [path], else the current file, in the project tree (NERDTree :NERDTreeFind).</td></tr>
+<tr><td><code>:TlistToggle</code>, <code>:Tlist</code></td><td>Open or close the structure outline, leaving the cursor where it is (taglist :TlistToggle).</td></tr>
+<tr><td><code>:TlistOpen</code></td><td>Open the structure outline and move into it (taglist :TlistOpen).</td></tr>
+<tr><td><code>:TlistClose</code></td><td>Close the structure outline (taglist :TlistClose).</td></tr>
+<tr><td><code>:Minimap</code></td><td>Show the minimap (vim-minimap :Minimap).</td></tr>
+<tr><td><code>:MinimapToggle</code></td><td>Show or hide the minimap (vim-minimap :MinimapToggle).</td></tr>
+<tr><td><code>:MinimapClose</code></td><td>Hide the minimap (vim-minimap :MinimapClose).</td></tr>
+<tr><td><code>:LOTROpen</code></td><td>Show the registers tool window (vim-lotr :LOTROpen).</td></tr>
+<tr><td><code>:LOTRToggle</code></td><td>Show or hide the registers tool window (vim-lotr :LOTRToggle).</td></tr>
+<tr><td><code>:LOTRClose</code></td><td>Hide the registers tool window (vim-lotr :LOTRClose).</td></tr>
 <tr><td><code>:undotree</code>, <code>:undo-tree</code>, <code>:UndotreeToggle</code></td><td>Open the branching undo-history browser (vim undotree).</td></tr>
 <tr><td><code>:undolist</code>, <code>:undol</code></td><td>List the undo states as a text popup (vim :undolist).</td></tr>
 <tr><td><code>:injections</code>, <code>:injection-rules</code></td><td>List the active language-injection rules (defaults + injections.toml).</td></tr>
@@ -10007,7 +10021,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>902</strong> (7.6%)</li>
 <li>Absent: <strong>1184</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2979 static commands, 3204 typable <code>:</code> commands, 4717 default keybindings</li>
+<li>zmax source surface: 2979 static commands, 3219 typable <code>:</code> commands, 4717 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
