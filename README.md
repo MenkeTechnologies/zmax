@@ -235,7 +235,7 @@ leaving the editor:
 - **Help browser** (`:help`, `SPC h h`) — searchable across every command, key,
   and topic; `SPC h` describe-* routes symbol lookups through LSP hover.
 - **Start screen** — a startify-style recent-files page (frecency + MRU) shown
-  on launch.
+  on launch; reopen it any time with `:startify` / `:banner` or `SPC b h`.
 - **Wildfire** — press `<ret>` in normal mode to select the closest text
   object and again to grow to the next enclosing one; `<backspace>` shrinks.
 

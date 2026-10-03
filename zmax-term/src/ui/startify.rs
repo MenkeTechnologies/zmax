@@ -160,9 +160,14 @@ impl Startify {
                     }
                 })
             }
-            // Scratch buffer is already open underneath; just reveal it.
-            EntryAction::NewFile => Box::new(|compositor: &mut Compositor, _cx| {
+            // On launch the empty scratch is already underneath, so just reveal it;
+            // reopened over a real buffer (`:startify`), act like vim-startify's `:enew`.
+            EntryAction::NewFile => Box::new(|compositor: &mut Compositor, cx: &mut Context| {
                 compositor.pop();
+                let (_, doc) = zmax_view::current_ref!(cx.editor);
+                if doc.path().is_some() || doc.is_modified() || doc.text().len_chars() > 0 {
+                    cx.editor.new_file(Action::Replace);
+                }
             }),
             EntryAction::Quit => Box::new(|compositor: &mut Compositor, cx: &mut Context| {
                 compositor.pop();

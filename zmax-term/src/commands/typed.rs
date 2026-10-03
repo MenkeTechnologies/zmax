@@ -34792,6 +34792,24 @@ fn ex_version(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
 
 /// vim `:intro` — show the introductory message (name, version, and a pointer to
 /// help/quit) in a scratch buffer.
+/// `:startify` / `:banner` — reopen the launch start screen over the current view.
+fn ex_startify(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(ui::Startify::new()));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 fn ex_intro(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -65978,6 +65996,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["int"],
         doc: "Show the introductory message (vim :intro).",
         fun: ex_intro,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "startify",
+        aliases: &["banner"],
+        doc: "Open the start screen: banner, recent files, project languages (vim-startify :Startify).",
+        fun: ex_startify,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

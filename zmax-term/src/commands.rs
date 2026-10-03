@@ -2034,6 +2034,7 @@ impl MappableCommand {
         global_visual_wrap_prefix_mode, "Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode)",
         help, "Open the inline Help browser",
         dashboard, "Open the system-stats Dashboard (Preferences)",
+        startify, "Open the start screen: banner, recent files, project languages (vim-startify :Startify, spacemacs home buffer)",
         search_in_files, "Open the project-wide Find in Files panel",
         terminal, "Open an integrated terminal (PTY shell)",
         comint_shell, "Open a comint line-oriented shell buffer (emacs M-x shell)",
@@ -53664,6 +53665,12 @@ fn dashboard(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::preferences::PreferencesPanel::new(5)) as Box<dyn Component>)
     });
+}
+
+/// Reopen the start screen shown on a no-args launch (vim-startify `:Startify`,
+/// spacemacs `SPC b h` home buffer).
+fn startify(cx: &mut Context) {
+    open_overlay(cx, |_editor| Ok(Box::new(crate::ui::Startify::new()) as Box<dyn Component>));
 }
 
 /// Open an integrated terminal running the user's `$SHELL` in a PTY.

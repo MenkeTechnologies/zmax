@@ -1435,6 +1435,7 @@
 | `:print-line-number`, `:=` | Echo the line number of {line}, or of the buffer's last line (vim/nvi :=). |
 | `:version`, `:ver` | Show the zmax version and compiled feature summary (vim :version). |
 | `:intro`, `:int` | Show the introductory message (vim :intro). |
+| `:startify`, `:banner` | Open the start screen: banner, recent files, project languages (vim-startify :Startify). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
 | `:redrawtabline` | Redraw the tab line (vim :redrawtabline; approximated by a full redraw). |
 | `:silent`, `:sil` | Run {cmd} silently (vim :silent[!]); message suppression is best-effort. |

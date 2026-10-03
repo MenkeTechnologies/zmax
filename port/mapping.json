@@ -65418,7 +65418,7 @@
   "evidence": [
    "key:normal:space b h"
   ],
-  "note": "spacemacs spc_b_h -> home buffer (dashboard)"
+  "note": "spacemacs SPC b h -> startify: reopens the launch start screen (banner, recent files, project languages; zmax-term/src/ui/startify.rs), which is what spacemacs's *spacemacs* home buffer is"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_hU",

@@ -2117,7 +2117,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 },
                 "P" => [select_all, replace_with_yanked], // SPC b P : paste-replace buffer
                 "Y" => [select_all, yank_to_clipboard, collapse_selection], // SPC b Y
-                "h" => dashboard,                  // SPC b h : home buffer (dashboard)
+                "h" => startify,                   // SPC b h : home buffer (start screen)
                 "H" => help,                       // SPC b H : *Help* buffer (inline Help browser)
                 "u" => reopen_last_closed,         // SPC b u : reopen the most recently killed buffer
                 "w" => toggle_readonly,            // SPC b w : toggle read-only (writable state)
