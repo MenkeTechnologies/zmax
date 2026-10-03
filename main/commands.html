@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-a1642e58.js";
+            window.path_to_searchindex_js = "searchindex-d5d89eee.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -980,6 +980,7 @@
 <tr><td><code>:blast</code>, <code>:bl</code></td><td>Go to the last buffer in the buffer list (vim :blast).</td></tr>
 <tr><td><code>:bmodified</code>, <code>:bm</code></td><td>Go to the next modified buffer (vim :bmodified).</td></tr>
 <tr><td><code>:ball</code>, <code>:sball</code>, <code>:unhide</code>, <code>:unh</code>, <code>:sunhide</code>, <code>:sun</code></td><td>Open a window for each buffer in the buffer list (vim :ball; :unhide/:sunhide — every zmax buffer is loaded).</td></tr>
+<tr><td><code>:file</code>, <code>:f</code>, <code>:fi</code>, <code>:fil</code></td><td>Rename the current buffer to {name}, or show the file info (vim :file).</td></tr>
 <tr><td><code>:badd</code></td><td>Add a file to the buffer list without editing it (vim :badd).</td></tr>
 <tr><td><code>:balt</code></td><td>Add a file to the buffer list and set it as the alternate file (vim :balt).</td></tr>
 <tr><td><code>:bufdo</code></td><td>Run an Ex command in each listed buffer (vim :bufdo).</td></tr>
@@ -1574,7 +1575,7 @@
 <tr><td><code>:normal</code>, <code>:norm</code>, <code>:normal!</code>, <code>:norm!</code></td><td>Execute {commands} as normal-mode keystrokes (vim :normal[!]).</td></tr>
 <tr><td><code>:mark</code>, <code>:k</code></td><td>Set mark {x} at the cursor position (vim :mark / :k).</td></tr>
 <tr><td><code>:buffer</code>, <code>:buf</code>, <code>:b</code></td><td>Switch to the open buffer whose path contains {name} (vim :buffer / :b).</td></tr>
-<tr><td><code>:resize</code>, <code>:res</code></td><td>Adjust the current window height (vim :resize [+/-]{N}).</td></tr>
+<tr><td><code>:resize</code>, <code>:res</code></td><td>Adjust window N’s (else the current window’s) height, or width under :vertical (vim :[N]resize [+/-]{n}).</td></tr>
 <tr><td><code>:let</code></td><td>Set a vimscript variable via the embedded interpreter (:let x = 42).</td></tr>
 <tr><td><code>:Files</code></td><td>Fuzzy-find files with fzf and open the selection (fzf.vim :Files).</td></tr>
 <tr><td><code>:GFiles</code>, <code>:GitFiles</code></td><td>Fuzzy-find git-tracked files with fzf and open the pick (fzf.vim :GFiles).</td></tr>
