@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-06594580.js";
+            window.path_to_searchindex_js = "searchindex-aae113b9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -347,10 +347,21 @@ so each window opens on the line vim shows.</li>
 <li><strong>Directories</strong> — <code>cd</code>, and the window- and tab-local <code>lcd</code> and <code>tcd</code>.</li>
 <li><strong>Argument list</strong> — <code>%argdel</code>, <code>$argadd {file}</code>, <code>{N}argument</code>.</li>
 </ul>
+<h3 id="writing-sessions"><a class="header" href="#writing-sessions">Writing sessions</a></h3>
+<p><code>:mks[ession][!] [file]</code> writes <code>Session.vim</code> (or <code>file</code>) the way nvim does —
+the same commands from the same state, so the file loads in vim and nvim as
+well as in zmax: every tab page and its split layout and sizes, each window’s
+buffer, cursor, scroll, folds (<code>setlocal fold…</code>, <code>{range}fold</code>, <code>zo</code>/<code>zc</code>) and
+<code>lcd</code>, the tab pages’ <code>tcd</code>, the buffer list, the argument list and the working
+directory. Without <code>!</code> an existing file is kept (E189). <code>'sessionoptions'</code>
+(nvim’s default: <code>blank,buffers,curdir,folds,help,tabpages,winsize,terminal</code>)
+picks the parts; <code>sesdir</code> writes names relative to the session file.</p>
 <p><code>zmax-term/tests/session_parity.rs</code> holds zmax to this: it loads sessions nvim
 wrote with <code>:mksession</code> (stacked, nested and multi-tab layouts, folds, local
 directories, the arglist) and compares every window’s layout, size, cursor, top
-line, folds and directory with what nvim restores from the same file.</p>
+line, folds, directory and buffer list with what nvim restores from the same
+file. The session zmax writes back from it must restore the same again, and nvim
+restores zmax’s sessions as its own (<code>fixtures/sessions/nvim-loads.sh</code>).</p>
 
                     </main>
 

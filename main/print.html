@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-06594580.js";
+            window.path_to_searchindex_js = "searchindex-aae113b9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2674,7 +2674,7 @@ without scrolling.</p>
 <tr><td><code>:lgetexpr</code></td><td>Parse the argument text into the location list without jumping.</td></tr>
 <tr><td><code>:lfile</code>, <code>:lf</code></td><td>Read a file of error lines into the location list and jump to the first entry.</td></tr>
 <tr><td><code>:lgetfile</code></td><td>Read a file of error lines into the location list without jumping.</td></tr>
-<tr><td><code>:tabnew</code>, <code>:tabe</code>, <code>:tabedit</code></td><td>Open a new tabpage (optionally editing a file).</td></tr>
+<tr><td><code>:tabnew</code>, <code>:tabe</code>, <code>:tabedit</code></td><td>Open a new tabpage, optionally editing a file and running a +cmd (vim :tabnew [+cmd] [file]).</td></tr>
 <tr><td><code>:tabnext</code>, <code>:tabn</code></td><td>Go to the next tabpage (or tab [count]).</td></tr>
 <tr><td><code>:tabprevious</code>, <code>:tabp</code>, <code>:tabNext</code>, <code>:tabN</code></td><td>Go to the previous tabpage.</td></tr>
 <tr><td><code>:tabclose</code>, <code>:tabc</code></td><td>Close the current tabpage.</td></tr>
@@ -2966,7 +2966,8 @@ without scrolling.</p>
 <tr><td><code>:rshada!</code>, <code>:rsh!</code>, <code>:rsha!</code>, <code>:rshad!</code></td><td>Read the shada file, overwriting registers, histories and marks that are already set (nvim :rshada!).</td></tr>
 <tr><td><code>:syncbind</code>, <code>:sync</code>, <code>:syncb</code>, <code>:syncbi</code>, <code>:syncbin</code></td><td>Scroll the ‘scrollbind’ (follow-mode) windows back into step with this one (vim :syncbind).</td></tr>
 <tr><td><code>:uptime</code>, <code>:upt</code>, <code>:uptim</code></td><td>Show how long this editor process has been running (nvim :uptime).</td></tr>
-<tr><td><code>:mksession</code>, <code>:mks</code></td><td>Write a session file (cwd + buffers) that :source restores (vim :mksession).</td></tr>
+<tr><td><code>:mksession</code>, <code>:mks</code></td><td>Write a session file of the tab pages, windows, buffers, folds and directories, as vim does (vim :mksession).</td></tr>
+<tr><td><code>:mksession!</code>, <code>:mks!</code></td><td>Write a session file, overwriting an existing one (vim :mksession!).</td></tr>
 <tr><td><code>:mkvimrc</code>, <code>:mkv</code></td><td>Write the current runtime mappings to a vimrc file (vim :mkvimrc; mappings only).</td></tr>
 <tr><td><code>:mkexrc</code>, <code>:mk</code></td><td>Write the current runtime mappings to an exrc file (vim :mkexrc; mappings only).</td></tr>
 <tr><td><code>:mkview</code>, <code>:mkvie</code></td><td>Write the current window’s view (cursor position) to a file (vim :mkview).</td></tr>
@@ -6831,10 +6832,21 @@ so each window opens on the line vim shows.</li>
 <li><strong>Directories</strong> — <code>cd</code>, and the window- and tab-local <code>lcd</code> and <code>tcd</code>.</li>
 <li><strong>Argument list</strong> — <code>%argdel</code>, <code>$argadd {file}</code>, <code>{N}argument</code>.</li>
 </ul>
+<h3 id="writing-sessions"><a class="header" href="#writing-sessions">Writing sessions</a></h3>
+<p><code>:mks[ession][!] [file]</code> writes <code>Session.vim</code> (or <code>file</code>) the way nvim does —
+the same commands from the same state, so the file loads in vim and nvim as
+well as in zmax: every tab page and its split layout and sizes, each window’s
+buffer, cursor, scroll, folds (<code>setlocal fold…</code>, <code>{range}fold</code>, <code>zo</code>/<code>zc</code>) and
+<code>lcd</code>, the tab pages’ <code>tcd</code>, the buffer list, the argument list and the working
+directory. Without <code>!</code> an existing file is kept (E189). <code>'sessionoptions'</code>
+(nvim’s default: <code>blank,buffers,curdir,folds,help,tabpages,winsize,terminal</code>)
+picks the parts; <code>sesdir</code> writes names relative to the session file.</p>
 <p><code>zmax-term/tests/session_parity.rs</code> holds zmax to this: it loads sessions nvim
 wrote with <code>:mksession</code> (stacked, nested and multi-tab layouts, folds, local
 directories, the arglist) and compares every window’s layout, size, cursor, top
-line, folds and directory with what nvim restores from the same file.</p>
+line, folds, directory and buffer list with what nvim restores from the same
+file. The session zmax writes back from it must restore the same again, and nvim
+restores zmax’s sessions as its own (<code>fixtures/sessions/nvim-loads.sh</code>).</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="language-servers"><a class="header" href="#language-servers">Language servers</a></h1>
 <p>Zmax has built-in support for the <a href="https://microsoft.github.io/language-server-protocol/">Language Server Protocol</a>, providing

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-06594580.js";
+            window.path_to_searchindex_js = "searchindex-aae113b9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -1153,7 +1153,7 @@
 <tr><td><code>:lgetexpr</code></td><td>Parse the argument text into the location list without jumping.</td></tr>
 <tr><td><code>:lfile</code>, <code>:lf</code></td><td>Read a file of error lines into the location list and jump to the first entry.</td></tr>
 <tr><td><code>:lgetfile</code></td><td>Read a file of error lines into the location list without jumping.</td></tr>
-<tr><td><code>:tabnew</code>, <code>:tabe</code>, <code>:tabedit</code></td><td>Open a new tabpage (optionally editing a file).</td></tr>
+<tr><td><code>:tabnew</code>, <code>:tabe</code>, <code>:tabedit</code></td><td>Open a new tabpage, optionally editing a file and running a +cmd (vim :tabnew [+cmd] [file]).</td></tr>
 <tr><td><code>:tabnext</code>, <code>:tabn</code></td><td>Go to the next tabpage (or tab [count]).</td></tr>
 <tr><td><code>:tabprevious</code>, <code>:tabp</code>, <code>:tabNext</code>, <code>:tabN</code></td><td>Go to the previous tabpage.</td></tr>
 <tr><td><code>:tabclose</code>, <code>:tabc</code></td><td>Close the current tabpage.</td></tr>
@@ -1445,7 +1445,8 @@
 <tr><td><code>:rshada!</code>, <code>:rsh!</code>, <code>:rsha!</code>, <code>:rshad!</code></td><td>Read the shada file, overwriting registers, histories and marks that are already set (nvim :rshada!).</td></tr>
 <tr><td><code>:syncbind</code>, <code>:sync</code>, <code>:syncb</code>, <code>:syncbi</code>, <code>:syncbin</code></td><td>Scroll the ‘scrollbind’ (follow-mode) windows back into step with this one (vim :syncbind).</td></tr>
 <tr><td><code>:uptime</code>, <code>:upt</code>, <code>:uptim</code></td><td>Show how long this editor process has been running (nvim :uptime).</td></tr>
-<tr><td><code>:mksession</code>, <code>:mks</code></td><td>Write a session file (cwd + buffers) that :source restores (vim :mksession).</td></tr>
+<tr><td><code>:mksession</code>, <code>:mks</code></td><td>Write a session file of the tab pages, windows, buffers, folds and directories, as vim does (vim :mksession).</td></tr>
+<tr><td><code>:mksession!</code>, <code>:mks!</code></td><td>Write a session file, overwriting an existing one (vim :mksession!).</td></tr>
 <tr><td><code>:mkvimrc</code>, <code>:mkv</code></td><td>Write the current runtime mappings to a vimrc file (vim :mkvimrc; mappings only).</td></tr>
 <tr><td><code>:mkexrc</code>, <code>:mk</code></td><td>Write the current runtime mappings to an exrc file (vim :mkexrc; mappings only).</td></tr>
 <tr><td><code>:mkview</code>, <code>:mkvie</code></td><td>Write the current window’s view (cursor position) to a file (vim :mkview).</td></tr>
