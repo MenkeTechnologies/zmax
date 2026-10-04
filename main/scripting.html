@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-327f0c49.js";
+            window.path_to_searchindex_js = "searchindex-95eec682.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -346,6 +346,13 @@ so each window opens on the line vim shows.</li>
 <li><strong>Folds</strong> — <code>{range}fold</code>, <code>normal! zE</code>/<code>zo</code>/<code>zc</code>, <code>foldmethod</code>/<code>foldlevel</code>.</li>
 <li><strong>Directories</strong> — <code>cd</code>, and the window- and tab-local <code>lcd</code> and <code>tcd</code>.</li>
 <li><strong>Argument list</strong> — <code>%argdel</code>, <code>$argadd {file}</code>, <code>{N}argument</code>.</li>
+<li><strong>Help windows</strong> — <code>enew | setl bt=help</code> then <code>help {tag}</code>: <code>:help</code> looks the
+tag up in the <code>tags</code> files vim searches (the directory of <code>'helpfile'</code>, else
+<code>$VIMRUNTIME/doc</code>, then <code>doc/</code> in each <code>'runtimepath'</code> directory; <code>tags-xx</code>
+for language <code>xx</code>), opens the help file in that window — unlisted,
+read-only, <code>buftype=help</code> — with the cursor on the tag and its line at the
+top. Without a matching tag the window stays empty and <code>:help</code> reports
+E149, as vim does when the help file is not installed.</li>
 </ul>
 <h3 id="writing-sessions"><a class="header" href="#writing-sessions">Writing sessions</a></h3>
 <p><code>:mks[ession][!] [file]</code> writes <code>Session.vim</code> (or <code>file</code>) the way nvim does —
@@ -369,6 +376,9 @@ are written only once set.</li>
 and a lowercase one after it) that hold a String, Number or Float, written
 after <code>SessionLoadPre</code>.</li>
 <li><code>resize</code> — <code>set lines= columns=</code> for the screen size.</li>
+<li><code>help</code> — help windows, as <code>enew | setl bt=help</code> and <code>help {tag}</code> (the tag
+the window was opened on); help buffers are never in the buffer list. A tab
+page with a window left out gets <code>wincmd =</code> instead of sizes, as in nvim.</li>
 </ul>
 <p><code>:set</code> takes vim’s <code>+=</code>, <code>^=</code> and <code>-=</code> on numbers, comma lists (no duplicates
 where the option forbids them, <code>key:value</code> items replacing their key) and flag
@@ -377,10 +387,11 @@ applies them. <code>:edit</code>, <code>:split</code>, <code>:vsplit</code> and 
 (<code>+{lnum}</code>, <code>+/{pat}</code>, <code>+</code> for the last line) and run it once the file opens.</p>
 <p><code>zmax-term/tests/session_parity.rs</code> holds zmax to this: it loads sessions nvim
 wrote with <code>:mksession</code> (stacked, nested and multi-tab layouts, folds, local
-directories, the arglist) and compares every window’s layout, size, cursor, top
-line, folds, directory and buffer list with what nvim restores from the same
-file. The session zmax writes back from it must restore the same again, and nvim
-restores zmax’s sessions as its own (<code>fixtures/sessions/nvim-loads.sh</code>).</p>
+directories, the arglist, a plugin help window) and compares every window’s
+layout, size, cursor, top line, folds, directory and buffer list with what nvim
+restores from the same file. The session zmax writes back from it must restore
+the same again, and nvim restores zmax’s sessions as its own
+(<code>fixtures/sessions/nvim-loads.sh</code>).</p>
 
                     </main>
 
