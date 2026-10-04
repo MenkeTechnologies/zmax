@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-f5f5c838.js";
+            window.path_to_searchindex_js = "searchindex-3c15cd6e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2008,7 +2008,7 @@ without scrolling.</p>
 <tr><td><code>:args</code>, <code>:ar</code>, <code>:argglobal</code>, <code>:argg</code>, <code>:arglocal</code>, <code>:argl</code></td><td>Show the argument list, or set it to the given files and edit the first (vim :args).</td></tr>
 <tr><td><code>:argadd</code>, <code>:arga</code></td><td>Add files to the argument list after the current entry (vim :argadd).</td></tr>
 <tr><td><code>:argedit</code>, <code>:arge</code></td><td>Add a file to the argument list and edit it (vim :argedit).</td></tr>
-<tr><td><code>:argdelete</code>, <code>:argd</code></td><td>Delete argument-list entries matching the given glob patterns (vim :argdelete).</td></tr>
+<tr><td><code>:argdelete</code>, <code>:argd</code></td><td>Delete argument-list entries matching glob patterns, or those in {range} (vim :[range]argdelete).</td></tr>
 <tr><td><code>:argdedupe</code></td><td>Remove duplicate entries from the argument list (vim :argdedupe).</td></tr>
 <tr><td><code>:next</code>, <code>:argnext</code></td><td>Edit the next file in the argument list (vim :next).</td></tr>
 <tr><td><code>:previous</code>, <code>:Next</code>, <code>:prev</code>, <code>:argprev</code></td><td>Edit the previous file in the argument list (vim :previous / :Next).</td></tr>
@@ -2022,7 +2022,7 @@ without scrolling.</p>
 <tr><td><code>:autocmd</code>, <code>:au</code></td><td>Register an autocommand: :autocmd {events} {pattern} {command} (<code>:autocmd !</code> clears the open group, or all).</td></tr>
 <tr><td><code>:augroup</code>, <code>:aug</code>, <code>:augr</code>, <code>:augro</code>, <code>:augrou</code></td><td>Open the autocmd group the following :autocmds join (<code>:augroup END</code> closes it, <code>:augroup! {name}</code> deletes it) (vim :augroup).</td></tr>
 <tr><td><code>:last</code>, <code>:la</code></td><td>Edit the last file in the argument list (vim :last).</td></tr>
-<tr><td><code>:argument</code>, <code>:argu</code></td><td>Edit the Nth file in the argument list (vim :argument).</td></tr>
+<tr><td><code>:argument</code>, <code>:argu</code></td><td>Edit the Nth file in the argument list (vim :[count]argument [count]).</td></tr>
 <tr><td><code>:snext</code>, <code>:sn</code></td><td>Split the window and edit the next argument (vim :snext).</td></tr>
 <tr><td><code>:sprevious</code>, <code>:sprev</code>, <code>:sNext</code>, <code>:sN</code></td><td>Split the window and edit the previous argument (vim :sprevious / :sNext).</td></tr>
 <tr><td><code>:srewind</code>, <code>:sre</code>, <code>:sfirst</code>, <code>:sfir</code></td><td>Split the window and edit the first argument (vim :srewind / :sfirst).</td></tr>
@@ -2946,7 +2946,9 @@ without scrolling.</p>
 <tr><td><code>:tmux-buffer-paste-before</code></td><td>Paste a tmux paste buffer (newest, or the named one) before selections.</td></tr>
 <tr><td><code>:tmux-buffers</code></td><td>List the session’s tmux paste buffers in the status bar.</td></tr>
 <tr><td><code>:show-clipboard-provider</code></td><td>Show clipboard provider name in status bar.</td></tr>
-<tr><td><code>:change-current-directory</code>, <code>:cd</code>, <code>:chdir</code>, <code>:lcd</code>, <code>:lchdir</code>, <code>:tcd</code>, <code>:tchdir</code></td><td>Change the current working directory.</td></tr>
+<tr><td><code>:change-current-directory</code>, <code>:cd</code>, <code>:chdir</code></td><td>Change the current working directory (vim :cd).</td></tr>
+<tr><td><code>:lcd</code>, <code>:lc</code>, <code>:lchdir</code>, <code>:lch</code></td><td>Change the current window’s working directory (vim :lcd).</td></tr>
+<tr><td><code>:tcd</code>, <code>:tc</code>, <code>:tchdir</code>, <code>:tch</code></td><td>Change the current tab page’s working directory (vim :tcd).</td></tr>
 <tr><td><code>:show-directory-stack</code></td><td>Show the directory stack as a <space> delimited string.</space></td></tr>
 <tr><td><code>:push-directory</code>, <code>:pushd</code></td><td>Save and then change the current directory.</td></tr>
 <tr><td><code>:pop-directory</code>, <code>:popd</code></td><td>Remove the top entry from the directory stack, and cd to the new top directory..</td></tr>
@@ -3146,7 +3148,7 @@ without scrolling.</p>
 <tr><td><code>:Colors</code></td><td>Fuzzy-pick a colorscheme with fzf (fzf.vim :Colors).</td></tr>
 <tr><td><code>:Buffers</code></td><td>Fuzzy-pick an open buffer with fzf and switch to it (fzf.vim :Buffers).</td></tr>
 <tr><td><code>:Commands</code></td><td>Fuzzy-pick a <code>:</code> command with fzf and run it (fzf.vim :Commands).</td></tr>
-<tr><td><code>:fold</code>, <code>:fo</code></td><td>Create a fold over the selected/current lines (vim :fold).</td></tr>
+<tr><td><code>:fold</code>, <code>:fo</code></td><td>Create a fold over {range}, else the selected/current lines (vim :{range}fold).</td></tr>
 <tr><td><code>:foldopen</code>, <code>:foldo</code></td><td>Open the fold under the cursor (vim :foldopen).</td></tr>
 <tr><td><code>:foldclose</code>, <code>:foldc</code></td><td>Close the fold under the cursor (vim :foldclose).</td></tr>
 <tr><td><code>:&amp;</code>, <code>:&amp;&amp;</code>, <code>:s-repeat</code></td><td>Repeat the last :substitute on the current line (vim :&amp; / :&amp;&amp;).</td></tr>
