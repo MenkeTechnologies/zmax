@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-3c15cd6e.js";
+            window.path_to_searchindex_js = "searchindex-06594580.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -6814,14 +6814,27 @@ vim’s <code>:mksession</code> or the vim-session plugin restores its layout:</
 <pre><code class="language-sh">zmax -S ~/.vim/sessions/work.vim + notes.txt
 </code></pre>
 <p>A bare <code>-S</code> (last, or followed by another option) sources <code>Session.vim</code>; <code>-S</code>
-may be repeated. The session’s commands run through the same interpreter as
-<code>:source</code>: <code>badd +{lnum}</code> lists a buffer that is entered on <code>{lnum}</code>,
-<code>edit</code>/<code>tabedit</code>/<code>tabnext</code> drive the tab pages, <code>vsplit</code>, <code>{N}wincmd</code>, <code>vert {N}resize</code> and <code>file {name}</code> rebuild a split layout window by window, <code>&amp;columns</code>
-and <code>&amp;lines</code> report the area the windows share,
-<code>winheight(0)</code>/<code>winwidth(0)</code> measure the current window, and <code>normal!</code> runs
-zmax’s own Normal mode in script order, so the session’s <code>exe s:l | normal! zt</code>
-scroll lands where vim puts it. <code>:source {session}</code> at the prompt restores the
-same way.</p>
+may be repeated. <code>:source {session}</code> at the prompt restores the same way.</p>
+<p>What a session restores, and the vim behaviour each part follows:</p>
+<ul>
+<li><strong>Windows and tab pages</strong> — <code>vsplit</code>/<code>split</code>, <code>tabnew</code>/<code>tabnext</code>, <code>{N}wincmd</code>,
+<code>wincmd _ | wincmd |</code>, <code>{N}resize</code> and <code>vert {N}resize</code> with sizes scaled by
+<code>&amp;lines</code>/<code>&amp;columns</code> (the area the windows share). <code>:resize</code> sizes a window’s
+text, as in vim.</li>
+<li><strong>Buffers</strong> — <code>badd +{lnum}</code>, <code>balt</code>, <code>edit</code>, and <code>file {name}</code> for plugin
+windows; the start-up buffer is wiped as the session asks.</li>
+<li><strong>Cursor and scroll</strong> — <code>exe s:l | normal! zt</code> then the cursor line: <code>normal!</code>
+runs in script order, <code>winheight(0)</code> is the real height, and a window whose
+height changes keeps the cursor at the same relative row (vim’s <code>w_fraction</code>),
+so each window opens on the line vim shows.</li>
+<li><strong>Folds</strong> — <code>{range}fold</code>, <code>normal! zE</code>/<code>zo</code>/<code>zc</code>, <code>foldmethod</code>/<code>foldlevel</code>.</li>
+<li><strong>Directories</strong> — <code>cd</code>, and the window- and tab-local <code>lcd</code> and <code>tcd</code>.</li>
+<li><strong>Argument list</strong> — <code>%argdel</code>, <code>$argadd {file}</code>, <code>{N}argument</code>.</li>
+</ul>
+<p><code>zmax-term/tests/session_parity.rs</code> holds zmax to this: it loads sessions nvim
+wrote with <code>:mksession</code> (stacked, nested and multi-tab layouts, folds, local
+directories, the arglist) and compares every window’s layout, size, cursor, top
+line, folds and directory with what nvim restores from the same file.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="language-servers"><a class="header" href="#language-servers">Language servers</a></h1>
 <p>Zmax has built-in support for the <a href="https://microsoft.github.io/language-server-protocol/">Language Server Protocol</a>, providing
