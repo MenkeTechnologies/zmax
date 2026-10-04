@@ -1627,6 +1627,15 @@ pub struct QfEntry {
     pub text: String,
 }
 
+/// Which directory a `:cd` changes (vim `CdScope`): the global one (`:cd`),
+/// the tab page's (`:tcd`) or the window's (`:lcd`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CdScope {
+    Global,
+    Tab,
+    Window,
+}
+
 /// A saved vim tabpage: a serialized window layout plus each window's saved
 /// selection (in left-to-right leaf order). Tabs share buffers — leaves
 /// reference `DocumentId`s in the shared `documents` map — and only one tab's
@@ -1640,6 +1649,10 @@ pub struct TabPage {
     /// windows at their own top lines. Missing entries (a fresh tab) leave the
     /// view to scroll to its cursor.
     pub offsets: Vec<ViewPosition>,
+    /// vim `tp_localdir`: the tab-local working directory `:tcd` set.
+    pub localdir: Option<PathBuf>,
+    /// Each window's `w_localdir`, in the same leaf order as `selections`.
+    pub window_localdirs: Vec<Option<PathBuf>>,
     /// User-assigned tab name (emacs `tab-rename` / `tab-switch`); `None` shows a
     /// default numbered label.
     pub name: Option<String>,
@@ -2179,6 +2192,11 @@ pub struct Editor {
     /// `:buffer-close-unmodified`) and marked in the bar. Closing one directly
     /// still works — pinning guards against the sweep, not against intent.
     pub pinned_buffers: HashSet<DocumentId>,
+    /// Untouched scratch buffers zmax wiped when another buffer replaced them in
+    /// their window. vim keeps such a buffer hidden until something wipes it (a
+    /// session ends with `exe 'bwipe ' . s:wipebuf`); a later `:bwipe` of one
+    /// of these numbers finds that work already done.
+    pub wiped_scratch: HashSet<DocumentId>,
 
     // We Flatten<> to resolve the inner DocumentSavedEventFuture. For that we need a stream of streams, hence the Once<>.
     // https://stackoverflow.com/a/66875668
@@ -2437,6 +2455,11 @@ pub struct Editor {
     pub last_find: Option<(char, bool, bool)>,
     pub last_completion: Option<CompleteAction>,
     pub last_cwd: Option<PathBuf>,
+    /// vim `globaldir`: the global working directory, remembered while a
+    /// window- or tab-local one (`:lcd`, `:tcd`) is in effect.
+    pub globaldir: Option<PathBuf>,
+    /// vim `curtab->tp_localdir`: the current tab page's `:tcd` directory.
+    pub tab_localdir: Option<PathBuf>,
     pub dir_stack: VecDeque<PathBuf>,
 
     pub exit_code: i32,
@@ -2698,6 +2721,7 @@ impl Editor {
             documents: BTreeMap::new(),
             buffer_order: Vec::new(),
             pinned_buffers: HashSet::new(),
+            wiped_scratch: HashSet::new(),
             saves: HashMap::new(),
             save_queue: SelectAll::new(),
             write_count: 0,
@@ -2782,6 +2806,8 @@ impl Editor {
             last_find: None,
             last_completion: None,
             last_cwd: None,
+            globaldir: None,
+            tab_localdir: None,
             config,
             auto_pairs,
             exit_code: 0,
@@ -3449,6 +3475,7 @@ impl Editor {
                     self.documents.remove(&id);
                     self.buffer_order.retain(|&buf| buf != id);
                     self.pinned_buffers.remove(&id);
+                    self.wiped_scratch.insert(id);
 
                     // Remove the scratch buffer from any jumplists
                     for (view, _) in self.tree.views_mut() {
@@ -3501,7 +3528,12 @@ impl Editor {
                     .try_get(self.tree.focus)
                     .filter(|v| id == v.doc) // Different Document
                     .cloned()
-                    .unwrap_or_else(|| View::new(id, self.config().gutters.clone()));
+                    .unwrap_or_else(|| {
+                        // vim `win_init`: the new window inherits `w_localdir`.
+                        let mut view = View::new(id, self.config().gutters.clone());
+                        view.localdir = self.tree.try_get(self.tree.focus).and_then(|v| v.localdir.clone());
+                        view
+                    });
                 let (layout, before) = match action {
                     // vim `nosplitbelow` puts the new horizontal split above.
                     Action::HorizontalSplit => (Layout::Horizontal, !self.config().split_below),
@@ -3985,6 +4017,9 @@ impl Editor {
         self.tree.apply_win_size_policy();
         doc_mut!(self).mark_as_focused();
 
+        // vim `win_enter` → `win_fix_current_dir`.
+        self.fix_current_dir();
+
         let focus_lost = self.tree.get(prev_id).doc;
         dispatch(DocumentFocusLost {
             editor: self,
@@ -4076,10 +4111,18 @@ impl Editor {
             .collect();
         // Carry the current tab's user-assigned name across the snapshot.
         let name = self.tabs.get(self.current_tab).and_then(|t| t.name.clone());
+        let window_localdirs = self
+            .tree
+            .leaf_ids()
+            .into_iter()
+            .map(|vid| self.tree.get(vid).localdir.clone())
+            .collect();
         TabPage {
             shape,
             selections,
             offsets,
+            localdir: self.tab_localdir.clone(),
+            window_localdirs,
             name,
         }
     }
@@ -4114,8 +4157,14 @@ impl Editor {
                 }
             }
         }
+        for (vid, dir) in new_ids.iter().zip(tab.window_localdirs.iter()) {
+            self.tree.get_mut(*vid).localdir = dir.clone();
+        }
+        self.tab_localdir = tab.localdir.clone();
         let focus = self.tree.focus;
         self.ensure_cursor_in_view(focus);
+        // Entering the tab page enters its window: take up its directory.
+        self.fix_current_dir();
     }
 
     /// JetBrains "Maximize Editor in Split": show the focused window alone, or
@@ -4282,6 +4331,9 @@ impl Editor {
             return;
         }
         self.ensure_tabs_initialized();
+        // vim gives the new tab page the current one's `tp_localdir` and its
+        // window the current window's `w_localdir`.
+        let window_localdir = view!(self).localdir.clone();
         self.tabs[self.current_tab] = self.snapshot_current_tab();
         self.drop_live_view_state();
         let doc_id = self.new_document(Document::default(
@@ -4295,6 +4347,8 @@ impl Editor {
             },
             selections: vec![Selection::point(0)],
             offsets: Vec::new(),
+            localdir: self.tab_localdir.clone(),
+            window_localdirs: vec![window_localdir],
             name: None,
         };
         let idx = self.current_tab + 1;
@@ -4312,6 +4366,7 @@ impl Editor {
             return;
         }
         self.ensure_tabs_initialized();
+        let window_localdir = view!(self).localdir.clone();
         self.tabs[self.current_tab] = self.snapshot_current_tab();
         self.drop_live_view_state();
         let new = TabPage {
@@ -4321,6 +4376,8 @@ impl Editor {
             },
             selections: vec![Selection::point(0)],
             offsets: Vec::new(),
+            localdir: self.tab_localdir.clone(),
+            window_localdirs: vec![window_localdir],
             name: None,
         };
         let idx = self.current_tab + 1;
@@ -4531,6 +4588,8 @@ impl Editor {
             shape: crate::tree::TreeShape::Leaf { doc, focused: true },
             selections: vec![selection],
             offsets: Vec::new(),
+            localdir: None,
+            window_localdirs: Vec::new(),
             name: None,
         };
         let idx = self.frames.len();
@@ -5170,6 +5229,75 @@ impl Editor {
         self.last_cwd = zmax_stdx::env::set_current_working_dir(path)?;
         self.clear_doc_relative_paths();
         Ok(())
+    }
+
+    /// vim `changedir_func` + `post_chdir`: `:cd` (global), `:tcd` (tab page)
+    /// or `:lcd` (window) to `dir`. Any cd clears the window's `:lcd`
+    /// directory, and `:cd`/`:tcd` the tab page's; a local cd remembers the
+    /// global directory it left, which a window without a local one returns to.
+    pub fn change_dir(&mut self, dir: &Path, scope: CdScope) -> std::io::Result<()> {
+        let prev = zmax_stdx::env::current_working_dir();
+        self.set_cwd(dir)?;
+        view_mut!(self).localdir = None;
+        if scope != CdScope::Window {
+            self.tab_localdir = None;
+        }
+        if scope != CdScope::Global && self.globaldir.is_none() {
+            self.globaldir = Some(prev);
+        }
+        let cwd = zmax_stdx::env::current_working_dir();
+        match scope {
+            CdScope::Global => self.globaldir = None,
+            CdScope::Tab => self.tab_localdir = Some(cwd),
+            CdScope::Window => view_mut!(self).localdir = Some(cwd),
+        }
+        Ok(())
+    }
+
+    /// vim `win_fix_current_dir`, run on entering a window: change to its
+    /// `:lcd` directory, else its tab page's `:tcd` one (remembering the
+    /// global directory first), else back to the remembered global directory.
+    pub fn fix_current_dir(&mut self) {
+        let Some(view) = self.tree.try_get(self.tree.focus) else {
+            return;
+        };
+        let cwd = zmax_stdx::env::current_working_dir();
+        match view.localdir.clone().or_else(|| self.tab_localdir.clone()) {
+            Some(dir) => {
+                if self.globaldir.is_none() {
+                    self.globaldir = Some(cwd.clone());
+                }
+                if dir != cwd && zmax_stdx::env::set_current_working_dir(&dir).is_ok() {
+                    self.clear_doc_relative_paths();
+                }
+            }
+            None => {
+                if let Some(global) = self.globaldir.take() {
+                    if global != cwd && zmax_stdx::env::set_current_working_dir(&global).is_ok() {
+                        self.clear_doc_relative_paths();
+                    }
+                }
+            }
+        }
+    }
+
+    /// The working directory window `view` uses: its `:lcd` directory, the
+    /// tab page's `:tcd` one, else the global one (vim `getcwd({winnr})`).
+    pub fn window_cwd(&self, view: ViewId) -> PathBuf {
+        self.tree
+            .get(view)
+            .localdir
+            .clone()
+            .or_else(|| self.tab_localdir.clone())
+            .unwrap_or_else(|| self.global_cwd())
+    }
+
+    /// The global working directory (vim `getcwd(-1, -1)`): the remembered one
+    /// while a local directory is in effect, else the process directory.
+    pub fn global_cwd(&self) -> PathBuf {
+        self.globaldir
+            .clone()
+            .unwrap_or_else(zmax_stdx::env::current_working_dir)
     }
 
     pub fn get_last_cwd(&mut self) -> Option<&Path> {

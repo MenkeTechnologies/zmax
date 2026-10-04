@@ -18821,6 +18821,11 @@ fn toggle_statusline_element(cx: &mut Context, el: zmax_view::editor::StatusLine
 /// after the event loop exits and the terminal is restored, then re-execs.
 static RESTART_REQUESTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// The argument list as vim's `:args` shows it (`a.txt [b.txt] c.txt`).
+pub fn arglist_display() -> String {
+    typed::arglist_display()
+}
+
 /// Whether `SPC q r` asked for a restart. Read once by `main_impl` after the UI
 /// loop ends (`Application::run` has restored the terminal by then).
 pub fn restart_requested() -> bool {

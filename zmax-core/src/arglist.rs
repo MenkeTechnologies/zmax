@@ -64,6 +64,43 @@ impl ArgList {
         }
     }
 
+    /// `:{N}argadd {files}` — insert the names after entry `after` (1-based; 0
+    /// puts them first, `$` is the length). vim `alist_add_list`: an entry at or
+    /// past the insertion point keeps the current index on the same file.
+    pub fn add_after(&mut self, after: usize, files: Vec<String>) {
+        let had = !self.files.is_empty();
+        let after = after.min(self.files.len());
+        let count = files.len();
+        self.files.splice(after..after, files);
+        if had && self.current >= after {
+            self.current += count;
+        }
+    }
+
+    /// `:{range}argdelete` — remove entries `line1..=line2` (1-based, `line2`
+    /// clamped to the length). vim `ex_argdelete`: an index after the range
+    /// moves back by the count removed, one inside it lands on `line1`.
+    /// Returns how many were removed.
+    pub fn delete_range(&mut self, line1: usize, line2: usize) -> usize {
+        let line2 = line2.min(self.files.len());
+        if line1 == 0 || line1 > line2 {
+            return 0;
+        }
+        let n = line2 - line1 + 1;
+        self.files.drain(line1 - 1..line2);
+        if self.current >= line2 {
+            self.current -= n;
+        } else if self.current > line1 {
+            self.current = line1;
+        }
+        if self.files.is_empty() {
+            self.current = 0;
+        } else if self.current >= self.files.len() {
+            self.current = self.files.len() - 1;
+        }
+        n
+    }
+
     /// `:argedit {file}` — add the file after the current entry (if not already
     /// the current file) and make it current. Returns the file to edit.
     pub fn edit(&mut self, file: String) -> String {
@@ -219,6 +256,49 @@ mod tests {
         let mut a = ArgList::new();
         a.set(files.iter().map(|s| s.to_string()).collect());
         a
+    }
+
+    /// `:{range}argdelete` as nvim 0.12 runs it (each case checked there): the
+    /// index follows its file, or lands on the first survivor after the range.
+    #[test]
+    fn delete_range_moves_the_index_as_vim_does() {
+        // (current argument, line1, line2, list after)
+        let cases = [
+            (2, 2, 3, "a [d] e"),
+            (4, 2, 3, "a [d] e"),
+            (3, 2, 4, "a [e]"),
+        ];
+        for (arg, line1, line2, want) in cases {
+            let mut a = al(&["a", "b", "c", "d", "e"]);
+            a.goto(arg);
+            a.delete_range(line1, line2);
+            assert_eq!(a.display(), want, "{line1},{line2}argdel at {arg}");
+        }
+        let mut a = al(&["a", "b", "c"]);
+        assert_eq!(a.delete_range(1, 3), 3, ":%argdel");
+        assert!(a.is_empty());
+        assert_eq!(a.index(), 0);
+    }
+
+    /// `:{N}argadd` inserts after entry N (`$` the end, 0 the front) and keeps
+    /// the index on its file — nvim: `$argadd x` at b gives `a [b] c x`,
+    /// `0argadd y` gives `y a [b] c`; on an empty list the first add is current.
+    #[test]
+    fn add_after_keeps_the_current_file() {
+        let mut a = al(&["a", "b", "c"]);
+        a.goto(2);
+        a.add_after(3, vec!["x".into()]);
+        assert_eq!(a.display(), "a [b] c x");
+
+        let mut a = al(&["a", "b", "c"]);
+        a.goto(2);
+        a.add_after(0, vec!["y".into()]);
+        assert_eq!(a.display(), "y a [b] c");
+
+        let mut a = ArgList::new();
+        a.add_after(0, vec!["p".into()]);
+        a.add_after(1, vec!["q".into()]);
+        assert_eq!(a.display(), "[p] q");
     }
 
     #[test]

@@ -41,6 +41,13 @@ impl DocumentId {
     }
 }
 
+impl DocumentId {
+    /// The buffer number `:ls`, `:buffer {N}` and Vimscript's `bufnr()` use.
+    pub fn get(self) -> usize {
+        self.0.get()
+    }
+}
+
 impl std::fmt::Display for DocumentId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{}", self.0))

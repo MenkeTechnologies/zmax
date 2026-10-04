@@ -589,9 +589,9 @@ fn install_viml_host_hooks() {
             let _ = api_set_cursor(l, c);
         }),
         buf_name: Box::new(|| api_buf_name().unwrap_or_default()),
-        // Vimscript's current-buffer number; zmax presents a single current
-        // buffer to scripts, so 1 (matches `bufnr('')` on a normal buffer).
-        buf_nr: Box::new(|| 1),
+        // Vimscript's current-buffer number: zmax's own buffer number, so a
+        // session's `exe 'bwipe ' . s:wipebuf` reaches the buffer it named.
+        buf_nr: Box::new(|| with_cx(|cx| doc!(cx.editor).id().get() as i64).unwrap_or(1)),
     });
     // `winheight(0)` / `winwidth(0)`: the focused view's text area, which a
     // `:mksession` script sizes its `normal! zt` scroll from.
@@ -603,12 +603,13 @@ fn install_viml_host_hooks() {
         .unwrap_or((-1, -1))
     }));
     // `&lines` / `&columns`: the area the windows are laid out in (the IDE
-    // sidebar and the status/command rows are outside it), so a session's
-    // `vert {N}resize ((&columns * K + …) / …)` shares out exactly that space.
+    // sidebar is outside it), plus the command line for `&lines` as vim counts
+    // it — so a session's `{N}resize ((&lines * K + …) / …)` and `vert {N}resize
+    // ((&columns * K + …) / …)` share out exactly that space.
     vimlrs::fusevm_bridge::install_screen_size_hook(Box::new(|| {
         with_cx(|cx| {
             let area = cx.editor.tree.area();
-            (i64::from(area.height), i64::from(area.width))
+            (i64::from(area.height) + 1, i64::from(area.width))
         })
         .unwrap_or((24, 80))
     }));
@@ -693,13 +694,17 @@ fn install_viml_host_hooks() {
 /// zmax has no such command. A vim abbreviation zmax doesn't list (`argdel`) is
 /// spelled out by vim's own rule — the first command in vim's table it begins —
 /// so a session written by vim reaches the command it names. A window command
-/// with a count (`1wincmd w`, `2resize 30`) is zmax's too; any other line
+/// with a count (`1wincmd w`, `2resize 30`), a ranged `:fold` (`10,20fold`) or an
+/// argument address (`%argdel`, `$argadd a.txt`) is zmax's too; any other line
 /// opening with a range (`%argdel`) is left to vimlrs: zmax's command parser
 /// reads its first word as the command, which a range is not.
 fn zmax_command_line(line: &str) -> Option<String> {
     use crate::commands::typed::TYPABLE_COMMAND_MAP;
     let line = line.trim().trim_start_matches([':', ' ']);
-    if crate::commands::typed::split_window_count(line).is_some() {
+    if crate::commands::typed::split_window_count(line).is_some()
+        || crate::commands::typed::split_line_range_command(line).is_some()
+        || crate::commands::typed::split_arg_address(line).is_some()
+    {
         return Some(line.to_string());
     }
     let end = line
@@ -1215,7 +1220,8 @@ mod tests {
             super::zmax_command_line("argdel *").as_deref(),
             Some("argdelete *")
         );
-        assert_eq!(super::zmax_command_line("%argdel"), None);
+        assert_eq!(super::zmax_command_line("%argdel").as_deref(), Some("%argdel"));
+        assert_eq!(super::zmax_command_line("%foo"), None);
         assert_eq!(
             super::zmax_command_line("1wincmd w").as_deref(),
             Some("1wincmd w")

@@ -292,7 +292,7 @@
 | `:args`, `:ar`, `:argglobal`, `:argg`, `:arglocal`, `:argl` | Show the argument list, or set it to the given files and edit the first (vim :args). |
 | `:argadd`, `:arga` | Add files to the argument list after the current entry (vim :argadd). |
 | `:argedit`, `:arge` | Add a file to the argument list and edit it (vim :argedit). |
-| `:argdelete`, `:argd` | Delete argument-list entries matching the given glob patterns (vim :argdelete). |
+| `:argdelete`, `:argd` | Delete argument-list entries matching glob patterns, or those in {range} (vim :[range]argdelete). |
 | `:argdedupe` | Remove duplicate entries from the argument list (vim :argdedupe). |
 | `:next`, `:argnext` | Edit the next file in the argument list (vim :next). |
 | `:previous`, `:Next`, `:prev`, `:argprev` | Edit the previous file in the argument list (vim :previous / :Next). |
@@ -306,7 +306,7 @@
 | `:autocmd`, `:au` | Register an autocommand: :autocmd {events} {pattern} {command} (`:autocmd !` clears the open group, or all). |
 | `:augroup`, `:aug`, `:augr`, `:augro`, `:augrou` | Open the autocmd group the following :autocmds join (`:augroup END` closes it, `:augroup! {name}` deletes it) (vim :augroup). |
 | `:last`, `:la` | Edit the last file in the argument list (vim :last). |
-| `:argument`, `:argu` | Edit the Nth file in the argument list (vim :argument). |
+| `:argument`, `:argu` | Edit the Nth file in the argument list (vim :[count]argument [count]). |
 | `:snext`, `:sn` | Split the window and edit the next argument (vim :snext). |
 | `:sprevious`, `:sprev`, `:sNext`, `:sN` | Split the window and edit the previous argument (vim :sprevious / :sNext). |
 | `:srewind`, `:sre`, `:sfirst`, `:sfir` | Split the window and edit the first argument (vim :srewind / :sfirst). |
@@ -1224,7 +1224,9 @@
 | `:tmux-buffer-paste-before` | Paste a tmux paste buffer (newest, or the named one) before selections. |
 | `:tmux-buffers` | List the session's tmux paste buffers in the status bar. |
 | `:show-clipboard-provider` | Show clipboard provider name in status bar. |
-| `:change-current-directory`, `:cd`, `:chdir`, `:lcd`, `:lchdir`, `:tcd`, `:tchdir` | Change the current working directory. |
+| `:change-current-directory`, `:cd`, `:chdir` | Change the current working directory (vim :cd). |
+| `:lcd`, `:lc`, `:lchdir`, `:lch` | Change the current window's working directory (vim :lcd). |
+| `:tcd`, `:tc`, `:tchdir`, `:tch` | Change the current tab page's working directory (vim :tcd). |
 | `:show-directory-stack` | Show the directory stack as a <space> delimited string. |
 | `:push-directory`, `:pushd` | Save and then change the current directory. |
 | `:pop-directory`, `:popd` | Remove the top entry from the directory stack, and cd to the new top directory.. |
@@ -1424,7 +1426,7 @@
 | `:Colors` | Fuzzy-pick a colorscheme with fzf (fzf.vim :Colors). |
 | `:Buffers` | Fuzzy-pick an open buffer with fzf and switch to it (fzf.vim :Buffers). |
 | `:Commands` | Fuzzy-pick a `:` command with fzf and run it (fzf.vim :Commands). |
-| `:fold`, `:fo` | Create a fold over the selected/current lines (vim :fold). |
+| `:fold`, `:fo` | Create a fold over {range}, else the selected/current lines (vim :{range}fold). |
 | `:foldopen`, `:foldo` | Open the fold under the cursor (vim :foldopen). |
 | `:foldclose`, `:foldc` | Close the fold under the cursor (vim :foldclose). |
 | `:&`, `:&&`, `:s-repeat` | Repeat the last :substitute on the current line (vim :& / :&&). |

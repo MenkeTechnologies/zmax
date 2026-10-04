@@ -2055,6 +2055,11 @@ fn with_arglist<R>(f: impl FnOnce(&mut zmax_core::arglist::ArgList) -> R) -> R {
     ARGLIST.with(|a| f(&mut a.borrow_mut()))
 }
 
+/// The argument list as vim's `:args` shows it, the current file in brackets.
+pub(crate) fn arglist_display() -> String {
+    with_arglist(|a| a.display())
+}
+
 /// Open a file named in the argument list (expanding a leading `~`).
 fn edit_arg_file(cx: &mut compositor::Context, file: &str) -> anyhow::Result<()> {
     edit_arg_file_with(cx, file, Action::Replace)
@@ -2179,7 +2184,12 @@ fn argadd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         bail!("argadd: needs at least one file");
     }
     let files: Vec<String> = args.iter().map(|s| s.to_string()).collect();
-    with_arglist(|a| a.add(files));
+    // vim `:[count]argadd`: after argument {count} (`$` the end, 0 the front),
+    // else after the current one.
+    match EX_ARG_RANGE.with(|c| c.take()) {
+        Some((_, after)) => with_arglist(|a| a.add_after(after, files)),
+        None => with_arglist(|a| a.add(files)),
+    }
     cx.editor.set_status(with_arglist(|a| {
         format!("{} files in the arg list", a.len())
     }));
@@ -2203,8 +2213,31 @@ fn argdelete(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    if args.is_empty() {
-        bail!("argdelete: needs a pattern");
+    // vim `ex_argdelete`: `:{range}argdelete` removes those entries, and a bare
+    // `:argdelete` works like `:.argdelete`.
+    let range = EX_ARG_RANGE.with(|c| c.take());
+    if range.is_some() || args.is_empty() {
+        if !args.is_empty() {
+            bail!("E474: Invalid argument");
+        }
+        let (line1, line2) = match range {
+            Some(range) => range,
+            None => {
+                let (len, index) = with_arglist(|a| (a.len(), a.index()));
+                if index >= len {
+                    bail!("E610: No argument to delete");
+                }
+                (index + 1, index + 1)
+            }
+        };
+        // `:%argdel` on an empty list is not an error.
+        if line1 > line2 && !(line1 == 1 && line2 == 0) {
+            bail!("E16: Invalid range");
+        }
+        let n = with_arglist(|a| a.delete_range(line1, line2));
+        cx.editor
+            .set_status(format!("removed {n} from the arg list"));
+        return Ok(());
     }
     let pats: Vec<&str> = args.iter().map(|s| s.as_ref()).collect();
     let n = with_arglist(|a| a.delete_matching(&pats));
@@ -2326,7 +2359,10 @@ fn argument(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let Some(n) = args.first().and_then(|s| s.parse::<usize>().ok()) else {
+    // vim `:[count]argu[ment] [count]`: the count may come before the name
+    // (`:2argu`, as a session writes it) or after it.
+    let prefix = EX_ARG_RANGE.with(|c| c.take()).map(|(_, n)| n);
+    let Some(n) = args.first().and_then(|s| s.parse::<usize>().ok()).or(prefix) else {
         bail!("argument: needs a number");
     };
     let file = with_arglist(|a| a.goto(n).map(str::to_string));
@@ -5974,6 +6010,20 @@ thread_local! {
     static WINDOW_COUNT: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
 }
 
+/// The command `word` names, by its name or alias or by vim's abbreviation
+/// rule: a prefix of the full name that extends its shortest listed form
+/// (`argdel` for `argd[elete]`, `wincm` for `winc[md]`).
+fn command_by_abbrev(word: &str) -> Option<&'static TypableCommand> {
+    if word.is_empty() {
+        return None;
+    }
+    TYPABLE_COMMAND_MAP.get(word).copied().or_else(|| {
+        TYPABLE_COMMAND_LIST.iter().find(|cmd| {
+            cmd.name.starts_with(word) && cmd.aliases.iter().any(|alias| word.starts_with(alias))
+        })
+    })
+}
+
 /// The window commands vim lets a count precede, by canonical name.
 const WINDOW_COUNT_COMMANDS: &[&str] = &["wincmd", "resize"];
 
@@ -5988,11 +6038,81 @@ pub(crate) fn split_window_count(line: &str) -> Option<(usize, &str)> {
         .split(|c: char| c.is_whitespace() || c == '!')
         .next()
         .unwrap_or("");
-    let cmd = TYPABLE_COMMAND_MAP.get(word)?;
+    let cmd = command_by_abbrev(word)?;
     if digits == 0 || !WINDOW_COUNT_COMMANDS.contains(&cmd.name) {
         return None;
     }
     Some((line[..digits].parse().ok()?, rest))
+}
+
+thread_local! {
+    /// The resolved line range written before a range-taking command's name
+    /// (`:10,20fold`), 0-based and inclusive, for the length of that command.
+    static EX_LINE_RANGE: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
+}
+
+/// The commands that read [`EX_LINE_RANGE`], by canonical name.
+const LINE_RANGE_COMMANDS: &[&str] = &["fold"];
+
+/// Split `:{range}{cmd} …` into the range text and the rest of the line when
+/// `cmd` reads its range through [`EX_LINE_RANGE`] (`10,20fold` →
+/// `("10,20", "fold")`). A `:mksession` writes `sil! 10,20fold` per fold.
+pub(crate) fn split_line_range_command(line: &str) -> Option<(&str, &str)> {
+    let (range, rest) = split_leading_range(line.trim_start().trim_start_matches(':'));
+    if range.is_empty() {
+        return None;
+    }
+    let word = rest
+        .split(|c: char| c.is_whitespace() || c == '!')
+        .next()
+        .unwrap_or("");
+    let cmd = command_by_abbrev(word)?;
+    LINE_RANGE_COMMANDS
+        .contains(&cmd.name)
+        .then_some((range, rest))
+}
+
+thread_local! {
+    /// The argument-list range written before an arglist command's name
+    /// (`:%argdel`, `:$argadd`, `:2argu`): 1-based and inclusive, resolved
+    /// against the list, for the length of that command.
+    static EX_ARG_RANGE: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
+}
+
+/// The commands vim addresses by argument number (`ADDR_ARGUMENTS`).
+const ARG_ADDRESS_COMMANDS: &[&str] = &["argdelete", "argadd", "argument"];
+
+/// Split `:{addr}{cmd} …` into the argument address and the rest of the line
+/// when `cmd` is an arglist command (`%argdel` → `("%", "argdel")`). A session
+/// rebuilds the list with `%argdel` and `$argadd {file}`.
+pub(crate) fn split_arg_address(line: &str) -> Option<(&str, &str)> {
+    let line = line.trim_start().trim_start_matches(':');
+    let end = line.find(|c: char| !(c.is_ascii_digit() || matches!(c, '.' | '$' | '%' | ',')))?;
+    let (addr, rest) = line.split_at(end);
+    let word = rest
+        .split(|c: char| c.is_whitespace() || c == '!')
+        .next()
+        .unwrap_or("");
+    let cmd = command_by_abbrev(word)?;
+    (!addr.is_empty() && ARG_ADDRESS_COMMANDS.contains(&cmd.name)).then_some((addr, rest))
+}
+
+/// Resolve an argument address against a list of `len` entries whose current
+/// index (0-based) is `current`: `N`, `.` (current), `$` (last), `%` (all) and
+/// `A,B`. Pure — unit tested.
+fn resolve_arg_address(addr: &str, len: usize, current: usize) -> Option<(usize, usize)> {
+    let one = |a: &str| match a {
+        "." => Some(current + 1),
+        "$" => Some(len),
+        n => n.parse().ok(),
+    };
+    match addr {
+        "%" => Some((1, len)),
+        _ => match addr.split_once(',') {
+            Some((a, b)) => Some((one(a)?, one(b)?)),
+            None => one(addr).map(|n| (n, n)),
+        },
+    }
 }
 
 /// Window `n` in vim's numbering (1 is the top-left, counting to the
@@ -6037,7 +6157,9 @@ fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         // possible (`:mksession` writes `wincmd _ | wincmd |` before splitting).
         "_" | "C-_" => {
             let view = cx.editor.tree.focus;
-            cx.editor.tree.set_height(view, count.map_or(u16::MAX, |n| n as u16));
+            let chrome = cx.editor.tree.node_height(view) - cx.editor.tree.get(view).inner_height() as u16;
+            let height = count.map_or(u16::MAX, |n| (n as u16).saturating_add(chrome));
+            cx.editor.tree.set_height(view, height);
         }
         "|" => {
             let view = cx.editor.tree.focus;
@@ -6351,6 +6473,18 @@ fn buffer_gather_paths_impl(editor: &mut Editor, args: Args) -> Vec<DocumentId> 
     let mut nonexistent_buffers = vec![];
     let mut document_ids = vec![];
     for arg in args {
+        // vim `:bdelete {N}` / `:bwipeout {N}`: an all-digit argument is a buffer
+        // number, as for `:buffer {N}` (a session wipes its start-up buffer with
+        // `exe 'bwipe ' . s:wipebuf`).
+        if !arg.is_empty() && arg.bytes().all(|b| b.is_ascii_digit()) {
+            match editor.documents().find(|doc| doc.id().to_string() == arg.as_ref()) {
+                Some(doc) => document_ids.push(doc.id()),
+                // A scratch buffer zmax already wiped when a file replaced it.
+                None if editor.wiped_scratch.iter().any(|id| id.to_string() == arg.as_ref()) => {}
+                None => nonexistent_buffers.push(format!("'{}'", arg)),
+            }
+            continue;
+        }
         let doc_id = editor.documents().find_map(|doc| {
             let arg_path = Some(Path::new(arg.as_ref()));
             // The buffer completer offers `display_name`, so a buffer renamed by
@@ -24648,8 +24782,12 @@ fn parse_first_arg_as_dir(args: &Args, last_cwd: Option<PathBuf>) -> anyhow::Res
 
 /// Helper function to apply a directory change for an already-parsed Path ref
 #[inline]
-fn apply_directory_change(cx: &mut compositor::Context, dir: &Path) -> anyhow::Result<()> {
-    cx.editor.set_cwd(dir).map_err(|err| {
+fn apply_directory_change(
+    cx: &mut compositor::Context,
+    dir: &Path,
+    scope: zmax_view::editor::CdScope,
+) -> anyhow::Result<()> {
+    cx.editor.change_dir(dir, scope).map_err(|err| {
         anyhow!(
             "Could not change working directory to '{}': {err}",
             dir.display()
@@ -24664,10 +24802,13 @@ fn apply_directory_change(cx: &mut compositor::Context, dir: &Path) -> anyhow::R
     Ok(())
 }
 
-fn change_current_directory(
+/// vim `:cd`, `:tcd` and `:lcd`: change the global, tab-page or window
+/// working directory.
+fn change_directory_in(
     cx: &mut compositor::Context,
     args: Args,
     event: PromptEvent,
+    scope: zmax_view::editor::CdScope,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -24683,7 +24824,31 @@ fn change_current_directory(
 
     let dir = parse_first_arg_as_dir(&args, cx.editor.get_last_cwd().map(|p| p.to_path_buf()))?;
 
-    apply_directory_change(cx, &dir)
+    apply_directory_change(cx, &dir, scope)
+}
+
+fn change_current_directory(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    change_directory_in(cx, args, event, zmax_view::editor::CdScope::Global)
+}
+
+fn change_window_directory(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    change_directory_in(cx, args, event, zmax_view::editor::CdScope::Window)
+}
+
+fn change_tab_directory(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    change_directory_in(cx, args, event, zmax_view::editor::CdScope::Tab)
 }
 
 fn show_directory_stack(
@@ -24743,7 +24908,7 @@ fn pop_directory(
     }
 
     if let Some(dir) = cx.editor.dir_stack.pop_front() {
-        apply_directory_change(cx, &dir)?;
+        apply_directory_change(cx, &dir, zmax_view::editor::CdScope::Global)?;
     } else {
         cx.editor.set_error("Stack is empty");
     }
@@ -34889,7 +35054,25 @@ macro_rules! ex_static_cmd {
     };
 }
 
-ex_static_cmd!(ex_fold, super::fold_create);
+/// vim `:{range}fo[ld]`: "Create a fold for the lines in {range}. Works like
+/// zf." Without a range, the fold covers the selection (zmax's `zf`).
+fn ex_fold(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match EX_LINE_RANGE.with(|c| c.take()) {
+        Some((start, end)) => {
+            let doc = doc_mut!(cx.editor);
+            let last = doc.text().len_lines().saturating_sub(1);
+            if !doc.folds_mut().create(start, end) {
+                bail!("fold: cannot create a fold over lines {}-{}", start + 1, end + 1);
+            }
+            doc.folds_mut().clamp(last);
+        }
+        None => super::fold_create(&mut editor_context(cx)),
+    }
+    Ok(())
+}
 ex_static_cmd!(ex_foldopen, super::fold_open);
 ex_static_cmd!(ex_foldclose, super::fold_close);
 
@@ -35463,11 +35646,13 @@ fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
         None => cx.editor.tree.focus,
     };
     let width = cmd_mods().split == Some(SplitDir::Vertical);
+    // vim sizes a window's text: its height excludes the status line.
+    let chrome = cx.editor.tree.node_height(view) as i32 - cx.editor.tree.get(view).inner_height() as i32;
     let current = if width {
-        cx.editor.tree.node_width(view)
+        i32::from(cx.editor.tree.node_width(view))
     } else {
-        cx.editor.tree.node_height(view)
-    } as i32;
+        i32::from(cx.editor.tree.node_height(view)) - chrome
+    };
     let target = if let Some(n) = a.strip_prefix('+') {
         current + n.trim().parse::<i32>().unwrap_or(1)
     } else if let Some(n) = a.strip_prefix('-') {
@@ -35485,7 +35670,7 @@ fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     if width {
         cx.editor.tree.set_width(view, target);
     } else {
-        cx.editor.tree.set_height(view, target);
+        cx.editor.tree.set_height(view, target.saturating_add(chrome.max(0) as u16));
     }
     Ok(())
 }
@@ -54095,11 +54280,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "argdelete",
         aliases: &["argd"],
-        doc: "Delete argument-list entries matching the given glob patterns (vim :argdelete).",
+        doc: "Delete argument-list entries matching glob patterns, or those in {range} (vim :[range]argdelete).",
         fun: argdelete,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (1, None),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -54249,11 +54434,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "argument",
         aliases: &["argu"],
-        doc: "Edit the Nth file in the argument list (vim :argument).",
+        doc: "Edit the Nth file in the argument list (vim :[count]argument [count]).",
         fun: argument,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (1, Some(1)),
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -64376,11 +64561,31 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "change-current-directory",
-        // vim's window-local (`:lcd`) and tab-local (`:tcd`) cd variants and their
-        // long forms are approximated by the global cd here.
-        aliases: &["cd", "chdir", "lcd", "lchdir", "tcd", "tchdir"],
-        doc: "Change the current working directory.",
+        aliases: &["cd", "chdir"],
+        doc: "Change the current working directory (vim :cd).",
         fun: change_current_directory,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "lcd",
+        aliases: &["lc", "lchdir", "lch"],
+        doc: "Change the current window's working directory (vim :lcd).",
+        fun: change_window_directory,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tcd",
+        aliases: &["tc", "tchdir", "tch"],
+        doc: "Change the current tab page's working directory (vim :tcd).",
+        fun: change_tab_directory,
         completer: CommandCompleter::positional(&[completers::directory]),
         signature: Signature {
             positionals: (1, Some(1)),
@@ -66210,7 +66415,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "fold",
         aliases: &["fo"],
-        doc: "Create a fold over the selected/current lines (vim :fold).",
+        doc: "Create a fold over {range}, else the selected/current lines (vim :{range}fold).",
         fun: ex_fold,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -72415,6 +72620,33 @@ fn execute_command_line_inner(
         WINDOW_COUNT.with(|c| c.set(prev));
         return result;
     }
+    // `:{addr}argdel` & co.: resolve the argument address against the list.
+    if let Some((addr, line)) = split_arg_address(input) {
+        if event != PromptEvent::Validate {
+            return Ok(());
+        }
+        let range = with_arglist(|a| resolve_arg_address(addr, a.len(), a.index()));
+        let Some(range) = range else {
+            bail!("E16: Invalid range");
+        };
+        let prev = EX_ARG_RANGE.with(|c| c.replace(Some(range)));
+        let result = execute_command_line_inner(cx, line, event);
+        EX_ARG_RANGE.with(|c| c.set(prev));
+        return result;
+    }
+    // `:{range}fold`: resolve the range here and hand it to the command.
+    if let Some((range, line)) = split_line_range_command(input) {
+        if event != PromptEvent::Validate {
+            return Ok(());
+        }
+        let Some(lines) = resolve_range_with_marks(cx, range) else {
+            bail!("E16: Invalid range");
+        };
+        let prev = EX_LINE_RANGE.with(|c| c.replace(Some(lines)));
+        let result = execute_command_line_inner(cx, line, event);
+        EX_LINE_RANGE.with(|c| c.set(prev));
+        return result;
+    }
 
     // If command is numeric, interpret as line number and go there.
     if command.parse::<usize>().is_ok() && rest.trim().is_empty() {
@@ -73121,7 +73353,9 @@ fn execute_command_line_inner(
         return execute_command(cx, cmd, shell_cmd, event);
     }
 
-    match typed::TYPABLE_COMMAND_MAP.get(command) {
+    // Exact names and aliases first, then vim's abbreviation rule (`argdel`
+    // for `argd[elete]`), as a script written for vim spells them.
+    match command_by_abbrev(command) {
         Some(cmd) => execute_command(cx, cmd, rest, event),
         // A command registered by a native (compiled Rust) plugin — the port of
         // zsh's `zmodload -R` plugin host. Resolved here, after built-in
@@ -78048,6 +78282,25 @@ mod vim_set_tests {
         assert_eq!(reindent_put_block("    a\n      b\n", "  "), "  a\n    b\n");
         // Blank lines stay empty.
         assert_eq!(reindent_put_block("a\n\nb\n", "  "), "  a\n\n  b\n");
+    }
+
+    /// vim's argument addresses (`ADDR_ARGUMENTS`) over a 3-entry list whose
+    /// second entry is current, and the lines a session writes with them.
+    #[test]
+    fn argument_addresses_resolve_and_split_as_vim_reads_them() {
+        assert_eq!(super::resolve_arg_address("%", 3, 1), Some((1, 3)));
+        assert_eq!(super::resolve_arg_address("$", 3, 1), Some((3, 3)));
+        assert_eq!(super::resolve_arg_address(".", 3, 1), Some((2, 2)));
+        assert_eq!(super::resolve_arg_address("1,$", 3, 1), Some((1, 3)));
+        assert_eq!(super::resolve_arg_address("0", 3, 1), Some((0, 0)));
+        assert_eq!(super::resolve_arg_address("%", 0, 0), Some((1, 0)));
+
+        assert_eq!(super::split_arg_address("%argdel"), Some(("%", "argdel")));
+        assert_eq!(super::split_arg_address("$argadd a.txt"), Some(("$", "argadd a.txt")));
+        assert_eq!(super::split_arg_address("2argu"), Some(("2", "argu")));
+        assert_eq!(super::split_arg_address("%argdele"), Some(("%", "argdele")), "vim abbreviation");
+        assert_eq!(super::split_arg_address("%s/a/b/"), None, "a line range, not an arg one");
+        assert_eq!(super::split_arg_address("argdel *"), None, "no address");
     }
 
     /// `TYPABLE_COMMAND_MAP` is a `HashMap` built from every command's name *and*

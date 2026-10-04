@@ -516,6 +516,9 @@ pub struct View {
     /// the currently-active list.
     pub loclist_stack: Vec<Vec<crate::editor::QfEntry>>,
     pub loclist_stack_pos: usize,
+    /// vim `w_localdir`: the window-local working directory `:lcd` set. On
+    /// entering the window the process changes to it (`Editor::fix_current_dir`).
+    pub localdir: Option<std::path::PathBuf>,
 }
 
 impl fmt::Debug for View {
@@ -550,6 +553,7 @@ impl View {
             loclist_idx: None,
             loclist_stack: Vec::new(),
             loclist_stack_pos: 0,
+            localdir: None,
         }
     }
 
