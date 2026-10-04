@@ -1132,8 +1132,9 @@
 | `goto_visual_line_end` | Goto visual line end (soft-wrap aware) | **spacemacs, hybrid, vim** — normal: `` g$ `` |
 | `extend_to_visual_line_start` | Extend to visual line start |  |
 | `extend_to_visual_line_end` | Extend to visual line end |  |
-| `goto_column` | Goto column | **spacemacs, hybrid** — normal: `` \| ``, `` <A-g><tab> ``<br>**vim** — normal: `` \| ``<br>**helix, kakoune** — normal: `` g\| `` |
+| `goto_column` | Goto column | **spacemacs, hybrid** — normal: `` <A-g><tab> ``<br>**helix, kakoune** — normal: `` g\| `` |
 | `extend_to_column` | Extend to column | **helix, kakoune** — select: `` g\| `` |
+| `vim_goto_column` | Goto screen column [count] (vim |) | **spacemacs, hybrid, vim** — normal: `` \| `` |
 | `goto_next_buffer` | Goto next buffer | **spacemacs, hybrid** — normal: `` ]b ``, `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, select: `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, insert: `` <C-x><right> ``<br>**vim** — normal: `` ]b ``<br>**helix, kakoune** — normal: `` gn ``, select: `` gn ``<br>**emacs** — normal: `` <C-x><right> ``, insert: `` <C-x><right> ``<br>**cua** — normal: `` <C-x><right> ``, select: `` <C-X><right> ``, insert: `` <C-x><right> ``<br>**micro** — normal: `` <A-.> ``, insert: `` <A-.> `` |
 | `goto_previous_buffer` | Goto previous buffer | **spacemacs, hybrid** — normal: `` [b ``, `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, select: `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, insert: `` <C-x><left> ``<br>**vim** — normal: `` [b ``<br>**helix, kakoune** — normal: `` gp ``, select: `` gp ``<br>**emacs** — normal: `` <C-x><left> ``, insert: `` <C-x><left> ``<br>**cua** — normal: `` <C-x><left> ``, select: `` <C-X><left> ``, insert: `` <C-x><left> ``<br>**micro** — normal: `` <A-,> ``, insert: `` <A-,> `` |
 | `goto_line_end_newline` | Goto newline at line end | **spacemacs, vim, helix, kakoune** — insert: `` <end> `` |
