@@ -1527,7 +1527,7 @@ impl MappableCommand {
         extend_to_visual_line_end, "Extend to visual line end",
         goto_column, "Goto column",
         extend_to_column, "Extend to column",
-        vim_goto_column, "Goto screen column [count] (vim |)",
+        vim_goto_column, "Goto screen column [count] (vim bar motion)",
         goto_next_buffer, "Goto next buffer",
         goto_previous_buffer, "Goto previous buffer",
         goto_line_end_newline, "Goto newline at line end",
