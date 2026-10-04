@@ -169,7 +169,20 @@ What a session restores, and the vim behaviour each part follows:
 - **Directories** — `cd`, and the window- and tab-local `lcd` and `tcd`.
 - **Argument list** — `%argdel`, `$argadd {file}`, `{N}argument`.
 
+### Writing sessions
+
+`:mks[ession][!] [file]` writes `Session.vim` (or `file`) the way nvim does —
+the same commands from the same state, so the file loads in vim and nvim as
+well as in zmax: every tab page and its split layout and sizes, each window's
+buffer, cursor, scroll, folds (`setlocal fold…`, `{range}fold`, `zo`/`zc`) and
+`lcd`, the tab pages' `tcd`, the buffer list, the argument list and the working
+directory. Without `!` an existing file is kept (E189). `'sessionoptions'`
+(nvim's default: `blank,buffers,curdir,folds,help,tabpages,winsize,terminal`)
+picks the parts; `sesdir` writes names relative to the session file.
+
 `zmax-term/tests/session_parity.rs` holds zmax to this: it loads sessions nvim
 wrote with `:mksession` (stacked, nested and multi-tab layouts, folds, local
 directories, the arglist) and compares every window's layout, size, cursor, top
-line, folds and directory with what nvim restores from the same file.
+line, folds, directory and buffer list with what nvim restores from the same
+file. The session zmax writes back from it must restore the same again, and nvim
+restores zmax's sessions as its own (`fixtures/sessions/nvim-loads.sh`).

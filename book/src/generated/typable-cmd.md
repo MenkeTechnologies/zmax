@@ -958,7 +958,7 @@
 | `:lgetexpr` | Parse the argument text into the location list without jumping. |
 | `:lfile`, `:lf` | Read a file of error lines into the location list and jump to the first entry. |
 | `:lgetfile` | Read a file of error lines into the location list without jumping. |
-| `:tabnew`, `:tabe`, `:tabedit` | Open a new tabpage (optionally editing a file). |
+| `:tabnew`, `:tabe`, `:tabedit` | Open a new tabpage, optionally editing a file and running a +cmd (vim :tabnew [+cmd] [file]). |
 | `:tabnext`, `:tabn` | Go to the next tabpage (or tab [count]). |
 | `:tabprevious`, `:tabp`, `:tabNext`, `:tabN` | Go to the previous tabpage. |
 | `:tabclose`, `:tabc` | Close the current tabpage. |
@@ -1244,7 +1244,8 @@
 | `:rshada!`, `:rsh!`, `:rsha!`, `:rshad!` | Read the shada file, overwriting registers, histories and marks that are already set (nvim :rshada!). |
 | `:syncbind`, `:sync`, `:syncb`, `:syncbi`, `:syncbin` | Scroll the 'scrollbind' (follow-mode) windows back into step with this one (vim :syncbind). |
 | `:uptime`, `:upt`, `:uptim` | Show how long this editor process has been running (nvim :uptime). |
-| `:mksession`, `:mks` | Write a session file (cwd + buffers) that :source restores (vim :mksession). |
+| `:mksession`, `:mks` | Write a session file of the tab pages, windows, buffers, folds and directories, as vim does (vim :mksession). |
+| `:mksession!`, `:mks!` | Write a session file, overwriting an existing one (vim :mksession!). |
 | `:mkvimrc`, `:mkv` | Write the current runtime mappings to a vimrc file (vim :mkvimrc; mappings only). |
 | `:mkexrc`, `:mk` | Write the current runtime mappings to an exrc file (vim :mkexrc; mappings only). |
 | `:mkview`, `:mkvie` | Write the current window's view (cursor position) to a file (vim :mkview). |

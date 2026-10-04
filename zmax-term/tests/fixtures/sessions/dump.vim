@@ -12,6 +12,9 @@ for s:i in range(argc())
   call add(s:args, s:i == argidx() ? '[' . s:name . ']' : s:name)
 endfor
 let s:out = ['tab ' . tabpagenr() . '/' . tabpagenr('$') . ' win ' . winnr() . ' args ' . join(s:args, ' ')]
+" The listed buffers with a name, sorted (numbering is not part of a session).
+let s:bufs = map(filter(getbufinfo({'buflisted': 1}), 'v:val.name !=# ""'), 'fnamemodify(v:val.name, ":t")')
+call add(s:out, 'bufs ' . join(sort(s:bufs), ','))
 for t in range(1, tabpagenr('$'))
   call add(s:out, 'TAB ' . t . ' cwd ' . fnamemodify(getcwd(-1, t), ':t') . ' layout ' . s:layout(winlayout(t)))
   for w in range(1, tabpagewinnr(t, '$'))

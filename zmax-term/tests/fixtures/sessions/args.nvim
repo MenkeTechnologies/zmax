@@ -1,3 +1,4 @@
 tab 1/1 win 1 args a.txt [b.txt] c.txt
+bufs a.txt,b.txt,c.txt
 TAB 1 cwd w layout b.txt
   win 1 b.txt w=120 h=148 cur=12:1 top=1 folds= cwd=w

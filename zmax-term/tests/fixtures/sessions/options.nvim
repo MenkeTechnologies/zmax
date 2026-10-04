@@ -1,4 +1,5 @@
 tab 1/1 win 1 args 
+bufs a.txt,b.txt
 TAB 1 cwd w layout row(b.txt,a.txt)
   win 1 b.txt w=60 h=148 cur=25:1 top=1 folds= cwd=w
   win 2 a.txt w=59 h=148 cur=1:1 top=1 folds= cwd=w

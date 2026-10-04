@@ -1,8 +1,11 @@
 //! Session parity with nvim: sessions written by nvim's `:mksession`
 //! (`tests/fixtures/sessions/*.vim`) are loaded the way `zmax -S` loads them,
 //! and the resulting editor state is compared with what nvim itself restores
-//! from the same file (`*.nvim`, dumped by `fixtures/sessions/dump.vim`).
-//! `fixtures/sessions/generate.sh` rebuilds both from nvim.
+//! from the same file (`*.nvim`, dumped by `fixtures/sessions/dump.vim`). The
+//! session zmax writes back with `:mksession!` must restore the same state.
+//! `fixtures/sessions/generate.sh` rebuilds both from nvim, and
+//! `fixtures/sessions/nvim-loads.sh` checks that nvim restores the sessions zmax
+//! writes (kept with `ZMAX_SESSION_OUT`) as it restores its own.
 //!
 //! Own test binary, one test: sessions `cd`, so they must not run in parallel
 //! with each other or with other tests.
@@ -130,11 +133,16 @@ fn dump(editor: &mut Editor) -> Vec<String> {
             }
         })
         .collect();
-    let mut out = vec![format!(
-        "tab {}/{tabs} win {win} args {}",
-        current + 1,
-        args.join(" ")
-    )];
+    // The listed buffers with a file, sorted, as dump.vim writes them.
+    let mut bufs: Vec<String> = editor
+        .documents()
+        .filter_map(|doc| doc.path().map(|p| tail(Some(p))))
+        .collect();
+    bufs.sort();
+    let mut out = vec![
+        format!("tab {}/{tabs} win {win} args {}", current + 1, args.join(" ")),
+        format!("bufs {}", bufs.join(",")),
+    ];
     for t in 0..tabs {
         if tabs > 1 {
             editor.switch_tab(t);
@@ -147,10 +155,50 @@ fn dump(editor: &mut Editor) -> Vec<String> {
     out
 }
 
+/// Start zmax the way `zmax -S {scripts…}` does, under the vim preset (a
+/// session's `normal!` keys are vim keys).
+fn boot(scripts: &[PathBuf]) -> anyhow::Result<Application> {
+    let mut args = Args::default();
+    args.source_files = scripts.to_vec();
+    let mut config = test_config();
+    config.keymap = "vim".to_string();
+    config.keys = zmax_term::keymap::preset("vim").expect("the vim preset");
+    let mut app = Application::new(
+        args,
+        config,
+        test_syntax_loader(None),
+        WorkspaceTrust::fully_trusted(),
+    )?;
+    app.load_init_scripts();
+    app.source_startup_files(scripts);
+    Ok(app)
+}
+
+/// Compare a dump with nvim's, recording a failure under `label`.
+fn check(label: &str, app: &mut Application, want: &[&str], failures: &mut Vec<String>) {
+    if app.editor.is_err() {
+        failures.push(format!("{label}: {:?}", app.editor.get_status()));
+    }
+    let got = dump(&mut app.editor);
+    if got != want {
+        failures.push(format!(
+            "{label}:\n  nvim:\n    {}\n  zmax:\n    {}",
+            want.join("\n    "),
+            got.join("\n    ")
+        ));
+    }
+}
+
+/// Each fixture: zmax loads nvim's session and must restore what nvim does;
+/// then zmax writes the session back with `:mksession!`, and a fresh zmax
+/// loading *that* must restore the same again — the round trip vim users rely
+/// on. With `ZMAX_SESSION_OUT` set, zmax's sessions are kept there (with the
+/// workspace path as `@DIR@`) so they can be loaded in nvim as well.
 #[tokio::test(flavor = "multi_thread")]
 async fn sessions_restore_as_nvim_restores_them() -> anyhow::Result<()> {
     let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sessions");
     let fixtures = std::env::var_os("ZMAX_SESSION_FIXTURES").map_or(fixtures, PathBuf::from);
+    let keep = std::env::var_os("ZMAX_SESSION_OUT").map(PathBuf::from);
     let root = std::env::temp_dir().join(format!("zmax-session-parity-{}", std::process::id()));
     let mut names: Vec<_> = std::fs::read_dir(&fixtures)?
         .filter_map(|e| e.ok()?.path().file_stem().map(|s| s.to_string_lossy().into_owned()))
@@ -168,34 +216,30 @@ async fn sessions_restore_as_nvim_restores_them() -> anyhow::Result<()> {
             .replace("@DIR@", &dir.to_string_lossy());
         let script = root.join(&name).join("sess.vim");
         std::fs::write(&script, session)?;
-
-        let mut args = Args::default();
-        args.source_files.push(script);
-        let source_files = args.source_files.clone();
-        // A session's `normal!` keys are vim keys: run under the vim preset.
-        let mut config = test_config();
-        config.keymap = "vim".to_string();
-        config.keys = zmax_term::keymap::preset("vim").expect("the vim preset");
-        let mut app = Application::new(
-            args,
-            config,
-            test_syntax_loader(None),
-            WorkspaceTrust::fully_trusted(),
-        )?;
-        app.load_init_scripts();
-        app.source_startup_files(&source_files);
-        if app.editor.is_err() {
-            failures.push(format!("{name}: {:?}", app.editor.get_status()));
-        }
-        let got = dump(&mut app.editor);
         let want = std::fs::read_to_string(fixtures.join(format!("{name}.nvim")))?;
         let want: Vec<&str> = want.lines().collect();
-        if got != want {
-            failures.push(format!(
-                "{name}:\n  nvim:\n    {}\n  zmax:\n    {}",
-                want.join("\n    "),
-                got.join("\n    ")
-            ));
+
+        // nvim's session, then zmax writing its own.
+        let written = root.join(&name).join("zmax.vim");
+        let save = root.join(&name).join("save.vim");
+        std::fs::write(&save, format!("mksession! {}\n", written.display()))?;
+        let mut app = boot(&[script, save])?;
+        check(&format!("{name} (nvim's session)"), &mut app, &want, &mut failures);
+        drop(app);
+
+        // zmax's session, loaded from a fresh start in the same directory.
+        std::env::set_current_dir(&dir)?;
+        let mut app = boot(std::slice::from_ref(&written))?;
+        check(&format!("{name} (zmax's session)"), &mut app, &want, &mut failures);
+        if let Some(keep) = &keep {
+            std::fs::create_dir_all(keep)?;
+            // Directories are written resolved (`/private/var/…` on macOS), as
+            // vim's `getcwd()` gives them: template that spelling first.
+            let real = std::fs::canonicalize(&dir)?;
+            let text = std::fs::read_to_string(&written)?
+                .replace(&*real.to_string_lossy(), "@DIR@")
+                .replace(&*dir.to_string_lossy(), "@DIR@");
+            std::fs::write(keep.join(format!("{name}.vim")), text)?;
         }
     }
     let _ = std::fs::remove_dir_all(&root);

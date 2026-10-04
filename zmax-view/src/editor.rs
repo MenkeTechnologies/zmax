@@ -1869,6 +1869,18 @@ fn encode_file_name(path: &Path, _coding: Option<&'static Encoding>) -> PathBuf 
     path.to_path_buf()
 }
 
+/// Every document a parked tab's windows show.
+fn shape_docs(shape: &crate::tree::TreeShape, out: &mut Vec<DocumentId>) {
+    match shape {
+        crate::tree::TreeShape::Leaf { doc, .. } => out.push(*doc),
+        crate::tree::TreeShape::Split { children, .. } => {
+            for (_, child) in children {
+                shape_docs(child, out);
+            }
+        }
+    }
+}
+
 /// The document of a parked tab's focused window (or its first window).
 fn tab_focused_doc(shape: &crate::tree::TreeShape) -> DocumentId {
     use crate::tree::TreeShape;
@@ -4815,6 +4827,18 @@ impl Editor {
                 }
             })
             .collect()
+    }
+
+    /// Every document some window shows, in this tab page or a parked one —
+    /// vim's `b_nwindows > 0`. A buffer outside this list is hidden.
+    pub fn displayed_docs(&self) -> Vec<DocumentId> {
+        let mut docs: Vec<DocumentId> = self.tree.views().map(|(view, _)| view.doc).collect();
+        for (i, tab) in self.tabs.iter().enumerate() {
+            if i != self.current_tab {
+                shape_docs(&tab.shape, &mut docs);
+            }
+        }
+        docs
     }
 
     pub fn ensure_cursor_in_view(&mut self, id: ViewId) {

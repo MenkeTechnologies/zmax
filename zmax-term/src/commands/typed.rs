@@ -16303,11 +16303,29 @@ qf_nav_cmd!(loclist_getfile_cmd, QfKind::Location, |cx, a| {
 
 // --- Tabpages (`:tabnew`, `:tabnext`, `:tabclose`, …) ----------------------
 
+/// vim `[+cmd]` (`:h +cmd`): the Ex command a leading `+…` argument of a
+/// file-opening command stands for, run once the file is open — `+` the last
+/// line, `+{num}` that line, `+/{pat}` the first match, `+{command}` the
+/// command itself (`:tabnew +setlocal\ bufhidden=wipe`, as a session writes).
+/// `None` for an argument that is not one. Pure — unit tested.
+fn plus_cmd(arg: &str) -> Option<String> {
+    let cmd = arg.strip_prefix('+')?;
+    Some(if cmd.is_empty() { "$".to_string() } else { cmd.to_string() })
+}
+
 fn tab_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let path = args.join(" ");
+    let mut words: Vec<&str> = args.iter().map(|a| a.as_ref()).collect();
+    let after_open = match words.first().copied().and_then(plus_cmd) {
+        Some(cmd) => {
+            words.remove(0);
+            Some(cmd)
+        }
+        None => None,
+    };
+    let path = words.join(" ");
     let path = path.trim();
     cx.editor.new_tab();
     if !path.is_empty() {
@@ -16315,6 +16333,9 @@ fn tab_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             std::path::Path::new(path),
             zmax_view::editor::Action::Replace,
         )?;
+    }
+    if let Some(cmd) = after_open {
+        run_command_line(cx, &cmd);
     }
     Ok(())
 }
@@ -33197,7 +33218,8 @@ fn set_buf_hidden_action(id: zmax_view::DocumentId, action: &str) {
 /// unset value keep it, which is zmax's normal behavior). Called after each ex
 /// command, i.e. after every `:edit`/`:bnext`/`:buffer` that can hide a buffer.
 pub(crate) fn bufhidden_close_hidden(editor: &mut Editor) {
-    let shown: Vec<zmax_view::DocumentId> = editor.tree.views().map(|(view, _)| view.doc).collect();
+    // Hidden means no window in any tab page shows it (vim `b_nwindows == 0`).
+    let shown = editor.displayed_docs();
     let hidden: Vec<zmax_view::DocumentId> = BUFHIDDEN.with(|b| {
         b.borrow()
             .iter()
@@ -44540,12 +44562,63 @@ fn default_view_path(buf: &std::path::Path) -> std::path::PathBuf {
     dir.join(view_file_name(buf))
 }
 
-/// vim `:mksession [file]` — write a session file (default `Session.vim` in the
-/// cwd) that restores the working directory and re-opens the buffers when
-/// sourced. zmax's `:source` now runs editor `:` commands, so
-/// `:source Session.vim` replays the `cd`/`badd`/`edit` lines. A subset of vim's
-/// session (cwd + buffer list + current file, not the full window layout).
-fn ex_mksession(
+/// A buffer's effective value of vim option `name`: its `:setlocal` value,
+/// else the global one, else the compiled default. Booleans read `on`/`off`.
+fn buffer_vim_opt(doc: &Document, name: &str) -> String {
+    doc.vim_local_opts
+        .get(name)
+        .cloned()
+        .or_else(|| global_vim_opt(name))
+        .unwrap_or_default()
+}
+
+/// The global value of vim option `name`, else its compiled default.
+fn global_vim_opt(name: &str) -> Option<String> {
+    vim_opt_global_str(name)
+        .or_else(|| vim_opt_str(name))
+        .or_else(|| vim_opt_meta(name).map(|(_, default)| default.to_string()))
+}
+
+/// vim `:mks[ession][!] [file]` — write a session file (default `Session.vim`)
+/// that `:source`/`-S` restore: every tab page and its window layout and sizes,
+/// each window's buffer, cursor, scroll, folds and `:lcd` directory, the
+/// buffer list, the argument list and the working directory, as nvim writes it
+/// (`ex_session.c`, see [`crate::session`]). Without `!` an existing file is
+/// not overwritten (E189). `'sessionoptions'` selects the parts.
+fn mksession(cx: &mut compositor::Context, args: &Args, overwrite: bool) -> anyhow::Result<()> {
+    let cwd = zmax_stdx::env::current_working_dir();
+    let path = session_arg_path(args, cwd.join("Session.vim"));
+    let path = if path.is_absolute() { path } else { cwd.join(path) };
+    if !overwrite && path.exists() {
+        bail!("E189: \"{}\" exists (add ! to override)", path.display());
+    }
+    let ssop = crate::session::SessionOptions::parse(
+        &vim_opt_str_alias("sessionoptions", "ssop")
+            .unwrap_or_else(|| crate::session::DEFAULT_SESSIONOPTIONS.to_string()),
+    );
+    let reader = crate::session::OptionReader {
+        buffer_opt: &buffer_vim_opt,
+        global_opt: &|name| global_vim_opt(name).unwrap_or_default(),
+    };
+    let arglist = with_arglist(|a| (a.files().to_vec(), a.index()));
+    let snap = crate::session::snapshot(cx.editor, &reader, arglist);
+    let dir = path.parent().unwrap_or(&cwd).to_path_buf();
+    let text = crate::session::write(&snap, ssop, &dir);
+    let _ = std::fs::create_dir_all(&dir);
+    std::fs::write(&path, text.as_bytes()).map_err(|e| anyhow!("mksession: {e}"))?;
+    cx.editor
+        .set_status(format!("session written to {}", path.display()));
+    Ok(())
+}
+
+fn ex_mksession(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    mksession(cx, &args, false)
+}
+
+fn ex_mksession_bang(
     cx: &mut compositor::Context,
     args: Args,
     event: PromptEvent,
@@ -44553,44 +44626,7 @@ fn ex_mksession(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let cwd = zmax_stdx::env::current_working_dir();
-    let path = session_arg_path(&args, cwd.join("Session.vim"));
-    let current = doc!(cx.editor).path().map(|p| p.to_path_buf());
-    let mut files: Vec<std::path::PathBuf> = cx
-        .editor
-        .documents()
-        .filter_map(|d| d.path().map(|p| p.to_path_buf()))
-        .filter(|p| current.as_deref() != Some(p.as_path()))
-        .collect();
-    files.sort();
-    files.dedup();
-    // vim `sessionoptions` (default `blank,buffers,curdir,folds,help,options,
-    // tabpages,winsize,terminal`) selects what goes in the file. zmax writes the
-    // two parts it can replay: `curdir` (a `cd` line) and `buffers` (an `edit` per
-    // buffer); the layout/fold/option parts of vim's session are not written.
-    let sessionoptions = vim_opt_str_alias("sessionoptions", "ssop");
-    const SESSIONOPTIONS_DEFAULT: &str =
-        "blank,buffers,curdir,folds,help,options,tabpages,winsize,terminal";
-    let want = |flag: &str| opt_list_has(sessionoptions.as_deref(), SESSIONOPTIONS_DEFAULT, flag);
-    // Re-open every buffer with `:edit` (the current file last so it ends up
-    // focused). `:edit` is what vimlrs recognises and the host bridge routes back
-    // to zmax, so `:source Session.vim` replays it.
-    let mut out = String::from("\" zmax session — :source this file to restore it\n");
-    if want("curdir") {
-        out.push_str(&format!("cd {}\n", cwd.display()));
-    }
-    if want("buffers") {
-        for f in files.iter().chain(current.iter()) {
-            out.push_str(&format!("edit {}\n", f.display()));
-        }
-    }
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    std::fs::write(&path, out.as_bytes()).map_err(|e| anyhow!("mksession: {e}"))?;
-    cx.editor
-        .set_status(format!("session written to {}", path.display()));
-    Ok(())
+    mksession(cx, &args, true)
 }
 
 /// Shared body of `:mkvimrc`/`:mkexrc`: write the recorded runtime mappings to a
@@ -61645,11 +61681,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "tabnew",
         aliases: &["tabe", "tabedit"],
-        doc: "Open a new tabpage (optionally editing a file).",
+        doc: "Open a new tabpage, optionally editing a file and running a +cmd (vim :tabnew [+cmd] [file]).",
         fun: tab_new,
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
-            positionals: (0, Some(1)),
+            positionals: (0, Some(2)),
             ..Signature::DEFAULT
         },
     },
@@ -64787,8 +64823,19 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "mksession",
         aliases: &["mks"],
-        doc: "Write a session file (cwd + buffers) that :source restores (vim :mksession).",
+        doc: "Write a session file of the tab pages, windows, buffers, folds and directories, as vim does (vim :mksession).",
         fun: ex_mksession,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mksession!",
+        aliases: &["mks!"],
+        doc: "Write a session file, overwriting an existing one (vim :mksession!).",
+        fun: ex_mksession_bang,
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (0, Some(1)),
@@ -78287,6 +78334,19 @@ mod vim_set_tests {
         assert_eq!(reindent_put_block("    a\n      b\n", "  "), "  a\n    b\n");
         // Blank lines stay empty.
         assert_eq!(reindent_put_block("a\n\nb\n", "  "), "  a\n\n  b\n");
+    }
+
+    /// vim `+cmd` forms: `+` is the last line, the rest is the command.
+    #[test]
+    fn plus_cmd_is_the_command_a_plus_argument_names() {
+        assert_eq!(super::plus_cmd("+").as_deref(), Some("$"));
+        assert_eq!(super::plus_cmd("+12").as_deref(), Some("12"));
+        assert_eq!(super::plus_cmd("+/fn main").as_deref(), Some("/fn main"));
+        assert_eq!(
+            super::plus_cmd("+setlocal bufhidden=wipe").as_deref(),
+            Some("setlocal bufhidden=wipe")
+        );
+        assert_eq!(super::plus_cmd("notes.txt"), None);
     }
 
     /// vim's argument addresses (`ADDR_ARGUMENTS`) over a 3-entry list whose
