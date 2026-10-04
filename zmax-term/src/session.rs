@@ -12,6 +12,8 @@ use std::path::{Path, PathBuf};
 use zmax_view::tree::{Layout, TreeShape};
 use zmax_view::{Editor, ViewId};
 
+use crate::vim_option_scopes::{Kind, Scope, VimOptionScope, VIM_OPTION_SCOPES};
+
 /// The `'sessionoptions'` flags the writer honours.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct SessionOptions {
@@ -24,6 +26,14 @@ pub struct SessionOptions {
     pub tabpages: bool,
     pub winsize: bool,
     pub terminal: bool,
+    /// Global options and mappings, and every window's local options.
+    pub options: bool,
+    /// Every window's local options only.
+    pub localoptions: bool,
+    /// Global variables with a mixed-case name (`let Count = 3`).
+    pub globals: bool,
+    /// The screen size (`set lines= columns=`).
+    pub resize: bool,
 }
 
 impl SessionOptions {
@@ -40,6 +50,10 @@ impl SessionOptions {
             tabpages: has("tabpages"),
             winsize: has("winsize"),
             terminal: has("terminal"),
+            options: has("options"),
+            localoptions: has("localoptions"),
+            globals: has("globals"),
+            resize: has("resize"),
         }
     }
 }
@@ -55,6 +69,32 @@ pub struct FoldNode {
     pub end: usize,
     pub closed: bool,
     pub nested: Vec<FoldNode>,
+}
+
+/// An option's global value, as `makeset(OPT_GLOBAL)` reads it.
+#[derive(Debug, Clone)]
+pub struct GlobalOpt {
+    pub opt: &'static VimOptionScope,
+    pub value: String,
+    pub default: String,
+}
+
+/// A local option of one window, as `makeset(OPT_LOCAL)` reads it.
+#[derive(Debug, Clone)]
+pub struct LocalOpt {
+    pub opt: &'static VimOptionScope,
+    /// The `:setlocal` value, if the buffer has one.
+    pub local: Option<String>,
+    /// The global value (vim's "fresh" value of a window-local option).
+    pub global: String,
+    pub default: String,
+}
+
+impl LocalOpt {
+    /// The window's value: its own, else the global one.
+    fn value(&self) -> &str {
+        self.local.as_deref().unwrap_or(&self.global)
+    }
 }
 
 /// One window, as `put_view` and `ses_winsizes` read it.
@@ -86,6 +126,8 @@ pub struct WinSnap {
     pub foldmethod_manual: bool,
     pub foldlevel: usize,
     pub folds: Vec<FoldNode>,
+    /// The window's local options (`makeset(OPT_LOCAL)`).
+    pub local_options: Vec<LocalOpt>,
 }
 
 /// One tab page.
@@ -121,6 +163,15 @@ pub struct SessionSnap {
     pub showtabline: usize,
     pub winheight: usize,
     pub winwidth: usize,
+    /// `'shortmess'`, restored with "options".
+    pub shortmess: String,
+    /// Every option zmax knows, at its global value (`makeset(OPT_GLOBAL)`).
+    pub global_options: Vec<GlobalOpt>,
+    /// The mappings, as `:map` commands (`makemap`).
+    pub maps: Vec<String>,
+    /// The `let` lines for the session's global variables
+    /// (`store_session_globals`).
+    pub globals: Vec<String>,
 }
 
 /// The values the snapshot needs from zmax's option store.
@@ -130,6 +181,13 @@ pub struct OptionReader<'a> {
     pub buffer_opt: &'a dyn Fn(&zmax_view::Document, &str) -> String,
     /// An option's global value (else its default), by full name.
     pub global_opt: &'a dyn Fn(&str) -> String,
+    /// An option zmax knows: its global value and its default.
+    pub known: &'a dyn Fn(&VimOptionScope) -> Option<(String, String)>,
+    /// A buffer's `:setlocal` value of an option, when it has one.
+    pub local: &'a dyn Fn(&zmax_view::Document, &VimOptionScope) -> Option<String>,
+    /// The mappings and the session's global variables, as lines.
+    pub maps: Vec<String>,
+    pub globals: Vec<String>,
 }
 
 /// Record the editor's tab pages and windows. Each tab page is visited in turn
@@ -175,6 +233,13 @@ pub fn snapshot(editor: &mut Editor, opts: &OptionReader, args: (Vec<String>, us
         showtabline: (opts.global_opt)("showtabline").parse().unwrap_or(1),
         winheight: (opts.global_opt)("winheight").parse().unwrap_or(1),
         winwidth: (opts.global_opt)("winwidth").parse().unwrap_or(20),
+        shortmess: (opts.global_opt)("shortmess"),
+        global_options: VIM_OPTION_SCOPES
+            .iter()
+            .filter_map(|opt| (opts.known)(opt).map(|(value, default)| GlobalOpt { opt, value, default }))
+            .collect(),
+        maps: opts.maps.clone(),
+        globals: opts.globals.clone(),
     }
 }
 
@@ -252,6 +317,18 @@ fn snapshot_win(
         ("foldenable", opt("foldenable")),
     ];
     let viewport = view.inner_area(doc);
+    let local_options = VIM_OPTION_SCOPES
+        .iter()
+        .filter(|opt| opt.scope != Scope::Global)
+        .filter_map(|opt| {
+            (opts.known)(opt).map(|(global, default)| LocalOpt {
+                opt,
+                local: (opts.local)(doc, opt),
+                global,
+                default,
+            })
+        })
+        .collect();
     WinSnap {
         path: doc.path().map(Path::to_path_buf),
         alt,
@@ -271,6 +348,7 @@ fn snapshot_win(
         foldmethod_manual: foldmethod == "manual",
         foldlevel: doc.folds().level(),
         folds: fold_tree(doc.folds().iter().map(|f| (f.start + 1, f.end + 1, f.closed))),
+        local_options,
     }
 }
 
@@ -424,6 +502,127 @@ fn ses_winsizes(w: &mut Writer, snap: &SessionSnap, tab: &TabSnap) {
     }
 }
 
+/// vim `put_escstr(fd, value, 2)`: an option value as `:set` reads it back —
+/// white space, `"` and `\` behind a backslash, a newline as `\^V^J`, another
+/// control character or `|` behind a CTRL-V.
+fn escape_option_value(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for c in value.chars() {
+        match c {
+            '\n' => out.push_str("\\\u{16}\n"),
+            ' ' | '\t' | '"' | '\\' => {
+                out.push('\\');
+                out.push(c);
+            }
+            c if c < ' ' || c == '|' || c == '\u{7f}' => {
+                out.push('\u{16}');
+                out.push(c);
+            }
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// vim `home_replace` over a comma-separated value: `~` for the home
+/// directory at the start of each part (`kOptFlagExpand` options).
+fn home_replace_list(value: &str) -> String {
+    value
+        .split(',')
+        .map(|part| zmax_stdx::path::fold_home_dir(Path::new(part)).to_string_lossy().into_owned())
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// vim `get_special_key_name` for the key `'wildchar'`/`'wildcharm'` hold
+/// (`wc_use_keyname`): `<Tab>`, `<CR>`, `<Esc>`, `<C-X>`; a printable key as
+/// itself.
+fn wildchar_key_name(value: &str) -> String {
+    match value.parse::<u32>().ok() {
+        Some(9) => "<Tab>".into(),
+        Some(13) => "<CR>".into(),
+        Some(27) => "<Esc>".into(),
+        Some(n @ 1..=31) => format!("<C-{}>", char::from_u32(n + 64).unwrap_or('@')),
+        _ => value.to_string(),
+    }
+}
+
+/// vim `put_set`: one `:set`/`:setlocal` line for an option's value.
+fn put_set(w: &mut Writer, cmd: &str, opt: &VimOptionScope, value: &str) {
+    let name = opt.name;
+    match opt.kind {
+        Kind::Boolean => {
+            let off = matches!(value, "off" | "0" | "false");
+            w.line(&format!("{cmd} {}{name}", if off { "no" } else { "" }));
+        }
+        Kind::Number if matches!(name, "wildchar" | "wildcharm") => {
+            w.line(&format!("{cmd} {name}={}", wildchar_key_name(value)));
+        }
+        Kind::Number => w.line(&format!("{cmd} {name}={value}")),
+        Kind::String => {
+            let value = if opt.expand { home_replace_list(value) } else { value.to_string() };
+            w.line(&format!("{cmd} {name}={}", escape_option_value(&value)));
+        }
+    }
+}
+
+/// vim `put_set` guarded as `makeset` writes 'syntax' and 'filetype': only
+/// when the value differs, so the syntax file is not loaded twice.
+fn put_set_guarded(w: &mut Writer, cmd: &str, opt: &VimOptionScope, value: &str) {
+    let guard = matches!(opt.name, "syntax" | "filetype");
+    if guard {
+        w.line(&format!("if &{} != '{value}'", opt.name));
+    }
+    put_set(w, cmd, opt, value);
+    if guard {
+        w.line("endif");
+    }
+}
+
+/// vim `makeset(fd, OPT_GLOBAL, false)`: a `:set` for every global value not
+/// at its default (the `pri_mkrc` ones first). Window-local options and
+/// `noglob` ones have no global value to write.
+fn makeset_global(w: &mut Writer, snap: &SessionSnap) {
+    for pri in [true, false] {
+        for g in snap.global_options.iter().filter(|g| g.opt.pri_mkrc == pri) {
+            let opt = g.opt;
+            if opt.no_mkrc
+                || opt.immutable
+                || opt.noglob
+                || opt.scope == Scope::Win
+                || g.value == g.default
+            {
+                continue;
+            }
+            put_set_guarded(w, "set", opt, &g.value);
+        }
+    }
+}
+
+/// vim `makeset(fd, OPT_LOCAL, local_only)`: a `:setlocal` for each local
+/// option of the window. With `options` (not `local_only`), a window-local
+/// option's global ("fresh") value not at its default is `:set` first. A
+/// global-local option the buffer has no local value for is skipped.
+fn makeset_local(w: &mut Writer, win: &WinSnap, local_only: bool) {
+    for pri in [true, false] {
+        for lo in win.local_options.iter().filter(|lo| lo.opt.pri_mkrc == pri) {
+            let opt = lo.opt;
+            if opt.no_mkrc || opt.immutable {
+                continue;
+            }
+            let window_local = matches!(opt.scope, Scope::Win | Scope::GlobalWin);
+            if window_local && !local_only && lo.global != lo.default {
+                put_set_guarded(w, "set", opt, &lo.global);
+            }
+            let global_local = matches!(opt.scope, Scope::GlobalBuf | Scope::GlobalWin);
+            if global_local && lo.local.is_none() {
+                continue;
+            }
+            put_set_guarded(w, "setlocal", opt, lo.value());
+        }
+    }
+}
+
 /// vim `put_folds` (manual folds and the open/closed state of each).
 fn put_folds(w: &mut Writer, win: &WinSnap) {
     if win.foldmethod_manual {
@@ -497,7 +696,9 @@ fn put_view(w: &mut Writer, snap: &SessionSnap, win: &WinSnap, add_edit: bool, c
         let f = w.fname(alt);
         w.line(&format!("balt {f}"));
     }
-    if w.ssop.folds {
+    if w.ssop.options || w.ssop.localoptions {
+        makeset_local(w, win, !w.ssop.options);
+    } else if w.ssop.folds {
         for (name, value) in &win.fold_opts {
             match value.as_str() {
                 "on" => w.line(&format!("setlocal {name}")),
@@ -505,9 +706,9 @@ fn put_view(w: &mut Writer, snap: &SessionSnap, win: &WinSnap, add_edit: bool, c
                 v => w.line(&format!("setlocal {name}={}", v.replace(' ', "\\ "))),
             }
         }
-        if win.path.is_some() {
-            put_folds(w, win);
-        }
+    }
+    if w.ssop.folds && win.path.is_some() {
+        put_folds(w, win);
     }
     if do_cursor {
         if win.view_height == 0 {
@@ -568,11 +769,22 @@ pub fn write(snap: &SessionSnap, ssop: SessionOptions, session_dir: &Path) -> St
         base,
     };
     w.line("let SessionLoad = 1");
+    if ssop.options {
+        for map in &snap.maps {
+            w.line(map);
+        }
+        makeset_global(&mut w, snap);
+    }
     w.line("let s:so_save = &g:so | let s:siso_save = &g:siso | setg so=0 siso=0 | setl so=-1 siso=-1");
 
     // makeopens
     w.line("let v:this_session=expand(\"<sfile>:p\")");
     w.line("doautoall SessionLoadPre");
+    if ssop.globals {
+        for line in &snap.globals {
+            w.line(line);
+        }
+    }
     w.line("silent only");
     if ssop.tabpages {
         w.line("silent tabonly");
@@ -586,7 +798,9 @@ pub fn write(snap: &SessionSnap, ssop: SessionOptions, session_dir: &Path) -> St
     w.line("if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''");
     w.line("  let s:wipebuf = bufnr('%')");
     w.line("endif");
-    w.line("let s:shortmess_save = &shortmess");
+    if !ssop.options {
+        w.line("let s:shortmess_save = &shortmess");
+    }
     w.line("set shortmess+=aoO");
     let shown: Vec<&Path> = snap
         .tabs
@@ -609,6 +823,10 @@ pub fn write(snap: &SessionSnap, ssop: SessionOptions, session_dir: &Path) -> St
             escape_fname(&snap.cwd.join(arg))
         };
         w.line(&format!("$argadd {f}"));
+    }
+
+    if ssop.resize {
+        w.line(&format!("set lines={} columns={}", snap.rows, snap.columns));
     }
 
     let tabs: &[TabSnap] = if ssop.tabpages {
@@ -717,7 +935,12 @@ pub fn write(snap: &SessionSnap, ssop: SessionOptions, session_dir: &Path) -> St
     w.line("endif");
     w.line("unlet! s:wipebuf");
     w.line(&format!("set winheight={} winwidth={}", snap.winheight, snap.winwidth));
-    w.line("let &shortmess = s:shortmess_save");
+    if ssop.options {
+        let shm = escape_option_value(&snap.shortmess);
+        w.line(&format!("set shortmess={shm}"));
+    } else {
+        w.line("let &shortmess = s:shortmess_save");
+    }
     if restore_height_width {
         w.line("let &winminheight = s:save_winminheight");
         w.line("let &winminwidth = s:save_winminwidth");

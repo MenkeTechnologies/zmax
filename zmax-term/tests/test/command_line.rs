@@ -308,6 +308,57 @@ async fn source_runs_a_scripts_normal_keys_in_order() -> anyhow::Result<()> {
     Ok(())
 }
 
+// vim `[+cmd]` on the file commands: `:edit +{num} {file}` opens on that line,
+// `:split +` splits onto the last line, and `:tabnew +{command}` runs the command
+// in the new tab — none of them is a file name (a session writes
+// `tabnew +setlocal\ bufhidden=wipe`).
+#[tokio::test(flavor = "multi_thread")]
+async fn plus_cmd_arguments_run_after_the_file_opens() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let notes = dir.path().join("notes.txt");
+    std::fs::write(&notes, (1..=20).map(|n| format!("line {n}\n")).collect::<String>())?;
+    let line_of = |app: &zmax_term::application::Application| {
+        let (view, doc) = zmax_view::current_ref!(app.editor);
+        let text = doc.text().slice(..);
+        text.char_to_line(doc.selection(view.id).primary().cursor(text)) + 1
+    };
+    let mut app = AppBuilder::new().build()?;
+    test_key_sequence(
+        &mut app,
+        Some(&format!(":edit +7 {}<ret>", notes.display())),
+        Some(&move |app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(line_of(app), 7);
+        }),
+        false,
+    )
+    .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":split +<ret>"),
+        Some(&move |app| {
+            assert_eq!(app.editor.tree.views().count(), 2);
+            assert_eq!(line_of(app), 20, "`+` is the last line");
+        }),
+        false,
+    )
+    .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":tabnew +setlocal\\ bufhidden=wipe<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert!(
+                app.editor.documents().all(|d| d.path().is_none_or(|p| !p.ends_with("+setlocal bufhidden=wipe"))),
+                "a +cmd is not a file"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 // The vimrc's sidebar-plugin commands (F1 `:NERDTreeToggle`, F3 `:TlistToggle`,
 // F4 `:MinimapToggle`, F5 `:LOTRToggle`) run on the workbench without error,
 // and NERDTree's start directory must exist, failing with NERDTree's message.

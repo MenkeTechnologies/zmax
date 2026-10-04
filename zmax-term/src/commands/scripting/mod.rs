@@ -76,6 +76,19 @@ thread_local! {
         const { Cell::new(ptr::null_mut()) };
 }
 
+/// The `let` lines `:mksession` writes for the global variables with a
+/// session-flavoured name (`let Count = 3`; vimlrs `store_session_globals`).
+pub fn session_globals() -> Vec<String> {
+    #[cfg(unix)]
+    {
+        vimlrs::ported::ex_session::store_session_globals()
+    }
+    #[cfg(not(unix))]
+    {
+        Vec::new()
+    }
+}
+
 /// Whether a script is being evaluated on this thread right now — a
 /// `:source` met inside one runs in place rather than being rescheduled.
 pub fn script_running() -> bool {

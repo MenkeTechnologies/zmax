@@ -99,6 +99,7 @@ pub mod ui;
 pub mod vim_autocmd;
 pub mod vim_conceal;
 pub mod vim_modeline;
+pub mod vim_option_scopes;
 pub mod vim_regex;
 pub mod vim_statusline;
 pub mod vim_swap;

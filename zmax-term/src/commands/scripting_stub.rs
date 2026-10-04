@@ -58,6 +58,11 @@ pub fn source_viml_file(
     Err(DISABLED.to_string())
 }
 
+/// See [`crate::commands::scripting::session_globals`].
+pub fn session_globals() -> Vec<String> {
+    Vec::new()
+}
+
 /// See [`crate::commands::scripting::script_running`].
 pub fn script_running() -> bool {
     false

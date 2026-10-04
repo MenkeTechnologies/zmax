@@ -820,9 +820,32 @@ fn sandbox_check(what: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Split a file command's arguments into its vim `[+cmd]` (`:h +cmd`, the
+/// first argument when it starts with a single `+`) and the file names.
+fn split_plus_arg(args: &Args) -> (Option<String>, Vec<String>) {
+    let mut files: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let cmd = match files.first() {
+        Some(first) if !first.starts_with("++") => plus_cmd(first),
+        _ => None,
+    };
+    if cmd.is_some() {
+        files.remove(0);
+    }
+    (cmd, files)
+}
+
 fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow::Result<()> {
+    let (after_open, files) = split_plus_arg(&args);
+    open_files(cx, files, action)?;
+    if let Some(cmd) = after_open {
+        run_command_line(cx, &cmd);
+    }
+    Ok(())
+}
+
+fn open_files(cx: &mut compositor::Context, files: Vec<String>, action: Action) -> anyhow::Result<()> {
     let action = split_mod(cx.editor, action);
-    for arg in args {
+    for arg in files {
         let (path, pos) = crate::args::parse_file(&arg);
         let path = zmax_stdx::path::expand_tilde(path);
         // If the path is a directory, open a file picker on that directory and update the status
@@ -16317,14 +16340,7 @@ fn tab_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let mut words: Vec<&str> = args.iter().map(|a| a.as_ref()).collect();
-    let after_open = match words.first().copied().and_then(plus_cmd) {
-        Some(cmd) => {
-            words.remove(0);
-            Some(cmd)
-        }
-        None => None,
-    };
+    let (after_open, words) = split_plus_arg(&args);
     let path = words.join(" ");
     let path = path.trim();
     cx.editor.new_tab();
@@ -27109,13 +27125,22 @@ fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         return Ok(());
     }
 
-    if args.is_empty() {
-        let action = split_mod(cx.editor, Action::VerticalSplit);
+    split_or_open(cx, &args, Action::VerticalSplit)
+}
+
+/// `:split`/`:vsplit [+cmd] [file]`: split the window, onto `file` when one is
+/// named, then run the `+cmd`.
+fn split_or_open(cx: &mut compositor::Context, args: &Args, direction: Action) -> anyhow::Result<()> {
+    let (after_open, files) = split_plus_arg(args);
+    if files.is_empty() {
+        let action = split_mod(cx.editor, direction);
         split(cx.editor, action);
     } else {
-        open_impl(cx, args, Action::VerticalSplit)?;
+        open_files(cx, files, direction)?;
     }
-
+    if let Some(cmd) = after_open {
+        run_command_line(cx, &cmd);
+    }
     Ok(())
 }
 
@@ -27124,14 +27149,7 @@ fn hsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         return Ok(());
     }
 
-    if args.is_empty() {
-        let action = split_mod(cx.editor, Action::HorizontalSplit);
-        split(cx.editor, action);
-    } else {
-        open_impl(cx, args, Action::HorizontalSplit)?;
-    }
-
-    Ok(())
+    split_or_open(cx, &args, Action::HorizontalSplit)
 }
 
 fn vsplit_new(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -27404,6 +27422,291 @@ fn parse_set_token(tok: &str) -> (bool, bool, &str, Option<&str>) {
         }
     }
     (false, toggle, t, None)
+}
+
+// --- vim `:set {opt}+=`, `^=`, `-=` (nvim option.c) --------------------------
+
+/// vim `set_op_T`: what `+=`, `^=` and `-=` do to an option's value.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum SetOp {
+    Add,
+    Prepend,
+    Remove,
+}
+
+/// vim `get_op`: split `opt+=val` (or `+:`, `^=`, `-=`) into the option name,
+/// the operation and the value. `None` for any other token.
+fn split_set_op(tok: &str) -> Option<(&str, SetOp, &str)> {
+    let eq = tok.find(['=', ':'])?;
+    let head = &tok[..eq];
+    let op = match head.chars().last()? {
+        '+' => SetOp::Add,
+        '^' => SetOp::Prepend,
+        '-' => SetOp::Remove,
+        _ => return None,
+    };
+    Some((&head[..head.len() - 1], op, &tok[eq + 1..]))
+}
+
+/// vim `find_dup_item`: where `new` occurs in `orig` — as a whole item of a
+/// comma list (a comma escaped by an odd number of backslashes does not
+/// separate) or, for any other value, anywhere. A byte offset.
+fn find_dup_item(orig: &str, new: &str, comma: bool) -> Option<usize> {
+    let b = orig.as_bytes();
+    let n = new.len();
+    let mut bs = 0;
+    for s in 0..b.len() {
+        if (!comma || s == 0 || (b[s - 1] == b',' && bs & 1 == 0))
+            && b[s..].starts_with(new.as_bytes())
+            && (!comma || s + n == b.len() || b[s + n] == b',')
+        {
+            return Some(s);
+        }
+        if (s > 1 && b[s - 1] == b'\\' && b[s - 2] != b',') || (s == 1 && b[0] == b'\\') {
+            bs += 1;
+        } else {
+            bs = 0;
+        }
+    }
+    None
+}
+
+/// vim `find_key_item`: the item of comma list `src` whose key part (through
+/// its `:`) is `key` — its offset and length.
+fn find_key_item(src: &str, key: &str, from: usize) -> Option<(usize, usize)> {
+    let b = src.as_bytes();
+    (from..b.len()).find_map(|p| {
+        ((p == 0 || b[p - 1] == b',') && src[p..].starts_with(key)).then(|| {
+            let end = src[p..].find(',').map_or(src.len(), |e| p + e);
+            (p, end - p)
+        })
+    })
+}
+
+/// vim `remove_comma_item`: drop the item at `pos` with the comma after it,
+/// else the one before it.
+fn remove_comma_item(s: &mut String, pos: usize, len: usize) {
+    if s.as_bytes().get(pos + len) == Some(&b',') {
+        s.replace_range(pos..pos + len + 1, "");
+    } else if pos > 0 && s.as_bytes()[pos - 1] == b',' {
+        s.replace_range(pos - 1..pos + len, "");
+    } else {
+        s.truncate(pos);
+    }
+}
+
+/// vim `remove_key_item`: drop every item with this key except the one at
+/// `skip`.
+fn remove_key_item(s: &mut String, key: &str, mut skip: Option<usize>) {
+    let mut from = 0;
+    while let Some((pos, len)) = find_key_item(s, key, from) {
+        if Some(pos) == skip {
+            from = pos + len + 1;
+            continue;
+        }
+        remove_comma_item(s, pos, len);
+        if let Some(k) = skip.filter(|k| *k > pos) {
+            skip = Some(k - (len + 1).min(k - pos));
+        }
+        from = 0;
+    }
+}
+
+/// vim `append_item` / `prepend_item`: add an item to a comma list.
+fn add_comma_item(s: &mut String, item: &str, op: SetOp) {
+    match (op, s.is_empty()) {
+        (_, true) => s.push_str(item),
+        (SetOp::Prepend, false) => s.insert_str(0, &format!("{item},")),
+        _ => {
+            s.push(',');
+            s.push_str(item);
+        }
+    }
+}
+
+/// vim `stropt_handle_keymatch`: for a `key:value` comma list, each item of
+/// `new` replaces the item with its key (or is dropped, for `-=`). `None` when
+/// `new` is a single plain item, which the ordinary path handles.
+fn stropt_handle_keymatch(orig: &str, new: &str, op: SetOp) -> Option<String> {
+    if !new.contains([':', ',']) {
+        return None;
+    }
+    let mut res = orig.to_string();
+    for item in new.split(',').filter(|i| !i.is_empty()) {
+        match item.find(':') {
+            Some(colon) => {
+                let key = &item[..=colon];
+                if op == SetOp::Remove {
+                    remove_key_item(&mut res, key, None);
+                    continue;
+                }
+                match find_key_item(&res, key, 0) {
+                    Some((pos, len)) if &res[pos..pos + len] == item => {
+                        remove_key_item(&mut res, key, Some(pos))
+                    }
+                    Some(_) => {
+                        remove_key_item(&mut res, key, None);
+                        add_comma_item(&mut res, item, op);
+                    }
+                    None => add_comma_item(&mut res, item, op),
+                }
+            }
+            None => match (op, find_dup_item(&res, item, true)) {
+                (SetOp::Remove, Some(pos)) => remove_comma_item(&mut res, pos, item.len()),
+                (SetOp::Remove, None) | (_, Some(_)) => {}
+                (_, None) => add_comma_item(&mut res, item, op),
+            },
+        }
+    }
+    Some(res)
+}
+
+/// vim `stropt_remove_dupflags`: in a flag list, keep only the last of each
+/// flag (`shortmess+=f` on `filn…` moves the `f` to the end).
+fn stropt_remove_dupflags(value: &str, opt: &crate::vim_option_scopes::VimOptionScope) -> String {
+    let mut s: Vec<char> = value.chars().collect();
+    let mut i = 0;
+    while i < s.len() {
+        let c = s[i];
+        // `flags & kOptFlagOneComma` is true for any comma list: the mask
+        // carries kOptFlagComma's bit too.
+        if opt.comma {
+            if c != ',' && s.get(i + 1) == Some(&',') && s[i + 2..].contains(&c) {
+                s.drain(i..i + 2);
+                continue;
+            }
+        } else if (!opt.comma || c != ',') && s[i + 1..].contains(&c) {
+            s.remove(i);
+            continue;
+        }
+        i += 1;
+    }
+    s.into_iter().collect()
+}
+
+/// vim `stropt_get_newval` for `+=`, `^=` and `-=` on a String option.
+fn string_set_op(
+    opt: &crate::vim_option_scopes::VimOptionScope,
+    op: SetOp,
+    orig: &str,
+    new: &str,
+) -> String {
+    let handled = (opt.comma && opt.colon)
+        .then(|| stropt_handle_keymatch(orig, new, op))
+        .flatten();
+    let value = handled.unwrap_or_else(|| {
+        let dup = (op == SetOp::Remove || opt.no_dup)
+            .then(|| find_dup_item(orig, new, opt.comma))
+            .flatten();
+        match op {
+            // Not added again when it is already there.
+            SetOp::Add | SetOp::Prepend if opt.no_dup && dup.is_some() => orig.to_string(),
+            SetOp::Add | SetOp::Prepend => {
+                // stropt_concat_with_comma
+                let comma = opt.comma && !orig.is_empty() && !new.is_empty();
+                let sep = if comma { "," } else { "" };
+                if op == SetOp::Prepend {
+                    format!("{new}{sep}{orig}")
+                } else {
+                    let b = orig.as_bytes();
+                    let strip = comma
+                        && opt.one_comma
+                        && b.len() > 1
+                        && b[b.len() - 1] == b','
+                        && b[b.len() - 2] != b'\\';
+                    let orig = if strip { &orig[..orig.len() - 1] } else { orig };
+                    format!("{orig}{sep}{new}")
+                }
+            }
+            // stropt_remove_val: the item and a comma beside it.
+            SetOp::Remove => match dup.filter(|_| !new.is_empty()) {
+                Some(pos) => {
+                    let (mut start, mut len) = (pos, new.len());
+                    if opt.comma {
+                        if pos == 0 {
+                            if orig.as_bytes().get(len) == Some(&b',') {
+                                len += 1;
+                            }
+                        } else {
+                            start -= 1;
+                            len += 1;
+                        }
+                    }
+                    let mut out = orig.to_string();
+                    out.replace_range(start..start + len, "");
+                    out
+                }
+                None => orig.to_string(),
+            },
+        }
+    });
+    if opt.flag_list {
+        stropt_remove_dupflags(&value, opt)
+    } else {
+        value
+    }
+}
+
+/// vim `vim_str2nr(…, STR2NR_ALL, …)` for a `:set` number: decimal, `0x`
+/// hex, `0b` binary or leading-`0` octal, optionally negative.
+fn parse_set_number(s: &str) -> Option<i64> {
+    let (neg, digits) = match s.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, s),
+    };
+    let lower = digits.to_ascii_lowercase();
+    let n = if let Some(h) = lower.strip_prefix("0x") {
+        i64::from_str_radix(h, 16).ok()?
+    } else if let Some(b) = lower.strip_prefix("0b") {
+        i64::from_str_radix(b, 2).ok()?
+    } else if digits.len() > 1 && digits.starts_with('0') && digits.bytes().all(|b| b.is_ascii_digit() && b < b'8') {
+        i64::from_str_radix(&digits[1..], 8).ok()?
+    } else {
+        digits.parse().ok()?
+    };
+    Some(if neg { -n } else { n })
+}
+
+/// Rewrite each `opt+=val` / `opt^=val` / `opt-=val` of a `:set` line as the
+/// `opt=newval` it produces from the option's current value, as nvim's
+/// `get_option_newval` does. `current` reads that value by full name.
+fn resolve_set_operators(
+    tokens: Vec<String>,
+    current: impl Fn(&crate::vim_option_scopes::VimOptionScope) -> String,
+) -> anyhow::Result<Vec<String>> {
+    use crate::vim_option_scopes::{Kind, VIM_OPTION_SCOPES};
+    tokens
+        .into_iter()
+        .map(|tok| {
+            let Some((name, op, value)) = split_set_op(&tok) else {
+                return Ok(tok);
+            };
+            let Some(opt) = VIM_OPTION_SCOPES
+                .iter()
+                .find(|o| o.name == name || (!o.abbr.is_empty() && o.abbr == name))
+            else {
+                bail!("E518: Unknown option: {name}");
+            };
+            let old = current(opt);
+            let new = match opt.kind {
+                Kind::Boolean => bail!("E474: Invalid argument: {tok}"),
+                Kind::Number => {
+                    let old = parse_set_number(&old).unwrap_or(0);
+                    let Some(n) = parse_set_number(value) else {
+                        bail!("E521: Number required after =: {tok}");
+                    };
+                    match op {
+                        SetOp::Add => old + n,
+                        SetOp::Prepend => old * n,
+                        SetOp::Remove => old - n,
+                    }
+                    .to_string()
+                }
+                Kind::String => string_set_op(opt, op, &old, value),
+            };
+            Ok(format!("{}={new}", opt.name))
+        })
+        .collect()
 }
 
 /// Translate a parsed vim option into (zmax key, JSON value). `current_bool`
@@ -28148,7 +28451,31 @@ fn errorfile_path(arg: &str) -> std::path::PathBuf {
 /// the session store.
 fn vim_opt_effective(cfg: &Value, name: &str) -> Option<String> {
     let get = |key: &str| cfg.pointer(&format!("/{}", key.replace('.', "/")));
+    // The string the user `:set` an option to, when it has one.
+    let set_value = |names: &[&str]| {
+        names
+            .iter()
+            .find_map(|n| VIM_OPTION_STORE.with(|s| s.borrow().get(*n).cloned()))
+            .filter(|v| !v.is_empty() && v != "on" && v != "off")
+    };
     match name {
+        // String options zmax keeps as an on/off config: report vim's form —
+        // the modes / border style that was `:set`, else vim's value for "on",
+        // and empty for off.
+        "mouse" => {
+            return Some(if get("mouse")?.as_bool()? {
+                set_value(&["mouse"]).unwrap_or_else(|| "nvi".into())
+            } else {
+                String::new()
+            });
+        }
+        "pumborder" => {
+            return Some(if get("popup-border")?.as_str()? == "none" {
+                String::new()
+            } else {
+                set_value(&["pumborder"]).unwrap_or_else(|| "single".into())
+            });
+        }
         "number" | "nu" => {
             return Some(bool_word(config_gutter_present(cfg, "line-numbers")));
         }
@@ -28355,6 +28682,29 @@ fn vim_set_scoped(
         return Ok(());
     }
     let tokens: Vec<String> = (0..args.len()).map(|i| args[i].to_string()).collect();
+
+    // `opt+=val`, `opt^=val`, `opt-=val` become the `opt=val` they produce from
+    // the value the command's scope sees.
+    let tokens = {
+        let cfg = serde_json::json!(&cx.editor.config().deref());
+        let local = doc!(cx.editor).vim_local_opts.clone();
+        resolve_set_operators(tokens, |opt| {
+            let names = [opt.name, opt.abbr];
+            let pick = |get: &dyn Fn(&str) -> Option<String>| {
+                names.iter().filter(|n| !n.is_empty()).find_map(|n| get(n))
+            };
+            let scoped = match scope {
+                OptScope::Global => pick(&|n| vim_opt_global_str(n)),
+                OptScope::Local => pick(&|n| local.get(n).cloned()),
+                OptScope::Both => None,
+            };
+            scoped
+                .or_else(|| vim_opt_effective(&cfg, opt.name))
+                .or_else(|| pick(&|n| VIM_OPTION_STORE.with(|s| s.borrow().get(n).cloned())))
+                .or_else(|| vim_opt_meta(opt.name).map(|(_, d)| d.to_string()))
+                .unwrap_or_default()
+        })?
+    };
 
     // `:setglobal` changes the default for buffers without a local value; it must
     // not touch this buffer's value or apply any behavior to it. Store the global
@@ -44579,6 +44929,32 @@ fn global_vim_opt(name: &str) -> Option<String> {
         .or_else(|| vim_opt_meta(name).map(|(_, default)| default.to_string()))
 }
 
+/// Options whose nvim default is computed from the environment or the screen
+/// at startup (`$SHELL`, `$VIMRUNTIME`, `$XDG_STATE_HOME`, the terminal size,
+/// the locale), so the compiled table holds no comparable default.
+const ENV_DEFAULT_OPTIONS: &[&str] = &[
+    "backupdir",
+    "columns",
+    "directory",
+    "grepprg",
+    "helpfile",
+    "helplang",
+    "lines",
+    "packpath",
+    "runtimepath",
+    "scroll",
+    "shell",
+    "shellcmdflag",
+    "shellpipe",
+    "shellquote",
+    "shellredir",
+    "shellxescape",
+    "shellxquote",
+    "undodir",
+    "viewdir",
+    "window",
+];
+
 /// vim `:mks[ession][!] [file]` — write a session file (default `Session.vim`)
 /// that `:source`/`-S` restore: every tab page and its window layout and sizes,
 /// each window's buffer, cursor, scroll, folds and `:lcd` directory, the
@@ -44596,9 +44972,36 @@ fn mksession(cx: &mut compositor::Context, args: &Args, overwrite: bool) -> anyh
         &vim_opt_str_alias("sessionoptions", "ssop")
             .unwrap_or_else(|| crate::session::DEFAULT_SESSIONOPTIONS.to_string()),
     );
+    let cfg = serde_json::json!(&cx.editor.config().deref());
+    // An option zmax knows: its global value (the `:setglobal` one, else what
+    // the editor config or the option store says) and its default.
+    let known = |opt: &crate::vim_option_scopes::VimOptionScope| {
+        let (_, default) = vim_opt_meta(opt.name)?;
+        let set = vim_opt_global_str(opt.name)
+            .or_else(|| (!opt.abbr.is_empty()).then(|| vim_opt_global_str(opt.abbr)).flatten());
+        // nvim computes these defaults from the environment at startup, so
+        // they differ from it only once the user sets them.
+        if set.is_none() && ENV_DEFAULT_OPTIONS.contains(&opt.name) {
+            return Some((default.to_string(), default.to_string()));
+        }
+        let value = set
+            .or_else(|| vim_opt_current(&cfg, opt.name))
+            .unwrap_or_else(|| default.to_string());
+        Some((value, default.to_string()))
+    };
+    let local = |doc: &Document, opt: &crate::vim_option_scopes::VimOptionScope| {
+        doc.vim_local_opts
+            .get(opt.name)
+            .or_else(|| (!opt.abbr.is_empty()).then(|| doc.vim_local_opts.get(opt.abbr)).flatten())
+            .cloned()
+    };
     let reader = crate::session::OptionReader {
         buffer_opt: &buffer_vim_opt,
         global_opt: &|name| global_vim_opt(name).unwrap_or_default(),
+        known: &known,
+        local: &local,
+        maps: crate::keymap::vim_map::export_map_lines(),
+        globals: crate::commands::scripting::session_globals(),
     };
     let arglist = with_arglist(|a| (a.files().to_vec(), a.index()));
     let snap = crate::session::snapshot(cx.editor, &reader, arglist);
@@ -78334,6 +78737,53 @@ mod vim_set_tests {
         assert_eq!(reindent_put_block("    a\n      b\n", "  "), "  a\n    b\n");
         // Blank lines stay empty.
         assert_eq!(reindent_put_block("a\n\nb\n", "  "), "  a\n\n  b\n");
+    }
+
+    /// `:set opt+=`, `^=`, `-=`: each case and result is what nvim 0.12
+    /// gives from the same starting value.
+    #[test]
+    fn set_operators_match_nvim() {
+        let opt = |name: &str| {
+            crate::vim_option_scopes::VIM_OPTION_SCOPES
+                .iter()
+                .find(|o| o.name == name)
+                .unwrap()
+        };
+        use super::{string_set_op as s, SetOp::*};
+        let cases: &[(&str, super::SetOp, &str, &str, &str)] = &[
+            ("path", Add, ".,,", "**", ".,,,**"),
+            ("path", Add, ".,,,**", "**", ".,,,**"),
+            ("path", Remove, ".,,,**", ".", ",,**"),
+            ("path", Prepend, ",,**", "/usr/include", "/usr/include,,,**"),
+            ("shortmess", Add, "filnxtToOF", "I", "filnxtToOFI"),
+            ("shortmess", Add, "filnxtToOFI", "f", "ilnxtToOFIf"),
+            ("shortmess", Remove, "ilnxtToOFIf", "O", "ilnxtToFIf"),
+            ("whichwrap", Add, "b,s", "h,l", "b,s,h,l"),
+            ("whichwrap", Add, "b,s,h,l", "b", "s,h,l,b"),
+            ("listchars", Add, "tab:> ,trail:-,nbsp:+", "tab:>-", "trail:-,nbsp:+,tab:>-"),
+            ("listchars", Remove, "trail:-,nbsp:+,tab:>-", "trail:-", "nbsp:+,tab:>-"),
+            ("listchars", Add, "nbsp:+,tab:>-", "eol:$,space:.", "nbsp:+,tab:>-,eol:$,space:."),
+            ("wildignore", Add, "", "*.o", "*.o"),
+            ("wildignore", Add, "*.o", "*.o,*.a", "*.o,*.o,*.a"),
+            ("titlestring", Add, "abc", "def", "abcdef"),
+            ("titlestring", Remove, "abcdef", "bc", "adef"),
+            ("titlestring", Prepend, "adef", "x", "xadef"),
+            ("cpoptions", Remove, "aABceFs", "a", "ABceFs"),
+            ("cpoptions", Add, "ABceFs", "a", "ABceFsa"),
+        ];
+        for &(name, op, orig, new, want) in cases {
+            assert_eq!(s(opt(name), op, orig, new), want, "{name} {op:?} {orig:?} {new:?}");
+        }
+        let resolved = super::resolve_set_operators(
+            vec!["sw+=2".into(), "ts^=3".into(), "tw-=1".into()],
+            |o| match o.name {
+                "shiftwidth" => "4".into(),
+                "tabstop" => "5".into(),
+                _ => "80".into(),
+            },
+        )
+        .unwrap();
+        assert_eq!(resolved, ["shiftwidth=6", "tabstop=15", "textwidth=79"]);
     }
 
     /// vim `+cmd` forms: `+` is the last line, the rest is the command.

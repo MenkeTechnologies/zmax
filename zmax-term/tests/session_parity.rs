@@ -155,6 +155,9 @@ fn dump(editor: &mut Editor) -> Vec<String> {
     out
 }
 
+/// Both tests `cd`: one at a time.
+static CWD: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Start zmax the way `zmax -S {scripts…}` does, under the vim preset (a
 /// session's `normal!` keys are vim keys).
 fn boot(scripts: &[PathBuf]) -> anyhow::Result<Application> {
@@ -196,6 +199,7 @@ fn check(label: &str, app: &mut Application, want: &[&str], failures: &mut Vec<S
 /// workspace path as `@DIR@`) so they can be loaded in nvim as well.
 #[tokio::test(flavor = "multi_thread")]
 async fn sessions_restore_as_nvim_restores_them() -> anyhow::Result<()> {
+    let _cwd = CWD.lock().unwrap_or_else(|e| e.into_inner());
     let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sessions");
     let fixtures = std::env::var_os("ZMAX_SESSION_FIXTURES").map_or(fixtures, PathBuf::from);
     let keep = std::env::var_os("ZMAX_SESSION_OUT").map(PathBuf::from);
@@ -244,5 +248,67 @@ async fn sessions_restore_as_nvim_restores_them() -> anyhow::Result<()> {
     }
     let _ = std::fs::remove_dir_all(&root);
     assert!(failures.is_empty(), "\n{}", failures.join("\n"));
+    Ok(())
+}
+
+/// 'sessionoptions' "options", "localoptions", "globals" and "resize": zmax
+/// writes a changed global option, a buffer's `:setlocal` value, the
+/// mixed-case globals and the screen size, and loading the file restores them.
+#[tokio::test(flavor = "multi_thread")]
+async fn sessions_save_options_globals_and_the_screen() -> anyhow::Result<()> {
+    let _cwd = CWD.lock().unwrap_or_else(|e| e.into_inner());
+    let root = std::env::temp_dir().join(format!("zmax-session-opts-{}", std::process::id()));
+    let dir = root.join("w");
+    let _ = std::fs::remove_dir_all(&root);
+    write_workspace(&dir)?;
+    std::env::set_current_dir(&dir)?;
+    let written = root.join("zmax.vim");
+    let setup = root.join("setup.vim");
+    std::fs::write(
+        &setup,
+        format!(
+            "set sessionoptions+=options,localoptions,globals,resize\n\
+             set tabstop=4\n\
+             let MyCount = 3\n\
+             let MyName = 'x \"y\"'\n\
+             edit {dir}/a.txt\n\
+             setlocal shiftwidth=2\n\
+             mksession! {out}\n",
+            dir = dir.display(),
+            out = written.display()
+        ),
+    )?;
+    let app = boot(&[setup])?;
+    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+    drop(app);
+    let text = std::fs::read_to_string(&written)?;
+    for want in [
+        "set tabstop=4",
+        "setlocal shiftwidth=2",
+        "let MyCount =  3 ",
+        "let MyName = \"x \\\"y\\\"\"",
+        "set lines=",
+    ] {
+        assert!(text.contains(want), "{want:?} missing from:\n{text}");
+    }
+
+    // A fresh zmax loading it gets them back.
+    let check = root.join("check.vim");
+    let out = root.join("check.out");
+    std::fs::write(
+        &check,
+        format!("call writefile([&tabstop, MyCount, MyName], '{}')\n", out.display()),
+    )?;
+    std::env::set_current_dir(&dir)?;
+    let app = boot(&[written, check])?;
+    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+    assert_eq!(std::fs::read_to_string(&out)?, "4\n3\nx \"y\"\n");
+    let (_, doc) = zmax_view::current_ref!(app.editor);
+    assert_eq!(
+        doc.vim_local_opts.get("shiftwidth").map(String::as_str),
+        Some("2"),
+        "the buffer's :setlocal value"
+    );
+    let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }

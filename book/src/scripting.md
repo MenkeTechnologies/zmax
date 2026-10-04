@@ -178,7 +178,26 @@ buffer, cursor, scroll, folds (`setlocal fold…`, `{range}fold`, `zo`/`zc`) and
 `lcd`, the tab pages' `tcd`, the buffer list, the argument list and the working
 directory. Without `!` an existing file is kept (E189). `'sessionoptions'`
 (nvim's default: `blank,buffers,curdir,folds,help,tabpages,winsize,terminal`)
-picks the parts; `sesdir` writes names relative to the session file.
+picks the parts; `sesdir` writes names relative to the session file. The
+`option`-flavoured flags follow `makeset`/`put_view` in nvim's option.c and
+ex_session.c:
+
+- `options` — the mappings (`:map` family), every global option that differs
+  from its default (`set`), and each window's local options (`setlocal`); the
+  session ends with `set shortmess=` instead of restoring it. Options whose nvim
+  default comes from the environment (`'shell'`, `'runtimepath'`, `'lines'`, …)
+  are written only once set.
+- `localoptions` — each window's local options without the globals.
+- `globals` — `g:` variables named like `MyCount` (an uppercase first letter
+  and a lowercase one after it) that hold a String, Number or Float, written
+  after `SessionLoadPre`.
+- `resize` — `set lines= columns=` for the screen size.
+
+`:set` takes vim's `+=`, `^=` and `-=` on numbers, comma lists (no duplicates
+where the option forbids them, `key:value` items replacing their key) and flag
+lists, so the `set {opt}+=…` lines vim sessions and vimrcs write apply as vim
+applies them. `:edit`, `:split`, `:vsplit` and `:tabnew` take `+{cmd}`
+(`+{lnum}`, `+/{pat}`, `+` for the last line) and run it once the file opens.
 
 `zmax-term/tests/session_parity.rs` holds zmax to this: it loads sessions nvim
 wrote with `:mksession` (stacked, nested and multi-tab layouts, folds, local
