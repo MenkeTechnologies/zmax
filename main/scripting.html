@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-aae113b9.js";
+            window.path_to_searchindex_js = "searchindex-327f0c49.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -355,7 +355,26 @@ buffer, cursor, scroll, folds (<code>setlocal fold…</code>, <code>{range}fold<
 <code>lcd</code>, the tab pages’ <code>tcd</code>, the buffer list, the argument list and the working
 directory. Without <code>!</code> an existing file is kept (E189). <code>'sessionoptions'</code>
 (nvim’s default: <code>blank,buffers,curdir,folds,help,tabpages,winsize,terminal</code>)
-picks the parts; <code>sesdir</code> writes names relative to the session file.</p>
+picks the parts; <code>sesdir</code> writes names relative to the session file. The
+<code>option</code>-flavoured flags follow <code>makeset</code>/<code>put_view</code> in nvim’s option.c and
+ex_session.c:</p>
+<ul>
+<li><code>options</code> — the mappings (<code>:map</code> family), every global option that differs
+from its default (<code>set</code>), and each window’s local options (<code>setlocal</code>); the
+session ends with <code>set shortmess=</code> instead of restoring it. Options whose nvim
+default comes from the environment (<code>'shell'</code>, <code>'runtimepath'</code>, <code>'lines'</code>, …)
+are written only once set.</li>
+<li><code>localoptions</code> — each window’s local options without the globals.</li>
+<li><code>globals</code> — <code>g:</code> variables named like <code>MyCount</code> (an uppercase first letter
+and a lowercase one after it) that hold a String, Number or Float, written
+after <code>SessionLoadPre</code>.</li>
+<li><code>resize</code> — <code>set lines= columns=</code> for the screen size.</li>
+</ul>
+<p><code>:set</code> takes vim’s <code>+=</code>, <code>^=</code> and <code>-=</code> on numbers, comma lists (no duplicates
+where the option forbids them, <code>key:value</code> items replacing their key) and flag
+lists, so the <code>set {opt}+=…</code> lines vim sessions and vimrcs write apply as vim
+applies them. <code>:edit</code>, <code>:split</code>, <code>:vsplit</code> and <code>:tabnew</code> take <code>+{cmd}</code>
+(<code>+{lnum}</code>, <code>+/{pat}</code>, <code>+</code> for the last line) and run it once the file opens.</p>
 <p><code>zmax-term/tests/session_parity.rs</code> holds zmax to this: it loads sessions nvim
 wrote with <code>:mksession</code> (stacked, nested and multi-tab layouts, folds, local
 directories, the arglist) and compares every window’s layout, size, cursor, top
