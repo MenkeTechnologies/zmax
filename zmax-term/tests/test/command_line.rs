@@ -359,6 +359,110 @@ async fn plus_cmd_arguments_run_after_the_file_opens() -> anyhow::Result<()> {
     Ok(())
 }
 
+// vim `:help {subject}` for a tag in a 'runtimepath' `doc/tags`: the help file
+// opens in a new window above, unlisted, `buftype=help`, with the cursor on the
+// tag and its line at the top; a second `:help` reuses that window, a subject
+// with no tag there is E149 inside it, and `:helpclose` closes it.
+#[tokio::test(flavor = "multi_thread")]
+async fn help_subjects_open_the_plugin_help_file() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    std::fs::create_dir_all(dir.path().join("doc"))?;
+    let mut help = String::from("*plug.txt*  The plug plugin\n\n");
+    for s in 1..=3 {
+        help.push_str(&format!("SECTION {s}      *plug-s{s}*\n"));
+        help.push_str(&(1..=30).map(|n| format!("text {s}.{n}\n")).collect::<String>());
+    }
+    std::fs::write(dir.path().join("doc/plug.txt"), help)?;
+    std::fs::write(
+        dir.path().join("doc/tags"),
+        "plug-s1\tplug.txt\t/*plug-s1*\nplug-s2\tplug.txt\t/*plug-s2*\nplug-s3\tplug.txt\t/*plug-s3*\nplug.txt\tplug.txt\t/*plug.txt*\n",
+    )?;
+    let at = |app: &zmax_term::application::Application| {
+        let (view, doc) = zmax_view::current_ref!(app.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        let top = text.char_to_line(doc.view_offset(view.id).anchor);
+        (line + 1, cursor - text.line_to_char(line), top + 1)
+    };
+    let mut app = AppBuilder::new().build()?;
+    test_key_sequence(
+        &mut app,
+        Some(&format!(":set runtimepath={}<ret>:help plug-s2<ret>", dir.path().display())),
+        Some(&move |app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(app.editor.tree.views().count(), 2);
+            let doc = zmax_view::doc!(app.editor);
+            assert_eq!(doc.buftype, "help");
+            assert!(!doc.listed && doc.readonly && !doc.modifiable);
+            assert_eq!(at(app), (34, 15, 34), "on `*plug-s2*`, its line at the top");
+        }),
+        false,
+    )
+    .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":help s3<ret>"),
+        Some(&move |app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(app.editor.tree.views().count(), 2, "the help window is reused");
+            assert_eq!(at(app).0, 65);
+        }),
+        false,
+    )
+    .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":help no-such-subject<ret>"),
+        Some(&|app| {
+            let status = app.editor.get_status().map(|(msg, _)| msg.to_string()).unwrap_or_default();
+            assert!(status.ends_with("E149: No help for no-such-subject"), "{status}");
+        }),
+        false,
+    )
+    .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":helpclose<ret>"),
+        Some(&|app| {
+            assert_eq!(app.editor.tree.views().count(), 1);
+            assert_ne!(zmax_view::doc!(app.editor).buftype, "help");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+// vim 'buflisted' is the buffer's own: `:set nobuflisted` hides it from the
+// buffer list, `:set buflisted!` toggles it back.
+#[tokio::test(flavor = "multi_thread")]
+async fn buflisted_belongs_to_the_buffer() -> anyhow::Result<()> {
+    let mut app = AppBuilder::new().build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":set nobuflisted<ret>"),
+        Some(&|app| assert!(!zmax_view::doc!(app.editor).listed)),
+        false,
+    )
+    .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":vnew<ret>"),
+        Some(&|app| assert!(zmax_view::doc!(app.editor).listed, "a new buffer is listed")),
+        false,
+    )
+    .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set nobuflisted<ret>:set buflisted!<ret>"),
+        Some(&|app| assert!(zmax_view::doc!(app.editor).listed, "toggled back")),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 // The vimrc's sidebar-plugin commands (F1 `:NERDTreeToggle`, F3 `:TlistToggle`,
 // F4 `:MinimapToggle`, F5 `:LOTRToggle`) run on the workbench without error,
 // and NERDTree's start directory must exist, failing with NERDTree's message.

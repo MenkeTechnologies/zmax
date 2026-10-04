@@ -16,12 +16,15 @@ mkdir -p "$w/sub"
 for f in a b c d; do perl -e 'print "'"$f"' line $_\n" for 1..200' >"$w/$f.txt"; done
 perl -e 'for $s (1..6) { print "section $s {{{\n"; print "  body $s.$_\n" for 1..8; print "}}}\n" }' >"$w/m.txt"
 perl -e 'print "sub line $_\n" for 1..50' >"$w/sub/s.txt"
+mkdir -p "$w/doc"
+perl -e 'print "*plug.txt*  The plug plugin\n\n"; for $s (1..5) { print "=" x 40, "\n", sprintf("%-39s*plug-s%d*\n\n", "SECTION $s", $s); print "text $s.$_\n" for 1..30 }' >"$w/doc/plug.txt"
+perl -e 'print "plug-s$_\tplug.txt\t/*plug-s$_*\n" for 1..5; print "plug.txt\tplug.txt\t/*plug.txt*\n"' >"$w/doc/tags"
 real="$(cd "$w" && pwd -P)"
 status=0
 for s in "$out"/*.vim; do
   name="$(basename "$s" .vim)"
   W="$real" perl -pe 's/\@DIR\@/$ENV{W}/g' "$s" | grep -v '^set stal=' >"$tmp/$name.vim"
-  (cd "$w" && nvim --clean --headless --cmd 'set columns=120 lines=150 showtabline=0' \
+  (cd "$w" && nvim --clean --headless --cmd 'set columns=120 lines=150 showtabline=0' --cmd "set rtp^=$real" \
     --cmd "let g:dumpfile='$tmp/$name.out'" -S "$tmp/$name.vim" -S "$here/dump.vim" -c 'qa!' 2>/dev/null)
   if diff -u "$here/$name.nvim" "$tmp/$name.out"; then
     echo "$name: nvim restores zmax's session as its own"

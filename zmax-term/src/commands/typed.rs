@@ -29619,12 +29619,12 @@ fn vim_set_scoped(
         // document id here. `buflisted` hides a buffer from `:ls` and the buffer
         // picker; `bufhidden` says what happens to it once it is no longer shown.
         if value.is_none() && matches!(name, "buflisted" | "bl" | "nobuflisted" | "nobl") {
-            let listed = if toggle {
-                !buf_is_listed(doc!(cx.editor).id())
+            let doc = doc_mut!(cx.editor);
+            doc.listed = if toggle {
+                !doc.listed
             } else {
                 !neg && !name.starts_with("no")
             };
-            set_buf_listed(doc!(cx.editor).id(), listed);
             continue;
         }
         if matches!(name, "bufhidden" | "bh") {
@@ -30732,10 +30732,6 @@ fn ex_match3(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     ex_match_group(cx, 3, &args)
 }
 
-/// vim `:helptags {dir}` — regenerate a help-tags index for a runtime doc
-/// directory. zmax's help is not tag-file based (it indexes commands/topics
-/// directly), so there is nothing to generate; accepted as a no-op for
-/// compatibility.
 /// The help tags a vim help file defines: every `*tag*` on a line, with the line
 /// it is on. vim's help tag markers are `*` … `*` with no whitespace inside.
 /// Pure — unit tested.
@@ -30753,6 +30749,8 @@ fn help_tags_in(text: &str) -> Vec<(String, usize)> {
     out
 }
 
+/// vim `:helptags {dir}` — write `{dir}/tags`, the index `:help {subject}`
+/// searches, for the `*.txt` help files in `{dir}`.
 fn ex_helptags(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -33529,28 +33527,9 @@ vim_map_typable!(vim_map_ounmap, "ounmap");
 // window (`hide` keeps it, `unload`/`delete`/`wipe` drop it).
 
 thread_local! {
-    /// Document ids `:set nobuflisted` hid from the buffer list.
-    static UNLISTED_BUFS: std::cell::RefCell<Vec<zmax_view::DocumentId>> =
-        const { std::cell::RefCell::new(Vec::new()) };
     /// Document id → its 'bufhidden' value.
     static BUFHIDDEN: std::cell::RefCell<Vec<(zmax_view::DocumentId, String)>> =
         const { std::cell::RefCell::new(Vec::new()) };
-}
-
-/// vim 'buflisted' for a document — true unless `:set nobuflisted` ran in it.
-/// `:ls` and the buffer picker skip an unlisted buffer.
-pub(crate) fn buf_is_listed(id: zmax_view::DocumentId) -> bool {
-    UNLISTED_BUFS.with(|b| !b.borrow().contains(&id))
-}
-
-fn set_buf_listed(id: zmax_view::DocumentId, listed: bool) {
-    UNLISTED_BUFS.with(|b| {
-        let mut b = b.borrow_mut();
-        b.retain(|&x| x != id);
-        if !listed {
-            b.push(id);
-        }
-    });
 }
 
 fn set_buf_hidden_action(id: zmax_view::DocumentId, action: &str) {
@@ -33585,7 +33564,6 @@ pub(crate) fn bufhidden_close_hidden(editor: &mut Editor) {
         }
         let _ = editor.close_document(id, false);
         set_buf_hidden_action(id, "");
-        set_buf_listed(id, true);
     }
 }
 
@@ -45002,6 +44980,7 @@ fn mksession(cx: &mut compositor::Context, args: &Args, overwrite: bool) -> anyh
         local: &local,
         maps: crate::keymap::vim_map::export_map_lines(),
         globals: crate::commands::scripting::session_globals(),
+        help_tag: &window_help_tag,
     };
     let arglist = with_arglist(|a| (a.files().to_vec(), a.index()));
     let snap = crate::session::snapshot(cx.editor, &reader, arglist);
@@ -50025,13 +50004,24 @@ fn ex_checkhealth(
     Ok(())
 }
 
-/// vim `:helpclose` — close the help window (the Help browser panel).
+/// vim `:helpclose` — close the tab page's help window, else the Help browser
+/// panel.
 fn ex_helpclose(
     cx: &mut compositor::Context,
     _args: Args,
     event: PromptEvent,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let help_win = cx
+        .editor
+        .tree
+        .traverse()
+        .find(|(_, view)| cx.editor.document(view.doc).is_some_and(|d| d.buftype == "help"))
+        .map(|(id, _)| id);
+    if let Some(id) = help_win {
+        cx.editor.close(id);
         return Ok(());
     }
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
@@ -73995,9 +73985,27 @@ fn zen_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
-fn open_help(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn open_help(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
+    }
+    // vim `ex_help`: a subject found in the help tags files opens that help
+    // file in a help window, as vim does for plugin docs and sessions.
+    let subject = args.join(" ");
+    let subject = subject.trim();
+    if !subject.is_empty() {
+        let (subject, lang) = check_help_lang(subject);
+        let matches = find_help_tags(&help_tag_files(), subject, lang);
+        if let Some(best) = matches.into_iter().next() {
+            return open_help_window(cx, &best);
+        }
+        // In a help window `:help` is vim's own: no browser to fall back to.
+        if doc!(cx.editor).buftype == "help" {
+            match lang {
+                Some(lang) => bail!("E661: No '{lang}' help for {subject}"),
+                None => bail!("E149: No help for {subject}"),
+            }
+        }
     }
     // vim `'helpfile'` (options.txt): "Name of the main help file. […]
     // Environment variables are expanded." `:help` with no subject opens it, so
@@ -74017,6 +74025,219 @@ fn open_help(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         Ok(call)
     };
     cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// vim `check_help_lang`: split a trailing `@xx` language off a help subject.
+fn check_help_lang(arg: &str) -> (&str, Option<&str>) {
+    let b = arg.as_bytes();
+    let n = b.len();
+    if n >= 3 && b[n - 3] == b'@' && b[n - 2].is_ascii_alphabetic() && b[n - 1].is_ascii_alphabetic() {
+        (&arg[..n - 3], Some(&arg[n - 2..]))
+    } else {
+        (arg, None)
+    }
+}
+
+/// The help tags files vim searches (`get_tagfname` for help): the directory
+/// of 'helpfile' (else `$VIMRUNTIME/doc`) first, then `doc/` in each
+/// 'runtimepath' directory. Each is `(tags file, language)`: `tags` holds
+/// English tags, `tags-xx` language `xx`'s.
+fn help_tag_files() -> Vec<(std::path::PathBuf, String)> {
+    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
+    let helpdir = vim_opt_str_alias("helpfile", "hf")
+        .map(|raw| {
+            let path = zmax_stdx::path::expand_tilde(std::path::Path::new(&expand_env_vars(&raw))).into_owned();
+            path.parent().map(std::path::Path::to_path_buf).unwrap_or_default()
+        })
+        .or_else(|| std::env::var_os("VIMRUNTIME").map(|rt| std::path::PathBuf::from(rt).join("doc")));
+    dirs.extend(helpdir);
+    for dir in runtime_dirs() {
+        let doc = dir.join("doc");
+        if !dirs.contains(&doc) {
+            dirs.push(doc);
+        }
+    }
+    let mut files = Vec::new();
+    for dir in dirs {
+        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let mut found: Vec<(std::path::PathBuf, String)> = entries
+            .flatten()
+            .filter_map(|e| {
+                let name = e.file_name().to_string_lossy().into_owned();
+                let lang = match name.as_str() {
+                    "tags" => "en".to_string(),
+                    _ => name.strip_prefix("tags-").filter(|l| l.len() == 2)?.to_string(),
+                };
+                Some((e.path(), lang))
+            })
+            .collect();
+        found.sort();
+        files.extend(found);
+    }
+    files
+}
+
+/// vim `help_heuristic`: how well `tag` matches at byte `offset` (smaller is
+/// better) — fewer letters, then fewer characters, then a match nearer the
+/// start; a match only ignoring case and a `+feature` tag rank lower.
+fn help_heuristic(tag: &str, offset: usize, wrong_case: bool) -> usize {
+    let b = tag.as_bytes();
+    let letters = b.iter().filter(|c| c.is_ascii_alphanumeric()).count();
+    let mut offset = offset;
+    if offset > 0 && b.get(offset).is_some_and(u8::is_ascii_alphanumeric) && b[offset - 1].is_ascii_alphanumeric() {
+        offset += 10000;
+    } else if offset > 2 {
+        offset *= 200;
+    }
+    if wrong_case {
+        offset += 5000;
+    }
+    if b.first() == Some(&b'+') && b.len() > 1 {
+        offset += 100;
+    }
+    100 * letters + b.len() + offset
+}
+
+/// One help tag: its name as vim's tag stack keeps it (`tag@lang`), the help
+/// file it is in, and the text `*tag*` that marks it there.
+#[derive(Debug, Clone, PartialEq)]
+struct HelpTag {
+    name: String,
+    file: std::path::PathBuf,
+    tag: String,
+}
+
+/// vim `find_help_tags` for a literal subject: every tag in `files` containing
+/// `subject` (a case-insensitive match ranks lower), best first by
+/// [`help_heuristic`], ties by name; `lang` keeps one language's tags.
+fn find_help_tags(files: &[(std::path::PathBuf, String)], subject: &str, lang: Option<&str>) -> Vec<HelpTag> {
+    let lower = subject.to_lowercase();
+    let mut ranked: Vec<(usize, HelpTag)> = Vec::new();
+    for (tags, tag_lang) in files {
+        if lang.is_some_and(|l| !l.eq_ignore_ascii_case(tag_lang)) {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(tags) else { continue };
+        let dir = tags.parent().unwrap_or(std::path::Path::new(""));
+        for line in text.lines() {
+            let mut fields = line.split('\t');
+            let (Some(tag), Some(file)) = (fields.next(), fields.next()) else { continue };
+            if tag.starts_with("!_TAG_") {
+                continue;
+            }
+            let (offset, wrong_case) = match tag.find(subject) {
+                Some(at) => (at, false),
+                None => match tag.to_lowercase().find(&lower) {
+                    Some(at) => (at, true),
+                    None => continue,
+                },
+            };
+            let name = format!("{tag}@{tag_lang}");
+            if ranked.iter().any(|(_, t)| t.name == name) {
+                continue;
+            }
+            ranked.push((
+                help_heuristic(tag, offset, wrong_case),
+                HelpTag { name, file: dir.join(file), tag: tag.to_string() },
+            ));
+        }
+    }
+    ranked.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.name.cmp(&b.1.name)));
+    ranked.into_iter().map(|(_, t)| t).collect()
+}
+
+thread_local! {
+    /// The help tag each help window was opened on (vim's tag stack entry),
+    /// which `:mksession` writes back as `help {tag}`.
+    static HELP_TAGS: std::cell::RefCell<HashMap<zmax_view::ViewId, String>> =
+        std::cell::RefCell::new(HashMap::new());
+}
+
+/// The help tag window `id` shows, when it is a help window.
+pub(crate) fn window_help_tag(id: zmax_view::ViewId) -> Option<String> {
+    HELP_TAGS.with(|t| t.borrow().get(&id).cloned())
+}
+
+/// vim `ex_help` + `do_tag(DT_HELP)`: show `tag` in a help window — the
+/// current one when it is a help window, else the tab page's help window,
+/// else a new split ('helpheight' rows at least) — with the help buffer's
+/// options (`prepare_help_buffer`), the cursor on the tag and its line at the
+/// top of the window.
+fn open_help_window(cx: &mut compositor::Context, tag: &HelpTag) -> anyhow::Result<()> {
+    if doc!(cx.editor).buftype != "help" {
+        let help_win = cx
+            .editor
+            .tree
+            .traverse()
+            .map(|(id, view)| (id, view.doc))
+            .find(|(_, doc)| cx.editor.document(*doc).is_some_and(|d| d.buftype == "help"))
+            .map(|(id, _)| id);
+        match help_win {
+            Some(id) => cx.editor.focus(id),
+            None => {
+                // A narrow window that is not full width gets the help at the
+                // far top (or bottom with 'splitbelow').
+                let view = view!(cx.editor);
+                let narrow = view.area.width < cx.editor.tree.area().width && view.area.width < 80;
+                let below = cx.editor.config().split_below;
+                let split = match (narrow, below) {
+                    (true, true) => "botright split",
+                    (true, false) => "topleft split",
+                    _ => "split",
+                };
+                execute_command_line(cx, split, PromptEvent::Validate)?;
+                let hh = vim_opt_num("helpheight").unwrap_or(20);
+                if view!(cx.editor).inner_height() < hh {
+                    execute_command_line(cx, &format!("resize {hh}"), PromptEvent::Validate)?;
+                }
+            }
+        }
+    }
+    let text = std::fs::read_to_string(&tag.file)
+        .map_err(|e| anyhow!("E149: No help for {}: {e}", tag.name))?;
+    cx.editor.open(&tag.file, Action::Replace)?;
+    // nomagic search for `*tag*` from the first line, then ignoring case.
+    let marker = format!("*{}*", tag.tag);
+    let lower = marker.to_lowercase();
+    let found = text
+        .lines()
+        .enumerate()
+        .find_map(|(n, line)| line.find(&marker).map(|col| (n, col)))
+        .or_else(|| {
+            text.lines()
+                .enumerate()
+                .find_map(|(n, line)| line.to_lowercase().find(&lower).map(|col| (n, col)))
+        });
+    let (view, doc) = current!(cx.editor);
+    doc.buftype = "help".to_string();
+    doc.readonly = true;
+    doc.modifiable = false;
+    for (name, value) in [
+        ("foldmethod", "manual"),
+        ("tabstop", "8"),
+        ("list", "off"),
+        ("number", "off"),
+        ("relativenumber", "off"),
+        ("foldenable", "off"),
+        ("spell", "off"),
+    ] {
+        doc.vim_local_opts.insert(name.to_string(), value.to_string());
+    }
+    let id = view.id;
+    if let Some((line, col)) = found {
+        let text = doc.text().slice(..);
+        let line = line.min(text.len_lines().saturating_sub(1));
+        let start = text.line_to_char(line);
+        let col = text.line(line).to_string()[..col].chars().count();
+        doc.set_selection(id, Selection::point(start + col));
+        let mut offset = doc.view_offset(id);
+        offset.anchor = start;
+        offset.vertical_offset = 0;
+        doc.set_view_offset(id, offset);
+    }
+    doc.listed = false;
+    HELP_TAGS.with(|t| t.borrow_mut().insert(id, tag.name.clone()));
     Ok(())
 }
 
@@ -78786,6 +79007,33 @@ mod vim_set_tests {
         assert_eq!(resolved, ["shiftwidth=6", "tabstop=15", "textwidth=79"]);
     }
 
+    /// vim `help_heuristic` order: fewer letters first, a `+feature` and a
+    /// case-insensitive match lower, a match inside a word last; the same tag
+    /// in two languages ties and sorts by name; `@xx` keeps one language.
+    #[test]
+    fn help_tags_rank_as_vim_ranks_them() {
+        let dir = tempfile::tempdir().unwrap();
+        let en = dir.path().join("tags");
+        let de = dir.path().join("tags-de");
+        std::fs::write(
+            &en,
+            "Foo\tf.txt\t/*Foo*\n+foo\tf.txt\t/*+foo*\nbarfoo\tf.txt\t/*barfoo*\nfoo\tf.txt\t/*foo*\nfoo-bar\tf.txt\t/*foo-bar*\n",
+        )
+        .unwrap();
+        std::fs::write(&de, "foo\tf.dex\t/*foo*\n").unwrap();
+        let files = vec![(en, "en".to_string()), (de, "de".to_string())];
+        let names = |subject: &str, lang: Option<&str>| -> Vec<String> {
+            find_help_tags(&files, subject, lang).into_iter().map(|t| t.name).collect()
+        };
+        assert_eq!(names("foo", None), ["foo@de", "foo@en", "+foo@en", "foo-bar@en", "Foo@en", "barfoo@en"]);
+        assert_eq!(names("foo", Some("de")), ["foo@de"]);
+        assert_eq!(check_help_lang("foo@de"), ("foo", Some("de")));
+        assert_eq!(check_help_lang("x@1z"), ("x@1z", None));
+        let best = &find_help_tags(&files, "foo", Some("de"))[0];
+        assert_eq!(best.file, dir.path().join("f.dex"));
+        assert_eq!(best.tag, "foo");
+    }
+
     /// vim `+cmd` forms: `+` is the last line, the rest is the command.
     #[test]
     fn plus_cmd_is_the_command_a_plus_argument_names() {
@@ -80635,18 +80883,6 @@ mod vim_option_consumer_tests {
             *f.borrow_mut() = Some((regex::Regex::new("rs$").unwrap(), true));
         });
         assert_eq!(take_output_filter("a.rs\nb.txt\n"), "b.txt\n");
-    }
-
-    /// 'buflisted' is buffer-local: a document is listed until `:set nobuflisted`
-    /// runs in it, and `:set buflisted` puts it back.
-    #[test]
-    fn buflisted_is_per_document() {
-        let id = zmax_view::DocumentId::default();
-        assert!(buf_is_listed(id));
-        set_buf_listed(id, false);
-        assert!(!buf_is_listed(id));
-        set_buf_listed(id, true);
-        assert!(buf_is_listed(id));
     }
 
     /// 'bufhidden' is per document too, and only the values that drop a buffer

@@ -1527,6 +1527,7 @@ impl MappableCommand {
         extend_to_visual_line_end, "Extend to visual line end",
         goto_column, "Goto column",
         extend_to_column, "Extend to column",
+        vim_goto_column, "Goto screen column [count] (vim |)",
         goto_next_buffer, "Goto next buffer",
         goto_previous_buffer, "Goto previous buffer",
         goto_line_end_newline, "Goto newline at line end",
@@ -35048,7 +35049,7 @@ pub(crate) fn build_buffer_picker(
     let mut items = editor
         .documents
         .values()
-        .filter(|doc| doc.id() == current || typed::buf_is_listed(doc.id()))
+        .filter(|doc| doc.id() == current || doc.listed)
         .map(new_meta)
         .collect::<Vec<BufferMeta>>();
 
@@ -39412,6 +39413,47 @@ fn goto_column_impl(cx: &mut Context, movement: Movement) {
     doc.set_selection(view.id, selection);
 }
 
+/// vim `|` (`nv_pipe` + `coladvance`): go to screen column [count] (1 without
+/// one) — the character covering that column with tabs and wide characters
+/// counted at their width, else the last character of the line.
+fn vim_goto_column(cx: &mut Context) {
+    let want = cx.count().saturating_sub(1);
+    let extend = cx.editor.mode == Mode::Select;
+    let (view, doc) = current!(cx.editor);
+    let tab_width = doc.tab_width();
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let line = range.cursor_line(text);
+        let pos = coladvance(text, line, want, tab_width);
+        range.put_cursor(text, pos, extend)
+    });
+    doc.set_selection(view.id, selection);
+}
+
+/// vim `coladvance` without 'virtualedit': the character of `line` that
+/// covers screen column `want` (0-based), else its last character.
+fn coladvance(text: RopeSlice, line: usize, want: usize, tab_width: usize) -> usize {
+    let start = text.line_to_char(line);
+    let end = line_end_char_index(&text, line);
+    let mut pos = start;
+    let mut vcol = 0;
+    while pos < end {
+        let next = graphemes::next_grapheme_boundary(text, pos);
+        let g = text.slice(pos..next);
+        let width = if g == "\t" {
+            tab_width - vcol % tab_width.max(1)
+        } else {
+            graphemes::grapheme_width(&std::borrow::Cow::from(g))
+        };
+        if vcol + width > want || next >= end {
+            return pos;
+        }
+        vcol += width;
+        pos = next;
+    }
+    pos
+}
+
 /// Spacemacs `C-TAB` / `C-S-TAB`: cycle through the buffers this window has
 /// visited, rather than toggling between the last two.
 ///
@@ -39754,6 +39796,29 @@ fn render_hunk(base: RopeSlice, doc: RopeSlice, hunk: &Hunk) -> String {
         push('+', doc.line(line as usize));
     }
     out
+}
+
+#[cfg(test)]
+mod coladvance_tests {
+    use super::coladvance;
+    use zmax_core::Rope;
+
+    /// vim `|` columns are screen columns: a tab covers up to its stop, a wide
+    /// character two columns, and a column past the end is the last character.
+    #[test]
+    fn screen_columns_land_on_the_character_covering_them() {
+        let text = Rope::from("\tab\u{4e2d}c\nxy\n\n");
+        let text = text.slice(..);
+        let col = |line, want| coladvance(text, line, want, 8) - text.line_to_char(line);
+        assert_eq!(col(0, 0), 0);
+        assert_eq!(col(0, 7), 0, "inside the tab");
+        assert_eq!(col(0, 8), 1);
+        assert_eq!(col(0, 10), 3, "the wide character's first column");
+        assert_eq!(col(0, 11), 3, "and its second");
+        assert_eq!(col(0, 12), 4);
+        assert_eq!(col(1, 39), 1, "past the end: the last character");
+        assert_eq!(col(2, 5), 0, "an empty line");
+    }
 }
 
 #[cfg(test)]
@@ -58030,7 +58095,7 @@ fn menu_bar_buffer_items(editor: Option<&Editor>) -> Vec<MenuBarItem> {
             let mut docs: Vec<&Document> = editor
                 .documents
                 .values()
-                .filter(|doc| doc.id() == current || typed::buf_is_listed(doc.id()))
+                .filter(|doc| doc.id() == current || doc.listed)
                 .collect();
             // "only that many most-recently-selected buffers are shown" — the
             // menu is in `buffer-list` order, which is most-recently-used.
@@ -88149,7 +88214,7 @@ fn msb_buffer_entries(editor: &Editor) -> Vec<MsbEntry> {
     let mut items: Vec<MsbEntry> = editor
         .documents
         .values()
-        .filter(|doc| doc.id() == current || typed::buf_is_listed(doc.id()))
+        .filter(|doc| doc.id() == current || doc.listed)
         .map(|doc| MsbEntry {
             id: doc.id(),
             mode: doc.language_name().unwrap_or("Fundamental").to_string(),

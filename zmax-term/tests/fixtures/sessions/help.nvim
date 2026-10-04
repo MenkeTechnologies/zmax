@@ -1,0 +1,5 @@
+tab 1/1 win 1 args 
+bufs a.txt
+TAB 1 cwd w layout col(plug.txt,a.txt)
+  win 1 plug.txt w=120 h=77 cur=75:8 top=62 folds= cwd=w
+  win 2 a.txt w=120 h=70 cur=30:1 top=30 folds= cwd=w

@@ -28,6 +28,9 @@ call s:save('tabs')
 " options: window-local options that sessions restore
 e a.txt | setlocal nowrap nonumber list | vsplit b.txt | setlocal number relativenumber colorcolumn=80 | 25
 call s:save('options')
+" help: a help window above the file, scrolled past its tag
+e a.txt | 30 | help plug-s3 | normal! 5j
+call s:save('help')
 " args: arglist and current arg
 args a.txt b.txt c.txt | next | 12
 call s:save('args')

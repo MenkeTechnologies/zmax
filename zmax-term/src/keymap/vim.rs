@@ -750,7 +750,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "$" => goto_line_end,
         "end" => end_key,
         "S-end" => shift_end_key,
-        "|"          => goto_column,
+        "|"          => vim_goto_column,
         "G"          => goto_last_line,
         "%"          => match_brackets_or_goto_percent,
 

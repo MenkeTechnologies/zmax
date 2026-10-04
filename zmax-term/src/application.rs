@@ -198,6 +198,10 @@ pub struct Application {
 
     /// The `server-start` listening socket, once a server has been started.
     server_listener: Option<ServerListener>,
+
+    /// The buffer whose vim local options were last swapped in; entering
+    /// another one swaps its options in.
+    vim_opts_doc: Option<zmax_view::DocumentId>,
 }
 
 #[cfg(feature = "integration")]
@@ -535,6 +539,7 @@ impl Application {
             lsp_progress: LspProgressMap::new(),
             theme_mode,
             server_listener: None,
+            vim_opts_doc: None,
         };
 
         Ok(app)
@@ -604,17 +609,7 @@ impl Application {
         // `:b#`, the picker, a window jump — without each one needing its own hook.
         {
             let doc_id = doc!(self.editor).id();
-            static LAST_DOC: std::sync::Mutex<Option<zmax_view::DocumentId>> =
-                std::sync::Mutex::new(None);
-            let switched = match LAST_DOC.lock() {
-                Ok(mut last) => {
-                    let switched = *last != Some(doc_id);
-                    *last = Some(doc_id);
-                    switched
-                }
-                Err(_) => false,
-            };
-            if switched {
+            if self.vim_opts_doc.replace(doc_id) != Some(doc_id) {
                 let local = doc!(self.editor).vim_local_opts.clone();
                 crate::commands::typed::vim_opts_enter_buffer(&mut self.editor, &local);
             }

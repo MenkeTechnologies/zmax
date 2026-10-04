@@ -413,6 +413,10 @@ pub struct Document {
     /// [`E21_NOT_MODIFIABLE`]; enforced in [`Document::apply`].
     pub modifiable: bool,
 
+    /// vim `'buflisted'`: false keeps the buffer out of `:ls`, the buffer
+    /// picker and sessions (`:set nobuflisted`, help buffers).
+    pub listed: bool,
+
     pub is_binary: bool,
 
     pub previous_diagnostic_ids: HashMap<LanguageServerId, String>,
@@ -1426,6 +1430,7 @@ impl Document {
             focused_at: std::time::Instant::now(),
             readonly: false,
             modifiable: true,
+            listed: true,
             is_binary: false,
             jump_labels: HashMap::new(),
             conceal_overlays: Vec::new(),

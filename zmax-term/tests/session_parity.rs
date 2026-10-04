@@ -41,7 +41,20 @@ fn write_workspace(dir: &Path) -> std::io::Result<()> {
     }
     std::fs::write(dir.join("m.txt"), marked)?;
     let sub: String = (1..=50).map(|n| format!("sub line {n}\n")).collect();
-    std::fs::write(dir.join("sub/s.txt"), sub)
+    std::fs::write(dir.join("sub/s.txt"), sub)?;
+    // A plugin's help file and its tags, found through 'runtimepath'.
+    std::fs::create_dir_all(dir.join("doc"))?;
+    let mut help = String::from("*plug.txt*  The plug plugin\n\n");
+    for s in 1..=5 {
+        help.push_str(&format!("{}\n{:<39}*plug-s{s}*\n\n", "=".repeat(40), format!("SECTION {s}")));
+        for n in 1..=30 {
+            help.push_str(&format!("text {s}.{n}\n"));
+        }
+    }
+    std::fs::write(dir.join("doc/plug.txt"), help)?;
+    let mut tags: String = (1..=5).map(|s| format!("plug-s{s}\tplug.txt\t/*plug-s{s}*\n")).collect();
+    tags.push_str("plug.txt\tplug.txt\t/*plug.txt*\n");
+    std::fs::write(dir.join("doc/tags"), tags)
 }
 
 fn tail(path: Option<&Path>) -> String {
@@ -136,6 +149,7 @@ fn dump(editor: &mut Editor) -> Vec<String> {
     // The listed buffers with a file, sorted, as dump.vim writes them.
     let mut bufs: Vec<String> = editor
         .documents()
+        .filter(|doc| doc.listed)
         .filter_map(|doc| doc.path().map(|p| tail(Some(p))))
         .collect();
     bufs.sort();
@@ -223,17 +237,21 @@ async fn sessions_restore_as_nvim_restores_them() -> anyhow::Result<()> {
         let want = std::fs::read_to_string(fixtures.join(format!("{name}.nvim")))?;
         let want: Vec<&str> = want.lines().collect();
 
+        // The workspace is on 'runtimepath', as generate.sh puts it for nvim.
+        let rtp = root.join(&name).join("rtp.vim");
+        std::fs::write(&rtp, format!("set runtimepath^={}\n", dir.display()))?;
+
         // nvim's session, then zmax writing its own.
         let written = root.join(&name).join("zmax.vim");
         let save = root.join(&name).join("save.vim");
         std::fs::write(&save, format!("mksession! {}\n", written.display()))?;
-        let mut app = boot(&[script, save])?;
+        let mut app = boot(&[rtp.clone(), script, save])?;
         check(&format!("{name} (nvim's session)"), &mut app, &want, &mut failures);
         drop(app);
 
         // zmax's session, loaded from a fresh start in the same directory.
         std::env::set_current_dir(&dir)?;
-        let mut app = boot(std::slice::from_ref(&written))?;
+        let mut app = boot(&[rtp, written.clone()])?;
         check(&format!("{name} (zmax's session)"), &mut app, &want, &mut failures);
         if let Some(keep) = &keep {
             std::fs::create_dir_all(keep)?;

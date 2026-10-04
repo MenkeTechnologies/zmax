@@ -121,6 +121,11 @@ pub struct WinSnap {
     pub leftcol: usize,
     pub wrap: bool,
     pub localdir: Option<PathBuf>,
+    /// The buffer's `'buftype'`.
+    pub buftype: String,
+    /// For a help window, the tag it shows (vim's tag stack entry), which
+    /// `:help` jumps to again.
+    pub help_tag: Option<String>,
     /// `makefoldset`: the window's fold options as `:setlocal` writes them.
     pub fold_opts: Vec<(&'static str, String)>,
     pub foldmethod_manual: bool,
@@ -188,6 +193,8 @@ pub struct OptionReader<'a> {
     /// The mappings and the session's global variables, as lines.
     pub maps: Vec<String>,
     pub globals: Vec<String>,
+    /// The help tag a window was opened on.
+    pub help_tag: &'a dyn Fn(ViewId) -> Option<String>,
 }
 
 /// Record the editor's tab pages and windows. Each tab page is visited in turn
@@ -210,6 +217,10 @@ pub fn snapshot(editor: &mut Editor, opts: &OptionReader, args: (Vec<String>, us
     let mut buffers = Vec::new();
     for id in &editor.buffer_order {
         let Some(doc) = editor.document(*id) else { continue };
+        // Only listed buffers: a help buffer is never listed.
+        if !doc.listed {
+            continue;
+        }
         let Some(path) = doc.path() else { continue };
         let text = doc.text().slice(..);
         let lnum = doc
@@ -303,6 +314,7 @@ fn snapshot_win(
         .rev()
         .find(|d| **d != view.doc)
         .and_then(|d| editor.document(*d))
+        .filter(|d| d.listed)
         .and_then(|d| d.path().map(Path::to_path_buf));
     let opt = |name: &str| (opts.buffer_opt)(doc, name);
     let foldmethod = opt("foldmethod");
@@ -344,6 +356,8 @@ fn snapshot_win(
         leftcol: offset.horizontal_offset,
         wrap: doc.text_format(viewport.width, None, Some(id)).soft_wrap,
         localdir: view.localdir.clone(),
+        buftype: doc.buftype.clone(),
+        help_tag: (opts.help_tag)(id),
         fold_opts,
         foldmethod_manual: foldmethod == "manual",
         foldlevel: doc.folds().level(),
@@ -439,9 +453,22 @@ impl Writer {
         escape_fname(path)
     }
 
+    /// vim `ses_do_win`: whether the session restores this window.
     fn do_win(&self, win: &WinSnap) -> bool {
-        win.path.is_some() || self.ssop.blank
+        if win.path.is_none() || (win.buftype != "terminal" && bt_nofilename(&win.buftype)) {
+            return self.ssop.blank;
+        }
+        match win.buftype.as_str() {
+            "help" => self.ssop.help,
+            "terminal" => self.ssop.terminal,
+            _ => true,
+        }
     }
+}
+
+/// vim `bt_nofilename`: a buffer whose name is not a file.
+fn bt_nofilename(buftype: &str) -> bool {
+    matches!(buftype, "nofile" | "terminal" | "prompt")
 }
 
 /// vim `ses_win_rec`: commands that split the first window into `shape`.
@@ -473,7 +500,9 @@ fn ses_win_rec(w: &mut Writer, shape: &TreeShape) {
 
 /// vim `ses_winsizes`.
 fn ses_winsizes(w: &mut Writer, snap: &SessionSnap, tab: &TabSnap) {
-    if !w.ssop.winsize {
+    // Sizes are restorable only when no window is left out.
+    let restore_size = tab.windows.iter().all(|win| w.do_win(win));
+    if !restore_size || !w.ssop.winsize {
         w.line("wincmd =");
         return;
     }
@@ -677,7 +706,13 @@ fn put_view(w: &mut Writer, snap: &SessionSnap, win: &WinSnap, add_edit: bool, c
     let mut do_cursor = true;
     if add_edit && (!did_next || arg_idx_invalid(snap, win.path.as_deref())) {
         match &win.path {
-            Some(path) => {
+            // A help buffer needs its options: an empty `buftype=help` buffer
+            // that `:help` then reuses, with its window.
+            Some(_) if win.buftype == "help" => {
+                w.line("enew | setl bt=help");
+                w.line(&format!("help {}", win.help_tag.as_deref().unwrap_or("")));
+            }
+            Some(path) if !bt_nofilename(&win.buftype) || win.buftype == "terminal" => {
                 let f = w.fname(path);
                 w.line(&format!(
                     "if bufexists(fnamemodify(\"{f}\", \":p\")) | buffer {f} | else | edit {f} | endif"
@@ -686,8 +721,13 @@ fn put_view(w: &mut Writer, snap: &SessionSnap, win: &WinSnap, add_edit: bool, c
                 w.line(&format!("  silent file {f}"));
                 w.line("endif");
             }
-            None => {
+            // No file in this buffer: an empty one, with the buffer's name
+            // when it has one that is not a file.
+            _ => {
                 w.line("enew");
+                if let Some(path) = &win.path {
+                    w.line(&format!("file {}", w.fname(path)));
+                }
                 do_cursor = false;
             }
         }
@@ -707,7 +747,8 @@ fn put_view(w: &mut Writer, snap: &SessionSnap, win: &WinSnap, add_edit: bool, c
             }
         }
     }
-    if w.ssop.folds && win.path.is_some() {
+    // Folds when 'buftype' is empty and for help files.
+    if w.ssop.folds && win.path.is_some() && matches!(win.buftype.as_str(), "" | "help") {
         put_folds(w, win);
     }
     if do_cursor {
@@ -855,7 +896,8 @@ pub fn write(snap: &SessionSnap, ssop: SessionOptions, session_dir: &Path) -> St
         // useless windows.
         let mut edited_win = None;
         for (i, win) in tab.windows.iter().enumerate() {
-            if let Some(path) = win.path.as_ref().filter(|_| w.do_win(win)) {
+            let loads_file = w.do_win(win) && win.buftype != "help" && !bt_nofilename(&win.buftype);
+            if let Some(path) = win.path.as_ref().filter(|_| loads_file) {
                 if need_tabnext {
                     w.line("tabnext");
                     need_tabnext = false;

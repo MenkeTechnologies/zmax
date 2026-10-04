@@ -168,6 +168,13 @@ What a session restores, and the vim behaviour each part follows:
 - **Folds** — `{range}fold`, `normal! zE`/`zo`/`zc`, `foldmethod`/`foldlevel`.
 - **Directories** — `cd`, and the window- and tab-local `lcd` and `tcd`.
 - **Argument list** — `%argdel`, `$argadd {file}`, `{N}argument`.
+- **Help windows** — `enew | setl bt=help` then `help {tag}`: `:help` looks the
+  tag up in the `tags` files vim searches (the directory of `'helpfile'`, else
+  `$VIMRUNTIME/doc`, then `doc/` in each `'runtimepath'` directory; `tags-xx`
+  for language `xx`), opens the help file in that window — unlisted,
+  read-only, `buftype=help` — with the cursor on the tag and its line at the
+  top. Without a matching tag the window stays empty and `:help` reports
+  E149, as vim does when the help file is not installed.
 
 ### Writing sessions
 
@@ -192,6 +199,9 @@ ex_session.c:
   and a lowercase one after it) that hold a String, Number or Float, written
   after `SessionLoadPre`.
 - `resize` — `set lines= columns=` for the screen size.
+- `help` — help windows, as `enew | setl bt=help` and `help {tag}` (the tag
+  the window was opened on); help buffers are never in the buffer list. A tab
+  page with a window left out gets `wincmd =` instead of sizes, as in nvim.
 
 `:set` takes vim's `+=`, `^=` and `-=` on numbers, comma lists (no duplicates
 where the option forbids them, `key:value` items replacing their key) and flag
@@ -201,7 +211,8 @@ applies them. `:edit`, `:split`, `:vsplit` and `:tabnew` take `+{cmd}`
 
 `zmax-term/tests/session_parity.rs` holds zmax to this: it loads sessions nvim
 wrote with `:mksession` (stacked, nested and multi-tab layouts, folds, local
-directories, the arglist) and compares every window's layout, size, cursor, top
-line, folds, directory and buffer list with what nvim restores from the same
-file. The session zmax writes back from it must restore the same again, and nvim
-restores zmax's sessions as its own (`fixtures/sessions/nvim-loads.sh`).
+directories, the arglist, a plugin help window) and compares every window's
+layout, size, cursor, top line, folds, directory and buffer list with what nvim
+restores from the same file. The session zmax writes back from it must restore
+the same again, and nvim restores zmax's sessions as its own
+(`fixtures/sessions/nvim-loads.sh`).
