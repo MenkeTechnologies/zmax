@@ -6653,6 +6653,11 @@ impl Component for EditorView {
         };
         zmax_view::view::set_conceal_reveal_cursor_line(!conceal_modes.contains(mode_letter));
 
+        // vim's redraw validates the current window's cursor row (`w_wrow`),
+        // which a later resize keeps the cursor at; other windows keep theirs.
+        let focus = cx.editor.tree.focus;
+        cx.editor.validate_wrow(focus);
+
         for (view, is_focused) in cx.editor.tree.views() {
             let doc = cx.editor.document(view.doc).unwrap();
             self.render_view(cx.editor, doc, view, area, surface, is_focused);

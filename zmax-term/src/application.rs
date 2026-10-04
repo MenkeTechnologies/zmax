@@ -251,6 +251,7 @@ impl Application {
             workspace_trust,
         );
         editor.vim_semantics = matches!(config.load().keymap.as_str(), "vim" | "spacemacs");
+        zmax_view::view::set_vim_update_topline(editor.vim_semantics);
         // Publish the starting preset so commands that swap it (`:cua-mode`) can
         // restore what they displaced.
         crate::keymap::set_current_preset(&config.load().keymap);
@@ -1035,6 +1036,7 @@ impl Application {
                         // Follow the preset for vim-only semantics (dot-repeat,
                         // operator-count multiplication, magic-regex translation).
                         self.editor.vim_semantics = matches!(name.as_str(), "vim" | "spacemacs");
+                        zmax_view::view::set_vim_update_topline(self.editor.vim_semantics);
                         self.editor.set_status(format!("keymap: {name}"));
                     }
                     None => {

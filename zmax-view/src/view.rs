@@ -109,6 +109,14 @@ static V_SCROLL_BAR: AtomicUsize = AtomicUsize::new(0);
 /// The frame-wide powerline bar says everything that row said, so while it is
 /// drawn the row goes back to the text instead of being drawn twice.
 static WINDOW_STATUS_LINE: AtomicBool = AtomicBool::new(true);
+/// Whether the cursor follows vim's `update_topline` rules (the vim-family
+/// presets): a jump far out of the window centres the cursor line.
+static VIM_UPDATE_TOPLINE: AtomicBool = AtomicBool::new(false);
+
+/// Follow vim's `update_topline` rules when the cursor leaves the window.
+pub fn set_vim_update_topline(on: bool) {
+    VIM_UPDATE_TOPLINE.store(on, Ordering::Relaxed);
+}
 
 /// emacs `window-tool-bar-mode` / `global-window-tool-bar-mode`.
 pub fn set_window_tool_bar(on: bool) {
@@ -519,6 +527,17 @@ pub struct View {
     /// vim `w_localdir`: the window-local working directory `:lcd` set. On
     /// entering the window the process changes to it (`Editor::fix_current_dir`).
     pub localdir: Option<std::path::PathBuf>,
+    /// vim `w_wrow`: the screen row of the cursor in the window, as last
+    /// validated (each redraw does it for the focused window; others keep the
+    /// row they had). `Editor::resize_windows` keeps the cursor at the same
+    /// relative row through a height change from it.
+    pub wrow: usize,
+    /// vim `w_fraction`: the cursor row as a fraction of the height, in
+    /// 1/16384ths (`FRACTION_MULT`).
+    pub fraction: usize,
+    /// vim `w_prev_fraction_row`: the `wrow` `fraction` was last computed
+    /// for (`None` for vim's -1, never).
+    pub prev_fraction_row: Option<usize>,
 }
 
 impl fmt::Debug for View {
@@ -554,6 +573,9 @@ impl View {
             loclist_stack: Vec::new(),
             loclist_stack_pos: 0,
             localdir: None,
+            wrow: 0,
+            fraction: 0,
+            prev_fraction_row: None,
         }
     }
 
@@ -838,9 +860,113 @@ impl View {
     }
 
     pub fn ensure_cursor_in_view(&self, doc: &mut Document, scrolloff: usize) {
+        if VIM_UPDATE_TOPLINE.load(Ordering::Relaxed) {
+            self.vim_update_topline(doc, scrolloff);
+        }
         if let Some(offset) = self.offset_coords_to_in_view_center::<false>(doc, scrolloff) {
             doc.set_view_offset(self.id, offset);
         }
+    }
+
+    /// vim `update_topline` (move.c) for unwrapped text: when the cursor has
+    /// left the window, scroll the least that shows it with `scrolloff` lines
+    /// around it — unless it went more than half a window above, or more than a
+    /// window below, where vim centres it instead (`scroll_cursor_halfway`).
+    /// A closed fold counts as one line. Wrapped text keeps the row-based path.
+    fn vim_update_topline(&self, doc: &mut Document, scrolloff: usize) {
+        let Some(top) = self.vim_topline(doc, scrolloff) else {
+            return;
+        };
+        let text = doc.text().slice(..);
+        let offset = doc.view_offset(self.id);
+        if text.char_to_line(offset.anchor.min(text.len_chars())) != top {
+            let anchor = text.line_to_char(top);
+            doc.set_view_offset(
+                self.id,
+                ViewPosition {
+                    anchor,
+                    vertical_offset: 0,
+                    ..offset
+                },
+            );
+        }
+    }
+
+    /// The top line [`Self::vim_update_topline`] scrolls to, or `None` where
+    /// it does not apply (no rows, wrapped text, an empty buffer).
+    fn vim_topline(&self, doc: &Document, scrolloff: usize) -> Option<usize> {
+        let height = self.inner_height();
+        let viewport = self.inner_area(doc);
+        if height == 0 || doc.text_format(viewport.width, None, Some(self.id)).soft_wrap {
+            return None;
+        }
+        let text = doc.text().slice(..);
+        let trailing = usize::from(text.len_chars() > 0 && text.char(text.len_chars() - 1) == '\n');
+        let line_count = text.len_lines() - trailing;
+        if line_count == 0 {
+            return None;
+        }
+        let folds = doc.folds();
+        // Visible lines: a closed fold's body is skipped.
+        let up = |l: usize| (0..l).rev().find(|&p| !folds.is_line_hidden(p));
+        let down = |l: usize| (l + 1..line_count).find(|&n| !folds.is_line_hidden(n));
+        // The line `n` visible lines above `line` (stopping at the first).
+        let back = |mut line: usize, n: usize| {
+            for _ in 0..n {
+                match up(line) {
+                    Some(prev) => line = prev,
+                    None => break,
+                }
+            }
+            line
+        };
+        let mut top = text.char_to_line(doc.view_offset(self.id).anchor.min(text.len_chars()));
+        let cursor = text.char_to_line(doc.selection(self.id).primary().cursor(text));
+        let so = scrolloff.min(height.saturating_sub(1) / 2);
+
+        // `scroll_cursor_halfway`: one line below, then one above, until the
+        // window is full; past the end a "~" row takes no space.
+        let halfway = || {
+            let (mut topline, mut boff, mut used) = (cursor, cursor, 1);
+            while topline > 0 {
+                if let Some(next) = down(boff) {
+                    boff = next;
+                    used += 1;
+                    if used > height {
+                        break;
+                    }
+                }
+                let Some(prev) = up(topline) else { break };
+                used += 1;
+                if used > height {
+                    break;
+                }
+                topline = prev;
+            }
+            topline
+        };
+
+        if top > 0 && cursor < top + so {
+            let halfheight = (height / 2).saturating_sub(1).max(2);
+            if top + so - cursor >= halfheight {
+                return Some(halfway());
+            }
+            top = back(cursor, so);
+        }
+        // vim `w_botline`: the first line below the window.
+        let mut botline = top;
+        for _ in 0..height {
+            botline = down(botline).unwrap_or(line_count);
+        }
+        if botline < line_count && cursor + so >= botline {
+            let n = cursor + 1 + so - botline;
+            top = if n <= height + 1 {
+                back(cursor, (height - 1).saturating_sub(so))
+            } else {
+                halfway()
+            };
+        }
+        Some(top)
     }
 
     pub fn ensure_cursor_in_view_center(&self, doc: &mut Document, scrolloff: usize) {

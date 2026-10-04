@@ -151,12 +151,25 @@ zmax -S ~/.vim/sessions/work.vim + notes.txt
 ```
 
 A bare `-S` (last, or followed by another option) sources `Session.vim`; `-S`
-may be repeated. The session's commands run through the same interpreter as
-`:source`: `badd +{lnum}` lists a buffer that is entered on `{lnum}`,
-`edit`/`tabedit`/`tabnext` drive the tab pages, `vsplit`, `{N}wincmd`, `vert
-{N}resize` and `file {name}` rebuild a split layout window by window, `&columns`
-and `&lines` report the area the windows share,
-`winheight(0)`/`winwidth(0)` measure the current window, and `normal!` runs
-zmax's own Normal mode in script order, so the session's `exe s:l | normal! zt`
-scroll lands where vim puts it. `:source {session}` at the prompt restores the
-same way.
+may be repeated. `:source {session}` at the prompt restores the same way.
+
+What a session restores, and the vim behaviour each part follows:
+
+- **Windows and tab pages** — `vsplit`/`split`, `tabnew`/`tabnext`, `{N}wincmd`,
+  `wincmd _ | wincmd |`, `{N}resize` and `vert {N}resize` with sizes scaled by
+  `&lines`/`&columns` (the area the windows share). `:resize` sizes a window's
+  text, as in vim.
+- **Buffers** — `badd +{lnum}`, `balt`, `edit`, and `file {name}` for plugin
+  windows; the start-up buffer is wiped as the session asks.
+- **Cursor and scroll** — `exe s:l | normal! zt` then the cursor line: `normal!`
+  runs in script order, `winheight(0)` is the real height, and a window whose
+  height changes keeps the cursor at the same relative row (vim's `w_fraction`),
+  so each window opens on the line vim shows.
+- **Folds** — `{range}fold`, `normal! zE`/`zo`/`zc`, `foldmethod`/`foldlevel`.
+- **Directories** — `cd`, and the window- and tab-local `lcd` and `tcd`.
+- **Argument list** — `%argdel`, `$argadd {file}`, `{N}argument`.
+
+`zmax-term/tests/session_parity.rs` holds zmax to this: it loads sessions nvim
+wrote with `:mksession` (stacked, nested and multi-tab layouts, folds, local
+directories, the arglist) and compares every window's layout, size, cursor, top
+line, folds and directory with what nvim restores from the same file.

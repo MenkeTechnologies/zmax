@@ -1,0 +1,5 @@
+tab 1/1 win 1 args 
+TAB 1 cwd w layout col(c.txt,b.txt,a.txt)
+  win 1 c.txt w=120 h=20 cur=10:1 top=2 folds= cwd=w
+  win 2 b.txt w=120 h=56 cur=40:1 top=40 folds= cwd=w
+  win 3 a.txt w=120 h=70 cur=120:1 top=120 folds= cwd=w

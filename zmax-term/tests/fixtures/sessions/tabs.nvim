@@ -1,0 +1,9 @@
+tab 2/3 win 1 args 
+TAB 1 cwd w layout a.txt
+  win 1 a.txt w=120 h=148 cur=50:1 top=1 folds= cwd=w
+TAB 2 cwd w layout row(c.txt,b.txt)
+  win 1 c.txt w=60 h=148 cur=80:1 top=1 folds= cwd=w
+  win 2 b.txt w=59 h=148 cur=1:1 top=1 folds= cwd=w
+TAB 3 cwd w layout col(a.txt,d.txt)
+  win 1 a.txt w=120 h=77 cur=190:1 top=124 folds= cwd=w
+  win 2 d.txt w=120 h=70 cur=1:1 top=1 folds= cwd=w

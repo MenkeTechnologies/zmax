@@ -6159,7 +6159,9 @@ fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
             let view = cx.editor.tree.focus;
             let chrome = cx.editor.tree.node_height(view) - cx.editor.tree.get(view).inner_height() as u16;
             let height = count.map_or(u16::MAX, |n| (n as u16).saturating_add(chrome));
-            cx.editor.tree.set_height(view, height);
+            cx.editor.resize_windows(move |tree| {
+                tree.set_height(view, height);
+            });
         }
         "|" => {
             let view = cx.editor.tree.focus;
@@ -35670,7 +35672,10 @@ fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     if width {
         cx.editor.tree.set_width(view, target);
     } else {
-        cx.editor.tree.set_height(view, target.saturating_add(chrome.max(0) as u16));
+        let height = target.saturating_add(chrome.max(0) as u16);
+        cx.editor.resize_windows(move |tree| {
+            tree.set_height(view, height);
+        });
     }
     Ok(())
 }

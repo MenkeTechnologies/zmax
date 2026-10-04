@@ -1627,6 +1627,9 @@ pub struct QfEntry {
     pub text: String,
 }
 
+/// vim `FRACTION_MULT`: the unit of a window's `w_fraction`.
+const FRACTION_MULT: usize = 16384;
+
 /// Which directory a `:cd` changes (vim `CdScope`): the global one (`:cd`),
 /// the tab page's (`:tcd`) or the window's (`:lcd`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -3529,9 +3532,15 @@ impl Editor {
                     .filter(|v| id == v.doc) // Different Document
                     .cloned()
                     .unwrap_or_else(|| {
-                        // vim `win_init`: the new window inherits `w_localdir`.
+                        // vim `win_init`: the new window inherits `w_localdir` and
+                        // the cursor row / fraction its scrolling is kept by.
                         let mut view = View::new(id, self.config().gutters.clone());
-                        view.localdir = self.tree.try_get(self.tree.focus).and_then(|v| v.localdir.clone());
+                        if let Some(old) = self.tree.try_get(self.tree.focus) {
+                            view.localdir = old.localdir.clone();
+                            view.wrow = old.wrow;
+                            view.fraction = old.fraction;
+                            view.prev_fraction_row = old.prev_fraction_row;
+                        }
                         view
                     });
                 let (layout, before) = match action {
@@ -5278,6 +5287,125 @@ impl Editor {
                     }
                 }
             }
+        }
+    }
+
+    /// vim `validate_cursor`/`curs_columns` for the row: record the screen row
+    /// the cursor sits on in `view` (its `w_wrow`). Unchanged when the cursor is
+    /// off screen.
+    pub fn validate_wrow(&mut self, view_id: ViewId) {
+        let Some(view) = self.tree.try_get(view_id) else {
+            return;
+        };
+        let Some(doc) = self.documents.get(&view.doc) else {
+            return;
+        };
+        if !doc.selections().contains_key(&view_id) {
+            return;
+        }
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view_id).primary().cursor(text);
+        if let Some(pos) = view.screen_coords_at_pos(doc, text, cursor) {
+            self.tree.get_mut(view_id).wrow = pos.row;
+        }
+    }
+
+    /// Change window sizes through `resize` (`:resize`, `CTRL-W _`), then do for
+    /// every window whose text height changed what vim's `win_set_inner_size`
+    /// does: recompute its `w_fraction` from its cursor row (validated first for
+    /// the focused window, stale for the others, as in vim) unless that row is
+    /// the one the fraction was last taken from, and scroll it so the cursor
+    /// keeps that relative row (`scroll_to_fraction`).
+    pub fn resize_windows(&mut self, resize: impl FnOnce(&mut Tree)) {
+        let focus = self.tree.focus;
+        self.validate_wrow(focus);
+        let before: Vec<(ViewId, usize)> = self
+            .tree
+            .views()
+            .map(|(view, _)| (view.id, view.inner_height()))
+            .collect();
+        resize(&mut self.tree);
+        for (id, prev_height) in before {
+            let Some(view) = self.tree.try_get(id) else {
+                continue;
+            };
+            if view.inner_height() == prev_height {
+                continue;
+            }
+            if view.inner_height() > 0 && view.prev_fraction_row != Some(view.wrow) {
+                // vim `set_fraction`, taken against the height before the change.
+                let view = self.tree.get_mut(id);
+                if prev_height > 1 {
+                    view.fraction = (view.wrow * FRACTION_MULT + FRACTION_MULT / 2) / prev_height;
+                }
+            }
+            self.scroll_to_fraction(id, prev_height);
+        }
+    }
+
+    /// vim `scroll_to_fraction`: put the top line where the cursor keeps the
+    /// relative row `w_fraction` gives it in the window's new height. Lines are
+    /// counted as screen rows one each, a closed fold as one.
+    fn scroll_to_fraction(&mut self, view_id: ViewId, prev_height: usize) {
+        let view = self.tree.get(view_id);
+        let height = view.inner_height();
+        let fraction = view.fraction;
+        let Some(doc) = self.documents.get_mut(&view.doc) else {
+            return;
+        };
+        let text = doc.text().slice(..);
+        let line_count = text.len_lines() - usize::from(text.len_chars() > 0 && text.char(text.len_chars() - 1) == '\n');
+        let top = text.char_to_line(doc.view_offset(view_id).anchor.min(text.len_chars()));
+        let mut wrow = view.wrow as isize;
+        if height > 0 && (height < line_count || top > 0) {
+            let cursor = doc.selection(view_id).primary().cursor(text);
+            let mut lnum = text.char_to_line(cursor);
+            // `(w_fraction * height - 1) / FRACTION_MULT`, in C's truncating
+            // division (0 for a fraction of 0).
+            wrow = (fraction as isize * height as isize - 1) / FRACTION_MULT as isize;
+            let mut sline = wrow;
+            if sline >= 0 && sline > height as isize - 1 {
+                sline = height as isize - 1;
+                wrow -= 1;
+            }
+            if sline < 0 {
+                wrow = 0;
+            } else if sline > 0 {
+                let folds = doc.folds();
+                let mut line_size = 0;
+                while sline > 0 && lnum > 0 {
+                    lnum -= 1;
+                    line_size = isize::from(!folds.is_line_hidden(lnum));
+                    sline -= line_size;
+                }
+                if sline < 0 {
+                    lnum += 1;
+                    wrow -= line_size + sline;
+                } else if sline > 0 {
+                    lnum = 0;
+                    wrow -= sline;
+                }
+            }
+            let anchor = text.line_to_char(lnum);
+            let offset = doc.view_offset(view_id);
+            doc.set_view_offset(
+                view_id,
+                ViewPosition {
+                    anchor,
+                    vertical_offset: 0,
+                    ..offset
+                },
+            );
+        }
+        let wrow = wrow.max(0) as usize;
+        let view = self.tree.get_mut(view_id);
+        view.wrow = wrow;
+        if view_id == self.tree.focus {
+            self.validate_wrow(view_id);
+        }
+        if prev_height > 0 {
+            let view = self.tree.get_mut(view_id);
+            view.prev_fraction_row = Some(view.wrow);
         }
     }
 
