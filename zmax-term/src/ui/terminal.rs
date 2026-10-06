@@ -514,7 +514,7 @@ impl TerminalPanel {
 
     /// Pasted text, filtered through vim `termpastefilter` (`tpf`): "control
     /// characters to be removed from the text pasted into the terminal window"
-    /// (options.txt). An <Esc> or <BS> in the clipboard would otherwise drive
+    /// (options.txt). An `<Esc>` or `<BS>` in the clipboard would otherwise drive
     /// the child's line editor instead of being inserted. `:set
     /// termpastefilter=` (empty) filters nothing; because the effective-value
     /// store reads an empty value as "unset", the raw `:setglobal` copy — which

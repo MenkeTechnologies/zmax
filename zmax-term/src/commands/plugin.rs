@@ -9,7 +9,7 @@
 //! ## Where plugin commands resolve
 //!
 //! A freshly-loaded plugin command is unknown to the static
-//! [`TYPABLE_COMMAND_MAP`](crate::commands::typed::TYPABLE_COMMAND_MAP), so it
+//! [`TYPABLE_COMMAND_MAP`], so it
 //! arrives at [`execute_command_line_inner`](crate::commands::typed)'s
 //! fallthrough, which consults [`dispatch`](crate::commands::plugin::dispatch)
 //! AFTER built-in typables and BEFORE

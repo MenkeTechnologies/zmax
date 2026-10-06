@@ -19796,7 +19796,7 @@ static STICKY_LINES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBo
 static STICKY_LINES_LIMIT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(5);
 
 /// The languages whose buffers never pin scope headers — JetBrains "Disable
-/// for <language>" on the sticky-lines panel.
+/// for `<language>`" on the sticky-lines panel.
 static STICKY_LINES_OFF_FOR: std::sync::Mutex<std::collections::BTreeSet<String>> =
     std::sync::Mutex::new(std::collections::BTreeSet::new());
 
@@ -19811,7 +19811,7 @@ pub(crate) fn sticky_lines_enabled(language: Option<&str>) -> bool {
         })
 }
 
-/// JetBrains "Disable for <language>" (`EditorStickyLinesDisableForLang`):
+/// JetBrains "Disable for `<language>`" (`EditorStickyLinesDisableForLang`):
 /// stop pinning scope headers in buffers of the current buffer's language, or
 /// start again when they are off for it.
 fn toggle_sticky_lines_for_language(cx: &mut Context) {
@@ -39592,7 +39592,7 @@ fn goto_column_impl(cx: &mut Context, movement: Movement) {
     doc.set_selection(view.id, selection);
 }
 
-/// vim `|` (`nv_pipe` + `coladvance`): go to screen column [count] (1 without
+/// vim `|` (`nv_pipe` + `coladvance`): go to screen column `[count]` (1 without
 /// one) — the character covering that column with tabs and wide characters
 /// counted at their width, else the last character of the line.
 fn vim_goto_column(cx: &mut Context) {

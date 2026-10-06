@@ -5,7 +5,7 @@
 //! The file it writes is the one nvim writes for the same layout, so a session
 //! saved by zmax loads in vim and nvim, and theirs load in zmax. The editor is
 //! read in two steps: [`snapshot`] visits each tab page and records what the
-//! writer needs, then [`write`] produces the text from that record alone.
+//! writer needs, then [`write()`] produces the text from that record alone.
 
 use std::path::{Path, PathBuf};
 
@@ -147,7 +147,7 @@ pub struct TabSnap {
     pub localdir: Option<PathBuf>,
 }
 
-/// Everything [`write`] reads.
+/// Everything [`write()`] reads.
 #[derive(Debug, Clone)]
 pub struct SessionSnap {
     pub tabs: Vec<TabSnap>,

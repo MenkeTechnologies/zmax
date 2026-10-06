@@ -35956,7 +35956,7 @@ fn feed_keys(
     }
 }
 
-/// Feed `keys` once at the cursor as `:normal` does, then the implicit <Esc>
+/// Feed `keys` once at the cursor as `:normal` does, then the implicit `<Esc>`
 /// vim appends so a sequence ending in Insert/Select returns to Normal.
 fn feed_normal_keys(
     editor: &mut Editor,
