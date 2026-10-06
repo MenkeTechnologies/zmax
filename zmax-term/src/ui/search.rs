@@ -275,7 +275,8 @@ impl SearchPanel {
         let mut current = None;
         for (fi, hit) in self.hits.iter().enumerate() {
             for (mi, m) in hit.matches.iter().enumerate() {
-                if matches!(self.rows.get(self.sel), Some(Row::Match(f, i)) if (*f, *i) == (fi, mi)) {
+                if matches!(self.rows.get(self.sel), Some(Row::Match(f, i)) if (*f, *i) == (fi, mi))
+                {
                     current = Some(entries.len());
                 }
                 entries.push(zmax_view::editor::QfEntry {

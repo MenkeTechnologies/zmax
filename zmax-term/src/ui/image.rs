@@ -1096,8 +1096,10 @@ fn toggle_animation(cx: &mut Context) -> anyhow::Result<()> {
             file,
         }));
         redisplay(cx, &orig);
-        cx.editor
-            .set_status(format!("image: animating from frame [{}/{count}]", start + 1));
+        cx.editor.set_status(format!(
+            "image: animating from frame [{}/{count}]",
+            start + 1
+        ));
     }
     Ok(())
 }
@@ -1284,11 +1286,17 @@ mod tests {
             bottom: 70,
         };
         assert_eq!(display_factor(50), 2.0);
-        assert_eq!(area.to_original(display_factor(50)).geometry(), "200x100+20+40");
+        assert_eq!(
+            area.to_original(display_factor(50)).geometry(),
+            "200x100+20+40"
+        );
         // 100% is the identity, which is what the geometry means with no
         // scaling in play.
         assert_eq!(display_factor(100), 1.0);
-        assert_eq!(area.to_original(display_factor(100)).geometry(), "100x50+10+20");
+        assert_eq!(
+            area.to_original(display_factor(100)).geometry(),
+            "100x50+10+20"
+        );
         // Emacs truncates towards zero at every step (image-crop.el:259-266):
         // at 300% a 100px-wide rectangle is 33, not 34.
         assert_eq!(
@@ -1442,7 +1450,13 @@ mod tests {
         assert_eq!(
             still_args(src, 2, out),
             vec![
-                "/a.gif", "-coalesce", "-delete", "0-1", "-delete", "1--1", "/o.gif"
+                "/a.gif",
+                "-coalesce",
+                "-delete",
+                "0-1",
+                "-delete",
+                "1--1",
+                "/o.gif"
             ]
         );
         assert_eq!(
@@ -1451,7 +1465,15 @@ mod tests {
         );
         assert_eq!(
             animate_args(src, 3, 1, out),
-            vec!["/a.gif", "-coalesce", "-delete", "0-2", "-loop", "1", "/o.gif"]
+            vec![
+                "/a.gif",
+                "-coalesce",
+                "-delete",
+                "0-2",
+                "-loop",
+                "1",
+                "/o.gif"
+            ]
         );
     }
 

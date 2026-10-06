@@ -101,9 +101,7 @@ async fn emacs_transpose_chars() -> anyhow::Result<()> {
 /// count dedicated strongly and a bare `C-u` weakly.
 #[tokio::test(flavor = "multi_thread")]
 async fn c_x_w_d_dedicates_strongly_only_for_a_raw_prefix() -> anyhow::Result<()> {
-    let mut app = preset_app("emacs")
-        .with_input_text("#[a|]#bc\n")
-        .build()?;
+    let mut app = preset_app("emacs").with_input_text("#[a|]#bc\n").build()?;
     test_key_sequences(
         &mut app,
         vec![
@@ -215,7 +213,9 @@ async fn negative_argument_makes_the_word_case_commands_work_backwards() -> anyh
                     );
                     let (view, doc) = zmax_view::current_ref!(app.editor);
                     assert_eq!(
-                        doc.selection(view.id).primary().cursor(doc.text().slice(..)),
+                        doc.selection(view.id)
+                            .primary()
+                            .cursor(doc.text().slice(..)),
                         10,
                         "point stays where it was, as emacs leaves it"
                     );

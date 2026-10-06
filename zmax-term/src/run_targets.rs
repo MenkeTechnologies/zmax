@@ -70,20 +70,38 @@ pub fn parse(spec: &str) -> Result<RunTarget, String> {
     };
     let kind = match kind {
         "ssh" => match value.split_once(':') {
-            Some((host, dir)) => TargetKind::Ssh { host: host.into(), dir: Some(dir.into()) },
-            None => TargetKind::Ssh { host: value.into(), dir: None },
+            Some((host, dir)) => TargetKind::Ssh {
+                host: host.into(),
+                dir: Some(dir.into()),
+            },
+            None => TargetKind::Ssh {
+                host: value.into(),
+                dir: None,
+            },
         },
-        "docker" => TargetKind::Docker { image: value.into() },
+        "docker" => TargetKind::Docker {
+            image: value.into(),
+        },
         "container" => TargetKind::Container { name: value.into() },
-        other => return Err(format!("unknown target kind {other}: ssh, docker or container")),
+        other => {
+            return Err(format!(
+                "unknown target kind {other}: ssh, docker or container"
+            ))
+        }
     };
-    Ok(RunTarget { name: name.into(), kind })
+    Ok(RunTarget {
+        name: name.into(),
+        kind,
+    })
 }
 
 impl RunTarget {
     pub fn describe(&self) -> String {
         match &self.kind {
-            TargetKind::Ssh { host, dir: Some(dir) } => format!("ssh {host}:{dir}"),
+            TargetKind::Ssh {
+                host,
+                dir: Some(dir),
+            } => format!("ssh {host}:{dir}"),
             TargetKind::Ssh { host, dir: None } => format!("ssh {host}"),
             TargetKind::Docker { image } => format!("docker {image}"),
             TargetKind::Container { name } => format!("container {name}"),
@@ -136,7 +154,10 @@ mod tests {
     fn parse_and_wrap() {
         let root = Path::new("/w");
         let ssh = parse("box ssh dev@host:/srv/app").unwrap();
-        assert_eq!("ssh -t dev@host 'cd '\\''/srv/app/sub'\\'' && make'", ssh.wrap(root, Path::new("/w/sub"), "make"));
+        assert_eq!(
+            "ssh -t dev@host 'cd '\\''/srv/app/sub'\\'' && make'",
+            ssh.wrap(root, Path::new("/w/sub"), "make")
+        );
         let docker = parse("ci docker rust:1").unwrap();
         assert_eq!(
             "docker run --rm -i -v '/w':'/w' -w '/w' rust:1 sh -c 'cargo test'",

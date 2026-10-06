@@ -896,15 +896,15 @@ async fn structural_replace_rewrites_what_the_query_captures() -> anyhow::Result
                 None,
             ),
             (
-            Some("fn_@name<ret>"),
-            Some(&|app| {
-                let doc = app.editor.documents().next().unwrap();
-                assert_eq!(
-                    "fn fn_alpha() {}\nfn fn_beta() {}\n",
-                    doc.text().to_string(),
-                    "each captured name is rewritten through the template"
-                );
-            }),
+                Some("fn_@name<ret>"),
+                Some(&|app| {
+                    let doc = app.editor.documents().next().unwrap();
+                    assert_eq!(
+                        "fn fn_alpha() {}\nfn fn_beta() {}\n",
+                        doc.text().to_string(),
+                        "each captured name is rewritten through the template"
+                    );
+                }),
             ),
         ],
         false,
@@ -918,7 +918,10 @@ async fn structural_replace_rewrites_what_the_query_captures() -> anyhow::Result
 #[tokio::test(flavor = "multi_thread")]
 async fn fix_doc_comment_lists_the_parameters_of_the_definition() -> anyhow::Result<()> {
     let file = tempfile::Builder::new().suffix(".rs").tempfile()?;
-    std::fs::write(file.path(), "fn parse(input: &str, strict: bool) -> bool {\n    strict\n}\n")?;
+    std::fs::write(
+        file.path(),
+        "fn parse(input: &str, strict: bool) -> bool {\n    strict\n}\n",
+    )?;
     let mut app = helpers::preset_app("spacemacs")
         .with_file(file.path(), None)
         .build()?;

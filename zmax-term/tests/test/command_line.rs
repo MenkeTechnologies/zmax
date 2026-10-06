@@ -316,7 +316,10 @@ async fn source_runs_a_scripts_normal_keys_in_order() -> anyhow::Result<()> {
 async fn plus_cmd_arguments_run_after_the_file_opens() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let notes = dir.path().join("notes.txt");
-    std::fs::write(&notes, (1..=20).map(|n| format!("line {n}\n")).collect::<String>())?;
+    std::fs::write(
+        &notes,
+        (1..=20).map(|n| format!("line {n}\n")).collect::<String>(),
+    )?;
     let line_of = |app: &zmax_term::application::Application| {
         let (view, doc) = zmax_view::current_ref!(app.editor);
         let text = doc.text().slice(..);
@@ -349,7 +352,9 @@ async fn plus_cmd_arguments_run_after_the_file_opens() -> anyhow::Result<()> {
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
             assert!(
-                app.editor.documents().all(|d| d.path().is_none_or(|p| !p.ends_with("+setlocal bufhidden=wipe"))),
+                app.editor.documents().all(|d| d
+                    .path()
+                    .is_none_or(|p| !p.ends_with("+setlocal bufhidden=wipe"))),
                 "a +cmd is not a file"
             );
         }),
@@ -370,7 +375,11 @@ async fn help_subjects_open_the_plugin_help_file() -> anyhow::Result<()> {
     let mut help = String::from("*plug.txt*  The plug plugin\n\n");
     for s in 1..=3 {
         help.push_str(&format!("SECTION {s}      *plug-s{s}*\n"));
-        help.push_str(&(1..=30).map(|n| format!("text {s}.{n}\n")).collect::<String>());
+        help.push_str(
+            &(1..=30)
+                .map(|n| format!("text {s}.{n}\n"))
+                .collect::<String>(),
+        );
     }
     std::fs::write(dir.path().join("doc/plug.txt"), help)?;
     std::fs::write(
@@ -388,7 +397,10 @@ async fn help_subjects_open_the_plugin_help_file() -> anyhow::Result<()> {
     let mut app = AppBuilder::new().build()?;
     test_key_sequence(
         &mut app,
-        Some(&format!(":set runtimepath={}<ret>:help plug-s2<ret>", dir.path().display())),
+        Some(&format!(
+            ":set runtimepath={}<ret>:help plug-s2<ret>",
+            dir.path().display()
+        )),
         Some(&move |app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
             assert_eq!(app.editor.tree.views().count(), 2);
@@ -405,7 +417,11 @@ async fn help_subjects_open_the_plugin_help_file() -> anyhow::Result<()> {
         Some(":help s3<ret>"),
         Some(&move |app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(app.editor.tree.views().count(), 2, "the help window is reused");
+            assert_eq!(
+                app.editor.tree.views().count(),
+                2,
+                "the help window is reused"
+            );
             assert_eq!(at(app).0, 65);
         }),
         false,
@@ -415,8 +431,15 @@ async fn help_subjects_open_the_plugin_help_file() -> anyhow::Result<()> {
         &mut app,
         Some(":help no-such-subject<ret>"),
         Some(&|app| {
-            let status = app.editor.get_status().map(|(msg, _)| msg.to_string()).unwrap_or_default();
-            assert!(status.ends_with("E149: No help for no-such-subject"), "{status}");
+            let status = app
+                .editor
+                .get_status()
+                .map(|(msg, _)| msg.to_string())
+                .unwrap_or_default();
+            assert!(
+                status.ends_with("E149: No help for no-such-subject"),
+                "{status}"
+            );
         }),
         false,
     )
@@ -497,9 +520,9 @@ async fn vim_sidebar_plugin_commands_run() -> anyhow::Result<()> {
             let (status, _) = app.editor.get_status().expect("an error");
             assert!(app.editor.is_err());
             assert!(
-                status
-                    .as_ref()
-                    .ends_with("NERDTree: No bookmark or directory found for: zmax-no-such-directory"),
+                status.as_ref().ends_with(
+                    "NERDTree: No bookmark or directory found for: zmax-no-such-directory"
+                ),
                 "{}",
                 status.as_ref()
             );

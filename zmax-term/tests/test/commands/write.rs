@@ -1195,8 +1195,13 @@ async fn test_toggle_file_readonly_changes_permissions() -> anyhow::Result<()> {
     let path = file.path().to_path_buf();
     let mut app = helpers::AppBuilder::new().with_file(&path, None).build()?;
 
-    test_key_sequence(&mut app, Some(":toggle<minus>file<minus>readonly<ret>"), None, false)
-        .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":toggle<minus>file<minus>readonly<ret>"),
+        None,
+        false,
+    )
+    .await?;
     assert!(
         std::fs::metadata(&path)?.permissions().readonly(),
         "the file is read-only on disk"
@@ -1206,8 +1211,13 @@ async fn test_toggle_file_readonly_changes_permissions() -> anyhow::Result<()> {
         "the buffer flag followed the file"
     );
 
-    test_key_sequence(&mut app, Some(":toggle<minus>file<minus>readonly<ret>"), None, false)
-        .await?;
+    test_key_sequence(
+        &mut app,
+        Some(":toggle<minus>file<minus>readonly<ret>"),
+        None,
+        false,
+    )
+    .await?;
     assert!(
         !std::fs::metadata(&path)?.permissions().readonly(),
         "and back to writable"
@@ -1344,7 +1354,11 @@ async fn test_messages_clear_empties_the_log() -> anyhow::Result<()> {
                 Some(&|app| {
                     // Everything before the clear is gone; what remains is the
                     // line reporting it, which `set_status` logs like any other.
-                    assert_eq!(app.editor.messages.len(), 1, "only the confirmation is left");
+                    assert_eq!(
+                        app.editor.messages.len(),
+                        1,
+                        "only the confirmation is left"
+                    );
                     assert!(
                         app.editor.messages[0].0.starts_with("cleared "),
                         "and that one line is the confirmation: {:?}",

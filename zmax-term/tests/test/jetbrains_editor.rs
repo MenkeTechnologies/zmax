@@ -18,7 +18,9 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "extend_to_block_end" => keymap!({ "Normal mode" "Z" => extend_to_block_end, }),
         "extend_to_window_bottom" => keymap!({ "Normal mode" "Z" => extend_to_window_bottom, }),
         "md_table_insert_row_below" => keymap!({ "Normal mode" "Z" => md_table_insert_row_below, }),
-        "md_table_move_column_right" => keymap!({ "Normal mode" "Z" => md_table_move_column_right, }),
+        "md_table_move_column_right" => {
+            keymap!({ "Normal mode" "Z" => md_table_move_column_right, })
+        }
         "md_table_align_right" => keymap!({ "Normal mode" "Z" => md_table_align_right, }),
         "md_toggle_bold" => keymap!({ "Normal mode" "Z" => md_toggle_bold, }),
         "md_heading_up" => keymap!({ "Normal mode" "Z" => md_heading_up, }),
@@ -175,7 +177,10 @@ async fn mnemonic_bookmark_moves_and_toggles_off() -> anyhow::Result<()> {
         vec![
             (Some("jjZggQ"), Some(&|app| assert_eq!(2, cursor_line(app)))),
             // The prompt form moves 7 to line 0.
-            (Some("ggM7jjQ"), Some(&|app| assert_eq!(0, cursor_line(app)))),
+            (
+                Some("ggM7jjQ"),
+                Some(&|app| assert_eq!(0, cursor_line(app))),
+            ),
             (
                 Some("ZjQ"),
                 Some(&|app| {
@@ -194,7 +199,10 @@ async fn mnemonic_bookmark_moves_and_toggles_off() -> anyhow::Result<()> {
 /// the cell the edit is about.
 #[tokio::test(flavor = "multi_thread")]
 async fn md_table_row_below_is_aligned_and_takes_the_cursor() -> anyhow::Result<()> {
-    let mut app = app_with("| a | bb |\n|---|---|\n| #[1|]# | 2 |\n", "md_table_insert_row_below")?;
+    let mut app = app_with(
+        "| a | bb |\n|---|---|\n| #[1|]# | 2 |\n",
+        "md_table_insert_row_below",
+    )?;
     test_key_sequences(
         &mut app,
         vec![(
@@ -215,7 +223,10 @@ async fn md_table_row_below_is_aligned_and_takes_the_cursor() -> anyhow::Result<
 /// Moving a column carries every row's cell, the separator row included.
 #[tokio::test(flavor = "multi_thread")]
 async fn md_table_column_moves_right_with_its_cells() -> anyhow::Result<()> {
-    let mut app = app_with("| #[a|]# | b |\n| --- | --: |\n| 1 | 2 |\n", "md_table_move_column_right")?;
+    let mut app = app_with(
+        "| #[a|]# | b |\n| --- | --: |\n| 1 | 2 |\n",
+        "md_table_move_column_right",
+    )?;
     test_key_sequences(
         &mut app,
         vec![(
@@ -233,7 +244,10 @@ async fn md_table_align_right_pads_on_the_left() -> anyhow::Result<()> {
     let mut app = app_with("| #[a|]# |\n| --- |\n| 1 |\n", "md_table_align_right")?;
     test_key_sequences(
         &mut app,
-        vec![(Some("Z"), Some(&|app| assert_eq!("|   a |\n| --: |\n|   1 |\n", text(app))))],
+        vec![(
+            Some("Z"),
+            Some(&|app| assert_eq!("|   a |\n| --: |\n|   1 |\n", text(app))),
+        )],
         false,
     )
     .await
@@ -245,7 +259,10 @@ async fn md_bold_wraps_the_word_under_the_cursor() -> anyhow::Result<()> {
     let mut app = app_with("say h#[e|]#llo\n", "md_toggle_bold")?;
     test_key_sequences(
         &mut app,
-        vec![(Some("Z"), Some(&|app| assert_eq!("say **hello**\n", text(app))))],
+        vec![(
+            Some("Z"),
+            Some(&|app| assert_eq!("say **hello**\n", text(app))),
+        )],
         false,
     )
     .await
@@ -298,9 +315,18 @@ async fn breakpoints_disable_remove_and_restore() -> anyhow::Result<()> {
     test_key_sequences(
         &mut app,
         vec![
-            (Some("ZjZQ"), Some(&|app| assert_eq!(vec![(0, false), (1, true)], breakpoints(app)))),
-            (Some("M"), Some(&|app| assert_eq!(Vec::<(usize, bool)>::new(), breakpoints(app)))),
-            (Some("R"), Some(&|app| assert_eq!(vec![(1, true)], breakpoints(app)))),
+            (
+                Some("ZjZQ"),
+                Some(&|app| assert_eq!(vec![(0, false), (1, true)], breakpoints(app))),
+            ),
+            (
+                Some("M"),
+                Some(&|app| assert_eq!(Vec::<(usize, bool)>::new(), breakpoints(app))),
+            ),
+            (
+                Some("R"),
+                Some(&|app| assert_eq!(vec![(1, true)], breakpoints(app))),
+            ),
         ],
         false,
     )
@@ -353,10 +379,16 @@ async fn maximize_split_and_restore() -> anyhow::Result<()> {
     test_key_sequences(
         &mut app,
         vec![
-            (Some(":vsplit<ret>:split<ret>"), Some(&|app| assert_eq!(3, windows(app)))),
+            (
+                Some(":vsplit<ret>:split<ret>"),
+                Some(&|app| assert_eq!(3, windows(app))),
+            ),
             (Some("Z"), Some(&|app| assert_eq!(1, windows(app)))),
             (Some("Z"), Some(&|app| assert_eq!(3, windows(app)))),
-            (Some("Q"), Some(&|app| assert!(!app.editor.config().render_statusline))),
+            (
+                Some("Q"),
+                Some(&|app| assert!(!app.editor.config().render_statusline)),
+            ),
         ],
         false,
     )
@@ -445,17 +477,29 @@ async fn shelf_save_pop_and_restore() -> anyhow::Result<()> {
     let shelf = repo.path().join(".git").join("zmax-shelf");
     let patches = move |dir: &std::path::Path| {
         std::fs::read_dir(dir)
-            .map(|d| d.flatten().filter(|e| e.path().extension().is_some_and(|x| x == "patch")).count())
+            .map(|d| {
+                d.flatten()
+                    .filter(|e| e.path().extension().is_some_and(|x| x == "patch"))
+                    .count()
+            })
             .unwrap_or(0)
     };
 
     test_key_sequences(&mut app, vec![(Some("Z"), None)], false).await?;
     assert_eq!(1, patches(&shelf), "saved to the shelf");
-    assert_eq!("two\n", std::fs::read_to_string(&file)?, "the tree kept the change");
+    assert_eq!(
+        "two\n",
+        std::fs::read_to_string(&file)?,
+        "the tree kept the change"
+    );
 
     git(&["checkout", "--", "f.txt"]);
     test_key_sequences(&mut app, vec![(Some("Q<ret>"), None)], false).await?;
-    assert_eq!("two\n", std::fs::read_to_string(&file)?, "popped back into the tree");
+    assert_eq!(
+        "two\n",
+        std::fs::read_to_string(&file)?,
+        "popped back into the tree"
+    );
     assert_eq!(0, patches(&shelf), "and off the shelf");
 
     test_key_sequences(&mut app, vec![(Some("M<ret>"), None)], false).await?;
@@ -494,7 +538,11 @@ async fn shelve_from_a_subdirectory_covers_the_whole_tree() -> anyhow::Result<()
 
     let mut app = AppBuilder::new().with_file(&nested, None).build()?;
     test_key_sequences(&mut app, vec![(Some(":shelve work<ret>"), None)], false).await?;
-    assert_eq!("a\n", std::fs::read_to_string(&top)?, "the top-level file was shelved too");
+    assert_eq!(
+        "a\n",
+        std::fs::read_to_string(&top)?,
+        "the top-level file was shelved too"
+    );
     assert_eq!("b\n", std::fs::read_to_string(&nested)?);
 
     test_key_sequences(&mut app, vec![(Some(":unshelve work<ret>"), None)], false).await?;
@@ -539,8 +587,15 @@ async fn default_changelist_commits_the_unclaimed_changes() -> anyhow::Result<()
         false,
     )
     .await?;
-    assert_eq!("b.txt\n", git(&["show", "--name-only", "--format=", "HEAD"]));
-    assert_eq!(" M a.txt\n", git(&["status", "--porcelain"]), "work's file stayed uncommitted");
+    assert_eq!(
+        "b.txt\n",
+        git(&["show", "--name-only", "--format=", "HEAD"])
+    );
+    assert_eq!(
+        " M a.txt\n",
+        git(&["status", "--porcelain"]),
+        "work's file stayed uncommitted"
+    );
     Ok(())
 }
 
@@ -576,11 +631,17 @@ async fn watches_add_duplicate_and_clear() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn clear_undo_history_keeps_the_text() -> anyhow::Result<()> {
     let mut config = Config::default();
-    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => clear_undo_history, }));
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode" "Z" => clear_undo_history, }),
+    );
     let mut app = AppBuilder::new().with_config(config).build()?;
     test_key_sequences(
         &mut app,
-        vec![(Some("ihello<esc>Zu"), Some(&|app| assert_eq!("hello\n", text(app))))],
+        vec![(
+            Some("ihello<esc>Zu"),
+            Some(&|app| assert_eq!("hello\n", text(app))),
+        )],
         false,
     )
     .await
@@ -590,7 +651,10 @@ async fn clear_undo_history_keeps_the_text() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn open_in_opposite_group_keeps_the_original() -> anyhow::Result<()> {
     let mut config = Config::default();
-    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => open_in_opposite_group, }));
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode" "Z" => open_in_opposite_group, }),
+    );
     let mut app = AppBuilder::new().with_config(config).build()?;
     test_key_sequences(
         &mut app,
@@ -614,11 +678,20 @@ async fn new_html_file_beside_the_buffer() -> anyhow::Result<()> {
     let file = dir.path().join("a.txt");
     std::fs::write(&file, "a\n")?;
     let mut config = Config::default();
-    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => new_html_file, }));
-    let mut app = AppBuilder::new().with_config(config).with_file(&file, None).build()?;
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode" "Z" => new_html_file, }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(&file, None)
+        .build()?;
     test_key_sequences(&mut app, vec![(Some("Zpage<ret>"), None)], false).await?;
     let page = std::fs::read_to_string(dir.path().join("page.html"))?;
-    assert!(page.starts_with("<!DOCTYPE html>") && page.contains("<title>page</title>"), "{page}");
+    assert!(
+        page.starts_with("<!DOCTYPE html>") && page.contains("<title>page</title>"),
+        "{page}"
+    );
     Ok(())
 }
 
@@ -627,7 +700,10 @@ async fn new_html_file_beside_the_buffer() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn search_preview_off_waits_for_enter() -> anyhow::Result<()> {
     let mut config = Config::default();
-    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => toggle_search_preview, }));
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode" "Z" => toggle_search_preview, }),
+    );
     let mut app = AppBuilder::new()
         .with_config(config)
         .with_input_text("#[a|]#bc\nxyz\n")
@@ -635,8 +711,14 @@ async fn search_preview_off_waits_for_enter() -> anyhow::Result<()> {
     test_key_sequences(
         &mut app,
         vec![
-            (Some("Z/xy"), Some(&|app| assert_eq!(0, cursor_line(app), "no move while typing"))),
-            (Some("<ret>"), Some(&|app| assert_eq!(1, cursor_line(app), "moved on Enter"))),
+            (
+                Some("Z/xy"),
+                Some(&|app| assert_eq!(0, cursor_line(app), "no move while typing")),
+            ),
+            (
+                Some("<ret>"),
+                Some(&|app| assert_eq!(1, cursor_line(app), "moved on Enter")),
+            ),
             (Some("Z"), None),
         ],
         false,
@@ -681,7 +763,10 @@ async fn md_inline_link_becomes_a_reference() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn palette_commands_open_their_prompts() -> anyhow::Result<()> {
     let mut config = Config::default();
-    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => command_palette, }));
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode" "Z" => command_palette, }),
+    );
     let mut app = AppBuilder::new().with_config(config).build()?;
     test_key_sequences(
         &mut app,
@@ -702,7 +787,10 @@ async fn next_occurrence_without_results_is_the_next_match() -> anyhow::Result<(
     test_key_sequences(
         &mut app,
         vec![
-            (Some("/x<ret>"), Some(&|app| assert_eq!((2, 3), primary(app)))),
+            (
+                Some("/x<ret>"),
+                Some(&|app| assert_eq!((2, 3), primary(app))),
+            ),
             (Some("Z"), Some(&|app| assert_eq!((6, 7), primary(app)))),
         ],
         false,
@@ -715,9 +803,15 @@ async fn next_occurrence_without_results_is_the_next_match() -> anyhow::Result<(
 #[tokio::test(flavor = "multi_thread")]
 async fn fold_code_block_folds_the_block_around_the_caret() -> anyhow::Result<()> {
     let file = tempfile::Builder::new().suffix(".rs").tempfile()?;
-    std::fs::write(file.path(), "fn a() {\n    let x = 1;\n    let y = 2;\n}\nfn b() {}\n")?;
+    std::fs::write(
+        file.path(),
+        "fn a() {\n    let x = 1;\n    let y = 2;\n}\nfn b() {}\n",
+    )?;
     let mut config = Config::default();
-    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => fold_code_block, }));
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode" "Z" => fold_code_block, }),
+    );
     let mut app = AppBuilder::new()
         .with_config(config)
         .with_file(file.path(), None)
@@ -761,7 +855,12 @@ async fn bookmark_lists_descriptions_and_order() -> anyhow::Result<()> {
         .with_config(config)
         .with_file(file.path(), None)
         .build()?;
-    let status = |app: &Application| app.editor.get_status().map(|(s, _)| s.to_string()).unwrap_or_default();
+    let status = |app: &Application| {
+        app.editor
+            .get_status()
+            .map(|(s, _)| s.to_string())
+            .unwrap_or_default()
+    };
 
     test_key_sequences(
         &mut app,
@@ -787,25 +886,29 @@ async fn bookmark_lists_descriptions_and_order() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn blank_diff_sides_diff_against_each_other() -> anyhow::Result<()> {
     let mut config = Config::default();
-    config.keys.insert(Mode::Normal, keymap!({ "Normal mode" "Z" => blank_diff_window, }));
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode" "Z" => blank_diff_window, }),
+    );
     let mut app = AppBuilder::new().with_config(config).build()?;
     test_key_sequences(
         &mut app,
-        vec![
-            (
-                Some("Zia<ret>c<esc><C-w>hia<ret>b<esc>"),
-                Some(&|app| {
-                    let bases: Vec<String> = app
-                        .editor
-                        .documents()
-                        .filter_map(|d| d.diff_handle().map(|h| (d.text().to_string(), h.load().diff_base().to_string())))
-                        .map(|(text, base)| format!("{text}|{base}"))
-                        .collect();
-                    assert!(bases.contains(&"a\nc\n|a\nb\n".to_string()), "{bases:?}");
-                    assert!(bases.contains(&"a\nb\n|a\nc\n".to_string()), "{bases:?}");
-                }),
-            ),
-        ],
+        vec![(
+            Some("Zia<ret>c<esc><C-w>hia<ret>b<esc>"),
+            Some(&|app| {
+                let bases: Vec<String> = app
+                    .editor
+                    .documents()
+                    .filter_map(|d| {
+                        d.diff_handle()
+                            .map(|h| (d.text().to_string(), h.load().diff_base().to_string()))
+                    })
+                    .map(|(text, base)| format!("{text}|{base}"))
+                    .collect();
+                assert!(bases.contains(&"a\nc\n|a\nb\n".to_string()), "{bases:?}");
+                assert!(bases.contains(&"a\nb\n|a\nc\n".to_string()), "{bases:?}");
+            }),
+        )],
         false,
     )
     .await

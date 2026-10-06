@@ -344,7 +344,11 @@ pub fn rerun_failed_command(cmd: &str, failed: &[String]) -> Option<String> {
         // go's filter is one regex alternation.
         return Some(format!("{base} -run '^({})$'", failed.join("|")));
     }
-    if base.starts_with("npx jest") || base.starts_with("jest") || base.starts_with("npx vitest") || base.starts_with("vitest") {
+    if base.starts_with("npx jest")
+        || base.starts_with("jest")
+        || base.starts_with("npx vitest")
+        || base.starts_with("vitest")
+    {
         // jest matches test names by regex with -t.
         let escaped: Vec<String> = failed
             .iter()

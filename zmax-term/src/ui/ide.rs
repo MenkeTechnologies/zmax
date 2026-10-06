@@ -225,9 +225,17 @@ enum BookmarkRow {
     /// A harpoon file pin (a JetBrains file bookmark).
     Pin(PathBuf),
     /// A line bookmark list's header.
-    List { name: String, default: bool, count: usize },
+    List {
+        name: String,
+        default: bool,
+        count: usize,
+    },
     /// A line bookmark: the line (0-based) and what the row shows.
-    Line { path: PathBuf, line: usize, label: String },
+    Line {
+        path: PathBuf,
+        line: usize,
+        label: String,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -413,7 +421,10 @@ fn group_problems_by_source(rows: Vec<ProblemRow>) -> Vec<ProblemRow> {
         }
     }
     if !ungrouped.is_empty() {
-        groups.entry("other".to_string()).or_default().extend(ungrouped);
+        groups
+            .entry("other".to_string())
+            .or_default()
+            .extend(ungrouped);
     }
     let mut out = Vec::new();
     for (source, rows) in groups {
@@ -468,12 +479,20 @@ fn project_problems(editor: &zmax_view::Editor, folders_first: bool) -> Vec<Prob
         })
         .collect();
     files.sort_by(|a, b| {
-        let rel = |p: &PathBuf| p.strip_prefix(&root).map(Path::to_path_buf).unwrap_or_else(|_| p.clone());
+        let rel = |p: &PathBuf| {
+            p.strip_prefix(&root)
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|_| p.clone())
+        };
         problem_path_order(&rel(&a.0), &rel(&b.0), folders_first)
     });
     let mut out = Vec::new();
     for (path, rows) in files {
-        let shown = path.strip_prefix(&root).unwrap_or(&path).display().to_string();
+        let shown = path
+            .strip_prefix(&root)
+            .unwrap_or(&path)
+            .display()
+            .to_string();
         out.push(ProblemRow {
             line: 0,
             start: 0,
@@ -1258,7 +1277,12 @@ impl Ide {
         };
         let (cmd, shell, cwd, lines) = {
             let s = r.lock().map_err(|_| "the run console is locked")?;
-            (s.cmd.clone(), s.shell.clone(), s.cwd.clone(), s.lines.clone())
+            (
+                s.cmd.clone(),
+                s.shell.clone(),
+                s.cwd.clone(),
+                s.lines.clone(),
+            )
         };
         let failed = crate::ui::run::failed_tests(&lines);
         if failed.is_empty() {
@@ -1381,7 +1405,11 @@ impl Ide {
     /// window: the cursor moves into it only with `focus` (NERDTree does,
     /// `:TlistToggle` and the minimap leave it where it was).
     pub fn open_tool_window(&mut self, which: &str, focus: bool) {
-        let before = if self.visible { self.focus } else { Focus::Editor };
+        let before = if self.visible {
+            self.focus
+        } else {
+            Focus::Editor
+        };
         match which {
             "minimap" => {
                 self.set_minimap(Some(true));
@@ -1968,10 +1996,14 @@ impl Ide {
     ) {
         self.docs_loader = Some(loader);
         if self.docs_tabs.get(self.docs_tab).is_none_or(|t| t.kept) {
-            self.docs_tab = self.docs_tabs.iter().position(|t| !t.kept).unwrap_or_else(|| {
-                self.docs_tabs.push(DocTab::default());
-                self.docs_tabs.len() - 1
-            });
+            self.docs_tab = self
+                .docs_tabs
+                .iter()
+                .position(|t| !t.kept)
+                .unwrap_or_else(|| {
+                    self.docs_tabs.push(DocTab::default());
+                    self.docs_tabs.len() - 1
+                });
         }
         let tab = &mut self.docs_tabs[self.docs_tab];
         // A lookup after going back drops the entries ahead, as a browser does.
@@ -2006,7 +2038,11 @@ impl Ide {
         let Some(tab) = self.docs_tabs.get_mut(self.docs_tab) else {
             return false;
         };
-        let next = if forward { tab.pos + 1 } else { tab.pos.wrapping_sub(1) };
+        let next = if forward {
+            tab.pos + 1
+        } else {
+            tab.pos.wrapping_sub(1)
+        };
         if next >= tab.history.len() {
             return false;
         }
@@ -2041,9 +2077,18 @@ impl Ide {
 
     /// Rebuild the Bookmarks rows, and under "Always Select Opened Element"
     /// select the bookmark the editor has moved onto.
-    fn refresh_bookmark_rows(&mut self, editor: &zmax_view::Editor, here: Option<(PathBuf, usize)>) {
+    fn refresh_bookmark_rows(
+        &mut self,
+        editor: &zmax_view::Editor,
+        here: Option<(PathBuf, usize)>,
+    ) {
         let default = crate::line_bookmarks::default_list();
-        let mut rows: Vec<BookmarkRow> = self.harpoon_rows.iter().cloned().map(BookmarkRow::Pin).collect();
+        let mut rows: Vec<BookmarkRow> = self
+            .harpoon_rows
+            .iter()
+            .cloned()
+            .map(BookmarkRow::Pin)
+            .collect();
         for list in crate::line_bookmarks::lists() {
             rows.push(BookmarkRow::List {
                 default: list.name == default,
@@ -2051,7 +2096,11 @@ impl Ide {
                 name: list.name,
             });
             for mark in list.marks {
-                let name = mark.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                let name = mark
+                    .path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
                 // Text only from open buffers: this runs every frame.
                 let text = editor
                     .document_by_path(&mark.path)
@@ -2061,11 +2110,16 @@ impl Ide {
                 if let Some(description) = mark.description {
                     label = format!("{description} — {label}");
                 }
-                rows.push(BookmarkRow::Line { path: mark.path, line: mark.line, label });
+                rows.push(BookmarkRow::Line {
+                    path: mark.path,
+                    line: mark.line,
+                    label,
+                });
             }
         }
         self.bookmark_rows = rows;
-        if crate::line_bookmarks::options().autoscroll_from_source && here != self.bookmark_followed {
+        if crate::line_bookmarks::options().autoscroll_from_source && here != self.bookmark_followed
+        {
             if let Some((path, line)) = &here {
                 if let Some(i) = self.bookmark_rows.iter().position(|row| {
                     matches!(row, BookmarkRow::Line { path: p, line: l, .. } if p == path && l == line)
@@ -2312,7 +2366,9 @@ impl Ide {
         if !structure && self.bottom_tab == BottomTab::Docs {
             match key.code {
                 KeyCode::Char('j') | KeyCode::Down => self.docs_scroll += 1,
-                KeyCode::Char('k') | KeyCode::Up => self.docs_scroll = self.docs_scroll.saturating_sub(1),
+                KeyCode::Char('k') | KeyCode::Up => {
+                    self.docs_scroll = self.docs_scroll.saturating_sub(1)
+                }
                 KeyCode::Char('g') | KeyCode::Home => self.docs_scroll = 0,
                 KeyCode::Char('b') | KeyCode::Left => {
                     self.docs_step(false);
@@ -2333,7 +2389,9 @@ impl Ide {
                     self.docs_scroll = 0;
                 }
                 KeyCode::Enter => {
-                    if let Some((path, line, col)) = self.docs_current().and_then(|d| d.source.clone()) {
+                    if let Some((path, line, col)) =
+                        self.docs_current().and_then(|d| d.source.clone())
+                    {
                         self.focus = Focus::Editor;
                         return IdeAction::DocumentationSource { path, line, col };
                     }
@@ -2455,7 +2513,11 @@ impl Ide {
             let text = open.text();
             self.problem_preview = (Some(key), around(&mut text.lines().map(|l| l.to_string())));
         } else if self.problem_preview.0.as_ref() != Some(&key) {
-            let body = row.path.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).unwrap_or_default();
+            let body = row
+                .path
+                .as_ref()
+                .and_then(|p| std::fs::read_to_string(p).ok())
+                .unwrap_or_default();
             self.problem_preview = (Some(key), around(&mut body.lines().map(str::to_owned)));
         }
     }
@@ -2465,7 +2527,12 @@ impl Ide {
     fn problem_action(&self, idx: usize) -> IdeAction {
         match self.problems.get(idx) {
             Some(p) if p.header => IdeAction::None,
-            Some(ProblemRow { path: Some(path), line, col, .. }) => IdeAction::OpenProblem {
+            Some(ProblemRow {
+                path: Some(path),
+                line,
+                col,
+                ..
+            }) => IdeAction::OpenProblem {
                 path: path.clone(),
                 line: *line,
                 col: *col,
@@ -4656,9 +4723,19 @@ impl Ide {
                     let glyph = crate::ui::icons::file_icon(&name);
                     surface.set_stringn(body.x + 3, y, &format!("{glyph} {name}"), width, base);
                 }
-                BookmarkRow::List { name, default, count } => {
+                BookmarkRow::List {
+                    name,
+                    default,
+                    count,
+                } => {
                     let star = if *default { " (default)" } else { "" };
-                    surface.set_stringn(body.x + 1, y, &format!("▾ {name}{star}  {count}"), width + 2, header);
+                    surface.set_stringn(
+                        body.x + 1,
+                        y,
+                        &format!("▾ {name}{star}  {count}"),
+                        width + 2,
+                        header,
+                    );
                 }
                 BookmarkRow::Line { label, .. } => {
                     surface.set_stringn(body.x + 3, y, &format!("◆ {label}"), width, base);
@@ -4779,7 +4856,12 @@ impl Ide {
         // around the selected problem.
         let body = if self.problems_preview && body.width >= 60 {
             let list_w = body.width / 2;
-            let preview = Rect::new(body.x + list_w + 1, body.y, body.width - list_w - 1, body.height);
+            let preview = Rect::new(
+                body.x + list_w + 1,
+                body.y,
+                body.width - list_w - 1,
+                body.height,
+            );
             self.render_problem_preview(surface, theme, preview);
             Rect::new(body.x, body.y, list_w, body.height)
         } else {
@@ -4847,7 +4929,8 @@ impl Ide {
             return;
         }
         let dim = theme.get("comment");
-        let (Some(entry), Some(loader)) = (self.docs_current().cloned(), self.docs_loader.clone()) else {
+        let (Some(entry), Some(loader)) = (self.docs_current().cloned(), self.docs_loader.clone())
+        else {
             surface.set_stringn(
                 body.x,
                 body.y,
@@ -4867,27 +4950,52 @@ impl Ide {
             header.push_str(&format!("{mark}{pin}{title}  "));
         }
         header.push_str(&format!("({}/{})", tab.pos + 1, tab.history.len()));
-        surface.set_stringn(body.x + 1, body.y, &header, body.width.saturating_sub(1) as usize, theme.get("ui.text.focus"));
+        surface.set_stringn(
+            body.x + 1,
+            body.y,
+            &header,
+            body.width.saturating_sub(1) as usize,
+            theme.get("ui.text.focus"),
+        );
         let markdown = crate::ui::Markdown::new(entry.body, loader);
         let text = markdown.parse(Some(theme));
         let height = body.height.saturating_sub(1) as usize;
         self.docs_scroll = self.docs_scroll.min(text.lines.len().saturating_sub(1));
-        for (row, line) in text.lines.iter().skip(self.docs_scroll).take(height).enumerate() {
-            surface.set_spans(body.x + 1, body.y + 1 + row as u16, line, body.width.saturating_sub(1));
+        for (row, line) in text
+            .lines
+            .iter()
+            .skip(self.docs_scroll)
+            .take(height)
+            .enumerate()
+        {
+            surface.set_spans(
+                body.x + 1,
+                body.y + 1 + row as u16,
+                line,
+                body.width.saturating_sub(1),
+            );
         }
     }
 
     fn render_problem_preview(&self, surface: &mut Surface, theme: &zmax_view::Theme, area: Rect) {
         let dim = theme.get("comment");
         let text = theme.get("ui.text");
-        let focus = theme.get("ui.cursorline.primary").patch(theme.get("ui.text.focus"));
+        let focus = theme
+            .get("ui.cursorline.primary")
+            .patch(theme.get("ui.text.focus"));
         for y in area.y..area.bottom() {
             surface.set_stringn(area.x.saturating_sub(1), y, "│", 1, dim);
         }
         let Some((_, line)) = &self.problem_preview.0 else {
             return;
         };
-        for (row, (i, content)) in self.problem_preview.1.iter().enumerate().take(area.height as usize) {
+        for (row, (i, content)) in self
+            .problem_preview
+            .1
+            .iter()
+            .enumerate()
+            .take(area.height as usize)
+        {
             let y = area.y + row as u16;
             let style = if i == line { focus } else { text };
             let number = format!("{:>5} ", i + 1);
@@ -6303,8 +6411,14 @@ mod parse_tests {
     #[test]
     fn documentation_history_and_kept_tabs() {
         use std::sync::Arc;
-        let loader = Arc::new(arc_swap::ArcSwap::from_pointee(zmax_core::config::default_lang_loader()));
-        let entry = |title: &str| super::DocEntry { title: title.into(), body: String::new(), source: None };
+        let loader = Arc::new(arc_swap::ArcSwap::from_pointee(
+            zmax_core::config::default_lang_loader(),
+        ));
+        let entry = |title: &str| super::DocEntry {
+            title: title.into(),
+            body: String::new(),
+            source: None,
+        };
         let mut ide = super::Ide::new();
         let shown = |ide: &super::Ide| ide.docs_current().map(|d| d.title.clone());
         ide.show_documentation(entry("a"), loader.clone(), true);
@@ -6329,8 +6443,14 @@ mod parse_tests {
         let (sub, file) = (Path::new("a/z/x.rs"), Path::new("a/y.rs"));
         assert_eq!(Less, problem_path_order(sub, file, true));
         assert_eq!(Greater, problem_path_order(sub, file, false));
-        assert_eq!(Less, problem_path_order(Path::new("a/b.rs"), Path::new("a/c.rs"), true));
-        assert_eq!(Less, problem_path_order(Path::new("b/x.rs"), Path::new("c.rs"), true));
+        assert_eq!(
+            Less,
+            problem_path_order(Path::new("a/b.rs"), Path::new("a/c.rs"), true)
+        );
+        assert_eq!(
+            Less,
+            problem_path_order(Path::new("b/x.rs"), Path::new("c.rs"), true)
+        );
     }
 
     /// Sorting the project-wide list orders each file's problems and leaves
@@ -6341,7 +6461,14 @@ mod parse_tests {
             header,
             ..problem(msg, None)
         };
-        let mut rows = vec![row("one.rs", true), row("b", false), row("a", false), row("two.rs", true), row("d", false), row("c", false)];
+        let mut rows = vec![
+            row("one.rs", true),
+            row("b", false),
+            row("a", false),
+            row("two.rs", true),
+            row("d", false),
+            row("c", false),
+        ];
         sort_problem_runs(&mut rows, |run| run.sort_by(|x, y| x.msg.cmp(&y.msg)));
         let msgs: Vec<&str> = rows.iter().map(|r| r.msg.as_str()).collect();
         assert_eq!(vec!["one.rs", "a", "b", "two.rs", "c", "d"], msgs);
@@ -6412,10 +6539,8 @@ mod parse_tests {
             problem("mystery", None),
             problem("dead code", Some("rustc")),
         ]);
-        let shape: Vec<(bool, String)> = grouped
-            .iter()
-            .map(|p| (p.header, p.msg.clone()))
-            .collect();
+        let shape: Vec<(bool, String)> =
+            grouped.iter().map(|p| (p.header, p.msg.clone())).collect();
         assert_eq!(
             shape,
             vec![

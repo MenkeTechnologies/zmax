@@ -21,9 +21,22 @@ use crate::{ctrl, key};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Row {
-    Project { file: PathBuf, depth: usize, ignored: bool, member: bool, imported: bool },
-    Group { label: String, depth: usize },
-    Task { dir: PathBuf, command: String, depth: usize },
+    Project {
+        file: PathBuf,
+        depth: usize,
+        ignored: bool,
+        member: bool,
+        imported: bool,
+    },
+    Group {
+        label: String,
+        depth: usize,
+    },
+    Task {
+        dir: PathBuf,
+        command: String,
+        depth: usize,
+    },
 }
 
 pub struct BuildToolPanel {
@@ -61,17 +74,34 @@ impl BuildToolPanel {
             groups.sort_unstable();
             groups.dedup();
             for group in groups {
-                rows.push(Row::Group { label: group.to_string(), depth });
+                rows.push(Row::Group {
+                    label: group.to_string(),
+                    depth,
+                });
                 for task in tasks.iter().filter(|t| task_group(t) == group) {
-                    rows.push(Row::Task { dir: dir.to_path_buf(), command: task.clone(), depth: depth + 1 });
+                    rows.push(Row::Task {
+                        dir: dir.to_path_buf(),
+                        command: task.clone(),
+                        depth: depth + 1,
+                    });
                 }
             }
         } else {
-            rows.extend(tasks.iter().map(|t| Row::Task { dir: dir.to_path_buf(), command: t.clone(), depth }));
+            rows.extend(tasks.iter().map(|t| Row::Task {
+                dir: dir.to_path_buf(),
+                command: t.clone(),
+                depth,
+            }));
         }
     }
 
-    fn project_rows(&self, rows: &mut Vec<Row>, project: &BuildProject, depth: usize, root_file: Option<&Path>) {
+    fn project_rows(
+        &self,
+        rows: &mut Vec<Row>,
+        project: &BuildProject,
+        depth: usize,
+        root_file: Option<&Path>,
+    ) {
         let ignored = self.state.ignored.contains(&project.file);
         if self.state.detached.contains(&project.file) || (ignored && !self.state.show_ignored) {
             return;
@@ -83,7 +113,13 @@ impl BuildToolPanel {
                 .find(|(f, _)| f == root)
                 .is_none_or(|(_, members)| members.contains(&project.file))
         });
-        rows.push(Row::Project { file: project.file.clone(), depth, ignored, member: root_file.is_some(), imported });
+        rows.push(Row::Project {
+            file: project.file.clone(),
+            depth,
+            ignored,
+            member: root_file.is_some(),
+            imported,
+        });
         if !self.expanded.contains(&project.file) {
             return;
         }
@@ -91,8 +127,15 @@ impl BuildToolPanel {
         // "Show Inherited Tasks": the members' tasks under their parent too.
         if self.state.show_inherited && root_file.is_none() {
             for member in &project.members {
-                let name = member.dir().file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-                rows.push(Row::Group { label: format!("{name} (inherited)"), depth: depth + 1 });
+                let name = member
+                    .dir()
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                rows.push(Row::Group {
+                    label: format!("{name} (inherited)"),
+                    depth: depth + 1,
+                });
                 self.tasks(rows, member.dir(), &member.tasks, depth + 2);
             }
         }
@@ -126,10 +169,13 @@ impl BuildToolPanel {
     fn selected_project(&self) -> Option<PathBuf> {
         match self.rows.get(self.selected)? {
             Row::Project { file, .. } => Some(file.clone()),
-            _ => self.rows[..self.selected].iter().rev().find_map(|r| match r {
-                Row::Project { file, .. } => Some(file.clone()),
-                _ => None,
-            }),
+            _ => self.rows[..self.selected]
+                .iter()
+                .rev()
+                .find_map(|r| match r {
+                    Row::Project { file, .. } => Some(file.clone()),
+                    _ => None,
+                }),
         }
     }
 
@@ -155,16 +201,28 @@ impl BuildToolPanel {
 
     /// JetBrains "Select Project Data to Import": a member is imported or not.
     fn toggle_imported(&mut self) {
-        let Some(Row::Project { file, member: true, .. }) = self.rows.get(self.selected).cloned() else {
+        let Some(Row::Project {
+            file, member: true, ..
+        }) = self.rows.get(self.selected).cloned()
+        else {
             self.status = "not a workspace member".into();
             return;
         };
-        let Some(root) = self.projects.iter().find(|p| p.members.iter().any(|m| m.file == file)) else {
+        let Some(root) = self
+            .projects
+            .iter()
+            .find(|p| p.members.iter().any(|m| m.file == file))
+        else {
             return;
         };
         let all: Vec<PathBuf> = root.members.iter().map(|m| m.file.clone()).collect();
         let root_file = root.file.clone();
-        let entry = match self.state.imported.iter_mut().find(|(f, _)| *f == root_file) {
+        let entry = match self
+            .state
+            .imported
+            .iter_mut()
+            .find(|(f, _)| *f == root_file)
+        {
             Some(entry) => entry,
             None => {
                 self.state.imported.push((root_file, all));
@@ -172,7 +230,12 @@ impl BuildToolPanel {
             }
         };
         let imported = Self::toggle(&mut entry.1, file);
-        self.status = if imported { "member imported" } else { "member not imported" }.into();
+        self.status = if imported {
+            "member imported"
+        } else {
+            "member not imported"
+        }
+        .into();
         self.save();
     }
 
@@ -187,16 +250,30 @@ impl BuildToolPanel {
     /// A picker of the moments a task can be triggered at.
     fn trigger_picker(dir: PathBuf, task: String) -> Callback {
         Box::new(move |compositor: &mut Compositor, _| {
-            let columns = [crate::ui::PickerColumn::new("run the task", |w: &build_tool::When, _: &()| w.label().into())];
-            let picker = crate::ui::Picker::new(columns, 0, build_tool::When::ALL, (), move |cx, when: &build_tool::When, _| {
-                let trigger = build_tool::Trigger { when: *when, dir: dir.clone(), task: task.clone() };
-                build_tool::update(|state| {
-                    if !state.triggers.contains(&trigger) {
-                        state.triggers.push(trigger);
-                    }
-                });
-                cx.editor.set_status(format!("{} runs {}", task, when.label()));
-            });
+            let columns = [crate::ui::PickerColumn::new(
+                "run the task",
+                |w: &build_tool::When, _: &()| w.label().into(),
+            )];
+            let picker = crate::ui::Picker::new(
+                columns,
+                0,
+                build_tool::When::ALL,
+                (),
+                move |cx, when: &build_tool::When, _| {
+                    let trigger = build_tool::Trigger {
+                        when: *when,
+                        dir: dir.clone(),
+                        task: task.clone(),
+                    };
+                    build_tool::update(|state| {
+                        if !state.triggers.contains(&trigger) {
+                            state.triggers.push(trigger);
+                        }
+                    });
+                    cx.editor
+                        .set_status(format!("{} runs {}", task, when.label()));
+                },
+            );
             compositor.push(Box::new(crate::ui::overlay::overlaid(picker)));
         })
     }
@@ -210,14 +287,30 @@ pub fn triggers_manager() -> Option<Callback> {
     }
     Some(Box::new(move |compositor: &mut Compositor, _| {
         let columns = [
-            crate::ui::PickerColumn::new("when", |t: &build_tool::Trigger, _: &()| t.when.label().into()),
-            crate::ui::PickerColumn::new("task", |t: &build_tool::Trigger, _: &()| t.task.as_str().into()),
-            crate::ui::PickerColumn::new("in", |t: &build_tool::Trigger, _: &()| t.dir.display().to_string().into()),
+            crate::ui::PickerColumn::new("when", |t: &build_tool::Trigger, _: &()| {
+                t.when.label().into()
+            }),
+            crate::ui::PickerColumn::new("task", |t: &build_tool::Trigger, _: &()| {
+                t.task.as_str().into()
+            }),
+            crate::ui::PickerColumn::new("in", |t: &build_tool::Trigger, _: &()| {
+                t.dir.display().to_string().into()
+            }),
         ];
-        let picker = crate::ui::Picker::new(columns, 0, triggers, (), |cx, trigger: &build_tool::Trigger, _| {
-            build_tool::update(|state| state.triggers.retain(|t| t != trigger));
-            cx.editor.set_status(format!("removed: {} {}", trigger.task, trigger.when.label()));
-        });
+        let picker = crate::ui::Picker::new(
+            columns,
+            0,
+            triggers,
+            (),
+            |cx, trigger: &build_tool::Trigger, _| {
+                build_tool::update(|state| state.triggers.retain(|t| t != trigger));
+                cx.editor.set_status(format!(
+                    "removed: {} {}",
+                    trigger.task,
+                    trigger.when.label()
+                ));
+            },
+        );
         compositor.push(Box::new(crate::ui::overlay::overlaid(picker)));
     }))
 }
@@ -258,13 +351,18 @@ impl Component for BuildToolPanel {
                 if let Some(file) = self.selected_project() {
                     self.expanded.remove(&file);
                     self.build_rows();
-                    self.selected = self.rows.iter().position(|r| matches!(r, Row::Project { file: f, .. } if *f == file)).unwrap_or(0);
+                    self.selected = self
+                        .rows
+                        .iter()
+                        .position(|r| matches!(r, Row::Project { file: f, .. } if *f == file))
+                        .unwrap_or(0);
                 }
             }
             key!('E') => {
                 for project in &self.projects {
                     self.expanded.insert(project.file.clone());
-                    self.expanded.extend(project.members.iter().map(|m| m.file.clone()));
+                    self.expanded
+                        .extend(project.members.iter().map(|m| m.file.clone()));
                 }
                 self.build_rows();
             }
@@ -291,7 +389,12 @@ impl Component for BuildToolPanel {
             key!('I') => {
                 if let Some(file) = self.selected_project() {
                     let ignored = Self::toggle(&mut self.state.ignored, file);
-                    self.status = if ignored { "project ignored" } else { "project no longer ignored" }.into();
+                    self.status = if ignored {
+                        "project ignored"
+                    } else {
+                        "project no longer ignored"
+                    }
+                    .into();
                     self.save();
                 }
             }
@@ -305,20 +408,26 @@ impl Component for BuildToolPanel {
             key!('x') => self.toggle_imported(),
             key!('o') => {
                 if let Some(file) = self.selected_project() {
-                    return EventResult::Consumed(Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-                        compositor.pop();
-                        if let Err(e) = cx.editor.open(&file, zmax_view::editor::Action::Replace) {
-                            cx.editor.set_error(format!("{}: {e}", file.display()));
-                        }
-                    })));
+                    return EventResult::Consumed(Some(Box::new(
+                        move |compositor: &mut Compositor, cx: &mut Context| {
+                            compositor.pop();
+                            if let Err(e) =
+                                cx.editor.open(&file, zmax_view::editor::Action::Replace)
+                            {
+                                cx.editor.set_error(format!("{}: {e}", file.display()));
+                            }
+                        },
+                    )));
                 }
             }
             key!('r') | key!('R') => {
                 let all = *key == key!('R');
                 let scope = if all { None } else { self.selected_project() };
-                return EventResult::Consumed(Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-                    crate::commands::build_sync_now(compositor, cx, scope);
-                })));
+                return EventResult::Consumed(Some(Box::new(
+                    move |compositor: &mut Compositor, cx: &mut Context| {
+                        crate::commands::build_sync_now(compositor, cx, scope);
+                    },
+                )));
             }
             key!('a') => {
                 if let Some((dir, task)) = self.selected_task() {
@@ -361,7 +470,8 @@ impl Component for BuildToolPanel {
         if area.height < 3 {
             return;
         }
-        let title = format!(
+        let title =
+            format!(
             " Build tools — {}   modules {}  tasks {}  inherited {}  ignored {}  auto-sync {:?}",
             self.root.display(),
             if self.state.group_modules { "grouped" } else { "flat" },
@@ -370,7 +480,13 @@ impl Component for BuildToolPanel {
             if self.state.show_ignored { "shown" } else { "hidden" },
             self.state.auto_sync,
         );
-        surface.set_stringn(area.x, area.y, &title, area.width as usize, theme.get("ui.text.focus"));
+        surface.set_stringn(
+            area.x,
+            area.y,
+            &title,
+            area.width as usize,
+            theme.get("ui.text.focus"),
+        );
         let body_h = area.height.saturating_sub(2) as usize;
         if self.selected < self.scroll {
             self.scroll = self.selected;
@@ -378,14 +494,34 @@ impl Component for BuildToolPanel {
             self.scroll = self.selected + 1 - body_h;
         }
         if self.rows.is_empty() {
-            surface.set_stringn(area.x, area.y + 1, "  no build files at the workspace root", area.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                area.x,
+                area.y + 1,
+                "  no build files at the workspace root",
+                area.width as usize,
+                theme.get("comment"),
+            );
         }
         for (i, row) in self.rows.iter().enumerate().skip(self.scroll).take(body_h) {
             let y = area.y + 1 + (i - self.scroll) as u16;
             let (line, style) = match row {
-                Row::Project { file, depth, ignored, imported, .. } => {
-                    let open = if self.expanded.contains(file) { "▾" } else { "▸" };
-                    let rel = file.strip_prefix(&self.root).unwrap_or(file).display().to_string();
+                Row::Project {
+                    file,
+                    depth,
+                    ignored,
+                    imported,
+                    ..
+                } => {
+                    let open = if self.expanded.contains(file) {
+                        "▾"
+                    } else {
+                        "▸"
+                    };
+                    let rel = file
+                        .strip_prefix(&self.root)
+                        .unwrap_or(file)
+                        .display()
+                        .to_string();
                     let mut line = format!("{}{open} {rel}", "  ".repeat(*depth));
                     if *ignored {
                         line.push_str("  (ignored)");
@@ -395,13 +531,29 @@ impl Component for BuildToolPanel {
                     }
                     (line, theme.get("ui.text.directory"))
                 }
-                Row::Group { label, depth } => (format!("{}▾ {label}", "  ".repeat(*depth)), theme.get("comment")),
-                Row::Task { command, depth, .. } => (format!("{}⚙ {command}", "  ".repeat(*depth)), theme.get("ui.text")),
+                Row::Group { label, depth } => (
+                    format!("{}▾ {label}", "  ".repeat(*depth)),
+                    theme.get("comment"),
+                ),
+                Row::Task { command, depth, .. } => (
+                    format!("{}⚙ {command}", "  ".repeat(*depth)),
+                    theme.get("ui.text"),
+                ),
             };
-            let style = if i == self.selected { theme.get("ui.selection") } else { style };
+            let style = if i == self.selected {
+                theme.get("ui.selection")
+            } else {
+                style
+            };
             surface.set_stringn(area.x, y, &line, area.width as usize, style);
         }
         let footer = "⏎ run/open  h/l  E/C  m t i s groups  I ignore  d detach  x import  o open  r/R sync  a trigger  T triggers  b before run  S auto-sync  q";
-        surface.set_stringn(area.x, area.y + area.height - 1, footer, area.width as usize, theme.get("ui.linenr"));
+        surface.set_stringn(
+            area.x,
+            area.y + area.height - 1,
+            footer,
+            area.width as usize,
+            theme.get("ui.linenr"),
+        );
     }
 }

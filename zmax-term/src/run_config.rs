@@ -58,8 +58,15 @@ impl RunConfig {
             .collect();
         steps.push(format!("{env_prefix}{}", self.command));
         let line = steps.join(" && ");
-        match (!self.target.is_empty()).then(|| crate::run_targets::find(&self.target)).flatten() {
-            Some(target) => target.wrap(&zmax_loader::find_workspace().0, &resolve_dir(&self.dir), &line),
+        match (!self.target.is_empty())
+            .then(|| crate::run_targets::find(&self.target))
+            .flatten()
+        {
+            Some(target) => target.wrap(
+                &zmax_loader::find_workspace().0,
+                &resolve_dir(&self.dir),
+                &line,
+            ),
             None => line,
         }
     }
@@ -71,7 +78,10 @@ impl RunConfig {
 pub fn add_before_task(dir: &std::path::Path, command: &str) -> Option<String> {
     let mut data = load();
     let config = data.configs.get_mut(data.active)?;
-    let task = BeforeTask { dir: dir.to_string_lossy().into_owned(), command: command.to_string() };
+    let task = BeforeTask {
+        dir: dir.to_string_lossy().into_owned(),
+        command: command.to_string(),
+    };
     if !config.before.contains(&task) {
         config.before.push(task);
     }
@@ -302,7 +312,10 @@ mod tests {
         let mut data = named(&["a", "b"]);
         data.active = 1;
         data.remove(1);
-        assert_eq!(0, data.active, "the removed active one falls back to its neighbour");
+        assert_eq!(
+            0, data.active,
+            "the removed active one falls back to its neighbour"
+        );
         assert!(data.remove(5).is_none());
     }
 
@@ -311,9 +324,15 @@ mod tests {
         let config = super::RunConfig {
             command: "cargo run".into(),
             env: "RUST_LOG=debug".into(),
-            before: vec![super::BeforeTask { dir: "/w/tool".into(), command: "cargo fmt".into() }],
+            before: vec![super::BeforeTask {
+                dir: "/w/tool".into(),
+                command: "cargo fmt".into(),
+            }],
             ..Default::default()
         };
-        assert_eq!("(cd '/w/tool' && cargo fmt) && RUST_LOG=debug cargo run", config.command_line());
+        assert_eq!(
+            "(cd '/w/tool' && cargo fmt) && RUST_LOG=debug cargo run",
+            config.command_line()
+        );
     }
 }

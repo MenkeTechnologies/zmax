@@ -36,17 +36,21 @@ fn github_job(
         let result = tokio::task::spawn_blocking(work)
             .await
             .map_err(|e| anyhow::anyhow!("github task: {e}"))?;
-        Ok(Callback::Editor(Box::new(move |editor: &mut Editor| match result {
-            Ok(value) => done(editor, value),
-            Err(e) => editor.set_error(format!("github: {e}")),
-        })))
+        Ok(Callback::Editor(Box::new(
+            move |editor: &mut Editor| match result {
+                Ok(value) => done(editor, value),
+                Err(e) => editor.set_error(format!("github: {e}")),
+            },
+        )))
     });
 }
 
 /// The open pull request whose head is `branch` in `slug`, as its JSON.
 fn branch_pull_request(slug: &str, branch: &str) -> Result<Value, String> {
     let owner = slug.split('/').next().unwrap_or_default();
-    let list = crate::github::api(&format!("repos/{slug}/pulls?state=open&head={owner}:{branch}"))?;
+    let list = crate::github::api(&format!(
+        "repos/{slug}/pulls?state=open&head={owner}:{branch}"
+    ))?;
     list.as_array()
         .and_then(|prs| prs.first().cloned())
         .ok_or_else(|| format!("no open pull request for {branch}"))
@@ -98,7 +102,10 @@ pub fn github_create_gist(cx: &mut Context) {
         move || {
             let body = json!({ "public": false, "files": { name: { "content": content } } });
             let gist = crate::github::request("POST", "gists", Some(&body))?;
-            gist["html_url"].as_str().map(str::to_string).ok_or_else(|| "no gist URL in the reply".into())
+            gist["html_url"]
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "no gist URL in the reply".into())
         },
         |editor, url| {
             let _ = editor.registers.write('+', vec![url.clone()]);
@@ -122,10 +129,17 @@ pub fn github_create_pull_request(cx: &mut Context) {
             "opening pull request…",
             move || {
                 let repo = crate::github::api(&format!("repos/{slug}"))?;
-                let base = repo["default_branch"].as_str().unwrap_or("main").to_string();
+                let base = repo["default_branch"]
+                    .as_str()
+                    .unwrap_or("main")
+                    .to_string();
                 let body = json!({ "title": title, "head": branch, "base": base });
-                let pr = crate::github::request("POST", &format!("repos/{slug}/pulls"), Some(&body))?;
-                pr["html_url"].as_str().map(str::to_string).ok_or_else(|| "no pull request URL in the reply".into())
+                let pr =
+                    crate::github::request("POST", &format!("repos/{slug}/pulls"), Some(&body))?;
+                pr["html_url"]
+                    .as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| "no pull request URL in the reply".into())
             },
             |editor, url| {
                 let _ = editor.registers.write('+', vec![url.clone()]);
@@ -147,7 +161,10 @@ pub fn github_open_branch_pr(cx: &mut Context) {
         "finding the pull request…",
         move || {
             let pr = branch_pull_request(&slug, &branch)?;
-            pr["html_url"].as_str().map(str::to_string).ok_or_else(|| "no URL".into())
+            pr["html_url"]
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "no URL".into())
         },
         |editor, url| match super::open_in_browser(&url) {
             Ok(()) => editor.set_status(format!("opening {url}")),
@@ -167,7 +184,10 @@ pub fn github_copy_branch_pr_url(cx: &mut Context) {
         "finding the pull request…",
         move || {
             let pr = branch_pull_request(&slug, &branch)?;
-            pr["html_url"].as_str().map(str::to_string).ok_or_else(|| "no URL".into())
+            pr["html_url"]
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "no URL".into())
         },
         |editor, url| {
             let _ = editor.registers.write('+', vec![url.clone()]);
@@ -184,7 +204,11 @@ fn render_pull_request(pr: &Value) -> String {
         "#{} {}\n{} by {} — {} into {}\n{}\n\n{}\n",
         pr["number"],
         field("title"),
-        if pr["merged_at"].is_string() { "merged".to_string() } else { field("state") },
+        if pr["merged_at"].is_string() {
+            "merged".to_string()
+        } else {
+            field("state")
+        },
         pr["user"]["login"].as_str().unwrap_or("?"),
         pr["head"]["ref"].as_str().unwrap_or("?"),
         pr["base"]["ref"].as_str().unwrap_or("?"),
@@ -209,7 +233,10 @@ pub fn github_show_pull_request(cx: &mut Context) {
             cx.jobs,
             cx.editor,
             "loading pull request…",
-            move || crate::github::api(&format!("repos/{slug}/pulls/{number}")).map(|pr| render_pull_request(&pr)),
+            move || {
+                crate::github::api(&format!("repos/{slug}/pulls/{number}"))
+                    .map(|pr| render_pull_request(&pr))
+            },
             |editor, text| show_text_in_scratch(editor, &text),
         );
     });
@@ -221,12 +248,21 @@ pub fn github_submit_review(cx: &mut Context) {
     let Some((slug, branch)) = slug_and_branch(cx.editor) else {
         return;
     };
-    let events = ["COMMENT", "APPROVE", "REQUEST_CHANGES"].map(String::from).to_vec();
-    let columns = [PickerColumn::new("review", |e: &String, _: &()| e.as_str().into())];
+    let events = ["COMMENT", "APPROVE", "REQUEST_CHANGES"]
+        .map(String::from)
+        .to_vec();
+    let columns = [PickerColumn::new("review", |e: &String, _: &()| {
+        e.as_str().into()
+    })];
     let picker = Picker::new(columns, 0, events, (), move |cx, event: &String, _| {
         let (slug, branch, event) = (slug.clone(), branch.clone(), event.clone());
         super::prompt_then_cx_allow_empty(cx, "review comment: ", move |cx, body| {
-            let (slug, branch, event, body) = (slug.clone(), branch.clone(), event.clone(), body.to_string());
+            let (slug, branch, event, body) = (
+                slug.clone(),
+                branch.clone(),
+                event.clone(),
+                body.to_string(),
+            );
             github_job(
                 cx.jobs,
                 cx.editor,
@@ -235,7 +271,11 @@ pub fn github_submit_review(cx: &mut Context) {
                     let pr = branch_pull_request(&slug, &branch)?;
                     let number = pr["number"].as_u64().ok_or("no pull request number")?;
                     let review = json!({ "event": event, "body": body });
-                    crate::github::request("POST", &format!("repos/{slug}/pulls/{number}/reviews"), Some(&review))?;
+                    crate::github::request(
+                        "POST",
+                        &format!("repos/{slug}/pulls/{number}/reviews"),
+                        Some(&review),
+                    )?;
                     Ok(format!("#{number}"))
                 },
                 |editor, pr| editor.set_status(format!("review submitted on {pr}")),
@@ -253,24 +293,34 @@ pub fn github_share(cx: &mut Context) {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
-    prompt_then(cx, "repository name (empty: the directory's): ", move |cx, name| {
-        let name = if name.is_empty() { suggested.clone() } else { name.to_string() };
-        let dir = dir.clone();
-        github_job(
-            cx.jobs,
-            cx.editor,
-            "creating the repository…",
-            move || {
-                let body = json!({ "name": name, "private": true });
-                let repo = crate::github::request("POST", "user/repos", Some(&body))?;
-                let url = repo["clone_url"].as_str().ok_or("no clone URL in the reply")?;
-                super::git_in(&dir, &["remote", "add", "origin", url])?;
-                super::git_in(&dir, &["push", "-u", "origin", "HEAD"])?;
-                Ok(repo["html_url"].as_str().unwrap_or(url).to_string())
-            },
-            |editor, url| editor.set_status(format!("shared on GitHub: {url}")),
-        );
-    });
+    prompt_then(
+        cx,
+        "repository name (empty: the directory's): ",
+        move |cx, name| {
+            let name = if name.is_empty() {
+                suggested.clone()
+            } else {
+                name.to_string()
+            };
+            let dir = dir.clone();
+            github_job(
+                cx.jobs,
+                cx.editor,
+                "creating the repository…",
+                move || {
+                    let body = json!({ "name": name, "private": true });
+                    let repo = crate::github::request("POST", "user/repos", Some(&body))?;
+                    let url = repo["clone_url"]
+                        .as_str()
+                        .ok_or("no clone URL in the reply")?;
+                    super::git_in(&dir, &["remote", "add", "origin", url])?;
+                    super::git_in(&dir, &["push", "-u", "origin", "HEAD"])?;
+                    Ok(repo["html_url"].as_str().unwrap_or(url).to_string())
+                },
+                |editor, url| editor.set_status(format!("shared on GitHub: {url}")),
+            );
+        },
+    );
 }
 
 /// JetBrains "Sync Fork" (`Github.Sync.Fork`): "rebase your GitHub forked
@@ -293,7 +343,9 @@ pub fn github_sync_fork(cx: &mut Context) {
         move || {
             let repo = crate::github::api(&format!("repos/{slug}"))?;
             let parent = &repo["parent"];
-            let url = parent["clone_url"].as_str().ok_or("this repository is not a fork")?;
+            let url = parent["clone_url"]
+                .as_str()
+                .ok_or("this repository is not a fork")?;
             let branch = parent["default_branch"].as_str().unwrap_or("main");
             if super::git_in(&dir, &["remote", "get-url", "upstream"]).is_err() {
                 super::git_in(&dir, &["remote", "add", "upstream", url])?;
@@ -328,7 +380,10 @@ mod tests {
             "body": "Details."
         });
         let text = render_pull_request(&pr);
-        assert!(text.starts_with("#7 Fix it\nmerged by user — fix into main\n"), "{text}");
+        assert!(
+            text.starts_with("#7 Fix it\nmerged by user — fix into main\n"),
+            "{text}"
+        );
         assert!(text.ends_with("Details.\n"));
     }
 }

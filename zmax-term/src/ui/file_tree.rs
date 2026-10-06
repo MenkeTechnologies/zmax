@@ -174,14 +174,18 @@ impl FileTree {
             // on Top", on by default); the sort then decides the order among
             // equals, and the name is always the last word so the listing is
             // stable.
-            let kind = if folders_first { b.2.cmp(&a.2) } else { std::cmp::Ordering::Equal };
+            let kind = if folders_first {
+                b.2.cmp(&a.2)
+            } else {
+                std::cmp::Ordering::Equal
+            };
             kind.then_with(|| match sort {
-                    TreeSort::Name => std::cmp::Ordering::Equal,
-                    TreeSort::Type => file_extension(&a.1).cmp(&file_extension(&b.1)),
-                    TreeSort::TimeNewest => b.3.cmp(&a.3),
-                    TreeSort::TimeOldest => a.3.cmp(&b.3),
-                })
-                .then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase()))
+                TreeSort::Name => std::cmp::Ordering::Equal,
+                TreeSort::Type => file_extension(&a.1).cmp(&file_extension(&b.1)),
+                TreeSort::TimeNewest => b.3.cmp(&a.3),
+                TreeSort::TimeOldest => a.3.cmp(&b.3),
+            })
+            .then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase()))
         });
         entries
             .into_iter()
@@ -214,7 +218,9 @@ impl FileTree {
             compact: bool,
             folders_first: bool,
         ) {
-            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, sort, folders_first) {
+            for (path, name, is_dir) in
+                FileTree::cached_children(cache, dir, show_hidden, sort, folders_first)
+            {
                 // "Compact Directories": a directory whose only child is another
                 // directory is drawn as one row, `a/b/c`, and the walk continues
                 // from the end of the chain — the empty package levels the IDE
@@ -280,7 +286,9 @@ impl FileTree {
                 return false;
             }
             let mut any = false;
-            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden, TreeSort::Name, true) {
+            for (path, name, is_dir) in
+                FileTree::cached_children(cache, dir, show_hidden, TreeSort::Name, true)
+            {
                 if is_dir {
                     let name_match = fuzzy(&name, q);
                     let mut kids = Vec::new();
@@ -693,7 +701,8 @@ impl FileTree {
     ) -> (PathBuf, String) {
         const MAX: usize = 32;
         for _ in 0..MAX {
-            let children = FileTree::cached_children(cache, &path, show_hidden, sort, folders_first);
+            let children =
+                FileTree::cached_children(cache, &path, show_hidden, sort, folders_first);
             match children.as_slice() {
                 [(child_path, child_name, true)] => {
                     name = format!("{name}/{child_name}");
@@ -1008,7 +1017,10 @@ mod tests {
         let mut tree = FileTree::new(root.clone());
         let names = |t: &FileTree| t.rows.iter().map(|r| r.name.clone()).collect::<Vec<_>>();
         let first = names(&tree);
-        assert_eq!("b_dir", first[0], "directories on top by default: {first:?}");
+        assert_eq!(
+            "b_dir", first[0],
+            "directories on top by default: {first:?}"
+        );
         assert!(!tree.toggle_folders_first());
         assert_eq!(vec!["a.txt", "b_dir", "c.txt"], names(&tree));
 
@@ -1025,10 +1037,17 @@ mod tests {
         let mut tree = FileTree::new(root.clone());
         tree.selected = tree.rows.iter().position(|r| r.name == "a").unwrap();
         tree.expand_selected();
-        tree.selected = tree.rows.iter().position(|r| r.name == "f.rs").expect("a opened");
+        tree.selected = tree
+            .rows
+            .iter()
+            .position(|r| r.name == "f.rs")
+            .expect("a opened");
         tree.collapse_selected();
 
-        assert!(!tree.rows.iter().any(|r| r.name == "f.rs"), "a closed again");
+        assert!(
+            !tree.rows.iter().any(|r| r.name == "f.rs"),
+            "a closed again"
+        );
         assert_eq!("a", tree.rows[tree.selected].name);
 
         let _ = std::fs::remove_dir_all(&root);

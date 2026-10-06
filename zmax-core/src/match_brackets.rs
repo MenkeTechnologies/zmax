@@ -193,7 +193,11 @@ fn has_error_inside(node: &Node) -> bool {
 /// glob qualifiers such as `*(/)` under the bash grammar leave the brackets
 /// around them unpaired, and `%` would otherwise do nothing on them.
 #[must_use]
-pub fn find_matching_bracket_any(syntax: Option<&Syntax>, doc: RopeSlice, pos: usize) -> Option<usize> {
+pub fn find_matching_bracket_any(
+    syntax: Option<&Syntax>,
+    doc: RopeSlice,
+    pos: usize,
+) -> Option<usize> {
     syntax
         .and_then(|syntax| find_matching_bracket_fuzzy(syntax, doc, pos))
         .or_else(|| find_matching_bracket_plaintext(doc, pos))

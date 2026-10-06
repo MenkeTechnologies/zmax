@@ -136,7 +136,14 @@ static RECENT: Mutex<Vec<UsageSearch>> = Mutex::new(Vec::new());
 pub fn remember_search(symbol: String, origin: (PathBuf, usize, usize), scope: UsageScope) {
     let mut recent = RECENT.lock().unwrap_or_else(|e| e.into_inner());
     recent.retain(|s| !(s.symbol == symbol && s.origin == origin && s.scope == scope));
-    recent.insert(0, UsageSearch { symbol, origin, scope });
+    recent.insert(
+        0,
+        UsageSearch {
+            symbol,
+            origin,
+            scope,
+        },
+    );
     recent.truncate(RECENT_SEARCHES);
 }
 
@@ -211,7 +218,11 @@ impl UsagesView {
             let text = editor
                 .document_by_path(&path)
                 .map(|doc| doc.text().clone())
-                .or_else(|| std::fs::read_to_string(&path).ok().map(|s| Rope::from_str(&s)))
+                .or_else(|| {
+                    std::fs::read_to_string(&path)
+                        .ok()
+                        .map(|s| Rope::from_str(&s))
+                })
                 .unwrap_or_default();
             let language = loader.language_for_filename(&path);
             let comments: Vec<String> = language
@@ -219,11 +230,14 @@ impl UsagesView {
                 .unwrap_or_default();
             let comments: Vec<&str> = comments.iter().map(String::as_str).collect();
             let head: String = text.lines().take(5).map(|l| l.to_string()).collect();
-            let generated = usage_kind::is_generated_path(&path) || usage_kind::has_generated_marker(&head);
+            let generated =
+                usage_kind::is_generated_path(&path) || usage_kind::has_generated_marker(&head);
             let test = usage_kind::is_test_path(&path);
             let module = usage_kind::module_root(&path, Path::is_file);
             let members = language
-                .map(|lang| enclosing_members(&loader, lang, &text, locations.iter().map(|l| l.line)))
+                .map(|lang| {
+                    enclosing_members(&loader, lang, &text, locations.iter().map(|l| l.line))
+                })
                 .unwrap_or_else(|| vec![None; locations.len()]);
             for (location, member) in locations.into_iter().zip(members) {
                 let line = text
@@ -276,7 +290,10 @@ impl UsagesView {
     }
 
     fn rel(&self, path: &Path) -> String {
-        path.strip_prefix(&self.root).unwrap_or(path).display().to_string()
+        path.strip_prefix(&self.root)
+            .unwrap_or(path)
+            .display()
+            .to_string()
     }
 
     /// The group labels a usage sits under, outermost first.
@@ -289,8 +306,16 @@ impl UsagesView {
             groups.push(if hit.test { "Test" } else { "Production" }.to_string());
         }
         if options.by_module {
-            let module = hit.module.as_deref().map(|m| self.rel(m)).unwrap_or_default();
-            let module = if module.is_empty() { "(root)".to_string() } else { module };
+            let module = hit
+                .module
+                .as_deref()
+                .map(|m| self.rel(m))
+                .unwrap_or_default();
+            let module = if module.is_empty() {
+                "(root)".to_string()
+            } else {
+                module
+            };
             if options.flatten_modules {
                 groups.push(module);
             } else {
@@ -338,14 +363,24 @@ impl UsagesView {
         for (groups, hit) in order {
             let common = open.iter().zip(&groups).take_while(|(a, b)| a == b).count();
             for (depth, label) in groups.iter().enumerate().skip(common) {
-                rows.push(Row::Header { depth, label: label.clone() });
+                rows.push(Row::Header {
+                    depth,
+                    label: label.clone(),
+                });
             }
-            rows.push(Row::Hit { depth: groups.len(), hit });
+            rows.push(Row::Hit {
+                depth: groups.len(),
+                hit,
+            });
             open = groups;
         }
         self.rows = rows;
         self.selected = keep
-            .and_then(|k| self.rows.iter().position(|r| matches!(r, Row::Hit { hit, .. } if *hit == k)))
+            .and_then(|k| {
+                self.rows
+                    .iter()
+                    .position(|r| matches!(r, Row::Hit { hit, .. } if *hit == k))
+            })
             .or_else(|| self.rows.iter().position(|r| matches!(r, Row::Hit { .. })))
             .unwrap_or(0);
     }
@@ -380,7 +415,9 @@ impl UsagesView {
                 return;
             }
             if matches!(self.rows[i as usize], Row::Header { .. }) {
-                if let Some(j) = (i as usize + 1..self.rows.len()).find(|&j| matches!(self.rows[j], Row::Hit { .. })) {
+                if let Some(j) = (i as usize + 1..self.rows.len())
+                    .find(|&j| matches!(self.rows[j], Row::Hit { .. }))
+                {
                     self.selected = j;
                 }
                 return;
@@ -401,7 +438,8 @@ impl UsagesView {
 
     /// JetBrains "Include": the usage takes part again.
     pub fn include(&mut self) -> bool {
-        self.current_hit_index().is_some_and(|hit| self.excluded.remove(&hit))
+        self.current_hit_index()
+            .is_some_and(|hit| self.excluded.remove(&hit))
     }
 
     /// JetBrains "Remove": drop the usage from the list, the cursor moving to
@@ -417,7 +455,11 @@ impl UsagesView {
         });
         self.build_rows();
         if let Some(next) = next {
-            if let Some(i) = self.rows.iter().position(|r| matches!(r, Row::Hit { hit, .. } if *hit == next)) {
+            if let Some(i) = self
+                .rows
+                .iter()
+                .position(|r| matches!(r, Row::Hit { hit, .. } if *hit == next))
+            {
                 self.selected = i;
             }
         }
@@ -433,20 +475,38 @@ impl UsagesView {
     fn goto(&self) -> Option<Callback> {
         let hit = &self.hits[self.current_hit_index()?];
         let (path, line, col) = (hit.path.clone(), hit.line, hit.col);
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            crate::commands::open_at(cx.editor, &path, line, col, zmax_view::editor::Action::Replace, false);
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                crate::commands::open_at(
+                    cx.editor,
+                    &path,
+                    line,
+                    col,
+                    zmax_view::editor::Action::Replace,
+                    false,
+                );
+            },
+        ))
     }
 
     /// JetBrains "Rerun": search again from where the search was made.
     pub fn rerun(&self) -> Option<Callback> {
         let (path, line, col) = self.origin.clone()?;
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            crate::commands::open_at(cx.editor, &path, line, col, zmax_view::editor::Action::Replace, false);
-            crate::commands::menu_run(compositor, cx, &crate::commands::find_usages);
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                crate::commands::open_at(
+                    cx.editor,
+                    &path,
+                    line,
+                    col,
+                    zmax_view::editor::Action::Replace,
+                    false,
+                );
+                crate::commands::menu_run(compositor, cx, &crate::commands::find_usages);
+            },
+        ))
     }
 }
 
@@ -473,7 +533,10 @@ fn enclosing_members(
             nodes
                 .map(|n| {
                     let r = n.byte_range();
-                    (slice.byte_to_line(r.start), slice.byte_to_line(r.end.min(slice.len_bytes())))
+                    (
+                        slice.byte_to_line(r.start),
+                        slice.byte_to_line(r.end.min(slice.len_bytes())),
+                    )
                 })
                 .collect()
         })
@@ -486,7 +549,13 @@ fn enclosing_members(
                 .filter(|(start, end)| *start <= line && line <= *end)
                 .min_by_key(|(start, end)| end - start)
                 .map(|(start, _)| {
-                    slice.line(*start).to_string().trim().trim_end_matches('{').trim_end().to_string()
+                    slice
+                        .line(*start)
+                        .to_string()
+                        .trim()
+                        .trim_end_matches('{')
+                        .trim_end()
+                        .to_string()
                 })
         })
         .collect()
@@ -545,8 +614,20 @@ impl Component for UsagesView {
             key!('c') => toggle(|o| o.show_comments = !o.show_comments),
             key!('i') => toggle(|o| o.show_imports = !o.show_imports),
             key!('G') => toggle(|o| o.show_generated = !o.show_generated),
-            key!('R') => toggle(|o| o.access = if o.access == Access::Read { Access::All } else { Access::Read }),
-            key!('W') => toggle(|o| o.access = if o.access == Access::Write { Access::All } else { Access::Write }),
+            key!('R') => toggle(|o| {
+                o.access = if o.access == Access::Read {
+                    Access::All
+                } else {
+                    Access::Read
+                }
+            }),
+            key!('W') => toggle(|o| {
+                o.access = if o.access == Access::Write {
+                    Access::All
+                } else {
+                    Access::Write
+                }
+            }),
             _ => relayout = false,
         }
         if relayout {
@@ -571,7 +652,11 @@ impl Component for UsagesView {
         let dim = theme.get("ui.linenr");
         let selected = theme.get("ui.selection");
 
-        let shown = self.rows.iter().filter(|r| matches!(r, Row::Hit { .. })).count();
+        let shown = self
+            .rows
+            .iter()
+            .filter(|r| matches!(r, Row::Hit { .. }))
+            .count();
         let title = format!(
             " Usages of {}   ({shown} shown of {}, {} excluded)",
             self.symbol,
@@ -597,7 +682,12 @@ impl Component for UsagesView {
                 }
                 Row::Hit { depth, hit } => {
                     let usage = &self.hits[*hit];
-                    let line = format!("{}{:>5}  {}", "  ".repeat(*depth), usage.line + 1, usage.text.trim());
+                    let line = format!(
+                        "{}{:>5}  {}",
+                        "  ".repeat(*depth),
+                        usage.line + 1,
+                        usage.text.trim()
+                    );
                     let style = if i == self.selected {
                         selected
                     } else if self.excluded.contains(hit) {
@@ -610,10 +700,22 @@ impl Component for UsagesView {
             }
         }
         if self.rows.is_empty() {
-            surface.set_stringn(area.x, body_y, "(no usages pass the filters)", area.width as usize, dim);
+            surface.set_stringn(
+                area.x,
+                body_y,
+                "(no usages pass the filters)",
+                area.width as usize,
+                dim,
+            );
         }
         let footer = "n/p move  }/{ group  ⏎ go  x exclude  d remove  r rerun  t s m M D T f P group  c i G R W filter  q quit";
-        surface.set_stringn(area.x, area.y + area.height - 1, footer, area.width as usize, dim);
+        surface.set_stringn(
+            area.x,
+            area.y + area.height - 1,
+            footer,
+            area.width as usize,
+            dim,
+        );
     }
 }
 
@@ -667,7 +769,12 @@ mod tests {
     fn grouping_filters_and_removal() {
         let defaults = options();
         set_options(|o| {
-            *o = UsageOptions { by_type: true, by_directory: false, directory_tree: false, ..defaults };
+            *o = UsageOptions {
+                by_type: true,
+                by_directory: false,
+                directory_tree: false,
+                ..defaults
+            };
         });
         let mut v = view(vec![
             hit("/w/src/a.rs", 3, UsageKind::Call),
@@ -706,7 +813,13 @@ mod tests {
 
         set_options(|o| o.access = Access::Write);
         v.refresh();
-        assert_eq!(1, v.rows.iter().filter(|r| matches!(r, Row::Hit { .. })).count());
+        assert_eq!(
+            1,
+            v.rows
+                .iter()
+                .filter(|r| matches!(r, Row::Hit { .. }))
+                .count()
+        );
 
         set_options(|o| o.access = Access::All);
         v.refresh();

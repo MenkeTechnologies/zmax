@@ -45,8 +45,15 @@ pub fn config_type(config: &RunConfig) -> String {
 
 #[derive(Clone)]
 enum Row {
-    Group { label: String, depth: usize },
-    Config { index: usize, depth: usize, status: RunStatus },
+    Group {
+        label: String,
+        depth: usize,
+    },
+    Config {
+        index: usize,
+        depth: usize,
+        status: RunStatus,
+    },
 }
 
 pub struct ServicesView {
@@ -77,7 +84,12 @@ impl ServicesView {
 
     fn status_of(&self, config: &RunConfig) -> RunStatus {
         let line = config.command_line();
-        match self.runs.iter().rev().find(|(cmd, _)| *cmd == line || cmd.ends_with(&config.command)) {
+        match self
+            .runs
+            .iter()
+            .rev()
+            .find(|(cmd, _)| *cmd == line || cmd.ends_with(&config.command))
+        {
             Some((_, true)) => RunStatus::Running,
             Some((_, false)) => RunStatus::Finished,
             None => RunStatus::NotStarted,
@@ -113,10 +125,17 @@ impl ServicesView {
         for (groups, index) in order {
             let common = open.iter().zip(&groups).take_while(|(a, b)| a == b).count();
             for (depth, label) in groups.iter().enumerate().skip(common) {
-                rows.push(Row::Group { label: label.clone(), depth });
+                rows.push(Row::Group {
+                    label: label.clone(),
+                    depth,
+                });
             }
             let status = self.status_of(&self.data.configs[index]);
-            rows.push(Row::Config { index, depth: groups.len(), status });
+            rows.push(Row::Config {
+                index,
+                depth: groups.len(),
+                status,
+            });
             open = groups;
         }
         self.rows = rows;
@@ -138,23 +157,37 @@ impl ServicesView {
 
     fn run_selected(&self) -> Option<Callback> {
         let config = self.data.configs.get(self.selected_index()?)?.clone();
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-                view.start_run(cx, config.command_line(), run_config::resolve_dir(&config.dir));
-            }
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                    view.start_run(
+                        cx,
+                        config.command_line(),
+                        run_config::resolve_dir(&config.dir),
+                    );
+                }
+            },
+        ))
     }
 }
 
 /// A picker over hidden configurations; picking one shows it again.
 fn restore_picker(data: &RunConfigs) -> Option<Callback> {
-    let hidden: Vec<String> = data.configs.iter().filter(|c| c.hidden).map(|c| c.name.clone()).collect();
+    let hidden: Vec<String> = data
+        .configs
+        .iter()
+        .filter(|c| c.hidden)
+        .map(|c| c.name.clone())
+        .collect();
     if hidden.is_empty() {
         return None;
     }
     Some(Box::new(move |compositor: &mut Compositor, _| {
-        let columns = [crate::ui::PickerColumn::new("hidden configuration", |n: &String, _: &()| n.as_str().into())];
+        let columns = [crate::ui::PickerColumn::new(
+            "hidden configuration",
+            |n: &String, _: &()| n.as_str().into(),
+        )];
         let picker = crate::ui::Picker::new(columns, 0, hidden, (), |cx, name: &String, _| {
             restore_config(name);
             cx.editor.set_status(format!("{name} shown again"));
@@ -195,12 +228,14 @@ impl Component for ServicesView {
             key!('k') | key!(Up) => self.selected = self.selected.saturating_sub(1),
             key!(Enter) => return EventResult::Consumed(self.run_selected()),
             key!('s') => {
-                return EventResult::Consumed(Some(Box::new(|compositor: &mut Compositor, cx: &mut Context| {
-                    if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-                        view.with_ide(|ide| ide.stop_run());
-                    }
-                    cx.editor.set_status("run stopped");
-                })))
+                return EventResult::Consumed(Some(Box::new(
+                    |compositor: &mut Compositor, cx: &mut Context| {
+                        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                            view.with_ide(|ide| ide.stop_run());
+                        }
+                        cx.editor.set_status("run stopped");
+                    },
+                )))
             }
             key!('g') => {
                 self.by_status = !self.by_status;
@@ -217,7 +252,8 @@ impl Component for ServicesView {
                         None,
                         crate::ui::completers::none,
                         move |cx: &mut Context, input: &str, event: crate::ui::PromptEvent| {
-                            if event != crate::ui::PromptEvent::Validate || input.trim().is_empty() {
+                            if event != crate::ui::PromptEvent::Validate || input.trim().is_empty()
+                            {
                                 return;
                             }
                             let folder = input.trim().to_string();
@@ -227,17 +263,21 @@ impl Component for ServicesView {
                             }
                             run_config::save(&data);
                             cx.editor.set_status(format!("in folder {folder}"));
-                            crate::compositor::defer([Box::new(|compositor: &mut Compositor, _: &mut Context| {
-                                if let Some(view) = compositor.find::<ServicesView>() {
-                                    view.data = run_config::load();
-                                    view.build_rows();
-                                }
-                            }) as Callback]);
+                            crate::compositor::defer([Box::new(
+                                |compositor: &mut Compositor, _: &mut Context| {
+                                    if let Some(view) = compositor.find::<ServicesView>() {
+                                        view.data = run_config::load();
+                                        view.build_rows();
+                                    }
+                                },
+                            ) as Callback]);
                         },
                     );
-                    return EventResult::Consumed(Some(Box::new(move |compositor: &mut Compositor, _| {
-                        compositor.push(Box::new(prompt));
-                    })));
+                    return EventResult::Consumed(Some(Box::new(
+                        move |compositor: &mut Compositor, _| {
+                            compositor.push(Box::new(prompt));
+                        },
+                    )));
                 }
             }
             key!('u') => {
@@ -289,31 +329,68 @@ impl Component for ServicesView {
             if self.by_status { "on" } else { "off" },
             if self.by_type { "on" } else { "off" },
         );
-        surface.set_stringn(area.x, area.y, &title, area.width as usize, theme.get("ui.text.focus"));
+        surface.set_stringn(
+            area.x,
+            area.y,
+            &title,
+            area.width as usize,
+            theme.get("ui.text.focus"),
+        );
         let body_h = area.height.saturating_sub(2) as usize;
         let top = self.selected.saturating_sub(body_h.saturating_sub(1));
         for (i, row) in self.rows.iter().enumerate().skip(top).take(body_h) {
             let y = area.y + 1 + (i - top) as u16;
             let (line, style) = match row {
-                Row::Group { label, depth } => (format!("{}▾ {label}", "  ".repeat(*depth)), theme.get("ui.text.directory")),
-                Row::Config { index, depth, status } => {
+                Row::Group { label, depth } => (
+                    format!("{}▾ {label}", "  ".repeat(*depth)),
+                    theme.get("ui.text.directory"),
+                ),
+                Row::Config {
+                    index,
+                    depth,
+                    status,
+                } => {
                     let config = &self.data.configs[*index];
                     let mark = match status {
                         RunStatus::Running => "▶",
                         RunStatus::Finished => "■",
                         RunStatus::NotStarted => "·",
                     };
-                    (format!("{}{mark} {}  {}", "  ".repeat(*depth), config.name, config.command), theme.get("ui.text"))
+                    (
+                        format!(
+                            "{}{mark} {}  {}",
+                            "  ".repeat(*depth),
+                            config.name,
+                            config.command
+                        ),
+                        theme.get("ui.text"),
+                    )
                 }
             };
-            let style = if i == self.selected { theme.get("ui.selection") } else { style };
+            let style = if i == self.selected {
+                theme.get("ui.selection")
+            } else {
+                style
+            };
             surface.set_stringn(area.x, y, &line, area.width as usize, style);
         }
         if self.rows.is_empty() {
-            surface.set_stringn(area.x, area.y + 1, "  no run configurations shown — H restores hidden ones", area.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                area.x,
+                area.y + 1,
+                "  no run configurations shown — H restores hidden ones",
+                area.width as usize,
+                theme.get("comment"),
+            );
         }
         let footer = "⏎ run  s stop  g status  t type  f folder  u unfolder  h hide  H/r restore  x remove type  e edit  q";
-        surface.set_stringn(area.x, area.y + area.height - 1, footer, area.width as usize, theme.get("ui.linenr"));
+        surface.set_stringn(
+            area.x,
+            area.y + area.height - 1,
+            footer,
+            area.width as usize,
+            theme.get("ui.linenr"),
+        );
     }
 }
 
@@ -323,9 +400,15 @@ mod tests {
 
     #[test]
     fn a_configuration_type_is_its_program() {
-        let config = |command: &str| RunConfig { command: command.into(), ..Default::default() };
+        let config = |command: &str| RunConfig {
+            command: command.into(),
+            ..Default::default()
+        };
         assert_eq!("cargo", config_type(&config("cargo run --release")));
-        assert_eq!("node", config_type(&config("NODE_ENV=dev /usr/bin/node app.js")));
+        assert_eq!(
+            "node",
+            config_type(&config("NODE_ENV=dev /usr/bin/node app.js"))
+        );
         assert_eq!("shell", config_type(&config("")));
     }
 }

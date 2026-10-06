@@ -46,13 +46,19 @@ fn write_workspace(dir: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(dir.join("doc"))?;
     let mut help = String::from("*plug.txt*  The plug plugin\n\n");
     for s in 1..=5 {
-        help.push_str(&format!("{}\n{:<39}*plug-s{s}*\n\n", "=".repeat(40), format!("SECTION {s}")));
+        help.push_str(&format!(
+            "{}\n{:<39}*plug-s{s}*\n\n",
+            "=".repeat(40),
+            format!("SECTION {s}")
+        ));
         for n in 1..=30 {
             help.push_str(&format!("text {s}.{n}\n"));
         }
     }
     std::fs::write(dir.join("doc/plug.txt"), help)?;
-    let mut tags: String = (1..=5).map(|s| format!("plug-s{s}\tplug.txt\t/*plug-s{s}*\n")).collect();
+    let mut tags: String = (1..=5)
+        .map(|s| format!("plug-s{s}\tplug.txt\t/*plug-s{s}*\n"))
+        .collect();
     tags.push_str("plug.txt\tplug.txt\t/*plug.txt*\n");
     std::fs::write(dir.join("doc/tags"), tags)
 }
@@ -70,7 +76,10 @@ fn layout(editor: &Editor, shape: &TreeShape) -> String {
         // zmax roots every tree in a container; vim's `winlayout()` does not wrap
         // a lone child.
         TreeShape::Split { children, .. } if children.len() == 1 => layout(editor, &children[0].1),
-        TreeShape::Split { layout: kind, children } => {
+        TreeShape::Split {
+            layout: kind,
+            children,
+        } => {
             let name = match kind {
                 Layout::Vertical => "row",
                 Layout::Horizontal => "col",
@@ -84,7 +93,10 @@ fn layout(editor: &Editor, shape: &TreeShape) -> String {
 /// The current tab's windows, in the format of `dump.vim`.
 fn dump_tab(editor: &Editor, tab: usize, out: &mut Vec<String>) {
     // vim `getcwd(-1, {tab})`: the tab page's `:tcd` directory, else the global one.
-    let tab_cwd = editor.tab_localdir.clone().unwrap_or_else(|| editor.global_cwd());
+    let tab_cwd = editor
+        .tab_localdir
+        .clone()
+        .unwrap_or_else(|| editor.global_cwd());
     out.push(format!(
         "TAB {tab} cwd {} layout {}",
         tail(Some(&tab_cwd)),
@@ -102,7 +114,10 @@ fn dump_tab(editor: &Editor, tab: usize, out: &mut Vec<String>) {
         let mut closed = Vec::new();
         let mut l = 0;
         while l < text.len_lines() {
-            match folds.closed_fold_starting_at(l).filter(|_| !folds.is_line_hidden(l)) {
+            match folds
+                .closed_fold_starting_at(l)
+                .filter(|_| !folds.is_line_hidden(l))
+            {
                 Some(f) => {
                     closed.push(format!("{}-{}", f.start + 1, f.end + 1));
                     l = f.end + 1;
@@ -154,7 +169,11 @@ fn dump(editor: &mut Editor) -> Vec<String> {
         .collect();
     bufs.sort();
     let mut out = vec![
-        format!("tab {}/{tabs} win {win} args {}", current + 1, args.join(" ")),
+        format!(
+            "tab {}/{tabs} win {win} args {}",
+            current + 1,
+            args.join(" ")
+        ),
         format!("bufs {}", bufs.join(",")),
     ];
     for t in 0..tabs {
@@ -219,7 +238,12 @@ async fn sessions_restore_as_nvim_restores_them() -> anyhow::Result<()> {
     let keep = std::env::var_os("ZMAX_SESSION_OUT").map(PathBuf::from);
     let root = std::env::temp_dir().join(format!("zmax-session-parity-{}", std::process::id()));
     let mut names: Vec<_> = std::fs::read_dir(&fixtures)?
-        .filter_map(|e| e.ok()?.path().file_stem().map(|s| s.to_string_lossy().into_owned()))
+        .filter_map(|e| {
+            e.ok()?
+                .path()
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+        })
         .filter(|n| fixtures.join(format!("{n}.vim")).is_file() && n != "dump" && n != "layouts")
         .collect();
     names.sort();
@@ -246,13 +270,23 @@ async fn sessions_restore_as_nvim_restores_them() -> anyhow::Result<()> {
         let save = root.join(&name).join("save.vim");
         std::fs::write(&save, format!("mksession! {}\n", written.display()))?;
         let mut app = boot(&[rtp.clone(), script, save])?;
-        check(&format!("{name} (nvim's session)"), &mut app, &want, &mut failures);
+        check(
+            &format!("{name} (nvim's session)"),
+            &mut app,
+            &want,
+            &mut failures,
+        );
         drop(app);
 
         // zmax's session, loaded from a fresh start in the same directory.
         std::env::set_current_dir(&dir)?;
         let mut app = boot(&[rtp, written.clone()])?;
-        check(&format!("{name} (zmax's session)"), &mut app, &want, &mut failures);
+        check(
+            &format!("{name} (zmax's session)"),
+            &mut app,
+            &want,
+            &mut failures,
+        );
         if let Some(keep) = &keep {
             std::fs::create_dir_all(keep)?;
             // Directories are written resolved (`/private/var/…` on macOS), as
@@ -315,7 +349,10 @@ async fn sessions_save_options_globals_and_the_screen() -> anyhow::Result<()> {
     let out = root.join("check.out");
     std::fs::write(
         &check,
-        format!("call writefile([&tabstop, MyCount, MyName], '{}')\n", out.display()),
+        format!(
+            "call writefile([&tabstop, MyCount, MyName], '{}')\n",
+            out.display()
+        ),
     )?;
     std::env::set_current_dir(&dir)?;
     let app = boot(&[written, check])?;

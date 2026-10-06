@@ -129,14 +129,20 @@ mod tests {
     fn a_run_round_trips_through_the_file_format() {
         let rows = vec![
             entry("cargo test", &[]),
-            entry("pytest", &["tests/test_a.py::test_x", "tests/test_b.py::test_y"]),
+            entry(
+                "pytest",
+                &["tests/test_a.py::test_x", "tests/test_b.py::test_y"],
+            ),
         ];
         assert_eq!(parse(&render(&rows)), rows);
     }
 
     #[test]
     fn a_half_written_line_costs_only_itself() {
-        let text = format!("{}17000\tnot-a-status\n", render(&[entry("cargo test", &[])]));
+        let text = format!(
+            "{}17000\tnot-a-status\n",
+            render(&[entry("cargo test", &[])])
+        );
         assert_eq!(parse(&text), vec![entry("cargo test", &[])]);
     }
 

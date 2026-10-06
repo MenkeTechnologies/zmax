@@ -34,9 +34,19 @@ pub const BUILD_FILES: [&str; 8] = [
 /// `contents` is the file's text, read where a tool's own listing would be
 /// slow or need the tool installed. Pure — unit tested.
 pub fn build_file_tasks(file: &str, contents: &str) -> Vec<String> {
-    let each = |tool: &str, tasks: &[&str]| tasks.iter().map(|t| format!("{tool} {t}")).collect::<Vec<_>>();
+    let each = |tool: &str, tasks: &[&str]| {
+        tasks
+            .iter()
+            .map(|t| format!("{tool} {t}"))
+            .collect::<Vec<_>>()
+    };
     match file {
-        "Cargo.toml" => each("cargo", &["build", "check", "test", "run", "clippy", "doc", "bench", "clean"]),
+        "Cargo.toml" => each(
+            "cargo",
+            &[
+                "build", "check", "test", "run", "clippy", "doc", "bench", "clean",
+            ],
+        ),
         "package.json" => serde_json::from_str::<serde_json::Value>(contents)
             .ok()
             .and_then(|json| json["scripts"].as_object().cloned())
@@ -49,7 +59,9 @@ pub fn build_file_tasks(file: &str, contents: &str) -> Vec<String> {
                 let valid = !target.is_empty()
                     && !target.starts_with(['.', '\t', ' ', '#'])
                     && !line[target.len()..].starts_with(":=")
-                    && target.chars().all(|c| c.is_alphanumeric() || "-_/.".contains(c));
+                    && target
+                        .chars()
+                        .all(|c| c.is_alphanumeric() || "-_/.".contains(c));
                 valid.then(|| format!("make {target}"))
             })
             .collect(),
@@ -60,17 +72,24 @@ pub fn build_file_tasks(file: &str, contents: &str) -> Vec<String> {
                 let valid = !name.is_empty()
                     && line.contains(':')
                     && !line.contains(":=")
-                    && name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_');
+                    && name
+                        .chars()
+                        .all(|c| c.is_alphanumeric() || c == '-' || c == '_');
                 valid.then(|| format!("just {name}"))
             })
             .collect(),
-        "build.gradle.kts" | "build.gradle" => each("./gradlew", &["build", "test", "clean", "assemble", "check"]),
-        "pom.xml" => each("mvn", &["compile", "test", "package", "verify", "install", "clean"]),
+        "build.gradle.kts" | "build.gradle" => each(
+            "./gradlew",
+            &["build", "test", "clean", "assemble", "check"],
+        ),
+        "pom.xml" => each(
+            "mvn",
+            &["compile", "test", "package", "verify", "install", "clean"],
+        ),
         "CMakeLists.txt" => vec!["cmake -S . -B build".into(), "cmake --build build".into()],
         _ => Vec::new(),
     }
 }
-
 
 /// A build-tool project: a build file and what it offers.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -93,7 +112,9 @@ impl BuildProject {
 pub fn task_group(task: &str) -> &'static str {
     let name = task.rsplit(' ').next().unwrap_or(task);
     match name {
-        "build" | "check" | "compile" | "assemble" | "clean" | "doc" | "package" | "install" => "build",
+        "build" | "check" | "compile" | "assemble" | "clean" | "doc" | "package" | "install" => {
+            "build"
+        }
         "test" | "clippy" | "bench" | "verify" | "lint" => "verification",
         "run" | "start" | "dev" | "serve" => "application",
         _ if name.starts_with("test") || name.starts_with("lint") => "verification",
@@ -113,12 +134,20 @@ pub fn workspace_members(file: &Path) -> Vec<PathBuf> {
         Some("Cargo.toml") => toml::from_str::<toml::Value>(&text)
             .ok()
             .and_then(|v| v.get("workspace")?.get("members")?.as_array().cloned())
-            .map(|a| a.iter().filter_map(|m| m.as_str().map(str::to_owned)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|m| m.as_str().map(str::to_owned))
+                    .collect()
+            })
             .unwrap_or_default(),
         Some("package.json") => serde_json::from_str::<serde_json::Value>(&text)
             .ok()
             .and_then(|v| v.get("workspaces")?.as_array().cloned())
-            .map(|a| a.iter().filter_map(|m| m.as_str().map(str::to_owned)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|m| m.as_str().map(str::to_owned))
+                    .collect()
+            })
             .unwrap_or_default(),
         _ => Vec::new(),
     };
@@ -154,7 +183,9 @@ pub fn discover(root: &Path) -> Vec<BuildProject> {
 
 fn load_project(file: &Path, depth: usize) -> BuildProject {
     let name = file.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    let tasks = std::fs::read_to_string(file).map(|t| build_file_tasks(name, &t)).unwrap_or_default();
+    let tasks = std::fs::read_to_string(file)
+        .map(|t| build_file_tasks(name, &t))
+        .unwrap_or_default();
     // A member's own members are not followed further: build tools do not
     // nest workspaces.
     let members = if depth == 0 {
@@ -167,7 +198,11 @@ fn load_project(file: &Path, depth: usize) -> BuildProject {
     } else {
         Vec::new()
     };
-    BuildProject { file: file.to_path_buf(), tasks, members }
+    BuildProject {
+        file: file.to_path_buf(),
+        tasks,
+        members,
+    }
 }
 
 /// When a triggered task runs (JetBrains "Execute Before / After …").
@@ -277,7 +312,11 @@ impl BuildState {
         let mut projects = discover(root);
         projects.retain(|p| !self.detached.contains(&p.file) && !self.ignored.contains(&p.file));
         for project in &mut projects {
-            let chosen = self.imported.iter().find(|(f, _)| *f == project.file).map(|(_, m)| m.clone());
+            let chosen = self
+                .imported
+                .iter()
+                .find(|(f, _)| *f == project.file)
+                .map(|(_, m)| m.clone());
             project.members.retain(|m| {
                 !self.ignored.contains(&m.file)
                     && !self.detached.contains(&m.file)
@@ -333,16 +372,25 @@ pub fn build_files(root: &Path) -> Vec<PathBuf> {
 pub fn changed_since_sync(state: &BuildState, root: &Path) -> Vec<PathBuf> {
     build_files(root)
         .into_iter()
-        .filter(|f| state.synced.iter().find(|(p, _)| p == f).is_none_or(|(_, t)| *t != mtime(f)))
+        .filter(|f| {
+            state
+                .synced
+                .iter()
+                .find(|(p, _)| p == f)
+                .is_none_or(|(_, t)| *t != mtime(f))
+        })
         .collect()
 }
 
 /// Record the build files' times as synced.
 pub fn mark_synced(state: &mut BuildState, root: &Path) {
-    state.synced = build_files(root).into_iter().map(|f| {
-        let t = mtime(&f);
-        (f, t)
-    }).collect();
+    state.synced = build_files(root)
+        .into_iter()
+        .map(|f| {
+            let t = mtime(&f);
+            (f, t)
+        })
+        .collect();
 }
 #[cfg(test)]
 mod build_task_tests {
@@ -352,15 +400,24 @@ mod build_task_tests {
     fn npm_scripts_make_targets_and_just_recipes() {
         assert_eq!(
             vec!["npm run build", "npm run test"],
-            build_file_tasks("package.json", r#"{"scripts":{"build":"tsc","test":"jest"}}"#)
+            build_file_tasks(
+                "package.json",
+                r#"{"scripts":{"build":"tsc","test":"jest"}}"#
+            )
         );
         let makefile = "CC := cc\nall: app\n\tcc -o app\n.PHONY: all\nclean:\n\trm app\n";
-        assert_eq!(vec!["make all", "make clean"], build_file_tasks("Makefile", makefile));
-        let justfile = "set shell := [\"zsh\"]\ntest arg:\n    cargo test {{arg}}\nfmt:\n    cargo fmt\n";
-        assert_eq!(vec!["just test", "just fmt"], build_file_tasks("justfile", justfile));
+        assert_eq!(
+            vec!["make all", "make clean"],
+            build_file_tasks("Makefile", makefile)
+        );
+        let justfile =
+            "set shell := [\"zsh\"]\ntest arg:\n    cargo test {{arg}}\nfmt:\n    cargo fmt\n";
+        assert_eq!(
+            vec!["just test", "just fmt"],
+            build_file_tasks("justfile", justfile)
+        );
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -378,21 +435,51 @@ mod tests {
     fn workspace_members_and_triggers() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        std::fs::write(root.join("Cargo.toml"), "[workspace]\nmembers = [\"crates/*\", \"tool\"]\n").unwrap();
+        std::fs::write(
+            root.join("Cargo.toml"),
+            "[workspace]\nmembers = [\"crates/*\", \"tool\"]\n",
+        )
+        .unwrap();
         for member in ["crates/a", "crates/b", "tool"] {
             std::fs::create_dir_all(root.join(member)).unwrap();
-            std::fs::write(root.join(member).join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
+            std::fs::write(
+                root.join(member).join("Cargo.toml"),
+                "[package]\nname = \"x\"\n",
+            )
+            .unwrap();
         }
         let projects = discover(root);
         assert_eq!(1, projects.len());
-        let members: Vec<_> = projects[0].members.iter().map(|m| m.dir().strip_prefix(root).unwrap().to_path_buf()).collect();
-        assert_eq!(vec![PathBuf::from("crates/a"), PathBuf::from("crates/b"), PathBuf::from("tool")], members);
+        let members: Vec<_> = projects[0]
+            .members
+            .iter()
+            .map(|m| m.dir().strip_prefix(root).unwrap().to_path_buf())
+            .collect();
+        assert_eq!(
+            vec![
+                PathBuf::from("crates/a"),
+                PathBuf::from("crates/b"),
+                PathBuf::from("tool")
+            ],
+            members
+        );
 
         let mut state = BuildState::default();
         state.ignored.push(root.join("tool/Cargo.toml"));
-        assert_eq!(2, state.active_projects(root)[0].members.len(), "an ignored member is left out");
-        state.triggers.push(Trigger { when: When::BeforeBuild, dir: root.join("tool"), task: "cargo fmt".into() });
+        assert_eq!(
+            2,
+            state.active_projects(root)[0].members.len(),
+            "an ignored member is left out"
+        );
+        state.triggers.push(Trigger {
+            when: When::BeforeBuild,
+            dir: root.join("tool"),
+            task: "cargo fmt".into(),
+        });
         let wrapped = state.wrap(When::BeforeBuild, "cargo build", When::AfterBuild);
-        assert!(wrapped.ends_with("&& cargo fmt) && cargo build"), "{wrapped}");
+        assert!(
+            wrapped.ends_with("&& cargo fmt) && cargo build"),
+            "{wrapped}"
+        );
     }
 }

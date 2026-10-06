@@ -536,7 +536,10 @@ impl EditorView {
     /// `:LOTRToggle`). Returns whether the window is on screen afterwards.
     pub fn tool_window(&mut self, which: &str, action: super::ide::ToolWindowAction) -> bool {
         use super::ide::ToolWindowAction;
-        let shown = self.ide.as_ref().is_some_and(|ide| ide.tool_window_shown(which));
+        let shown = self
+            .ide
+            .as_ref()
+            .is_some_and(|ide| ide.tool_window_shown(which));
         match action {
             ToolWindowAction::Close | ToolWindowAction::Toggle { .. } if shown => {
                 if let Some(ide) = self.ide.as_mut() {
@@ -933,7 +936,12 @@ impl EditorView {
                 context.editor.set_status(format!("opened {url}"));
                 None
             }
-            IdeAction::OpenProblem { path, line, col, preview_tab } => {
+            IdeAction::OpenProblem {
+                path,
+                line,
+                col,
+                preview_tab,
+            } => {
                 crate::commands::open_at(
                     context.editor,
                     &path,
@@ -1137,7 +1145,14 @@ impl EditorView {
                 None
             }
             IdeAction::DocumentationSource { path, line, col } => {
-                crate::commands::open_at(context.editor, &path, line, col, zmax_view::editor::Action::Replace, false);
+                crate::commands::open_at(
+                    context.editor,
+                    &path,
+                    line,
+                    col,
+                    zmax_view::editor::Action::Replace,
+                    false,
+                );
                 Some(Box::new(|compositor, cx| {
                     crate::commands::menu_run(compositor, cx, &crate::commands::goto_definition)
                 }))
@@ -4438,7 +4453,9 @@ impl EditorView {
 
         // JetBrains "Auto-Update from Source": the Documentation tool window
         // follows the caret while it is on screen.
-        if crate::ui::ide::docs_auto_update() && self.ide.as_ref().is_some_and(|ide| ide.docs_shown()) {
+        if crate::ui::ide::docs_auto_update()
+            && self.ide.as_ref().is_some_and(|ide| ide.docs_shown())
+        {
             commands::documentation_follow_caret(cx);
         }
 
@@ -6314,7 +6331,9 @@ impl Component for EditorView {
                             let mut consumed = false;
                             let menu_command =
                                 self.keymaps.runs_completion_command(Mode::Insert, key);
-                            if let Some(completion) = self.completion.as_mut().filter(|_| !menu_command) {
+                            if let Some(completion) =
+                                self.completion.as_mut().filter(|_| !menu_command)
+                            {
                                 let res = {
                                     // use a fake context here
                                     let mut cx = Context {

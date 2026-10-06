@@ -13,7 +13,6 @@ pub(crate) mod org;
 /// loaded at runtime via `:plugin load`. Independent of the embedded
 /// interpreters, so it is always compiled in.
 pub(crate) mod plugin;
-pub(crate) mod projectile;
 /// Native-plugin package manager. Installs `cdylib` plugins from `owner/repo`,
 /// git URLs, or local paths into a content-addressed global store under
 /// `~/.zmax/pkg/`, records them in `installed.toml`, and loads them through the
@@ -22,6 +21,7 @@ pub(crate) mod projectile;
 /// (Named `plugmgr`, not `pkg`, to avoid colliding with the emacs `package.el`
 /// `pkg` alias — `zmax_core::package` — used elsewhere in this module.)
 pub(crate) mod plugmgr;
+pub(crate) mod projectile;
 /// Embedded scripting host. The real `scripting/` module (which pulls the
 /// interpreter crates) is compiled only with the `scripting` feature; otherwise
 /// a stub exposing the same entry points reports that scripting was not built in.
@@ -36,8 +36,8 @@ pub(crate) mod typed;
 pub(crate) mod vim_options_data;
 
 pub use dap::*;
-pub use gh_actions::*;
 use futures_util::FutureExt;
+pub use gh_actions::*;
 pub use lsp::*;
 pub use syntax::*;
 use tui::{
@@ -4517,7 +4517,10 @@ mod doc_comment_tests {
         // The receiver is not a parameter.
         assert_eq!(param_names("(&mut self, path: &Path)"), vec!["path"]);
         // `type name`, the C family's order.
-        assert_eq!(param_names("(int count, char *name)"), vec!["count", "name"]);
+        assert_eq!(
+            param_names("(int count, char *name)"),
+            vec!["count", "name"]
+        );
         // Defaults and generics hold commas that must not split an argument.
         assert_eq!(
             param_names("(items: Vec<(u8, u8)>, sep = \",\")"),
@@ -4696,7 +4699,10 @@ fn cut_ranges(cx: &mut Context, span: impl Fn(RopeSlice, &Range) -> (usize, usiz
     if spans.is_empty() {
         return;
     }
-    let ranges = spans.into_iter().map(|(from, to)| Range::new(from, to)).collect();
+    let ranges = spans
+        .into_iter()
+        .map(|(from, to)| Range::new(from, to))
+        .collect();
     doc.set_selection(view.id, Selection::new(ranges, 0));
     cut_to_clipboard(cx);
 }
@@ -5091,15 +5097,16 @@ fn goto_outside_bracket(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let mut moved = false;
-    let selection = doc.selection(view.id).clone().transform(|range| {
-        match outside_bracket_or_quote(text, range.cursor(text)) {
-            Some(pos) => {
-                moved = true;
-                Range::point(pos.min(text.len_chars()))
+    let selection =
+        doc.selection(view.id).clone().transform(|range| {
+            match outside_bracket_or_quote(text, range.cursor(text)) {
+                Some(pos) => {
+                    moved = true;
+                    Range::point(pos.min(text.len_chars()))
+                }
+                None => range,
             }
-            None => range,
-        }
-    });
+        });
     if moved {
         doc.set_selection(view.id, selection);
     } else {
@@ -5374,9 +5381,14 @@ fn yank_relative_path(cx: &mut Context, root_of: impl FnOnce(&Path) -> Option<Pa
         cx.editor.set_error("no root for this file");
         return;
     };
-    let relative = path.strip_prefix(&root).unwrap_or(&path).display().to_string();
+    let relative = path
+        .strip_prefix(&root)
+        .unwrap_or(&path)
+        .display()
+        .to_string();
     let _ = cx.editor.registers.write('+', vec![relative.clone()]);
-    cx.editor.set_status(format!("Yanked to clipboard: {relative}"));
+    cx.editor
+        .set_status(format!("Yanked to clipboard: {relative}"));
 }
 
 /// JetBrains "Path from Content Root" (`CopyContentRootPath`): this file's path
@@ -5402,7 +5414,10 @@ fn yank_url_at_cursor(cx: &mut Context) {
         let text = doc.text().slice(..);
         let cursor = doc.selection(view.id).primary().cursor(text);
         let line = text.char_to_line(cursor);
-        url_at(&text.line(line).to_string(), cursor - text.line_to_char(line))
+        url_at(
+            &text.line(line).to_string(),
+            cursor - text.line_to_char(line),
+        )
     };
     match url {
         Some(url) => {
@@ -5543,7 +5558,8 @@ fn copy_branch_name(cx: &mut Context) {
     match branch {
         Some(branch) => {
             let _ = cx.editor.registers.write('+', vec![branch.clone()]);
-            cx.editor.set_status(format!("Yanked branch name: {branch}"));
+            cx.editor
+                .set_status(format!("Yanked branch name: {branch}"));
         }
         None => cx.editor.set_error("not in a git repository"),
     }
@@ -5569,9 +5585,9 @@ fn copy_revision_number(cx: &mut Context) {
             let _ = cx.editor.registers.write('+', vec![sha.clone()]);
             cx.editor.set_status(format!("Yanked revision: {sha}"));
         }
-        None => cx
-            .editor
-            .set_error("no committed revision for this line (uncommitted, or not in a git repository)"),
+        None => cx.editor.set_error(
+            "no committed revision for this line (uncommitted, or not in a git repository)",
+        ),
     }
 }
 
@@ -9513,7 +9529,9 @@ fn switch_to_lowercase(cx: &mut Context) {
 fn case_prev_word(cx: &mut Context, f: fn(&str) -> Tendril) {
     let cursor = {
         let (view, doc) = current_ref!(cx.editor);
-        doc.selection(view.id).primary().cursor(doc.text().slice(..))
+        doc.selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..))
     };
     let span = {
         let (view, doc) = current_ref!(cx.editor);
@@ -10590,42 +10608,48 @@ fn surround_with(cx: &mut Context) {
             t.1.lines().next().unwrap_or_default().into()
         }),
     ];
-    let picker = Picker::new(columns, 0, rows, (), |cx, template: &SurroundTemplate, _| {
-        let (before, after) = (template.1, template.2);
-        let (view, doc) = current!(cx.editor);
-        let unit = doc.indent_style.as_str().to_string();
-        let selection = doc.selection(view.id).clone();
-        let text = doc.text().slice(..);
-        let transaction = Transaction::change_by_selection(doc.text(), &selection, |range| {
-            // Whole lines: a block wrapper around half a line would not compile
-            // in any of these languages.
-            let first = text.char_to_line(range.from());
-            let last = text.char_to_line(range.to().saturating_sub(1).max(range.from()));
-            let from = text.line_to_char(first);
-            let to = if last + 1 < text.len_lines() {
-                text.line_to_char(last + 1) - 1
-            } else {
-                text.len_chars()
-            };
-            let indent: String = text
-                .line(first)
-                .chars()
-                .take_while(|c| *c == ' ' || *c == '\t')
-                .collect();
-            let body: String = text.slice(from..to).chunks().collect();
-            (
-                from,
-                to,
-                Some(Tendril::from(
-                    surround_with_block(&body, before, after, &indent, &unit).as_str(),
-                )),
-            )
-        });
-        doc.apply(&transaction, view.id);
-        doc.append_changes_to_history(view);
-        cx.editor
-            .set_status(format!("surrounded with {}", template.0));
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        rows,
+        (),
+        |cx, template: &SurroundTemplate, _| {
+            let (before, after) = (template.1, template.2);
+            let (view, doc) = current!(cx.editor);
+            let unit = doc.indent_style.as_str().to_string();
+            let selection = doc.selection(view.id).clone();
+            let text = doc.text().slice(..);
+            let transaction = Transaction::change_by_selection(doc.text(), &selection, |range| {
+                // Whole lines: a block wrapper around half a line would not compile
+                // in any of these languages.
+                let first = text.char_to_line(range.from());
+                let last = text.char_to_line(range.to().saturating_sub(1).max(range.from()));
+                let from = text.line_to_char(first);
+                let to = if last + 1 < text.len_lines() {
+                    text.line_to_char(last + 1) - 1
+                } else {
+                    text.len_chars()
+                };
+                let indent: String = text
+                    .line(first)
+                    .chars()
+                    .take_while(|c| *c == ' ' || *c == '\t')
+                    .collect();
+                let body: String = text.slice(from..to).chunks().collect();
+                (
+                    from,
+                    to,
+                    Some(Tendril::from(
+                        surround_with_block(&body, before, after, &indent, &unit).as_str(),
+                    )),
+                )
+            });
+            doc.apply(&transaction, view.id);
+            doc.append_changes_to_history(view);
+            cx.editor
+                .set_status(format!("surrounded with {}", template.0));
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -12077,11 +12101,19 @@ pub(crate) fn format_markdown_table(block: &str) -> String {
 
 /// The markdown table under the cursor, with the cursor's row and column in
 /// it. `None` when the cursor is not on a table line.
-fn md_table_at_cursor(doc: &Document, view: &View) -> Option<(crate::md_table::Table, usize, usize)> {
+fn md_table_at_cursor(
+    doc: &Document,
+    view: &View,
+) -> Option<(crate::md_table::Table, usize, usize)> {
     let text = doc.text().slice(..);
     let cursor = doc.selection(view.id).primary().cursor(text);
     let line = text.char_to_line(cursor);
-    let line_text = |i: usize| text.line(i).to_string().trim_end_matches(['\n', '\r']).to_string();
+    let line_text = |i: usize| {
+        text.line(i)
+            .to_string()
+            .trim_end_matches(['\n', '\r'])
+            .to_string()
+    };
     let is_row = |i: usize| line_text(i).trim_start().starts_with('|');
     if !is_row(line) {
         return None;
@@ -12123,8 +12155,11 @@ fn md_table_edit(
     let row = row.min(lines.len().saturating_sub(1));
     let before: usize = lines[..row].iter().map(|l| l.chars().count() + 1).sum();
     let cursor = start + before + crate::md_table::cell_offset(lines[row], column);
-    let transaction = Transaction::change(text, std::iter::once((start, end, Some(rendered.as_str().into()))))
-        .with_selection(Selection::point(cursor));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((start, end, Some(rendered.as_str().into()))),
+    )
+    .with_selection(Selection::point(cursor));
     doc.apply(&transaction, view.id);
 }
 
@@ -12140,17 +12175,23 @@ fn md_table_insert_row_below(cx: &mut Context) {
 
 /// JetBrains "Remove Row" in a markdown table. The separator row stays.
 fn md_table_remove_row(cx: &mut Context) {
-    md_table_edit(cx, |t, row, column| t.remove_row(row).then_some((row, column)));
+    md_table_edit(cx, |t, row, column| {
+        t.remove_row(row).then_some((row, column))
+    });
 }
 
 /// JetBrains "Move Row Up" in a markdown table.
 fn md_table_move_row_up(cx: &mut Context) {
-    md_table_edit(cx, |t, row, column| t.move_row(row, false).map(|to| (to, column)));
+    md_table_edit(cx, |t, row, column| {
+        t.move_row(row, false).map(|to| (to, column))
+    });
 }
 
 /// JetBrains "Move Row Down" in a markdown table.
 fn md_table_move_row_down(cx: &mut Context) {
-    md_table_edit(cx, |t, row, column| t.move_row(row, true).map(|to| (to, column)));
+    md_table_edit(cx, |t, row, column| {
+        t.move_row(row, true).map(|to| (to, column))
+    });
 }
 
 /// JetBrains "Insert Column Left" in a markdown table.
@@ -12179,16 +12220,22 @@ fn md_table_remove_column(cx: &mut Context) {
 
 /// JetBrains "Move Column Left" in a markdown table.
 fn md_table_move_column_left(cx: &mut Context) {
-    md_table_edit(cx, |t, row, column| t.move_column(column, false).map(|to| (row, to)));
+    md_table_edit(cx, |t, row, column| {
+        t.move_column(column, false).map(|to| (row, to))
+    });
 }
 
 /// JetBrains "Move Column Right" in a markdown table.
 fn md_table_move_column_right(cx: &mut Context) {
-    md_table_edit(cx, |t, row, column| t.move_column(column, true).map(|to| (row, to)));
+    md_table_edit(cx, |t, row, column| {
+        t.move_column(column, true).map(|to| (row, to))
+    });
 }
 
 fn md_table_align(cx: &mut Context, align: crate::md_table::Align) {
-    md_table_edit(cx, |t, row, column| t.set_alignment(column, align).then_some((row, column)));
+    md_table_edit(cx, |t, row, column| {
+        t.set_alignment(column, align).then_some((row, column))
+    });
 }
 
 /// JetBrains "Align Left" for a markdown table column.
@@ -12244,7 +12291,11 @@ fn md_table_select_column(cx: &mut Context) {
                 .map(|(i, _)| i)
                 .collect();
             let (open, close) = (*pipes.get(column)?, *pipes.get(column + 1)?);
-            let cell: String = line_text.chars().skip(open + 1).take(close - open - 1).collect();
+            let cell: String = line_text
+                .chars()
+                .skip(open + 1)
+                .take(close - open - 1)
+                .collect();
             let lead = cell.chars().take_while(|c| c.is_whitespace()).count();
             let width = cell.trim().chars().count();
             let from = text.line_to_char(line) + open + 1 + lead;
@@ -12267,8 +12318,14 @@ fn md_insert_table(cx: &mut Context) {
 fn md_table_prompt() -> crate::ui::prompt::Prompt {
     validated_prompt("table size (columns x rows): ", |cx, size| {
         let mut parts = size.split(['x', 'X', '*', ' ']).filter(|p| !p.is_empty());
-        let columns = parts.next().and_then(|c| c.parse::<usize>().ok()).unwrap_or(2);
-        let rows = parts.next().and_then(|r| r.parse::<usize>().ok()).unwrap_or(2);
+        let columns = parts
+            .next()
+            .and_then(|c| c.parse::<usize>().ok())
+            .unwrap_or(2);
+        let rows = parts
+            .next()
+            .and_then(|r| r.parse::<usize>().ok())
+            .unwrap_or(2);
         let table = typed::format_md_table(&crate::md_table::empty(columns, rows).to_text());
         let (view, doc) = current!(cx.editor);
         let text = doc.text();
@@ -12301,7 +12358,10 @@ fn md_toggle_wrap(cx: &mut Context, marker: &str) {
             let inner: String = text.slice(from..to).into();
             let before: String = text.slice(from.saturating_sub(width)..from).into();
             let after: String = text.slice(to..(to + width).min(text.len_chars())).into();
-            if inner.len() >= 2 * marker.len() && inner.starts_with(marker) && inner.ends_with(marker) {
+            if inner.len() >= 2 * marker.len()
+                && inner.starts_with(marker)
+                && inner.ends_with(marker)
+            {
                 let unwrapped = &inner[marker.len()..inner.len() - marker.len()];
                 (from, to, Some(unwrapped.into()))
             } else if before == marker && after == marker {
@@ -12399,12 +12459,20 @@ fn md_link_to_reference(cx: &mut Context) {
         .map(|c| if c.is_alphanumeric() { c } else { '-' })
         .collect();
     let len = text.len_chars();
-    let tail = if text.chars_at(len).reversed().next() == Some('\n') { "" } else { "\n" };
+    let tail = if text.chars_at(len).reversed().next() == Some('\n') {
+        ""
+    } else {
+        "\n"
+    };
     let definition = format!("{tail}\n[{reference}]: {url}\n");
     let transaction = Transaction::change(
         doc.text(),
         [
-            (line_start + start, line_start + end, Some(format!("[{label}][{reference}]").into())),
+            (
+                line_start + start,
+                line_start + end,
+                Some(format!("[{label}][{reference}]").into()),
+            ),
             (len, len, Some(definition.into())),
         ]
         .into_iter(),
@@ -12416,30 +12484,43 @@ fn md_link_to_reference(cx: &mut Context) {
 /// image, table, table of contents.
 fn md_insert_menu(cx: &mut Context) {
     let items = vec!["Link", "Image", "Table", "Table of Contents"];
-    let columns = [PickerColumn::new("insert", |i: &&'static str, _: &()| (*i).into())];
-    let picker = Picker::new(columns, 0, items, (), |cx, item: &&'static str, _| match *item {
-        "Link" => typed::run_command_line(cx, "markdown-link"),
-        "Table of Contents" => {
-            let mut cx = Context {
-                register: None,
-                count: None,
-                editor: cx.editor,
-                callback: Vec::new(),
-                on_next_key_callback: None,
-                jobs: cx.jobs,
-            };
-            insert_toc(&mut cx);
-        }
-        prompted => {
-            // The image and table steps ask a question first; their prompt has
-            // to reach the compositor, which a picker callback cannot touch.
-            let image = prompted == "Image";
-            let call: job::Callback = Callback::EditorCompositor(Box::new(move |_editor, compositor| {
-                compositor.push(Box::new(if image { md_image_prompt() } else { md_table_prompt() }));
-            }));
-            cx.jobs.callback(async move { Ok(call) });
-        }
-    });
+    let columns = [PickerColumn::new("insert", |i: &&'static str, _: &()| {
+        (*i).into()
+    })];
+    let picker = Picker::new(
+        columns,
+        0,
+        items,
+        (),
+        |cx, item: &&'static str, _| match *item {
+            "Link" => typed::run_command_line(cx, "markdown-link"),
+            "Table of Contents" => {
+                let mut cx = Context {
+                    register: None,
+                    count: None,
+                    editor: cx.editor,
+                    callback: Vec::new(),
+                    on_next_key_callback: None,
+                    jobs: cx.jobs,
+                };
+                insert_toc(&mut cx);
+            }
+            prompted => {
+                // The image and table steps ask a question first; their prompt has
+                // to reach the compositor, which a picker callback cannot touch.
+                let image = prompted == "Image";
+                let call: job::Callback =
+                    Callback::EditorCompositor(Box::new(move |_editor, compositor| {
+                        compositor.push(Box::new(if image {
+                            md_image_prompt()
+                        } else {
+                            md_table_prompt()
+                        }));
+                    }));
+                cx.jobs.callback(async move { Ok(call) });
+            }
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -12453,7 +12534,10 @@ fn run_pandoc(cx: &mut crate::compositor::Context, args: &[&str], done: &str) ->
         Ok(out) => {
             cx.editor.set_error(format!(
                 "pandoc: {}",
-                String::from_utf8_lossy(&out.stderr).lines().next().unwrap_or("failed")
+                String::from_utf8_lossy(&out.stderr)
+                    .lines()
+                    .next()
+                    .unwrap_or("failed")
             ));
             false
         }
@@ -12474,8 +12558,16 @@ fn md_export(cx: &mut Context) {
     };
     let suggested = path.with_extension("html");
     prompt_then(cx, "export to (.html .pdf .docx): ", move |cx, target| {
-        let target = if target.is_empty() { suggested.display().to_string() } else { target.to_string() };
-        run_pandoc(cx, &[&path.display().to_string(), "-s", "-o", &target], &format!("exported to {target}"));
+        let target = if target.is_empty() {
+            suggested.display().to_string()
+        } else {
+            target.to_string()
+        };
+        run_pandoc(
+            cx,
+            &[&path.display().to_string(), "-s", "-o", &target],
+            &format!("exported to {target}"),
+        );
     });
 }
 
@@ -12485,7 +12577,11 @@ fn md_import_docx(cx: &mut Context) {
     prompt_then(cx, "Word document: ", |cx, docx| {
         let target = Path::new(docx).with_extension("md");
         let target_str = target.display().to_string();
-        if run_pandoc(cx, &[docx, "-t", "gfm", "-o", &target_str], &format!("imported to {target_str}")) {
+        if run_pandoc(
+            cx,
+            &[docx, "-t", "gfm", "-o", &target_str],
+            &format!("imported to {target_str}"),
+        ) {
             if let Err(e) = cx.editor.open(&target, Action::Replace) {
                 cx.editor.set_error(format!("{target_str}: {e}"));
             }
@@ -12530,7 +12626,8 @@ fn md_set_heading(cx: &mut Context, level_of: impl Fn(usize) -> Option<usize>) {
     let start = text.line_to_char(line);
     let end = start + old.chars().count();
     let new = md_with_heading_level(old, level);
-    let transaction = Transaction::change(doc.text(), std::iter::once((start, end, Some(new.into()))));
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((start, end, Some(new.into()))));
     doc.apply(&transaction, view.id);
 }
 
@@ -12552,7 +12649,9 @@ fn md_set_header_style(cx: &mut Context) {
     let styles: Vec<String> = std::iter::once("Normal text".to_string())
         .chain((1..=6).map(|n| format!("Header {n}")))
         .collect();
-    let columns = [PickerColumn::new("style", |s: &String, _: &()| s.as_str().into())];
+    let columns = [PickerColumn::new("style", |s: &String, _: &()| {
+        s.as_str().into()
+    })];
     let picker = Picker::new(columns, 0, styles, (), |cx, style: &String, _| {
         let level = style
             .strip_prefix("Header ")
@@ -12578,7 +12677,10 @@ mod md_heading_tests {
     #[test]
     fn inline_links_but_not_images() {
         let links = md_inline_links("see [docs](https://x.io) and ![pic](p.png)");
-        assert_eq!(vec![(4, 24, "docs".to_string(), "https://x.io".to_string())], links);
+        assert_eq!(
+            vec![(4, 24, "docs".to_string(), "https://x.io".to_string())],
+            links
+        );
     }
 
     #[test]
@@ -14385,11 +14487,7 @@ fn set_numbered_bookmark(cx: &mut Context) {
         // mnemonic letters those differ (`a` is slot 10).
         let key = crate::numbered_bookmarks::char_of(slot).unwrap_or('?');
         cx.editor.set_status(match replaced {
-            Some(old) => format!(
-                "bookmark {key} moved from line {} to {}",
-                old + 1,
-                line + 1
-            ),
+            Some(old) => format!("bookmark {key} moved from line {} to {}", old + 1, line + 1),
             None => format!("bookmark {key} set at line {}", line + 1),
         });
     })
@@ -14445,7 +14543,10 @@ fn goto_numbered_bookmark(cx: &mut Context) {
 
 /// ne `UnsetBookmark`: forget one of the document's numbered slots.
 fn unset_numbered_bookmark(cx: &mut Context) {
-    cx.editor.autoinfo = Some(Info::new("Unset bookmark", &[("0-9 a-z", "forget that slot")]));
+    cx.editor.autoinfo = Some(Info::new(
+        "Unset bookmark",
+        &[("0-9 a-z", "forget that slot")],
+    ));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         let Some(slot) = event.char().and_then(crate::numbered_bookmarks::slot_of) else {
@@ -14821,8 +14922,7 @@ fn toggle_find_in_selection(cx: &mut Context) {
         return;
     }
     if to <= from {
-        cx.editor
-            .set_error("select the region to search in first");
+        cx.editor.set_error("select the region to search in first");
         return;
     }
     cx.editor.find_in_selection = Some((doc_id, from, to));
@@ -15580,7 +15680,11 @@ fn extend_search_prev_vim(cx: &mut Context) {
 /// ≤1-char range over a word char grows to the whole surrounding word (vim's
 /// `*`/`#`/`SPC *` semantics); anything longer, or a cursor on a non-word char,
 /// is returned unchanged.
-pub(crate) fn expand_bare_cursor_to_word(text: RopeSlice, from: usize, to: usize) -> (usize, usize) {
+pub(crate) fn expand_bare_cursor_to_word(
+    text: RopeSlice,
+    from: usize,
+    to: usize,
+) -> (usize, usize) {
     if to.saturating_sub(from) > 1 || from >= text.len_chars() || !char_is_word(text.char(from)) {
         return (from, to);
     }
@@ -16498,9 +16602,8 @@ fn isearch_exit(cx: &mut Context) {
     // will look for it.
     let (regexp, raw) = isearch_with(|s| (s.flags.regexp, s.raw.clone()));
     if regexp && !raw.is_empty() {
-        ISEARCH_REGEXP_RING.with(|ring| {
-            isearch_ring_update(&mut ring.borrow_mut(), &raw, REGEXP_SEARCH_RING_MAX)
-        });
+        ISEARCH_REGEXP_RING
+            .with(|ring| isearch_ring_update(&mut ring.borrow_mut(), &raw, REGEXP_SEARCH_RING_MAX));
     }
     let origin = isearch_with(|s| {
         s.ring_index = 0;
@@ -16619,23 +16722,27 @@ fn isearch_char_by_name(cx: &mut Context) {
         cx.editor.set_error("No current search");
         return;
     }
-    prompt_then(cx, "Add char to search string (Unicode name or hex): ", |cx, input| {
-        if let Some(ch) = char_by_name_or_code(input) {
-            isearch_append(cx.editor, &ch.to_string());
-            return;
-        }
-        // zmax's digraph mnemonics still resolve, so `a:` keeps working for
-        // anyone who reaches for vim's two-key form rather than the full name.
-        let mut chars = input.trim().chars();
-        if let (Some(a), Some(b), None) = (chars.next(), chars.next(), chars.next()) {
-            if let Some(ch) = digraph_lookup(a, b) {
+    prompt_then(
+        cx,
+        "Add char to search string (Unicode name or hex): ",
+        |cx, input| {
+            if let Some(ch) = char_by_name_or_code(input) {
                 isearch_append(cx.editor, &ch.to_string());
                 return;
             }
-        }
-        cx.editor
-            .set_error(format!("No character named '{}'", input.trim()));
-    });
+            // zmax's digraph mnemonics still resolve, so `a:` keeps working for
+            // anyone who reaches for vim's two-key form rather than the full name.
+            let mut chars = input.trim().chars();
+            if let (Some(a), Some(b), None) = (chars.next(), chars.next(), chars.next()) {
+                if let Some(ch) = digraph_lookup(a, b) {
+                    isearch_append(cx.editor, &ch.to_string());
+                    return;
+                }
+            }
+            cx.editor
+                .set_error(format!("No character named '{}'", input.trim()));
+        },
+    );
 }
 
 /// Emacs `isearch-emoji-by-name` (`C-x 8 e RET` while searching): "Read an Emoji
@@ -19561,8 +19668,10 @@ fn power_save_mode(cx: &mut Context) {
             }
         }
     });
-    cx.editor
-        .set_status(format!("power save mode: {}", if on { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "power save mode: {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// The gutters, buffer-line setting and status-line flag
@@ -19684,8 +19793,7 @@ fn toggle_breadcrumbs(cx: &mut Context) {
 /// "Show Sticky Lines" and "Configure Sticky Lines…". On, five, as the IDE
 /// ships them.
 static STICKY_LINES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
-static STICKY_LINES_LIMIT: std::sync::atomic::AtomicUsize =
-    std::sync::atomic::AtomicUsize::new(5);
+static STICKY_LINES_LIMIT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(5);
 
 /// The languages whose buffers never pin scope headers — JetBrains "Disable
 /// for <language>" on the sticky-lines panel.
@@ -20641,14 +20749,13 @@ fn ediff_merge_directories_with_ancestor(cx: &mut Context) {
                         ui::PickerColumn::new("file", |item: &(String, MergeGroupRow), _: &()| {
                             item.0.as_str().into()
                         }),
-                        ui::PickerColumn::new(
-                            "merge",
-                            |item: &(String, MergeGroupRow), _: &()| match &item.1 {
+                        ui::PickerColumn::new("merge", |item: &(String, MergeGroupRow), _: &()| {
+                            match &item.1 {
                                 MergeGroupRow::ThreeWay => "3-way (ancestor)".into(),
                                 MergeGroupRow::TwoWay => "2-way".into(),
                                 MergeGroupRow::OnlyIn(where_) => format!("only in {where_}").into(),
-                            },
-                        ),
+                            }
+                        }),
                     ];
                     let picker = Picker::new(
                         columns,
@@ -21623,7 +21730,8 @@ fn info_up(cx: &mut Context) {
 /// Emacs `Info-history-back` (`l`): back to the node visited before this one.
 fn info_history_back(cx: &mut Context) {
     let Some(_) = info_current_node(cx.editor) else {
-        cx.editor.set_error("Info-history-back: not in an Info buffer");
+        cx.editor
+            .set_error("Info-history-back: not in an Info buffer");
         return;
     };
     let id = doc!(cx.editor).id();
@@ -21637,7 +21745,9 @@ fn info_history_back(cx: &mut Context) {
         Some(node) => {
             info_display_node(cx.editor, &node, None);
         }
-        None => cx.editor.set_error("This is the first Info node you looked at"),
+        None => cx
+            .editor
+            .set_error("This is the first Info node you looked at"),
     }
 }
 
@@ -21822,19 +21932,12 @@ fn info_search(cx: &mut Context) {
         .boxed()
     };
 
-    let picker =
-        Picker::new(
-            columns,
-            0,
-            [],
-            (),
-            move |cx, item: &InfoEntry, _action| {
-                // An Info-mode buffer: the node's own `n`/`p`/`u`/`l`/`RET`
-                // navigation is live from here, as it is in emacs.
-                info_open_node(cx.editor, &item.node);
-            },
-        )
-        .with_dynamic_query(get_nodes, Some(275));
+    let picker = Picker::new(columns, 0, [], (), move |cx, item: &InfoEntry, _action| {
+        // An Info-mode buffer: the node's own `n`/`p`/`u`/`l`/`RET`
+        // navigation is live from here, as it is in emacs.
+        info_open_node(cx.editor, &item.node);
+    })
+    .with_dynamic_query(get_nodes, Some(275));
     let picker = match seed {
         Some(q) => picker.with_query(q, cx.editor),
         None => picker,
@@ -26297,17 +26400,23 @@ fn global_search_in_scope(cx: &mut Context) {
         PickerColumn::new("scope", |r: &(String, String), _: &()| r.0.as_str().into()),
         PickerColumn::new("glob", |r: &(String, String), _: &()| r.1.as_str().into()),
     ];
-    let picker = Picker::new(columns, 0, rows, (), |cx, row: &(String, String), _action| {
-        let mask = row.1.clone();
-        cx.jobs.callback(async move {
-            let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
-                move |editor: &mut Editor, compositor: &mut Compositor| {
-                    compositor.push(build_global_search_picker(editor, None, Some(mask), None));
-                },
-            ));
-            Ok(call)
-        });
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        rows,
+        (),
+        |cx, row: &(String, String), _action| {
+            let mask = row.1.clone();
+            cx.jobs.callback(async move {
+                let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+                    move |editor: &mut Editor, compositor: &mut Compositor| {
+                        compositor.push(build_global_search_picker(editor, None, Some(mask), None));
+                    },
+                ));
+                Ok(call)
+            });
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -26326,7 +26435,6 @@ fn build_global_search_picker(
     // call site, which a compositor callback has no access to.
     register: Option<char>,
 ) -> Box<dyn Component> {
-
     #[derive(Debug)]
     struct FileResult<'a> {
         path: Cow<'a, Path>,
@@ -29217,7 +29325,9 @@ fn abbrev_adjust_case(name: &str, expansion: &str, all_caps: bool) -> String {
             .collect();
     }
     // All caps.
-    let words = expansion.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty());
+    let words = expansion
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty());
     if !all_caps && words.count() > 1 {
         upcase_initials(expansion)
     } else {
@@ -34373,8 +34483,7 @@ fn cwarn_c_docs() -> &'static std::sync::Mutex<std::collections::HashSet<Documen
 /// bail on a single relaxed load. Deriving the same answer from `cwarn_docs`
 /// would take a mutex on the editor's hottest path for the overwhelmingly common
 /// case where cwarn-mode is off everywhere.
-static CWARN_ANYWHERE: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
+static CWARN_ANYWHERE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Recompute [`CWARN_ANYWHERE`]. Called wherever cwarn's on-ness changes.
 fn cwarn_refresh_anywhere() {
@@ -36349,9 +36458,13 @@ fn bookmarks_view(cx: &mut Context) {
         .collect();
     let columns = [
         PickerColumn::new("file", |b: &Bookmark, _: &()| b.display.as_str().into()),
-        PickerColumn::new("line", |b: &Bookmark, _: &()| (b.line + 1).to_string().into()),
+        PickerColumn::new("line", |b: &Bookmark, _: &()| {
+            (b.line + 1).to_string().into()
+        }),
         PickerColumn::new("text", |b: &Bookmark, _: &()| b.text.as_str().into()),
-        PickerColumn::new("description", |b: &Bookmark, _: &()| b.description.as_str().into()),
+        PickerColumn::new("description", |b: &Bookmark, _: &()| {
+            b.description.as_str().into()
+        }),
         PickerColumn::new("list", |b: &Bookmark, _: &()| b.lists.as_str().into()),
     ];
     let picker = Picker::new(columns, 0, items, (), |cx, bookmark: &Bookmark, action| {
@@ -36390,7 +36503,14 @@ static PREVIEW_TAB: std::sync::Mutex<Option<DocumentId>> = std::sync::Mutex::new
 /// Open `path` at 0-based `line` and `col`. With `preview`, the buffer the
 /// previous preview opened is closed, if nothing else holds it, and this one
 /// becomes the preview — unless it was open already.
-pub(crate) fn open_at(editor: &mut Editor, path: &Path, line: usize, col: usize, action: Action, preview: bool) {
+pub(crate) fn open_at(
+    editor: &mut Editor,
+    path: &Path,
+    line: usize,
+    col: usize,
+    action: Action,
+    preview: bool,
+) {
     let was_open = editor.document_by_path(path).map(|d| d.id());
     let previous = PREVIEW_TAB.lock().unwrap().take();
     match editor.open(path, action) {
@@ -36419,7 +36539,14 @@ pub(crate) fn open_at(editor: &mut Editor, path: &Path, line: usize, col: usize,
 
 /// Open a bookmark from the Bookmarks views, honouring their preview-tab option.
 pub(crate) fn open_bookmark(editor: &mut Editor, path: &Path, line: usize, action: Action) {
-    open_at(editor, path, line, 0, action, line_bookmarks::options().preview_tab);
+    open_at(
+        editor,
+        path,
+        line,
+        0,
+        action,
+        line_bookmarks::options().preview_tab,
+    );
 }
 
 fn bookmark_cycle(cx: &mut Context, forward: bool) {
@@ -36560,13 +36687,17 @@ fn bookmark_add_to_list(cx: &mut Context) {
         cx.editor.set_error("Cannot bookmark a scratch buffer");
         return;
     };
-    cx.push_layer(Box::new(bookmark_list_prompt("add bookmark to list:", move |cx, list| {
-        cx.editor.set_status(if line_bookmarks::add_to(list, &path, line) {
-            format!("Bookmark added to {list}")
-        } else {
-            format!("Already in {list}")
-        });
-    })));
+    cx.push_layer(Box::new(bookmark_list_prompt(
+        "add bookmark to list:",
+        move |cx, list| {
+            cx.editor
+                .set_status(if line_bookmarks::add_to(list, &path, line) {
+                    format!("Bookmark added to {list}")
+                } else {
+                    format!("Already in {list}")
+                });
+        },
+    )));
 }
 
 /// JetBrains "Create Bookmark List…" (`BookmarksView.Create`).
@@ -36583,58 +36714,81 @@ fn bookmark_list_create(cx: &mut Context) {
 /// JetBrains "Mark as Default List" (`BookmarksView.DefaultGroup`): the list
 /// Toggle Bookmark puts new bookmarks in.
 fn bookmark_list_set_default(cx: &mut Context) {
-    cx.push_layer(Box::new(bookmark_list_prompt("default bookmark list:", |cx, name| {
-        if line_bookmarks::set_default_list(name) {
-            cx.editor.set_status(format!("New bookmarks go into {name}"));
-        } else {
-            cx.editor.set_error(format!("No bookmark list named {name}"));
-        }
-    })));
+    cx.push_layer(Box::new(bookmark_list_prompt(
+        "default bookmark list:",
+        |cx, name| {
+            if line_bookmarks::set_default_list(name) {
+                cx.editor
+                    .set_status(format!("New bookmarks go into {name}"));
+            } else {
+                cx.editor
+                    .set_error(format!("No bookmark list named {name}"));
+            }
+        },
+    )));
 }
 
 /// JetBrains "Delete" on a bookmark list: remove the list and its
 /// bookmarks, asking first while "Ask Before Deleting Lists" is on.
 fn bookmark_list_delete(cx: &mut Context) {
-    cx.push_layer(Box::new(bookmark_list_prompt("delete bookmark list:", |cx, name| {
-        let name = name.to_owned();
-        if !line_bookmarks::list_names().contains(&name) {
-            cx.editor.set_error(format!("No bookmark list named {name}"));
-            return;
-        }
-        let delete = move |cx: &mut compositor::Context| {
-            line_bookmarks::delete_list(&name);
-            cx.editor.set_status(format!("Bookmark list {name} deleted"));
-        };
-        if line_bookmarks::options().confirm_list_delete {
-            let question = "Delete the bookmark list and its bookmarks? (y/n)".to_string();
-            let confirm = crate::ui::confirm::Confirm::new(question, "list kept", delete);
-            crate::compositor::defer([Box::new(move |compositor: &mut Compositor, _: &mut compositor::Context| {
-                compositor.push(Box::new(confirm));
-            }) as compositor::Callback]);
-        } else {
-            delete(cx);
-        }
-    })));
+    cx.push_layer(Box::new(bookmark_list_prompt(
+        "delete bookmark list:",
+        |cx, name| {
+            let name = name.to_owned();
+            if !line_bookmarks::list_names().contains(&name) {
+                cx.editor
+                    .set_error(format!("No bookmark list named {name}"));
+                return;
+            }
+            let delete = move |cx: &mut compositor::Context| {
+                line_bookmarks::delete_list(&name);
+                cx.editor
+                    .set_status(format!("Bookmark list {name} deleted"));
+            };
+            if line_bookmarks::options().confirm_list_delete {
+                let question = "Delete the bookmark list and its bookmarks? (y/n)".to_string();
+                let confirm = crate::ui::confirm::Confirm::new(question, "list kept", delete);
+                crate::compositor::defer([Box::new(
+                    move |compositor: &mut Compositor, _: &mut compositor::Context| {
+                        compositor.push(Box::new(confirm));
+                    },
+                ) as compositor::Callback]);
+            } else {
+                delete(cx);
+            }
+        },
+    )));
 }
 
 /// JetBrains "Ask Before Deleting Lists" (`BookmarksView.AskBeforeDeletingLists`).
 fn toggle_bookmark_list_delete_confirm(cx: &mut Context) {
-    let on = line_bookmarks::set_options(|o| o.confirm_list_delete = !o.confirm_list_delete).confirm_list_delete;
-    cx.editor.set_status(format!("ask before deleting bookmark lists: {}", if on { "on" } else { "off" }));
+    let on = line_bookmarks::set_options(|o| o.confirm_list_delete = !o.confirm_list_delete)
+        .confirm_list_delete;
+    cx.editor.set_status(format!(
+        "ask before deleting bookmark lists: {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// JetBrains "Ask Before Rewriting Mnemonic" (`BookmarksView.RewriteBookmarkType`).
 fn toggle_bookmark_mnemonic_confirm(cx: &mut Context) {
     let on = line_bookmarks::set_options(|o| o.confirm_mnemonic_move = !o.confirm_mnemonic_move)
         .confirm_mnemonic_move;
-    cx.editor.set_status(format!("ask before moving a mnemonic: {}", if on { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "ask before moving a mnemonic: {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// JetBrains "Sort Bookmarks by Type && Name" (`BookmarksView.SortGroupBookmarks`):
 /// list bookmarks by file and line, or in the order they were added and moved.
 fn toggle_bookmarks_sort(cx: &mut Context) {
     let on = line_bookmarks::set_options(|o| o.sort = !o.sort).sort;
-    cx.editor.set_status(if on { "bookmarks sorted by file and line" } else { "bookmarks in list order" });
+    cx.editor.set_status(if on {
+        "bookmarks sorted by file and line"
+    } else {
+        "bookmarks in list order"
+    });
 }
 
 /// JetBrains "Always Select Opened Element" (`BookmarksView.AutoscrollFromSource`):
@@ -36642,7 +36796,10 @@ fn toggle_bookmarks_sort(cx: &mut Context) {
 fn toggle_bookmarks_autoscroll_from_source(cx: &mut Context) {
     let on = line_bookmarks::set_options(|o| o.autoscroll_from_source = !o.autoscroll_from_source)
         .autoscroll_from_source;
-    cx.editor.set_status(format!("bookmarks follow the editor: {}", if on { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "bookmarks follow the editor: {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// JetBrains "Navigate with Single Click" (`BookmarksView.AutoscrollToSource`):
@@ -36650,7 +36807,10 @@ fn toggle_bookmarks_autoscroll_from_source(cx: &mut Context) {
 fn toggle_bookmarks_autoscroll_to_source(cx: &mut Context) {
     let on = line_bookmarks::set_options(|o| o.autoscroll_to_source = !o.autoscroll_to_source)
         .autoscroll_to_source;
-    cx.editor.set_status(format!("open bookmarks on selection: {}", if on { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "open bookmarks on selection: {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// JetBrains "Enable Preview Tab" (`BookmarksView.OpenInPreviewTab`): a
@@ -36658,7 +36818,10 @@ fn toggle_bookmarks_autoscroll_to_source(cx: &mut Context) {
 /// one opened, when nothing else has touched it.
 fn toggle_bookmarks_preview_tab(cx: &mut Context) {
     let on = line_bookmarks::set_options(|o| o.preview_tab = !o.preview_tab).preview_tab;
-    cx.editor.set_status(format!("bookmark preview tab: {}", if on { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "bookmark preview tab: {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// JetBrains "Edit Bookmark Description" (`BookmarksView.Rename`): the text
@@ -36678,7 +36841,11 @@ fn bookmark_edit_description(cx: &mut Context) {
         move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
             if event == PromptEvent::Validate {
                 let text = input.trim();
-                line_bookmarks::set_description(&path, line, (!text.is_empty()).then(|| text.to_owned()));
+                line_bookmarks::set_description(
+                    &path,
+                    line,
+                    (!text.is_empty()).then(|| text.to_owned()),
+                );
                 cx.editor.set_status("Bookmark description set");
             }
         },
@@ -36698,11 +36865,12 @@ fn bookmark_move(cx: &mut Context, up: bool) {
         return;
     }
     let moved = line_bookmarks::move_mark(&path, line, up);
-    cx.editor.set_status(match (moved, line_bookmarks::options().sort) {
-        (false, _) => "The bookmark is at that end of its list already",
-        (true, true) => "Bookmark moved; turn sorting off to list them in this order",
-        (true, false) => "Bookmark moved",
-    });
+    cx.editor
+        .set_status(match (moved, line_bookmarks::options().sort) {
+            (false, _) => "The bookmark is at that end of its list already",
+            (true, true) => "Bookmark moved; turn sorting off to list them in this order",
+            (true, false) => "Bookmark moved",
+        });
 }
 
 fn bookmark_move_up(cx: &mut Context) {
@@ -36744,7 +36912,9 @@ fn ask_then(
     on_yes: impl FnOnce(&mut compositor::Context) + 'static,
 ) {
     cx.callback.push(Box::new(move |compositor, _| {
-        compositor.push(Box::new(crate::ui::confirm::Confirm::new(question, on_no, on_yes)));
+        compositor.push(Box::new(crate::ui::confirm::Confirm::new(
+            question, on_no, on_yes,
+        )));
     }));
 }
 
@@ -36769,7 +36939,9 @@ fn toggle_mnemonic_bookmark(cx: &mut Context, mnemonic: char) {
     // JetBrains "Ask Before Rewriting Mnemonic": the mnemonic is on another
     // line, and moving it takes that line's bookmark away.
     let elsewhere = mnemonics.iter().find(|(m, _, _)| *m == mnemonic);
-    if let Some((_, old_path, old_line)) = elsewhere.filter(|_| line_bookmarks::options().confirm_mnemonic_move) {
+    if let Some((_, old_path, old_line)) =
+        elsewhere.filter(|_| line_bookmarks::options().confirm_mnemonic_move)
+    {
         let question = format!(
             "Bookmark {mnemonic} is on {}:{}; move it here? (y/n)",
             old_path.display(),
@@ -36856,20 +37028,31 @@ fn mnemonic_bookmarks_picker(cx: &mut Context) {
             m.0.to_string().into()
         }),
         PickerColumn::new("location", |m: &(char, PathBuf, usize), root: &PathBuf| {
-            format!("{}:{}", m.1.strip_prefix(root).unwrap_or(&m.1).display(), m.2 + 1).into()
+            format!(
+                "{}:{}",
+                m.1.strip_prefix(root).unwrap_or(&m.1).display(),
+                m.2 + 1
+            )
+            .into()
         }),
     ];
-    let picker = Picker::new(columns, 0, marks, root, |cx, mark: &(char, PathBuf, usize), _| {
-        let mut cx = Context {
-            register: None,
-            count: None,
-            editor: cx.editor,
-            callback: Vec::new(),
-            on_next_key_callback: None,
-            jobs: cx.jobs,
-        };
-        goto_mnemonic_bookmark(&mut cx, mark.0);
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        marks,
+        root,
+        |cx, mark: &(char, PathBuf, usize), _| {
+            let mut cx = Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            goto_mnemonic_bookmark(&mut cx, mark.0);
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -37434,11 +37617,7 @@ fn collect_keytrie_commands(
 /// directory bound to it (`project-any-command`); with `for_buffer`, the list is
 /// narrowed to the commands the buffer's major mode declares
 /// (`execute-extended-command-for-buffer`, `M-X`).
-fn command_palette_filtered(
-    cx: &mut Context,
-    root: Option<std::path::PathBuf>,
-    for_buffer: bool,
-) {
+fn command_palette_filtered(cx: &mut Context, root: Option<std::path::PathBuf>, for_buffer: bool) {
     let register = cx.register;
     let count = cx.count;
 
@@ -37460,9 +37639,9 @@ fn command_palette_filtered(
                         "M-X: {} command(s) for this buffer's major mode",
                         names.len()
                     )),
-                    None => cx
-                        .editor
-                        .set_status("M-X: this buffer's major mode declares no commands — showing all"),
+                    None => cx.editor.set_status(
+                        "M-X: this buffer's major mode declares no commands — showing all",
+                    ),
                 }
             }
 
@@ -39969,7 +40148,9 @@ fn show_diff_for_lines(cx: &mut Context) {
         })
     };
     match body {
-        None => cx.editor.set_status("This file has no version-control diff"),
+        None => cx
+            .editor
+            .set_status("This file has no version-control diff"),
         Some(None) => cx.editor.set_status("The selected lines are unchanged"),
         Some(Some(body)) => show_text_in_scratch(cx.editor, &body),
     }
@@ -46071,10 +46252,13 @@ fn ps_runs_into_lines(runs: &[PsRun]) -> Vec<Vec<PsRun>> {
                 lines.push(Vec::new());
             }
             if !part.is_empty() {
-                lines.last_mut().expect("a line is always open").push(PsRun {
-                    text: part.to_string(),
-                    face: run.face,
-                });
+                lines
+                    .last_mut()
+                    .expect("a line is always open")
+                    .push(PsRun {
+                        text: part.to_string(),
+                        face: run.face,
+                    });
             }
         }
     }
@@ -46226,8 +46410,7 @@ fn ps_face_runs(editor: &Editor, chars: std::ops::Range<usize>) -> Vec<PsRun> {
     let mut style = Style::default();
     let mut start = from_byte;
     if let Some(syntax) = doc.syntax() {
-        let mut highlighter =
-            syntax.highlighter(text, &loader, from_byte as u32..to_byte as u32);
+        let mut highlighter = syntax.highlighter(text, &loader, from_byte as u32..to_byte as u32);
         loop {
             let next = highlighter.next_event_offset();
             if next == u32::MAX {
@@ -47348,7 +47531,10 @@ const XREF_MARKER_RING_LENGTH: usize = 16;
 /// cancelled pick pushes nothing.
 pub(crate) fn xref_push_marker(editor: &Editor) {
     let (view, doc) = current_ref!(editor);
-    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let pos = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     let Ok(mut ring) = XREF_MARKERS.lock() else {
         return;
     };
@@ -47358,7 +47544,10 @@ pub(crate) fn xref_push_marker(editor: &Editor) {
 /// Push one marker onto the ring, dropping the oldest once it is full. A ring,
 /// not an unbounded stack — emacs's `xref-marker-ring-length` bounds it the same
 /// way. Pure — unit tested.
-fn xref_ring_push(ring: &mut Vec<(zmax_view::DocumentId, usize)>, entry: (zmax_view::DocumentId, usize)) {
+fn xref_ring_push(
+    ring: &mut Vec<(zmax_view::DocumentId, usize)>,
+    entry: (zmax_view::DocumentId, usize),
+) {
     ring.push(entry);
     if ring.len() > XREF_MARKER_RING_LENGTH {
         ring.remove(0);
@@ -48345,7 +48534,12 @@ fn copy_between_registers(cx: &mut Context) {
 /// Lookup actions do (see [`crate::ui::EditorView::completion_key`]). With
 /// `replace`, an acceptance replaces the identifier right of the cursor; `then`
 /// runs after it, when a menu was open.
-fn completion_menu_key(cx: &mut Context, key: KeyEvent, replace: bool, then: Option<fn(&mut Context)>) {
+fn completion_menu_key(
+    cx: &mut Context,
+    key: KeyEvent,
+    replace: bool,
+    then: Option<fn(&mut Context)>,
+) {
     cx.callback.push(Box::new(move |compositor, cx| {
         let Some(view) = compositor.find::<crate::ui::EditorView>() else {
             return;
@@ -48389,14 +48583,24 @@ fn completion_accept_replace(cx: &mut Context) {
 
 /// JetBrains `EditorChooseLookupItemDot`: accept the item and type a `.`.
 fn completion_accept_dot(cx: &mut Context) {
-    completion_menu_key(cx, crate::key!(Enter), false, Some(|cx| insert_at_cursors(cx.editor, ".")));
+    completion_menu_key(
+        cx,
+        crate::key!(Enter),
+        false,
+        Some(|cx| insert_at_cursors(cx.editor, ".")),
+    );
 }
 
 /// JetBrains "Complete Statement" in the lookup
 /// (`EditorChooseLookupItemCompleteStatement`, Cmd-Shift-Enter): accept the
 /// item, then complete the statement around it.
 fn completion_accept_complete_statement(cx: &mut Context) {
-    completion_menu_key(cx, crate::key!(Enter), false, Some(complete_current_statement));
+    completion_menu_key(
+        cx,
+        crate::key!(Enter),
+        false,
+        Some(complete_current_statement),
+    );
 }
 
 /// JetBrains "Toggle Center View" (`EditorCenterView`): draw each window's
@@ -48404,7 +48608,11 @@ fn completion_accept_complete_statement(cx: &mut Context) {
 fn toggle_center_view(cx: &mut Context) {
     let on = !zmax_view::view::center_view();
     zmax_view::view::set_center_view(on);
-    cx.editor.set_status(if on { "center view on" } else { "center view off" });
+    cx.editor.set_status(if on {
+        "center view on"
+    } else {
+        "center view off"
+    });
 }
 
 /// JetBrains "Scroll to Top" (`EditorScrollTop`): show the start of the file
@@ -53722,8 +53930,7 @@ fn repl_send_statement(cx: &mut Context) {
         return;
     };
     open_overlay(cx, move |_editor| {
-        Ok(Box::new(crate::ui::repl::ReplPanel::with_input(lang, &src))
-            as Box<dyn Component>)
+        Ok(Box::new(crate::ui::repl::ReplPanel::with_input(lang, &src)) as Box<dyn Component>)
     });
 }
 
@@ -53759,7 +53966,9 @@ fn dashboard(cx: &mut Context) {
 /// Reopen the start screen shown on a no-args launch (vim-startify `:Startify`,
 /// spacemacs `SPC b h` home buffer).
 fn startify(cx: &mut Context) {
-    open_overlay(cx, |_editor| Ok(Box::new(crate::ui::Startify::new()) as Box<dyn Component>));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::Startify::new()) as Box<dyn Component>)
+    });
 }
 
 /// Open an integrated terminal running the user's `$SHELL` in a PTY.
@@ -53939,13 +54148,16 @@ fn terminal_new_predefined_session(cx: &mut Context) {
         cx.editor.set_status("/etc/shells lists no shells");
         return;
     }
-    let columns = [PickerColumn::new("shell", |s: &String, _: &()| s.as_str().into())];
+    let columns = [PickerColumn::new("shell", |s: &String, _: &()| {
+        s.as_str().into()
+    })];
     let picker = Picker::new(columns, 0, shells, (), |cx, shell: &String, _| {
         let shell = shell.clone();
         let cwd = std::env::current_dir().ok();
-        let call: job::Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
-            open_terminal_panel(editor, compositor, Some(&shell), cwd.as_deref())
-        }));
+        let call: job::Callback =
+            Callback::EditorCompositor(Box::new(move |editor, compositor| {
+                open_terminal_panel(editor, compositor, Some(&shell), cwd.as_deref())
+            }));
         cx.jobs.callback(async move { Ok(call) });
     });
     cx.push_layer(Box::new(overlaid(picker)));
@@ -53977,7 +54189,10 @@ fn parse_shell_history(bytes: &[u8]) -> Vec<String> {
     let mut pending = String::new();
     for line in text.lines() {
         let line = if pending.is_empty() {
-            match line.strip_prefix(": ").and_then(|rest| rest.split_once(';')) {
+            match line
+                .strip_prefix(": ")
+                .and_then(|rest| rest.split_once(';'))
+            {
                 Some((_stamp, command)) => command,
                 None => line,
             }
@@ -53997,7 +54212,11 @@ fn parse_shell_history(bytes: &[u8]) -> Vec<String> {
     }
 
     let mut seen = std::collections::HashSet::new();
-    entries.into_iter().rev().filter(|e| seen.insert(e.clone())).collect()
+    entries
+        .into_iter()
+        .rev()
+        .filter(|e| seen.insert(e.clone()))
+        .collect()
 }
 
 /// The history file of the shell the terminal runs: `$HISTFILE` when it is
@@ -54028,15 +54247,18 @@ fn terminal_search_history(cx: &mut Context) {
         cx.editor.set_status("No shell history found");
         return;
     }
-    let columns = [PickerColumn::new("command", |c: &String, _: &()| c.as_str().into())];
+    let columns = [PickerColumn::new("command", |c: &String, _: &()| {
+        c.as_str().into()
+    })];
     let picker = Picker::new(columns, 0, entries, (), |cx, command: &String, _| {
         let command = command.clone();
-        let call: job::Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
-            match compositor.find::<crate::ui::terminal::TerminalPanel>() {
-                Some(panel) => panel.paste(&command),
-                None => editor.set_error("term: no terminal panel (open one with `terminal`)"),
-            }
-        }));
+        let call: job::Callback =
+            Callback::EditorCompositor(Box::new(move |editor, compositor| {
+                match compositor.find::<crate::ui::terminal::TerminalPanel>() {
+                    Some(panel) => panel.paste(&command),
+                    None => editor.set_error("term: no terminal panel (open one with `terminal`)"),
+                }
+            }));
         cx.jobs.callback(async move { Ok(call) });
     });
     cx.push_layer(Box::new(overlaid(picker)));
@@ -55155,19 +55377,27 @@ fn locate_duplicates(cx: &mut Context) {
         }
     }
     let columns = [
-        PickerColumn::new("line", |f: &Finding, _: &()| (f.line + 1).to_string().into()),
+        PickerColumn::new("line", |f: &Finding, _: &()| {
+            (f.line + 1).to_string().into()
+        }),
         PickerColumn::new("lines", |f: &Finding, _: &()| f.len.to_string().into()),
         PickerColumn::new("copies", |f: &Finding, _: &()| f.copies.to_string().into()),
         PickerColumn::new("text", |f: &Finding, _: &()| f.first.as_str().into()),
     ];
-    let picker = Picker::new(columns, 0, findings, (), |cx, finding: &Finding, _action| {
-        let (view, doc) = current!(cx.editor);
-        let text = doc.text();
-        let line = finding.line.min(text.len_lines().saturating_sub(1));
-        let pos = text.line_to_char(line);
-        doc.set_selection(view.id, Selection::point(pos));
-        align_view(doc, view, Align::Center);
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        findings,
+        (),
+        |cx, finding: &Finding, _action| {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text();
+            let line = finding.line.min(text.len_lines().saturating_sub(1));
+            let pos = text.line_to_char(line);
+            doc.set_selection(view.id, Selection::point(pos));
+            align_view(doc, view, Align::Center);
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -55222,7 +55452,11 @@ fn scratch_dir() -> PathBuf {
 /// The first free `scratch.<ext>`, `scratch_1.<ext>`, … name in `dir`, as the
 /// IDE numbers them. Pure but for the existence check — unit tested.
 fn next_scratch_path(dir: &Path, ext: &str, exists: impl Fn(&Path) -> bool) -> PathBuf {
-    let dot = if ext.is_empty() { String::new() } else { format!(".{ext}") };
+    let dot = if ext.is_empty() {
+        String::new()
+    } else {
+        format!(".{ext}")
+    };
     (0..)
         .map(|n| match n {
             0 => dir.join(format!("scratch{dot}")),
@@ -55250,28 +55484,38 @@ fn new_scratch_file(cx: &mut Context) {
     };
     languages.sort();
     let columns = [
-        PickerColumn::new("language", |l: &(String, String), _: &()| l.0.as_str().into()),
-        PickerColumn::new("extension", |l: &(String, String), _: &()| l.1.as_str().into()),
+        PickerColumn::new("language", |l: &(String, String), _: &()| {
+            l.0.as_str().into()
+        }),
+        PickerColumn::new("extension", |l: &(String, String), _: &()| {
+            l.1.as_str().into()
+        }),
     ];
-    let picker = Picker::new(columns, 0, languages, (), |cx, (language, ext): &(String, String), action| {
-        let dir = scratch_dir();
-        if let Err(e) = std::fs::create_dir_all(&dir) {
-            cx.editor.set_error(format!("{}: {e}", dir.display()));
-            return;
-        }
-        let path = next_scratch_path(&dir, ext, Path::exists);
-        if let Err(e) = std::fs::write(&path, "") {
-            cx.editor.set_error(format!("{}: {e}", path.display()));
-            return;
-        }
-        match cx.editor.open(&path, action) {
-            Ok(id) => {
-                let loader = cx.editor.syn_loader.load();
-                let _ = doc_mut!(cx.editor, &id).set_language_by_language_id(language, &loader);
+    let picker = Picker::new(
+        columns,
+        0,
+        languages,
+        (),
+        |cx, (language, ext): &(String, String), action| {
+            let dir = scratch_dir();
+            if let Err(e) = std::fs::create_dir_all(&dir) {
+                cx.editor.set_error(format!("{}: {e}", dir.display()));
+                return;
             }
-            Err(e) => cx.editor.set_error(format!("{}: {e}", path.display())),
-        }
-    });
+            let path = next_scratch_path(&dir, ext, Path::exists);
+            if let Err(e) = std::fs::write(&path, "") {
+                cx.editor.set_error(format!("{}: {e}", path.display()));
+                return;
+            }
+            match cx.editor.open(&path, action) {
+                Ok(id) => {
+                    let loader = cx.editor.syn_loader.load();
+                    let _ = doc_mut!(cx.editor, &id).set_language_by_language_id(language, &loader);
+                }
+                Err(e) => cx.editor.set_error(format!("{}: {e}", path.display())),
+            }
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -55311,7 +55555,10 @@ fn show_scratch_files(cx: &mut Context) {
     for path in files {
         let open = cx.editor.document_by_path(&path);
         scratches.push(Scratch {
-            name: path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+            name: path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default(),
             lines: open.map_or_else(
                 || std::fs::read_to_string(&path).map_or(0, |t| t.lines().count()),
                 |doc| doc.text().len_lines(),
@@ -55332,14 +55579,20 @@ fn show_scratch_files(cx: &mut Context) {
             if s.modified { "[+]" } else { "" }.into()
         }),
     ];
-    let picker = Picker::new(columns, 0, scratches, (), |cx, scratch: &Scratch, action| match &scratch.target {
-        Target::Buffer(id) => cx.editor.switch(*id, action),
-        Target::File(path) => {
-            if let Err(e) = cx.editor.open(path, action) {
-                cx.editor.set_error(format!("{}: {e}", path.display()));
+    let picker = Picker::new(
+        columns,
+        0,
+        scratches,
+        (),
+        |cx, scratch: &Scratch, action| match &scratch.target {
+            Target::Buffer(id) => cx.editor.switch(*id, action),
+            Target::File(path) => {
+                if let Err(e) = cx.editor.open(path, action) {
+                    cx.editor.set_error(format!("{}: {e}", path.display()));
+                }
             }
-        }
-    });
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -55351,13 +55604,19 @@ mod scratch_tests {
     #[test]
     fn scratch_names_count_up_from_the_bare_name() {
         let dir = Path::new("/s");
-        assert_eq!(Path::new("/s/scratch.rs"), next_scratch_path(dir, "rs", |_| false));
+        assert_eq!(
+            Path::new("/s/scratch.rs"),
+            next_scratch_path(dir, "rs", |_| false)
+        );
         let taken = [Path::new("/s/scratch.rs"), Path::new("/s/scratch_1.rs")];
         assert_eq!(
             Path::new("/s/scratch_2.rs"),
             next_scratch_path(dir, "rs", |p| taken.contains(&p))
         );
-        assert_eq!(Path::new("/s/scratch"), next_scratch_path(dir, "", |_| false));
+        assert_eq!(
+            Path::new("/s/scratch"),
+            next_scratch_path(dir, "", |_| false)
+        );
     }
 }
 
@@ -55566,8 +55825,11 @@ fn project_tree_action(
         let ran = compositor
             .find::<crate::ui::EditorView>()
             .and_then(|view| view.with_project_tree(f));
-        cx.editor
-            .set_status(if ran.is_some() { done } else { "no project tree" });
+        cx.editor.set_status(if ran.is_some() {
+            done
+        } else {
+            "no project tree"
+        });
     }));
 }
 
@@ -55605,7 +55867,8 @@ fn compare_directories_view(cx: &mut Context) {
                 .map(|d| zmax_stdx::path::expand_tilde(PathBuf::from(d)).into_owned())
                 .collect();
             let [left, right] = dirs.as_slice() else {
-                cx.editor.set_error("give two directories, separated by a space");
+                cx.editor
+                    .set_error("give two directories, separated by a space");
                 return;
             };
             if !left.is_dir() || !right.is_dir() {
@@ -55613,9 +55876,11 @@ fn compare_directories_view(cx: &mut Context) {
                 return;
             }
             let view = ui::dirdiff::DirDiff::new(left.clone(), right.clone());
-            crate::compositor::defer([Box::new(move |compositor: &mut Compositor, _: &mut compositor::Context| {
-                compositor.push(Box::new(view));
-            }) as compositor::Callback]);
+            crate::compositor::defer([Box::new(
+                move |compositor: &mut Compositor, _: &mut compositor::Context| {
+                    compositor.push(Box::new(view));
+                },
+            ) as compositor::Callback]);
         },
     );
     cx.push_layer(Box::new(prompt));
@@ -55629,7 +55894,8 @@ fn blank_diff_window(cx: &mut Context) {
     let left = cx.editor.new_file(Action::Replace);
     let right = cx.editor.new_file(Action::VerticalSplit);
     crate::live_diff::link(cx.editor, vec![left, right]);
-    cx.editor.set_status("blank diff: paste or type into both sides");
+    cx.editor
+        .set_status("blank diff: paste or type into both sides");
 }
 
 /// JetBrains "Toggle Three-Side Mode" in the blank diff window
@@ -55644,14 +55910,25 @@ fn blank_diff_toggle_three_side(cx: &mut Context) {
     if group.len() >= 3 {
         let third = group[2];
         crate::live_diff::unlink(third);
-        let views: Vec<ViewId> = cx.editor.tree.views().filter(|(v, _)| v.doc == third).map(|(v, _)| v.id).collect();
+        let views: Vec<ViewId> = cx
+            .editor
+            .tree
+            .views()
+            .filter(|(v, _)| v.doc == third)
+            .map(|(v, _)| v.id)
+            .collect();
         for view in views {
             cx.editor.close(view);
         }
         cx.editor.set_status("blank diff: two sides");
     } else {
         let last = *group.last().expect("a group has two buffers");
-        let view = cx.editor.tree.views().find(|(v, _)| v.doc == last).map(|(v, _)| v.id);
+        let view = cx
+            .editor
+            .tree
+            .views()
+            .find(|(v, _)| v.doc == last)
+            .map(|(v, _)| v.id);
         if let Some(view) = view {
             cx.editor.focus(view);
         }
@@ -55729,26 +56006,40 @@ fn git_diff_in_new_tab(cx: &mut Context) {
         }
     }
     // HEAD on the left, as the diff viewer has it.
-    cx.editor.tree.swap_split_in_direction(zmax_view::tree::Direction::Left);
+    cx.editor
+        .tree
+        .swap_split_in_direction(zmax_view::tree::Direction::Left);
     crate::live_diff::link(cx.editor, vec![left, id]);
-    cx.editor.set_status(format!("{} against HEAD", path.display()));
+    cx.editor
+        .set_status(format!("{} against HEAD", path.display()));
 }
 
 /// JetBrains "Back" in the Documentation tool window (`Documentation.Back`).
 fn documentation_back(cx: &mut Context) {
-    with_ide_status(cx, |ide| (!ide.docs_step(false)).then(|| "no earlier documentation".to_string()));
+    with_ide_status(cx, |ide| {
+        (!ide.docs_step(false)).then(|| "no earlier documentation".to_string())
+    });
 }
 
 /// JetBrains "Forward" in the Documentation tool window (`Documentation.Forward`).
 fn documentation_forward(cx: &mut Context) {
-    with_ide_status(cx, |ide| (!ide.docs_step(true)).then(|| "no later documentation".to_string()));
+    with_ide_status(cx, |ide| {
+        (!ide.docs_step(true)).then(|| "no later documentation".to_string())
+    });
 }
 
 /// JetBrains "Keep This Documentation" (`Documentation.KeepTab`): the shown
 /// tab stays and the next lookup opens another.
 fn documentation_keep_tab(cx: &mut Context) {
     with_ide_status(cx, |ide| {
-        Some(if ide.docs_keep_tab() { "documentation kept" } else { "no documentation shown" }.to_string())
+        Some(
+            if ide.docs_keep_tab() {
+                "documentation kept"
+            } else {
+                "no documentation shown"
+            }
+            .to_string(),
+        )
     });
 }
 
@@ -55774,18 +56065,29 @@ fn documentation_jump_to_source(cx: &mut Context) {
 /// or goes straight to the Documentation tool window.
 fn toggle_documentation_popup_first(cx: &mut Context) {
     let on = crate::ui::ide::toggle_docs_popup_first();
-    cx.editor.set_status(if on { "documentation: popup" } else { "documentation: tool window" });
+    cx.editor.set_status(if on {
+        "documentation: popup"
+    } else {
+        "documentation: tool window"
+    });
 }
 
 /// JetBrains "Auto-Update from Source" (`Documentation.ToggleAutoUpdate`): the
 /// Documentation tool window follows the caret once the editor is idle.
 fn toggle_documentation_auto_update(cx: &mut Context) {
     let on = crate::ui::ide::toggle_docs_auto_update();
-    cx.editor.set_status(format!("documentation follows the caret: {}", if on { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "documentation follows the caret: {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// Change a Usages view option, re-laying an open view, and report `status`.
-fn usages_option(cx: &mut Context, f: fn(&mut ui::usages::UsageOptions), status: fn(&ui::usages::UsageOptions) -> String) {
+fn usages_option(
+    cx: &mut Context,
+    f: fn(&mut ui::usages::UsageOptions),
+    status: fn(&ui::usages::UsageOptions) -> String,
+) {
     let options = ui::usages::set_options(f);
     cx.editor.set_status(status(&options));
     cx.callback.push(Box::new(|compositor, _| {
@@ -55796,62 +56098,125 @@ fn usages_option(cx: &mut Context, f: fn(&mut ui::usages::UsageOptions), status:
 }
 
 fn on_off(on: bool) -> &'static str {
-    if on { "on" } else { "off" }
+    if on {
+        "on"
+    } else {
+        "off"
+    }
 }
 
 /// JetBrains "Group by Usage Type" (`UsageGrouping.UsageType`).
 fn usages_group_by_type(cx: &mut Context) {
-    usages_option(cx, |o| o.by_type = !o.by_type, |o| format!("usages by type: {}", on_off(o.by_type)));
+    usages_option(
+        cx,
+        |o| o.by_type = !o.by_type,
+        |o| format!("usages by type: {}", on_off(o.by_type)),
+    );
 }
 /// JetBrains "Group by Test/Production" (`UsageGrouping.Scope`).
 fn usages_group_by_scope(cx: &mut Context) {
-    usages_option(cx, |o| o.by_scope = !o.by_scope, |o| format!("usages by scope: {}", on_off(o.by_scope)));
+    usages_option(
+        cx,
+        |o| o.by_scope = !o.by_scope,
+        |o| format!("usages by scope: {}", on_off(o.by_scope)),
+    );
 }
 /// JetBrains "Group by Module" (`UsageGrouping.Module`): by the nearest
 /// package root (Cargo.toml, package.json, go.mod…).
 fn usages_group_by_module(cx: &mut Context) {
-    usages_option(cx, |o| o.by_module = !o.by_module, |o| format!("usages by module: {}", on_off(o.by_module)));
+    usages_option(
+        cx,
+        |o| o.by_module = !o.by_module,
+        |o| format!("usages by module: {}", on_off(o.by_module)),
+    );
 }
 /// JetBrains "Flatten Modules" (`UsageGrouping.FlattenModules`).
 fn usages_flatten_modules(cx: &mut Context) {
-    usages_option(cx, |o| o.flatten_modules = !o.flatten_modules, |o| format!("flatten modules: {}", on_off(o.flatten_modules)));
+    usages_option(
+        cx,
+        |o| o.flatten_modules = !o.flatten_modules,
+        |o| format!("flatten modules: {}", on_off(o.flatten_modules)),
+    );
 }
 /// JetBrains "Group by Directory" (`UsageGrouping.Directory`).
 fn usages_group_by_directory(cx: &mut Context) {
-    usages_option(cx, |o| o.by_directory = !o.by_directory, |o| format!("usages by directory: {}", on_off(o.by_directory)));
+    usages_option(
+        cx,
+        |o| o.by_directory = !o.by_directory,
+        |o| format!("usages by directory: {}", on_off(o.by_directory)),
+    );
 }
 /// JetBrains "Group by Directory Structure" (`UsageGrouping.DirectoryStructure`).
 fn usages_group_by_directory_tree(cx: &mut Context) {
-    usages_option(cx, |o| o.directory_tree = !o.directory_tree, |o| format!("usages by directory tree: {}", on_off(o.directory_tree)));
+    usages_option(
+        cx,
+        |o| o.directory_tree = !o.directory_tree,
+        |o| format!("usages by directory tree: {}", on_off(o.directory_tree)),
+    );
 }
 /// JetBrains "Group by File Structure" (`UsageGrouping.FileStructure`): by the
 /// enclosing class or function.
 fn usages_group_by_member(cx: &mut Context) {
-    usages_option(cx, |o| o.by_member = !o.by_member, |o| format!("usages by file structure: {}", on_off(o.by_member)));
+    usages_option(
+        cx,
+        |o| o.by_member = !o.by_member,
+        |o| format!("usages by file structure: {}", on_off(o.by_member)),
+    );
 }
 /// JetBrains "Show File Names Only" (`UsageGrouping.ShortFilePath`).
 fn usages_toggle_short_paths(cx: &mut Context) {
-    usages_option(cx, |o| o.short_paths = !o.short_paths, |o| format!("usages short paths: {}", on_off(o.short_paths)));
+    usages_option(
+        cx,
+        |o| o.short_paths = !o.short_paths,
+        |o| format!("usages short paths: {}", on_off(o.short_paths)),
+    );
 }
 /// JetBrains "Show Comment Usages" (`UsageFiltering.Comments`).
 fn usages_toggle_comments(cx: &mut Context) {
-    usages_option(cx, |o| o.show_comments = !o.show_comments, |o| format!("usages in comments: {}", on_off(o.show_comments)));
+    usages_option(
+        cx,
+        |o| o.show_comments = !o.show_comments,
+        |o| format!("usages in comments: {}", on_off(o.show_comments)),
+    );
 }
 /// JetBrains "Show Import Statements" (`UsageFiltering.Imports`).
 fn usages_toggle_imports(cx: &mut Context) {
-    usages_option(cx, |o| o.show_imports = !o.show_imports, |o| format!("usages in imports: {}", on_off(o.show_imports)));
+    usages_option(
+        cx,
+        |o| o.show_imports = !o.show_imports,
+        |o| format!("usages in imports: {}", on_off(o.show_imports)),
+    );
 }
 /// JetBrains "Show Usages in Generated Code" (`UsageFiltering.GeneratedCode`).
 fn usages_toggle_generated(cx: &mut Context) {
-    usages_option(cx, |o| o.show_generated = !o.show_generated, |o| format!("usages in generated code: {}", on_off(o.show_generated)));
+    usages_option(
+        cx,
+        |o| o.show_generated = !o.show_generated,
+        |o| format!("usages in generated code: {}", on_off(o.show_generated)),
+    );
 }
 /// JetBrains "Show Read Access" (`UsageFiltering.ReadAccess`): only reads.
 fn usages_toggle_read_access(cx: &mut Context) {
     use ui::usages::Access;
     usages_option(
         cx,
-        |o| o.access = if o.access == Access::Read { Access::All } else { Access::Read },
-        |o| format!("usages: {}", if o.access == Access::Read { "reads only" } else { "all" }),
+        |o| {
+            o.access = if o.access == Access::Read {
+                Access::All
+            } else {
+                Access::Read
+            }
+        },
+        |o| {
+            format!(
+                "usages: {}",
+                if o.access == Access::Read {
+                    "reads only"
+                } else {
+                    "all"
+                }
+            )
+        },
     );
 }
 /// JetBrains "Show Write Access" (`UsageFiltering.WriteAccess`): only writes.
@@ -55859,15 +56224,33 @@ fn usages_toggle_write_access(cx: &mut Context) {
     use ui::usages::Access;
     usages_option(
         cx,
-        |o| o.access = if o.access == Access::Write { Access::All } else { Access::Write },
-        |o| format!("usages: {}", if o.access == Access::Write { "writes only" } else { "all" }),
+        |o| {
+            o.access = if o.access == Access::Write {
+                Access::All
+            } else {
+                Access::Write
+            }
+        },
+        |o| {
+            format!(
+                "usages: {}",
+                if o.access == Access::Write {
+                    "writes only"
+                } else {
+                    "all"
+                }
+            )
+        },
     );
 }
 
 /// Run `f` on the open Usages view.
 fn with_usages_view(cx: &mut Context, f: fn(&mut ui::usages::UsagesView) -> &'static str) {
     cx.callback.push(Box::new(move |compositor, cx| {
-        let status = compositor.find::<ui::usages::UsagesView>().map(f).unwrap_or("no Usages view open");
+        let status = compositor
+            .find::<ui::usages::UsagesView>()
+            .map(f)
+            .unwrap_or("no Usages view open");
         cx.editor.set_status(status);
     }));
 }
@@ -55882,13 +56265,22 @@ fn usages_exclude(cx: &mut Context) {
 }
 /// JetBrains "Include" in the Usages view (`UsageView.Include`).
 fn usages_include(cx: &mut Context) {
-    with_usages_view(cx, |view| if view.include() { "usage included" } else { "the usage is not excluded" });
+    with_usages_view(cx, |view| {
+        if view.include() {
+            "usage included"
+        } else {
+            "the usage is not excluded"
+        }
+    });
 }
 /// JetBrains "Rerun" in the Usages view (`UsageView.Rerun`): search again from
 /// where the open view's search was made.
 fn usages_rerun(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
-        match compositor.find::<ui::usages::UsagesView>().and_then(|view| view.rerun()) {
+        match compositor
+            .find::<ui::usages::UsagesView>()
+            .and_then(|view| view.rerun())
+        {
             Some(rerun) => rerun(compositor, cx),
             None => cx.editor.set_status("no Usages view to rerun"),
         }
@@ -55897,11 +56289,17 @@ fn usages_rerun(cx: &mut Context) {
 
 /// Run a past Find Usages search again: go to where it was made and search
 /// its scope.
-fn rerun_usage_search(compositor: &mut Compositor, cx: &mut compositor::Context, search: ui::usages::UsageSearch) {
+fn rerun_usage_search(
+    compositor: &mut Compositor,
+    cx: &mut compositor::Context,
+    search: ui::usages::UsageSearch,
+) {
     let (path, line, col) = search.origin;
     open_at(cx.editor, &path, line, col, Action::Replace, false);
     let scope = search.scope;
-    menu_run(compositor, cx, &move |cx: &mut Context| find_usages_in(cx, scope.clone()));
+    menu_run(compositor, cx, &move |cx: &mut Context| {
+        find_usages_in(cx, scope.clone())
+    });
 }
 
 /// JetBrains "Recent Find Usages" (`UsageView.ShowRecentFindUsages`): pick a
@@ -55914,19 +56312,36 @@ fn usages_recent(cx: &mut Context) {
     }
     let root = zmax_loader::find_workspace().0;
     let columns = [
-        PickerColumn::new("symbol", |s: &ui::usages::UsageSearch, _: &PathBuf| s.symbol.as_str().into()),
-        PickerColumn::new("scope", |s: &ui::usages::UsageSearch, _: &PathBuf| s.scope.label().into()),
+        PickerColumn::new("symbol", |s: &ui::usages::UsageSearch, _: &PathBuf| {
+            s.symbol.as_str().into()
+        }),
+        PickerColumn::new("scope", |s: &ui::usages::UsageSearch, _: &PathBuf| {
+            s.scope.label().into()
+        }),
         PickerColumn::new("from", |s: &ui::usages::UsageSearch, root: &PathBuf| {
             let (path, line, _) = &s.origin;
-            format!("{}:{}", path.strip_prefix(root).unwrap_or(path).display(), line + 1).into()
+            format!(
+                "{}:{}",
+                path.strip_prefix(root).unwrap_or(path).display(),
+                line + 1
+            )
+            .into()
         }),
     ];
-    let picker = Picker::new(columns, 0, searches, root, |_cx, search: &ui::usages::UsageSearch, _| {
-        let search = search.clone();
-        crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut compositor::Context| {
-            rerun_usage_search(compositor, cx, search)
-        }) as compositor::Callback]);
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        searches,
+        root,
+        |_cx, search: &ui::usages::UsageSearch, _| {
+            let search = search.clone();
+            crate::compositor::defer([Box::new(
+                move |compositor: &mut Compositor, cx: &mut compositor::Context| {
+                    rerun_usage_search(compositor, cx, search)
+                },
+            ) as compositor::Callback]);
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -55943,19 +56358,32 @@ fn find_usages_with_settings(cx: &mut Context) {
         }
     }
     scopes.extend([UsageScope::Production, UsageScope::Test]);
-    let columns = [PickerColumn::new("find usages in", |s: &UsageScope, _: &()| s.label().into())];
+    let columns = [PickerColumn::new(
+        "find usages in",
+        |s: &UsageScope, _: &()| s.label().into(),
+    )];
     let picker = Picker::new(columns, 0, scopes, (), |_cx, scope: &UsageScope, _| {
         let scope = scope.clone();
-        crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut compositor::Context| {
-            menu_run(compositor, cx, &move |cx: &mut Context| find_usages_in(cx, scope.clone()))
-        }) as compositor::Callback]);
+        crate::compositor::defer([Box::new(
+            move |compositor: &mut Compositor, cx: &mut compositor::Context| {
+                menu_run(compositor, cx, &move |cx: &mut Context| {
+                    find_usages_in(cx, scope.clone())
+                })
+            },
+        ) as compositor::Callback]);
     });
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// JetBrains "Remove" in the Usages view (`UsageView.Remove`).
 fn usages_remove(cx: &mut Context) {
-    with_usages_view(cx, |view| if view.remove() { "usage removed" } else { "no usage selected" });
+    with_usages_view(cx, |view| {
+        if view.remove() {
+            "usage removed"
+        } else {
+            "no usage selected"
+        }
+    });
 }
 
 /// Flip a Problems panel option and report it as `on` / `off`.
@@ -55980,14 +56408,24 @@ fn toggle_problems_option(
 /// JetBrains "Sort by Name" in the Problems panel (`ProblemsView.SortByName`).
 fn toggle_problems_by_name(cx: &mut Context) {
     use crate::ui::ide::ProblemsOption;
-    toggle_problems_option(cx, ProblemsOption::ByName, "problems: by message", "problems: in line order");
+    toggle_problems_option(
+        cx,
+        ProblemsOption::ByName,
+        "problems: by message",
+        "problems: in line order",
+    );
 }
 
 /// JetBrains "Project Errors": the Problems panel lists every file's
 /// diagnostics, under a header per file, instead of the current file's.
 fn toggle_problems_project(cx: &mut Context) {
     use crate::ui::ide::ProblemsOption;
-    toggle_problems_option(cx, ProblemsOption::Project, "problems: whole project", "problems: current file");
+    toggle_problems_option(
+        cx,
+        ProblemsOption::Project,
+        "problems: whole project",
+        "problems: current file",
+    );
 }
 
 /// JetBrains "Folders Always on Top" in the Problems panel
@@ -55995,14 +56433,24 @@ fn toggle_problems_project(cx: &mut Context) {
 /// directory's subdirectories come before its files.
 fn toggle_problems_folders_first(cx: &mut Context) {
     use crate::ui::ide::ProblemsOption;
-    toggle_problems_option(cx, ProblemsOption::FoldersFirst, "problems: folders first", "problems: in path order");
+    toggle_problems_option(
+        cx,
+        ProblemsOption::FoldersFirst,
+        "problems: folders first",
+        "problems: in path order",
+    );
 }
 
 /// JetBrains "Open Files with Single Click" in the Problems panel
 /// (`ProblemsView.AutoscrollToSource`): the editor follows the selection.
 fn toggle_problems_autoscroll(cx: &mut Context) {
     use crate::ui::ide::ProblemsOption;
-    toggle_problems_option(cx, ProblemsOption::Autoscroll, "problems: open on selection", "problems: open on Enter");
+    toggle_problems_option(
+        cx,
+        ProblemsOption::Autoscroll,
+        "problems: open on selection",
+        "problems: open on Enter",
+    );
 }
 
 /// JetBrains "Open Editor Preview" in the Problems panel
@@ -56010,7 +56458,12 @@ fn toggle_problems_autoscroll(cx: &mut Context) {
 /// the list.
 fn toggle_problems_preview(cx: &mut Context) {
     use crate::ui::ide::ProblemsOption;
-    toggle_problems_option(cx, ProblemsOption::Preview, "problems: preview on", "problems: preview off");
+    toggle_problems_option(
+        cx,
+        ProblemsOption::Preview,
+        "problems: preview on",
+        "problems: preview off",
+    );
 }
 
 /// JetBrains "Enable Preview Tab" in the Problems panel
@@ -56018,7 +56471,12 @@ fn toggle_problems_preview(cx: &mut Context) {
 /// reuse one buffer until it is edited.
 fn toggle_problems_preview_tab(cx: &mut Context) {
     use crate::ui::ide::ProblemsOption;
-    toggle_problems_option(cx, ProblemsOption::PreviewTab, "problems: preview tab on", "problems: preview tab off");
+    toggle_problems_option(
+        cx,
+        ProblemsOption::PreviewTab,
+        "problems: preview tab on",
+        "problems: preview tab off",
+    );
 }
 
 /// JetBrains "Sort by Severity" in the Problems panel
@@ -56117,20 +56575,27 @@ fn change_view_mode(cx: &mut Context) {
         ("Full Screen", toggle_frame_fullscreen),
         ("Focus Mode", toggle_focus_mode),
     ];
-    let columns = [PickerColumn::new("view mode", |m: &(&'static str, fn(&mut Context)), _: &()| {
-        m.0.into()
-    })];
-    let picker = Picker::new(columns, 0, modes, (), |cx, mode: &(&'static str, fn(&mut Context)), _| {
-        let mut cx = Context {
-            register: None,
-            count: None,
-            editor: cx.editor,
-            callback: Vec::new(),
-            on_next_key_callback: None,
-            jobs: cx.jobs,
-        };
-        (mode.1)(&mut cx);
-    });
+    let columns = [PickerColumn::new(
+        "view mode",
+        |m: &(&'static str, fn(&mut Context)), _: &()| m.0.into(),
+    )];
+    let picker = Picker::new(
+        columns,
+        0,
+        modes,
+        (),
+        |cx, mode: &(&'static str, fn(&mut Context)), _| {
+            let mut cx = Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            (mode.1)(&mut cx);
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -56175,7 +56640,12 @@ fn keymap_to_csv(cx: &mut Context) {
         rows.sort();
         let mut csv = String::from("mode,keys,command\n");
         for (mode, keys, command) in &rows {
-            csv.push_str(&format!("{},{},{}\n", csv_field(mode), csv_field(keys), csv_field(command)));
+            csv.push_str(&format!(
+                "{},{},{}\n",
+                csv_field(mode),
+                csv_field(keys),
+                csv_field(command)
+            ));
         }
         let count = rows.len();
         let prompt = crate::ui::prompt::Prompt::new(
@@ -56192,7 +56662,9 @@ fn keymap_to_csv(cx: &mut Context) {
                     return;
                 }
                 match std::fs::write(path, &csv) {
-                    Ok(()) => cx.editor.set_status(format!("wrote {count} bindings to {path}")),
+                    Ok(()) => cx
+                        .editor
+                        .set_status(format!("wrote {count} bindings to {path}")),
                     Err(e) => cx.editor.set_error(format!("{path}: {e}")),
                 }
             },
@@ -56266,7 +56738,10 @@ fn new_github_workflow(cx: &mut Context) {
 fn new_github_action(cx: &mut Context) {
     let root = zmax_loader::find_workspace().0;
     prompt_then(cx, "action directory: ", move |cx, dir| {
-        let name = Path::new(dir).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let name = Path::new(dir)
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let body = format!(
             "name: {name}\ndescription: ''\ninputs: {{}}\noutputs: {{}}\nruns:\n  using: composite\n  steps:\n    - run: echo {name}\n      shell: bash\n"
         );
@@ -56282,15 +56757,20 @@ fn show_file_path(cx: &mut Context) {
         return;
     };
     let dirs: Vec<PathBuf> = path.ancestors().skip(1).map(Path::to_path_buf).collect();
-    let columns = [PickerColumn::new("open in file manager", |p: &PathBuf, _: &()| {
-        p.display().to_string().into()
-    })];
-    let picker = Picker::new(columns, 0, dirs, (), |cx, dir: &PathBuf, _| {
-        match open_in_browser(&dir.display().to_string()) {
+    let columns = [PickerColumn::new(
+        "open in file manager",
+        |p: &PathBuf, _: &()| p.display().to_string().into(),
+    )];
+    let picker = Picker::new(
+        columns,
+        0,
+        dirs,
+        (),
+        |cx, dir: &PathBuf, _| match open_in_browser(&dir.display().to_string()) {
             Ok(()) => cx.editor.set_status(format!("opened {}", dir.display())),
             Err(e) => cx.editor.set_error(format!("{}: {e}", dir.display())),
-        }
-    });
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -56415,7 +56895,9 @@ fn project_tree_open_selected(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
         let path = compositor
             .find::<crate::ui::EditorView>()
-            .and_then(|view| view.with_project_tree(|tree| tree.selected_path().map(Path::to_path_buf)))
+            .and_then(|view| {
+                view.with_project_tree(|tree| tree.selected_path().map(Path::to_path_buf))
+            })
             .flatten();
         match path {
             Some(path) if path.is_file() => {
@@ -56445,10 +56927,9 @@ fn toggle_sort_by_type(cx: &mut Context) {
             .find::<crate::ui::EditorView>()
             .and_then(|view| view.toggle_sort_by_type());
         match state {
-            Some(on) => cx.editor.set_status(format!(
-                "sort by type: {}",
-                if on { "on" } else { "off" }
-            )),
+            Some(on) => cx
+                .editor
+                .set_status(format!("sort by type: {}", if on { "on" } else { "off" })),
             None => cx.editor.set_status("no project tree"),
         }
     }));
@@ -56462,10 +56943,9 @@ fn toggle_file_details(cx: &mut Context) {
             .find::<crate::ui::EditorView>()
             .and_then(|view| view.toggle_file_details());
         match state {
-            Some(on) => cx.editor.set_status(format!(
-                "file details: {}",
-                if on { "on" } else { "off" }
-            )),
+            Some(on) => cx
+                .editor
+                .set_status(format!("file details: {}", if on { "on" } else { "off" })),
             None => cx.editor.set_status("no project tree to annotate"),
         }
     }));
@@ -56827,7 +57307,13 @@ fn git_async_args(
 
 /// JetBrains "Abort Cherry-Pick" (`Git.CherryPick.Abort`).
 fn git_cherry_pick_abort(cx: &mut Context) {
-    git_async_args(cx, "aborting cherry-pick…", &["cherry-pick", "--abort"], "cherry-pick aborted", true)
+    git_async_args(
+        cx,
+        "aborting cherry-pick…",
+        &["cherry-pick", "--abort"],
+        "cherry-pick aborted",
+        true,
+    )
 }
 
 /// JetBrains "Continue Cherry-Pick" (`Git.CherryPick.Continue`).
@@ -56843,18 +57329,36 @@ fn git_cherry_pick_continue(cx: &mut Context) {
 
 /// JetBrains "Abort Merge" (`Git.Merge.Abort`).
 fn git_merge_abort(cx: &mut Context) {
-    git_async_args(cx, "aborting merge…", &["merge", "--abort"], "merge aborted", true)
+    git_async_args(
+        cx,
+        "aborting merge…",
+        &["merge", "--abort"],
+        "merge aborted",
+        true,
+    )
 }
 
 /// JetBrains "Commit merge" (`Git.Merge.Commit`): conclude a merge whose
 /// conflicts are resolved, with the message git prepared.
 fn git_merge_commit(cx: &mut Context) {
-    git_async_args(cx, "committing merge…", &["commit", "--no-edit"], "merge committed", true)
+    git_async_args(
+        cx,
+        "committing merge…",
+        &["commit", "--no-edit"],
+        "merge committed",
+        true,
+    )
 }
 
 /// JetBrains "Abort Rebase" (`Git.Rebase.Abort`).
 fn git_rebase_abort(cx: &mut Context) {
-    git_async_args(cx, "aborting rebase…", &["rebase", "--abort"], "rebase aborted", true)
+    git_async_args(
+        cx,
+        "aborting rebase…",
+        &["rebase", "--abort"],
+        "rebase aborted",
+        true,
+    )
 }
 
 /// JetBrains "Continue Rebase" (`Git.Rebase.Continue`).
@@ -56870,12 +57374,24 @@ fn git_rebase_continue(cx: &mut Context) {
 
 /// JetBrains "Skip Commit" (`Git.Rebase.Skip`) during a rebase.
 fn git_rebase_skip(cx: &mut Context) {
-    git_async_args(cx, "skipping commit…", &["rebase", "--skip"], "rebase skipped", true)
+    git_async_args(
+        cx,
+        "skipping commit…",
+        &["rebase", "--skip"],
+        "rebase skipped",
+        true,
+    )
 }
 
 /// JetBrains "Abort Revert" (`Git.Revert.Abort`).
 fn git_revert_abort(cx: &mut Context) {
-    git_async_args(cx, "aborting revert…", &["revert", "--abort"], "revert aborted", true)
+    git_async_args(
+        cx,
+        "aborting revert…",
+        &["revert", "--abort"],
+        "revert aborted",
+        true,
+    )
 }
 
 /// JetBrains "Stage All" (`Git.Stage.Add.All`): stage every change, untracked
@@ -56894,7 +57410,10 @@ fn git_stage_tracked(cx: &mut Context) {
 /// on this buffer's file, so git knows of it and `git diff` shows it, while
 /// nothing of its content is staged yet.
 fn git_intent_to_add(cx: &mut Context) {
-    let Some(path) = doc!(cx.editor).path().map(|p| p.to_string_lossy().into_owned()) else {
+    let Some(path) = doc!(cx.editor)
+        .path()
+        .map(|p| p.to_string_lossy().into_owned())
+    else {
         cx.editor.set_error("buffer has no file path");
         return;
     };
@@ -56910,24 +57429,48 @@ fn git_intent_to_add(cx: &mut Context) {
 /// JetBrains "Undo Commit" (`Git.Uncommit`): drop the last commit and keep its
 /// changes staged.
 fn git_uncommit(cx: &mut Context) {
-    git_async_args(cx, "undoing commit…", &["reset", "--soft", "HEAD~1"], "uncommitted", true)
+    git_async_args(
+        cx,
+        "undoing commit…",
+        &["reset", "--soft", "HEAD~1"],
+        "uncommitted",
+        true,
+    )
 }
 
 /// JetBrains "Unshallow repository" (`Git.Unshallow`): fetch the history a
 /// shallow clone left out.
 fn git_unshallow(cx: &mut Context) {
-    git_async_args(cx, "unshallowing…", &["fetch", "--unshallow"], "unshallowed", false)
+    git_async_args(
+        cx,
+        "unshallowing…",
+        &["fetch", "--unshallow"],
+        "unshallowed",
+        false,
+    )
 }
 
 /// JetBrains "Prune" in the working-tree list (`Git.WorkingTrees.Prune`): forget working
 /// trees whose directories are gone.
 fn git_worktree_prune(cx: &mut Context) {
-    git_async_args(cx, "pruning…", &["worktree", "prune"], "worktrees pruned", false)
+    git_async_args(
+        cx,
+        "pruning…",
+        &["worktree", "prune"],
+        "worktrees pruned",
+        false,
+    )
 }
 
 /// JetBrains "Clear" in the stash list (`Git.Stash.Clear`): drop every stash.
 fn git_stash_clear(cx: &mut Context) {
-    git_async_args(cx, "clearing stashes…", &["stash", "clear"], "stashes cleared", false)
+    git_async_args(
+        cx,
+        "clearing stashes…",
+        &["stash", "clear"],
+        "stashes cleared",
+        false,
+    )
 }
 
 /// JetBrains `Git.OpenExcludeFile`: the repository's
@@ -56935,7 +57478,15 @@ fn git_stash_clear(cx: &mut Context) {
 /// git dir resolves to the right file.
 fn git_open_exclude_file(cx: &mut Context) {
     let root = zmax_loader::find_workspace().0;
-    match git_in(&root, &["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"]) {
+    match git_in(
+        &root,
+        &[
+            "rev-parse",
+            "--path-format=absolute",
+            "--git-path",
+            "info/exclude",
+        ],
+    ) {
         Ok(path) => {
             if let Err(e) = cx.editor.open(std::path::Path::new(&path), Action::Replace) {
                 cx.editor.set_error(format!("{path}: {e}"));
@@ -57817,30 +58368,34 @@ fn structural_replace(cx: &mut Context) {
     }
     prompt_then(cx, "tree-sitter query: ", move |cx, query| {
         let query = query.to_string();
-        prompt_then_cx_allow_empty(cx, "replace with (@name interpolates): ", move |cx, tmpl| {
-            let edits = match structural_replacements(cx.editor, &query, tmpl) {
-                Ok(edits) => edits,
-                Err(err) => {
-                    cx.editor.set_error(err);
+        prompt_then_cx_allow_empty(
+            cx,
+            "replace with (@name interpolates): ",
+            move |cx, tmpl| {
+                let edits = match structural_replacements(cx.editor, &query, tmpl) {
+                    Ok(edits) => edits,
+                    Err(err) => {
+                        cx.editor.set_error(err);
+                        return;
+                    }
+                };
+                if edits.is_empty() {
+                    cx.editor.set_status("no matches");
                     return;
                 }
-            };
-            if edits.is_empty() {
-                cx.editor.set_status("no matches");
-                return;
-            }
-            let n = edits.len();
-            let (view, doc) = current!(cx.editor);
-            let transaction = Transaction::change(
-                doc.text(),
-                edits
-                    .into_iter()
-                    .map(|(from, to, text)| (from, to, (!text.is_empty()).then(|| text.into()))),
-            );
-            doc.apply(&transaction, view.id);
-            doc.append_changes_to_history(view);
-            cx.editor.set_status(format!("{n} match(es) replaced"));
-        });
+                let n = edits.len();
+                let (view, doc) = current!(cx.editor);
+                let transaction = Transaction::change(
+                    doc.text(),
+                    edits.into_iter().map(|(from, to, text)| {
+                        (from, to, (!text.is_empty()).then(|| text.into()))
+                    }),
+                );
+                doc.apply(&transaction, view.id);
+                doc.append_changes_to_history(view);
+                cx.editor.set_status(format!("{n} match(es) replaced"));
+            },
+        );
     });
 }
 
@@ -57920,13 +58475,19 @@ mod structural_template_tests {
 
     #[test]
     fn captures_are_substituted_by_name() {
-        let out = expand_capture_template("let @name = @value;", &caps(&[("name", "x"), ("value", "1")]));
+        let out = expand_capture_template(
+            "let @name = @value;",
+            &caps(&[("name", "x"), ("value", "1")]),
+        );
         assert_eq!(out, "let x = 1;");
     }
 
     #[test]
     fn the_longer_name_wins_over_its_prefix() {
-        let out = expand_capture_template("@name_full/@name", &caps(&[("name", "a"), ("name_full", "a::b")]));
+        let out = expand_capture_template(
+            "@name_full/@name",
+            &caps(&[("name", "a"), ("name_full", "a::b")]),
+        );
         assert_eq!(out, "a::b/a");
     }
 
@@ -58088,7 +58649,12 @@ fn menu_bar_buffer_items(editor: Option<&Editor>) -> Vec<MenuBarItem> {
         let listed: Vec<(DocumentId, String)> = if msb {
             msb_buffer_entries(editor)
                 .into_iter()
-                .map(|e| (e.id, format!("{} ▸ {}", e.mode, menu_bar_buffer_name(&e.name))))
+                .map(|e| {
+                    (
+                        e.id,
+                        format!("{} ▸ {}", e.mode, menu_bar_buffer_name(&e.name)),
+                    )
+                })
                 .collect()
         } else {
             let current = view!(editor).doc;
@@ -59055,7 +59621,10 @@ pub(crate) fn record_known_project(root: &std::path::Path) {
 }
 
 /// Completions over the known-project list, for the project prompts.
-pub(crate) fn known_project_completer(_editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
+pub(crate) fn known_project_completer(
+    _editor: &Editor,
+    input: &str,
+) -> Vec<ui::prompt::Completion> {
     let input = input.trim();
     known_projects()
         .into_iter()
@@ -59688,20 +60257,24 @@ fn xref_query_replace_in_results(cx: &mut Context) {
             .set_error("xref-query-replace-in-results: no xref results to replace in");
         return;
     }
-    prompt_then(cx, "Query replace in results (regexp): ", move |cx, from| {
-        let from = from.to_string();
-        let entries = entries.clone();
-        prompt_then_cx(cx, "Replace with: ", move |cx, to| {
-            if let Err(e) = crate::commands::typed::run_replace_in_entries(
-                cx,
-                entries.clone(),
-                from.clone(),
-                to.to_string(),
-            ) {
-                cx.editor.set_error(e.to_string());
-            }
-        });
-    });
+    prompt_then(
+        cx,
+        "Query replace in results (regexp): ",
+        move |cx, from| {
+            let from = from.to_string();
+            let entries = entries.clone();
+            prompt_then_cx(cx, "Replace with: ", move |cx, to| {
+                if let Err(e) = crate::commands::typed::run_replace_in_entries(
+                    cx,
+                    entries.clone(),
+                    from.clone(),
+                    to.to_string(),
+                ) {
+                    cx.editor.set_error(e.to_string());
+                }
+            });
+        },
+    );
 }
 
 /// `xref-find-references-and-replace`: find references to a symbol and replace
@@ -59853,23 +60426,32 @@ fn pick_run_config(
     header: &'static str,
     on_pick: impl Fn(&mut crate::compositor::Context, usize) + 'static,
 ) {
-    let configs: Vec<(usize, crate::run_config::RunConfig)> =
-        crate::run_config::load().configs.into_iter().enumerate().collect();
+    let configs: Vec<(usize, crate::run_config::RunConfig)> = crate::run_config::load()
+        .configs
+        .into_iter()
+        .enumerate()
+        .collect();
     if configs.is_empty() {
         cx.editor.set_status("no run configurations");
         return;
     }
     let columns = [
-        PickerColumn::new(header, |c: &(usize, crate::run_config::RunConfig), _: &()| {
-            c.1.name.as_str().into()
-        }),
-        PickerColumn::new("command", |c: &(usize, crate::run_config::RunConfig), _: &()| {
-            c.1.command.as_str().into()
-        }),
+        PickerColumn::new(
+            header,
+            |c: &(usize, crate::run_config::RunConfig), _: &()| c.1.name.as_str().into(),
+        ),
+        PickerColumn::new(
+            "command",
+            |c: &(usize, crate::run_config::RunConfig), _: &()| c.1.command.as_str().into(),
+        ),
     ];
-    let picker = Picker::new(columns, 0, configs, (), move |cx, c: &(usize, crate::run_config::RunConfig), _| {
-        on_pick(cx, c.0)
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        configs,
+        (),
+        move |cx, c: &(usize, crate::run_config::RunConfig), _| on_pick(cx, c.0),
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -59880,8 +60462,13 @@ fn run_config_picker(cx: &mut Context) {
         let mut data = crate::run_config::load();
         data.active = index;
         crate::run_config::save(&data);
-        let name = data.configs.get(index).map(|c| c.name.clone()).unwrap_or_default();
-        cx.editor.set_status(format!("active run configuration: {name}"));
+        let name = data
+            .configs
+            .get(index)
+            .map(|c| c.name.clone())
+            .unwrap_or_default();
+        cx.editor
+            .set_status(format!("active run configuration: {name}"));
     });
 }
 
@@ -59923,7 +60510,8 @@ fn copy_run_config(cx: &mut Context) {
             ..original
         });
         crate::run_config::save(&data);
-        cx.editor.set_status(format!("added run configuration '{name}'"));
+        cx.editor
+            .set_status(format!("added run configuration '{name}'"));
     });
 }
 
@@ -59942,17 +60530,22 @@ fn run_build_task(cx: &mut Context) {
         .flatten()
         .collect();
     if tasks.is_empty() {
-        cx.editor.set_status("no build file with tasks at the project root");
+        cx.editor
+            .set_status("no build file with tasks at the project root");
         return;
     }
-    let columns = [PickerColumn::new("task", |t: &String, _: &()| t.as_str().into())];
+    let columns = [PickerColumn::new("task", |t: &String, _: &()| {
+        t.as_str().into()
+    })];
     let picker = Picker::new(columns, 0, tasks, (), move |_cx, task: &String, _| {
         let (task, root) = (task.clone(), root.clone());
-        crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut crate::compositor::Context| {
-            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-                view.start_run(cx, task, root);
-            }
-        }) as crate::compositor::Callback]);
+        crate::compositor::defer([Box::new(
+            move |compositor: &mut Compositor, cx: &mut crate::compositor::Context| {
+                if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                    view.start_run(cx, task, root);
+                }
+            },
+        ) as crate::compositor::Callback]);
     });
     cx.push_layer(Box::new(overlaid(picker)));
 }
@@ -59961,7 +60554,11 @@ fn run_build_task(cx: &mut Context) {
 /// the project's build file, picked when there is more than one.
 fn open_build_file(cx: &mut Context) {
     let root = zmax_loader::find_workspace().0;
-    let files: Vec<PathBuf> = BUILD_FILES.iter().map(|f| root.join(f)).filter(|p| p.is_file()).collect();
+    let files: Vec<PathBuf> = BUILD_FILES
+        .iter()
+        .map(|f| root.join(f))
+        .filter(|p| p.is_file())
+        .collect();
     match files.as_slice() {
         [] => cx.editor.set_status("no build file at the project root"),
         [only] => {
@@ -59971,7 +60568,10 @@ fn open_build_file(cx: &mut Context) {
         }
         _ => {
             let columns = [PickerColumn::new("build file", |p: &PathBuf, _: &()| {
-                p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default().into()
+                p.file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+                    .into()
             })];
             let picker = Picker::new(columns, 0, files, (), |cx, path: &PathBuf, action| {
                 if let Err(e) = cx.editor.open(path, action) {
@@ -60003,14 +60603,19 @@ fn validate_xml(cx: &mut Context) {
             "XML is well formed"
         }),
         Ok(out) => show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&out.stderr)),
-        Err(e) => cx.editor.set_error(format!("xmllint: {e} (install libxml2)")),
+        Err(e) => cx
+            .editor
+            .set_error(format!("xmllint: {e} (install libxml2)")),
     }
 }
 
 /// JetBrains "Rerun Tests" (`RerunTests`): run the most recent test run again,
 /// from the test history, whatever has run in the console since.
 fn rerun_tests(cx: &mut Context) {
-    let Some(last) = crate::test_history::entries().into_iter().max_by_key(|e| e.when) else {
+    let Some(last) = crate::test_history::entries()
+        .into_iter()
+        .max_by_key(|e| e.when)
+    else {
         cx.editor.set_status("no test run to repeat");
         return;
     };
@@ -60895,9 +61500,10 @@ fn tex_region_source(buffer: &str, region: &str) -> String {
     let header = start.and_then(|start| {
         // `tex-end-of-header` is `\begin\s-*{document}`; the header runs through
         // that line inclusive.
-        let end = lines[start..]
-            .iter()
-            .position(|l| l.replace(char::is_whitespace, "").contains("\\begin{document}"))?;
+        let end = lines[start..].iter().position(|l| {
+            l.replace(char::is_whitespace, "")
+                .contains("\\begin{document}")
+        })?;
         Some(lines[start..=start + end].join("\n"))
     });
 
@@ -60947,7 +61553,9 @@ fn tex_region(cx: &mut Context) {
     // to the buffer's own directory.
     let zap = path.with_file_name(format!(
         "_zmax_tex_{}.tex",
-        path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+        path.file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default()
     ));
     if let Err(e) = std::fs::write(&zap, tex_region_source(&buffer, &region)) {
         cx.editor
@@ -61871,7 +62479,11 @@ fn code_block_lines(doc: &zmax_view::Document, pos: usize) -> Option<(usize, usi
     let lines = |node: &zmax_core::tree_sitter::Node| {
         let range = node.byte_range();
         let start = text.byte_to_line(range.start as usize);
-        let end = text.byte_to_line((range.end as usize).saturating_sub(1).max(range.start as usize));
+        let end = text.byte_to_line(
+            (range.end as usize)
+                .saturating_sub(1)
+                .max(range.start as usize),
+        );
         (start, end)
     };
     let mut node = syntax.descendant_for_byte_range(byte, byte);
@@ -61898,7 +62510,10 @@ fn code_block_lines(doc: &zmax_view::Document, pos: usize) -> Option<(usize, usi
 /// innermost code block around the caret, making the fold when there is none.
 fn fold_code_block(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
-    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let pos = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     let Some((start, end)) = code_block_lines(doc, pos) else {
         cx.editor.set_status("no code block around the caret");
         return;
@@ -62428,7 +63043,11 @@ fn foldenable() -> bool {
 fn set_foldenable(cx: &mut Context, on: bool) {
     typed::vim_opt_store(
         "foldenable",
-        if on { "on".to_string() } else { "off".to_string() },
+        if on {
+            "on".to_string()
+        } else {
+            "off".to_string()
+        },
     );
     if on {
         fold_reapply_level(cx);
@@ -63149,10 +63768,7 @@ fn edmacro_macro_text(buffer: &str) -> Option<String> {
 fn edmacro_finish_edit(cx: &mut Context) {
     let (is_edmacro, buffer) = {
         let doc = doc!(cx.editor);
-        (
-            doc.major_mode() == Some("edmacro"),
-            doc.text().to_string(),
-        )
+        (doc.major_mode() == Some("edmacro"), doc.text().to_string())
     };
     if !is_edmacro {
         cx.editor
@@ -65524,7 +66140,11 @@ fn custom_regions(lines: &[String]) -> Vec<CustomRegion> {
                 && only_comment_punctuation(&t[..lower.find("</editor-fold").unwrap_or(0)])
         {
             if let Some((name, start)) = open.pop() {
-                out.push(CustomRegion { name, start, end: i });
+                out.push(CustomRegion {
+                    name,
+                    start,
+                    end: i,
+                });
             }
             continue;
         }
@@ -65597,13 +66217,21 @@ fn goto_custom_region(cx: &mut Context) {
             (r.start + 1).to_string().into()
         }),
     ];
-    let picker = Picker::new(columns, 0, regions, (), |cx, region: &CustomRegion, _action| {
-        let line = region.start;
-        let (view, doc) = current!(cx.editor);
-        let pos = doc.text().line_to_char(line.min(doc.text().len_lines() - 1));
-        doc.set_selection(view.id, Selection::point(pos));
-        align_view(doc, view, Align::Center);
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        regions,
+        (),
+        |cx, region: &CustomRegion, _action| {
+            let line = region.start;
+            let (view, doc) = current!(cx.editor);
+            let pos = doc
+                .text()
+                .line_to_char(line.min(doc.text().len_lines() - 1));
+            doc.set_selection(view.id, Selection::point(pos));
+            align_view(doc, view, Align::Center);
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -66462,7 +67090,9 @@ enum ShellBehavior {
     /// (simple.el:4583-4585). The output is *displayed* — it does not touch the
     /// buffer. `pipe` says whether the selection is fed to the command
     /// (`shell-command-on-region`, `M-|`) or not (`shell-command`, `M-!`).
-    Show { pipe: bool },
+    Show {
+        pipe: bool,
+    },
 }
 
 /// The pandoc reader name for a buffer, from its language. pandoc's own name for
@@ -67625,8 +68255,14 @@ fn emmet_expansion_at_cursor(editor: &Editor) -> Option<(usize, usize, String)> 
         (start, crate::emmet::expand_css(&abbr)?)
     } else if crate::emmet::is_html_like(lang) {
         let (start, abbr) = crate::emmet::extract_abbreviation(&before)?;
-        let indent: String = before.chars().take_while(|c| *c == ' ' || *c == '\t').collect();
-        (start, crate::emmet::expand(&abbr, doc.indent_style.as_str(), &indent)?)
+        let indent: String = before
+            .chars()
+            .take_while(|c| *c == ' ' || *c == '\t')
+            .collect();
+        (
+            start,
+            crate::emmet::expand(&abbr, doc.indent_style.as_str(), &indent)?,
+        )
     } else {
         return None;
     };
@@ -67641,7 +68277,9 @@ fn emmet_preview(cx: &mut Context) {
             let popup = ui::Popup::new("emmet-preview", ui::Text::new(snippet_plain(&snippet)));
             cx.replace_or_push_layer("emmet-preview", popup);
         }
-        None => cx.editor.set_status("no emmet abbreviation before the cursor"),
+        None => cx
+            .editor
+            .set_status("no emmet abbreviation before the cursor"),
     }
 }
 
@@ -67699,11 +68337,14 @@ fn surround_with_emmet(cx: &mut Context) {
             .take_while(|c| *c == ' ' || *c == '\t')
             .collect();
         let Some(snippet) = crate::emmet::expand(abbr, doc.indent_style.as_str(), &indent) else {
-            cx.editor.set_error(format!("not an emmet abbreviation: {abbr}"));
+            cx.editor
+                .set_error(format!("not an emmet abbreviation: {abbr}"));
             return;
         };
         // The first empty slot takes the selection; `$0` when there is no other.
-        let slot = ["${1}", "$1", "$0"].iter().find_map(|s| snippet.find(s).map(|at| (at, s.len())));
+        let slot = ["${1}", "$1", "$0"]
+            .iter()
+            .find_map(|s| snippet.find(s).map(|at| (at, s.len())));
         let wrapped = match slot {
             Some((at, len)) => format!(
                 "{}{}{}",
@@ -67727,15 +68368,26 @@ mod emmet_command_tests {
 
     #[test]
     fn snippets_render_as_the_text_they_insert() {
-        assert_eq!("<a href=\"x\"></a>", snippet_plain("<a href=\"${1:x}\">${2}</a>$0"));
+        assert_eq!(
+            "<a href=\"x\"></a>",
+            snippet_plain("<a href=\"${1:x}\">${2}</a>$0")
+        );
         assert_eq!("cost: $5", snippet_plain("cost: \\$5"));
     }
 
     #[test]
     fn edit_points_are_empty_values_and_empty_elements() {
         let text: Vec<char> = "<a href=\"\"><b></b></a>".chars().collect();
-        assert_eq!(Some(9), emmet_edit_point(&text, 0, true), "inside href=\"\"");
-        assert_eq!(Some(14), emmet_edit_point(&text, 9, true), "between <b> and </b>");
+        assert_eq!(
+            Some(9),
+            emmet_edit_point(&text, 0, true),
+            "inside href=\"\""
+        );
+        assert_eq!(
+            Some(14),
+            emmet_edit_point(&text, 9, true),
+            "between <b> and </b>"
+        );
         assert_eq!(Some(9), emmet_edit_point(&text, 14, false));
     }
 }
@@ -69990,13 +70642,13 @@ mod insert_generator_tests {
     #[test]
     fn duplicate_blocks_finds_copies_and_ignores_boilerplate() {
         let src = lines(&[
-            "fn a() {",      // 0
+            "fn a() {", // 0
             "    let x = 1;",
             "    let y = 2;",
             "    print(x);",
             "}",
-            "",              // 5
-            "fn b() {",      // 6 — same body, different name
+            "",         // 5
+            "fn b() {", // 6 — same body, different name
             "    let x = 1;",
             "    let y = 2;",
             "    print(x);",
@@ -70021,7 +70673,7 @@ mod insert_generator_tests {
             "    do_it();",
             "}",
             "x",
-            "        if a {",  // deeper indentation, same code
+            "        if a {", // deeper indentation, same code
             "            do_it();",
             "        }",
         ]);
@@ -70047,15 +70699,27 @@ let x = 1;
 ```
 ";
         let out = render_markdown(src);
-        assert!(out.contains("Title\n====="), "h1 is underlined with =: {out}");
+        assert!(
+            out.contains("Title\n====="),
+            "h1 is underlined with =: {out}"
+        );
         assert!(out.contains("Section\n-------"), "h2 with -: {out}");
-        assert!(out.contains("Some emphasis and code."), "markers dropped: {out}");
-        assert!(out.contains("• one") && out.contains("• two"), "bullets: {out}");
+        assert!(
+            out.contains("Some emphasis and code."),
+            "markers dropped: {out}"
+        );
+        assert!(
+            out.contains("• one") && out.contains("• two"),
+            "bullets: {out}"
+        );
         assert!(
             out.contains("zmax <https://example.com/zmax>"),
             "link text over its url: {out}"
         );
-        assert!(out.contains("    let x = 1;"), "fenced code indented: {out}");
+        assert!(
+            out.contains("    let x = 1;"),
+            "fenced code indented: {out}"
+        );
         assert!(!out.contains("```"), "the fence markers are gone: {out}");
     }
 
@@ -70078,10 +70742,7 @@ Exception in thread \"main\" java.lang.NullPointerException
 thread 'main' panicked at src/main.rs:12:5:
 no frame here";
         let frames = stack_trace_frames(trace);
-        let got: Vec<(&str, usize)> = frames
-            .iter()
-            .map(|f| (f.file.as_str(), f.line))
-            .collect();
+        let got: Vec<(&str, usize)> = frames.iter().map(|f| (f.file.as_str(), f.line)).collect();
         assert_eq!(
             got,
             vec![
@@ -70114,7 +70775,10 @@ no frame here";
         let rope = Rope::from_str("\"a\\\"b\" rest");
         assert_eq!(outside_bracket_or_quote(rope.slice(..), 1), Some(6));
         // Nothing encloses the tail of a file.
-        assert_eq!(outside_bracket_or_quote(Rope::from_str("abc").slice(..), 1), None);
+        assert_eq!(
+            outside_bracket_or_quote(Rope::from_str("abc").slice(..), 1),
+            None
+        );
     }
 
     #[test]
@@ -70151,8 +70815,16 @@ no frame here";
         assert_eq!(
             regions,
             vec![
-                CustomRegion { name: "outer".into(), start: 0, end: 3 },
-                CustomRegion { name: "inner".into(), start: 1, end: 2 },
+                CustomRegion {
+                    name: "outer".into(),
+                    start: 0,
+                    end: 3
+                },
+                CustomRegion {
+                    name: "inner".into(),
+                    start: 1,
+                    end: 2
+                },
             ]
         );
     }
@@ -72102,11 +72774,7 @@ fn current_major_mode(editor: &Editor) -> Option<String> {
 /// `define-key`'s `local` keymap. Opened through a job callback so it can be
 /// reached from a `compositor::Context` — a chained prompt, as
 /// [`keymap_prompt_in_mode`] is.
-fn keymap_local_prompt(
-    cx: &mut compositor::Context,
-    major_mode: String,
-    action: LocalKeyAction,
-) {
+fn keymap_local_prompt(cx: &mut compositor::Context, major_mode: String, action: LocalKeyAction) {
     let call = job::Callback::EditorCompositor(Box::new(move |editor, compositor| {
         let title: std::borrow::Cow<'static, str> = match action {
             LocalKeyAction::Set => "Set key locally (KEY COMMAND): ".into(),
@@ -73943,7 +74611,12 @@ fn dabbrev_candidates(text: &str, prefix: &str, cursor: usize) -> Vec<String> {
 /// [`dabbrev_candidates`], with the words after the cursor first when
 /// `forward_first` — the order JetBrains' "Cyclic Expand Word (Backward)"
 /// offers them in. Each side is still nearest-first. Pure — unit tested.
-fn dabbrev_candidates_ordered(text: &str, prefix: &str, cursor: usize, forward_first: bool) -> Vec<String> {
+fn dabbrev_candidates_ordered(
+    text: &str,
+    prefix: &str,
+    cursor: usize,
+    forward_first: bool,
+) -> Vec<String> {
     if prefix.is_empty() {
         return Vec::new();
     }
@@ -73979,7 +74652,11 @@ fn dabbrev_candidates_ordered(text: &str, prefix: &str, cursor: usize, forward_f
         }
     }
     before.reverse(); // nearest match behind point first
-    let (first, second) = if forward_first { (after, before) } else { (before, after) };
+    let (first, second) = if forward_first {
+        (after, before)
+    } else {
+        (before, after)
+    };
     let mut out: Vec<String> = Vec::new();
     for w in first.into_iter().chain(second) {
         let w = w.to_string();
@@ -74286,27 +74963,31 @@ fn analyze_stack_trace(cx: &mut Context) {
         PickerColumn::new("line", |f: &StackFrame, _: &()| f.line.to_string().into()),
         PickerColumn::new("frame", |f: &StackFrame, _: &()| f.text.as_str().into()),
     ];
-    let picker = Picker::new(columns, 0, frames, (), move |cx, frame: &StackFrame, action| {
-        let path = std::path::Path::new(&frame.file);
-        let candidate = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            root.join(path)
-        };
-        match cx.editor.open(&candidate, action) {
-            Ok(_) => {
-                let (view, doc) = current!(cx.editor);
-                let text = doc.text();
-                let line = frame.line.saturating_sub(1).min(text.len_lines() - 1);
-                let pos = text.line_to_char(line);
-                doc.set_selection(view.id, Selection::point(pos));
-                align_view(doc, view, Align::Center);
+    let picker = Picker::new(
+        columns,
+        0,
+        frames,
+        (),
+        move |cx, frame: &StackFrame, action| {
+            let path = std::path::Path::new(&frame.file);
+            let candidate = if path.is_absolute() {
+                path.to_path_buf()
+            } else {
+                root.join(path)
+            };
+            match cx.editor.open(&candidate, action) {
+                Ok(_) => {
+                    let (view, doc) = current!(cx.editor);
+                    let text = doc.text();
+                    let line = frame.line.saturating_sub(1).min(text.len_lines() - 1);
+                    let pos = text.line_to_char(line);
+                    doc.set_selection(view.id, Selection::point(pos));
+                    align_view(doc, view, Align::Center);
+                }
+                Err(e) => cx.editor.set_error(format!("{}: {e}", candidate.display())),
             }
-            Err(e) => cx
-                .editor
-                .set_error(format!("{}: {e}", candidate.display())),
-        }
-    });
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -74468,9 +75149,17 @@ fn run_project_build(cx: &mut Context, rebuild: bool) {
     // The build-tool window's task triggers run around it.
     let state = crate::build_tool::load();
     let command = if rebuild {
-        state.wrap(crate::build_tool::When::BeforeRebuild, &command, crate::build_tool::When::AfterRebuild)
+        state.wrap(
+            crate::build_tool::When::BeforeRebuild,
+            &command,
+            crate::build_tool::When::AfterRebuild,
+        )
     } else {
-        state.wrap(crate::build_tool::When::BeforeBuild, &command, crate::build_tool::When::AfterBuild)
+        state.wrap(
+            crate::build_tool::When::BeforeBuild,
+            &command,
+            crate::build_tool::When::AfterBuild,
+        )
     };
     let mut bridge = crate::compositor::Context {
         editor: cx.editor,
@@ -74493,7 +75182,11 @@ fn build_tool_window(cx: &mut Context) {
 /// `ExternalSystem.RefreshProject` for `scope`): run the before-sync tasks,
 /// reload the language servers so they read the build files again, run the
 /// after-sync tasks, and record the build files as loaded.
-pub(crate) fn build_sync_now(_compositor: &mut Compositor, cx: &mut compositor::Context, scope: Option<PathBuf>) {
+pub(crate) fn build_sync_now(
+    _compositor: &mut Compositor,
+    cx: &mut compositor::Context,
+    scope: Option<PathBuf>,
+) {
     use crate::build_tool::When;
     let root = zmax_loader::find_workspace().0;
     let state = crate::build_tool::update(|state| {
@@ -74509,14 +75202,19 @@ pub(crate) fn build_sync_now(_compositor: &mut Compositor, cx: &mut compositor::
         }
     }
     typed::run_command_line(cx, "lsp-restart");
-    let what = scope.map_or_else(|| "all build projects".to_string(), |p| p.display().to_string());
+    let what = scope.map_or_else(
+        || "all build projects".to_string(),
+        |p| p.display().to_string(),
+    );
     cx.editor.set_status(format!("synced {what}"));
     *BUILD_CHANGE_NOTICE.lock().unwrap() = None;
 }
 
 /// JetBrains "Reload All Projects" (`ExternalSystem.RefreshAllProjects`).
 fn build_sync(cx: &mut Context) {
-    cx.callback.push(Box::new(|compositor, cx| build_sync_now(compositor, cx, None)));
+    cx.callback.push(Box::new(|compositor, cx| {
+        build_sync_now(compositor, cx, None)
+    }));
 }
 
 /// JetBrains "Reload Project" (`ExternalSystem.RefreshProject`): the build
@@ -74530,7 +75228,9 @@ fn build_sync_project(cx: &mut Context) {
             .filter(|b| b.parent().is_some_and(|d| f.starts_with(d)))
             .max_by_key(|b| b.components().count())
     });
-    cx.callback.push(Box::new(move |compositor, cx| build_sync_now(compositor, cx, project)));
+    cx.callback.push(Box::new(move |compositor, cx| {
+        build_sync_now(compositor, cx, project)
+    }));
 }
 
 /// The build files changed since the last sync, as the notice last shown or
@@ -74538,7 +75238,8 @@ fn build_sync_project(cx: &mut Context) {
 static BUILD_CHANGE_NOTICE: std::sync::Mutex<Option<Vec<PathBuf>>> = std::sync::Mutex::new(None);
 static BUILD_CHANGE_HIDDEN: std::sync::Mutex<Vec<PathBuf>> = std::sync::Mutex::new(Vec::new());
 /// When the build files were last looked at, so idle checks stay cheap.
-static BUILD_CHANGE_CHECKED: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
+static BUILD_CHANGE_CHECKED: std::sync::Mutex<Option<std::time::Instant>> =
+    std::sync::Mutex::new(None);
 
 /// JetBrains "Load Build Changes" (`ExternalSystem.ProjectRefreshAction`): on
 /// idle, notice build files changed since the last sync — sync with auto-sync
@@ -74564,11 +75265,20 @@ pub(crate) fn check_build_changes(cx: &mut Context) {
         return;
     }
     if state.auto_sync == crate::build_tool::AutoSync::Any {
-        cx.callback.push(Box::new(|compositor, cx| build_sync_now(compositor, cx, None)));
+        cx.callback.push(Box::new(|compositor, cx| {
+            build_sync_now(compositor, cx, None)
+        }));
         return;
     }
-    let names: Vec<String> = changed.iter().filter_map(|f| f.strip_prefix(&root).ok()).map(|f| f.display().to_string()).collect();
-    cx.editor.set_status(format!("build files changed ({}) — build_sync loads them", names.join(", ")));
+    let names: Vec<String> = changed
+        .iter()
+        .filter_map(|f| f.strip_prefix(&root).ok())
+        .map(|f| f.display().to_string())
+        .collect();
+    cx.editor.set_status(format!(
+        "build files changed ({}) — build_sync loads them",
+        names.join(", ")
+    ));
     *BUILD_CHANGE_NOTICE.lock().unwrap() = Some(changed);
 }
 
@@ -74619,7 +75329,12 @@ fn pick_build_task(cx: &mut Context, then: fn(&mut compositor::Context, PathBuf,
     let mut tasks: Vec<(PathBuf, String)> = Vec::new();
     for project in crate::build_tool::discover(&root) {
         for member in std::iter::once(&project).chain(project.members.iter()) {
-            tasks.extend(member.tasks.iter().map(|t| (member.dir().to_path_buf(), t.clone())));
+            tasks.extend(
+                member
+                    .tasks
+                    .iter()
+                    .map(|t| (member.dir().to_path_buf(), t.clone())),
+            );
         }
     }
     if tasks.is_empty() {
@@ -74627,12 +75342,26 @@ fn pick_build_task(cx: &mut Context, then: fn(&mut compositor::Context, PathBuf,
         return;
     }
     let columns = [
-        PickerColumn::new("task", |t: &(PathBuf, String), _: &PathBuf| t.1.as_str().into()),
-        PickerColumn::new("in", |t: &(PathBuf, String), root: &PathBuf| t.0.strip_prefix(root).unwrap_or(&t.0).display().to_string().into()),
+        PickerColumn::new("task", |t: &(PathBuf, String), _: &PathBuf| {
+            t.1.as_str().into()
+        }),
+        PickerColumn::new("in", |t: &(PathBuf, String), root: &PathBuf| {
+            t.0.strip_prefix(root)
+                .unwrap_or(&t.0)
+                .display()
+                .to_string()
+                .into()
+        }),
     ];
-    let picker = Picker::new(columns, 0, tasks, root, move |cx, (dir, task): &(PathBuf, String), _| {
-        then(cx, dir.clone(), task.clone());
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        tasks,
+        root,
+        move |cx, (dir, task): &(PathBuf, String), _| {
+            then(cx, dir.clone(), task.clone());
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -74641,19 +75370,35 @@ fn pick_build_task(cx: &mut Context, then: fn(&mut compositor::Context, PathBuf,
 /// runs.
 fn build_task_trigger(cx: &mut Context) {
     pick_build_task(cx, |_cx, dir, task| {
-        crate::compositor::defer([Box::new(move |compositor: &mut Compositor, _: &mut compositor::Context| {
-            let columns = [PickerColumn::new("run the task", |w: &crate::build_tool::When, _: &()| w.label().into())];
-            let picker = Picker::new(columns, 0, crate::build_tool::When::ALL, (), move |cx, when: &crate::build_tool::When, _| {
-                let trigger = crate::build_tool::Trigger { when: *when, dir: dir.clone(), task: task.clone() };
-                crate::build_tool::update(|s| {
-                    if !s.triggers.contains(&trigger) {
-                        s.triggers.push(trigger);
-                    }
-                });
-                cx.editor.set_status(format!("{task} runs {}", when.label()));
-            });
-            compositor.push(Box::new(overlaid(picker)));
-        }) as compositor::Callback]);
+        crate::compositor::defer([Box::new(
+            move |compositor: &mut Compositor, _: &mut compositor::Context| {
+                let columns = [PickerColumn::new(
+                    "run the task",
+                    |w: &crate::build_tool::When, _: &()| w.label().into(),
+                )];
+                let picker = Picker::new(
+                    columns,
+                    0,
+                    crate::build_tool::When::ALL,
+                    (),
+                    move |cx, when: &crate::build_tool::When, _| {
+                        let trigger = crate::build_tool::Trigger {
+                            when: *when,
+                            dir: dir.clone(),
+                            task: task.clone(),
+                        };
+                        crate::build_tool::update(|s| {
+                            if !s.triggers.contains(&trigger) {
+                                s.triggers.push(trigger);
+                            }
+                        });
+                        cx.editor
+                            .set_status(format!("{task} runs {}", when.label()));
+                    },
+                );
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ) as compositor::Callback]);
     });
 }
 
@@ -74670,10 +75415,11 @@ fn build_task_triggers(cx: &mut Context) {
 /// task to run before the active run configuration.
 fn run_config_add_before_task(cx: &mut Context) {
     pick_build_task(cx, |cx, dir, task| {
-        cx.editor.set_status(match crate::run_config::add_before_task(&dir, &task) {
-            Some(name) => format!("{task} runs before {name}"),
-            None => "no active run configuration".to_string(),
-        });
+        cx.editor
+            .set_status(match crate::run_config::add_before_task(&dir, &task) {
+                Some(name) => format!("{task} runs before {name}"),
+                None => "no active run configuration".to_string(),
+            });
     });
 }
 
@@ -74695,7 +75441,8 @@ fn services_restore_all(cx: &mut Context) {
     let n = data.configs.iter().filter(|c| c.hidden).count();
     data.configs.iter_mut().for_each(|c| c.hidden = false);
     crate::run_config::save(&data);
-    cx.editor.set_status(format!("{n} configuration(s) shown again"));
+    cx.editor
+        .set_status(format!("{n} configuration(s) shown again"));
 }
 
 /// JetBrains "Manage Targets" (`ManageTargets`): the run targets; picking one
@@ -74703,37 +75450,52 @@ fn services_restore_all(cx: &mut Context) {
 fn manage_run_targets(cx: &mut Context) {
     let targets = crate::run_targets::load();
     if targets.is_empty() {
-        cx.editor.set_status("no run targets — run_target_add defines one");
+        cx.editor
+            .set_status("no run targets — run_target_add defines one");
         return;
     }
     let columns = [
-        PickerColumn::new("target", |t: &crate::run_targets::RunTarget, _: &()| t.name.as_str().into()),
-        PickerColumn::new("runs on", |t: &crate::run_targets::RunTarget, _: &()| t.describe().into()),
+        PickerColumn::new("target", |t: &crate::run_targets::RunTarget, _: &()| {
+            t.name.as_str().into()
+        }),
+        PickerColumn::new("runs on", |t: &crate::run_targets::RunTarget, _: &()| {
+            t.describe().into()
+        }),
     ];
-    let picker = Picker::new(columns, 0, targets, (), |cx, target: &crate::run_targets::RunTarget, _| {
-        let mut targets = crate::run_targets::load();
-        targets.retain(|t| t.name != target.name);
-        crate::run_targets::save(targets);
-        cx.editor.set_status(format!("run target {} removed", target.name));
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        targets,
+        (),
+        |cx, target: &crate::run_targets::RunTarget, _| {
+            let mut targets = crate::run_targets::load();
+            targets.retain(|t| t.name != target.name);
+            crate::run_targets::save(targets);
+            cx.editor
+                .set_status(format!("run target {} removed", target.name));
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// Define a run target: `NAME ssh HOST[:DIR]`, `NAME docker IMAGE` or
 /// `NAME container NAME` (JetBrains "Manage Targets" → add).
 fn run_target_add(cx: &mut Context) {
-    prompt_then(cx, "run target (NAME ssh HOST[:DIR] | docker IMAGE | container NAME):", |cx, spec| {
-        match crate::run_targets::parse(spec) {
+    prompt_then(
+        cx,
+        "run target (NAME ssh HOST[:DIR] | docker IMAGE | container NAME):",
+        |cx, spec| match crate::run_targets::parse(spec) {
             Ok(target) => {
                 let mut targets = crate::run_targets::load();
                 targets.retain(|t| t.name != target.name);
-                cx.editor.set_status(format!("run target {}: {}", target.name, target.describe()));
+                cx.editor
+                    .set_status(format!("run target {}: {}", target.name, target.describe()));
                 targets.push(target);
                 crate::run_targets::save(targets);
             }
             Err(e) => cx.editor.set_error(e),
-        }
-    });
+        },
+    );
 }
 
 /// JetBrains run targets combo (`ExecutionTargets`): where the active run
@@ -74741,17 +75503,24 @@ fn run_target_add(cx: &mut Context) {
 fn choose_run_target(cx: &mut Context) {
     let mut names = vec!["local".to_string()];
     names.extend(crate::run_targets::load().into_iter().map(|t| t.name));
-    let columns = [PickerColumn::new("run on", |n: &String, _: &()| n.as_str().into())];
+    let columns = [PickerColumn::new("run on", |n: &String, _: &()| {
+        n.as_str().into()
+    })];
     let picker = Picker::new(columns, 0, names, (), |cx, name: &String, _| {
         let mut data = crate::run_config::load();
         let Some(config) = data.configs.get_mut(data.active) else {
             cx.editor.set_error("no active run configuration");
             return;
         };
-        config.target = if name == "local" { String::new() } else { name.clone() };
+        config.target = if name == "local" {
+            String::new()
+        } else {
+            name.clone()
+        };
         let config_name = config.name.clone();
         crate::run_config::save(&data);
-        cx.editor.set_status(format!("{config_name} runs on {name}"));
+        cx.editor
+            .set_status(format!("{config_name} runs on {name}"));
     });
     cx.push_layer(Box::new(overlaid(picker)));
 }
@@ -74924,8 +75693,7 @@ fn recent_projects_picker(cx: &mut Context) {
             cx.editor.set_error(format!("open project: {e}"));
             return;
         }
-        cx.editor
-            .set_status(format!("project: {}", path.display()));
+        cx.editor.set_status(format!("project: {}", path.display()));
         // The workbench tree keeps the old root otherwise, which would say one
         // project while every path-resolving command means another.
         let root = path.clone();
@@ -74962,7 +75730,11 @@ fn convert_indent(line: &str, width: usize, to_tabs: bool) -> String {
         let spaces = columns % width.max(1);
         format!("{}{}{}", "\t".repeat(tabs), " ".repeat(spaces), rest)
     } else {
-        format!("{}{}", indent.replace('\t', &" ".repeat(width.max(1))), rest)
+        format!(
+            "{}{}",
+            indent.replace('\t', &" ".repeat(width.max(1))),
+            rest
+        )
     }
 }
 
@@ -74995,7 +75767,11 @@ fn convert_indents_impl(cx: &mut Context, to_tabs: bool) {
         let stripped = content.trim_end_matches(['\n', '\r']);
         let converted = convert_indent(stripped, width, to_tabs);
         if converted != stripped {
-            changes.push((start, start + stripped.chars().count(), Some(converted.into())));
+            changes.push((
+                start,
+                start + stripped.chars().count(),
+                Some(converted.into()),
+            ));
         }
     }
     if changes.is_empty() {
@@ -75043,7 +75819,11 @@ fn git_history_for_selection(cx: &mut Context) {
     };
     // `-L` wants the path relative to the repo, and a `start,end:file` argument.
     let root = zmax_loader::find_workspace().0;
-    let rel = path.strip_prefix(&root).unwrap_or(&path).display().to_string();
+    let rel = path
+        .strip_prefix(&root)
+        .unwrap_or(&path)
+        .display()
+        .to_string();
     let range = format!("{first},{last}:{rel}");
     let mut bridge = crate::compositor::Context {
         editor: cx.editor,
@@ -75076,19 +75856,25 @@ fn git_compare_with_branch(cx: &mut Context) {
     let columns = [PickerColumn::new("branch", |b: &String, _: &()| {
         b.as_str().into()
     })];
-    let picker = Picker::new(columns, 0, branches, (), move |cx, branch: &String, _action| {
-        let root = zmax_loader::find_workspace().0;
-        let rel = path
-            .strip_prefix(&root)
-            .unwrap_or(&path)
-            .display()
-            .to_string();
-        git_output_to_scratch_cx(
-            cx,
-            &["diff", branch, "--", &rel],
-            &format!("{rel} is identical on {branch}"),
-        );
-    });
+    let picker = Picker::new(
+        columns,
+        0,
+        branches,
+        (),
+        move |cx, branch: &String, _action| {
+            let root = zmax_loader::find_workspace().0;
+            let rel = path
+                .strip_prefix(&root)
+                .unwrap_or(&path)
+                .display()
+                .to_string();
+            git_output_to_scratch_cx(
+                cx,
+                &["diff", branch, "--", &rel],
+                &format!("{rel} is identical on {branch}"),
+            );
+        },
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -75176,49 +75962,81 @@ where
 
 /// JetBrains "Merge" (`Git.Merge`): merge a picked branch into the current one.
 fn git_merge_branch(cx: &mut Context) {
-    git_pick(cx, "merge into current", git_branch_refs(), "No git branches", |cx, branch| {
-        git_run_cx(cx, &["merge", branch], &format!("Merged {branch}"), true)
-    });
+    git_pick(
+        cx,
+        "merge into current",
+        git_branch_refs(),
+        "No git branches",
+        |cx, branch| git_run_cx(cx, &["merge", branch], &format!("Merged {branch}"), true),
+    );
 }
 
 /// JetBrains "Rebase" (`Git.Rebase`): rebase the current branch onto a picked
 /// one.
 fn git_rebase_onto(cx: &mut Context) {
-    git_pick(cx, "rebase onto", git_branch_refs(), "No git branches", |cx, branch| {
-        git_run_cx(cx, &["rebase", branch], &format!("Rebased onto {branch}"), true)
-    });
+    git_pick(
+        cx,
+        "rebase onto",
+        git_branch_refs(),
+        "No git branches",
+        |cx, branch| {
+            git_run_cx(
+                cx,
+                &["rebase", branch],
+                &format!("Rebased onto {branch}"),
+                true,
+            )
+        },
+    );
 }
 
 /// JetBrains "Checkout and Update" (`Git.Checkout.Update`): switch to a local
 /// branch, then fast-forward it from its upstream.
 fn git_checkout_and_update(cx: &mut Context) {
-    git_pick(cx, "checkout and update", git_branch_names(), "No git branches", |cx, branch| {
-        if let Err(e) = git_exec(&["checkout", branch]) {
-            cx.editor.set_error(format!(
-                "git checkout {branch}: {}",
-                e.lines().next().unwrap_or("failed")
-            ));
-            return;
-        }
-        crate::commands::typed::reload_open_docs(cx);
-        git_async_cx(
-            cx,
-            "updating…",
-            vec!["pull".into(), "--ff-only".into()],
-            "checked out and updated",
-            true,
-        );
-    });
+    git_pick(
+        cx,
+        "checkout and update",
+        git_branch_names(),
+        "No git branches",
+        |cx, branch| {
+            if let Err(e) = git_exec(&["checkout", branch]) {
+                cx.editor.set_error(format!(
+                    "git checkout {branch}: {}",
+                    e.lines().next().unwrap_or("failed")
+                ));
+                return;
+            }
+            crate::commands::typed::reload_open_docs(cx);
+            git_async_cx(
+                cx,
+                "updating…",
+                vec!["pull".into(), "--ff-only".into()],
+                "checked out and updated",
+                true,
+            );
+        },
+    );
 }
 
 /// JetBrains `Git.Rename.Local.Branch`: rename a picked local branch.
 fn git_rename_branch(cx: &mut Context) {
-    git_pick(cx, "rename branch", git_branch_names(), "No git branches", |cx, branch| {
-        let old = branch.to_string();
-        prompt_then_cx(cx, "new branch name: ", move |cx, new| {
-            git_run_cx(cx, &["branch", "-m", &old, new], &format!("Renamed {old} to {new}"), false)
-        });
-    });
+    git_pick(
+        cx,
+        "rename branch",
+        git_branch_names(),
+        "No git branches",
+        |cx, branch| {
+            let old = branch.to_string();
+            prompt_then_cx(cx, "new branch name: ", move |cx, new| {
+                git_run_cx(
+                    cx,
+                    &["branch", "-m", &old, new],
+                    &format!("Renamed {old} to {new}"),
+                    false,
+                )
+            });
+        },
+    );
 }
 
 /// JetBrains "Reset HEAD" (`Git.Reset`): move HEAD to a commit, branch or tag,
@@ -75268,7 +76086,12 @@ where
 /// `fixup!` of a picked commit, for a later autosquash.
 fn git_fixup_commit(cx: &mut Context) {
     git_pick_commit(cx, "fixup of", |cx, sha| {
-        git_run_cx(cx, &["commit", &format!("--fixup={sha}")], &format!("Created fixup! of {sha}"), false)
+        git_run_cx(
+            cx,
+            &["commit", &format!("--fixup={sha}")],
+            &format!("Created fixup! of {sha}"),
+            false,
+        )
     });
 }
 
@@ -75308,7 +76131,12 @@ fn git_reword_commit(cx: &mut Context) {
         prompt_then_cx(cx, "new message: ", move |cx, message| {
             let full = |rev: &str| git_exec(&["rev-parse", rev]).ok();
             if full("HEAD").is_some() && full("HEAD") == full(&sha) {
-                git_run_cx(cx, &["commit", "--amend", "--only", "-m", message], "Reworded HEAD", false);
+                git_run_cx(
+                    cx,
+                    &["commit", "--amend", "--only", "-m", message],
+                    "Reworded HEAD",
+                    false,
+                );
                 return;
             }
             let root = zmax_loader::find_workspace().0;
@@ -75317,7 +76145,10 @@ fn git_reword_commit(cx: &mut Context) {
                 .arg(&root)
                 .args(["rebase", "-i", &format!("{sha}^")])
                 .env("GIT_TERMINAL_PROMPT", "0")
-                .env("GIT_SEQUENCE_EDITOR", "perl -i -pe 's/^pick /reword / if $. == 1'")
+                .env(
+                    "GIT_SEQUENCE_EDITOR",
+                    "perl -i -pe 's/^pick /reword / if $. == 1'",
+                )
                 .env(
                     "GIT_EDITOR",
                     "perl -e 'open my $f, q(>), $ARGV[0] or die; print $f $ENV{ZMAX_REWORD_MSG}'",
@@ -75331,7 +76162,10 @@ fn git_reword_commit(cx: &mut Context) {
                 }
                 Ok(out) => cx.editor.set_error(format!(
                     "reword {sha}: {}",
-                    String::from_utf8_lossy(&out.stderr).lines().next().unwrap_or("failed")
+                    String::from_utf8_lossy(&out.stderr)
+                        .lines()
+                        .next()
+                        .unwrap_or("failed")
                 )),
                 Err(e) => cx.editor.set_error(format!("git: {e}")),
             }
@@ -75345,21 +76179,33 @@ fn git_branch_at_commit(cx: &mut Context) {
     git_pick_commit(cx, "branch from", |cx, sha| {
         let sha = sha.to_string();
         prompt_then_cx(cx, "new branch: ", move |cx, name| {
-            git_run_cx(cx, &["switch", "-c", name, &sha], &format!("Switched to new branch {name} at {sha}"), true)
+            git_run_cx(
+                cx,
+                &["switch", "-c", name, &sha],
+                &format!("Switched to new branch {name} at {sha}"),
+                true,
+            )
         });
     });
 }
 
 /// JetBrains "Reset Current Branch to Here" (`Git.Reset.In.Log`).
 fn git_reset_to_commit(cx: &mut Context) {
-    git_pick_commit(cx, "reset to", |cx, sha| git_reset_mode_picker(cx, sha.to_string()));
+    git_pick_commit(cx, "reset to", |cx, sha| {
+        git_reset_mode_picker(cx, sha.to_string())
+    });
 }
 
 /// JetBrains "Revert Commit" (`Git.Revert.In.Log`): a new commit undoing a
 /// picked one.
 fn git_revert_commit(cx: &mut Context) {
     git_pick_commit(cx, "revert", |cx, sha| {
-        git_run_cx(cx, &["revert", "--no-edit", sha], &format!("Reverted {sha}"), true)
+        git_run_cx(
+            cx,
+            &["revert", "--no-edit", sha],
+            &format!("Reverted {sha}"),
+            true,
+        )
     });
 }
 
@@ -75370,7 +76216,12 @@ fn vcs_get_version(cx: &mut Context) {
         return;
     };
     prompt_then(cx, "get revision: ", move |cx, rev| {
-        git_run_cx(cx, &["checkout", rev, "--", &rel], &format!("{rel} is now at {rev}"), true)
+        git_run_cx(
+            cx,
+            &["checkout", rev, "--", &rel],
+            &format!("{rel} is now at {rev}"),
+            true,
+        )
     });
 }
 
@@ -75380,9 +76231,13 @@ where
     F: Fn(&mut crate::compositor::Context, &str, &str) + 'static,
 {
     let commits = git_lines(&["log", "--format=%h %s", "-500", "--", &rel]);
-    git_pick(cx, header, commits, "No commits touch this file", move |cx, line| {
-        on_pick(cx, line.split(' ').next().unwrap_or(line), &rel)
-    });
+    git_pick(
+        cx,
+        header,
+        commits,
+        "No commits touch this file",
+        move |cx, line| on_pick(cx, line.split(' ').next().unwrap_or(line), &rel),
+    );
 }
 
 /// JetBrains "Annotate" on a log revision (`Vcs.Log.AnnotateRevisionAction`):
@@ -75483,13 +76338,13 @@ fn git_remove_deleted(cx: &mut Context) {
     let mut args = vec!["rm", "--cached", "--quiet", "--"];
     args.extend(deleted.iter().map(String::as_str));
     match git_exec(&args) {
-        Ok(_) => cx
-            .editor
-            .set_status(format!("Removed {} deleted file(s) from git", deleted.len())),
-        Err(e) => cx.editor.set_error(format!(
-            "git rm: {}",
-            e.lines().next().unwrap_or("failed")
+        Ok(_) => cx.editor.set_status(format!(
+            "Removed {} deleted file(s) from git",
+            deleted.len()
         )),
+        Err(e) => cx
+            .editor
+            .set_error(format!("git rm: {}", e.lines().next().unwrap_or("failed"))),
     }
 }
 
@@ -75498,7 +76353,11 @@ fn git_remove_deleted(cx: &mut Context) {
 fn git_stash_list(cx: &mut Context) {
     git_pick(cx, "stash", git_stashes(), "No stashes", |cx, line| {
         let stash = stash_ref(line);
-        git_output_to_scratch_cx(cx, &["stash", "show", "-p", "--include-untracked", stash], "The stash is empty")
+        git_output_to_scratch_cx(
+            cx,
+            &["stash", "show", "-p", "--include-untracked", stash],
+            "The stash is empty",
+        )
     });
 }
 
@@ -75517,9 +76376,12 @@ fn git_manage_remotes(cx: &mut Context) {
             prompt_then_cx(cx, "remote name and URL: ", |cx, input| {
                 let mut parts = input.split_whitespace();
                 match (parts.next(), parts.next()) {
-                    (Some(name), Some(url)) => {
-                        git_run_cx(cx, &["remote", "add", name, url], &format!("Added remote {name}"), false)
-                    }
+                    (Some(name), Some(url)) => git_run_cx(
+                        cx,
+                        &["remote", "add", name, url],
+                        &format!("Added remote {name}"),
+                        false,
+                    ),
                     _ => cx.editor.set_error("give a name and a URL"),
                 }
             });
@@ -75529,9 +76391,19 @@ fn git_manage_remotes(cx: &mut Context) {
         prompt_then_cx_allow_empty(cx, "URL (empty: remove the remote): ", move |cx, url| {
             let url = url.trim();
             if url.is_empty() {
-                git_run_cx(cx, &["remote", "remove", &name], &format!("Removed remote {name}"), false)
+                git_run_cx(
+                    cx,
+                    &["remote", "remove", &name],
+                    &format!("Removed remote {name}"),
+                    false,
+                )
             } else {
-                git_run_cx(cx, &["remote", "set-url", &name, url], &format!("{name} now points at {url}"), false)
+                git_run_cx(
+                    cx,
+                    &["remote", "set-url", &name, url],
+                    &format!("{name} now points at {url}"),
+                    false,
+                )
             }
         });
     });
@@ -75543,7 +76415,9 @@ fn git_manage_remotes(cx: &mut Context) {
 /// (`git branch -d`), which refuses a branch with unmerged work.
 fn git_cleanup_branches(cx: &mut Context) {
     let merged: std::collections::HashSet<String> =
-        git_lines(&["branch", "--merged", "HEAD", "--format=%(refname:short)"]).into_iter().collect();
+        git_lines(&["branch", "--merged", "HEAD", "--format=%(refname:short)"])
+            .into_iter()
+            .collect();
     let current = git_exec(&["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_default();
     let rows: Vec<String> = git_lines(&[
         "for-each-ref",
@@ -75560,14 +76434,29 @@ fn git_cleanup_branches(cx: &mut Context) {
         }
         let date = fields.next().unwrap_or("");
         let upstream = fields.next().filter(|u| !u.is_empty()).unwrap_or("-");
-        let status = if merged.contains(&name) { "merged" } else { "not merged" };
+        let status = if merged.contains(&name) {
+            "merged"
+        } else {
+            "not merged"
+        };
         Some(format!("{name}  {date}  {upstream}  {status}"))
     })
     .collect();
-    git_pick(cx, "delete branch", rows, "No other local branches", |cx, row| {
-        let name = row.split_whitespace().next().unwrap_or(row);
-        git_run_cx(cx, &["branch", "-d", name], &format!("Deleted branch {name}"), false)
-    });
+    git_pick(
+        cx,
+        "delete branch",
+        rows,
+        "No other local branches",
+        |cx, row| {
+            let name = row.split_whitespace().next().unwrap_or(row);
+            git_run_cx(
+                cx,
+                &["branch", "-d", name],
+                &format!("Deleted branch {name}"),
+                false,
+            )
+        },
+    );
 }
 
 /// JetBrains "Show Repository at Revision" (`Git.BrowseRepoAtRevision`): pick a
@@ -75578,10 +76467,16 @@ fn git_browse_at_revision(cx: &mut Context) {
         let call: job::Callback = Callback::EditorCompositor(Box::new(
             move |_editor: &mut Editor, compositor: &mut Compositor| {
                 let files = git_lines(&["ls-tree", "-r", "--name-only", &sha]);
-                let columns = [PickerColumn::new("file", |f: &String, _: &()| f.as_str().into())];
+                let columns = [PickerColumn::new("file", |f: &String, _: &()| {
+                    f.as_str().into()
+                })];
                 let sha = sha.clone();
                 let picker = Picker::new(columns, 0, files, (), move |cx, file: &String, _| {
-                    git_output_to_scratch_cx(cx, &["show", &format!("{sha}:{file}")], "The file was empty")
+                    git_output_to_scratch_cx(
+                        cx,
+                        &["show", &format!("{sha}:{file}")],
+                        "The file was empty",
+                    )
                 });
                 compositor.push(Box::new(overlaid(picker)));
             },
@@ -75619,7 +76514,9 @@ fn shelf_here(cx: &mut Context) -> Option<(PathBuf, PathBuf)> {
         .map_err(|e| e.to_string())
         .and_then(|top| {
             let top = PathBuf::from(top);
-            typed::shelf_dir(&top).map(|shelf| (top, shelf)).map_err(|e| e.to_string())
+            typed::shelf_dir(&top)
+                .map(|shelf| (top, shelf))
+                .map_err(|e| e.to_string())
         });
     match found {
         Ok(found) => Some(found),
@@ -75663,7 +76560,10 @@ fn pick_shelf_entry(
         return;
     }
     let columns = [PickerColumn::new(header, |p: &PathBuf, _: &()| {
-        p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default().into()
+        p.file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default()
+            .into()
     })];
     let picker = Picker::new(columns, 0, entries, (), move |cx, patch: &PathBuf, _| {
         on_pick(cx, &top, patch)
@@ -75681,7 +76581,10 @@ fn shelf_apply_patch(cx: &mut crate::compositor::Context, top: &Path, patch: &Pa
             true
         }
         Err(e) => {
-            cx.editor.set_error(format!("git apply: {}", e.lines().next().unwrap_or("failed")));
+            cx.editor.set_error(format!(
+                "git apply: {}",
+                e.lines().next().unwrap_or("failed")
+            ));
             false
         }
     }
@@ -75695,7 +76598,10 @@ fn shelf_recycle(patch: &Path) -> std::io::Result<()> {
 }
 
 fn entry_name(patch: &Path) -> String {
-    patch.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+    patch
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }
 
 /// JetBrains "Shelf" tool window (`Vcs.Show.Shelf`) and "Apply" /
@@ -75707,7 +76613,8 @@ fn shelf_apply(cx: &mut Context) {
     };
     pick_shelf_entry(cx, "apply shelved", top, &shelf, |cx, top, patch| {
         if shelf_apply_patch(cx, top, patch) {
-            cx.editor.set_status(format!("applied {}", entry_name(patch)));
+            cx.editor
+                .set_status(format!("applied {}", entry_name(patch)));
         }
     });
 }
@@ -75722,7 +76629,8 @@ fn shelf_pop(cx: &mut Context) {
     pick_shelf_entry(cx, "pop shelved", top, &shelf, |cx, top, patch| {
         if shelf_apply_patch(cx, top, patch) {
             let _ = shelf_recycle(patch);
-            cx.editor.set_status(format!("popped {}", entry_name(patch)));
+            cx.editor
+                .set_status(format!("popped {}", entry_name(patch)));
         }
     });
 }
@@ -75733,12 +76641,18 @@ fn shelf_drop(cx: &mut Context) {
     let Some((top, shelf)) = shelf_here(cx) else {
         return;
     };
-    pick_shelf_entry(cx, "drop shelved", top, &shelf, |cx, _, patch| {
-        match shelf_recycle(patch) {
-            Ok(()) => cx.editor.set_status(format!("dropped {}", entry_name(patch))),
+    pick_shelf_entry(
+        cx,
+        "drop shelved",
+        top,
+        &shelf,
+        |cx, _, patch| match shelf_recycle(patch) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("dropped {}", entry_name(patch))),
             Err(e) => cx.editor.set_error(format!("shelf: {e}")),
-        }
-    });
+        },
+    );
 }
 
 /// JetBrains "Restore" of a dropped entry (`ShelvedChanges.Restore`): back
@@ -75748,13 +76662,21 @@ fn shelf_restore(cx: &mut Context) {
         return;
     };
     let recycled = shelf_recycled(&shelf);
-    pick_shelf_entry(cx, "restore dropped", top, &recycled, move |cx, _, patch| {
-        let back = shelf.join(patch.file_name().unwrap_or_default());
-        match std::fs::rename(patch, &back) {
-            Ok(()) => cx.editor.set_status(format!("restored {}", entry_name(patch))),
-            Err(e) => cx.editor.set_error(format!("shelf: {e}")),
-        }
-    });
+    pick_shelf_entry(
+        cx,
+        "restore dropped",
+        top,
+        &recycled,
+        move |cx, _, patch| {
+            let back = shelf.join(patch.file_name().unwrap_or_default());
+            match std::fs::rename(patch, &back) {
+                Ok(()) => cx
+                    .editor
+                    .set_status(format!("restored {}", entry_name(patch))),
+                Err(e) => cx.editor.set_error(format!("shelf: {e}")),
+            }
+        },
+    );
 }
 
 /// JetBrains "Rename" of a shelf entry (`ShelvedChanges.Rename`).
@@ -75767,7 +76689,8 @@ fn shelf_rename(cx: &mut Context) {
         prompt_then_cx(cx, "new name: ", move |cx, name| {
             let to = patch.with_file_name(format!("{}.patch", name.replace(['/', '\\'], "-")));
             if to.exists() {
-                cx.editor.set_error(format!("a shelf entry named {name} exists"));
+                cx.editor
+                    .set_error(format!("a shelf entry named {name} exists"));
                 return;
             }
             match std::fs::rename(&patch, &to) {
@@ -75786,10 +76709,15 @@ fn shelf_import(cx: &mut Context) {
     };
     prompt_then(cx, "patch file: ", move |cx, file| {
         let from = PathBuf::from(file);
-        let name = from.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let name = from
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let to = shelf.join(format!("{name}.patch"));
         match std::fs::copy(&from, &to) {
-            Ok(_) => cx.editor.set_status(format!("imported {name} onto the shelf")),
+            Ok(_) => cx
+                .editor
+                .set_status(format!("imported {name} onto the shelf")),
             Err(e) => cx.editor.set_error(format!("{file}: {e}")),
         }
     });
@@ -75804,7 +76732,8 @@ fn shelf_save_keep(cx: &mut Context) {
     let patch = match typed::local_changes_patch(&top) {
         Ok(patch) if !patch.is_empty() => patch,
         Ok(_) => {
-            cx.editor.set_status("nothing to shelve — the tree is clean");
+            cx.editor
+                .set_status("nothing to shelve — the tree is clean");
             return;
         }
         Err(e) => {
@@ -75820,7 +76749,9 @@ fn shelf_save_keep(cx: &mut Context) {
             .unwrap_or(0)
     );
     match std::fs::write(shelf.join(format!("{name}.patch")), &patch) {
-        Ok(()) => cx.editor.set_status(format!("saved {name} to the shelf; the tree is unchanged")),
+        Ok(()) => cx
+            .editor
+            .set_status(format!("saved {name} to the shelf; the tree is unchanged")),
         Err(e) => cx.editor.set_error(format!("shelf: {e}")),
     }
 }
@@ -75870,7 +76801,11 @@ fn git_push_up_to_commit(cx: &mut Context) {
         git_async_cx(
             cx,
             "pushing…",
-            vec!["push".into(), git_push_remote(), format!("{sha}:refs/heads/{branch}")],
+            vec![
+                "push".into(),
+                git_push_remote(),
+                format!("{sha}:refs/heads/{branch}"),
+            ],
             "pushed",
             false,
         )
@@ -75912,17 +76847,33 @@ fn stash_ref(line: &str) -> &str {
 
 /// JetBrains "Apply" in the stash list (`Git.Stash.Apply`).
 fn git_stash_apply_picked(cx: &mut Context) {
-    git_pick(cx, "apply stash", git_stashes(), "No stashes", |cx, line| {
-        let stash = stash_ref(line);
-        git_run_cx(cx, &["stash", "apply", stash], &format!("Applied {stash}"), true)
-    });
+    git_pick(
+        cx,
+        "apply stash",
+        git_stashes(),
+        "No stashes",
+        |cx, line| {
+            let stash = stash_ref(line);
+            git_run_cx(
+                cx,
+                &["stash", "apply", stash],
+                &format!("Applied {stash}"),
+                true,
+            )
+        },
+    );
 }
 
 /// JetBrains "Drop" in the stash list (`Git.Stash.Drop`).
 fn git_stash_drop_picked(cx: &mut Context) {
     git_pick(cx, "drop stash", git_stashes(), "No stashes", |cx, line| {
         let stash = stash_ref(line);
-        git_run_cx(cx, &["stash", "drop", stash], &format!("Dropped {stash}"), false)
+        git_run_cx(
+            cx,
+            &["stash", "drop", stash],
+            &format!("Dropped {stash}"),
+            false,
+        )
     });
 }
 
@@ -75930,17 +76881,23 @@ fn git_stash_drop_picked(cx: &mut Context) {
 /// branch` checks out a branch at the commit the stash was made on and pops
 /// the stash there, index included.
 fn git_unstash_as_branch(cx: &mut Context) {
-    git_pick(cx, "unstash as branch", git_stashes(), "No stashes", |cx, line| {
-        let stash = stash_ref(line).to_string();
-        prompt_then_cx(cx, "new branch: ", move |cx, branch| {
-            git_run_cx(
-                cx,
-                &["stash", "branch", branch, &stash],
-                &format!("Unstashed {stash} onto {branch}"),
-                true,
-            )
-        });
-    });
+    git_pick(
+        cx,
+        "unstash as branch",
+        git_stashes(),
+        "No stashes",
+        |cx, line| {
+            let stash = stash_ref(line).to_string();
+            prompt_then_cx(cx, "new branch: ", move |cx, branch| {
+                git_run_cx(
+                    cx,
+                    &["stash", "branch", branch, &stash],
+                    &format!("Unstashed {stash} onto {branch}"),
+                    true,
+                )
+            });
+        },
+    );
 }
 
 /// `git stash push` limited to this buffer's file (`Git.Stage.Stash.Files`).
@@ -75956,17 +76913,21 @@ fn git_stash_file(cx: &mut Context) {
 fn git_worktree_add(cx: &mut Context) {
     prompt_then(cx, "worktree path: ", |cx, path| {
         let path = path.to_string();
-        prompt_then_cx_allow_empty(cx, "new branch (empty: detached HEAD): ", move |cx, branch| {
-            let branch = branch.trim();
-            let mut args = vec!["worktree", "add"];
-            if !branch.is_empty() {
-                args.extend(["-b", branch]);
-            } else {
-                args.push("--detach");
-            }
-            args.push(&path);
-            git_run_cx(cx, &args, &format!("Worktree created at {path}"), false)
-        });
+        prompt_then_cx_allow_empty(
+            cx,
+            "new branch (empty: detached HEAD): ",
+            move |cx, branch| {
+                let branch = branch.trim();
+                let mut args = vec!["worktree", "add"];
+                if !branch.is_empty() {
+                    args.extend(["-b", branch]);
+                } else {
+                    args.push("--detach");
+                }
+                args.push(&path);
+                git_run_cx(cx, &args, &format!("Worktree created at {path}"), false)
+            },
+        );
     });
 }
 
@@ -75981,9 +76942,20 @@ fn git_linked_worktrees() -> Vec<String> {
 
 /// JetBrains "Delete" in the worktree list (`Git.WorkingTrees.Remove`).
 fn git_worktree_remove(cx: &mut Context) {
-    git_pick(cx, "remove worktree", git_linked_worktrees(), "No linked worktrees", |cx, path| {
-        git_run_cx(cx, &["worktree", "remove", path], &format!("Removed worktree {path}"), false)
-    });
+    git_pick(
+        cx,
+        "remove worktree",
+        git_linked_worktrees(),
+        "No linked worktrees",
+        |cx, path| {
+            git_run_cx(
+                cx,
+                &["worktree", "remove", path],
+                &format!("Removed worktree {path}"),
+                false,
+            )
+        },
+    );
 }
 
 /// JetBrains "Find Merged Local Branches" (`Git.FindMergedLocalBranches`):
@@ -75999,31 +76971,59 @@ fn git_merged_branches(cx: &mut Context) {
 /// JetBrains `Git.Ref.Diff.With.Local`: the whole tree's difference between a
 /// picked branch and the working tree.
 fn git_diff_ref_with_local(cx: &mut Context) {
-    git_pick(cx, "diff with local", git_branch_refs(), "No git branches", |cx, branch| {
-        git_output_to_scratch_cx(
-            cx,
-            &["diff", branch],
-            &format!("The working tree matches {branch}"),
-        )
-    });
+    git_pick(
+        cx,
+        "diff with local",
+        git_branch_refs(),
+        "No git branches",
+        |cx, branch| {
+            git_output_to_scratch_cx(
+                cx,
+                &["diff", branch],
+                &format!("The working tree matches {branch}"),
+            )
+        },
+    );
 }
 
 /// JetBrains `Git.Ref.Compare.With`: what a picked branch has that the current
 /// one lacks, the reverse, and the files that differ.
 fn git_compare_ref(cx: &mut Context) {
-    git_pick(cx, "compare with current", git_branch_refs(), "No git branches", |cx, branch| {
-        let section = |title: String, args: &[&str]| {
-            let body = git_exec(args).unwrap_or_default();
-            format!("{title}\n{}\n", if body.is_empty() { "  (none)".into() } else { body })
-        };
-        let text = [
-            section(format!("Commits in {branch} not in HEAD:"), &["log", "--oneline", &format!("HEAD..{branch}")]),
-            section(format!("Commits in HEAD not in {branch}:"), &["log", "--oneline", &format!("{branch}..HEAD")]),
-            section("Files that differ:".into(), &["diff", "--stat", &format!("HEAD...{branch}")]),
-        ]
-        .join("\n");
-        show_text_in_scratch(cx.editor, &text);
-    });
+    git_pick(
+        cx,
+        "compare with current",
+        git_branch_refs(),
+        "No git branches",
+        |cx, branch| {
+            let section = |title: String, args: &[&str]| {
+                let body = git_exec(args).unwrap_or_default();
+                format!(
+                    "{title}\n{}\n",
+                    if body.is_empty() {
+                        "  (none)".into()
+                    } else {
+                        body
+                    }
+                )
+            };
+            let text = [
+                section(
+                    format!("Commits in {branch} not in HEAD:"),
+                    &["log", "--oneline", &format!("HEAD..{branch}")],
+                ),
+                section(
+                    format!("Commits in HEAD not in {branch}:"),
+                    &["log", "--oneline", &format!("{branch}..HEAD")],
+                ),
+                section(
+                    "Files that differ:".into(),
+                    &["diff", "--stat", &format!("HEAD...{branch}")],
+                ),
+            ]
+            .join("\n");
+            show_text_in_scratch(cx.editor, &text);
+        },
+    );
 }
 
 /// This buffer's path relative to the workspace root, which is where
@@ -76034,7 +77034,12 @@ fn git_rel_path(cx: &mut Context) -> Option<String> {
         return None;
     };
     let root = zmax_loader::find_workspace().0;
-    Some(path.strip_prefix(&root).unwrap_or(&path).display().to_string())
+    Some(
+        path.strip_prefix(&root)
+            .unwrap_or(&path)
+            .display()
+            .to_string(),
+    )
 }
 
 /// Run `git <args>` and put the last line it prints on the status line.
@@ -76065,7 +77070,11 @@ fn git_diff_staged_head(cx: &mut Context) {
     let Some(rel) = git_rel_path(cx) else {
         return;
     };
-    git_output_to_scratch(cx, &["diff", "--cached", "--", &rel], "Nothing staged for this file");
+    git_output_to_scratch(
+        cx,
+        &["diff", "--cached", "--", &rel],
+        "Nothing staged for this file",
+    );
 }
 
 /// JetBrains "Compare with Staged Version" (`Git.Stage.Compare.Local.Staged`):
@@ -76074,7 +77083,11 @@ fn git_diff_local_staged(cx: &mut Context) {
     let Some(rel) = git_rel_path(cx) else {
         return;
     };
-    git_output_to_scratch(cx, &["diff", "--", &rel], "The working tree matches the staged version");
+    git_output_to_scratch(
+        cx,
+        &["diff", "--", &rel],
+        "The working tree matches the staged version",
+    );
 }
 
 /// JetBrains "Compare with Local Version" of the staged file
@@ -76084,7 +77097,11 @@ fn git_diff_staged_local(cx: &mut Context) {
     let Some(rel) = git_rel_path(cx) else {
         return;
     };
-    git_output_to_scratch(cx, &["diff", "-R", "--", &rel], "The staged version matches the working tree");
+    git_output_to_scratch(
+        cx,
+        &["diff", "-R", "--", &rel],
+        "The staged version matches the working tree",
+    );
 }
 
 /// JetBrains "Show Staged Version" (`Git.Stage.Show.Staged`): the file as the
@@ -76093,7 +77110,11 @@ fn git_show_staged(cx: &mut Context) {
     let Some(rel) = git_rel_path(cx) else {
         return;
     };
-    git_output_to_scratch(cx, &["show", &format!(":{rel}")], "The staged version is empty");
+    git_output_to_scratch(
+        cx,
+        &["show", &format!(":{rel}")],
+        "The staged version is empty",
+    );
 }
 
 /// JetBrains "Pin Tab": keep this buffer out of `:buffer-close-others`,
@@ -76186,7 +77207,8 @@ fn snapshot_title(ts: u64, snapshot: &Path) -> String {
 /// buffer as it is now under a name, to find it again in the history.
 fn local_history_put_label(cx: &mut Context) {
     if doc!(cx.editor).path().is_none() {
-        cx.editor.set_error("local-history: the buffer is not visiting a file");
+        cx.editor
+            .set_error("local-history: the buffer is not visiting a file");
         return;
     }
     prompt_then(cx, "label: ", |cx, name| {
@@ -76195,7 +77217,9 @@ fn local_history_put_label(cx: &mut Context) {
             return;
         };
         match crate::local_history::put_label(&path, doc.text(), name) {
-            Ok(()) => cx.editor.set_status(format!("local-history: labelled \"{name}\"")),
+            Ok(()) => cx
+                .editor
+                .set_status(format!("local-history: labelled \"{name}\"")),
             Err(e) => cx.editor.set_error(format!("local-history: {e}")),
         }
     });
@@ -76227,12 +77251,18 @@ fn local_history_project(cx: &mut Context) {
     let columns = [
         ui::PickerColumn::new("when", |e: &Entry, _: &PathBuf| e.title.as_str().into()),
         ui::PickerColumn::new("file", |e: &Entry, root: &PathBuf| {
-            e.file.strip_prefix(root).unwrap_or(&e.file).display().to_string().into()
+            e.file
+                .strip_prefix(root)
+                .unwrap_or(&e.file)
+                .display()
+                .to_string()
+                .into()
         }),
     ];
     let picker = Picker::new(columns, 1, items, root, |cx, entry: &Entry, action| {
         if let Err(e) = cx.editor.open(&entry.file, action) {
-            cx.editor.set_error(format!("{}: {e}", entry.file.display()));
+            cx.editor
+                .set_error(format!("{}: {e}", entry.file.display()));
         }
     })
     .with_preview(|_editor, entry: &Entry| Some((entry.snapshot.as_path().into(), None)));
@@ -76257,7 +77287,10 @@ fn selected_lines(doc: &Document, view: &View) -> (usize, usize) {
     let text = doc.text().slice(..);
     let range = doc.selection(view.id).primary();
     let (first, last) = range.line_range(text);
-    (text.line_to_char(first), text.line_to_char((last + 1).min(text.len_lines())))
+    (
+        text.line_to_char(first),
+        text.line_to_char((last + 1).min(text.len_lines())),
+    )
 }
 
 #[cfg(test)]
@@ -76292,7 +77325,8 @@ fn pick_snapshot(
     on_pick: impl Fn(&mut crate::compositor::Context, &Path) + 'static,
 ) {
     let Some(path) = doc!(cx.editor).path().map(Path::to_path_buf) else {
-        cx.editor.set_error("local-history: the buffer is not visiting a file");
+        cx.editor
+            .set_error("local-history: the buffer is not visiting a file");
         return;
     };
     struct Snap {
@@ -76313,9 +77347,13 @@ fn pick_snapshot(
         cx.editor.set_status(empty);
         return;
     }
-    let columns = [ui::PickerColumn::new("when", |s: &Snap, _: &()| s.title.as_str().into())];
-    let picker = Picker::new(columns, 0, items, (), move |cx, snap: &Snap, _| on_pick(cx, &snap.path))
-        .with_preview(|_editor, snap: &Snap| Some((snap.path.as_path().into(), None)));
+    let columns = [ui::PickerColumn::new("when", |s: &Snap, _: &()| {
+        s.title.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, items, (), move |cx, snap: &Snap, _| {
+        on_pick(cx, &snap.path)
+    })
+    .with_preview(|_editor, snap: &Snap| Some((snap.path.as_path().into(), None)));
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -76328,7 +77366,9 @@ fn local_history_selection(cx: &mut Context) {
     };
     pick_snapshot(
         cx,
-        move |snapshot| !snapshot_changes(&current, snapshot, |f, t| touches(span, f, t)).is_empty(),
+        move |snapshot| {
+            !snapshot_changes(&current, snapshot, |f, t| touches(span, f, t)).is_empty()
+        },
         "local-history: no snapshot changes the selected lines",
         |cx, snapshot| {
             if let Err(e) = cx.editor.open(snapshot, Action::Replace) {
@@ -76348,18 +77388,23 @@ fn local_history_revert_selection(cx: &mut Context) {
     };
     pick_snapshot(
         cx,
-        move |snapshot| !snapshot_changes(&current, snapshot, |f, t| touches(span, f, t)).is_empty(),
+        move |snapshot| {
+            !snapshot_changes(&current, snapshot, |f, t| touches(span, f, t)).is_empty()
+        },
         "local-history: no snapshot changes the selected lines",
         move |cx, snapshot| {
             let Ok(text) = std::fs::read_to_string(snapshot) else {
                 return;
             };
             let (view, doc) = current!(cx.editor);
-            let changes = snapshot_changes(doc.text(), &Rope::from_str(&text), |f, t| touches(span, f, t));
+            let changes = snapshot_changes(doc.text(), &Rope::from_str(&text), |f, t| {
+                touches(span, f, t)
+            });
             let transaction = Transaction::change(doc.text(), changes.into_iter());
             doc.apply(&transaction, view.id);
             doc.append_changes_to_history(view);
-            cx.editor.set_status("local-history: selection reverted (undo to come back)");
+            cx.editor
+                .set_status("local-history: selection reverted (undo to come back)");
         },
     );
 }
@@ -76367,21 +77412,28 @@ fn local_history_revert_selection(cx: &mut Context) {
 /// JetBrains "Create Patch" from Local History (`ActivityView.CreatePatch`):
 /// the diff from a picked snapshot to the buffer as it is now.
 fn local_history_create_patch(cx: &mut Context) {
-    pick_snapshot(cx, |_| true, "no local history yet — snapshots are taken on save", |cx, snapshot| {
-        let doc = doc!(cx.editor);
-        let name = doc
-            .path()
-            .and_then(|p| p.file_name())
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let text = doc.text().to_string();
-        let (from, to) = (format!("a/{name}"), format!("b/{name}"));
-        match typed::unified_diff(snapshot, &text, Some((&from, &to))) {
-            Ok(Some(patch)) => show_text_in_scratch(cx.editor, &patch),
-            Ok(None) => cx.editor.set_status("local-history: the buffer matches that snapshot"),
-            Err(e) => cx.editor.set_error(format!("local-history: {e}")),
-        }
-    });
+    pick_snapshot(
+        cx,
+        |_| true,
+        "no local history yet — snapshots are taken on save",
+        |cx, snapshot| {
+            let doc = doc!(cx.editor);
+            let name = doc
+                .path()
+                .and_then(|p| p.file_name())
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let text = doc.text().to_string();
+            let (from, to) = (format!("a/{name}"), format!("b/{name}"));
+            match typed::unified_diff(snapshot, &text, Some((&from, &to))) {
+                Ok(Some(patch)) => show_text_in_scratch(cx.editor, &patch),
+                Ok(None) => cx
+                    .editor
+                    .set_status("local-history: the buffer matches that snapshot"),
+                Err(e) => cx.editor.set_error(format!("local-history: {e}")),
+            }
+        },
+    );
 }
 
 /// The directory holding the file templates (JetBrains File and Code Templates).
@@ -76426,11 +77478,7 @@ fn save_selection_as_snippet(cx: &mut Context) {
     let (body, lang) = {
         let (view, doc) = current_ref!(cx.editor);
         let text = doc.text().slice(..);
-        let body = doc
-            .selection(view.id)
-            .primary()
-            .fragment(text)
-            .to_string();
+        let body = doc.selection(view.id).primary().fragment(text).to_string();
         let lang = doc.language_name().map(ToOwned::to_owned);
         (body, lang)
     };
@@ -76569,74 +77617,76 @@ fn new_file_from_template(cx: &mut Context) {
             // The Prompt is not Send, so it is BUILT inside the compositor
             // callback; only the paths cross the job boundary.
             cx.jobs.callback(async move {
-                let call: crate::job::Callback = crate::job::Callback::EditorCompositor(
-                    Box::new(move |_editor, compositor: &mut Compositor| {
-                    let prompt = ui::Prompt::new(
-                        format!("new file in {}: ", dir.display()).into(),
-                        None,
-                        ui::completers::none,
-                        move |cx, input: &str, event: ui::PromptEvent| {
-                            if event != ui::PromptEvent::Validate {
-                                return;
-                            }
-                            let mut name = input.trim().to_string();
-                            if name.is_empty() {
-                                return;
-                            }
-                            // A name with no extension takes the template's.
-                            if !name.contains('.') {
-                                name.push_str(&suffix);
-                            }
-                            let path = dir.join(&name);
-                            if path.exists() {
-                                cx.editor
-                                    .set_error(format!("{} already exists", path.display()));
-                                return;
-                            }
-                            let body = match std::fs::read_to_string(&template) {
-                                Ok(body) => body,
-                                Err(e) => {
+                let call: crate::job::Callback = crate::job::Callback::EditorCompositor(Box::new(
+                    move |_editor, compositor: &mut Compositor| {
+                        let prompt = ui::Prompt::new(
+                            format!("new file in {}: ", dir.display()).into(),
+                            None,
+                            ui::completers::none,
+                            move |cx, input: &str, event: ui::PromptEvent| {
+                                if event != ui::PromptEvent::Validate {
+                                    return;
+                                }
+                                let mut name = input.trim().to_string();
+                                if name.is_empty() {
+                                    return;
+                                }
+                                // A name with no extension takes the template's.
+                                if !name.contains('.') {
+                                    name.push_str(&suffix);
+                                }
+                                let path = dir.join(&name);
+                                if path.exists() {
+                                    cx.editor
+                                        .set_error(format!("{} already exists", path.display()));
+                                    return;
+                                }
+                                let body = match std::fs::read_to_string(&template) {
+                                    Ok(body) => body,
+                                    Err(e) => {
+                                        cx.editor.set_error(format!("new file: {e}"));
+                                        return;
+                                    }
+                                };
+                                let now = time::OffsetDateTime::now_local()
+                                    .unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+                                let date = format!(
+                                    "{:04}-{:02}-{:02}",
+                                    now.year(),
+                                    now.month() as u8,
+                                    now.day()
+                                );
+                                let user = std::env::var("USER")
+                                    .or_else(|_| std::env::var("USERNAME"))
+                                    .unwrap_or_default();
+                                let body = expand_file_template(
+                                    &body,
+                                    &name,
+                                    &date,
+                                    &now.year().to_string(),
+                                    &user,
+                                );
+                                if let Some(parent) = path.parent() {
+                                    if let Err(e) = std::fs::create_dir_all(parent) {
+                                        cx.editor.set_error(format!("new file: {e}"));
+                                        return;
+                                    }
+                                }
+                                if let Err(e) = std::fs::write(&path, body) {
                                     cx.editor.set_error(format!("new file: {e}"));
                                     return;
                                 }
-                            };
-                            let now = time::OffsetDateTime::now_local()
-                                .unwrap_or_else(|_| time::OffsetDateTime::now_utc());
-                            let date = format!(
-                                "{:04}-{:02}-{:02}",
-                                now.year(),
-                                now.month() as u8,
-                                now.day()
-                            );
-                            let user = std::env::var("USER")
-                                .or_else(|_| std::env::var("USERNAME"))
-                                .unwrap_or_default();
-                            let body = expand_file_template(
-                                &body,
-                                &name,
-                                &date,
-                                &now.year().to_string(),
-                                &user,
-                            );
-                            if let Some(parent) = path.parent() {
-                                if let Err(e) = std::fs::create_dir_all(parent) {
-                                    cx.editor.set_error(format!("new file: {e}"));
-                                    return;
+                                match cx.editor.open(&path, Action::Replace) {
+                                    Ok(_) => {
+                                        cx.editor.set_status(format!("Created {}", path.display()))
+                                    }
+                                    Err(e) => cx.editor.set_error(format!("new file: {e}")),
                                 }
-                            }
-                            if let Err(e) = std::fs::write(&path, body) {
-                                cx.editor.set_error(format!("new file: {e}"));
-                                return;
-                            }
-                            match cx.editor.open(&path, Action::Replace) {
-                                Ok(_) => cx.editor.set_status(format!("Created {}", path.display())),
-                                Err(e) => cx.editor.set_error(format!("new file: {e}")),
-                            }
-                        },
-                    );
+                            },
+                        );
                         compositor.push(Box::new(prompt));
-                    }),
-                );
+                    },
+                ));
                 Ok(call)
             });
         },
@@ -76658,15 +77708,16 @@ fn context_info(cx: &mut Context) {
         let (view, doc) = current_ref!(cx.editor);
         let text = doc.text().slice(..);
         let cursor = doc.selection(view.id).primary().cursor(text);
-        let mut chain: Vec<(usize, String)> = crate::commands::syntax::document_outline(doc, &loader)
-            .into_iter()
-            .filter(|item| (item.start..=item.end).contains(&cursor))
-            .map(|item| {
-                let line = text.char_to_line(item.start);
-                let src = text.line(line).to_string().trim_end().to_string();
-                (line, format!("{}  {}", item.kind, src.trim_start()))
-            })
-            .collect();
+        let mut chain: Vec<(usize, String)> =
+            crate::commands::syntax::document_outline(doc, &loader)
+                .into_iter()
+                .filter(|item| (item.start..=item.end).contains(&cursor))
+                .map(|item| {
+                    let line = text.char_to_line(item.start);
+                    let src = text.line(line).to_string().trim_end().to_string();
+                    (line, format!("{}  {}", item.kind, src.trim_start()))
+                })
+                .collect();
         // Outermost first, so the innermost declaration — the one usually
         // wanted — ends up closest to the caret at the bottom of the popup.
         chain.sort_by_key(|(line, _)| *line);
@@ -77428,8 +78479,8 @@ fn find_file_at_point(cx: &mut Context) {
             // `ffap-newfile-prompt' is nil by default (ffap.el:1745-1747), so a
             // name that does not exist is still visited — it just makes a new
             // buffer, as `find-file' does.
-            let path = ffap_resolve(cx.editor, name)
-                .unwrap_or_else(|| rel_path.join(path::expand(name)));
+            let path =
+                ffap_resolve(cx.editor, name).unwrap_or_else(|| rel_path.join(path::expand(name)));
             ffap_open_in_editor(cx.editor, &path, line);
         },
     );
@@ -80727,11 +81778,8 @@ const ETAGS_REGEN_TAGS_FILE: &str = "TAGS";
 /// `.#foo.c`, which still ends in `.c` — and handing etags a dangling symlink
 /// puts a bogus file entry in the table. Pure — unit tested.
 fn etags_regen_is_backup(path: &std::path::Path) -> bool {
-    path.components().any(|c| {
-        c.as_os_str()
-            .to_str()
-            .is_some_and(|s| s.starts_with(".#"))
-    })
+    path.components()
+        .any(|c| c.as_os_str().to_str().is_some_and(|s| s.starts_with(".#")))
 }
 
 /// Whether `etags-regen-mode` is on (the mode is `:global t` in emacs too).
@@ -83140,8 +84188,7 @@ pub(crate) fn sync_font_lock_keywords(editor: &Editor) {
     if !FONT_LOCK_ANY.load(std::sync::atomic::Ordering::Relaxed) {
         return;
     }
-    let (Ok(keywords), Ok(mut installed)) =
-        (FONT_LOCK_KEYWORDS.lock(), FONT_LOCK_INSTALLED.lock())
+    let (Ok(keywords), Ok(mut installed)) = (FONT_LOCK_KEYWORDS.lock(), FONT_LOCK_INSTALLED.lock())
     else {
         return;
     };
@@ -83390,8 +84437,7 @@ const FORTRAN_WINDOW_MIN_FRAME: u16 = FORTRAN_LINE_LENGTH + 2;
 ///
 /// Pure — unit tested.
 pub(crate) fn fortran_window_delta(frame_width: u16, current: u16) -> Option<i16> {
-    (frame_width >= FORTRAN_WINDOW_MIN_FRAME)
-        .then(|| FORTRAN_LINE_LENGTH as i16 - current as i16)
+    (frame_width >= FORTRAN_WINDOW_MIN_FRAME).then(|| FORTRAN_LINE_LENGTH as i16 - current as i16)
 }
 
 /// Emacs `fortran-window-create` (fortran.el:1010-1025): make the window
@@ -83471,9 +84517,7 @@ fn fortran_window_create_momentarily(cx: &mut Context) {
         // goes away again, or — when the frame had no room for it — the ruler.
         match extra {
             Some(view) => cx.editor.close(view),
-            None => edit_live_config(cx, |c| {
-                c.rulers.retain(|r| *r != FORTRAN_LINE_LENGTH)
-            }),
+            None => edit_live_config(cx, |c| c.rulers.retain(|r| *r != FORTRAN_LINE_LENGTH)),
         }
         // `(or (equal char ?\s) (push char unread-command-events))`: SPC is
         // consumed by the prompt, and any other key is put back so it runs as
@@ -84854,7 +85898,12 @@ pub(crate) fn aggressive_indent_post_command(cx: &mut Context) {
     // root container rather than a view, so reading the focused document here
     // panics (`Tree::get_mut` is `unreachable!()` for a container). Resolve the
     // focused view first and do nothing when there is not one.
-    let Some(doc_id) = cx.editor.tree.try_get(cx.editor.tree.focus).map(|view| view.doc) else {
+    let Some(doc_id) = cx
+        .editor
+        .tree
+        .try_get(cx.editor.tree.focus)
+        .map(|view| view.doc)
+    else {
         return;
     };
     let changed = {
@@ -84906,7 +85955,11 @@ pub fn register_post_command_hooks() {
 /// [`aggressive_indent_post_command`] covers.
 fn aggressive_indent_after_change(cx: &mut Context) {
     // Same guard as the post-command hook: no focused view, nothing to re-indent.
-    let focused = cx.editor.tree.try_get(cx.editor.tree.focus).map(|view| view.doc);
+    let focused = cx
+        .editor
+        .tree
+        .try_get(cx.editor.tree.focus)
+        .map(|view| view.doc);
     let on = focused
         .and_then(|id| cx.editor.documents.get(&id))
         .is_some_and(|doc| doc.aggressive_indent);
@@ -86074,7 +87127,8 @@ fn test_counterparts(name: &str) -> (bool, Vec<String>) {
 /// is where the languages that separate tests from sources put them.
 fn goto_test(cx: &mut Context) {
     let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
-        cx.editor.set_error("goto-test: buffer is not visiting a file");
+        cx.editor
+            .set_error("goto-test: buffer is not visiting a file");
         return;
     };
     let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
@@ -86125,11 +87179,26 @@ mod goto_test_tests {
 
     #[test]
     fn a_test_file_offers_its_subject() {
-        assert_eq!(test_counterparts("parser_test.go"), (true, vec!["parser.go".to_string()]));
-        assert_eq!(test_counterparts("test_parser.py"), (true, vec!["parser.py".to_string()]));
-        assert_eq!(test_counterparts("FooTest.java"), (true, vec!["Foo.java".to_string()]));
-        assert_eq!(test_counterparts("foo.test.ts"), (true, vec!["foo.ts".to_string()]));
-        assert_eq!(test_counterparts("foo_spec.rb"), (true, vec!["foo.rb".to_string()]));
+        assert_eq!(
+            test_counterparts("parser_test.go"),
+            (true, vec!["parser.go".to_string()])
+        );
+        assert_eq!(
+            test_counterparts("test_parser.py"),
+            (true, vec!["parser.py".to_string()])
+        );
+        assert_eq!(
+            test_counterparts("FooTest.java"),
+            (true, vec!["Foo.java".to_string()])
+        );
+        assert_eq!(
+            test_counterparts("foo.test.ts"),
+            (true, vec!["foo.ts".to_string()])
+        );
+        assert_eq!(
+            test_counterparts("foo_spec.rb"),
+            (true, vec!["foo.rb".to_string()])
+        );
     }
 }
 
@@ -86155,7 +87224,9 @@ fn goto_link_target(cx: &mut Context) {
     let target = if target.is_absolute() {
         target
     } else {
-        path.parent().unwrap_or(std::path::Path::new(".")).join(target)
+        path.parent()
+            .unwrap_or(std::path::Path::new("."))
+            .join(target)
     };
     if let Err(err) = cx.editor.open(&target, Action::Replace) {
         cx.editor
@@ -86906,9 +87977,8 @@ fn recover_session(cx: &mut Context) {
                     .filter(|(_, swap)| swap.is_file())
                     .collect();
             if files.is_empty() {
-                cx.editor.set_status(
-                    "recover-session: that session's auto-save files are all gone",
-                );
+                cx.editor
+                    .set_status("recover-session: that session's auto-save files are all gone");
                 return;
             }
             recover_files_picker(cx, files);
@@ -88653,7 +89723,10 @@ mod info_mode_tests {
     /// reads the Next/Prev/Up targets out of.
     #[test]
     fn header_fields_come_off_the_first_line() {
-        assert_eq!(info_header_field(NODE, "File").as_deref(), Some("bash.info"));
+        assert_eq!(
+            info_header_field(NODE, "File").as_deref(),
+            Some("bash.info")
+        );
         assert_eq!(info_header_field(NODE, "Node").as_deref(), Some("Top"));
         assert_eq!(
             info_header_field(NODE, "Next").as_deref(),
@@ -88722,9 +89795,16 @@ mod elisp_redefinition_tests {
             rewritten.contains("(funcall (or (get 'opt 'custom-set) 'set-default) 'opt 2)"),
             "{rewritten}"
         );
-        let rewritten = elisp_force_redefinition("(defface fc ((t :weight bold)) \"doc\")").unwrap();
-        assert!(rewritten.contains("(put 'fc 'face-defface-spec nil)"), "{rewritten}");
-        assert!(rewritten.contains("(put 'fc 'face-override-spec nil)"), "{rewritten}");
+        let rewritten =
+            elisp_force_redefinition("(defface fc ((t :weight bold)) \"doc\")").unwrap();
+        assert!(
+            rewritten.contains("(put 'fc 'face-defface-spec nil)"),
+            "{rewritten}"
+        );
+        assert!(
+            rewritten.contains("(put 'fc 'face-override-spec nil)"),
+            "{rewritten}"
+        );
         assert_eq!(elisp_force_redefinition("(setq x 1)"), None);
         assert_eq!(elisp_force_redefinition("(defvar v 1)"), None);
     }
@@ -88803,7 +89883,10 @@ mod ediff_group_tests {
                 ("both.txt".to_string(), MergeGroupRow::ThreeWay),
                 ("shared.txt".to_string(), MergeGroupRow::TwoWay),
                 ("only_a.txt".to_string(), MergeGroupRow::OnlyIn("A")),
-                ("only_anc.txt".to_string(), MergeGroupRow::OnlyIn("ancestor")),
+                (
+                    "only_anc.txt".to_string(),
+                    MergeGroupRow::OnlyIn("ancestor")
+                ),
                 ("only_b.txt".to_string(), MergeGroupRow::OnlyIn("B")),
             ]
         );
@@ -89116,7 +90199,10 @@ mod foldenable_tests {
     fn foldenable_defaults_on_and_follows_both_spellings() {
         vim_opt_reset("foldenable");
         vim_opt_reset("fen");
-        assert!(foldenable(), "unset 'foldenable' is vim's default, which is on");
+        assert!(
+            foldenable(),
+            "unset 'foldenable' is vim's default, which is on"
+        );
 
         vim_opt_store("foldenable", "off".to_string());
         assert!(!foldenable());
@@ -89213,8 +90299,7 @@ mod search_count_tests {
     fn maxsearchcount_caps_both_halves_of_the_count() {
         // 'maxsearchcount' 2 over three matches: nvim reports total maxcount + 1
         // and incomplete 2, which is `exceeded` here.
-        let (current, total, exceeded) =
-            search_count_from_matches(MATCHES.into_iter(), 15, 2);
+        let (current, total, exceeded) = search_count_from_matches(MATCHES.into_iter(), 15, 2);
         assert_eq!((total, exceeded), (3, true));
         assert!(current <= 3);
         // Under the limit nothing is capped.
@@ -89294,12 +90379,8 @@ mod command_palette_tests {
             );
         }
         assert!(
-            zmax_core::fuzzy::fuzzy_match(
-                "column-number-mode",
-                ["column_number_mode"],
-                false
-            )
-            .is_empty(),
+            zmax_core::fuzzy::fuzzy_match("column-number-mode", ["column_number_mode"], false)
+                .is_empty(),
             "the drawn name alone cannot match the Emacs spelling — that is why \
              the match text exists"
         );
@@ -92855,10 +93936,7 @@ mod mode_gating_tests {
     /// colon that is not followed by digits belongs to the name.
     #[test]
     fn ffap_answer_splits_off_only_a_numeric_line_suffix() {
-        assert_eq!(
-            ffap_split_line("src/main.rs:42"),
-            ("src/main.rs", Some(42))
-        );
+        assert_eq!(ffap_split_line("src/main.rs:42"), ("src/main.rs", Some(42)));
         assert_eq!(ffap_split_line("src/main.rs"), ("src/main.rs", None));
         // A name that merely contains a colon is left whole — the suffix has to
         // parse as a number.
@@ -93063,7 +94141,10 @@ mod menu_bar_buffers_tests {
 
         let path = "zmax-term/src/ui/context_menu.rs";
         assert_eq!(path.chars().count(), 32);
-        assert_eq!(menu_bar_buffer_name(path), "zmax-term/src/u...context_menu.rs");
+        assert_eq!(
+            menu_bar_buffer_name(path),
+            "zmax-term/src/u...context_menu.rs"
+        );
     }
 
     /// The Buffers menu is `menu-bar-buffers-menu-command-entries` *after* the
@@ -93204,7 +94285,11 @@ mod font_lock_keyword_scope_tests {
         assert_eq!(FONT_LOCK_KEYWORDS.lock().unwrap().len(), 2);
 
         // A mode nobody added the keyword for removes nothing.
-        assert!(!font_lock_forget_keyword(r"\bFIXME\b", Some("rust"), buffer));
+        assert!(!font_lock_forget_keyword(
+            r"\bFIXME\b",
+            Some("rust"),
+            buffer
+        ));
         assert_eq!(FONT_LOCK_KEYWORDS.lock().unwrap().len(), 2);
 
         // Removing for `c` leaves the buffer-local entry standing.

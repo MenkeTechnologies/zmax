@@ -42,7 +42,10 @@ pub fn parse(text: &str) -> Store {
             continue;
         }
         if let Some(name) = &current {
-            store.entry(name.clone()).or_default().push(line.to_string());
+            store
+                .entry(name.clone())
+                .or_default()
+                .push(line.to_string());
         }
     }
     store
@@ -176,7 +179,10 @@ mod tests {
     #[test]
     fn deleting_a_list_hands_its_files_to_the_default() {
         let mut store = parse("[work]\nsrc/a.rs\n[main]\nsrc/b.rs\n");
-        assert_eq!(Some(vec!["src/a.rs".to_string()]), delete(&mut store, "work", Some("main")));
+        assert_eq!(
+            Some(vec!["src/a.rs".to_string()]),
+            delete(&mut store, "work", Some("main"))
+        );
         assert!(!store.contains_key("work"));
         assert_eq!(list_of(&store, "src/a.rs"), Some("main"));
         assert_eq!(None, delete(&mut store, "work", None));

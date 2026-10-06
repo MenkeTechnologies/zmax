@@ -1346,14 +1346,26 @@ async fn percent_pairs_brackets_the_grammar_left_unpaired() -> anyhow::Result<()
         &mut app,
         vec![
             // `$(` … `)`, around a `${…}` inside a string.
-            (Some("f(%"), Some(&|app| assert_eq!((0, LINES[0].len() - 1), cursor(app)))),
+            (
+                Some("f(%"),
+                Some(&|app| assert_eq!((0, LINES[0].len() - 1), cursor(app))),
+            ),
             (Some("%"), Some(&|app| assert_eq!((0, 6), cursor(app)))),
             // `fpath=(` to the `)` closing the array two lines down.
-            (Some("j0f(%"), Some(&|app| assert_eq!((3, LINES[3].len() - 1), cursor(app)))),
+            (
+                Some("j0f(%"),
+                Some(&|app| assert_eq!((3, LINES[3].len() - 1), cursor(app))),
+            ),
             (Some("%"), Some(&|app| assert_eq!((1, 6), cursor(app)))),
             // A glob qualifier's own parentheses.
-            (Some("$"), Some(&|app| assert_eq!((1, LINES[1].len() - 1), cursor(app)))),
-            (Some("%"), Some(&|app| assert_eq!((1, LINES[1].len() - 3), cursor(app)))),
+            (
+                Some("$"),
+                Some(&|app| assert_eq!((1, LINES[1].len() - 1), cursor(app))),
+            ),
+            (
+                Some("%"),
+                Some(&|app| assert_eq!((1, LINES[1].len() - 3), cursor(app))),
+            ),
         ],
         false,
     )
@@ -1378,6 +1390,9 @@ async fn zsh_files_parse_with_the_zsh_grammar() -> anyhow::Result<()> {
     fn has_error(node: &zmax_core::tree_sitter::Node) -> bool {
         node.kind() == "ERROR" || node.is_missing() || node.children().any(|c| has_error(&c))
     }
-    assert!(!has_error(&syntax.tree().root_node()), "the zsh grammar parses the file");
+    assert!(
+        !has_error(&syntax.tree().root_node()),
+        "the zsh grammar parses the file"
+    );
     Ok(())
 }

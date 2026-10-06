@@ -488,7 +488,10 @@ fn workspace_symbol_picker_of(cx: &mut Context, kinds: SymbolKinds) {
         return;
     }
 
-    let get_symbols = |pattern: &str, editor: &mut Editor, kinds: std::sync::Arc<SymbolKinds>, injector: &Injector<_, _>| {
+    let get_symbols = |pattern: &str,
+                       editor: &mut Editor,
+                       kinds: std::sync::Arc<SymbolKinds>,
+                       injector: &Injector<_, _>| {
         let kinds = *kinds;
         let doc = doc!(editor);
         let mut seen_language_servers = HashSet::new();
@@ -698,7 +701,12 @@ pub fn extract_class(cx: &mut Context) {
     code_action_filtered(
         cx,
         Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
-        Some(&["extract class", "extract delegate", "to class", "into class"]),
+        Some(&[
+            "extract class",
+            "extract delegate",
+            "to class",
+            "into class",
+        ]),
         "No extract-class refactoring available here",
     );
 }
@@ -742,8 +750,16 @@ pub fn extract_module(cx: &mut Context) {
 pub fn introduce_parameter_object(cx: &mut Context) {
     code_action_filtered(
         cx,
-        Some(vec![CodeActionKind::REFACTOR_REWRITE, CodeActionKind::REFACTOR_EXTRACT]),
-        Some(&["parameter object", "parameters to destructured object", "parameters struct", "parameters to object"]),
+        Some(vec![
+            CodeActionKind::REFACTOR_REWRITE,
+            CodeActionKind::REFACTOR_EXTRACT,
+        ]),
+        Some(&[
+            "parameter object",
+            "parameters to destructured object",
+            "parameters struct",
+            "parameters to object",
+        ]),
         "No introduce-parameter-object refactoring available here",
     );
 }
@@ -1290,7 +1306,12 @@ fn goto_single_or<P, F>(
     let here = doc.uri();
     let cursor: Vec<(OffsetEncoding, lsp::Position)> = doc
         .language_servers_with_feature(feature)
-        .map(|ls| (ls.offset_encoding(), doc.position(view.id, ls.offset_encoding())))
+        .map(|ls| {
+            (
+                ls.offset_encoding(),
+                doc.position(view.id, ls.offset_encoding()),
+            )
+        })
         .collect();
     let mut futures: FuturesUnordered<_> = doc
         .language_servers_with_feature(feature)
@@ -1354,9 +1375,11 @@ fn goto_single_or<P, F>(
                         })
                 })
             }) {
-                crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut crate::compositor::Context| {
-                    crate::commands::menu_run(compositor, cx, &command)
-                }) as crate::compositor::Callback]);
+                crate::compositor::defer([Box::new(
+                    move |compositor: &mut Compositor, cx: &mut crate::compositor::Context| {
+                        crate::commands::menu_run(compositor, cx, &command)
+                    },
+                ) as crate::compositor::Callback]);
             } else {
                 goto_impl(editor, compositor, locations);
             }
@@ -1586,13 +1609,19 @@ pub fn find_usages_in(cx: &mut Context, scope: ui::usages::UsageScope) {
             let offset_encoding = language_server.offset_encoding();
             let pos = doc.position(view.id, offset_encoding);
             let future = language_server
-                .goto_reference(doc.identifier(), pos, config.lsp.goto_reference_include_declaration, None)
+                .goto_reference(
+                    doc.identifier(),
+                    pos,
+                    config.lsp.goto_reference_include_declaration,
+                    None,
+                )
                 .unwrap();
             async move { anyhow::Ok((future.await?, offset_encoding)) }
         })
         .collect();
     if futures.is_empty() {
-        cx.editor.set_error("No configured language server supports find references");
+        cx.editor
+            .set_error("No configured language server supports find references");
         return;
     }
 
@@ -1994,7 +2023,9 @@ pub fn type_hierarchy(cx: &mut Context) {
                 if depth != 0 {
                     found.extend(row(&item, depth));
                 }
-                if depth.abs() >= HIERARCHY_MAX_DEPTH || rows.len() + found.len() >= HIERARCHY_MAX_ROWS {
+                if depth.abs() >= HIERARCHY_MAX_DEPTH
+                    || rows.len() + found.len() >= HIERARCHY_MAX_ROWS
+                {
                     continue;
                 }
                 let related = if up {
@@ -2010,7 +2041,11 @@ pub fn type_hierarchy(cx: &mut Context) {
                 };
                 let next = if up { depth - 1 } else { depth + 1 };
                 for related in related.into_iter().flatten().rev() {
-                    if seen.insert((related.uri.clone(), related.selection_range.start, related.name.clone())) {
+                    if seen.insert((
+                        related.uri.clone(),
+                        related.selection_range.start,
+                        related.name.clone(),
+                    )) {
                         stack.push((related, next));
                     }
                 }
@@ -2037,17 +2072,22 @@ pub fn type_hierarchy(cx: &mut Context) {
                         let indent = "  ".repeat((row.depth - top) as usize);
                         format!("{indent}{marker}{}", row.name).into()
                     }),
-                    ui::PickerColumn::new("kind", |row: &HierarchyRow, _| display_symbol_kind(row.kind).into()),
+                    ui::PickerColumn::new("kind", |row: &HierarchyRow, _| {
+                        display_symbol_kind(row.kind).into()
+                    }),
                     ui::PickerColumn::new("path", |row: &HierarchyRow, _| {
                         let path = row.location.uri.as_path().map(path::get_relative_path);
-                        let path = path.map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+                        let path = path
+                            .map(|p| p.to_string_lossy().into_owned())
+                            .unwrap_or_default();
                         format!("{path}:{}", row.location.range.start.line + 1).into()
                     }),
                 ];
-                let picker = Picker::new(columns, 0, rows, top, |cx, row: &HierarchyRow, action| {
-                    jump_to_location(cx.editor, &row.location, action)
-                })
-                .with_preview(|_editor, row| location_to_file_location(&row.location));
+                let picker =
+                    Picker::new(columns, 0, rows, top, |cx, row: &HierarchyRow, action| {
+                        jump_to_location(cx.editor, &row.location, action)
+                    })
+                    .with_preview(|_editor, row| location_to_file_location(&row.location));
                 compositor.push(Box::new(overlaid(picker)));
             },
         )))
@@ -2460,13 +2500,20 @@ fn hover_to(cx: &mut Context, panel: bool, quiet: bool) {
             if panel {
                 let body = hovers
                     .iter()
-                    .map(|(_, hover)| crate::ui::lsp::hover::hover_contents_to_string(hover.contents.clone()))
+                    .map(|(_, hover)| {
+                        crate::ui::lsp::hover::hover_contents_to_string(hover.contents.clone())
+                    })
                     .collect::<Vec<_>>()
                     .join("\n\n---\n\n");
-                let entry = crate::ui::ide::DocEntry { title, body, source };
+                let entry = crate::ui::ide::DocEntry {
+                    title,
+                    body,
+                    source,
+                };
                 let loader = editor.syn_loader.clone();
                 if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-                    view.ide_or_create().show_documentation(entry, loader, !quiet);
+                    view.ide_or_create()
+                        .show_documentation(entry, loader, !quiet);
                 }
                 return;
             }
@@ -2933,7 +2980,12 @@ mod siblings_tests {
     }
 
     #[allow(deprecated)]
-    fn symbol(name: &str, from: u32, to: u32, children: Vec<lsp::DocumentSymbol>) -> lsp::DocumentSymbol {
+    fn symbol(
+        name: &str,
+        from: u32,
+        to: u32,
+        children: Vec<lsp::DocumentSymbol>,
+    ) -> lsp::DocumentSymbol {
         lsp::DocumentSymbol {
             name: name.to_string(),
             detail: None,
@@ -2957,7 +3009,12 @@ mod siblings_tests {
     #[test]
     fn inside_a_type_the_siblings_are_its_members() {
         let tree = vec![
-            symbol("A", 0, 20, vec![symbol("a1", 1, 5, vec![]), symbol("a2", 6, 10, vec![])]),
+            symbol(
+                "A",
+                0,
+                20,
+                vec![symbol("a1", 1, 5, vec![]), symbol("a2", 6, 10, vec![])],
+            ),
             symbol("B", 21, 30, vec![]),
         ];
         assert_eq!(names(&siblings_at(&tree, pos(7))), vec!["a1", "a2"]);

@@ -1104,7 +1104,10 @@ is_sticky = false
             },
         );
         let mut keymaps = Keymaps::new(Box::new(Constant(map)));
-        let ctrl = |c| KeyEvent { code: KeyCode::Char(c), modifiers: KeyModifiers::CONTROL };
+        let ctrl = |c| KeyEvent {
+            code: KeyCode::Char(c),
+            modifiers: KeyModifiers::CONTROL,
+        };
         assert!(keymaps.runs_completion_command(Mode::Insert, ctrl('j')));
         assert!(!keymaps.runs_completion_command(Mode::Insert, ctrl('k')));
         assert!(!keymaps.runs_completion_command(Mode::Insert, key!('n')));

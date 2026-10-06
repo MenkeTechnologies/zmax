@@ -59,7 +59,8 @@ impl SessionOptions {
 }
 
 /// nvim's default `'sessionoptions'`.
-pub const DEFAULT_SESSIONOPTIONS: &str = "blank,buffers,curdir,folds,help,tabpages,winsize,terminal";
+pub const DEFAULT_SESSIONOPTIONS: &str =
+    "blank,buffers,curdir,folds,help,tabpages,winsize,terminal";
 
 /// A fold as `put_folds_recurse` walks it: its lines (1-based), whether it is
 /// closed, and the folds nested in it.
@@ -199,7 +200,11 @@ pub struct OptionReader<'a> {
 
 /// Record the editor's tab pages and windows. Each tab page is visited in turn
 /// (as vim reads `tp_firstwin`/`tp_topframe`) and the current one is restored.
-pub fn snapshot(editor: &mut Editor, opts: &OptionReader, args: (Vec<String>, usize)) -> SessionSnap {
+pub fn snapshot(
+    editor: &mut Editor,
+    opts: &OptionReader,
+    args: (Vec<String>, usize),
+) -> SessionSnap {
     let tab_count = editor.tabs.len().max(1);
     let curtab = editor.current_tab;
     let mut tabs = Vec::with_capacity(tab_count);
@@ -216,7 +221,9 @@ pub fn snapshot(editor: &mut Editor, opts: &OptionReader, args: (Vec<String>, us
     let area = editor.tree.area();
     let mut buffers = Vec::new();
     for id in &editor.buffer_order {
-        let Some(doc) = editor.document(*id) else { continue };
+        let Some(doc) = editor.document(*id) else {
+            continue;
+        };
         // Only listed buffers: a help buffer is never listed.
         if !doc.listed {
             continue;
@@ -247,7 +254,13 @@ pub fn snapshot(editor: &mut Editor, opts: &OptionReader, args: (Vec<String>, us
         shortmess: (opts.global_opt)("shortmess"),
         global_options: VIM_OPTION_SCOPES
             .iter()
-            .filter_map(|opt| (opts.known)(opt).map(|(value, default)| GlobalOpt { opt, value, default }))
+            .filter_map(|opt| {
+                (opts.known)(opt).map(|(value, default)| GlobalOpt {
+                    opt,
+                    value,
+                    default,
+                })
+            })
             .collect(),
         maps: opts.maps.clone(),
         globals: opts.globals.clone(),
@@ -264,7 +277,11 @@ fn arg_idx_invalid(snap: &SessionSnap, path: Option<&Path>) -> bool {
         return true;
     };
     let arg = zmax_stdx::path::expand_tilde(Path::new(arg));
-    let arg = if arg.is_absolute() { arg.into_owned() } else { snap.cwd.join(arg) };
+    let arg = if arg.is_absolute() {
+        arg.into_owned()
+    } else {
+        snap.cwd.join(arg)
+    };
     path.is_none_or(|p| zmax_stdx::path::canonicalize(arg) != p)
 }
 
@@ -280,7 +297,10 @@ fn frame(shape: &TreeShape) -> &TreeShape {
 fn snapshot_tab(editor: &Editor, opts: &OptionReader) -> TabSnap {
     let area = editor.tree.area();
     let ids: Vec<ViewId> = editor.tree.traverse().map(|(id, _)| id).collect();
-    let curwin = ids.iter().position(|id| *id == editor.tree.focus).map_or(1, |n| n + 1);
+    let curwin = ids
+        .iter()
+        .position(|id| *id == editor.tree.focus)
+        .map_or(1, |n| n + 1);
     let windows = ids
         .iter()
         .map(|&id| snapshot_win(editor, id, area, opts))
@@ -361,7 +381,11 @@ fn snapshot_win(
         fold_opts,
         foldmethod_manual: foldmethod == "manual",
         foldlevel: doc.folds().level(),
-        folds: fold_tree(doc.folds().iter().map(|f| (f.start + 1, f.end + 1, f.closed))),
+        folds: fold_tree(
+            doc.folds()
+                .iter()
+                .map(|f| (f.start + 1, f.end + 1, f.closed)),
+        ),
         local_options,
     }
 }
@@ -487,7 +511,11 @@ fn ses_win_rec(w: &mut Writer, shape: &TreeShape) {
         w.line(split);
     }
     if count > 0 {
-        let dir = if *layout == Layout::Horizontal { 'k' } else { 'h' };
+        let dir = if *layout == Layout::Horizontal {
+            'k'
+        } else {
+            'h'
+        };
         w.line(&format!("{count}wincmd {dir}"));
     }
     for (i, (_, child)) in children.iter().enumerate() {
@@ -558,7 +586,11 @@ fn escape_option_value(value: &str) -> String {
 fn home_replace_list(value: &str) -> String {
     value
         .split(',')
-        .map(|part| zmax_stdx::path::fold_home_dir(Path::new(part)).to_string_lossy().into_owned())
+        .map(|part| {
+            zmax_stdx::path::fold_home_dir(Path::new(part))
+                .to_string_lossy()
+                .into_owned()
+        })
         .collect::<Vec<_>>()
         .join(",")
 }
@@ -589,7 +621,11 @@ fn put_set(w: &mut Writer, cmd: &str, opt: &VimOptionScope, value: &str) {
         }
         Kind::Number => w.line(&format!("{cmd} {name}={value}")),
         Kind::String => {
-            let value = if opt.expand { home_replace_list(value) } else { value.to_string() };
+            let value = if opt.expand {
+                home_replace_list(value)
+            } else {
+                value.to_string()
+            };
             w.line(&format!("{cmd} {name}={}", escape_option_value(&value)));
         }
     }
@@ -691,11 +727,20 @@ fn put_foldopen_recurse(w: &mut Writer, win: &WinSnap, folds: &[FoldNode], level
 
 fn put_fold_open_close(w: &mut Writer, fold: &FoldNode) {
     w.line(&fold.start.to_string());
-    w.line(&format!("sil! normal! z{}", if fold.closed { 'c' } else { 'o' }));
+    w.line(&format!(
+        "sil! normal! z{}",
+        if fold.closed { 'c' } else { 'o' }
+    ));
 }
 
 /// vim `put_view`: everything that restores one window.
-fn put_view(w: &mut Writer, snap: &SessionSnap, win: &WinSnap, add_edit: bool, current_arg_idx: usize) {
+fn put_view(
+    w: &mut Writer,
+    snap: &SessionSnap,
+    win: &WinSnap,
+    add_edit: bool,
+    current_arg_idx: usize,
+) {
     w.line("argglobal");
     // Restore the argument index; `:argument` edits the file itself.
     let mut did_next = false;
@@ -778,7 +823,10 @@ fn put_view(w: &mut Writer, snap: &SessionSnap, win: &WinSnap, add_edit: bool, c
                 win.width
             ));
             w.line("if s:c > 0");
-            w.line(&format!("  exe 'normal! ' . s:c . '|zs' . {} . '|'", win.virtcol + 1));
+            w.line(&format!(
+                "  exe 'normal! ' . s:c . '|zs' . {} . '|'",
+                win.virtcol + 1
+            ));
             w.line("else");
             w.line(&format!("  normal! 0{}|", win.virtcol + 1));
             w.line("endif");
@@ -816,7 +864,9 @@ pub fn write(snap: &SessionSnap, ssop: SessionOptions, session_dir: &Path) -> St
         }
         makeset_global(&mut w, snap);
     }
-    w.line("let s:so_save = &g:so | let s:siso_save = &g:siso | setg so=0 siso=0 | setl so=-1 siso=-1");
+    w.line(
+        "let s:so_save = &g:so | let s:siso_save = &g:siso | setg so=0 siso=0 | setl so=-1 siso=-1",
+    );
 
     // makeopens
     w.line("let v:this_session=expand(\"<sfile>:p\")");
@@ -976,7 +1026,10 @@ pub fn write(snap: &SessionSnap, ssop: SessionOptions, session_dir: &Path) -> St
     w.line("  silent exe 'bwipe ' . s:wipebuf");
     w.line("endif");
     w.line("unlet! s:wipebuf");
-    w.line(&format!("set winheight={} winwidth={}", snap.winheight, snap.winwidth));
+    w.line(&format!(
+        "set winheight={} winwidth={}",
+        snap.winheight, snap.winwidth
+    ));
     if ssop.options {
         let shm = escape_option_value(&snap.shortmess);
         w.line(&format!("set shortmess={shm}"));

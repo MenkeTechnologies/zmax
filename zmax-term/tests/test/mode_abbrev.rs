@@ -67,13 +67,13 @@ async fn only_global_abbrevs_reroutes_add_mode_abbrev_to_the_global_table() -> a
     )
     .unwrap_or_default();
     assert!(
-        store
-            .lines()
-            .any(|line| line == "oganame\togaexpansion"),
+        store.lines().any(|line| line == "oganame\togaexpansion"),
         "the abbrev went into the global table: {store:?}"
     );
     assert!(
-        !store.lines().any(|line| line.ends_with("\toganame\togaexpansion")),
+        !store
+            .lines()
+            .any(|line| line.ends_with("\toganame\togaexpansion")),
         "and not into a mode table: {store:?}"
     );
     // Leave the variable as it was for the rest of the process.

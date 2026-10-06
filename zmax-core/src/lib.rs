@@ -97,11 +97,11 @@ mod transaction;
 pub mod two_column;
 pub mod unicode_names;
 pub mod uri;
+pub mod usage_kind;
 pub mod vc;
 pub mod vim_opts;
 pub mod whitespace;
 pub mod wrap;
-pub mod usage_kind;
 pub mod xref;
 
 pub mod unicode {

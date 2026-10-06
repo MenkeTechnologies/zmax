@@ -95,7 +95,11 @@ async fn dash_s_restores_a_session_over_the_command_line_file() -> anyhow::Resul
 
     assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
     let (view, doc) = zmax_view::current_ref!(app.editor);
-    assert_eq!(doc.path(), Some(notes.as_path()), "the session's `edit` buffer");
+    assert_eq!(
+        doc.path(),
+        Some(notes.as_path()),
+        "the session's `edit` buffer"
+    );
     let text = doc.text().slice(..);
     let cursor = doc.selection(view.id).primary().cursor(text);
     assert_eq!(text.char_to_line(cursor), 29, "the session's `exe 30`");
@@ -123,10 +127,13 @@ async fn dash_s_reports_a_missing_script() -> anyhow::Result<()> {
     Ok(())
 }
 
-
 /// Boot `zmax -S {session}` over `files` in a fresh `HOME` holding `files`,
 /// with `DIR` in the session replaced by that directory.
-fn boot_session(name: &str, files: &[(&str, usize)], session: &str) -> anyhow::Result<(Application, std::path::PathBuf)> {
+fn boot_session(
+    name: &str,
+    files: &[(&str, usize)],
+    session: &str,
+) -> anyhow::Result<(Application, std::path::PathBuf)> {
     let dir = std::env::temp_dir().join(format!("zmax-dash-s-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join(".zmax"))?;
@@ -139,7 +146,8 @@ fn boot_session(name: &str, files: &[(&str, usize)], session: &str) -> anyhow::R
     std::fs::write(&script, session.replace("DIR", &dir.to_string_lossy()))?;
 
     let mut args = Args::default();
-    args.files.insert(dir.join(files[0].0), vec![Position::default()]);
+    args.files
+        .insert(dir.join(files[0].0), vec![Position::default()]);
     args.source_files.push(script);
     let source_files = args.source_files.clone();
     let mut app = Application::new(
@@ -169,7 +177,10 @@ async fn session_badd_lnum_is_the_entry_line_not_a_buffer() -> anyhow::Result<()
     let names: Vec<_> = app
         .editor
         .documents()
-        .filter_map(|d| d.path().map(|p| p.file_name().unwrap().to_string_lossy().into_owned()))
+        .filter_map(|d| {
+            d.path()
+                .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+        })
         .collect();
     assert!(
         names.iter().all(|n| !n.starts_with('+')),
@@ -184,12 +195,18 @@ async fn session_badd_lnum_is_the_entry_line_not_a_buffer() -> anyhow::Result<()
     // The command-line file was showing when its `badd +30` ran: vim leaves
     // a displayed buffer's cursor alone.
     app.editor.switch(
-        app.editor.document_by_path(dir.join("notes.txt")).unwrap().id(),
+        app.editor
+            .document_by_path(dir.join("notes.txt"))
+            .unwrap()
+            .id(),
         zmax_view::editor::Action::Replace,
     );
     let (view, doc) = zmax_view::current_ref!(app.editor);
     let text = doc.text().slice(..);
-    assert_eq!(text.char_to_line(doc.selection(view.id).primary().cursor(text)), 0);
+    assert_eq!(
+        text.char_to_line(doc.selection(view.id).primary().cursor(text)),
+        0
+    );
 
     let _ = std::fs::remove_dir_all(&dir);
     Ok(())
@@ -207,7 +224,11 @@ async fn session_winheight_measures_the_window() -> anyhow::Result<()> {
     let text = doc.text().slice(..);
     let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
     assert!(view.inner_height() > 1);
-    assert_eq!(line + 1, view.inner_height(), "`exe winheight(0)` goes to that line");
+    assert_eq!(
+        line + 1,
+        view.inner_height(),
+        "`exe winheight(0)` goes to that line"
+    );
 
     let _ = std::fs::remove_dir_all(&dir);
     Ok(())
@@ -254,7 +275,10 @@ async fn session_tabnext_restores_the_window_scroll() -> anyhow::Result<()> {
     let cursor = doc.selection(view.id).primary().cursor(text);
     assert_eq!(text.char_to_line(cursor), 109);
     let top = text.char_to_line(doc.view_offset(view.id).anchor);
-    assert_eq!(top, 99, "tab 1 keeps its `normal! zt` scroll across tabnext");
+    assert_eq!(
+        top, 99,
+        "tab 1 keeps its `normal! zt` scroll across tabnext"
+    );
 
     let _ = std::fs::remove_dir_all(&dir);
     Ok(())
@@ -300,11 +324,16 @@ async fn session_split_layout_sizes_names_and_focuses_windows() -> anyhow::Resul
     let name = |n: usize| {
         let doc = app.editor.tree.get(windows[n]).doc;
         let doc = app.editor.document(doc).unwrap();
-        doc.path().map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+        doc.path()
+            .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
     };
     assert_eq!(name(0).as_deref(), Some("a.txt"));
     assert_eq!(name(1).as_deref(), Some("b.txt"));
-    assert_eq!(name(2).as_deref(), Some("scratchname"), "`file scratchname`");
+    assert_eq!(
+        name(2).as_deref(),
+        Some("scratchname"),
+        "`file scratchname`"
+    );
     assert_eq!(app.editor.tree.focus, windows[1], "`2wincmd w`");
 
     let _ = std::fs::remove_dir_all(&dir);

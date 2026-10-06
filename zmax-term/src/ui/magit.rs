@@ -2880,8 +2880,7 @@ impl MagitLog {
             return;
         }
         crate::commands::show_text_in_scratch(cx.editor, &out);
-        cx.editor
-            .set_status(format!("files affected by {sha}"));
+        cx.editor.set_status(format!("files affected by {sha}"));
     }
 
     /// JetBrains "History Up to Here" (`Vcs.ShowHistoryForRevision`): the log
@@ -5988,10 +5987,7 @@ MM both.rs
         );
         // No decoration, and a subject that merely starts with a paren.
         assert_eq!(strip_decoration("fix the thing"), "fix the thing");
-        assert_eq!(
-            strip_decoration("(unclosed subject"),
-            "(unclosed subject"
-        );
+        assert_eq!(strip_decoration("(unclosed subject"), "(unclosed subject");
     }
 
     #[test]

@@ -423,7 +423,10 @@ pub fn dap_toggle_breakpoint_impl(cx: &mut Context, path: PathBuf, line: usize) 
         .position(|breakpoint| breakpoint.line == line)
     {
         let removed = breakpoints.remove(pos);
-        REMOVED_BREAKPOINTS.lock().unwrap().push((path.clone(), removed));
+        REMOVED_BREAKPOINTS
+            .lock()
+            .unwrap()
+            .push((path.clone(), removed));
     } else {
         breakpoints.push(Breakpoint {
             line,
@@ -709,7 +712,11 @@ pub fn dap_quick_evaluate(cx: &mut Context) {
     let expr = {
         let (view, doc) = current_ref!(cx.editor);
         let range = doc.selection(view.id).primary();
-        let selected = doc.text().slice(..).slice(range.from()..range.to()).to_string();
+        let selected = doc
+            .text()
+            .slice(..)
+            .slice(range.from()..range.to())
+            .to_string();
         if selected.trim().is_empty() || range.len() <= 1 {
             crate::commands::typed::word_under_cursor(cx.editor)
         } else {
@@ -750,7 +757,10 @@ fn resync_all_breakpoints(editor: &mut Editor) {
 /// The current buffer's path and cursor line, or an error on the status line.
 fn breakpoint_site(editor: &mut Editor) -> Option<(PathBuf, usize)> {
     let (view, doc) = current!(editor);
-    let line = doc.selection(view.id).primary().cursor_line(doc.text().slice(..));
+    let line = doc
+        .selection(view.id)
+        .primary()
+        .cursor_line(doc.text().slice(..));
     match doc.path() {
         Some(path) => Some((path.to_owned(), line)),
         None => {
@@ -776,7 +786,11 @@ pub fn dap_toggle_breakpoint_enabled(cx: &mut Context) {
         return;
     };
     breakpoint.disabled = !breakpoint.disabled;
-    let state = if breakpoint.disabled { "disabled" } else { "enabled" };
+    let state = if breakpoint.disabled {
+        "disabled"
+    } else {
+        "enabled"
+    };
     resync_all_breakpoints(cx.editor);
     cx.editor.set_status(format!("Breakpoint {state}"));
 }
@@ -787,8 +801,11 @@ pub fn dap_mute_breakpoints(cx: &mut Context) {
     use std::sync::atomic::Ordering;
     let muted = !zmax_view::handlers::dap::BREAKPOINTS_MUTED.fetch_xor(true, Ordering::Relaxed);
     resync_all_breakpoints(cx.editor);
-    cx.editor
-        .set_status(if muted { "Breakpoints muted" } else { "Breakpoints unmuted" });
+    cx.editor.set_status(if muted {
+        "Breakpoints muted"
+    } else {
+        "Breakpoints unmuted"
+    });
 }
 
 /// JetBrains "Disable All Except This" (`XDebugger.DisableAllButThisBreakpoint`).
@@ -808,7 +825,10 @@ pub fn dap_disable_all_but_this(cx: &mut Context) {
 /// Breakpoint. Returns how many went.
 /// A file left with no breakpoints keeps its (empty) entry, so the resync
 /// still tells the adapter to clear that file.
-fn remove_breakpoints_where(editor: &mut Editor, pick: impl Fn(&PathBuf, &Breakpoint) -> bool) -> usize {
+fn remove_breakpoints_where(
+    editor: &mut Editor,
+    pick: impl Fn(&PathBuf, &Breakpoint) -> bool,
+) -> usize {
     let mut removed = REMOVED_BREAKPOINTS.lock().unwrap();
     let mut count = 0;
     for (path, breakpoints) in editor.breakpoints.iter_mut() {
@@ -832,7 +852,8 @@ pub fn dap_remove_all_but_this(cx: &mut Context) {
     };
     let count = remove_breakpoints_where(cx.editor, |path, b| !(*path == here && b.line == line));
     resync_all_breakpoints(cx.editor);
-    cx.editor.set_status(format!("Removed {count} breakpoint(s)"));
+    cx.editor
+        .set_status(format!("Removed {count} breakpoint(s)"));
 }
 
 /// JetBrains "Remove All Breakpoints in the File"
@@ -843,7 +864,8 @@ pub fn dap_remove_breakpoints_in_file(cx: &mut Context) {
     };
     let count = remove_breakpoints_where(cx.editor, |path, _| *path == here);
     resync_all_breakpoints(cx.editor);
-    cx.editor.set_status(format!("Removed {count} breakpoint(s)"));
+    cx.editor
+        .set_status(format!("Removed {count} breakpoint(s)"));
 }
 
 /// JetBrains "Restore Breakpoint" (`Debugger.RestoreBreakpoint`): put back the
@@ -863,8 +885,11 @@ pub fn dap_restore_breakpoint(cx: &mut Context) {
         });
     }
     resync_all_breakpoints(cx.editor);
-    cx.editor
-        .set_status(format!("Restored breakpoint at {}:{}", path.display(), line + 1));
+    cx.editor.set_status(format!(
+        "Restored breakpoint at {}:{}",
+        path.display(),
+        line + 1
+    ));
 }
 
 /// Set a breakpoint on this line if there is none.
@@ -946,7 +971,10 @@ pub fn dap_remove_breakpoint_impl(cx: &mut Context, path: PathBuf, line: usize) 
         return;
     };
     let removed = breakpoints.remove(pos);
-    REMOVED_BREAKPOINTS.lock().unwrap().push((path.clone(), removed));
+    REMOVED_BREAKPOINTS
+        .lock()
+        .unwrap()
+        .push((path.clone(), removed));
 
     let debugger = debugger!(cx.editor);
 
@@ -1253,11 +1281,14 @@ pub fn dap_add_watch(cx: &mut Context) {
 pub fn dap_show_watches(cx: &mut Context) {
     let watches = WATCHES.lock().unwrap().clone();
     if watches.is_empty() {
-        cx.editor.set_status("no watches — add one with dap_add_watch");
+        cx.editor
+            .set_status("no watches — add one with dap_add_watch");
         return;
     }
     let debugger = cx.editor.debug_adapters.get_active_client();
-    let frame_id = debugger.and_then(|d| selected_frame(d, false)).map(|f| f.id);
+    let frame_id = debugger
+        .and_then(|d| selected_frame(d, false))
+        .map(|f| f.id);
     let body: String = watches
         .iter()
         .map(|expr| {
@@ -1275,16 +1306,33 @@ pub fn dap_show_watches(cx: &mut Context) {
 }
 
 /// Pick a watch by its index and hand the index to `on_pick`.
-fn pick_watch(cx: &mut Context, header: &'static str, on_pick: impl Fn(&mut compositor::Context, usize) + 'static) {
-    let watches: Vec<(usize, String)> = WATCHES.lock().unwrap().iter().cloned().enumerate().collect();
+fn pick_watch(
+    cx: &mut Context,
+    header: &'static str,
+    on_pick: impl Fn(&mut compositor::Context, usize) + 'static,
+) {
+    let watches: Vec<(usize, String)> = WATCHES
+        .lock()
+        .unwrap()
+        .iter()
+        .cloned()
+        .enumerate()
+        .collect();
     if watches.is_empty() {
         cx.editor.set_status("no watches");
         return;
     }
-    let columns = [ui::PickerColumn::new(header, |w: &(usize, String), _: &()| {
-        w.1.as_str().into()
-    })];
-    let picker = Picker::new(columns, 0, watches, (), move |cx, w: &(usize, String), _| on_pick(cx, w.0));
+    let columns = [ui::PickerColumn::new(
+        header,
+        |w: &(usize, String), _: &()| w.1.as_str().into(),
+    )];
+    let picker = Picker::new(
+        columns,
+        0,
+        watches,
+        (),
+        move |cx, w: &(usize, String), _| on_pick(cx, w.0),
+    );
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -1346,14 +1394,26 @@ pub fn dap_copy_watch(cx: &mut Context) {
 }
 
 fn move_watch(cx: &mut Context, down: bool) {
-    pick_watch(cx, if down { "move watch down" } else { "move watch up" }, move |cx, index| {
-        let mut watches = WATCHES.lock().unwrap();
-        let to = if down { index + 1 } else { index.wrapping_sub(1) };
-        if to < watches.len() {
-            watches.swap(index, to);
-            cx.editor.set_status("watch moved");
-        }
-    });
+    pick_watch(
+        cx,
+        if down {
+            "move watch down"
+        } else {
+            "move watch up"
+        },
+        move |cx, index| {
+            let mut watches = WATCHES.lock().unwrap();
+            let to = if down {
+                index + 1
+            } else {
+                index.wrapping_sub(1)
+            };
+            if to < watches.len() {
+                watches.swap(index, to);
+                cx.editor.set_status("watch moved");
+            }
+        },
+    );
 }
 
 /// JetBrains "Move Watch Up" (`XDebugger.MoveWatchUp`).
@@ -1416,7 +1476,9 @@ fn pick_variable(
         ui::PickerColumn::new(header, |v: &FrameVariable, _: &()| v.name.as_str().into()),
         ui::PickerColumn::new("value", |v: &FrameVariable, _: &()| v.value.as_str().into()),
     ];
-    let picker = Picker::new(columns, 0, vars, (), move |cx, v: &FrameVariable, _| on_pick(cx, v));
+    let picker = Picker::new(columns, 0, vars, (), move |cx, v: &FrameVariable, _| {
+        on_pick(cx, v)
+    });
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -1424,7 +1486,8 @@ fn pick_variable(
 pub fn dap_copy_variable_value(cx: &mut Context) {
     pick_variable(cx, "copy value of", |cx, var| {
         let _ = cx.editor.registers.write('+', vec![var.value.clone()]);
-        cx.editor.set_status(format!("yanked the value of {}", var.name));
+        cx.editor
+            .set_status(format!("yanked the value of {}", var.name));
     });
 }
 
@@ -1451,8 +1514,14 @@ pub fn dap_set_variable(cx: &mut Context) {
                         return;
                     }
                     let debugger = debugger!(cx.editor);
-                    match block_on(debugger.set_variable(var.scope, var.name.clone(), input.to_string())) {
-                        Ok(resp) => cx.editor.set_status(format!("{} = {}", var.name, resp.value)),
+                    match block_on(debugger.set_variable(
+                        var.scope,
+                        var.name.clone(),
+                        input.to_string(),
+                    )) {
+                        Ok(resp) => cx
+                            .editor
+                            .set_status(format!("{} = {}", var.name, resp.value)),
                         Err(e) => cx.editor.set_error(format!("setVariable: {e}")),
                     }
                 },

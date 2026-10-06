@@ -112,7 +112,11 @@ mod tests {
     fn the_ring_keeps_the_most_recent() {
         clear();
         for i in 0..(CAPACITY + 10) {
-            record(std::path::Path::new("/repo"), &["log", &i.to_string()], true);
+            record(
+                std::path::Path::new("/repo"),
+                &["log", &i.to_string()],
+                true,
+            );
         }
         let got = entries();
         assert_eq!(got.len(), CAPACITY, "the ring is bounded");

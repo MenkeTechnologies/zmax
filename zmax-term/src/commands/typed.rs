@@ -843,7 +843,11 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     Ok(())
 }
 
-fn open_files(cx: &mut compositor::Context, files: Vec<String>, action: Action) -> anyhow::Result<()> {
+fn open_files(
+    cx: &mut compositor::Context,
+    files: Vec<String>,
+    action: Action,
+) -> anyhow::Result<()> {
     let action = split_mod(cx.editor, action);
     for arg in files {
         let (path, pos) = crate::args::parse_file(&arg);
@@ -2385,7 +2389,11 @@ fn argument(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     // vim `:[count]argu[ment] [count]`: the count may come before the name
     // (`:2argu`, as a session writes it) or after it.
     let prefix = EX_ARG_RANGE.with(|c| c.take()).map(|(_, n)| n);
-    let Some(n) = args.first().and_then(|s| s.parse::<usize>().ok()).or(prefix) else {
+    let Some(n) = args
+        .first()
+        .and_then(|s| s.parse::<usize>().ok())
+        .or(prefix)
+    else {
         bail!("argument: needs a number");
     };
     let file = with_arglist(|a| a.goto(n).map(str::to_string));
@@ -4730,12 +4738,7 @@ fn messages_clear(
 /// caches and logs are equally not settings, and `projects` is per-machine
 /// session state.
 const SETTINGS_EXPORT_SKIP: &[&str] = &[
-    "runtime",
-    "grammars",
-    ".git",
-    "cache",
-    "projects",
-    "zmax.log",
+    "runtime", "grammars", ".git", "cache", "projects", "zmax.log",
 ];
 
 /// Copy `from` into `to` recursively, returning how many files were written.
@@ -6141,7 +6144,11 @@ fn resolve_arg_address(addr: &str, len: usize, current: usize) -> Option<(usize,
 /// Window `n` in vim's numbering (1 is the top-left, counting to the
 /// bottom-right), or `None` past the last.
 fn window_by_number(editor: &Editor, n: usize) -> Option<zmax_view::ViewId> {
-    editor.tree.traverse().map(|(id, _)| id).nth(n.checked_sub(1)?)
+    editor
+        .tree
+        .traverse()
+        .map(|(id, _)| id)
+        .nth(n.checked_sub(1)?)
 }
 
 /// `:[N]wincmd {arg}` — run a window (CTRL-W) command by its key, e.g. `:wincmd h`
@@ -6163,7 +6170,9 @@ fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         "h" | "C-h" | "left" => (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Left)),
         "j" | "C-j" | "down" => (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Down)),
         "k" | "C-k" | "up" => (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Up)),
-        "l" | "C-l" | "right" => (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Right)),
+        "l" | "C-l" | "right" => {
+            (0..steps).for_each(|_| cx.editor.focus_direction(Direction::Right))
+        }
         "w" | "C-w" | "W" => match count {
             // "Without count: move cursor to window below/right of the current
             // one... With count: go to Nth window" — past the last, the last.
@@ -6180,7 +6189,8 @@ fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         // possible (`:mksession` writes `wincmd _ | wincmd |` before splitting).
         "_" | "C-_" => {
             let view = cx.editor.tree.focus;
-            let chrome = cx.editor.tree.node_height(view) - cx.editor.tree.get(view).inner_height() as u16;
+            let chrome =
+                cx.editor.tree.node_height(view) - cx.editor.tree.get(view).inner_height() as u16;
             let height = count.map_or(u16::MAX, |n| (n as u16).saturating_add(chrome));
             cx.editor.resize_windows(move |tree| {
                 tree.set_height(view, height);
@@ -6188,13 +6198,19 @@ fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         }
         "|" => {
             let view = cx.editor.tree.focus;
-            cx.editor.tree.set_width(view, count.map_or(u16::MAX, |n| n as u16));
+            cx.editor
+                .tree
+                .set_width(view, count.map_or(u16::MAX, |n| n as u16));
         }
         // vim CTRL-W t / CTRL-W b: the top-left and bottom-right windows, the
         // first and last in window-number order. `:mksession` writes `wincmd t`.
         "t" | "C-t" | "b" | "C-b" => {
             let mut ids = cx.editor.tree.traverse().map(|(id, _)| id);
-            let target = if arg.ends_with('t') { ids.next() } else { ids.last() };
+            let target = if arg.ends_with('t') {
+                ids.next()
+            } else {
+                ids.next_back()
+            };
             if let Some(id) = target {
                 cx.editor.focus(id);
             }
@@ -6502,10 +6518,16 @@ fn buffer_gather_paths_impl(editor: &mut Editor, args: Args) -> Vec<DocumentId> 
         // number, as for `:buffer {N}` (a session wipes its start-up buffer with
         // `exe 'bwipe ' . s:wipebuf`).
         if !arg.is_empty() && arg.bytes().all(|b| b.is_ascii_digit()) {
-            match editor.documents().find(|doc| doc.id().to_string() == arg.as_ref()) {
+            match editor
+                .documents()
+                .find(|doc| doc.id().to_string() == arg.as_ref())
+            {
                 Some(doc) => document_ids.push(doc.id()),
                 // A scratch buffer zmax already wiped when a file replaced it.
-                None if editor.wiped_scratch.iter().any(|id| id.to_string() == arg.as_ref()) => {}
+                None if editor
+                    .wiped_scratch
+                    .iter()
+                    .any(|id| id.to_string() == arg.as_ref()) => {}
                 None => nonexistent_buffers.push(format!("'{}'", arg)),
             }
             continue;
@@ -6730,11 +6752,7 @@ fn buffer_close_readonly(
 /// `:pin-tab` — IntelliJ "Pin Tab": keep this buffer out of the bulk closes.
 /// Toggles, and says which way it went, since the bar's marker is easy to miss
 /// on a long buffer line.
-fn pin_tab(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn pin_tab(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7871,9 +7889,7 @@ fn special_paths(
                             let call: job::Callback = job::Callback::EditorCompositor(Box::new(
                                 move |editor: &mut Editor, compositor: &mut Compositor| {
                                     match ui::file_explorer(dir.clone(), editor) {
-                                        Ok(picker) => {
-                                            compositor.push(Box::new(overlaid(picker)))
-                                        }
+                                        Ok(picker) => compositor.push(Box::new(overlaid(picker))),
                                         Err(e) => {
                                             editor.set_error(format!("{}: {e}", dir.display()))
                                         }
@@ -7926,10 +7942,19 @@ fn collect_logs(
     out.push_str(&format!("zmax {}\n", zmax_loader::VERSION_AND_GIT_HASH));
     out.push_str(&format!("os: {}\n", std::env::consts::OS));
     out.push_str(&format!("arch: {}\n", std::env::consts::ARCH));
-    out.push_str(&format!("config dir: {}\n", zmax_loader::config_dir().display()));
-    out.push_str(&format!("cache dir: {}\n", zmax_loader::cache_dir().display()));
+    out.push_str(&format!(
+        "config dir: {}\n",
+        zmax_loader::config_dir().display()
+    ));
+    out.push_str(&format!(
+        "cache dir: {}\n",
+        zmax_loader::cache_dir().display()
+    ));
     out.push_str(&format!("log file: {}\n", log.display()));
-    out.push_str(&format!("open buffers: {}\n", cx.editor.documents().count()));
+    out.push_str(&format!(
+        "open buffers: {}\n",
+        cx.editor.documents().count()
+    ));
     out.push_str(&format!("\n--- last {} log lines ---\n", tail.len()));
     out.push_str(&tail.join("\n"));
     out.push('\n');
@@ -8789,8 +8814,11 @@ fn export_test_results(
     };
     std::fs::write(&path, render_test_report(&entries))?;
     cx.editor.open(&path, Action::Replace)?;
-    cx.editor
-        .set_status(format!("{} run(s) written to {}", entries.len(), path.display()));
+    cx.editor.set_status(format!(
+        "{} run(s) written to {}",
+        entries.len(),
+        path.display()
+    ));
     Ok(())
 }
 
@@ -8819,8 +8847,12 @@ mod test_report_tests {
             },
         ];
         let report = render_test_report(&entries);
-        let fail_at = report.find("## FAIL pytest").expect("the failing run is listed");
-        let pass_at = report.find("## PASS cargo test").expect("the passing run is listed");
+        let fail_at = report
+            .find("## FAIL pytest")
+            .expect("the failing run is listed");
+        let pass_at = report
+            .find("## PASS cargo test")
+            .expect("the passing run is listed");
         assert!(fail_at < pass_at, "newest first");
         assert!(report.contains("  failed: test_a\n"));
     }
@@ -9388,7 +9420,11 @@ macro_rules! plugin_window_cmd {
         }
     };
     ($fn:ident, $which:literal, $action:expr) => {
-        fn $fn(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+        fn $fn(
+            cx: &mut compositor::Context,
+            _args: Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
             if event != PromptEvent::Validate {
                 return Ok(());
             }
@@ -9402,7 +9438,12 @@ use crate::ui::ide::ToolWindowAction::{Close as TwClose, Open as TwOpen, Toggle 
 
 // NERDTree opens with the cursor in the tree (`_createTreeWin`).
 plugin_window_cmd!(ex_nerdtree, "project", TwOpen { focus: true }, root);
-plugin_window_cmd!(ex_nerdtree_toggle, "project", TwToggle { focus: true }, root);
+plugin_window_cmd!(
+    ex_nerdtree_toggle,
+    "project",
+    TwToggle { focus: true },
+    root
+);
 plugin_window_cmd!(ex_nerdtree_focus, "project", TwOpen { focus: true });
 plugin_window_cmd!(ex_nerdtree_close, "project", TwClose);
 // taglist: ":TlistToggle ... the cursor is not moved"; ":TlistOpen Open and
@@ -9421,7 +9462,11 @@ plugin_window_cmd!(ex_lotr_close, "registers", TwClose);
 
 /// NERDTree `:NERDTreeFind [<path>]`: reveal `path`, else the current file,
 /// in the tree.
-fn ex_nerdtree_find(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_nerdtree_find(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -9565,7 +9610,9 @@ pub(crate) fn open_diff(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
         return;
     }
     // The other changed files, for JetBrains "Compare Next / Previous File".
-    let path = editor.document(doc_id).and_then(|d| d.path().map(|p| p.to_path_buf()));
+    let path = editor
+        .document(doc_id)
+        .and_then(|d| d.path().map(|p| p.to_path_buf()));
     let files = path
         .as_ref()
         .and_then(|p| p.parent())
@@ -9765,8 +9812,7 @@ fn github(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         Some(name) => match crate::ui::github::Tab::from_name(name) {
             Some(tab) => tab,
             None => {
-                cx.editor
-                    .set_error(format!("no such github tab: {name}"));
+                cx.editor.set_error(format!("no such github tab: {name}"));
                 return Ok(());
             }
         },
@@ -16333,7 +16379,11 @@ qf_nav_cmd!(loclist_getfile_cmd, QfKind::Location, |cx, a| {
 /// `None` for an argument that is not one. Pure — unit tested.
 fn plus_cmd(arg: &str) -> Option<String> {
     let cmd = arg.strip_prefix('+')?;
-    Some(if cmd.is_empty() { "$".to_string() } else { cmd.to_string() })
+    Some(if cmd.is_empty() {
+        "$".to_string()
+    } else {
+        cmd.to_string()
+    })
 }
 
 fn tab_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -17040,7 +17090,10 @@ pub(crate) fn format_md_table(s: &str) -> String {
     if lines.len() < 2 {
         return s.to_string();
     }
-    let rows: Vec<Vec<String>> = lines.iter().map(|l| crate::md_table::parse_row(l)).collect();
+    let rows: Vec<Vec<String>> = lines
+        .iter()
+        .map(|l| crate::md_table::parse_row(l))
+        .collect();
     let sep_idx = 1;
     if !crate::md_table::is_separator(&rows[sep_idx]) {
         return s.to_string();
@@ -24628,11 +24681,8 @@ fn compare_directories(
         return Ok(());
     }
     crate::commands::show_text_in_scratch(cx.editor, &body);
-    cx.editor.set_status(format!(
-        "diff -ru {} {}",
-        left.display(),
-        right.display()
-    ));
+    cx.editor
+        .set_status(format!("diff -ru {} {}", left.display(), right.display()));
     Ok(())
 }
 
@@ -25265,8 +25315,7 @@ fn sticky_lines_limit_cmd(
                 .parse()
                 .map_err(|_| anyhow!("sticky-lines: {n} is not a number"))?;
             let set = super::set_sticky_lines_limit(n);
-            cx.editor
-                .set_status(format!("sticky lines: at most {set}"));
+            cx.editor.set_status(format!("sticky lines: at most {set}"));
         }
         None => {
             let n = super::sticky_lines_limit();
@@ -25308,7 +25357,13 @@ fn repo_dirs(cx: &compositor::Context) -> anyhow::Result<(std::path::PathBuf, st
 }
 
 /// Load the repository's changelists.
-fn load_changelists(cx: &compositor::Context) -> anyhow::Result<(std::path::PathBuf, std::path::PathBuf, crate::changelists::Store)> {
+fn load_changelists(
+    cx: &compositor::Context,
+) -> anyhow::Result<(
+    std::path::PathBuf,
+    std::path::PathBuf,
+    crate::changelists::Store,
+)> {
     let (git_dir, root) = repo_dirs(cx)?;
     let path = crate::changelists::store_path(&git_dir);
     let text = std::fs::read_to_string(&path).unwrap_or_default();
@@ -25316,7 +25371,10 @@ fn load_changelists(cx: &compositor::Context) -> anyhow::Result<(std::path::Path
 }
 
 /// The current buffer's path relative to the repository root.
-fn current_repo_relative(cx: &compositor::Context, root: &std::path::Path) -> anyhow::Result<String> {
+fn current_repo_relative(
+    cx: &compositor::Context,
+    root: &std::path::Path,
+) -> anyhow::Result<String> {
     let path = doc!(cx.editor)
         .path()
         .map(ToOwned::to_owned)
@@ -25330,9 +25388,7 @@ fn current_repo_relative(cx: &compositor::Context, root: &std::path::Path) -> an
 ///
 /// `off` is not a severity but the fourth thing the IDE's "Error Highlighting"
 /// slider can be set to, so it is accepted here and reported as `None`.
-pub(crate) fn parse_diagnostic_severity(
-    name: &str,
-) -> Option<Option<zmax_view::editor::Severity>> {
+pub(crate) fn parse_diagnostic_severity(name: &str) -> Option<Option<zmax_view::editor::Severity>> {
     use zmax_view::editor::Severity;
     match name.trim().to_ascii_lowercase().as_str() {
         "off" | "none" | "disable" | "disabled" => Some(None),
@@ -25491,10 +25547,11 @@ fn changelist(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     let (path, root, mut store) = load_changelists(cx)?;
     let rel = current_repo_relative(cx, &root)?;
     let Some(name) = args.first() else {
-        cx.editor.set_status(match crate::changelists::list_of(&store, &rel) {
-            Some(list) => format!("{rel} is in changelist `{list}`"),
-            None => format!("{rel} is in no changelist"),
-        });
+        cx.editor
+            .set_status(match crate::changelists::list_of(&store, &rel) {
+                Some(list) => format!("{rel} is in changelist `{list}`"),
+                None => format!("{rel} is in no changelist"),
+            });
         return Ok(());
     };
     let moved_from = crate::changelists::assign(&mut store, name, &rel);
@@ -25551,7 +25608,9 @@ fn changelist_commit(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let name = args.first().context("usage: :changelist-commit NAME MESSAGE")?;
+    let name = args
+        .first()
+        .context("usage: :changelist-commit NAME MESSAGE")?;
     let message: String = args
         .iter()
         .skip(1)
@@ -25572,7 +25631,9 @@ fn changelist_commit(
             .output()
             .map_err(|e| anyhow!("git: {e}"))?;
         for path in String::from_utf8_lossy(&changed.stdout).lines() {
-            if crate::changelists::list_of(&store, path).is_none() && !paths.iter().any(|p| p == path) {
+            if crate::changelists::list_of(&store, path).is_none()
+                && !paths.iter().any(|p| p == path)
+            {
                 paths.push(path.to_string());
             }
         }
@@ -25583,7 +25644,9 @@ fn changelist_commit(
     let paths = &paths;
 
     let mut cmd = std::process::Command::new("git");
-    cmd.arg("-C").arg(&root).args(["commit", "-m", &message, "--"]);
+    cmd.arg("-C")
+        .arg(&root)
+        .args(["commit", "-m", &message, "--"]);
     for p in paths {
         cmd.arg(p);
     }
@@ -25594,10 +25657,8 @@ fn changelist_commit(
             String::from_utf8_lossy(&out.stderr).trim()
         );
     }
-    cx.editor.set_status(format!(
-        "committed {} file(s) from `{name}`",
-        paths.len()
-    ));
+    cx.editor
+        .set_status(format!("committed {} file(s) from `{name}`", paths.len()));
     Ok(())
 }
 
@@ -25610,13 +25671,21 @@ fn changelist_default_name(store: &std::path::Path) -> Option<String> {
         .filter(|name| !name.is_empty())
 }
 
-fn save_changelists(path: &std::path::Path, store: &crate::changelists::Store) -> anyhow::Result<()> {
-    std::fs::write(path, crate::changelists::render(store)).map_err(|e| anyhow!("{}: {e}", path.display()))
+fn save_changelists(
+    path: &std::path::Path,
+    store: &crate::changelists::Store,
+) -> anyhow::Result<()> {
+    std::fs::write(path, crate::changelists::render(store))
+        .map_err(|e| anyhow!("{}: {e}", path.display()))
 }
 
 /// `:changelist-new NAME` — JetBrains "New Changelist"
 /// (`ChangesView.NewChangeList`): an empty list to move files into.
-fn changelist_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn changelist_new(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -25633,7 +25702,11 @@ fn changelist_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 /// `:changelist-delete NAME` — JetBrains "Delete Changelist"
 /// (`ChangesView.RemoveChangeList`). Its files move to the default list when
 /// one is set, as the IDE moves them to its active one.
-fn changelist_delete(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn changelist_delete(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -25645,7 +25718,10 @@ fn changelist_delete(cx: &mut compositor::Context, args: Args, event: PromptEven
     save_changelists(&path, &store)?;
     cx.editor.set_status(match default.filter(|d| d != name) {
         Some(default) if !moved.is_empty() => {
-            format!("deleted `{name}`; {} file(s) moved to `{default}`", moved.len())
+            format!(
+                "deleted `{name}`; {} file(s) moved to `{default}`",
+                moved.len()
+            )
         }
         _ => format!("deleted `{name}`"),
     });
@@ -25654,7 +25730,11 @@ fn changelist_delete(cx: &mut compositor::Context, args: Args, event: PromptEven
 
 /// `:changelist-rename OLD NEW` — JetBrains "Rename Changelist"
 /// (`ChangesView.Rename`).
-fn changelist_rename(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn changelist_rename(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -25676,7 +25756,11 @@ fn changelist_rename(cx: &mut compositor::Context, args: Args, event: PromptEven
 /// `:changelist-default NAME` — JetBrains "Set Active Changelist"
 /// (`ChangesView.SetDefault`): the list that the changes no other list claims
 /// belong to, and so the one `:changelist-commit` commits them with.
-fn changelist_default(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn changelist_default(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -25686,9 +25770,9 @@ fn changelist_default(cx: &mut compositor::Context, args: Args, event: PromptEve
         save_changelists(&path, &store)?;
     }
     let dir = path.parent().context("no git directory")?;
-    std::fs::write(crate::changelists::default_path(dir), name)
-        .map_err(|e| anyhow!("{e}"))?;
-    cx.editor.set_status(format!("`{name}` is the default changelist"));
+    std::fs::write(crate::changelists::default_path(dir), name).map_err(|e| anyhow!("{e}"))?;
+    cx.editor
+        .set_status(format!("`{name}` is the default changelist"));
     Ok(())
 }
 
@@ -25757,8 +25841,7 @@ fn attach_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
         );
     }
     if crate::attached_dirs::attach(dir.clone()) {
-        cx.editor
-            .set_status(format!("attached {}", dir.display()));
+        cx.editor.set_status(format!("attached {}", dir.display()));
     } else {
         cx.editor
             .set_status(format!("{} is already attached", dir.display()));
@@ -25791,15 +25874,16 @@ fn detach_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     };
     if arg == "*" {
         let n = crate::attached_dirs::detach_all();
-        cx.editor
-            .set_status(format!("detached {n} director{}", if n == 1 { "y" } else { "ies" }));
+        cx.editor.set_status(format!(
+            "detached {n} director{}",
+            if n == 1 { "y" } else { "ies" }
+        ));
         return Ok(());
     }
     let dir = std::path::PathBuf::from(arg);
     let dir = dir.canonicalize().unwrap_or(dir);
     if crate::attached_dirs::detach(&dir) {
-        cx.editor
-            .set_status(format!("detached {}", dir.display()));
+        cx.editor.set_status(format!("detached {}", dir.display()));
     } else {
         bail!("{} is not attached", dir.display());
     }
@@ -25813,11 +25897,7 @@ fn detach_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
 /// you where you were with git's own message; on success the working
 /// directory changes to the clone, which is what "get from version control"
 /// means in the IDE — you end up in the project.
-fn git_clone(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn git_clone(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -25842,7 +25922,8 @@ fn git_clone(
     let dir = std::path::PathBuf::from(&into);
     let dir = dir.canonicalize().unwrap_or(dir);
     zmax_stdx::env::set_current_working_dir(&dir)?;
-    cx.editor.set_status(format!("cloned into {}", dir.display()));
+    cx.editor
+        .set_status(format!("cloned into {}", dir.display()));
     Ok(())
 }
 
@@ -25914,7 +25995,10 @@ fn prune_empty_dirs(
     }
     cx.editor.set_status(match removed.len() {
         0 => "no empty directories to prune".to_string(),
-        n => format!("pruned {n} empty director{}", if n == 1 { "y" } else { "ies" }),
+        n => format!(
+            "pruned {n} empty director{}",
+            if n == 1 { "y" } else { "ies" }
+        ),
     });
     Ok(())
 }
@@ -26004,7 +26088,8 @@ fn shelve_changes(
     let dir = git_dir_for_current(cx);
     let patch = local_changes_patch(&dir)?;
     if patch.is_empty() {
-        cx.editor.set_status("nothing to shelve — the tree is clean");
+        cx.editor
+            .set_status("nothing to shelve — the tree is clean");
         return Ok(());
     }
     let name = match args.first() {
@@ -26140,11 +26225,7 @@ fn create_patch(
 
 /// `:copy-patch` — JetBrains "Copy as Patch to Clipboard"
 /// (`ChangesView.CreatePatchToClipboard`).
-fn copy_patch(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn copy_patch(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -27130,7 +27211,11 @@ fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
 
 /// `:split`/`:vsplit [+cmd] [file]`: split the window, onto `file` when one is
 /// named, then run the `+cmd`.
-fn split_or_open(cx: &mut compositor::Context, args: &Args, direction: Action) -> anyhow::Result<()> {
+fn split_or_open(
+    cx: &mut compositor::Context,
+    args: &Args,
+    direction: Action,
+) -> anyhow::Result<()> {
     let (after_open, files) = split_plus_arg(args);
     if files.is_empty() {
         let action = split_mod(cx.editor, direction);
@@ -27659,7 +27744,10 @@ fn parse_set_number(s: &str) -> Option<i64> {
         i64::from_str_radix(h, 16).ok()?
     } else if let Some(b) = lower.strip_prefix("0b") {
         i64::from_str_radix(b, 2).ok()?
-    } else if digits.len() > 1 && digits.starts_with('0') && digits.bytes().all(|b| b.is_ascii_digit() && b < b'8') {
+    } else if digits.len() > 1
+        && digits.starts_with('0')
+        && digits.bytes().all(|b| b.is_ascii_digit() && b < b'8')
+    {
         i64::from_str_radix(&digits[1..], 8).ok()?
     } else {
         digits.parse().ok()?
@@ -31900,7 +31988,9 @@ mod unified_diff_tests {
     fn labels_name_the_sides_and_equal_text_is_none() {
         let old = std::env::temp_dir().join(format!("zmax-udiff-{}.txt", std::process::id()));
         std::fs::write(&old, "a\n").unwrap();
-        let patch = unified_diff(&old, "b\n", Some(("a/x", "b/x"))).unwrap().unwrap();
+        let patch = unified_diff(&old, "b\n", Some(("a/x", "b/x")))
+            .unwrap()
+            .unwrap();
         assert!(patch.starts_with("--- a/x\n+++ b/x\n"), "{patch}");
         assert!(patch.contains("-a\n+b\n"), "{patch}");
         assert_eq!(None, unified_diff(&old, "a\n", None).unwrap());
@@ -31931,7 +32021,9 @@ pub(crate) fn unified_diff(
     match out {
         // diff exits 0 (identical) or 1 (differences); >1 is an error.
         Ok(o) if o.status.code() == Some(0) => Ok(None),
-        Ok(o) if o.status.code() == Some(1) => Ok(Some(String::from_utf8_lossy(&o.stdout).into_owned())),
+        Ok(o) if o.status.code() == Some(1) => {
+            Ok(Some(String::from_utf8_lossy(&o.stdout).into_owned()))
+        }
         Ok(o) => Err(String::from_utf8_lossy(&o.stderr).trim().to_string()),
         Err(err) => Err(format!("{err} (install diffutils)")),
     }
@@ -35417,7 +35509,11 @@ fn ex_fold(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
             let doc = doc_mut!(cx.editor);
             let last = doc.text().len_lines().saturating_sub(1);
             if !doc.folds_mut().create(start, end) {
-                bail!("fold: cannot create a fold over lines {}-{}", start + 1, end + 1);
+                bail!(
+                    "fold: cannot create a fold over lines {}-{}",
+                    start + 1,
+                    end + 1
+                );
             }
             doc.folds_mut().clamp(last);
         }
@@ -35999,7 +36095,8 @@ fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     };
     let width = cmd_mods().split == Some(SplitDir::Vertical);
     // vim sizes a window's text: its height excludes the status line.
-    let chrome = cx.editor.tree.node_height(view) as i32 - cx.editor.tree.get(view).inner_height() as i32;
+    let chrome =
+        cx.editor.tree.node_height(view) as i32 - cx.editor.tree.get(view).inner_height() as i32;
     let current = if width {
         i32::from(cx.editor.tree.node_width(view))
     } else {
@@ -44942,7 +45039,11 @@ const ENV_DEFAULT_OPTIONS: &[&str] = &[
 fn mksession(cx: &mut compositor::Context, args: &Args, overwrite: bool) -> anyhow::Result<()> {
     let cwd = zmax_stdx::env::current_working_dir();
     let path = session_arg_path(args, cwd.join("Session.vim"));
-    let path = if path.is_absolute() { path } else { cwd.join(path) };
+    let path = if path.is_absolute() {
+        path
+    } else {
+        cwd.join(path)
+    };
     if !overwrite && path.exists() {
         bail!("E189: \"{}\" exists (add ! to override)", path.display());
     }
@@ -44955,8 +45056,11 @@ fn mksession(cx: &mut compositor::Context, args: &Args, overwrite: bool) -> anyh
     // the editor config or the option store says) and its default.
     let known = |opt: &crate::vim_option_scopes::VimOptionScope| {
         let (_, default) = vim_opt_meta(opt.name)?;
-        let set = vim_opt_global_str(opt.name)
-            .or_else(|| (!opt.abbr.is_empty()).then(|| vim_opt_global_str(opt.abbr)).flatten());
+        let set = vim_opt_global_str(opt.name).or_else(|| {
+            (!opt.abbr.is_empty())
+                .then(|| vim_opt_global_str(opt.abbr))
+                .flatten()
+        });
         // nvim computes these defaults from the environment at startup, so
         // they differ from it only once the user sets them.
         if set.is_none() && ENV_DEFAULT_OPTIONS.contains(&opt.name) {
@@ -44970,7 +45074,11 @@ fn mksession(cx: &mut compositor::Context, args: &Args, overwrite: bool) -> anyh
     let local = |doc: &Document, opt: &crate::vim_option_scopes::VimOptionScope| {
         doc.vim_local_opts
             .get(opt.name)
-            .or_else(|| (!opt.abbr.is_empty()).then(|| doc.vim_local_opts.get(opt.abbr)).flatten())
+            .or_else(|| {
+                (!opt.abbr.is_empty())
+                    .then(|| doc.vim_local_opts.get(opt.abbr))
+                    .flatten()
+            })
             .cloned()
     };
     let reader = crate::session::OptionReader {
@@ -44993,7 +45101,11 @@ fn mksession(cx: &mut compositor::Context, args: &Args, overwrite: bool) -> anyh
     Ok(())
 }
 
-fn ex_mksession(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_mksession(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -50018,7 +50130,11 @@ fn ex_helpclose(
         .editor
         .tree
         .traverse()
-        .find(|(_, view)| cx.editor.document(view.doc).is_some_and(|d| d.buftype == "help"))
+        .find(|(_, view)| {
+            cx.editor
+                .document(view.doc)
+                .is_some_and(|d| d.buftype == "help")
+        })
         .map(|(id, _)| id);
     if let Some(id) = help_win {
         cx.editor.close(id);
@@ -74032,7 +74148,11 @@ fn open_help(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 fn check_help_lang(arg: &str) -> (&str, Option<&str>) {
     let b = arg.as_bytes();
     let n = b.len();
-    if n >= 3 && b[n - 3] == b'@' && b[n - 2].is_ascii_alphabetic() && b[n - 1].is_ascii_alphabetic() {
+    if n >= 3
+        && b[n - 3] == b'@'
+        && b[n - 2].is_ascii_alphabetic()
+        && b[n - 1].is_ascii_alphabetic()
+    {
         (&arg[..n - 3], Some(&arg[n - 2..]))
     } else {
         (arg, None)
@@ -74047,10 +74167,15 @@ fn help_tag_files() -> Vec<(std::path::PathBuf, String)> {
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();
     let helpdir = vim_opt_str_alias("helpfile", "hf")
         .map(|raw| {
-            let path = zmax_stdx::path::expand_tilde(std::path::Path::new(&expand_env_vars(&raw))).into_owned();
-            path.parent().map(std::path::Path::to_path_buf).unwrap_or_default()
+            let path = zmax_stdx::path::expand_tilde(std::path::Path::new(&expand_env_vars(&raw)))
+                .into_owned();
+            path.parent()
+                .map(std::path::Path::to_path_buf)
+                .unwrap_or_default()
         })
-        .or_else(|| std::env::var_os("VIMRUNTIME").map(|rt| std::path::PathBuf::from(rt).join("doc")));
+        .or_else(|| {
+            std::env::var_os("VIMRUNTIME").map(|rt| std::path::PathBuf::from(rt).join("doc"))
+        });
     dirs.extend(helpdir);
     for dir in runtime_dirs() {
         let doc = dir.join("doc");
@@ -74060,14 +74185,19 @@ fn help_tag_files() -> Vec<(std::path::PathBuf, String)> {
     }
     let mut files = Vec::new();
     for dir in dirs {
-        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         let mut found: Vec<(std::path::PathBuf, String)> = entries
             .flatten()
             .filter_map(|e| {
                 let name = e.file_name().to_string_lossy().into_owned();
                 let lang = match name.as_str() {
                     "tags" => "en".to_string(),
-                    _ => name.strip_prefix("tags-").filter(|l| l.len() == 2)?.to_string(),
+                    _ => name
+                        .strip_prefix("tags-")
+                        .filter(|l| l.len() == 2)?
+                        .to_string(),
                 };
                 Some((e.path(), lang))
             })
@@ -74085,7 +74215,10 @@ fn help_heuristic(tag: &str, offset: usize, wrong_case: bool) -> usize {
     let b = tag.as_bytes();
     let letters = b.iter().filter(|c| c.is_ascii_alphanumeric()).count();
     let mut offset = offset;
-    if offset > 0 && b.get(offset).is_some_and(u8::is_ascii_alphanumeric) && b[offset - 1].is_ascii_alphanumeric() {
+    if offset > 0
+        && b.get(offset).is_some_and(u8::is_ascii_alphanumeric)
+        && b[offset - 1].is_ascii_alphanumeric()
+    {
         offset += 10000;
     } else if offset > 2 {
         offset *= 200;
@@ -74111,18 +74244,26 @@ struct HelpTag {
 /// vim `find_help_tags` for a literal subject: every tag in `files` containing
 /// `subject` (a case-insensitive match ranks lower), best first by
 /// [`help_heuristic`], ties by name; `lang` keeps one language's tags.
-fn find_help_tags(files: &[(std::path::PathBuf, String)], subject: &str, lang: Option<&str>) -> Vec<HelpTag> {
+fn find_help_tags(
+    files: &[(std::path::PathBuf, String)],
+    subject: &str,
+    lang: Option<&str>,
+) -> Vec<HelpTag> {
     let lower = subject.to_lowercase();
     let mut ranked: Vec<(usize, HelpTag)> = Vec::new();
     for (tags, tag_lang) in files {
         if lang.is_some_and(|l| !l.eq_ignore_ascii_case(tag_lang)) {
             continue;
         }
-        let Ok(text) = std::fs::read_to_string(tags) else { continue };
+        let Ok(text) = std::fs::read_to_string(tags) else {
+            continue;
+        };
         let dir = tags.parent().unwrap_or(std::path::Path::new(""));
         for line in text.lines() {
             let mut fields = line.split('\t');
-            let (Some(tag), Some(file)) = (fields.next(), fields.next()) else { continue };
+            let (Some(tag), Some(file)) = (fields.next(), fields.next()) else {
+                continue;
+            };
             if tag.starts_with("!_TAG_") {
                 continue;
             }
@@ -74139,7 +74280,11 @@ fn find_help_tags(files: &[(std::path::PathBuf, String)], subject: &str, lang: O
             }
             ranked.push((
                 help_heuristic(tag, offset, wrong_case),
-                HelpTag { name, file: dir.join(file), tag: tag.to_string() },
+                HelpTag {
+                    name,
+                    file: dir.join(file),
+                    tag: tag.to_string(),
+                },
             ));
         }
     }
@@ -74171,7 +74316,11 @@ fn open_help_window(cx: &mut compositor::Context, tag: &HelpTag) -> anyhow::Resu
             .tree
             .traverse()
             .map(|(id, view)| (id, view.doc))
-            .find(|(_, doc)| cx.editor.document(*doc).is_some_and(|d| d.buftype == "help"))
+            .find(|(_, doc)| {
+                cx.editor
+                    .document(*doc)
+                    .is_some_and(|d| d.buftype == "help")
+            })
             .map(|(id, _)| id);
         match help_win {
             Some(id) => cx.editor.focus(id),
@@ -74222,7 +74371,8 @@ fn open_help_window(cx: &mut compositor::Context, tag: &HelpTag) -> anyhow::Resu
         ("foldenable", "off"),
         ("spell", "off"),
     ] {
-        doc.vim_local_opts.insert(name.to_string(), value.to_string());
+        doc.vim_local_opts
+            .insert(name.to_string(), value.to_string());
     }
     let id = view.id;
     if let Some((line, col)) = found {
@@ -78981,9 +79131,27 @@ mod vim_set_tests {
             ("shortmess", Remove, "ilnxtToOFIf", "O", "ilnxtToFIf"),
             ("whichwrap", Add, "b,s", "h,l", "b,s,h,l"),
             ("whichwrap", Add, "b,s,h,l", "b", "s,h,l,b"),
-            ("listchars", Add, "tab:> ,trail:-,nbsp:+", "tab:>-", "trail:-,nbsp:+,tab:>-"),
-            ("listchars", Remove, "trail:-,nbsp:+,tab:>-", "trail:-", "nbsp:+,tab:>-"),
-            ("listchars", Add, "nbsp:+,tab:>-", "eol:$,space:.", "nbsp:+,tab:>-,eol:$,space:."),
+            (
+                "listchars",
+                Add,
+                "tab:> ,trail:-,nbsp:+",
+                "tab:>-",
+                "trail:-,nbsp:+,tab:>-",
+            ),
+            (
+                "listchars",
+                Remove,
+                "trail:-,nbsp:+,tab:>-",
+                "trail:-",
+                "nbsp:+,tab:>-",
+            ),
+            (
+                "listchars",
+                Add,
+                "nbsp:+,tab:>-",
+                "eol:$,space:.",
+                "nbsp:+,tab:>-,eol:$,space:.",
+            ),
             ("wildignore", Add, "", "*.o", "*.o"),
             ("wildignore", Add, "*.o", "*.o,*.a", "*.o,*.o,*.a"),
             ("titlestring", Add, "abc", "def", "abcdef"),
@@ -78993,7 +79161,11 @@ mod vim_set_tests {
             ("cpoptions", Add, "ABceFs", "a", "ABceFsa"),
         ];
         for &(name, op, orig, new, want) in cases {
-            assert_eq!(s(opt(name), op, orig, new), want, "{name} {op:?} {orig:?} {new:?}");
+            assert_eq!(
+                s(opt(name), op, orig, new),
+                want,
+                "{name} {op:?} {orig:?} {new:?}"
+            );
         }
         let resolved = super::resolve_set_operators(
             vec!["sw+=2".into(), "ts^=3".into(), "tw-=1".into()],
@@ -79023,9 +79195,22 @@ mod vim_set_tests {
         std::fs::write(&de, "foo\tf.dex\t/*foo*\n").unwrap();
         let files = vec![(en, "en".to_string()), (de, "de".to_string())];
         let names = |subject: &str, lang: Option<&str>| -> Vec<String> {
-            find_help_tags(&files, subject, lang).into_iter().map(|t| t.name).collect()
+            find_help_tags(&files, subject, lang)
+                .into_iter()
+                .map(|t| t.name)
+                .collect()
         };
-        assert_eq!(names("foo", None), ["foo@de", "foo@en", "+foo@en", "foo-bar@en", "Foo@en", "barfoo@en"]);
+        assert_eq!(
+            names("foo", None),
+            [
+                "foo@de",
+                "foo@en",
+                "+foo@en",
+                "foo-bar@en",
+                "Foo@en",
+                "barfoo@en"
+            ]
+        );
         assert_eq!(names("foo", Some("de")), ["foo@de"]);
         assert_eq!(check_help_lang("foo@de"), ("foo", Some("de")));
         assert_eq!(check_help_lang("x@1z"), ("x@1z", None));
@@ -79059,10 +79244,21 @@ mod vim_set_tests {
         assert_eq!(super::resolve_arg_address("%", 0, 0), Some((1, 0)));
 
         assert_eq!(super::split_arg_address("%argdel"), Some(("%", "argdel")));
-        assert_eq!(super::split_arg_address("$argadd a.txt"), Some(("$", "argadd a.txt")));
+        assert_eq!(
+            super::split_arg_address("$argadd a.txt"),
+            Some(("$", "argadd a.txt"))
+        );
         assert_eq!(super::split_arg_address("2argu"), Some(("2", "argu")));
-        assert_eq!(super::split_arg_address("%argdele"), Some(("%", "argdele")), "vim abbreviation");
-        assert_eq!(super::split_arg_address("%s/a/b/"), None, "a line range, not an arg one");
+        assert_eq!(
+            super::split_arg_address("%argdele"),
+            Some(("%", "argdele")),
+            "vim abbreviation"
+        );
+        assert_eq!(
+            super::split_arg_address("%s/a/b/"),
+            None,
+            "a line range, not an arg one"
+        );
         assert_eq!(super::split_arg_address("argdel *"), None, "no address");
     }
 
@@ -81007,12 +81203,18 @@ mod diagnostic_severity_tests {
     #[test]
     fn every_level_the_command_advertises_parses() {
         // The four severities, their plurals and the aliases the help lists.
-        assert_eq!(parse_diagnostic_severity("error"), Some(Some(Severity::Error)));
+        assert_eq!(
+            parse_diagnostic_severity("error"),
+            Some(Some(Severity::Error))
+        );
         assert_eq!(
             parse_diagnostic_severity("Warnings"),
             Some(Some(Severity::Warning))
         );
-        assert_eq!(parse_diagnostic_severity(" info "), Some(Some(Severity::Info)));
+        assert_eq!(
+            parse_diagnostic_severity(" info "),
+            Some(Some(Severity::Info))
+        );
         assert_eq!(parse_diagnostic_severity("all"), Some(Some(Severity::Hint)));
         // `off` is not a severity: it is the fourth setting, and parses to None
         // INSIDE Some — a level was named, and that level is "draw nothing".

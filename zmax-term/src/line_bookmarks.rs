@@ -108,7 +108,8 @@ pub fn lists() -> Vec<BookmarkList> {
         let mut lists = store.lists.clone();
         if store.options.sort {
             for list in &mut lists {
-                list.marks.sort_by(|a, b| (&a.path, a.line).cmp(&(&b.path, b.line)));
+                list.marks
+                    .sort_by(|a, b| (&a.path, a.line).cmp(&(&b.path, b.line)));
             }
         }
         lists
@@ -135,7 +136,12 @@ pub fn set_options(f: impl FnOnce(&mut Options)) -> Options {
 }
 
 pub fn contains(path: &Path, line: usize) -> bool {
-    with(|store| store.lists.iter().any(|l| l.marks.iter().any(at(path, line))))
+    with(|store| {
+        store
+            .lists
+            .iter()
+            .any(|l| l.marks.iter().any(at(path, line)))
+    })
 }
 
 /// The bookmark on `path:line`, from the first list holding it.
@@ -327,8 +333,14 @@ mod tests {
         // In a second list; the description follows it there.
         assert!(set_description(b, 3, Some("entry".into())));
         assert!(add_to("todo", b, 3));
-        assert_eq!(vec![DEFAULT_LIST.to_owned(), "todo".to_owned()], lists_of(b, 3));
-        assert_eq!(Some("entry".to_owned()), get(b, 3).and_then(|m| m.description));
+        assert_eq!(
+            vec![DEFAULT_LIST.to_owned(), "todo".to_owned()],
+            lists_of(b, 3)
+        );
+        assert_eq!(
+            Some("entry".to_owned()),
+            get(b, 3).and_then(|m| m.description)
+        );
 
         assert!(remove(b, 3));
         assert!(!contains(b, 3), "removed from every list");

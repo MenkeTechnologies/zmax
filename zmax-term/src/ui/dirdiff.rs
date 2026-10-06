@@ -77,10 +77,14 @@ fn files_under(root: &Path) -> BTreeSet<PathBuf> {
     let mut out = BTreeSet::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         for entry in entries.flatten() {
             let path = entry.path();
-            let Ok(kind) = entry.file_type() else { continue };
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
             if kind.is_dir() {
                 if entry.file_name() != ".git" {
                     stack.push(path);
@@ -106,7 +110,12 @@ pub fn compare(left: &Path, right: &Path) -> Vec<Entry> {
                 (true, false) => Status::OnlyLeft,
                 _ => Status::OnlyRight,
             };
-            Entry { rel: rel.clone(), status, op: default_op(status), paired_right: None }
+            Entry {
+                rel: rel.clone(),
+                status,
+                op: default_op(status),
+                paired_right: None,
+            }
         })
         .collect()
 }
@@ -159,7 +168,12 @@ impl DirDiff {
             left,
             right,
             entries,
-            filter: Filter { equal: false, different: true, left: true, right: true },
+            filter: Filter {
+                equal: false,
+                different: true,
+                left: true,
+                right: true,
+            },
             shown: Vec::new(),
             selected: 0,
             marked: BTreeSet::new(),
@@ -172,7 +186,9 @@ impl DirDiff {
     }
 
     fn refilter(&mut self) {
-        self.shown = (0..self.entries.len()).filter(|&i| self.filter.shows(self.entries[i].status)).collect();
+        self.shown = (0..self.entries.len())
+            .filter(|&i| self.filter.shows(self.entries[i].status))
+            .collect();
         self.selected = self.selected.min(self.shown.len().saturating_sub(1));
         self.marked.retain(|i| self.shown.contains(i));
     }
@@ -217,9 +233,16 @@ impl DirDiff {
             _ => return Err("mark one new file on each side"),
         };
         let right_rel = self.entries[r].rel.clone();
-        let equal = same_contents(&self.left.join(&self.entries[l].rel), &self.right.join(&right_rel));
+        let equal = same_contents(
+            &self.left.join(&self.entries[l].rel),
+            &self.right.join(&right_rel),
+        );
         let entry = &mut self.entries[l];
-        entry.status = if equal { Status::Equal } else { Status::Different };
+        entry.status = if equal {
+            Status::Equal
+        } else {
+            Status::Different
+        };
         entry.op = Operation::None;
         entry.paired_right = Some(right_rel);
         self.entries.remove(r);
@@ -248,7 +271,8 @@ impl DirDiff {
     }
 
     fn right_path(&self, entry: &Entry) -> PathBuf {
-        self.right.join(entry.paired_right.as_ref().unwrap_or(&entry.rel))
+        self.right
+            .join(entry.paired_right.as_ref().unwrap_or(&entry.rel))
     }
 
     /// Carry out the operations of `rows`, then compare again. Returns what
@@ -284,21 +308,27 @@ impl DirDiff {
 
     /// Synchronize `rows`, asking first when one deletes and the option is on.
     fn synchronize_asking(&mut self, rows: Vec<usize>) -> Option<Callback> {
-        let deletes = rows.iter().filter(|&&i| self.entries[i].op == Operation::Delete).count();
+        let deletes = rows
+            .iter()
+            .filter(|&&i| self.entries[i].op == Operation::Delete)
+            .count();
         if deletes == 0 || !self.warn_on_delete {
             self.status = self.synchronize(rows);
             return None;
         }
         let question = format!("Synchronize, deleting {deletes} file(s)? (y/n)");
         Some(Box::new(move |compositor: &mut Compositor, _| {
-            let confirm = crate::ui::confirm::Confirm::new(question, "nothing synchronized", move |_cx| {
-                crate::compositor::defer([Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-                    if let Some(view) = compositor.find::<DirDiff>() {
-                        let status = view.synchronize(rows);
-                        cx.editor.set_status(status);
-                    }
-                }) as Callback]);
-            });
+            let confirm =
+                crate::ui::confirm::Confirm::new(question, "nothing synchronized", move |_cx| {
+                    crate::compositor::defer([Box::new(
+                        move |compositor: &mut Compositor, cx: &mut Context| {
+                            if let Some(view) = compositor.find::<DirDiff>() {
+                                let status = view.synchronize(rows);
+                                cx.editor.set_status(status);
+                            }
+                        },
+                    ) as Callback]);
+                });
             compositor.push(Box::new(confirm));
         }))
     }
@@ -312,8 +342,13 @@ impl DirDiff {
         let doc_id = zmax_view::current_ref!(cx.editor).1.id();
         let view = crate::ui::merge::DiffView::new(entry.rel.display().to_string(), doc_id, &a, &b)
             .read_only()
-            .with_labels(format!(" {}", self.left.display()), format!(" {}", self.right.display()));
-        Some(Box::new(move |compositor: &mut Compositor, _| compositor.push(Box::new(view))))
+            .with_labels(
+                format!(" {}", self.left.display()),
+                format!(" {}", self.right.display()),
+            );
+        Some(Box::new(move |compositor: &mut Compositor, _| {
+            compositor.push(Box::new(view))
+        }))
     }
 }
 
@@ -355,7 +390,9 @@ impl Component for DirDiff {
                     compositor.pop();
                 })))
             }
-            key!('j') | key!(Down) => self.selected = (self.selected + 1).min(self.shown.len().saturating_sub(1)),
+            key!('j') | key!(Down) => {
+                self.selected = (self.selected + 1).min(self.shown.len().saturating_sub(1))
+            }
             key!('k') | key!(Up) => self.selected = self.selected.saturating_sub(1),
             key!(' ') => {
                 if let Some(&i) = self.shown.get(self.selected) {
@@ -384,7 +421,10 @@ impl Component for DirDiff {
             key!('S') => return EventResult::Consumed(self.synchronize_asking(self.shown.clone())),
             key!('W') => {
                 self.warn_on_delete = !self.warn_on_delete;
-                self.status = format!("warn when deleting: {}", if self.warn_on_delete { "on" } else { "off" });
+                self.status = format!(
+                    "warn when deleting: {}",
+                    if self.warn_on_delete { "on" } else { "off" }
+                );
             }
             key!('1') => self.filter.equal = !self.filter.equal,
             key!('2') => self.filter.different = !self.filter.different,
@@ -413,7 +453,13 @@ impl Component for DirDiff {
             on(self.filter.left),
             on(self.filter.right)
         );
-        surface.set_stringn(area.x, area.y, &title, area.width as usize, theme.get("ui.text.focus"));
+        surface.set_stringn(
+            area.x,
+            area.y,
+            &title,
+            area.width as usize,
+            theme.get("ui.text.focus"),
+        );
         let body_h = area.height.saturating_sub(2) as usize;
         if self.selected < self.scroll {
             self.scroll = self.selected;
@@ -428,7 +474,11 @@ impl Component for DirDiff {
                 Some(r) => format!("{} ⇔ {}", entry.rel.display(), r.display()),
                 None => entry.rel.display().to_string(),
             };
-            let line = format!("{mark}{} {} {name}", status_mark(entry.status), op_mark(entry.op));
+            let line = format!(
+                "{mark}{} {} {name}",
+                status_mark(entry.status),
+                op_mark(entry.op)
+            );
             let style = if row == self.selected {
                 theme.get("ui.selection")
             } else {
@@ -446,7 +496,13 @@ impl Component for DirDiff {
         } else {
             self.status.as_str()
         };
-        surface.set_stringn(area.x, area.y + area.height - 1, footer, area.width as usize, theme.get("ui.linenr"));
+        surface.set_stringn(
+            area.x,
+            area.y + area.height - 1,
+            footer,
+            area.width as usize,
+            theme.get("ui.linenr"),
+        );
     }
 }
 
@@ -458,7 +514,11 @@ mod tests {
     fn default_and_mirror_plans() {
         assert_eq!(Operation::CopyToRight, default_op(Status::OnlyLeft));
         assert_eq!(Operation::None, default_op(Status::Different));
-        assert_eq!(Operation::Delete, mirror_op(Status::OnlyLeft, false), "mirroring to the left drops what the right lacks");
+        assert_eq!(
+            Operation::Delete,
+            mirror_op(Status::OnlyLeft, false),
+            "mirroring to the left drops what the right lacks"
+        );
         assert_eq!(Operation::CopyToLeft, mirror_op(Status::Different, false));
         assert_eq!(Operation::Delete, mirror_op(Status::OnlyRight, true));
     }
@@ -473,7 +533,12 @@ mod tests {
         std::fs::create_dir(a.path().join("sub")).unwrap();
         std::fs::write(a.path().join("sub/new"), "n").unwrap();
         let mut view = DirDiff::new(a.path().to_path_buf(), b.path().to_path_buf());
-        let status = |v: &DirDiff, name: &str| v.entries.iter().find(|e| e.rel == Path::new(name)).map(|e| e.status);
+        let status = |v: &DirDiff, name: &str| {
+            v.entries
+                .iter()
+                .find(|e| e.rel == Path::new(name))
+                .map(|e| e.status)
+        };
         assert_eq!(Some(Status::Equal), status(&view, "same"));
         assert_eq!(Some(Status::Different), status(&view, "diff"));
         assert_eq!(Some(Status::OnlyLeft), status(&view, "sub/new"));
@@ -481,7 +546,15 @@ mod tests {
 
         let all = view.shown.clone();
         view.synchronize(all);
-        assert_eq!("n", std::fs::read_to_string(b.path().join("sub/new")).unwrap(), "the new file was copied over");
-        assert_eq!("2", std::fs::read_to_string(b.path().join("diff")).unwrap(), "a differing file is left alone by default");
+        assert_eq!(
+            "n",
+            std::fs::read_to_string(b.path().join("sub/new")).unwrap(),
+            "the new file was copied over"
+        );
+        assert_eq!(
+            "2",
+            std::fs::read_to_string(b.path().join("diff")).unwrap(),
+            "a differing file is left alone by default"
+        );
     }
 }

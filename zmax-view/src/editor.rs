@@ -5378,7 +5378,8 @@ impl Editor {
             return;
         };
         let text = doc.text().slice(..);
-        let line_count = text.len_lines() - usize::from(text.len_chars() > 0 && text.char(text.len_chars() - 1) == '\n');
+        let line_count = text.len_lines()
+            - usize::from(text.len_chars() > 0 && text.char(text.len_chars() - 1) == '\n');
         let top = text.char_to_line(doc.view_offset(view_id).anchor.min(text.len_chars()));
         let mut wrow = view.wrow as isize;
         if height > 0 && (height < line_count || top > 0) {

@@ -136,7 +136,11 @@ impl Table {
         let at = at.min(columns);
         for row in &mut self.rows {
             row.resize(columns, String::new());
-            let cell = if is_separator(row) { "---".to_string() } else { String::new() };
+            let cell = if is_separator(row) {
+                "---".to_string()
+            } else {
+                String::new()
+            };
             row.insert(at, cell);
         }
     }
@@ -205,9 +209,15 @@ impl Table {
 /// `columns` wide.
 pub fn empty(columns: usize, body_rows: usize) -> Table {
     let columns = columns.max(1);
-    let mut rows = vec![vec![String::new(); columns], vec!["---".to_string(); columns]];
+    let mut rows = vec![
+        vec![String::new(); columns],
+        vec!["---".to_string(); columns],
+    ];
     rows.extend((0..body_rows).map(|_| vec![String::new(); columns]));
-    Table { first_line: 0, rows }
+    Table {
+        first_line: 0,
+        rows,
+    }
 }
 
 #[cfg(test)]

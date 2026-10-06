@@ -617,10 +617,9 @@ impl View {
         if !center_view() {
             return 0;
         }
-        let text = self
-            .area
-            .width
-            .saturating_sub(self.gutter_offset(doc) + scroll_bar_left_cols() + scroll_bar_right_cols());
+        let text = self.area.width.saturating_sub(
+            self.gutter_offset(doc) + scroll_bar_left_cols() + scroll_bar_right_cols(),
+        );
         let wanted = u16::try_from(doc.text_width()).unwrap_or(u16::MAX);
         text.saturating_sub(wanted) / 2
     }
@@ -897,7 +896,11 @@ impl View {
     fn vim_topline(&self, doc: &Document, scrolloff: usize) -> Option<usize> {
         let height = self.inner_height();
         let viewport = self.inner_area(doc);
-        if height == 0 || doc.text_format(viewport.width, None, Some(self.id)).soft_wrap {
+        if height == 0
+            || doc
+                .text_format(viewport.width, None, Some(self.id))
+                .soft_wrap
+        {
             return None;
         }
         let text = doc.text().slice(..);

@@ -63,7 +63,8 @@ use tui::buffer::Buffer as Surface;
 use zmax_core::buffer_menu::{BufferMenu as BufferMenuModel, BufferRow, Mark};
 use zmax_view::{
     editor::{Action, PrefixArg},
-    graphics::Rect, DocumentId, Editor,
+    graphics::Rect,
+    DocumentId, Editor,
 };
 
 use crate::{
@@ -1267,7 +1268,11 @@ mod tests {
         m.menu.set_mark(2, Mark::Delete);
 
         assert_eq!(m.bury_row(true), BuryOutcome::Buried(2));
-        assert_eq!(names(&m), ["a", "c", "b"], "buried to the bottom, not swapped");
+        assert_eq!(
+            names(&m),
+            ["a", "c", "b"],
+            "buried to the bottom, not swapped"
+        );
         assert_eq!(m.menu.selected(), 1, "save-excursion: point does not move");
         assert_eq!(
             m.menu.current_key(),
@@ -1304,7 +1309,11 @@ mod tests {
 
         assert_eq!(m.bury_row(false), BuryOutcome::Dead(2));
         assert_eq!(names(&m), ["a", "c"], "the dead buffer is gone, not sunk");
-        assert_eq!(m.menu.selected(), 1, "point stays put; the next row moved up");
+        assert_eq!(
+            m.menu.selected(),
+            1,
+            "point stays put; the next row moved up"
+        );
         assert_eq!(m.menu.current_key(), Some(3));
         assert_eq!(
             m.menu.mark_of(2),
@@ -1330,8 +1339,14 @@ mod tests {
         let mut m = menu(Vec::new());
         assert!(!m.show_internal, "internal buffers are hidden by default");
         assert!(m.lists_buffer("main.rs", true));
-        assert!(m.lists_buffer("untitled", false), "an ordinary name is listed");
-        assert!(!m.lists_buffer(" *hidden*", false), "a space-prefixed name is internal");
+        assert!(
+            m.lists_buffer("untitled", false),
+            "an ordinary name is listed"
+        );
+        assert!(
+            !m.lists_buffer(" *hidden*", false),
+            "a space-prefixed name is internal"
+        );
         assert!(!m.lists_buffer("*Messages*", false));
         assert!(
             m.lists_buffer(" *hidden*", true),

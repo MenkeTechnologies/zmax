@@ -1233,7 +1233,10 @@ mod tests {
             super::zmax_command_line("argdel *").as_deref(),
             Some("argdelete *")
         );
-        assert_eq!(super::zmax_command_line("%argdel").as_deref(), Some("%argdel"));
+        assert_eq!(
+            super::zmax_command_line("%argdel").as_deref(),
+            Some("%argdel")
+        );
         assert_eq!(super::zmax_command_line("%foo"), None);
         assert_eq!(
             super::zmax_command_line("1wincmd w").as_deref(),

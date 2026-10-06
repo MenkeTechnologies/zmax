@@ -23,7 +23,11 @@ static GROUPS: Mutex<Vec<Group>> = Mutex::new(Vec::new());
 
 /// The buffer `docs[i]` is diffed against.
 fn partner(i: usize) -> usize {
-    if i == 0 { 1 } else { i - 1 }
+    if i == 0 {
+        1
+    } else {
+        i - 1
+    }
 }
 
 /// Diff `docs` against each other from now on. A buffer already in a group
@@ -101,7 +105,11 @@ pub fn sync(editor: &mut Editor) {
     let mut groups = GROUPS.lock().unwrap_or_else(|e| e.into_inner());
     // A closed buffer leaves its group.
     for group in groups.iter_mut() {
-        let keep: Vec<bool> = group.docs.iter().map(|d| editor.document(*d).is_some()).collect();
+        let keep: Vec<bool> = group
+            .docs
+            .iter()
+            .map(|d| editor.document(*d).is_some())
+            .collect();
         let mut k = keep.iter();
         group.docs.retain(|_| *k.next().unwrap());
         let mut k = keep.iter();

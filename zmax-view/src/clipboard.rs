@@ -36,9 +36,7 @@ pub use external::{
     tmux_available, tmux_buffer_get, tmux_buffer_set, tmux_buffers, ClipboardProvider,
 };
 #[cfg(target_arch = "wasm32")]
-pub use noop::{
-    tmux_available, tmux_buffer_get, tmux_buffer_set, tmux_buffers, ClipboardProvider,
-};
+pub use noop::{tmux_available, tmux_buffer_get, tmux_buffer_set, tmux_buffers, ClipboardProvider};
 
 // Clipboard not supported for wasm
 #[cfg(target_arch = "wasm32")]

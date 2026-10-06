@@ -499,10 +499,8 @@ impl AppBuilder {
         // process so defining an abbrev in a test never writes to the user's own.
         static ABBREV_STORE: std::sync::Once = std::sync::Once::new();
         ABBREV_STORE.call_once(|| {
-            let path = std::env::temp_dir().join(format!(
-                "zmax-integration-abbrevs-{}",
-                std::process::id()
-            ));
+            let path = std::env::temp_dir()
+                .join(format!("zmax-integration-abbrevs-{}", std::process::id()));
             let _ = std::fs::remove_file(&path);
             std::env::set_var("ZMAX_ABBREV_FILE", path);
         });

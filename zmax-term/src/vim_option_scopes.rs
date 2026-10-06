@@ -51,6 +51,8 @@ pub struct VimOptionScope {
     pub no_dup: bool,
 }
 
+// One aligned row per option; rustfmt would split every field onto its own line.
+#[rustfmt::skip]
 pub const VIM_OPTION_SCOPES: &[VimOptionScope] = &[
     VimOptionScope { name: "aleph",             abbr: "al",      scope: Scope::Global, kind: Kind::Number, no_mkrc: false, pri_mkrc: false, noglob: false, immutable: true, expand: false, comma: false, one_comma: false, colon: false, flag_list: false, no_dup: false },
     VimOptionScope { name: "allowrevins",       abbr: "ari",     scope: Scope::Global, kind: Kind::Boolean, no_mkrc: false, pri_mkrc: false, noglob: false, immutable: false, expand: false, comma: false, one_comma: false, colon: false, flag_list: false, no_dup: false },

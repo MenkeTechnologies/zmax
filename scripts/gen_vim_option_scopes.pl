@@ -91,6 +91,8 @@ pub struct VimOptionScope {
     pub no_dup: bool,
 }
 
+// One aligned row per option; rustfmt would split every field onto its own line.
+#[rustfmt::skip]
 pub const VIM_OPTION_SCOPES: &[VimOptionScope] = &[
 HEAD
 print "$_\n" for @rows;

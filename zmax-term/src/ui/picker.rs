@@ -1039,12 +1039,12 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
 
             table = table.header(
                 Row::new(self.columns.iter().filter(|c| !c.hidden).map(|column| {
-                    let style =
-                        if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
-                            cx.editor.theme.get("ui.picker.header.column.active")
-                        } else {
-                            header_column_style
-                        };
+                    let style = if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name))
+                    {
+                        cx.editor.theme.get("ui.picker.header.column.active")
+                    } else {
+                        header_column_style
+                    };
 
                     Cell::from(Span::styled(Cow::from(&*column.name), style))
                 }))
