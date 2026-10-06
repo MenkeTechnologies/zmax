@@ -39,6 +39,15 @@ rustdocflags = ["-C", "link-arg=-Wl,--allow-multiple-definition"]
 # never overrides a real user runtime.
 [env]
 ZMAX_DEFAULT_RUNTIME = { value = "runtime", relative = true }
+# rustc lowers a `match` on string literals by recursing once per test, and
+# vendor/strykelang's dispatch matches (try_builtin in builtins.rs,
+# stryke_extension_name in parser.rs) carry thousands of arms. rustc's default
+# 8 MiB main-thread stack overflows on them (SIGBUS in rustc_mir_build's
+# match_candidates/test_candidates on macOS). strykelang sets this in its own
+# .cargo/config.toml, but cargo reads config from the invoking workspace, not
+# from path dependencies, so zmax has to set it too. rustc sizes that thread
+# from RUST_MIN_STACK; the stack is reserved, not committed.
+RUST_MIN_STACK = "268435456"
 
 [alias]
 xtask = "run --package xtask --"
