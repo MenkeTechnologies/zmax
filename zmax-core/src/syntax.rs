@@ -1227,6 +1227,19 @@ mod test {
     static LOADER: Lazy<Loader> = Lazy::new(crate::config::default_lang_loader);
 
     #[test]
+    fn test_zsh_completion_files_detected() {
+        let zsh = LOADER.language_for_name("zsh").unwrap();
+        for path in [
+            "/home/u/.zinit/plugins/Org---zsh-more-completions/src/_2to3",
+            "/home/u/.zinit/plugins/Org---zsh-more-completions/src/__mocha",
+            "/usr/share/zsh/site-functions/_git",
+            "/home/u/proj/completions/_tool",
+        ] {
+            assert_eq!(LOADER.language_for_filename(Path::new(path)), Some(zsh), "{path}");
+        }
+    }
+
+    #[test]
     fn test_textobject_queries() {
         let query_str = r#"
         (line_comment)+ @quantified_nodes

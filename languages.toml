@@ -1424,6 +1424,9 @@ file-types = [
   { glob = ".zprofile" },
   { glob = ".zshrc" },
   { glob = ".zimrc" },
+  { glob = "*zsh-more-completions/**/_*" },
+  { glob = "site-functions/_*" },
+  { glob = "completions/_*" },
 ]
 shebangs = ["zsh"]
 comment-token = "#"
