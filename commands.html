@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-f5f5c838.js";
+            window.path_to_searchindex_js = "searchindex-3e83577b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -487,7 +487,7 @@
 <tr><td><code>:args</code>, <code>:ar</code>, <code>:argglobal</code>, <code>:argg</code>, <code>:arglocal</code>, <code>:argl</code></td><td>Show the argument list, or set it to the given files and edit the first (vim :args).</td></tr>
 <tr><td><code>:argadd</code>, <code>:arga</code></td><td>Add files to the argument list after the current entry (vim :argadd).</td></tr>
 <tr><td><code>:argedit</code>, <code>:arge</code></td><td>Add a file to the argument list and edit it (vim :argedit).</td></tr>
-<tr><td><code>:argdelete</code>, <code>:argd</code></td><td>Delete argument-list entries matching the given glob patterns (vim :argdelete).</td></tr>
+<tr><td><code>:argdelete</code>, <code>:argd</code></td><td>Delete argument-list entries matching glob patterns, or those in {range} (vim :[range]argdelete).</td></tr>
 <tr><td><code>:argdedupe</code></td><td>Remove duplicate entries from the argument list (vim :argdedupe).</td></tr>
 <tr><td><code>:next</code>, <code>:argnext</code></td><td>Edit the next file in the argument list (vim :next).</td></tr>
 <tr><td><code>:previous</code>, <code>:Next</code>, <code>:prev</code>, <code>:argprev</code></td><td>Edit the previous file in the argument list (vim :previous / :Next).</td></tr>
@@ -501,7 +501,7 @@
 <tr><td><code>:autocmd</code>, <code>:au</code></td><td>Register an autocommand: :autocmd {events} {pattern} {command} (<code>:autocmd !</code> clears the open group, or all).</td></tr>
 <tr><td><code>:augroup</code>, <code>:aug</code>, <code>:augr</code>, <code>:augro</code>, <code>:augrou</code></td><td>Open the autocmd group the following :autocmds join (<code>:augroup END</code> closes it, <code>:augroup! {name}</code> deletes it) (vim :augroup).</td></tr>
 <tr><td><code>:last</code>, <code>:la</code></td><td>Edit the last file in the argument list (vim :last).</td></tr>
-<tr><td><code>:argument</code>, <code>:argu</code></td><td>Edit the Nth file in the argument list (vim :argument).</td></tr>
+<tr><td><code>:argument</code>, <code>:argu</code></td><td>Edit the Nth file in the argument list (vim :[count]argument [count]).</td></tr>
 <tr><td><code>:snext</code>, <code>:sn</code></td><td>Split the window and edit the next argument (vim :snext).</td></tr>
 <tr><td><code>:sprevious</code>, <code>:sprev</code>, <code>:sNext</code>, <code>:sN</code></td><td>Split the window and edit the previous argument (vim :sprevious / :sNext).</td></tr>
 <tr><td><code>:srewind</code>, <code>:sre</code>, <code>:sfirst</code>, <code>:sfir</code></td><td>Split the window and edit the first argument (vim :srewind / :sfirst).</td></tr>
@@ -1153,7 +1153,7 @@
 <tr><td><code>:lgetexpr</code></td><td>Parse the argument text into the location list without jumping.</td></tr>
 <tr><td><code>:lfile</code>, <code>:lf</code></td><td>Read a file of error lines into the location list and jump to the first entry.</td></tr>
 <tr><td><code>:lgetfile</code></td><td>Read a file of error lines into the location list without jumping.</td></tr>
-<tr><td><code>:tabnew</code>, <code>:tabe</code>, <code>:tabedit</code></td><td>Open a new tabpage (optionally editing a file).</td></tr>
+<tr><td><code>:tabnew</code>, <code>:tabe</code>, <code>:tabedit</code></td><td>Open a new tabpage, optionally editing a file and running a +cmd (vim :tabnew [+cmd] [file]).</td></tr>
 <tr><td><code>:tabnext</code>, <code>:tabn</code></td><td>Go to the next tabpage (or tab [count]).</td></tr>
 <tr><td><code>:tabprevious</code>, <code>:tabp</code>, <code>:tabNext</code>, <code>:tabN</code></td><td>Go to the previous tabpage.</td></tr>
 <tr><td><code>:tabclose</code>, <code>:tabc</code></td><td>Close the current tabpage.</td></tr>
@@ -1425,7 +1425,9 @@
 <tr><td><code>:tmux-buffer-paste-before</code></td><td>Paste a tmux paste buffer (newest, or the named one) before selections.</td></tr>
 <tr><td><code>:tmux-buffers</code></td><td>List the session’s tmux paste buffers in the status bar.</td></tr>
 <tr><td><code>:show-clipboard-provider</code></td><td>Show clipboard provider name in status bar.</td></tr>
-<tr><td><code>:change-current-directory</code>, <code>:cd</code>, <code>:chdir</code>, <code>:lcd</code>, <code>:lchdir</code>, <code>:tcd</code>, <code>:tchdir</code></td><td>Change the current working directory.</td></tr>
+<tr><td><code>:change-current-directory</code>, <code>:cd</code>, <code>:chdir</code></td><td>Change the current working directory (vim :cd).</td></tr>
+<tr><td><code>:lcd</code>, <code>:lc</code>, <code>:lchdir</code>, <code>:lch</code></td><td>Change the current window’s working directory (vim :lcd).</td></tr>
+<tr><td><code>:tcd</code>, <code>:tc</code>, <code>:tchdir</code>, <code>:tch</code></td><td>Change the current tab page’s working directory (vim :tcd).</td></tr>
 <tr><td><code>:show-directory-stack</code></td><td>Show the directory stack as a <space> delimited string.</space></td></tr>
 <tr><td><code>:push-directory</code>, <code>:pushd</code></td><td>Save and then change the current directory.</td></tr>
 <tr><td><code>:pop-directory</code>, <code>:popd</code></td><td>Remove the top entry from the directory stack, and cd to the new top directory..</td></tr>
@@ -1443,7 +1445,8 @@
 <tr><td><code>:rshada!</code>, <code>:rsh!</code>, <code>:rsha!</code>, <code>:rshad!</code></td><td>Read the shada file, overwriting registers, histories and marks that are already set (nvim :rshada!).</td></tr>
 <tr><td><code>:syncbind</code>, <code>:sync</code>, <code>:syncb</code>, <code>:syncbi</code>, <code>:syncbin</code></td><td>Scroll the ‘scrollbind’ (follow-mode) windows back into step with this one (vim :syncbind).</td></tr>
 <tr><td><code>:uptime</code>, <code>:upt</code>, <code>:uptim</code></td><td>Show how long this editor process has been running (nvim :uptime).</td></tr>
-<tr><td><code>:mksession</code>, <code>:mks</code></td><td>Write a session file (cwd + buffers) that :source restores (vim :mksession).</td></tr>
+<tr><td><code>:mksession</code>, <code>:mks</code></td><td>Write a session file of the tab pages, windows, buffers, folds and directories, as vim does (vim :mksession).</td></tr>
+<tr><td><code>:mksession!</code>, <code>:mks!</code></td><td>Write a session file, overwriting an existing one (vim :mksession!).</td></tr>
 <tr><td><code>:mkvimrc</code>, <code>:mkv</code></td><td>Write the current runtime mappings to a vimrc file (vim :mkvimrc; mappings only).</td></tr>
 <tr><td><code>:mkexrc</code>, <code>:mk</code></td><td>Write the current runtime mappings to an exrc file (vim :mkexrc; mappings only).</td></tr>
 <tr><td><code>:mkview</code>, <code>:mkvie</code></td><td>Write the current window’s view (cursor position) to a file (vim :mkview).</td></tr>
@@ -1625,7 +1628,7 @@
 <tr><td><code>:Colors</code></td><td>Fuzzy-pick a colorscheme with fzf (fzf.vim :Colors).</td></tr>
 <tr><td><code>:Buffers</code></td><td>Fuzzy-pick an open buffer with fzf and switch to it (fzf.vim :Buffers).</td></tr>
 <tr><td><code>:Commands</code></td><td>Fuzzy-pick a <code>:</code> command with fzf and run it (fzf.vim :Commands).</td></tr>
-<tr><td><code>:fold</code>, <code>:fo</code></td><td>Create a fold over the selected/current lines (vim :fold).</td></tr>
+<tr><td><code>:fold</code>, <code>:fo</code></td><td>Create a fold over {range}, else the selected/current lines (vim :{range}fold).</td></tr>
 <tr><td><code>:foldopen</code>, <code>:foldo</code></td><td>Open the fold under the cursor (vim :foldopen).</td></tr>
 <tr><td><code>:foldclose</code>, <code>:foldc</code></td><td>Close the fold under the cursor (vim :foldclose).</td></tr>
 <tr><td><code>:&amp;</code>, <code>:&amp;&amp;</code>, <code>:s-repeat</code></td><td>Repeat the last :substitute on the current line (vim :&amp; / :&amp;&amp;).</td></tr>
@@ -3292,8 +3295,9 @@
 <tr><td><code>goto_visual_line_end</code></td><td>Goto visual line end (soft-wrap aware)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>g$</code></td></tr>
 <tr><td><code>extend_to_visual_line_start</code></td><td>Extend to visual line start</td><td></td></tr>
 <tr><td><code>extend_to_visual_line_end</code></td><td>Extend to visual line end</td><td></td></tr>
-<tr><td><code>goto_column</code></td><td>Goto column</td><td><strong>spacemacs, hybrid</strong> — normal: <code>|</code>, <code>&lt;A-g&gt;&lt;tab&gt;</code><br><strong>vim</strong> — normal: <code>|</code><br><strong>helix, kakoune</strong> — normal: <code>g|</code></td></tr>
+<tr><td><code>goto_column</code></td><td>Goto column</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;A-g&gt;&lt;tab&gt;</code><br><strong>helix, kakoune</strong> — normal: <code>g|</code></td></tr>
 <tr><td><code>extend_to_column</code></td><td>Extend to column</td><td><strong>helix, kakoune</strong> — select: <code>g|</code></td></tr>
+<tr><td><code>vim_goto_column</code></td><td>Goto screen column [count] (vim bar motion)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>|</code></td></tr>
 <tr><td><code>goto_next_buffer</code></td><td>Goto next buffer</td><td><strong>spacemacs, hybrid</strong> — normal: <code>]b</code>, <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;C-x&gt;&lt;right&gt;</code>, select: <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;C-x&gt;&lt;right&gt;</code>, insert: <code>&lt;C-x&gt;&lt;right&gt;</code><br><strong>vim</strong> — normal: <code>]b</code><br><strong>helix, kakoune</strong> — normal: <code>gn</code>, select: <code>gn</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;&lt;right&gt;</code>, insert: <code>&lt;C-x&gt;&lt;right&gt;</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;&lt;right&gt;</code>, select: <code>&lt;C-X&gt;&lt;right&gt;</code>, insert: <code>&lt;C-x&gt;&lt;right&gt;</code><br><strong>micro</strong> — normal: <code>&lt;A-.&gt;</code>, insert: <code>&lt;A-.&gt;</code></td></tr>
 <tr><td><code>goto_previous_buffer</code></td><td>Goto previous buffer</td><td><strong>spacemacs, hybrid</strong> — normal: <code>[b</code>, <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;C-x&gt;&lt;left&gt;</code>, select: <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;C-x&gt;&lt;left&gt;</code>, insert: <code>&lt;C-x&gt;&lt;left&gt;</code><br><strong>vim</strong> — normal: <code>[b</code><br><strong>helix, kakoune</strong> — normal: <code>gp</code>, select: <code>gp</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;&lt;left&gt;</code>, insert: <code>&lt;C-x&gt;&lt;left&gt;</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;&lt;left&gt;</code>, select: <code>&lt;C-X&gt;&lt;left&gt;</code>, insert: <code>&lt;C-x&gt;&lt;left&gt;</code><br><strong>micro</strong> — normal: <code>&lt;A-,&gt;</code>, insert: <code>&lt;A-,&gt;</code></td></tr>
 <tr><td><code>goto_line_end_newline</code></td><td>Goto newline at line end</td><td><strong>spacemacs, vim, helix, kakoune</strong> — insert: <code>&lt;end&gt;</code></td></tr>
