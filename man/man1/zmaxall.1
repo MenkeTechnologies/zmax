@@ -2,7 +2,7 @@
 .\" Companion to the concise zmax(1) page. Covers architecture, keymaps,
 .\" the IDE workbench, version control, embedded scripting, language
 .\" support, health checks, and configuration.
-.TH ZMAXALL 1 "2026-10-03" "zmax 0.4.78" "User Commands"
+.TH ZMAXALL 1 "2026-10-03" "zmax 0.4.79" "User Commands"
 .SH NAME
 zmaxall \- comprehensive reference for the zmax modal editor
 .SH SYNOPSIS
@@ -13,7 +13,7 @@ zmaxall \- comprehensive reference for the zmax modal editor
 .SH OVERVIEW
 This page documents
 .B zmax
-in depth: its crate architecture, the four shipped keymaps, the IDE
+in depth: its crate architecture, the IDE
 workbench, the magit-style version-control interface, embedded
 scripting, language support, and configuration. For the option summary
 and the common invocation forms, see
@@ -28,7 +28,7 @@ shell and the
 .BR stryke (1)
 scripting language for in-editor evaluation.
 .SH ARCHITECTURE
-The workspace ships 13 first-party crates plus an
+The workspace ships first-party crates plus an
 .B xtask
 build helper. The default member is
 .BR zmax-term ,
@@ -66,16 +66,32 @@ Configuration, runtime-directory resolution, grammar loading, logging.
 .BR zmax-event ", " zmax-parsec ", " zmax-stdx
 Event handling, parser combinators, and shared standard-library
 extensions.
+.TP
+.B zmax-native
+Stable C-ABI SDK for native plugins loaded at runtime with
+.B :plugin load
 .SH KEYMAPS
 .B zmax
 selects one keymap at startup from configuration.
 .TP
-.B default
-The native zmax map.
+.B spacemacs
+Spacemacs-style leader menus under the space
+.RB ( SPC )
+key. The default.
+.TP
+.B hybrid
+Spacemacs's hybrid editing style: the spacemacs keymap with an emacs
+insert state.
 .TP
 .B vim
 Vim-style modal editing: normal, insert, visual, and operator-pending
 behavior.
+.TP
+.B helix
+Selection-first modal editing.
+.TP
+.B kakoune
+Kakoune-style modal editing.
 .TP
 .B emacs
 Emacs-style chorded bindings
@@ -83,10 +99,14 @@ Emacs-style chorded bindings
 .BR C\- c
 prefixes).
 .TP
-.B spacemacs
-Spacemacs-style leader menus under the space
-.RB ( SPC )
-key.
+.B cua
+The emacs keymap with CUA mode.
+.TP
+.B micro
+micro-style bindings.
+.TP
+.B nano
+nano-style bindings.
 .PP
 Modes follow the modal convention: a normal (command) mode drives
 motion and selection, and an insert mode types text. The status line
@@ -235,8 +255,10 @@ Default structured log (indexing, grammar builds, background work).
 .SH ENVIRONMENT
 .TP
 .B ZMAX_RUNTIME
-Runtime directory searched ahead of the bundled runtime and
-.IR ~/.zmax/runtime .
+Runtime directory searched after
+.IR ~/.zmax/runtime ,
+ahead of the compile-time fallback and the runtime directory next to the
+executable.
 .TP
 .B ZMAX_DEFAULT_RUNTIME
 Fallback runtime directory, honored only if set at compile time.

@@ -2,7 +2,7 @@
 .\" Companion: zmaxall(1) — comprehensive reference covering the modal
 .\" editor, keymaps (vim/emacs/spacemacs), the IDE workbench, embedded
 .\" scripting (zshrs, stryke), version control (magit), LSP/DAP, and health.
-.TH ZMAX 1 "2026-10-03" "zmax 0.4.78" "User Commands"
+.TH ZMAX 1 "2026-10-03" "zmax 0.4.79" "User Commands"
 .SH NAME
 zmax \- modal terminal text editor in Rust (tree-sitter + LSP)
 .SH SYNOPSIS
@@ -151,23 +151,35 @@ Print the help summary and exit.
 .B zmax
 selects a keymap from configuration. The shipped maps are:
 .TP
-.B default
-The native zmax map.
-.TP
-.B vim
-Vim-style modal editing.
-.TP
-.B emacs
-Emacs-style chorded bindings.
-.TP
 .B spacemacs
 Spacemacs-style leader
 .RB ( SPC )
-menus.
+menus. The default.
 .TP
 .B hybrid
 Spacemacs's hybrid editing style: the spacemacs keymap with an emacs
 insert state.
+.TP
+.B vim
+Vim-style modal editing.
+.TP
+.B helix
+Selection-first modal editing.
+.TP
+.B kakoune
+Kakoune-style modal editing.
+.TP
+.B emacs
+Emacs-style chorded bindings.
+.TP
+.B cua
+The emacs keymap with CUA mode.
+.TP
+.B micro
+micro-style bindings.
+.TP
+.B nano
+nano-style bindings.
 .SH FILES
 .TP
 .I ~/.zmax/config.toml
@@ -191,9 +203,10 @@ are logged here, never printed to the terminal.
 .SH ENVIRONMENT
 .TP
 .B ZMAX_RUNTIME
-Runtime directory (themes, grammars, queries) searched ahead of the
-bundled runtime. Takes precedence over
-.IR ~/.zmax/runtime .
+Runtime directory (themes, grammars, queries) searched after
+.IR ~/.zmax/runtime
+and ahead of the compile-time fallback and the runtime directory next to
+the executable.
 .TP
 .B ZMAX_DEFAULT_RUNTIME
 Fallback runtime directory, read only if it was set when
@@ -215,8 +228,8 @@ on Linux).
 exits
 .B 0
 on a clean shutdown. A failure to parse arguments, read a required
-configuration file, or initialize the terminal exits non-zero with a
-.BI zmax: " message"
+configuration file, or initialize the terminal exits non-zero after printing an
+.BI Error: " message"
 diagnostic on standard error.
 .SH SEE ALSO
 .BR zmaxall (1),
