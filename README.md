@@ -99,10 +99,8 @@ zmax -g fetch && zmax -g build
 
 ## Embedded scripting
 
-**A world first: the only IDE to embed 12 scripting languages with zero
-external dependencies and no FFI between them** — every interpreter is a
-pure-Rust crate compiled into the binary, sharing one host API rather than
-bridging through a C ABI.
+Every interpreter is a pure-Rust crate compiled into the binary with no external
+dependencies, sharing one host API rather than bridging through a C ABI.
 
 zmax embeds twelve scripting interpreters in the binary, evaluated against the
 live buffer: **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), plus

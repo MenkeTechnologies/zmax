@@ -32,7 +32,7 @@ report tracks that build-out.
 | `spacemacs_bindings.json` | Spacemacs `doc/DOCUMENTATION.org` |
 | `spacemacs_layers.json` | Spacemacs `layers/` git tree |
 | `fzf_vim.json` | junegunn/fzf.vim — Commands reference |
-| `projectile.json` | bbatsov/projectile `projectile.el` (3.5.0-snapshot) — every interactive command, the 27 its `--define-display-variants` / `--define-subproject-commands` macros generate included, each with the `C-c p` chord `projectile-command-map` binds it and a line-anchored `doc_ref` |
+| `projectile.json` | bbatsov/projectile `projectile.el` (3.5.0-snapshot) — every interactive command, the ones its `--define-display-variants` / `--define-subproject-commands` macros generate included, each with the `C-c p` chord `projectile-command-map` binds it and a line-anchored `doc_ref` |
 | `kakoune.json` | kakoune `doc/pages/keys.asciidoc` + `commands.asciidoc` (menu keys carry their prefix: `g h`, `<a-z> u`) |
 | `vis.json` | `vis(1)` — its vi side and the sam command language |
 | `sam.json` | plan9port `sam(1)` |
@@ -54,9 +54,9 @@ report tracks that build-out.
 Each item carries a `doc_ref` back to its source line/anchor.
 
 **A note on the emacs denominator.** `emacs_commands.json` + `emacs_keys.json`
-are the *entire* GNU Emacs manual indexes — 3008 items — including games
+are the *entire* GNU Emacs manual indexes, including games
 (`5x5`), two-column mode, Dired, TeX-mode, Gnus, Calc, and Buffer-Menu keys
-(445 of the 1124 keys are major-mode-specific). No editor "ports" that surface,
+(many of the keys are major-mode-specific). No editor "ports" that surface,
 so emacs coverage is reported as a low single-digit percentage by construction:
 it measures *fraction of all of Emacs*, not editing-command coverage. The
 mapped set targets the global editing/movement/search/kill-yank/window/buffer
@@ -73,7 +73,7 @@ generator is built to make faking the number structurally impossible:
 1. **The numerator is re-parsed from source every run.** The set of zmax
    static commands, typable `:` commands, and default keybindings is extracted
    from `zmax-term/src/commands.rs`, `commands/typed.rs`, and the active
-   default keymap `keymap/vim.rs` at generation time. The command-line editing
+   default keymap `keymap/default.rs` at generation time. The command-line editing
    surface is read from the `:` prompt's hardcoded key handler in
    `ui/prompt.rs` (exposed as the `command` mode). There is no cached count
    to edit.
@@ -88,7 +88,7 @@ generator is built to make faking the number structurally impossible:
    (e.g. Vim `d{motion}` vs zmax select-then-`d`).
 4. **No whitelisting, no detector-bypass annotations.** Do not edit this script
    or the inventories to make the number move. Move the number by shipping
-   commands. See `~/.claude/CLAUDE.md` "Audit-Tool Tampering".
+   commands.
 
 ## Regenerate
 

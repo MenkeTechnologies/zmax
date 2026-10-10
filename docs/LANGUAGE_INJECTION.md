@@ -236,14 +236,14 @@ below). `+dyn` = language inferred dynamically from text.
 `markdown`, `markdown-rustdoc` (→ rust), and markdown-in-comments for `elixir`, `gleam`, `julia`, `amber`, `erlang`, `lean`, `nickel`, `pkl`, `unison`, `markdoc`.
 
 ### The everything-injector
-`nix` injects ~24 languages (bash, c, clojure, css, fish, haskell, html, javascript, json, lua, nginx, nim, nu, perl, python, ruby, rust, scheme, sql, toml, typescript, xml, yaml).
+`nix` injects many languages (bash, c, clojure, css, fish, haskell, html, javascript, json, lua, nginx, nim, nu, perl, python, ruby, rust, scheme, sql, toml, typescript, xml, yaml).
 
 ### Other notable
 `rust` → html/json/slint/rust-format-args/markdown-rustdoc/sql · `elixir` → heex/json/zig · `vim` → lua/python/ruby/vim · `caddyfile`/`spicedb` → cel · `nginx` → lua · `elm` → glsl · `fsharp` → xml · `hurl` → json/xml.
 
 ## Universal baseline (not real embedding)
-- **`comment`** — ~150 grammars inject a pseudo-`comment` language to highlight `TODO`/`FIXME`/tags inside comments.
-- **`regex`** — ~30 grammars inject `regex` into regex literals.
+- **`comment`** — many grammars inject a pseudo-`comment` language to highlight `TODO`/`FIXME`/tags inside comments.
+- **`regex`** — many grammars inject `regex` into regex literals.
 
 These are noise for language-injection purposes; consumers should ignore
 `comment`/`regex`.

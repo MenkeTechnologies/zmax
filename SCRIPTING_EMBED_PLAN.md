@@ -1,5 +1,8 @@
 # Embedding 5 interpreters into zmax — implementation plan
 
+> Historical plan. Scripting has shipped, and the editor now embeds twelve
+> interpreters; the current reference is [`book/src/scripting.md`](book/src/scripting.md).
+
 Embed **elisprs** (Emacs Lisp), **zmax-viml/vimlrs** (Vimscript), **strykelang**
 (Perl 5), **awkrs** (AWK) and **zshrs** (zsh) into the editor so all five can drive
 zmax through one **uniform full IDE API**.
@@ -28,7 +31,7 @@ Decisions taken: dependencies wired as **git submodules / path deps** (editable,
   `main.rs` before `app.run()` — the natural init hook. `KeyTrie` keymaps live in `Config.keys`
   per `Mode`, runtime-swappable through `Arc<ArcSwap<Config>>`; `keymap::merge_keys`.
 - **Precedent**: `run-shell-command` / `!` / `sh` already shells out (template for zsh).
-- **No scripting exists yet** — clean slate. `WorkspaceTrust` already gates workspace config.
+- **No scripting existed when this plan was written** — clean slate. `WorkspaceTrust` already gates workspace config.
 
 ### Interpreter embedding surfaces
 

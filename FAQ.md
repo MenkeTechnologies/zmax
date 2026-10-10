@@ -47,10 +47,11 @@ has no analogue here by design.
 
 ## What scripting languages are embedded?
 
-Ten, all pure-Rust crates compiled into the binary (no FFI between them):
+Twelve, all pure-Rust crates compiled into the binary (no FFI between them):
 **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), and on unix
 **zsh** (`:zsh`), **stryke** (`:stryke`), **ruby** (`:ruby`), **php** (`:php`),
-**python** (`:python`), **node** (`:node`) and **arb** (`:arb`). `SPC a r` (or
+**python** (`:python`), **node** (`:node`), **arb** (`:arb`), **tcl** (`:tcl`)
+and **R** (`:rlang`). `SPC a r` (or
 `:repl`) opens a REPL fronting all of them. `~/.zmax/init.el` and `init.vim` are
 sourced at startup. These live behind the `scripting` Cargo feature (on by
 default). The vim ex-commands `:python`/`:ruby`/`:perl` evaluate in-process

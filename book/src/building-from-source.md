@@ -86,7 +86,7 @@ just the ones you want:
 cargo install --path zmax-term --locked --no-default-features --features git
 ```
 
-In a scripting-less build the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke`/`:ruby`/`:php`/`:python`/`:node`/`:arb` commands and
+In a scripting-less build the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke`/`:ruby`/`:php`/`:python`/`:node`/`:arb`/`:tcl`/`:rlang` commands and
 the REPL still exist but report that scripting was not compiled in; `init.el` /
 `init.vim` are not loaded.
 
