@@ -1235,7 +1235,11 @@ mod test {
             "/usr/share/zsh/site-functions/_git",
             "/home/u/proj/completions/_tool",
         ] {
-            assert_eq!(LOADER.language_for_filename(Path::new(path)), Some(zsh), "{path}");
+            assert_eq!(
+                LOADER.language_for_filename(Path::new(path)),
+                Some(zsh),
+                "{path}"
+            );
         }
     }
 
