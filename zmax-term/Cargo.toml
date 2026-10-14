@@ -183,10 +183,10 @@ gmp-mpfr-sys = { version = "1.7", features = ["force-cross"], optional = true }
 zsh = { path = "../vendor/zshrs", package = "zshrs", optional = true }            # embedded zsh shell (unix only)
 stryke = { path = "../vendor/strykelang", package = "strykelang", optional = true } # embedded Perl (unix only; pulls zshrs)
 # The six fusevm frontends + arb, added so all twelve MenkeTech languages embed.
-# All ride fusevm 0.17.x (unified via semver with the five above) and use libc,
+# All ride the one fusevm (unified via semver with the five above) and use libc,
 # so they sit in the unix-only section alongside their siblings. The single
-# fusevm line is a link-time requirement, not tidiness: fusevm exports ~54
-# `#[no_mangle]` symbols from its aot/jit/ffi modules, so two semver-incompatible
+# fusevm line is a link-time requirement, not tidiness: fusevm exports
+# `#[no_mangle]` symbols from its aot and jit modules, so two semver-incompatible
 # copies in this binary are a duplicate-symbol failure.
 rubylang = { path = "../vendor/rubylang", optional = true }                        # Ruby (rubylang)
 phplang = { path = "../vendor/phplang", optional = true }                          # PHP (phplang)
