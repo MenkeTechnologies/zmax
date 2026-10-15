@@ -65,7 +65,7 @@ libloading = { workspace = true }
 
 # Embedded scripting engines wired into the `commands::scripting` host. They
 # live as sibling meta-repo submodules, consumed by path so local edits are
-# picked up. They all run on fusevm (0.17.x, unified via semver).
+# picked up. They all run on one fusevm, unified via semver (see the root Cargo.lock).
 elisprs = { path = "../vendor/elisprs", optional = true }                          # Emacs Lisp
 # vimlrs (nix) and awkrs (nix/rug/gmp-mpfr-sys) are unix-only; see target deps below.
 # zsh (embedded shell command runner) is unix-only; see the target deps below.
