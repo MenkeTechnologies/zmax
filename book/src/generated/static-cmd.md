@@ -2804,6 +2804,9 @@
 | `terminal_paste_selection` | Paste the primary selection into the terminal (JetBrains Paste From Selection Clipboard) |  |
 | `open_in_terminal` | Open a terminal in this file's directory (JetBrains Open in Terminal) |  |
 | `terminal_new_predefined_session` | Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session) |  |
+| `terminal_rename_session` | Name the terminal session in its title bar (JetBrains Rename Session) |  |
+| `terminal_copy_all` | Copy the terminal's scrollback and screen to the clipboard (JetBrains Select All + Copy Selected Text) |  |
+| `terminal_find` | Scroll the terminal back to the previous line containing a prompted text (JetBrains Find in the terminal) |  |
 | `terminal_search_history` | Type a command picked from the shell history at the terminal prompt (JetBrains Search in Command History) |  |
 | `switch_to_completions` | Move into the list of completions (emacs switch-to-completions) |  |
 | `previous_matching_history_element` | Read a regexp, then recall the newest older history entry matching it (emacs previous-matching-history-element) |  |

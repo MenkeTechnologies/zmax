@@ -224,7 +224,9 @@ leaving the editor:
   structure outline, problems/run panels, and an error-stripe minimap; the
   whole layout persists to appdata.
 - **Integrated terminal** (`:terminal`) — a PTY shell in a pane, with a `C-\`
-  window leader for split/focus and click-to-focus across panes.
+  window leader for split/focus and click-to-focus across panes; `terminal_find`
+  searches the scrollback, `terminal_copy_all` copies it, and
+  `terminal_rename_session` names the session in the title bar.
 - **Comint shell** (`comint_shell` from the command palette, emacs `M-x shell`)
   — a line-oriented subprocess buffer: type a command, `Enter` runs it, output
   streams into the scrollback; `M-p`/`M-n` walk the input history, `C-c`

@@ -162,6 +162,8 @@ pub struct TerminalPanel {
     line_mode: bool,
     /// The locally-edited input line, in `term-line-mode`.
     line: String,
+    /// JetBrains "Rename Session": the name the title bar shows, if one was set.
+    name: Option<String>,
     /// Emacs `term-pager-toggle`: shared with the reader thread, which stops
     /// feeding the vt100 parser once a screenful of output has arrived and waits
     /// for a key.
@@ -379,6 +381,7 @@ impl TerminalPanel {
             pending_window: false,
             line_mode: false,
             line: String::new(),
+            name: None,
             pager,
         })
     }
@@ -499,6 +502,64 @@ impl TerminalPanel {
         } else {
             self.send(&[0x17]);
         }
+    }
+
+    /// JetBrains "Rename Session": name the title bar shows; an empty name clears it.
+    pub fn set_name(&mut self, name: &str) {
+        let name = name.trim();
+        self.name = (!name.is_empty()).then(|| name.to_string());
+        zmax_event::request_redraw();
+    }
+
+    /// Every line of the scrollback followed by the screen, oldest first, with
+    /// trailing blank lines dropped. The scrollback view is left where it was.
+    pub fn history_lines(&self) -> Vec<String> {
+        let mut parser = self.parser.parser.lock();
+        let saved = parser.screen().scrollback();
+        parser.set_scrollback(usize::MAX);
+        let max = parser.screen().scrollback();
+        let (rows, cols) = parser.screen().size();
+        let mut lines: Vec<String> = Vec::new();
+        let mut offset = max;
+        loop {
+            parser.set_scrollback(offset);
+            let top = max - offset;
+            for (i, line) in parser.screen().rows(0, cols).enumerate() {
+                if top + i >= lines.len() {
+                    lines.push(line);
+                }
+            }
+            if offset == 0 {
+                break;
+            }
+            offset = offset.saturating_sub(rows.max(1) as usize);
+        }
+        parser.set_scrollback(saved);
+        while lines.last().is_some_and(|l| l.trim().is_empty()) {
+            lines.pop();
+        }
+        lines
+    }
+
+    /// JetBrains "Find" in the terminal: scroll the scrollback so the nearest
+    /// line containing `query` (case-insensitive) above the line now at the top
+    /// of the view is the top line, wrapping to the bottom. Returns whether a
+    /// line matched.
+    pub fn find_back(&mut self, query: &str) -> bool {
+        let lines = self.history_lines();
+        let mut parser = self.parser.parser.lock();
+        let current = parser.screen().scrollback();
+        parser.set_scrollback(usize::MAX);
+        let max = parser.screen().scrollback();
+        let top = max - current;
+        let Some(found) = find_line_back(&lines, query, top) else {
+            parser.set_scrollback(current);
+            return false;
+        };
+        parser.set_scrollback(max.saturating_sub(found));
+        drop(parser);
+        zmax_event::request_redraw();
+        true
     }
 
     /// Scroll the scrollback by `lines` (positive: back into history).
@@ -706,7 +767,11 @@ impl Component for TerminalPanel {
             " Terminal — -- MORE -- (any key: next page) ".to_string()
         } else {
             format!(
-                " Terminal — {} — F12 detach{} ",
+                " Terminal{} — {} — F12 detach{} ",
+                self.name
+                    .as_deref()
+                    .map(|n| format!(" \"{n}\""))
+                    .unwrap_or_default(),
                 if self.line_mode {
                     "line mode"
                 } else {
@@ -1005,5 +1070,49 @@ mod test {
         assert!(screen.feed(b"!"));
         let parser = screen.parser.lock();
         assert!(parser.screen().contents().contains("hello world!"));
+    }
+}
+
+/// Index of the nearest line before `from` that contains `query`, ignoring
+/// case, wrapping round to the last line when nothing above matches.
+fn find_line_back(lines: &[String], query: &str, from: usize) -> Option<usize> {
+    if query.is_empty() {
+        return None;
+    }
+    let query = query.to_lowercase();
+    let hit = |i: &usize| lines[*i].to_lowercase().contains(&query);
+    let from = from.min(lines.len());
+    (0..from)
+        .rev()
+        .find(hit)
+        .or_else(|| (from..lines.len()).rev().find(hit))
+}
+
+#[cfg(test)]
+mod find_tests {
+    use super::find_line_back;
+
+    fn lines() -> Vec<String> {
+        ["alpha", "Beta", "gamma", "beta again", "delta"]
+            .map(String::from)
+            .to_vec()
+    }
+
+    #[test]
+    fn nearest_match_above_the_top_line() {
+        assert_eq!(find_line_back(&lines(), "beta", 4), Some(3));
+        assert_eq!(find_line_back(&lines(), "beta", 3), Some(1));
+    }
+
+    #[test]
+    fn wraps_to_the_bottom_when_nothing_is_above() {
+        assert_eq!(find_line_back(&lines(), "beta", 1), Some(3));
+        assert_eq!(find_line_back(&lines(), "delta", 0), Some(4));
+    }
+
+    #[test]
+    fn no_match_and_empty_query() {
+        assert_eq!(find_line_back(&lines(), "zeta", 4), None);
+        assert_eq!(find_line_back(&lines(), "", 4), None);
     }
 }

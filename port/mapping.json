@@ -87915,5 +87915,37 @@
    "static:git_diff_in_new_tab"
   ],
   "note": "Diff.OpenDiffInEditor = zmax `git_diff_in_new_tab`: moves the diff into an editor tab; there is no command that converts an open modal diff in place."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.RenameSession",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_rename_session"
+  ],
+  "note": "Terminal.RenameSession = zmax `terminal_rename_session`: prompts for a name and TerminalPanel::set_name shows it in the title bar (ui/terminal.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.Find",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_find"
+  ],
+  "note": "Terminal.Find = zmax `terminal_find`: prompts for text and TerminalPanel::find_back scrolls the scrollback to the nearest line above the view containing it, case-insensitively, wrapping. Backward only; no next-match key."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.SelectAll",
+  "status": "partial",
+  "evidence": [
+   "static:terminal_copy_all"
+  ],
+  "note": "Terminal.SelectAll = zmax `terminal_copy_all`: the terminal has no visible selection, so select-all and copy are one command that puts scrollback plus screen on the clipboard."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.CopySelectedText",
+  "status": "partial",
+  "evidence": [
+   "static:terminal_copy_all"
+  ],
+  "note": "Terminal.CopySelectedText = zmax `terminal_copy_all`: copies the whole scrollback and screen; the terminal has no partial selection to copy."
  }
 ]

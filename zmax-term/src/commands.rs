@@ -3197,6 +3197,9 @@ impl MappableCommand {
         terminal_paste_selection, "Paste the primary selection into the terminal (JetBrains Paste From Selection Clipboard)",
         open_in_terminal, "Open a terminal in this file's directory (JetBrains Open in Terminal)",
         terminal_new_predefined_session, "Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session)",
+        terminal_rename_session, "Name the terminal session in its title bar (JetBrains Rename Session)",
+        terminal_copy_all, "Copy the terminal's scrollback and screen to the clipboard (JetBrains Select All + Copy Selected Text)",
+        terminal_find, "Scroll the terminal back to the previous line containing a prompted text (JetBrains Find in the terminal)",
         terminal_search_history, "Type a command picked from the shell history at the terminal prompt (JetBrains Search in Command History)",
         switch_to_completions, "Move into the list of completions (emacs switch-to-completions)",
         previous_matching_history_element, "Read a regexp, then recall the newest older history entry matching it (emacs previous-matching-history-element)",
@@ -54089,6 +54092,79 @@ fn terminal_close_session(cx: &mut Context) {
             cx.editor.set_error("term: no terminal panel");
         }
     }));
+}
+
+/// JetBrains "Rename Session" (`Terminal.RenameSession`): the name shown in the
+/// terminal's title bar. An empty name removes it.
+fn terminal_rename_session(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "rename terminal session:".into(),
+        None,
+        ui::completers::none,
+        |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.to_string();
+            cx.jobs.callback(async move {
+                let call: job::Callback =
+                    Callback::EditorCompositor(Box::new(move |editor, compositor| {
+                        match compositor.find::<crate::ui::terminal::TerminalPanel>() {
+                            Some(panel) => panel.set_name(&name),
+                            None => editor.set_error("term: no terminal panel"),
+                        }
+                    }));
+                Ok(call)
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// JetBrains "Select All" and "Copy Selected Text" in the terminal
+/// (`Terminal.SelectAll`, `Terminal.CopySelectedText`): the whole scrollback and
+/// screen go to the clipboard register. The terminal has no partial selection,
+/// so this is the one selection it can make.
+fn terminal_copy_all(cx: &mut Context) {
+    term_action(cx, |panel, cx| {
+        let text = panel.history_lines().join("\n");
+        let lines = text.lines().count();
+        match cx.editor.registers.write('+', vec![text]) {
+            Ok(()) => cx.editor.set_status(format!("copied {lines} terminal lines")),
+            Err(e) => cx.editor.set_error(e.to_string()),
+        }
+    });
+}
+
+/// JetBrains "Find" in the terminal (`Terminal.Find`): prompt for text and
+/// scroll back to the nearest line above the view that contains it.
+fn terminal_find(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "terminal find:".into(),
+        None,
+        ui::completers::none,
+        |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let query = input.to_string();
+            cx.jobs.callback(async move {
+                let call: job::Callback =
+                    Callback::EditorCompositor(Box::new(move |editor, compositor| {
+                        match compositor.find::<crate::ui::terminal::TerminalPanel>() {
+                            Some(panel) => {
+                                if !panel.find_back(&query) {
+                                    editor.set_error(format!("terminal: no match for {query}"));
+                                }
+                            }
+                            None => editor.set_error("term: no terminal panel"),
+                        }
+                    }));
+                Ok(call)
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// Paste register `name` into the terminal, filtered as a bracketed paste is.
