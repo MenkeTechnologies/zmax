@@ -354,6 +354,44 @@ fn strip_decoration(summary: &str) -> String {
     t.to_string()
 }
 
+/// A `git log --decorate` summary with its reference list reshaped: JetBrains
+/// "Show Tag Names" (`show_tags` off drops `tag: …` references) and "Compact
+/// References View" (`compact` keeps only the first reference). Pure — unit
+/// tested.
+fn shape_decoration(summary: &str, show_tags: bool, compact: bool) -> String {
+    let Some(rest) = summary.trim_start().strip_prefix('(') else {
+        return summary.to_string();
+    };
+    let Some(end) = rest.find(')') else {
+        return summary.to_string();
+    };
+    let subject = rest[end + 1..].trim_start();
+    let mut refs: Vec<&str> = rest[..end].split(", ").collect();
+    if !show_tags {
+        refs.retain(|r| !r.starts_with("tag: "));
+    }
+    if compact {
+        refs.truncate(1);
+    }
+    if refs.is_empty() {
+        subject.to_string()
+    } else {
+        format!("({}) {subject}", refs.join(", "))
+    }
+}
+
+/// Parse `git log --format="%h %p"` output into abbreviated sha -> parent shas.
+/// Pure — unit tested.
+fn parse_parents(out: &str) -> std::collections::HashMap<String, Vec<String>> {
+    out.lines()
+        .filter_map(|line| {
+            let mut words = line.split_whitespace();
+            let sha = words.next()?.to_string();
+            Some((sha, words.map(String::from).collect()))
+        })
+        .collect()
+}
+
 /// Parse `git log --oneline [--decorate]` output into [`LogEntry`]s. Pure and
 /// unit-tested.
 ///
@@ -2747,12 +2785,24 @@ pub struct MagitLog {
     expanded: Vec<String>,
     /// The long form of each expanded commit, fetched once per SHA.
     bodies: std::collections::HashMap<String, Vec<String>>,
+    /// Each listed commit's parents, for JetBrains Go to Parent/Child Row.
+    parents: std::collections::HashMap<String, Vec<String>>,
+    /// JetBrains "Show Tag Names": whether `tag: …` references are listed.
+    show_tags: bool,
+    /// JetBrains "Compact References View": only a commit's first reference.
+    compact_refs: bool,
 }
 
 impl MagitLog {
     fn new(repo_dir: PathBuf) -> Self {
         let out = git_output(&repo_dir, &["log", "--oneline", "--decorate", "-n", "200"])
             .unwrap_or_default();
+        let parents = git_output(
+            &repo_dir,
+            &["log", "--format=%h %p", "-n", "200"],
+        )
+        .map(|out| parse_parents(&out))
+        .unwrap_or_default();
         MagitLog {
             repo_dir,
             entries: parse_log(&out),
@@ -2761,6 +2811,46 @@ impl MagitLog {
             viewport: 1,
             expanded: Vec::new(),
             bodies: std::collections::HashMap::new(),
+            parents,
+            show_tags: true,
+            compact_refs: false,
+        }
+    }
+
+    /// JetBrains "Go to Parent Row" (`Vcs.Log.GoToParent`): select the selected
+    /// commit's first parent. Returns a status line.
+    fn go_to_parent(&mut self) -> String {
+        let Some(sha) = self.entries.get(self.selected).map(|e| e.sha.clone()) else {
+            return String::new();
+        };
+        let parent = self.parents.get(&sha).and_then(|p| p.first());
+        match parent.and_then(|p| self.entries.iter().position(|e| e.sha == *p)) {
+            Some(i) => {
+                self.selected = i;
+                format!("parent of {sha}")
+            }
+            None if parent.is_none() => format!("{sha} has no parent"),
+            None => format!("parent of {sha} is not among the listed commits"),
+        }
+    }
+
+    /// JetBrains "Go to Child Row" (`Vcs.Log.GoToChild`): select the nearest
+    /// listed commit above the selected one that has it as a parent.
+    fn go_to_child(&mut self) -> String {
+        let Some(sha) = self.entries.get(self.selected).map(|e| e.sha.clone()) else {
+            return String::new();
+        };
+        let child = self.entries[..self.selected].iter().rposition(|e| {
+            self.parents
+                .get(&e.sha)
+                .is_some_and(|p| p.contains(&sha))
+        });
+        match child {
+            Some(i) => {
+                self.selected = i;
+                format!("child of {sha}")
+            }
+            None => format!("{sha} has no listed child"),
         }
     }
 
@@ -2801,7 +2891,8 @@ impl MagitLog {
     fn display_lines(&self) -> Vec<(usize, String, bool)> {
         let mut out = Vec::new();
         for (i, entry) in self.entries.iter().enumerate() {
-            out.push((i, format!("  {} {}", entry.sha, entry.summary), true));
+            let summary = shape_decoration(&entry.summary, self.show_tags, self.compact_refs);
+            out.push((i, format!("  {} {summary}", entry.sha), true));
             if self.expanded.contains(&entry.sha) {
                 for line in self.bodies.get(&entry.sha).into_iter().flatten() {
                     out.push((i, format!("      {line}"), false));
@@ -3016,6 +3107,28 @@ impl Component for MagitLog {
             key!('c') => self.compare_with_local(cx),
             key!('f') => self.show_affected_files(cx),
             key!('h') => self.history_up_to_here(cx),
+            key!('p') => {
+                let status = self.go_to_parent();
+                cx.editor.set_status(status);
+            }
+            key!('n') => {
+                let status = self.go_to_child();
+                cx.editor.set_status(status);
+            }
+            key!('t') => {
+                self.show_tags = !self.show_tags;
+                cx.editor.set_status(format!(
+                    "log tag names: {}",
+                    if self.show_tags { "shown" } else { "hidden" }
+                ));
+            }
+            key!('x') => {
+                self.compact_refs = !self.compact_refs;
+                cx.editor.set_status(format!(
+                    "log references: {}",
+                    if self.compact_refs { "first only" } else { "all" }
+                ));
+            }
             // `log-view-toggle-entry-display`: short form <-> full entry.
             key!(Tab) => {
                 if let Some(status) = self.toggle_entry_display() {
@@ -3048,7 +3161,7 @@ impl Component for MagitLog {
 
         let title = " Magit log";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  Tab long  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  Tab long  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -5988,6 +6101,53 @@ MM both.rs
         // No decoration, and a subject that merely starts with a paren.
         assert_eq!(strip_decoration("fix the thing"), "fix the thing");
         assert_eq!(strip_decoration("(unclosed subject"), "(unclosed subject");
+    }
+
+    #[test]
+    fn shape_decoration_drops_tags_and_keeps_the_first_ref() {
+        let s = "(HEAD -> main, tag: v1, origin/main) release";
+        assert_eq!(shape_decoration(s, true, false), s);
+        assert_eq!(
+            shape_decoration(s, false, false),
+            "(HEAD -> main, origin/main) release"
+        );
+        assert_eq!(shape_decoration(s, true, true), "(HEAD -> main) release");
+        assert_eq!(shape_decoration("(tag: v1) release", false, false), "release");
+        assert_eq!(shape_decoration("plain subject", false, true), "plain subject");
+        assert_eq!(shape_decoration("(unclosed", false, true), "(unclosed");
+    }
+
+    #[test]
+    fn parse_parents_reads_every_parent_of_a_merge() {
+        let parents = parse_parents("c3 b2 a1\nb2 a1\na1 \n");
+        assert_eq!(parents["c3"], ["b2", "a1"]);
+        assert_eq!(parents["b2"], ["a1"]);
+        assert!(parents["a1"].is_empty());
+    }
+
+    #[test]
+    fn log_walks_to_parent_and_child_rows() {
+        let mut log = MagitLog {
+            repo_dir: PathBuf::new(),
+            entries: parse_log("c3 third\nb2 second\na1 first\n"),
+            selected: 0,
+            scroll: 0,
+            viewport: 1,
+            expanded: Vec::new(),
+            bodies: Default::default(),
+            parents: parse_parents("c3 b2\nb2 a1\na1 \n"),
+            show_tags: true,
+            compact_refs: false,
+        };
+        assert_eq!(log.go_to_parent(), "parent of c3");
+        assert_eq!(log.selected, 1);
+        log.go_to_parent();
+        assert_eq!(log.selected, 2);
+        assert_eq!(log.go_to_parent(), "a1 has no parent");
+        assert_eq!(log.go_to_child(), "child of a1");
+        assert_eq!(log.selected, 1);
+        log.go_to_child();
+        assert_eq!(log.go_to_child(), "c3 has no listed child");
     }
 
     #[test]

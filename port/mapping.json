@@ -87947,5 +87947,45 @@
    "static:terminal_copy_all"
   ],
   "note": "Terminal.CopySelectedText = zmax `terminal_copy_all`: copies the whole scrollback and screen; the terminal has no partial selection to copy."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.GoToParent",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.GoToParent = `:magit` log view `p`: MagitLog::go_to_parent selects the first parent of the selected commit when it is among the 200 listed (ui/magit.rs); the parents come from `git log --format=%h %p`."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.GoToChild",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.GoToChild = `:magit` log view `n`: MagitLog::go_to_child selects the nearest listed commit above the selected one that has it as a parent."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.ShowTagNames",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.ShowTagNames = `:magit` log view `t`: toggles `tag: ...` references in the decoration (shape_decoration, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.CompactReferencesView",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.CompactReferencesView = `:magit` log view `x`: toggles showing only a commit's first reference (shape_decoration, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.AlignLabels",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.AlignLabels = `:magit` log view: references already sit before the commit message; there is no toggle to move them after it."
  }
 ]
