@@ -1446,6 +1446,7 @@
 | `insert_register` | Insert register | **spacemacs, vim, helix, kakoune** — insert: `` <C-r> `` |
 | `view_register` | Show a register's contents (emacs view-register, C-x r v) |  |
 | `not_modified` | Mark the buffer unmodified without saving (emacs not-modified, M-~) | **spacemacs, hybrid** — normal: `` <A-~> `` |
+| `mark_buffer_dirty` | Mark the buffer modified without changing its text (JetBrains Mark File Dirty) |  |
 | `insert_char_by_code` | Insert a character by Unicode code point (emacs insert-char, C-x 8 RET) |  |
 | `backward_delete_char_untabify` | Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify) |  |
 | `insert_last_inserted_text` | Insert the previously inserted text (vim i_CTRL-A) | **spacemacs, vim** — insert: `` <C-a> `` |

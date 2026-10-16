@@ -1839,6 +1839,7 @@ impl MappableCommand {
         insert_register, "Insert register",
         view_register, "Show a register's contents (emacs view-register, C-x r v)",
         not_modified, "Mark the buffer unmodified without saving (emacs not-modified, M-~)",
+        mark_buffer_dirty, "Mark the buffer modified without changing its text (JetBrains Mark File Dirty)",
         insert_char_by_code, "Insert a character by Unicode code point (emacs insert-char, C-x 8 RET)",
         backward_delete_char_untabify, "Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify)",
         insert_last_inserted_text, "Insert the previously inserted text (vim i_CTRL-A)",
@@ -20967,6 +20968,14 @@ fn not_modified(cx: &mut Context) {
     let (_view, doc) = current!(cx.editor);
     doc.reset_modified();
     cx.editor.set_status("(No changes need to be saved)");
+}
+
+/// JetBrains "Mark File Dirty" (`MarkFileDirty`): flag the buffer as modified
+/// without touching its text, so it is written on the next save.
+fn mark_buffer_dirty(cx: &mut Context) {
+    let (_view, doc) = current!(cx.editor);
+    doc.set_modified(true);
+    cx.editor.set_status("Buffer marked modified");
 }
 
 /// Completion over the listed Unicode names — emacs's `ucs-names`. The

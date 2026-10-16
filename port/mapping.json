@@ -87659,5 +87659,61 @@
    "static:find_usages_with_settings"
   ],
   "note": "ShowSettingsAndFindUsages (Find Usages Settings) = zmax `find_usages_with_settings`: choose the scope \u2014 project, open files, this file, this directory, production or test code \u2014 then Find Usages there."
+ },
+ {
+  "spec_id": "jetbrains-actions.NextEditorTab",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": "NextEditorTab = zmax `goto_next_buffer`: next buffer in buffer-bar order, count-aware, cycling."
+ },
+ {
+  "spec_id": "jetbrains-actions.PreviousEditorTab",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": "PreviousEditorTab = zmax `goto_previous_buffer`: previous buffer in buffer-bar order, count-aware, cycling."
+ },
+ {
+  "spec_id": "jetbrains-actions.MarkFileDirty",
+  "status": "ported",
+  "evidence": [
+   "static:mark_buffer_dirty"
+  ],
+  "note": "MarkFileDirty = zmax `mark_buffer_dirty`: Document::set_modified(true) flags the buffer modified without changing text."
+ },
+ {
+  "spec_id": "jetbrains-actions.InvertBoolean",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_value_selection"
+  ],
+  "note": "InvertBoolean flips true/false (and yes/no, on/off, ...) in the selection with `toggle_value_selection`; the IDE also renames the declaration and fixes every reference, which zmax does not do."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.SplitRight",
+  "status": "partial",
+  "evidence": [
+   "static:split_right_and_move"
+  ],
+  "note": "SplitChooser.SplitRight opens this file in a right split and moves it out of the old group (`split_right_and_move`); no interactive drop-zone chooser."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.SplitDown",
+  "status": "partial",
+  "evidence": [
+   "static:split_down_and_move"
+  ],
+  "note": "SplitChooser.SplitDown opens this file in a bottom split and moves it out of the old group (`split_down_and_move`); no interactive drop-zone chooser."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.Duplicate",
+  "status": "partial",
+  "evidence": [
+   "static:vsplit"
+  ],
+  "note": "SplitChooser.Duplicate keeps the file in both groups: `vsplit` shows the same buffer in a second view; no chooser."
  }
 ]
