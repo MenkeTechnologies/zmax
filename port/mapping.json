@@ -87715,5 +87715,205 @@
    "static:vsplit"
   ],
   "note": "SplitChooser.Duplicate keeps the file in both groups: `vsplit` shows the same buffer in a second view; no chooser."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.CancelComparingNewFilesWithEachOther",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.CancelComparingNewFilesWithEachOther (Cancel Comparing New Files with Each Other) = key `u` in the directory diff view `compare_directories_view` opens: `unpair` (ui/dirdiff.rs:419) splits a paired new-file row back into left-only and right-only."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.CompareNewFilesWithEachOtherAction",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.CompareNewFilesWithEachOtherAction (Compare New Files with Each Other) = key `c` in the directory diff view `compare_directories_view` opens: `pair_new_files` (ui/dirdiff.rs:414) pairs one marked left-only and one marked right-only file."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.EnableEqual",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.EnableEqual (Show Equal Files) = key `1` in the directory diff view `compare_directories_view` opens: toggles `filter.equal` (ui/dirdiff.rs:429)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.EnableNotEqual",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.EnableNotEqual (Show Different Files) = key `2` in the directory diff view `compare_directories_view` opens: toggles `filter.different` (ui/dirdiff.rs:430)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.EnableLeft",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.EnableLeft (Show Left-Only Files) = key `3` in the directory diff view `compare_directories_view` opens: toggles `filter.left` (ui/dirdiff.rs:431)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.EnableRight",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.EnableRight (Show Right-Only Files) = key `4` in the directory diff view `compare_directories_view` opens: toggles `filter.right` (ui/dirdiff.rs:432)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.Exclude",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.Exclude (Exclude from Synchronization) = key `x` in the directory diff view `compare_directories_view` opens: `exclude` (ui/dirdiff.rs:413) removes the selected or marked rows."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.MirrorToLeft",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.MirrorToLeft (Mirror to Left) = key `L` in the directory diff view `compare_directories_view` opens: `mirror_op(status, false)` (ui/dirdiff.rs:411) makes the left side match the right: copy left, delete left-only."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.MirrorToRight",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.MirrorToRight (Mirror to Right) = key `R` in the directory diff view `compare_directories_view` opens: `mirror_op(status, true)` (ui/dirdiff.rs:412) makes the right side match the left."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.SetCopyToLeft",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.SetCopyToLeft (Copy to Left) = key `<` in the directory diff view `compare_directories_view` opens: sets the row operation to CopyToLeft (ui/dirdiff.rs:407)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.SetCopyToRight",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.SetCopyToRight (Copy to Right) = key `>` in the directory diff view `compare_directories_view` opens: sets the row operation to CopyToRight (ui/dirdiff.rs:406)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.SetDefault",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.SetDefault (Set Default Operation) = key `=` in the directory diff view `compare_directories_view` opens: `default_op` (ui/dirdiff.rs:410)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.SetDelete",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.SetDelete (Delete) = key `D` in the directory diff view `compare_directories_view` opens: sets the row operation to Delete (ui/dirdiff.rs:408)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.SetNoOperation",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.SetNoOperation (No Operation) = key `-` in the directory diff view `compare_directories_view` opens: sets the row operation to None (ui/dirdiff.rs:409)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.SynchronizeDiff",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.SynchronizeDiff (Synchronize Selected) = key `s` in the directory diff view `compare_directories_view` opens: `synchronize_asking` over the selected and marked rows (ui/dirdiff.rs:420)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.SynchronizeDiff.All",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.SynchronizeDiff.All (Synchronize All) = key `S` in the directory diff view `compare_directories_view` opens: `synchronize_asking` over every shown row (ui/dirdiff.rs:421)."
+ },
+ {
+  "spec_id": "jetbrains-actions.DirDiffMenu.WarnOnDeletion",
+  "status": "ported",
+  "evidence": [
+   "static:compare_directories_view"
+  ],
+  "note": "DirDiffMenu.WarnOnDeletion (Warn on Deletion) = key `W` in the directory diff view `compare_directories_view` opens: toggles `warn_on_delete` (ui/dirdiff.rs:422)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ShowStandaloneDiff",
+  "status": "ported",
+  "evidence": [
+   "static:git_diff_in_new_tab"
+  ],
+  "note": "Diff.ShowStandaloneDiff (Show Diff in a New Tab) = zmax `git_diff_in_new_tab`: this file against HEAD in a tab of its own, editable and diffed live."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.ShowDiffInEditorTab",
+  "status": "ported",
+  "evidence": [
+   "static:git_diff_in_new_tab"
+  ],
+  "note": "Vcs.Diff.ShowDiffInEditorTab = zmax `git_diff_in_new_tab`: the diff opens as an editor tab rather than the modal view."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.ShowDiffInNewWindow",
+  "status": "partial",
+  "evidence": [
+   "static:git_diff_in_new_tab"
+  ],
+  "note": "Vcs.Diff.ShowDiffInNewWindow = zmax `git_diff_in_new_tab`; a terminal editor has one window, so the diff opens in a tab, not a separate OS window."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.Vcs.ShowStandaloneDiff.window",
+  "status": "partial",
+  "evidence": [
+   "static:git_diff_in_new_tab"
+  ],
+  "note": "Frontend.Vcs.ShowStandaloneDiff.window = zmax `git_diff_in_new_tab`; opens a tab, not a separate OS window."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.NextChange",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_change"
+  ],
+  "note": "Diff.NextChange = zmax `goto_next_change`: next changed hunk in the diffed buffer, which git_diff_in_new_tab keeps live."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.PrevChange",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_change"
+  ],
+  "note": "Diff.PrevChange = zmax `goto_prev_change`: previous changed hunk in the diffed buffer."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.OpenInEditor",
+  "status": "partial",
+  "evidence": [
+   "static:diffmode"
+  ],
+  "note": "Diff.OpenInEditor = `Enter`/`o` in the diff viewer `diffmode` opens the source file at the hunk (ui/diffmode.rs:376, goto_source); a viewer key, not a standalone command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.OpenDiffInEditor",
+  "status": "partial",
+  "evidence": [
+   "static:git_diff_in_new_tab"
+  ],
+  "note": "Diff.OpenDiffInEditor = zmax `git_diff_in_new_tab`: moves the diff into an editor tab; there is no command that converts an open modal diff in place."
  }
 ]
