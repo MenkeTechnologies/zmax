@@ -141,7 +141,7 @@ versioned C ABI (the [`zmax-native`](zmax-native) SDK crate) and can read/edit t
 buffer, run command lines, and post status messages through the host API. Manage
 loaded plugins with `:zmax-native load|unload|list`. See
 [`zmax-native/README.md`](zmax-native/README.md) and the buildable examples in
-[`zmax-native/examples`](zmax-native/examples) (hello, insert-date, buffer-stats,
+[`zmax-native/examples`](zmax-native/examples) (for example hello-plugin, insert-date, buffer-stats,
 trim-trailing, banner).
 
 ### Package manager
@@ -205,7 +205,7 @@ leaving the editor:
   `$GITHUB_TOKEN`.
 - **Org-mode** — outline folding, `TODO` state cycling, capture, and a
   date-aware agenda.
-- **Transform library** — 200+ selection-transform `:` commands: JSON/CSV/TOML
+- **Transform library** — selection-transform `:` commands: JSON/CSV/TOML
   reshaping, number/stats ops, identifier-case conversion, encoders
   (Base32/Caesar/Morse/CRC32/rot47), extraction (URLs/emails/numbers),
   Markdown/typography, line ops (`:align`/`:reflow`/`:dedup`/`:sort-by-field`),

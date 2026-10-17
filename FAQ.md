@@ -61,7 +61,7 @@ interpreter is spawned.
 ## What's built in?
 
 Snippet library (`:snippets`), hex editor (`:hex`), diff/merge (`:diff`/`:merge`),
-a magit-style git UI, org-mode, a 200+ command selection-transform library,
+a magit-style git UI, org-mode, a selection-transform command library,
 an IDE workbench (`:ide` / `F2`), an integrated terminal (`:terminal`), the Help
 browser, a startify-style start screen, and Wildfire expand-selection (`<ret>`).
 
