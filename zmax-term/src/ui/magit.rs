@@ -2797,12 +2797,9 @@ impl MagitLog {
     fn new(repo_dir: PathBuf) -> Self {
         let out = git_output(&repo_dir, &["log", "--oneline", "--decorate", "-n", "200"])
             .unwrap_or_default();
-        let parents = git_output(
-            &repo_dir,
-            &["log", "--format=%h %p", "-n", "200"],
-        )
-        .map(|out| parse_parents(&out))
-        .unwrap_or_default();
+        let parents = git_output(&repo_dir, &["log", "--format=%h %p", "-n", "200"])
+            .map(|out| parse_parents(&out))
+            .unwrap_or_default();
         MagitLog {
             repo_dir,
             entries: parse_log(&out),
@@ -2840,11 +2837,9 @@ impl MagitLog {
         let Some(sha) = self.entries.get(self.selected).map(|e| e.sha.clone()) else {
             return String::new();
         };
-        let child = self.entries[..self.selected].iter().rposition(|e| {
-            self.parents
-                .get(&e.sha)
-                .is_some_and(|p| p.contains(&sha))
-        });
+        let child = self.entries[..self.selected]
+            .iter()
+            .rposition(|e| self.parents.get(&e.sha).is_some_and(|p| p.contains(&sha)));
         match child {
             Some(i) => {
                 self.selected = i;
@@ -3126,7 +3121,11 @@ impl Component for MagitLog {
                 self.compact_refs = !self.compact_refs;
                 cx.editor.set_status(format!(
                     "log references: {}",
-                    if self.compact_refs { "first only" } else { "all" }
+                    if self.compact_refs {
+                        "first only"
+                    } else {
+                        "all"
+                    }
                 ));
             }
             // `log-view-toggle-entry-display`: short form <-> full entry.
@@ -6112,8 +6111,14 @@ MM both.rs
             "(HEAD -> main, origin/main) release"
         );
         assert_eq!(shape_decoration(s, true, true), "(HEAD -> main) release");
-        assert_eq!(shape_decoration("(tag: v1) release", false, false), "release");
-        assert_eq!(shape_decoration("plain subject", false, true), "plain subject");
+        assert_eq!(
+            shape_decoration("(tag: v1) release", false, false),
+            "release"
+        );
+        assert_eq!(
+            shape_decoration("plain subject", false, true),
+            "plain subject"
+        );
         assert_eq!(shape_decoration("(unclosed", false, true), "(unclosed");
     }
 

@@ -54130,7 +54130,9 @@ fn terminal_copy_all(cx: &mut Context) {
         let text = panel.history_lines().join("\n");
         let lines = text.lines().count();
         match cx.editor.registers.write('+', vec![text]) {
-            Ok(()) => cx.editor.set_status(format!("copied {lines} terminal lines")),
+            Ok(()) => cx
+                .editor
+                .set_status(format!("copied {lines} terminal lines")),
             Err(e) => cx.editor.set_error(e.to_string()),
         }
     });

@@ -19,6 +19,13 @@ pub fn current_working_dir() -> PathBuf {
         return path.clone();
     }
 
+    // Recheck under the write lock: a concurrent `set_current_working_dir` between the read above
+    // and here must not be overwritten with the stale process cwd computed below.
+    let mut cached = CWD.write().unwrap();
+    if let Some(path) = &*cached {
+        return path.clone();
+    }
+
     // implementation of crossplatform pwd -L
     // we want pwd -L so that symlinked directories are handled correctly
     let mut cwd = std::env::current_dir().expect("Couldn't determine current working directory");
@@ -32,8 +39,7 @@ pub fn current_working_dir() -> PathBuf {
             cwd = pwd;
         }
     }
-    let mut dst = CWD.write().unwrap();
-    *dst = Some(cwd.clone());
+    *cached = Some(cwd.clone());
 
     cwd
 }
