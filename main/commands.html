@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-4202191f.js";
+            window.path_to_searchindex_js = "searchindex-f45d576e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2533,6 +2533,7 @@
 <tr><td><code>toggle_ai_autocomplete</code></td><td>Toggle real-time AI ghost-text autocomplete (SPC a g)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;ag</code>, select: <code>&lt;space&gt;ag</code></td></tr>
 <tr><td><code>ghost_text_accept</code></td><td>Accept the AI ghost-text suggestion, else Tab (insert mode)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;tab&gt;</code></td></tr>
 <tr><td><code>ghost_text_accept_word</code></td><td>Accept the next word of the AI ghost-text suggestion (partial accept)</td><td><strong>spacemacs, vim</strong> — insert: <code>&lt;A-right&gt;</code></td></tr>
+<tr><td><code>ghost_text_accept_line</code></td><td>Accept the AI ghost-text suggestion up to its next line break (JetBrains Insert Next Line of Inline Completion)</td><td></td></tr>
 <tr><td><code>ai_revert_agent</code></td><td>Revert the workspace to the last agent checkpoint (SPC a z)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;az</code>, select: <code>&lt;space&gt;az</code></td></tr>
 <tr><td><code>ai_fix</code></td><td>AI-fix the diagnostic(s) on the current line (SPC a F)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;aF</code>, select: <code>&lt;space&gt;aF</code></td></tr>
 <tr><td><code>describe_diagnostics_checker</code></td><td>Describe the buffer’s checkers/language servers (SPC e h)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;eh</code>, select: <code>&lt;space&gt;eh</code></td></tr>
@@ -3134,6 +3135,8 @@
 <tr><td><code>github_copy_branch_pr_url</code></td><td>Yank the URL of the current branch’s pull request (JetBrains Copy Pull Request URL)</td><td></td></tr>
 <tr><td><code>github_show_pull_request</code></td><td>Show a pull request’s details by number (JetBrains Github.PullRequest.Show)</td><td></td></tr>
 <tr><td><code>github_submit_review</code></td><td>Approve, comment on or request changes to the current branch’s pull request (JetBrains Github.PullRequest.Review.Submit)</td><td></td></tr>
+<tr><td><code>github_next_review_comment</code></td><td>Jump to the next review comment on the current branch’s pull request (JetBrains CodeReview.NextComment)</td><td></td></tr>
+<tr><td><code>github_previous_review_comment</code></td><td>Jump to the previous review comment on the current branch’s pull request (JetBrains CodeReview.PreviousComment)</td><td></td></tr>
 <tr><td><code>github_share</code></td><td>Create a GitHub repository for the project and push to it (JetBrains Share Project on GitHub)</td><td></td></tr>
 <tr><td><code>github_sync_fork</code></td><td>Rebase the current branch onto the fork’s parent (JetBrains Sync Fork)</td><td></td></tr>
 <tr><td><code>git_push</code></td><td>Push the current branch to its remote (SPC g P)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, insert: <code>&lt;C-x&gt;vP</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code></td></tr>
@@ -3807,6 +3810,7 @@
 <tr><td><code>toggle_inline_blame</code></td><td>Toggle GitLens-style inline blame on the current line</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gI</code>, select: <code>&lt;space&gt;gI</code></td></tr>
 <tr><td><code>toggle_blame_annotate</code></td><td>Toggle the git-blame annotate gutter column (SPC g B)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gB</code>, select: <code>&lt;space&gt;gB</code></td></tr>
 <tr><td><code>git_branch_picker</code></td><td>Pick a git branch and check it out</td><td></td></tr>
+<tr><td><code>git_branches_toggle_tags</code></td><td>Toggle tags in the git branch picker (JetBrains Show Tags)</td><td></td></tr>
 <tr><td><code>preferences</code></td><td>Open the unified Preferences window</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;,</code>, select: <code>&lt;space&gt;,</code></td></tr>
 <tr><td><code>set_selective_display</code></td><td>Hide lines indented past the prefix-arg column; no arg turns it off (emacs set-selective-display, C-x $)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;$</code>, select: <code>&lt;C-x&gt;$</code>, insert: <code>&lt;C-x&gt;$</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;$</code>, select: <code>&lt;C-x&gt;$</code></td></tr>
 <tr><td><code>global_whitespace_toggle_options</code></td><td>Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options)</td><td></td></tr>
