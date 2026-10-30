@@ -1386,6 +1386,8 @@ impl MappableCommand {
         git_merge_branch, "Merge a picked branch into the current one (JetBrains Merge)",
         git_rebase_onto, "Rebase the current branch onto a picked one (JetBrains Rebase)",
         git_checkout_and_update, "Check out a picked branch and fast-forward it from upstream (JetBrains Checkout and Update)",
+        git_update_force_pushed, "Rebase the current branch onto a force-pushed upstream, replaying only local commits (JetBrains Update Force-Pushed Branch)",
+        git_recent_branches, "Pick a recently checked-out branch to check out (JetBrains Show Recent Branches)",
         git_rename_branch, "Rename a picked local branch (JetBrains Git.Rename.Local.Branch)",
         git_reset_head, "Reset HEAD to a commit, soft, mixed, hard or keep (JetBrains Reset HEAD)",
         git_push_tag, "Push a picked tag to the current branch's remote (JetBrains Git.Tag.Push)",
@@ -1832,6 +1834,8 @@ impl MappableCommand {
         vsplit, "Vertical right split",
         split_right_and_move, "Split right and move this buffer into it, leaving the old group behind (JetBrains Split and Move Right)",
         split_down_and_move, "Split down and move this buffer into it, leaving the old group behind (JetBrains Split and Move Down)",
+        split_left_and_move, "Split left and move this buffer into it, leaving the old group behind (JetBrains Split Left)",
+        split_up_and_move, "Split up and move this buffer into it, leaving the old group behind (JetBrains Split Top)",
         vsplit_new, "Vertical right split scratch buffer",
         wclose, "Close window",
         wonly, "Close windows except current",
@@ -1840,6 +1844,7 @@ impl MappableCommand {
         view_register, "Show a register's contents (emacs view-register, C-x r v)",
         not_modified, "Mark the buffer unmodified without saving (emacs not-modified, M-~)",
         mark_buffer_dirty, "Mark the buffer modified without changing its text (JetBrains Mark File Dirty)",
+        reformat_commit_message, "Blank line after the subject, body wrapped at 72 columns (JetBrains Reformat Commit Message)",
         insert_char_by_code, "Insert a character by Unicode code point (emacs insert-char, C-x 8 RET)",
         backward_delete_char_untabify, "Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify)",
         insert_last_inserted_text, "Insert the previously inserted text (vim i_CTRL-A)",
@@ -2112,6 +2117,8 @@ impl MappableCommand {
         sort_tree_by_time_newest, "Order the project tree by modification time, newest first (JetBrains Sort by Modification Time)",
         compare_directories_view, "Compare two directory trees file by file and synchronize them (JetBrains Compare Directories)",
         blank_diff_window, "Two empty buffers side by side, diffed as you type or paste (JetBrains Open Blank Diff Window)",
+        diff_focus_opposite_pane, "Move focus to the other side of a live diff (JetBrains Focus Opposite Pane)",
+        diff_focus_opposite_pane_and_scroll, "Move to the other side of a live diff, onto the matching line (JetBrains Focus Opposite Pane and Scroll)",
         blank_diff_toggle_three_side, "Add a third side to the blank diff window, or take it away (JetBrains Toggle Three-Side Mode)",
         blank_diff_open_blank, "Empty this side of the blank diff window (JetBrains Open Blank Editor)",
         blank_diff_open_file, "Show a file on this side of the blank diff window (JetBrains Open File)",
@@ -20979,6 +20986,90 @@ fn mark_buffer_dirty(cx: &mut Context) {
     let (_view, doc) = current!(cx.editor);
     doc.set_modified(true);
     cx.editor.set_status("Buffer marked modified");
+}
+
+/// The body width JetBrains' commit message checks hold to (Version Control >
+/// Commit > "Limit body line" defaults to 72).
+const COMMIT_BODY_WIDTH: usize = 72;
+
+/// JetBrains "Reformat Commit Message" (`Vcs.ReformatCommitMessage`): apply the
+/// commit message checks' fixes to the buffer — a blank line between subject
+/// and body, and body lines wrapped at [`COMMIT_BODY_WIDTH`].
+fn reformat_commit_message(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().to_string();
+    let formatted = reformat_commit_message_text(&text, COMMIT_BODY_WIDTH);
+    if formatted == text {
+        cx.editor.set_status("Commit message already formatted");
+        return;
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        [(0, doc.text().len_chars(), Some(formatted.into()))].into_iter(),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Subject, blank line, then the body with each over-long line wrapped.
+/// `#` comment lines are git's and are left as they are, short lines are
+/// never joined. Unit tested.
+fn reformat_commit_message_text(text: &str, width: usize) -> String {
+    let mut lines = text.lines();
+    let Some(subject) = lines.next() else {
+        return text.to_string();
+    };
+    let mut out = subject.trim_end().to_string();
+    out.push('\n');
+    let body: Vec<&str> = lines.collect();
+    if body.first().is_some_and(|l| !l.trim().is_empty()) {
+        out.push('\n');
+    }
+    for line in body {
+        let line = line.trim_end();
+        if line.starts_with('#') || line.chars().count() <= width {
+            out.push_str(line);
+            out.push('\n');
+        } else {
+            out.push_str(zmax_core::wrap::reflow_hard_wrap(line, width).trim_end());
+            out.push('\n');
+        }
+    }
+    if !text.ends_with('\n') {
+        out.pop();
+    }
+    out
+}
+
+#[cfg(test)]
+mod reformat_commit_message_tests {
+    use super::reformat_commit_message_text as fmt;
+
+    #[test]
+    fn body_is_separated_from_the_subject() {
+        assert_eq!("fix: x\n\nbody\n", fmt("fix: x\nbody\n", 72));
+        assert_eq!("fix: x\n\nbody\n", fmt("fix: x\n\nbody\n", 72));
+    }
+
+    #[test]
+    fn long_body_lines_wrap_and_short_ones_stay() {
+        let long = "word ".repeat(20);
+        let out = fmt(&format!("s\n\nshort\n{long}\n# {long}\n"), 30);
+        let lines: Vec<&str> = out.lines().collect();
+        assert_eq!(&["s", "", "short"], &lines[..3]);
+        assert!(lines[3..lines.len() - 1].iter().all(|l| l.len() <= 30));
+        assert!(
+            lines.last().unwrap().starts_with("# word"),
+            "comments untouched"
+        );
+        assert_eq!(long.trim_end(), lines[3..lines.len() - 1].join(" "));
+    }
+
+    #[test]
+    fn a_subject_alone_is_kept_with_its_trailing_newline_state() {
+        assert_eq!("subject", fmt("subject  ", 72));
+        assert_eq!("subject\n", fmt("subject\n", 72));
+    }
 }
 
 /// Completion over the listed Unicode names — emacs's `ucs-names`. The
@@ -48080,6 +48171,38 @@ fn split_down_and_move(cx: &mut Context) {
     split_and_move(cx, Action::HorizontalSplit);
 }
 
+/// JetBrains split chooser "Split Left" (`SplitChooser.SplitLeft`): move this
+/// file into a new split on the left.
+fn split_left_and_move(cx: &mut Context) {
+    split_and_move_before(cx, Action::VerticalSplit, tree::Direction::Left);
+}
+
+/// JetBrains split chooser "Split Top" (`SplitChooser.SplitTop`): move this
+/// file into a new split above.
+fn split_up_and_move(cx: &mut Context) {
+    split_and_move_before(cx, Action::HorizontalSplit, tree::Direction::Up);
+}
+
+/// [`split_and_move`], with the new split placed left of / above the old one
+/// whatever `split-right`/`split-below` say: when the split lands after the
+/// old view, the two swap places.
+fn split_and_move_before(cx: &mut Context, action: Action, before: tree::Direction) {
+    let origin = view!(cx.editor).id;
+    split_and_move(cx, action);
+    let focus = cx.editor.tree.focus;
+    let (old, new) = (
+        cx.editor.tree.get(origin).area,
+        cx.editor.tree.get(focus).area,
+    );
+    let landed_after = match before {
+        tree::Direction::Left => new.x > old.x,
+        _ => new.y > old.y,
+    };
+    if landed_after {
+        cx.editor.tree.swap_split_in_direction(before);
+    }
+}
+
 /// SPC b N i : clone the current buffer into a new split. zmax views share their underlying
 /// Document — text and edits propagate between them — so a second view of the same buffer is
 /// functionally an Emacs indirect buffer of the same base. Spacemacs `make-indirect-buffer`.
@@ -55983,6 +56106,138 @@ fn blank_diff_window(cx: &mut Context) {
     crate::live_diff::link(cx.editor, vec![left, right]);
     cx.editor
         .set_status("blank diff: paste or type into both sides");
+}
+
+/// JetBrains "Focus Opposite Pane" (`Diff.FocusOppositePane`): move focus to
+/// the other side of a live diff (blank diff window, diff in a new tab).
+fn diff_focus_opposite_pane(cx: &mut Context) {
+    diff_focus_opposite(cx, false);
+}
+
+/// JetBrains "Focus Opposite Pane and Scroll" (`Diff.FocusOppositePaneAndScroll`):
+/// move to the other side, onto the line matching the caret's line there.
+fn diff_focus_opposite_pane_and_scroll(cx: &mut Context) {
+    diff_focus_opposite(cx, true);
+}
+
+/// Side `i` of an `n`-sided diff faces its mirror (left and right swap); the
+/// middle of a three-sided diff faces the side it is diffed against.
+fn opposite_side(i: usize, n: usize) -> usize {
+    let mirror = n - 1 - i;
+    if mirror != i {
+        mirror
+    } else if i == 0 {
+        1
+    } else {
+        i - 1
+    }
+}
+
+/// The line of a diff base matching `line` of the document, given the hunks
+/// taking the base to the document. A line inside a change lands on the
+/// matching line of what it replaced, or on the line after it when the base
+/// side of the change is shorter.
+fn line_in_diff_base(hunks: impl IntoIterator<Item = Hunk>, line: u32) -> u32 {
+    let mut shift: i64 = 0;
+    for hunk in hunks {
+        if line < hunk.after.start {
+            break;
+        }
+        if line < hunk.after.end {
+            let into = line - hunk.after.start;
+            return hunk.before.start + into.min(hunk.before.len().saturating_sub(1) as u32);
+        }
+        shift = hunk.before.end as i64 - hunk.after.end as i64;
+    }
+    (line as i64 + shift).max(0) as u32
+}
+
+#[cfg(test)]
+mod diff_opposite_tests {
+    use super::{line_in_diff_base, opposite_side};
+    use zmax_vcs::Hunk;
+
+    #[test]
+    fn sides_face_their_mirror() {
+        assert_eq!(1, opposite_side(0, 2));
+        assert_eq!(0, opposite_side(1, 2));
+        assert_eq!(2, opposite_side(0, 3));
+        assert_eq!(0, opposite_side(2, 3));
+        assert_eq!(
+            0,
+            opposite_side(1, 3),
+            "middle faces the side it diffs against"
+        );
+    }
+
+    #[test]
+    fn lines_shift_past_changes_and_land_inside_them() {
+        // base 0..10; the document inserts 3 lines at 2 and replaces base 6..8
+        // (2 lines) with one line at document line 9.
+        let hunks = || {
+            [
+                Hunk {
+                    before: 2..2,
+                    after: 2..5,
+                },
+                Hunk {
+                    before: 6..8,
+                    after: 9..10,
+                },
+            ]
+        };
+        assert_eq!(1, line_in_diff_base(hunks(), 1));
+        assert_eq!(2, line_in_diff_base(hunks(), 3), "inside a pure insertion");
+        assert_eq!(3, line_in_diff_base(hunks(), 6));
+        assert_eq!(6, line_in_diff_base(hunks(), 9), "inside a replacement");
+        assert_eq!(8, line_in_diff_base(hunks(), 10), "past both changes");
+    }
+}
+
+fn diff_focus_opposite(cx: &mut Context, scroll: bool) {
+    let doc_id = doc!(cx.editor).id();
+    let Some(group) = crate::live_diff::group_of(doc_id) else {
+        cx.editor.set_error("not in a diff window");
+        return;
+    };
+    let Some(i) = group.iter().position(|d| *d == doc_id) else {
+        return;
+    };
+    let target = group[opposite_side(i, group.len())];
+    let Some(target_view) = cx
+        .editor
+        .tree
+        .views()
+        .find(|(v, _)| v.doc == target)
+        .map(|(v, _)| v.id)
+    else {
+        cx.editor.set_error("the opposite side is not shown");
+        return;
+    };
+    // The document's own diff base is the side it is diffed against, so its
+    // hunks map its lines there; any other side has the line number as is.
+    let line = scroll.then(|| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let line = text.char_to_line(doc.selection(view.id).primary().cursor(text)) as u32;
+        let against_target = group[crate::live_diff::partner_index(i)] == target;
+        match doc.diff_handle().filter(|_| against_target) {
+            Some(handle) => {
+                let diff = handle.load();
+                line_in_diff_base((0..diff.len()).map(|n| diff.nth_hunk(n)), line)
+            }
+            None => line,
+        }
+    });
+    cx.editor.focus(target_view);
+    if let Some(line) = line {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let line = (line as usize).min(text.len_lines().saturating_sub(1));
+        let pos = text.line_to_char(line);
+        doc.set_selection(view.id, Selection::point(pos));
+        align_view(doc, view, Align::Center);
+    }
 }
 
 /// JetBrains "Toggle Three-Side Mode" in the blank diff window
@@ -76103,6 +76358,78 @@ fn git_checkout_and_update(cx: &mut Context) {
             );
         },
     );
+}
+
+/// JetBrains "Update Force-Pushed Branch" (`git.update.force.pushed.branch`):
+/// bring the current branch up to an upstream that was rewritten. `pull
+/// --rebase` replays only the local commits: the fork point comes from the
+/// upstream's reflog, so commits the force-push dropped are not replayed.
+fn git_update_force_pushed(cx: &mut Context) {
+    git_async_args(
+        cx,
+        "updating from force-pushed upstream…",
+        &["pull", "--rebase"],
+        "updated",
+        true,
+    )
+}
+
+/// JetBrains "Show Recent Branches" in the branches popup
+/// (`git.branches.show.recent`): the local branches checked out lately, most
+/// recent first; pick one to check it out.
+fn git_recent_branches(cx: &mut Context) {
+    let reflog = git_exec(&["reflog", "--format=%gs"]).unwrap_or_default();
+    let existing = git_branch_names();
+    let branches: Vec<String> = recent_checkouts(&reflog)
+        .into_iter()
+        .filter(|b| existing.contains(b))
+        .collect();
+    git_pick(
+        cx,
+        "recent branch",
+        branches,
+        "No recently checked-out branches",
+        |cx, branch| match git_exec(&["checkout", branch]) {
+            Ok(_) => {
+                crate::commands::typed::reload_open_docs(cx);
+                cx.editor.set_status(format!("Switched to branch {branch}"));
+            }
+            Err(e) => cx.editor.set_error(format!(
+                "git checkout {branch}: {}",
+                e.lines().next().unwrap_or("failed")
+            )),
+        },
+    );
+}
+
+/// The branches `checkout: moving from A to B` reflog subjects moved to,
+/// newest first, each once. Unit tested.
+fn recent_checkouts(reflog: &str) -> Vec<String> {
+    let mut seen = Vec::new();
+    for subject in reflog.lines() {
+        let Some(rest) = subject.strip_prefix("checkout: moving from ") else {
+            continue;
+        };
+        if let Some((_, to)) = rest.rsplit_once(" to ") {
+            if !seen.iter().any(|b: &String| b == to) {
+                seen.push(to.to_string());
+            }
+        }
+    }
+    seen
+}
+
+#[cfg(test)]
+mod recent_checkouts_tests {
+    #[test]
+    fn newest_first_once_each() {
+        let reflog = "commit: x\n\
+                      checkout: moving from main to feat\n\
+                      checkout: moving from feat to main\n\
+                      reset: moving to HEAD\n\
+                      checkout: moving from dev to feat\n";
+        assert_eq!(vec!["feat", "main"], super::recent_checkouts(reflog));
+    }
 }
 
 /// JetBrains `Git.Rename.Local.Branch`: rename a picked local branch.

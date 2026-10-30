@@ -30,6 +30,11 @@ fn partner(i: usize) -> usize {
     }
 }
 
+/// The index of the buffer the `i`th buffer of a group is diffed against.
+pub fn partner_index(i: usize) -> usize {
+    partner(i)
+}
+
 /// Diff `docs` against each other from now on. A buffer already in a group
 /// leaves it.
 pub fn link(editor: &mut Editor, docs: Vec<DocumentId>) {

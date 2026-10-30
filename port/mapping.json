@@ -87987,5 +87987,69 @@
    "typable:magit"
   ],
   "note": "Vcs.Log.AlignLabels = `:magit` log view: references already sit before the commit message; there is no toggle to move them after it."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowBlankDiffWindow",
+  "status": "ported",
+  "evidence": [
+   "static:blank_diff_window"
+  ],
+  "note": "ShowBlankDiffWindow (Open Blank Diff Window) = zmax `blank_diff_window`: two empty buffers side by side, linked by live_diff so each is diffed against the other as you type or paste."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.SplitLeft",
+  "status": "partial",
+  "evidence": [
+   "static:split_left_and_move"
+  ],
+  "note": "SplitChooser.SplitLeft moves this file into a new split on the left (`split_left_and_move`, placed left whatever split-right says); no interactive drop-zone chooser."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.SplitTop",
+  "status": "partial",
+  "evidence": [
+   "static:split_up_and_move"
+  ],
+  "note": "SplitChooser.SplitTop moves this file into a new split above (`split_up_and_move`, placed above whatever split-below says); no interactive drop-zone chooser."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.FocusOppositePane",
+  "status": "partial",
+  "evidence": [
+   "static:diff_focus_opposite_pane"
+  ],
+  "note": "Diff.FocusOppositePane = zmax `diff_focus_opposite_pane`: focus moves to the other side of a live diff (blank diff window, diff in a new tab); left and right swap, the middle of three sides goes to the side it diffs against. The read-only ediff popup keeps both sides in one view and is not covered."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.FocusOppositePaneAndScroll",
+  "status": "partial",
+  "evidence": [
+   "static:diff_focus_opposite_pane_and_scroll"
+  ],
+  "note": "Diff.FocusOppositePaneAndScroll = zmax `diff_focus_opposite_pane_and_scroll`: as Focus Opposite Pane, landing on the matching line, which the document's diff hunks map when the opposite side is its diff base (the same line number otherwise). Live diffs only."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.ReformatCommitMessage",
+  "status": "ported",
+  "evidence": [
+   "static:reformat_commit_message"
+  ],
+  "note": "Vcs.ReformatCommitMessage = zmax `reformat_commit_message`: applies the commit-message checks' fixes, a blank line after the subject and body lines wrapped at 72 (the IDE's default limit); # comment lines untouched, short lines not joined."
+ },
+ {
+  "spec_id": "jetbrains-actions.git.update.force.pushed.branch",
+  "status": "ported",
+  "evidence": [
+   "static:git_update_force_pushed"
+  ],
+  "note": "git.update.force.pushed.branch = zmax `git_update_force_pushed`: `git pull --rebase`, whose fork point comes from the upstream reflog, so only local commits are replayed onto the rewritten upstream."
+ },
+ {
+  "spec_id": "jetbrains-actions.git.branches.show.recent",
+  "status": "partial",
+  "evidence": [
+   "static:git_recent_branches"
+  ],
+  "note": "git.branches.show.recent: zmax `git_recent_branches` lists the local branches checked out lately (reflog `checkout: moving from A to B`), newest first, and checks out the pick; a separate picker, not a toggle inside the branches popup."
  }
 ]
