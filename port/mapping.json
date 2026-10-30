@@ -88051,5 +88051,93 @@
    "static:git_recent_branches"
   ],
   "note": "git.branches.show.recent: zmax `git_recent_branches` lists the local branches checked out lately (reflog `checkout: moving from A to B`), newest first, and checks out the pick; a separate picker, not a toggle inside the branches popup."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.GoToRef",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.GoToRef = `:magit` log view `/`: prompts for a hash, branch or tag, resolves it with `git rev-parse --verify <rev>^{commit}` and selects that commit when it is among the 200 listed (MagitLog::select_ref, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.PreferCommitDate",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.PreferCommitDate = `:magit` log view `D`: the long form of a commit (Tab) shows the committer date instead of the author date; the one-line rows carry no date column to switch."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.SelectInLog",
+  "status": "partial",
+  "evidence": [
+   "static:select_in_git_log"
+  ],
+  "note": "Vcs.Log.SelectInLog = zmax `select_in_git_log`: blames the caret line and opens the :magit log view with that commit selected; the log lists the last 200 commits, so an older commit reports it is not listed."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.PasteFromHistory",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_paste_from_history"
+  ],
+  "note": "Terminal.PasteFromHistory = zmax `terminal_paste_from_history`: picks a kill-ring entry (the clipboard history zmax's Paste from History uses) and pastes it into the terminal panel."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectNextSibling",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectNextSibling = zmax project tree `J` after `focus_file_tree`: the next row at the same depth under the same parent, skipping expanded children (FileTree::sibling, ui/file_tree.rs); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectPreviousSibling",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectPreviousSibling = zmax project tree `K` after `focus_file_tree` (FileTree::sibling, ui/file_tree.rs); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-selectParentNoCollapse",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-selectParentNoCollapse = zmax project tree `p` after `focus_file_tree`: selects the parent directory and leaves an expanded directory open (`h` collapses first); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-scrollDownChangeSelection",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-scrollDownChangeSelection = zmax project tree PageDown after `focus_file_tree`: scrolls a page (the rows last drawn) and moves the selection with it; a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-scrollUpChangeSelection",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Tree-scrollUpChangeSelection = zmax project tree PageUp after `focus_file_tree`: scrolls a page up and moves the selection with it; a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.KeepTabOpen",
+  "status": "ported",
+  "evidence": [
+   "static:keep_preview_tab"
+  ],
+  "note": "KeepTabOpen = zmax `keep_preview_tab`: when the current buffer is the preview buffer (opened from the project tree, Bookmarks or Problems with their preview option on), it becomes an ordinary buffer, so the next preview opens beside it instead of replacing it."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.OpenInPreviewTab",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_toggle_preview_tab"
+  ],
+  "note": "ProjectView.OpenInPreviewTab = zmax `project_tree_toggle_preview_tab`: while on, files opened from the project tree (keyboard or click) reuse one preview buffer, closed when the next opens unless it was edited, is shown elsewhere or was open before."
  }
 ]

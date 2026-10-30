@@ -1160,6 +1160,8 @@ impl MappableCommand {
         toggle_bookmarks_autoscroll_from_source, "Make the Bookmarks tool window select the bookmark under the cursor (JetBrains Always Select Opened Element)",
         toggle_bookmarks_autoscroll_to_source, "Open bookmarks as the Bookmarks tool window selection moves (JetBrains Navigate with Single Click)",
         toggle_bookmarks_preview_tab, "Open bookmarks from the views in one reused buffer (JetBrains Enable Preview Tab)",
+        keep_preview_tab, "Make the preview buffer an ordinary one, so the next preview opens beside it (JetBrains Keep Tab Open)",
+        project_tree_toggle_preview_tab, "Open files from the project tree in one reused buffer until edited (JetBrains Enable Preview Tab)",
         bookmark_edit_description, "Set the description of the line's bookmark (JetBrains Edit Bookmark Description)",
         bookmark_move_up, "Move the line's bookmark up its list (JetBrains Move Up in Bookmarks)",
         bookmark_move_down, "Move the line's bookmark down its list (JetBrains Move Down in Bookmarks)",
@@ -2031,6 +2033,7 @@ impl MappableCommand {
         git_blame_line, "Show git blame for the current line (g b)",
         copy_branch_name, "Yank the current git branch name to the clipboard (JetBrains Copy Branch Name)",
         copy_revision_number, "Yank the commit that last touched this line to the clipboard (JetBrains Copy Revision Number)",
+        select_in_git_log, "Open the git log with the commit that last touched this line selected (JetBrains Select in Git Log)",
         toggle_inline_blame, "Toggle GitLens-style inline blame on the current line",
         toggle_blame_annotate, "Toggle the git-blame annotate gutter column (SPC g B)",
         git_branch_picker, "Pick a git branch and check it out",
@@ -3202,6 +3205,7 @@ impl MappableCommand {
         terminal_close_session, "End the terminal's shell and close its panel (JetBrains Close Session)",
         terminal_paste, "Paste the clipboard into the terminal (JetBrains Paste)",
         terminal_paste_selection, "Paste the primary selection into the terminal (JetBrains Paste From Selection Clipboard)",
+        terminal_paste_from_history, "Pick a kill-ring entry and paste it into the terminal (JetBrains Paste from History)",
         open_in_terminal, "Open a terminal in this file's directory (JetBrains Open in Terminal)",
         terminal_new_predefined_session, "Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session)",
         terminal_rename_session, "Name the terminal session in its title bar (JetBrains Rename Session)",
@@ -5600,6 +5604,56 @@ fn copy_revision_number(cx: &mut Context) {
             "no committed revision for this line (uncommitted, or not in a git repository)",
         ),
     }
+}
+
+/// JetBrains "Select in Git Log" (`Vcs.Log.SelectInLog`): open the log with the
+/// commit that last touched this line selected.
+fn select_in_git_log(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some(path) = doc.path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let text = doc.text().slice(..);
+    let line = text.char_to_line(doc.selection(view.id).primary().cursor(text)) + 1;
+    let Some(sha) = crate::blame::line_sha(&path, line) else {
+        cx.editor.set_error(
+            "no committed revision for this line (uncommitted, or not in a git repository)",
+        );
+        return;
+    };
+    let repo_dir = repo_dir_of_current_buffer(cx);
+    match crate::ui::magit::MagitLog::open_at(repo_dir, &sha) {
+        Ok(log) => cx.push_layer(Box::new(log)),
+        Err(e) => cx.editor.set_error(e),
+    }
+}
+
+/// JetBrains "Paste from History" in the terminal (`Terminal.PasteFromHistory`):
+/// pick a kill-ring entry and paste it at the terminal prompt.
+fn terminal_paste_from_history(cx: &mut Context) {
+    let entries = crate::emacs_kill::entries();
+    if entries.is_empty() {
+        cx.editor.set_error("Kill ring is empty");
+        return;
+    }
+    let columns = [ui::PickerColumn::new("paste", |e: &String, _: &()| {
+        e.replace('\n', "⏎").replace('\t', "⇥").into()
+    })];
+    let picker = Picker::new(columns, 0, entries, (), |cx, entry: &String, _action| {
+        let text = entry.clone();
+        cx.jobs.callback(async move {
+            let call: job::Callback =
+                Callback::EditorCompositor(Box::new(move |editor, compositor| {
+                    match compositor.find::<crate::ui::terminal::TerminalPanel>() {
+                        Some(panel) => panel.paste(&text),
+                        None => editor.set_error("term: no terminal panel"),
+                    }
+                }));
+            Ok(call)
+        });
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// The directory git commands about "this buffer" should run in: the buffer's
@@ -36626,17 +36680,61 @@ pub(crate) fn open_at(
             doc.set_selection(view.id, Selection::point(pos));
             align_view(doc, view, Align::Center);
             if preview {
-                if let Some(old) = previous.filter(|old| *old != id) {
-                    let shown = editor.tree.views().any(|(v, _)| v.doc == old);
-                    let modified = editor.document(old).is_some_and(|d| d.is_modified());
-                    if !shown && !modified {
-                        let _ = editor.close_document(old, false);
-                    }
-                }
-                *PREVIEW_TAB.lock().unwrap() = was_open.is_none().then_some(id);
+                become_preview(editor, previous, was_open, id);
             }
         }
         Err(e) => editor.set_error(format!("{}: {e}", path.display())),
+    }
+}
+
+/// `id` (just opened; `was_open` when it already was) takes the preview tab
+/// from `previous`, which is closed unless it is shown or was edited.
+fn become_preview(
+    editor: &mut Editor,
+    previous: Option<DocumentId>,
+    was_open: Option<DocumentId>,
+    id: DocumentId,
+) {
+    if let Some(old) = previous.filter(|old| *old != id) {
+        let shown = editor.tree.views().any(|(v, _)| v.doc == old);
+        let modified = editor.document(old).is_some_and(|d| d.is_modified());
+        if !shown && !modified {
+            let _ = editor.close_document(old, false);
+        }
+    }
+    *PREVIEW_TAB.lock().unwrap() = was_open.is_none().then_some(id);
+}
+
+/// Open `path` in the preview tab, keeping its position if it was open:
+/// the project tree's "Enable Preview Tab".
+pub(crate) fn open_preview(
+    editor: &mut Editor,
+    path: &Path,
+) -> Result<(), zmax_view::DocumentOpenError> {
+    let was_open = editor.document_by_path(path).map(|d| d.id());
+    let previous = PREVIEW_TAB.lock().unwrap().take();
+    match editor.open(path, Action::Replace) {
+        Ok(id) => {
+            become_preview(editor, previous, was_open, id);
+            Ok(())
+        }
+        Err(e) => {
+            *PREVIEW_TAB.lock().unwrap() = previous;
+            Err(e)
+        }
+    }
+}
+
+/// JetBrains "Keep Tab Open" (`KeepTabOpen`): the preview buffer becomes an
+/// ordinary one, so the next preview opens beside it instead of replacing it.
+fn keep_preview_tab(cx: &mut Context) {
+    let id = doc!(cx.editor).id();
+    let mut preview = PREVIEW_TAB.lock().unwrap();
+    if *preview == Some(id) {
+        *preview = None;
+        cx.editor.set_status("preview tab kept open");
+    } else {
+        cx.editor.set_status("not the preview tab");
     }
 }
 
@@ -57214,6 +57312,21 @@ fn project_tree_collapse_node(cx: &mut Context) {
 /// everything under it.
 fn project_tree_expand_recursively(cx: &mut Context) {
     project_tree_action(cx, "subtree expanded", |tree| tree.expand_recursively());
+}
+
+/// JetBrains "Enable Preview Tab" in the project tree
+/// (`ProjectView.OpenInPreviewTab`).
+fn project_tree_toggle_preview_tab(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let state = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_project_tree(|tree| tree.toggle_preview_tab()));
+        cx.editor.set_status(match state {
+            Some(true) => "project tree: preview tab on",
+            Some(false) => "project tree: preview tab off",
+            None => "no project tree",
+        });
+    }));
 }
 
 /// JetBrains "Folders Always on Top" (`ProjectView.FoldersAlwaysOnTop`).

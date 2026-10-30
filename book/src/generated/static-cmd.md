@@ -767,6 +767,8 @@
 | `toggle_bookmarks_autoscroll_from_source` | Make the Bookmarks tool window select the bookmark under the cursor (JetBrains Always Select Opened Element) |  |
 | `toggle_bookmarks_autoscroll_to_source` | Open bookmarks as the Bookmarks tool window selection moves (JetBrains Navigate with Single Click) |  |
 | `toggle_bookmarks_preview_tab` | Open bookmarks from the views in one reused buffer (JetBrains Enable Preview Tab) |  |
+| `keep_preview_tab` | Make the preview buffer an ordinary one, so the next preview opens beside it (JetBrains Keep Tab Open) |  |
+| `project_tree_toggle_preview_tab` | Open files from the project tree in one reused buffer until edited (JetBrains Enable Preview Tab) |  |
 | `bookmark_edit_description` | Set the description of the line's bookmark (JetBrains Edit Bookmark Description) |  |
 | `bookmark_move_up` | Move the line's bookmark up its list (JetBrains Move Up in Bookmarks) |  |
 | `bookmark_move_down` | Move the line's bookmark down its list (JetBrains Move Down in Bookmarks) |  |
@@ -1638,6 +1640,7 @@
 | `git_blame_line` | Show git blame for the current line (g b) | **spacemacs** — normal: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, select: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, insert: `` <C-x>vg ``<br>**hybrid** — normal: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, select: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb `` |
 | `copy_branch_name` | Yank the current git branch name to the clipboard (JetBrains Copy Branch Name) | **spacemacs, hybrid** — normal: `` <space>gYb ``, select: `` <space>gYb `` |
 | `copy_revision_number` | Yank the commit that last touched this line to the clipboard (JetBrains Copy Revision Number) | **spacemacs, hybrid** — normal: `` <space>gYr ``, select: `` <space>gYr `` |
+| `select_in_git_log` | Open the git log with the commit that last touched this line selected (JetBrains Select in Git Log) |  |
 | `toggle_inline_blame` | Toggle GitLens-style inline blame on the current line | **spacemacs, hybrid** — normal: `` <space>gI ``, select: `` <space>gI `` |
 | `toggle_blame_annotate` | Toggle the git-blame annotate gutter column (SPC g B) | **spacemacs, hybrid** — normal: `` <space>gB ``, select: `` <space>gB `` |
 | `git_branch_picker` | Pick a git branch and check it out |  |
@@ -2809,6 +2812,7 @@
 | `terminal_close_session` | End the terminal's shell and close its panel (JetBrains Close Session) |  |
 | `terminal_paste` | Paste the clipboard into the terminal (JetBrains Paste) |  |
 | `terminal_paste_selection` | Paste the primary selection into the terminal (JetBrains Paste From Selection Clipboard) |  |
+| `terminal_paste_from_history` | Pick a kill-ring entry and paste it into the terminal (JetBrains Paste from History) |  |
 | `open_in_terminal` | Open a terminal in this file's directory (JetBrains Open in Terminal) |  |
 | `terminal_new_predefined_session` | Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session) |  |
 | `terminal_rename_session` | Name the terminal session in its title bar (JetBrains Rename Session) |  |

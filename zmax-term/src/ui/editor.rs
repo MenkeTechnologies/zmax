@@ -931,6 +931,12 @@ impl EditorView {
                     }))
                 }
             }
+            IdeAction::OpenPreview(path) => {
+                if let Err(e) = crate::commands::open_preview(context.editor, &path) {
+                    context.editor.set_error(format!("{}: {e}", path.display()));
+                }
+                None
+            }
             IdeAction::OpenUrl(url) => {
                 let _ = open::that(&url);
                 context.editor.set_status(format!("opened {url}"));

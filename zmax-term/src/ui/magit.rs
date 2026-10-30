@@ -2774,7 +2774,9 @@ impl Component for MagitCommit {
 ///
 /// Opened from the status buffer with `l`. `j`/`k`/arrows move the selection,
 /// `g`/`G` jump to top/bottom, `Enter`/`d` open the selected commit's diff
-/// ([`MagitShow`]), `q`/`Esc` return to the status buffer.
+/// ([`MagitShow`]), `/` selects the commit a typed hash, branch or tag names,
+/// `D` switches the long form between author and committer date, `q`/`Esc`
+/// return to the status buffer.
 pub struct MagitLog {
     repo_dir: PathBuf,
     entries: Vec<LogEntry>,
@@ -2791,6 +2793,9 @@ pub struct MagitLog {
     show_tags: bool,
     /// JetBrains "Compact References View": only a commit's first reference.
     compact_refs: bool,
+    /// JetBrains "Prefer Commit Date" (`Vcs.Log.PreferCommitDate`): the long
+    /// form shows the committer date instead of the author date.
+    commit_date: bool,
 }
 
 impl MagitLog {
@@ -2811,7 +2816,76 @@ impl MagitLog {
             parents,
             show_tags: true,
             compact_refs: false,
+            commit_date: false,
         }
+    }
+
+    /// The log with the commit `rev` names selected (JetBrains "Select in Git
+    /// Log", `Vcs.Log.SelectInLog`). Fails when `rev` does not resolve or its
+    /// commit is not among the commits listed.
+    pub(crate) fn open_at(repo_dir: PathBuf, rev: &str) -> Result<Self, String> {
+        let mut log = MagitLog::new(repo_dir);
+        log.select_ref(rev).map(|_| log)
+    }
+
+    /// JetBrains "Go to Hash/Branch/Tag" (`Vcs.Log.GoToRef`): select the
+    /// commit a hash, branch or tag names. Returns the status line.
+    fn select_ref(&mut self, rev: &str) -> Result<String, String> {
+        let rev = rev.trim();
+        let full = git_output(
+            &self.repo_dir,
+            &[
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                &format!("{rev}^{{commit}}"),
+            ],
+        )
+        .filter(|s| !s.trim().is_empty())
+        .ok_or_else(|| format!("{rev}: no such commit"))?;
+        let full = full.trim();
+        match self
+            .entries
+            .iter()
+            .position(|e| full.starts_with(e.sha.as_str()))
+        {
+            Some(i) => {
+                self.selected = i;
+                Ok(format!("{rev} -> {}", self.entries[i].sha))
+            }
+            None => Err(format!("{rev} is not among the listed commits")),
+        }
+    }
+
+    /// Prompt for a hash, branch or tag and select its commit in the open log.
+    fn go_to_ref_prompt() -> Callback {
+        Box::new(|compositor: &mut Compositor, _cx| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                "go to hash/branch/tag: ".into(),
+                None,
+                crate::ui::completers::none,
+                |cx: &mut Context, input: &str, event: crate::ui::PromptEvent| {
+                    if event != crate::ui::PromptEvent::Validate {
+                        return;
+                    }
+                    let rev = input.to_string();
+                    cx.jobs.callback(async move {
+                        let call: crate::job::Callback =
+                            crate::job::Callback::EditorCompositor(Box::new(
+                                move |editor, compositor| match compositor.find::<MagitLog>() {
+                                    Some(log) => match log.select_ref(&rev) {
+                                        Ok(status) => editor.set_status(status),
+                                        Err(e) => editor.set_error(e),
+                                    },
+                                    None => editor.set_error("no git log open"),
+                                },
+                            ));
+                        Ok(call)
+                    });
+                },
+            );
+            compositor.push(Box::new(prompt));
+        })
     }
 
     /// JetBrains "Go to Parent Row" (`Vcs.Log.GoToParent`): select the selected
@@ -2860,16 +2934,12 @@ impl MagitLog {
             return Some(format!("log-view: {sha} shown in short form"));
         }
         if !self.bodies.contains_key(&sha) {
-            let out = git_output(
-                &self.repo_dir,
-                &[
-                    "show",
-                    "-s",
-                    "--format=Author: %an <%ae>%nDate:   %ad%n%n%B",
-                    &sha,
-                ],
-            )
-            .unwrap_or_default();
+            let format = if self.commit_date {
+                "--format=Author: %an <%ae>%nCommitDate: %cd%n%n%B"
+            } else {
+                "--format=Author: %an <%ae>%nDate:   %ad%n%n%B"
+            };
+            let out = git_output(&self.repo_dir, &["show", "-s", format, &sha]).unwrap_or_default();
             let lines: Vec<String> = out
                 .lines()
                 .map(|l| l.trim_end().to_string())
@@ -3116,6 +3186,26 @@ impl Component for MagitLog {
                     "log tag names: {}",
                     if self.show_tags { "shown" } else { "hidden" }
                 ));
+            }
+            key!('/') => return EventResult::Consumed(Some(Self::go_to_ref_prompt())),
+            key!('D') => {
+                // Long forms already fetched carry the other date: drop them.
+                self.commit_date = !self.commit_date;
+                self.bodies.clear();
+                let selected = self.selected;
+                let expanded = std::mem::take(&mut self.expanded);
+                for sha in expanded {
+                    if let Some(i) = self.entries.iter().position(|e| e.sha == sha) {
+                        self.selected = i;
+                        self.toggle_entry_display();
+                    }
+                }
+                self.selected = selected;
+                cx.editor.set_status(if self.commit_date {
+                    "log dates: committed"
+                } else {
+                    "log dates: authored"
+                });
             }
             key!('x') => {
                 self.compact_refs = !self.compact_refs;
@@ -6131,6 +6221,42 @@ MM both.rs
     }
 
     #[test]
+    fn log_selects_the_commit_a_ref_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        git(&["init", "-q"]);
+        git(&["commit", "-q", "--allow-empty", "-m", "first"]);
+        git(&["tag", "v1"]);
+        git(&["commit", "-q", "--allow-empty", "-m", "second"]);
+
+        let mut log = MagitLog::new(dir.path().to_path_buf());
+        assert_eq!(2, log.entries.len());
+        assert!(log.select_ref("v1").is_ok());
+        assert_eq!(1, log.selected, "the tagged commit is the older one");
+        assert!(log.select_ref("HEAD").is_ok());
+        assert_eq!(0, log.selected);
+        assert!(log.select_ref("no-such-ref").is_err());
+        assert_eq!(0, log.selected, "a bad ref leaves the selection");
+        assert_eq!(
+            1,
+            MagitLog::open_at(dir.path().to_path_buf(), "v1")
+                .unwrap()
+                .selected
+        );
+    }
+
+    #[test]
     fn log_walks_to_parent_and_child_rows() {
         let mut log = MagitLog {
             repo_dir: PathBuf::new(),
@@ -6143,6 +6269,7 @@ MM both.rs
             parents: parse_parents("c3 b2\nb2 a1\na1 \n"),
             show_tags: true,
             compact_refs: false,
+            commit_date: false,
         };
         assert_eq!(log.go_to_parent(), "parent of c3");
         assert_eq!(log.selected, 1);

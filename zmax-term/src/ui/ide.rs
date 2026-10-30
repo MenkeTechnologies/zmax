@@ -260,6 +260,8 @@ enum BottomHit {
 pub enum IdeAction {
     None,
     OpenFile(PathBuf),
+    /// Open a file from the project tree in the preview tab.
+    OpenPreview(PathBuf),
     /// Open a URL in the system browser (CI run links).
     OpenUrl(String),
     /// Open a problem from the project-wide Problems list at its 0-based line
@@ -1706,6 +1708,15 @@ impl Ide {
         .any(|r| in_rect(r, col, row))
     }
 
+    /// A file opened from the project tree, in the preview tab when that is on.
+    fn open_from_tree(&self, path: PathBuf) -> IdeAction {
+        if self.project.preview_tab() {
+            IdeAction::OpenPreview(path)
+        } else {
+            IdeAction::OpenFile(path)
+        }
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> IdeAction {
         // While the project tree's speed-search is capturing input, route every
         // key to it — otherwise IDE chrome shortcuts (z, <, >, Esc, Tab) would
@@ -1714,7 +1725,7 @@ impl Ide {
             return match self.project.handle_key(key) {
                 TreeAction::Open(p) => {
                     self.focus = Focus::Editor;
-                    IdeAction::OpenFile(p)
+                    self.open_from_tree(p)
                 }
                 TreeAction::Close => IdeAction::None,
                 TreeAction::None => IdeAction::None,
@@ -1756,7 +1767,7 @@ impl Ide {
                 Focus::Project => match self.project.handle_key(key) {
                     TreeAction::Open(p) => {
                         self.focus = Focus::Editor;
-                        IdeAction::OpenFile(p)
+                        self.open_from_tree(p)
                     }
                     TreeAction::Close => {
                         self.focus = Focus::Editor;
@@ -2701,7 +2712,7 @@ impl Ide {
                     self.focus = Focus::Project;
                     let lr = (row - self.project_rect.y - 1) as usize;
                     return match self.project.click_row(lr) {
-                        TreeAction::Open(p) => IdeAction::OpenFile(p),
+                        TreeAction::Open(p) => self.open_from_tree(p),
                         _ => IdeAction::None,
                     };
                 }

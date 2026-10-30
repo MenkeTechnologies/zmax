@@ -60,6 +60,11 @@ pub struct FileTree {
     /// the disk for directories already read. Cleared by `refresh` (the file
     /// watcher) and whenever `show_hidden` changes.
     dir_cache: HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
+    /// Rows the list showed at the last render: one page for PageUp/PageDown.
+    page: usize,
+    /// JetBrains "Enable Preview Tab" (`ProjectView.OpenInPreviewTab`): files
+    /// opened from the tree reuse one buffer until it is edited.
+    preview_tab: bool,
 }
 
 /// How the project tree orders the files inside a directory (JetBrains' Sort by
@@ -90,6 +95,8 @@ impl FileTree {
             list_offset: 0,
             show_hidden: true,
             dir_cache: HashMap::new(),
+            page: 1,
+            preview_tab: false,
         };
         tree.expanded.insert(root);
         tree.rebuild();
@@ -526,6 +533,31 @@ impl FileTree {
         }
     }
 
+    /// The next (or previous) row at the selected row's depth under the same
+    /// parent: the scan stops at the first shallower row.
+    fn sibling(&self, forward: bool) -> Option<usize> {
+        let depth = self.rows.get(self.selected)?.depth;
+        let mut i = self.selected;
+        loop {
+            i = if forward {
+                i.checked_add(1).filter(|&i| i < self.rows.len())?
+            } else {
+                i.checked_sub(1)?
+            };
+            match self.rows[i].depth {
+                d if d == depth => return Some(i),
+                d if d < depth => return None,
+                _ => {}
+            }
+        }
+    }
+
+    /// The row of the selected row's parent directory.
+    fn parent_row(&self) -> Option<usize> {
+        let parent = self.rows.get(self.selected)?.path.parent()?;
+        self.rows.iter().position(|r| r.path == parent)
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> TreeAction {
         // Speed-search input mode: keystrokes build the query until Esc/Enter.
         if self.filtering {
@@ -616,6 +648,32 @@ impl FileTree {
             }
             KeyCode::Char('G') | KeyCode::End => {
                 self.selected = self.rows.len().saturating_sub(1);
+                TreeAction::None
+            }
+            // JetBrains Tree-selectNextSibling / Tree-selectPreviousSibling.
+            KeyCode::Char('J') => {
+                self.selected = self.sibling(true).unwrap_or(self.selected);
+                TreeAction::None
+            }
+            KeyCode::Char('K') => {
+                self.selected = self.sibling(false).unwrap_or(self.selected);
+                TreeAction::None
+            }
+            // JetBrains Tree-selectParentNoCollapse: the parent directory, leaving
+            // an expanded directory open (`h` collapses it first).
+            KeyCode::Char('p') => {
+                self.selected = self.parent_row().unwrap_or(self.selected);
+                TreeAction::None
+            }
+            // JetBrains Tree-scrollDownChangeSelection / Tree-scrollUpChangeSelection.
+            KeyCode::PageDown => {
+                self.selected = (self.selected + self.page).min(self.rows.len().saturating_sub(1));
+                self.scroll += self.page;
+                TreeAction::None
+            }
+            KeyCode::PageUp => {
+                self.selected = self.selected.saturating_sub(self.page);
+                self.scroll = self.scroll.saturating_sub(self.page);
                 TreeAction::None
             }
             // Collapse the whole tree back to the project root.
@@ -712,6 +770,17 @@ impl FileTree {
             }
         }
         (path, name)
+    }
+
+    /// Flip "Enable Preview Tab"; returns the new state.
+    pub fn toggle_preview_tab(&mut self) -> bool {
+        self.preview_tab = !self.preview_tab;
+        self.preview_tab
+    }
+
+    /// Whether files open in the preview tab.
+    pub fn preview_tab(&self) -> bool {
+        self.preview_tab
     }
 
     /// JetBrains "Folders Always on Top" (`ProjectView.FoldersAlwaysOnTop`):
@@ -830,6 +899,7 @@ impl FileTree {
         }
 
         let height = area.height as usize;
+        self.page = height.max(1);
 
         // keep selection in view
         if self.selected < self.scroll {
@@ -973,6 +1043,54 @@ mod tests {
         assert!(!tree.is_filtering());
         let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
         assert!(names.contains(&"beta.txt"), "filter cleared: {names:?}");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn siblings_parent_and_pages() {
+        let root = std::env::temp_dir().join(format!("zmax_ft_sib_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("a")).unwrap();
+        std::fs::write(root.join("a").join("inner.rs"), "").unwrap();
+        std::fs::write(root.join("b.rs"), "").unwrap();
+        std::fs::write(root.join("c.rs"), "").unwrap();
+
+        let mut tree = FileTree::new(root.clone());
+        tree.expanded.insert(root.join("a"));
+        tree.rebuild();
+        let at = |tree: &FileTree| tree.rows[tree.selected].name.clone();
+        let index =
+            |tree: &FileTree, name: &str| tree.rows.iter().position(|r| r.name == name).unwrap();
+
+        tree.selected = index(&tree, "a");
+        tree.handle_key(key('J'));
+        assert_eq!("b.rs", at(&tree), "skips a's children");
+        tree.handle_key(key('K'));
+        assert_eq!("a", at(&tree));
+
+        tree.selected = index(&tree, "inner.rs");
+        tree.handle_key(key('J'));
+        assert_eq!("inner.rs", at(&tree), "no sibling below inside a/");
+        tree.handle_key(key('p'));
+        assert_eq!("a", at(&tree));
+        assert!(
+            tree.expanded.contains(&root.join("a")),
+            "parent left expanded"
+        );
+
+        tree.page = 2;
+        tree.selected = 0;
+        tree.handle_key(KeyEvent {
+            code: KeyCode::PageDown,
+            modifiers: KeyModifiers::empty(),
+        });
+        assert_eq!(2, tree.selected);
+        tree.handle_key(KeyEvent {
+            code: KeyCode::PageUp,
+            modifiers: KeyModifiers::empty(),
+        });
+        assert_eq!(0, tree.selected);
 
         let _ = std::fs::remove_dir_all(&root);
     }
