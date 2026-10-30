@@ -763,6 +763,7 @@ impl MappableCommand {
         toggle_ai_autocomplete, "Toggle real-time AI ghost-text autocomplete (SPC a g)",
         ghost_text_accept, "Accept the AI ghost-text suggestion, else Tab (insert mode)",
         ghost_text_accept_word, "Accept the next word of the AI ghost-text suggestion (partial accept)",
+        ghost_text_accept_line, "Accept the AI ghost-text suggestion up to its next line break (JetBrains Insert Next Line of Inline Completion)",
         ai_revert_agent, "Revert the workspace to the last agent checkpoint (SPC a z)",
         ai_fix, "AI-fix the diagnostic(s) on the current line (SPC a F)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
@@ -1364,6 +1365,8 @@ impl MappableCommand {
         github_copy_branch_pr_url, "Yank the URL of the current branch's pull request (JetBrains Copy Pull Request URL)",
         github_show_pull_request, "Show a pull request's details by number (JetBrains Github.PullRequest.Show)",
         github_submit_review, "Approve, comment on or request changes to the current branch's pull request (JetBrains Github.PullRequest.Review.Submit)",
+        github_next_review_comment, "Jump to the next review comment on the current branch's pull request (JetBrains CodeReview.NextComment)",
+        github_previous_review_comment, "Jump to the previous review comment on the current branch's pull request (JetBrains CodeReview.PreviousComment)",
         github_share, "Create a GitHub repository for the project and push to it (JetBrains Share Project on GitHub)",
         github_sync_fork, "Rebase the current branch onto the fork's parent (JetBrains Sync Fork)",
         git_push, "Push the current branch to its remote (SPC g P)",
@@ -2037,6 +2040,7 @@ impl MappableCommand {
         toggle_inline_blame, "Toggle GitLens-style inline blame on the current line",
         toggle_blame_annotate, "Toggle the git-blame annotate gutter column (SPC g B)",
         git_branch_picker, "Pick a git branch and check it out",
+        git_branches_toggle_tags, "Toggle tags in the git branch picker (JetBrains Show Tags)",
         preferences, "Open the unified Preferences window",
         set_selective_display, "Hide lines indented past the prefix-arg column; no arg turns it off (emacs set-selective-display, C-x $)",
         global_whitespace_toggle_options, "Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options)",
@@ -24772,12 +24776,24 @@ fn ghost_text_accept(cx: &mut Context) {
 /// Partial accept (Cursor): insert just the next word of the AI ghost-text suggestion, keeping the
 /// remainder as a ghost anchored at the new cursor. No-op when no suggestion is showing.
 fn ghost_text_accept_word(cx: &mut Context) {
+    ghost_text_accept_part(cx, split_first_token);
+}
+
+/// JetBrains "Insert Next Line of Inline Completion" (`InsertInlineCompletionLineAction`):
+/// insert the suggestion up to and including its next line break.
+fn ghost_text_accept_line(cx: &mut Context) {
+    ghost_text_accept_part(cx, split_first_line);
+}
+
+/// Insert the part of the ghost-text suggestion `split` cuts off its front and keep the rest as
+/// the ghost at the new cursor.
+fn ghost_text_accept_part(cx: &mut Context, split: fn(&str) -> (String, String)) {
     let (view, doc) = current!(cx.editor);
     let view_id = view.id;
     let Some(ghost) = doc.ghost_text(view_id).cloned() else {
         return;
     };
-    let (word, rest) = split_first_token(&ghost.text);
+    let (word, rest) = split(&ghost.text);
     if word.is_empty() {
         doc.clear_ghost_text(view_id);
         return;
@@ -24795,6 +24811,35 @@ fn ghost_text_accept_word(cx: &mut Context) {
         doc.clear_ghost_text(view_id);
     } else {
         doc.set_ghost_text(view_id, pos + n, rest);
+    }
+}
+
+/// Split a suggestion after its first line break: (the line with its break, the rest). A
+/// suggestion with no break is all line.
+fn split_first_line(s: &str) -> (String, String) {
+    match s.find('\n') {
+        Some(i) => (s[..=i].to_string(), s[i + 1..].to_string()),
+        None => (s.to_string(), String::new()),
+    }
+}
+
+#[cfg(test)]
+mod split_first_line_tests {
+    use super::split_first_line;
+
+    #[test]
+    fn the_line_break_goes_with_the_line() {
+        let split = |s| split_first_line(s);
+        assert_eq!(
+            split("a();\n    b();\n"),
+            ("a();\n".into(), "    b();\n".into())
+        );
+        assert_eq!(
+            split("\nnext"),
+            ("\n".into(), "next".into()),
+            "a leading break ends the line"
+        );
+        assert_eq!(split("tail"), ("tail".into(), String::new()));
     }
 }
 
@@ -37438,36 +37483,81 @@ fn git_branch_names() -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// JetBrains "Show Tags" (`git.branches.show.tags`): whether
+/// [`git_branch_picker`] lists tags after the branches.
+static BRANCH_PICKER_TAGS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// The repository's tags, newest first.
+fn git_tag_names() -> Vec<String> {
+    git_exec(&[
+        "for-each-ref",
+        "--sort=-creatordate",
+        "--format=%(refname:short)",
+        "refs/tags/",
+    ])
+    .map(|out| {
+        out.lines()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect()
+    })
+    .unwrap_or_default()
+}
+
+/// Toggle whether the branch picker lists tags (JetBrains Show Tags).
+fn git_branches_toggle_tags(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !BRANCH_PICKER_TAGS.fetch_xor(true, Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "branch picker: tags shown"
+    } else {
+        "branch picker: tags hidden"
+    });
+}
+
 pub(crate) fn git_branch_picker(cx: &mut Context) {
-    let branches: Vec<String> = git_branch_names();
-    if branches.is_empty() {
+    let mut refs: Vec<(String, &'static str)> = git_branch_names()
+        .into_iter()
+        .map(|b| (b, "branch"))
+        .collect();
+    if BRANCH_PICKER_TAGS.load(std::sync::atomic::Ordering::Relaxed) {
+        refs.extend(git_tag_names().into_iter().map(|t| (t, "tag")));
+    }
+    if refs.is_empty() {
         cx.editor.set_status("No git branches");
         return;
     }
-    let columns = [PickerColumn::new("branch", |b: &String, _: &()| {
-        b.as_str().into()
-    })];
-    let picker = Picker::new(columns, 0, branches, (), |cx, branch: &String, _action| {
-        let dir = std::env::current_dir().unwrap_or_default();
-        match std::process::Command::new("git")
-            .arg("-C")
-            .arg(&dir)
-            .args(["checkout", branch])
-            .output()
-        {
-            Ok(o) if o.status.success() => {
+    let columns = [
+        PickerColumn::new("ref", |r: &(String, &'static str), _: &()| {
+            r.0.as_str().into()
+        }),
+        PickerColumn::new("kind", |r: &(String, &'static str), _: &()| r.1.into()),
+    ];
+    let picker = Picker::new(columns, 0, refs, (), |cx, (name, kind), _action| {
+        // A tag is no branch to switch to: check its commit out detached.
+        let args: &[&str] = if *kind == "tag" {
+            &["checkout", "--detach", name]
+        } else {
+            &["checkout", name]
+        };
+        match git_exec(args) {
+            Ok(_) => {
                 crate::commands::typed::reload_open_docs(cx);
-                cx.editor.set_status(format!("Switched to branch {branch}"));
+                cx.editor.set_status(if *kind == "tag" {
+                    format!("HEAD detached at {name}")
+                } else {
+                    format!("Switched to branch {name}")
+                });
             }
-            Ok(o) => cx.editor.set_error(
-                String::from_utf8_lossy(&o.stderr)
-                    .lines()
+            Err(e) => cx.editor.set_error(
+                e.lines()
                     .next()
                     .unwrap_or("checkout failed")
                     .trim()
                     .to_owned(),
             ),
-            Err(e) => cx.editor.set_error(format!("git: {e}")),
         }
     });
     cx.push_layer(Box::new(overlaid(picker)));

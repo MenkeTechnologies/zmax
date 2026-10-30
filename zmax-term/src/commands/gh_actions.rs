@@ -361,9 +361,129 @@ pub fn github_sync_fork(cx: &mut Context) {
     );
 }
 
+/// One review thread's position on the current branch's pull request: the
+/// file relative to the repository root, the 1-based line, and its opening
+/// comment's author and first line.
+#[derive(Debug, Clone, PartialEq)]
+struct ReviewComment {
+    path: String,
+    line: usize,
+    summary: String,
+}
+
+/// The threads in a `pulls/{n}/comments` response, ordered by file and line.
+/// Replies join their thread and outdated comments (no current `line`) have
+/// nowhere to go, so neither is a stop.
+fn review_comments(list: &Value) -> Vec<ReviewComment> {
+    let mut out: Vec<ReviewComment> = list
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|c| c["in_reply_to_id"].is_null())
+        .filter_map(|c| {
+            let body = c["body"].as_str().unwrap_or_default();
+            Some(ReviewComment {
+                path: c["path"].as_str()?.to_string(),
+                line: c["line"].as_u64()? as usize,
+                summary: format!(
+                    "{}: {}",
+                    c["user"]["login"].as_str().unwrap_or("?"),
+                    body.lines().next().unwrap_or_default()
+                ),
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| (&a.path, a.line).cmp(&(&b.path, b.line)));
+    out
+}
+
+/// The comment after (or before) `path`:`line` in file-and-line order,
+/// wrapping around the ends.
+fn adjacent_comment<'a>(
+    comments: &'a [ReviewComment],
+    path: &str,
+    line: usize,
+    forward: bool,
+) -> Option<&'a ReviewComment> {
+    let here = (path, line);
+    if forward {
+        comments
+            .iter()
+            .find(|c| (c.path.as_str(), c.line) > here)
+            .or_else(|| comments.first())
+    } else {
+        comments
+            .iter()
+            .rev()
+            .find(|c| (c.path.as_str(), c.line) < here)
+            .or_else(|| comments.last())
+    }
+}
+
+/// Jump to the next or previous review comment on the current branch's pull
+/// request, opening its file when it is another one.
+fn goto_review_comment(cx: &mut Context, forward: bool) {
+    let Some((slug, branch)) = slug_and_branch(cx.editor) else {
+        return;
+    };
+    let root = repo_dir(cx.editor);
+    let (path, line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let line = text.char_to_line(doc.selection(view.id).primary().cursor(text)) + 1;
+        let path = doc
+            .path()
+            .and_then(|p| p.strip_prefix(&root).ok())
+            .map(|p| p.to_string_lossy().replace('\\', "/"))
+            .unwrap_or_default();
+        (path, line)
+    };
+    github_job(
+        cx.jobs,
+        cx.editor,
+        "loading review comments…",
+        move || {
+            let pr = branch_pull_request(&slug, &branch)?;
+            let number = pr["number"].as_u64().ok_or("no pull request number")?;
+            crate::github::api(&format!(
+                "repos/{slug}/pulls/{number}/comments?per_page=100"
+            ))
+            .map(|list| list.to_string())
+        },
+        move |editor, list| {
+            let list: Value = serde_json::from_str(&list).unwrap_or(Value::Null);
+            let comments = review_comments(&list);
+            let Some(next) = adjacent_comment(&comments, &path, line, forward) else {
+                editor.set_status("no review comments on this pull request");
+                return;
+            };
+            super::open_at(
+                editor,
+                &root.join(&next.path),
+                next.line - 1,
+                0,
+                super::Action::Replace,
+                false,
+            );
+            editor.set_status(next.summary.clone());
+        },
+    );
+}
+
+/// JetBrains "Next Comment" (`CodeReview.NextComment`): the next review
+/// thread on the current branch's pull request, by file and line.
+pub fn github_next_review_comment(cx: &mut Context) {
+    goto_review_comment(cx, true);
+}
+
+/// JetBrains "Previous Comment" (`CodeReview.PreviousComment`).
+pub fn github_previous_review_comment(cx: &mut Context) {
+    goto_review_comment(cx, false);
+}
+
 #[cfg(test)]
 mod tests {
-    use super::render_pull_request;
+    use super::{adjacent_comment, render_pull_request, review_comments};
     use serde_json::json;
 
     #[test]
@@ -385,5 +505,38 @@ mod tests {
             "{text}"
         );
         assert!(text.ends_with("Details.\n"));
+    }
+
+    #[test]
+    fn review_comments_step_through_threads_by_file_and_line() {
+        let list = json!([
+            { "path": "src/b.rs", "line": 3, "body": "nit\nmore", "user": { "login": "user" } },
+            { "path": "src/a.rs", "line": 40, "body": "why?", "user": { "login": "user" } },
+            { "path": "src/a.rs", "line": 40, "body": "because", "in_reply_to_id": 1,
+              "user": { "login": "user" } },
+            { "path": "src/a.rs", "line": null, "body": "outdated", "user": { "login": "user" } },
+            { "path": "src/a.rs", "line": 7, "body": "typo", "user": { "login": "user" } }
+        ]);
+        let comments = review_comments(&list);
+        let stops: Vec<_> = comments.iter().map(|c| (c.path.as_str(), c.line)).collect();
+        assert_eq!(stops, [("src/a.rs", 7), ("src/a.rs", 40), ("src/b.rs", 3)]);
+        assert_eq!(comments[2].summary, "user: nit");
+
+        let next = |path, line| adjacent_comment(&comments, path, line, true).map(|c| c.line);
+        let prev = |path, line| adjacent_comment(&comments, path, line, false).map(|c| c.line);
+        assert_eq!(
+            next("src/a.rs", 7),
+            Some(40),
+            "a comment on the cursor line is passed"
+        );
+        assert_eq!(next("src/a.rs", 41), Some(3), "into the next file");
+        assert_eq!(next("src/c.rs", 1), Some(7), "wraps to the first");
+        assert_eq!(prev("src/b.rs", 3), Some(40));
+        assert_eq!(
+            prev("", 1),
+            Some(3),
+            "a buffer outside the repo wraps to the last"
+        );
+        assert_eq!(adjacent_comment(&[], "src/a.rs", 1, true), None);
     }
 }

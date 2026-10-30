@@ -370,6 +370,7 @@
 | `toggle_ai_autocomplete` | Toggle real-time AI ghost-text autocomplete (SPC a g) | **spacemacs, hybrid** — normal: `` <space>ag ``, select: `` <space>ag `` |
 | `ghost_text_accept` | Accept the AI ghost-text suggestion, else Tab (insert mode) | **spacemacs, vim** — insert: `` <tab> `` |
 | `ghost_text_accept_word` | Accept the next word of the AI ghost-text suggestion (partial accept) | **spacemacs, vim** — insert: `` <A-right> `` |
+| `ghost_text_accept_line` | Accept the AI ghost-text suggestion up to its next line break (JetBrains Insert Next Line of Inline Completion) |  |
 | `ai_revert_agent` | Revert the workspace to the last agent checkpoint (SPC a z) | **spacemacs, hybrid** — normal: `` <space>az ``, select: `` <space>az `` |
 | `ai_fix` | AI-fix the diagnostic(s) on the current line (SPC a F) | **spacemacs, hybrid** — normal: `` <space>aF ``, select: `` <space>aF `` |
 | `describe_diagnostics_checker` | Describe the buffer's checkers/language servers (SPC e h) | **spacemacs, hybrid** — normal: `` <space>eh ``, select: `` <space>eh `` |
@@ -971,6 +972,8 @@
 | `github_copy_branch_pr_url` | Yank the URL of the current branch's pull request (JetBrains Copy Pull Request URL) |  |
 | `github_show_pull_request` | Show a pull request's details by number (JetBrains Github.PullRequest.Show) |  |
 | `github_submit_review` | Approve, comment on or request changes to the current branch's pull request (JetBrains Github.PullRequest.Review.Submit) |  |
+| `github_next_review_comment` | Jump to the next review comment on the current branch's pull request (JetBrains CodeReview.NextComment) |  |
+| `github_previous_review_comment` | Jump to the previous review comment on the current branch's pull request (JetBrains CodeReview.PreviousComment) |  |
 | `github_share` | Create a GitHub repository for the project and push to it (JetBrains Share Project on GitHub) |  |
 | `github_sync_fork` | Rebase the current branch onto the fork's parent (JetBrains Sync Fork) |  |
 | `git_push` | Push the current branch to its remote (SPC g P) | **spacemacs** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP ``, insert: `` <C-x>vP ``<br>**hybrid** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP `` |
@@ -1644,6 +1647,7 @@
 | `toggle_inline_blame` | Toggle GitLens-style inline blame on the current line | **spacemacs, hybrid** — normal: `` <space>gI ``, select: `` <space>gI `` |
 | `toggle_blame_annotate` | Toggle the git-blame annotate gutter column (SPC g B) | **spacemacs, hybrid** — normal: `` <space>gB ``, select: `` <space>gB `` |
 | `git_branch_picker` | Pick a git branch and check it out |  |
+| `git_branches_toggle_tags` | Toggle tags in the git branch picker (JetBrains Show Tags) |  |
 | `preferences` | Open the unified Preferences window | **spacemacs, hybrid** — normal: `` <space>, ``, select: `` <space>, `` |
 | `set_selective_display` | Hide lines indented past the prefix-arg column; no arg turns it off (emacs set-selective-display, C-x $) | **spacemacs** — normal: `` <C-x>$ ``, select: `` <C-x>$ ``, insert: `` <C-x>$ ``<br>**hybrid** — normal: `` <C-x>$ ``, select: `` <C-x>$ `` |
 | `global_whitespace_toggle_options` | Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options) |  |

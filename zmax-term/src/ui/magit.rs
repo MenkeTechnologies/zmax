@@ -2793,7 +2793,8 @@ impl Component for MagitCommit {
 /// `g`/`G` jump to top/bottom, `Enter`/`d` open the selected commit's diff
 /// ([`MagitShow`]), `/` selects the commit a typed hash, branch or tag names,
 /// `D` switches the long form between author and committer date, `s` filters
-/// by message (`i` match case, `e` regex), `q`/`Esc`
+/// by message (`i` match case, `e` regex), `m` shows merges
+/// against each parent, `q`/`Esc`
 /// return to the status buffer.
 pub struct MagitLog {
     repo_dir: PathBuf,
@@ -2822,6 +2823,10 @@ pub struct MagitLog {
     /// JetBrains "Regex" (`Vcs.Log.EnableFilterByRegexAction`): the filter is an
     /// extended regex (`-E`) instead of a fixed string (`-F`).
     regex: bool,
+    /// JetBrains "Show Changes to Parents" (`Vcs.Log.ShowChangesFromParents`):
+    /// a merge commit's diff and files are shown against each parent in turn
+    /// (`git show -m`).
+    per_parent: bool,
 }
 
 impl MagitLog {
@@ -2841,6 +2846,7 @@ impl MagitLog {
             filter: String::new(),
             match_case: false,
             regex: false,
+            per_parent: false,
         };
         log.reload();
         log
@@ -3074,8 +3080,9 @@ impl MagitLog {
     fn show_callback(&self) -> Option<Callback> {
         let sha = self.entries.get(self.selected)?.sha.clone();
         let repo_dir = self.repo_dir.clone();
+        let per_parent = self.per_parent;
         Some(Box::new(move |compositor: &mut Compositor, _cx| {
-            compositor.push(Box::new(MagitShow::new(repo_dir.clone(), &sha)));
+            compositor.push(Box::new(MagitShow::new(repo_dir.clone(), &sha, per_parent)));
         }))
     }
 
@@ -3121,11 +3128,12 @@ impl MagitLog {
             return;
         };
         let sha = entry.sha.clone();
-        let out = git_output(
-            &self.repo_dir,
-            &["show", "--numstat", "--format=%h %s%n", &sha],
-        )
-        .unwrap_or_default();
+        let mut args = vec!["show", "--numstat", "--format=%h %s%n"];
+        if self.per_parent {
+            args.push("-m");
+        }
+        args.push(&sha);
+        let out = git_output(&self.repo_dir, &args).unwrap_or_default();
         if out.trim().is_empty() {
             cx.editor.set_error(format!("no files for {sha}"));
             return;
@@ -3296,6 +3304,14 @@ impl Component for MagitLog {
                 self.reload();
                 cx.editor.set_status(self.filter_status());
             }
+            key!('m') => {
+                self.per_parent = !self.per_parent;
+                cx.editor.set_status(if self.per_parent {
+                    "merges: changes to each parent"
+                } else {
+                    "merges: git's default diff"
+                });
+            }
             key!('D') => {
                 // Long forms already fetched carry the other date: drop them.
                 self.commit_date = !self.commit_date;
@@ -3358,7 +3374,7 @@ impl Component for MagitLog {
 
         let title = " Magit log";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  Tab long  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  m merge parents  Tab long  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -3750,8 +3766,15 @@ pub struct MagitShow {
 }
 
 impl MagitShow {
-    fn new(repo_dir: PathBuf, sha: &str) -> Self {
-        let out = git_output(&repo_dir, &["show", "--stat", "-p", sha]).unwrap_or_default();
+    /// `per_parent` shows a merge against each parent (`git show -m`) instead
+    /// of git's default for merges.
+    fn new(repo_dir: PathBuf, sha: &str, per_parent: bool) -> Self {
+        let mut args = vec!["show", "--stat", "-p"];
+        if per_parent {
+            args.push("-m");
+        }
+        args.push(sha);
+        let out = git_output(&repo_dir, &args).unwrap_or_default();
         let lines: Vec<String> = out.lines().map(str::to_string).collect();
         MagitShow {
             title: format!(" {sha}"),
@@ -6418,6 +6441,48 @@ MM both.rs
     }
 
     #[test]
+    fn show_lists_a_merge_against_each_parent() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        let write = |name: &str| std::fs::write(dir.path().join(name), name).unwrap();
+        git(&["init", "-q", "-b", "main"]);
+        write("base");
+        git(&["add", "base"]);
+        git(&["commit", "-q", "-m", "base"]);
+        git(&["checkout", "-q", "-b", "side"]);
+        write("side_file");
+        git(&["add", "side_file"]);
+        git(&["commit", "-q", "-m", "side"]);
+        git(&["checkout", "-q", "main"]);
+        write("main_file");
+        git(&["add", "main_file"]);
+        git(&["commit", "-q", "-m", "main"]);
+        git(&["merge", "-q", "--no-edit", "side"]);
+
+        let lists = |show: &MagitShow, name: &str| show.lines.iter().any(|l| l.contains(name));
+        let per_parent = MagitShow::new(dir.path().to_path_buf(), "HEAD", true);
+        assert!(
+            lists(&per_parent, "side_file"),
+            "the change from main's side"
+        );
+        assert!(
+            lists(&per_parent, "main_file"),
+            "the change from side's side"
+        );
+    }
+
+    #[test]
     fn log_walks_to_parent_and_child_rows() {
         let mut log = MagitLog {
             repo_dir: PathBuf::new(),
@@ -6434,6 +6499,7 @@ MM both.rs
             filter: String::new(),
             match_case: false,
             regex: false,
+            per_parent: false,
         };
         assert_eq!(log.go_to_parent(), "parent of c3");
         assert_eq!(log.selected, 1);

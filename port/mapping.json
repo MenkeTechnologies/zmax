@@ -88155,5 +88155,45 @@
    "typable:magit"
   ],
   "note": "Vcs.Log.EnableFilterByRegexAction = `e` in the zmax git log (`:magit`, then `l`): the `s` message filter is an extended regex (`git log -E --grep`) instead of a fixed string (`-F`). git's ERE, not Java regex syntax; messages only, not hashes."
+ },
+ {
+  "spec_id": "jetbrains-actions.git.branches.show.tags",
+  "status": "ported",
+  "evidence": [
+   "static:git_branches_toggle_tags"
+  ],
+  "note": "git.branches.show.tags = zmax `git_branches_toggle_tags`: `git_branch_picker` then lists the repository's tags (newest first, kind column `tag`) after the branches; picking a tag checks its commit out detached (`git checkout --detach`)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.ShowChangesFromParents",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.ShowChangesFromParents = `m` in the zmax git log (`:magit`, then `l`): a merge commit's diff (`Enter`/`d`) and affected files (`f`) are shown against each parent in turn (`git show -m`) instead of git's default for merges."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeReview.NextComment",
+  "status": "partial",
+  "evidence": [
+   "static:github_next_review_comment"
+  ],
+  "note": "CodeReview.NextComment = zmax `github_next_review_comment`: the current branch's open GitHub pull request's review threads (first 100 comments; replies and outdated comments skipped), ordered by file and line; jumps to the one after the cursor, wrapping, and shows its author and first line."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeReview.PreviousComment",
+  "status": "partial",
+  "evidence": [
+   "static:github_previous_review_comment"
+  ],
+  "note": "CodeReview.PreviousComment = zmax `github_previous_review_comment`: as `github_next_review_comment`, backwards."
+ },
+ {
+  "spec_id": "jetbrains-actions.InsertInlineCompletionLineAction",
+  "status": "ported",
+  "evidence": [
+   "static:ghost_text_accept_line"
+  ],
+  "note": "InsertInlineCompletionLineAction = zmax `ghost_text_accept_line`: inserts the AI ghost-text suggestion up to and including its next line break and keeps the rest as the ghost at the new cursor (shares the partial-accept path with `ghost_text_accept_word`)."
  }
 ]
