@@ -32578,11 +32578,32 @@ fn queue_fzf(
     options: Vec<String>,
     preview: bool,
 ) {
+    // An empty list must not reach fzf: with no candidates and no command the
+    // runner streams FZF_DEFAULT_COMMAND, so `:Snippets` with no snippets
+    // showed the file list. `:Files` wants exactly that and uses
+    // `queue_fzf_files`.
+    if candidates.is_empty() {
+        cx.editor.set_status(format!("{prompt}: nothing to pick"));
+        return;
+    }
     cx.editor.pending_fzf = Some(zmax_view::editor::FzfRequest {
         candidates,
         prompt: prompt.to_string(),
         sink: sink.to_string(),
         options,
+        preview,
+        command: None,
+    });
+}
+
+/// fzf over the files `FZF_DEFAULT_COMMAND` (else the shell's CTRL-T command)
+/// lists — the request fzf.vim `:Files` makes with no `source`.
+fn queue_fzf_files(cx: &mut compositor::Context, prompt: &str, sink: &str, preview: bool) {
+    cx.editor.pending_fzf = Some(zmax_view::editor::FzfRequest {
+        candidates: Vec::new(),
+        prompt: prompt.to_string(),
+        sink: sink.to_string(),
+        options: Vec::new(),
         preview,
         command: None,
     });
@@ -32652,7 +32673,7 @@ fn fzf_line(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
 /// command) and open the pick, with a preview pane.
 fn fzf_files(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
-        queue_fzf(cx, "Files", "open {}", Vec::new(), Vec::new(), true);
+        queue_fzf_files(cx, "Files", "open {}", true);
     }
     Ok(())
 }
