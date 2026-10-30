@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-c17dba2c.js";
+            window.path_to_searchindex_js = "searchindex-2142ef6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4451,6 +4451,8 @@ without scrolling.</p>
 <tr><td><code>toggle_bookmarks_autoscroll_from_source</code></td><td>Make the Bookmarks tool window select the bookmark under the cursor (JetBrains Always Select Opened Element)</td><td></td></tr>
 <tr><td><code>toggle_bookmarks_autoscroll_to_source</code></td><td>Open bookmarks as the Bookmarks tool window selection moves (JetBrains Navigate with Single Click)</td><td></td></tr>
 <tr><td><code>toggle_bookmarks_preview_tab</code></td><td>Open bookmarks from the views in one reused buffer (JetBrains Enable Preview Tab)</td><td></td></tr>
+<tr><td><code>keep_preview_tab</code></td><td>Make the preview buffer an ordinary one, so the next preview opens beside it (JetBrains Keep Tab Open)</td><td></td></tr>
+<tr><td><code>project_tree_toggle_preview_tab</code></td><td>Open files from the project tree in one reused buffer until edited (JetBrains Enable Preview Tab)</td><td></td></tr>
 <tr><td><code>bookmark_edit_description</code></td><td>Set the description of the line’s bookmark (JetBrains Edit Bookmark Description)</td><td></td></tr>
 <tr><td><code>bookmark_move_up</code></td><td>Move the line’s bookmark up its list (JetBrains Move Up in Bookmarks)</td><td></td></tr>
 <tr><td><code>bookmark_move_down</code></td><td>Move the line’s bookmark down its list (JetBrains Move Down in Bookmarks)</td><td></td></tr>
@@ -5322,6 +5324,7 @@ without scrolling.</p>
 <tr><td><code>git_blame_line</code></td><td>Show git blame for the current line (g b)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vg</code>, <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code>, select: <code>&lt;C-x&gt;vg</code>, <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code>, insert: <code>&lt;C-x&gt;vg</code><br><strong>hybrid</strong> — normal: <code>&lt;C-x&gt;vg</code>, <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code>, select: <code>&lt;C-x&gt;vg</code>, <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code></td></tr>
 <tr><td><code>copy_branch_name</code></td><td>Yank the current git branch name to the clipboard (JetBrains Copy Branch Name)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gYb</code>, select: <code>&lt;space&gt;gYb</code></td></tr>
 <tr><td><code>copy_revision_number</code></td><td>Yank the commit that last touched this line to the clipboard (JetBrains Copy Revision Number)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gYr</code>, select: <code>&lt;space&gt;gYr</code></td></tr>
+<tr><td><code>select_in_git_log</code></td><td>Open the git log with the commit that last touched this line selected (JetBrains Select in Git Log)</td><td></td></tr>
 <tr><td><code>toggle_inline_blame</code></td><td>Toggle GitLens-style inline blame on the current line</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gI</code>, select: <code>&lt;space&gt;gI</code></td></tr>
 <tr><td><code>toggle_blame_annotate</code></td><td>Toggle the git-blame annotate gutter column (SPC g B)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;gB</code>, select: <code>&lt;space&gt;gB</code></td></tr>
 <tr><td><code>git_branch_picker</code></td><td>Pick a git branch and check it out</td><td></td></tr>
@@ -6493,6 +6496,7 @@ without scrolling.</p>
 <tr><td><code>terminal_close_session</code></td><td>End the terminal’s shell and close its panel (JetBrains Close Session)</td><td></td></tr>
 <tr><td><code>terminal_paste</code></td><td>Paste the clipboard into the terminal (JetBrains Paste)</td><td></td></tr>
 <tr><td><code>terminal_paste_selection</code></td><td>Paste the primary selection into the terminal (JetBrains Paste From Selection Clipboard)</td><td></td></tr>
+<tr><td><code>terminal_paste_from_history</code></td><td>Pick a kill-ring entry and paste it into the terminal (JetBrains Paste from History)</td><td></td></tr>
 <tr><td><code>open_in_terminal</code></td><td>Open a terminal in this file’s directory (JetBrains Open in Terminal)</td><td></td></tr>
 <tr><td><code>terminal_new_predefined_session</code></td><td>Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session)</td><td></td></tr>
 <tr><td><code>terminal_rename_session</code></td><td>Name the terminal session in its title bar (JetBrains Rename Session)</td><td></td></tr>
@@ -10086,11 +10090,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9873</strong> (82.8%)</li>
-<li>Partial: <strong>918</strong> (7.7%)</li>
-<li>Absent: <strong>1135</strong></li>
+<li>Ported: <strong>9877</strong> (82.8%)</li>
+<li>Partial: <strong>925</strong> (7.8%)</li>
+<li>Absent: <strong>1124</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 2992 static commands, 3225 typable <code>:</code> commands, 4718 default keybindings</li>
+<li>zmax source surface: 2996 static commands, 3225 typable <code>:</code> commands, 4719 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10153,7 +10157,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">902</td><td style="text-align: right">343</td><td style="text-align: right">45.1%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">906</td><td style="text-align: right">350</td><td style="text-align: right">45.3%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10249,11 +10253,11 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">30</td><td style="text-align: right">6</td><td style="text-align: right">75.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">664</td><td style="text-align: right">287</td><td style="text-align: right">41.3%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">667</td><td style="text-align: right">294</td><td style="text-align: right">41.5%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">5</td><td style="text-align: right">4</td><td style="text-align: right">13.5%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">7</td><td style="text-align: right">4</td><td style="text-align: right">43.8%</td></tr>
-<tr><td>jetbrains-actions</td><td>terminal</td><td style="text-align: right">59</td><td style="text-align: right">17</td><td style="text-align: right">7</td><td style="text-align: right">28.8%</td></tr>
+<tr><td>jetbrains-actions</td><td>terminal</td><td style="text-align: right">59</td><td style="text-align: right">18</td><td style="text-align: right">7</td><td style="text-align: right">30.5%</td></tr>
 <tr><td>jetbrains-actions</td><td>vcs-git</td><td style="text-align: right">118</td><td style="text-align: right">67</td><td style="text-align: right">28</td><td style="text-align: right">56.8%</td></tr>
 <tr><td>jetbrains-actions</td><td>vcs-github</td><td style="text-align: right">24</td><td style="text-align: right">12</td><td style="text-align: right">6</td><td style="text-align: right">50.0%</td></tr>
 <tr><td>kakoune</td><td>cancelling-operations</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
