@@ -382,6 +382,23 @@ fn shape_decoration(summary: &str, show_tags: bool, compact: bool) -> String {
 
 /// Parse `git log --format="%h %p"` output into abbreviated sha -> parent shas.
 /// Pure — unit tested.
+/// The `git log` arguments for the log's text filter: `--grep` with a fixed
+/// string (`-F`) or an extended regex (`-E`), case-insensitive (`-i`) unless
+/// `match_case`. An empty filter adds nothing.
+fn grep_args(filter: &str, match_case: bool, regex: bool) -> Vec<String> {
+    if filter.is_empty() {
+        return Vec::new();
+    }
+    let mut args = vec![
+        format!("--grep={filter}"),
+        if regex { "-E" } else { "-F" }.to_string(),
+    ];
+    if !match_case {
+        args.push("-i".to_string());
+    }
+    args
+}
+
 fn parse_parents(out: &str) -> std::collections::HashMap<String, Vec<String>> {
     out.lines()
         .filter_map(|line| {
@@ -2775,7 +2792,8 @@ impl Component for MagitCommit {
 /// Opened from the status buffer with `l`. `j`/`k`/arrows move the selection,
 /// `g`/`G` jump to top/bottom, `Enter`/`d` open the selected commit's diff
 /// ([`MagitShow`]), `/` selects the commit a typed hash, branch or tag names,
-/// `D` switches the long form between author and committer date, `q`/`Esc`
+/// `D` switches the long form between author and committer date, `s` filters
+/// by message (`i` match case, `e` regex), `q`/`Esc`
 /// return to the status buffer.
 pub struct MagitLog {
     repo_dir: PathBuf,
@@ -2796,28 +2814,105 @@ pub struct MagitLog {
     /// JetBrains "Prefer Commit Date" (`Vcs.Log.PreferCommitDate`): the long
     /// form shows the committer date instead of the author date.
     commit_date: bool,
+    /// JetBrains log text filter: commits whose message matches, via
+    /// `git log --grep`. Empty lists every commit.
+    filter: String,
+    /// JetBrains "Match Case" (`Vcs.Log.MatchCaseAction`) for [`Self::filter`].
+    match_case: bool,
+    /// JetBrains "Regex" (`Vcs.Log.EnableFilterByRegexAction`): the filter is an
+    /// extended regex (`-E`) instead of a fixed string (`-F`).
+    regex: bool,
 }
 
 impl MagitLog {
     fn new(repo_dir: PathBuf) -> Self {
-        let out = git_output(&repo_dir, &["log", "--oneline", "--decorate", "-n", "200"])
-            .unwrap_or_default();
-        let parents = git_output(&repo_dir, &["log", "--format=%h %p", "-n", "200"])
-            .map(|out| parse_parents(&out))
-            .unwrap_or_default();
-        MagitLog {
+        let mut log = MagitLog {
             repo_dir,
-            entries: parse_log(&out),
+            entries: Vec::new(),
             selected: 0,
             scroll: 0,
             viewport: 1,
             expanded: Vec::new(),
             bodies: std::collections::HashMap::new(),
-            parents,
+            parents: std::collections::HashMap::new(),
             show_tags: true,
             compact_refs: false,
             commit_date: false,
+            filter: String::new(),
+            match_case: false,
+            regex: false,
+        };
+        log.reload();
+        log
+    }
+
+    /// List the commits again under the current text filter, keeping the
+    /// selected commit selected when it is still listed.
+    fn reload(&mut self) {
+        let keep = self.entries.get(self.selected).map(|e| e.sha.clone());
+        let grep = grep_args(&self.filter, self.match_case, self.regex);
+        let log = |format: &[&str]| {
+            let mut args = vec!["log", "-n", "200"];
+            args.extend(format);
+            args.extend(grep.iter().map(String::as_str));
+            git_output(&self.repo_dir, &args).unwrap_or_default()
+        };
+        self.entries = parse_log(&log(&["--oneline", "--decorate"]));
+        self.parents = parse_parents(&log(&["--format=%h %p"]));
+        self.selected = keep
+            .and_then(|sha| self.entries.iter().position(|e| e.sha == sha))
+            .unwrap_or(0);
+    }
+
+    /// Prompt for the log's text filter; an empty answer clears it.
+    fn filter_prompt(current: String) -> Callback {
+        Box::new(move |compositor: &mut Compositor, cx| {
+            let mut prompt = crate::ui::prompt::Prompt::new(
+                "filter log messages: ".into(),
+                None,
+                crate::ui::completers::none,
+                |cx: &mut Context, input: &str, event: crate::ui::PromptEvent| {
+                    if event != crate::ui::PromptEvent::Validate {
+                        return;
+                    }
+                    let filter = input.to_string();
+                    cx.jobs.callback(async move {
+                        let call: crate::job::Callback =
+                            crate::job::Callback::EditorCompositor(Box::new(
+                                move |editor, compositor| match compositor.find::<MagitLog>() {
+                                    Some(log) => {
+                                        log.filter = filter;
+                                        log.reload();
+                                        editor.set_status(log.filter_status());
+                                    }
+                                    None => editor.set_error("no git log open"),
+                                },
+                            ));
+                        Ok(call)
+                    });
+                },
+            );
+            prompt.set_line(current.clone(), cx.editor);
+            compositor.push(Box::new(prompt));
+        })
+    }
+
+    /// The status line after the filter or one of its options changed.
+    fn filter_status(&self) -> String {
+        if self.filter.is_empty() {
+            return format!("log: {} commits, no filter", self.entries.len());
         }
+        format!(
+            "log: {} commits matching {:?} ({}, {})",
+            self.entries.len(),
+            self.filter,
+            if self.match_case {
+                "match case"
+            } else {
+                "any case"
+            },
+            if self.regex { "regex" } else { "plain text" },
+        )
     }
 
     /// The log with the commit `rev` names selected (JetBrains "Select in Git
@@ -3188,6 +3283,19 @@ impl Component for MagitLog {
                 ));
             }
             key!('/') => return EventResult::Consumed(Some(Self::go_to_ref_prompt())),
+            key!('s') => {
+                return EventResult::Consumed(Some(Self::filter_prompt(self.filter.clone())));
+            }
+            key!('i') => {
+                self.match_case = !self.match_case;
+                self.reload();
+                cx.editor.set_status(self.filter_status());
+            }
+            key!('e') => {
+                self.regex = !self.regex;
+                self.reload();
+                cx.editor.set_status(self.filter_status());
+            }
             key!('D') => {
                 // Long forms already fetched carry the other date: drop them.
                 self.commit_date = !self.commit_date;
@@ -3250,7 +3358,7 @@ impl Component for MagitLog {
 
         let title = " Magit log";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  Tab long  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  Tab long  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -6257,6 +6365,59 @@ MM both.rs
     }
 
     #[test]
+    fn log_filters_messages_by_case_and_regex() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        git(&["init", "-q"]);
+        git(&["commit", "-q", "--allow-empty", "-m", "Fix parser"]);
+        git(&["commit", "-q", "--allow-empty", "-m", "fix a.b lexer"]);
+        git(&["commit", "-q", "--allow-empty", "-m", "docs"]);
+
+        let mut log = MagitLog::new(dir.path().to_path_buf());
+        assert_eq!(3, log.entries.len());
+        log.selected = 1;
+        let selected = log.entries[1].sha.clone();
+
+        log.filter = "fix".into();
+        log.reload();
+        assert_eq!(2, log.entries.len(), "any case by default");
+        assert_eq!(selected, log.entries[log.selected].sha, "selection kept");
+
+        log.match_case = true;
+        log.reload();
+        assert_eq!(1, log.entries.len());
+        assert!(log.entries[0].summary.ends_with("fix a.b lexer"));
+
+        // `.` is literal as plain text and any character as a regex.
+        log.match_case = false;
+        log.filter = "a.b".into();
+        log.reload();
+        assert_eq!(1, log.entries.len());
+        log.filter = "fix.p".into();
+        log.reload();
+        assert!(log.entries.is_empty());
+        log.regex = true;
+        log.reload();
+        assert_eq!(1, log.entries.len());
+        assert!(log.entries[0].summary.ends_with("Fix parser"));
+
+        log.filter.clear();
+        log.reload();
+        assert_eq!(3, log.entries.len());
+    }
+
+    #[test]
     fn log_walks_to_parent_and_child_rows() {
         let mut log = MagitLog {
             repo_dir: PathBuf::new(),
@@ -6270,6 +6431,9 @@ MM both.rs
             show_tags: true,
             compact_refs: false,
             commit_date: false,
+            filter: String::new(),
+            match_case: false,
+            regex: false,
         };
         assert_eq!(log.go_to_parent(), "parent of c3");
         assert_eq!(log.selected, 1);

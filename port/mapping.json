@@ -88139,5 +88139,21 @@
    "static:project_tree_toggle_preview_tab"
   ],
   "note": "ProjectView.OpenInPreviewTab = zmax `project_tree_toggle_preview_tab`: while on, files opened from the project tree (keyboard or click) reuse one preview buffer, closed when the next opens unless it was edited, is shown elsewhere or was open before."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.MatchCaseAction",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.MatchCaseAction = `i` in the zmax git log (`:magit`, then `l`): the `s` message filter (`git log --grep`) becomes case-sensitive; off passes `-i`. The filter matches commit messages only, not hashes as the IDE's text filter also does (MagitLog::reload, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.EnableFilterByRegexAction",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.EnableFilterByRegexAction = `e` in the zmax git log (`:magit`, then `l`): the `s` message filter is an extended regex (`git log -E --grep`) instead of a fixed string (`-F`). git's ERE, not Java regex syntax; messages only, not hashes."
  }
 ]
