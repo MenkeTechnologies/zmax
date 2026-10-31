@@ -1358,6 +1358,7 @@ impl MappableCommand {
         git_diff, "Open side-by-side diff vs HEAD",
         resolve_conflicts, "Resolve merge conflicts (3-way)",
         git_status, "Magit status",
+        git_status_select_file, "Open the git status buffer at the current file",
         github_browser, "GitHub browser (CI runs, PRs, issues, releases)",
         github_create_gist, "Create a secret gist of the selection or buffer and yank its URL (JetBrains Create Gist)",
         github_create_pull_request, "Open a pull request from the current branch (JetBrains Create Pull Request)",
@@ -57681,6 +57682,24 @@ fn resolve_conflicts(cx: &mut Context) {
 /// Static-command mirror of the `:magit` / `:git` typable command.
 fn git_status(cx: &mut Context) {
     typed::open_magit(cx.editor, cx.jobs);
+}
+
+/// JetBrains "Select Opened File in Changes View" (`ChangesView.SelectFile`):
+/// open the Magit status buffer with the cursor on the focused file's row.
+fn git_status_select_file(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("buffer has no file");
+        return;
+    };
+    let Some(mut view) = crate::ui::magit::MagitStatus::new(&path) else {
+        cx.editor.set_status("not inside a git repository");
+        return;
+    };
+    if !view.select_file(&path) {
+        cx.editor
+            .set_status(format!("{}: no changes", path.display()));
+    }
+    cx.push_layer(Box::new(view));
 }
 
 /// Open the GitHub browser on the CI runs of the focused buffer's repo.

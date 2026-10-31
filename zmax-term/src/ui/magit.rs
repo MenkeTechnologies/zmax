@@ -14,8 +14,8 @@
 //!
 //! Keys: `j`/`k`/arrows move the selection, `g`/`G` jump to top/bottom, `s`
 //! stage, `u` unstage, `X` discard (press twice to confirm), `S` stage-all, `U`
-//! unstage-all, `I` show or hide ignored files, `c` commit (multi-line message buffer), `a` amend the last
-//! commit, `Enter` visit the file (a conflict row opens the `:merge` resolver),
+//! unstage-all, `I` show or hide ignored files, `c` commit (multi-line message buffer), `C` commit every tracked change when
+//! nothing is staged, `a` amend the last commit, `Enter` visit the file (a conflict row opens the `:merge` resolver),
 //! `P` push, `f` force push (press twice; `--force-with-lease`), `F` fetch, `p` pull, `R` pick the remote those three target, `!`
 //! (Emacs `vc-edit-next-command`) open the next git command for editing before
 //! it runs, `l` open the commit log, `g` refresh, `q`/`Esc` close.
@@ -36,6 +36,12 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// JetBrains "Commit All when Nothing Is Staged" (`Git.Stage.ToggleCommitAll`,
+/// `C` in the status buffer): with nothing staged, `c` commits every changed
+/// tracked file (`git commit -a`) instead of refusing.
+static COMMIT_ALL: AtomicBool = AtomicBool::new(false);
 
 use tui::buffer::Buffer as Surface;
 use zmax_view::input::KeyEvent;
@@ -768,6 +774,26 @@ impl MagitStatus {
 
     /// The list of selectable targets in render order, derived from the rendered
     /// rows so it always matches what's on screen.
+    /// JetBrains "Select Opened File in Changes View" (`ChangesView.SelectFile`):
+    /// put the cursor on `file`'s row. False when the file has no changes listed.
+    pub fn select_file(&mut self, file: &Path) -> bool {
+        let canonical = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+        let Ok(rel) = canonical(file)
+            .strip_prefix(canonical(&self.repo_dir))
+            .map(|rel| rel.to_string_lossy().into_owned())
+        else {
+            return false;
+        };
+        let found = self
+            .targets()
+            .iter()
+            .position(|t| matches!(t, Target::File(i) if self.entries[*i].path == rel));
+        if let Some(found) = found {
+            self.selected = found;
+        }
+        found.is_some()
+    }
+
     fn targets(&self) -> Vec<Target> {
         self.rows()
             .iter()
@@ -1404,14 +1430,17 @@ impl MagitStatus {
     }
 
     /// Build the commit callback: open the multi-line [`MagitCommit`] message
-    /// editor. A plain commit refuses when nothing is staged; an amend opens the
+    /// editor. A plain commit refuses when nothing is staged, unless
+    /// [`COMMIT_ALL`] is on and tracked files changed; an amend opens the
     /// editor pre-filled with the last commit message (`git log -1 --format=%B`)
     /// and is allowed even with nothing staged (a reword).
     fn commit_callback(&self, amend: bool) -> Callback {
         let has_staged = self.entries.iter().any(|e| e.section == Section::Staged);
+        let has_unstaged = self.entries.iter().any(|e| e.section == Section::Unstaged);
+        let all = !amend && !has_staged && has_unstaged && COMMIT_ALL.load(Ordering::Relaxed);
         let repo_dir = self.repo_dir.clone();
         Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            if !amend && !has_staged {
+            if !amend && !has_staged && !all {
                 cx.editor.set_status("nothing staged to commit");
                 return;
             }
@@ -1420,7 +1449,8 @@ impl MagitStatus {
             } else {
                 String::new()
             };
-            let editor = MagitCommit::new(repo_dir.clone(), amend, initial.trim_end());
+            let mut editor = MagitCommit::new(repo_dir.clone(), amend, initial.trim_end());
+            editor.all = all;
             compositor.push(Box::new(editor));
         })
     }
@@ -1763,6 +1793,14 @@ impl Component for MagitStatus {
             }
             key!('c') => return EventResult::Consumed(Some(self.commit_callback(false))),
             key!('a') => return EventResult::Consumed(Some(self.commit_callback(true))),
+            key!('C') => {
+                let all = !COMMIT_ALL.fetch_xor(true, Ordering::Relaxed);
+                cx.editor.set_status(if all {
+                    "nothing staged: c commits all tracked changes"
+                } else {
+                    "nothing staged: c refuses"
+                });
+            }
             key!('l') => return EventResult::Consumed(Some(self.log_callback())),
             key!('P') => self.remote_op_named(cx, "push"),
             key!('f') => {
@@ -1842,7 +1880,7 @@ impl Component for MagitStatus {
             );
         } else {
             let hint =
-                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  I ignored  c commit  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
+                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  I ignored  c commit  C commit-all  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -2091,6 +2129,9 @@ pub struct MagitCommit {
     repo_dir: PathBuf,
     /// True when amending the previous commit (`git commit --amend`).
     amend: bool,
+    /// Commit every changed tracked file (`git commit --all`); set from
+    /// [`COMMIT_ALL`] when nothing is staged.
+    all: bool,
     /// Message body, one entry per line (never empty: at least `[""]`).
     lines: Vec<String>,
     /// Cursor line index into `lines`.
@@ -2141,6 +2182,7 @@ impl MagitCommit {
         MagitCommit {
             repo_dir,
             amend,
+            all: false,
             lines,
             row,
             col,
@@ -2162,6 +2204,8 @@ impl MagitCommit {
     fn commit_diff(&self) -> String {
         let args: &[&str] = if self.amend {
             &["diff", "--cached", "HEAD~"]
+        } else if self.all {
+            &["diff", "HEAD"]
         } else {
             &["diff", "--cached"]
         };
@@ -2172,6 +2216,8 @@ impl MagitCommit {
     fn commit_files(&self) -> Vec<String> {
         let args: &[&str] = if self.amend {
             &["diff", "--cached", "--name-only", "HEAD~"]
+        } else if self.all {
+            &["diff", "--name-only", "HEAD"]
         } else {
             &["diff", "--cached", "--name-only"]
         };
@@ -2444,6 +2490,9 @@ impl MagitCommit {
         cmd.arg("-C").arg(&self.repo_dir).arg("commit");
         if self.amend {
             cmd.arg("--amend");
+        }
+        if self.all {
+            cmd.arg("--all");
         }
         cmd.arg("-F").arg(&tmp);
         let out = cmd.output();
@@ -2727,6 +2776,8 @@ impl Component for MagitCommit {
 
         let title = if self.amend {
             " Amend commit"
+        } else if self.all {
+            " Commit all tracked changes"
         } else {
             " Commit message"
         };
@@ -2869,10 +2920,18 @@ pub struct MagitLog {
     /// a merge commit's diff and files are shown against each parent in turn
     /// (`git show -m`).
     per_parent: bool,
+    /// JetBrains "Update Branch Filter" (`Git.Log.Branches.Change.Branch.Filter`):
+    /// list this branch's history instead of `HEAD`'s.
+    branch: Option<String>,
 }
 
 impl MagitLog {
     fn new(repo_dir: PathBuf) -> Self {
+        Self::for_branch(repo_dir, None)
+    }
+
+    /// The log of `branch`, or of `HEAD` when it is `None`.
+    fn for_branch(repo_dir: PathBuf, branch: Option<String>) -> Self {
         let mut log = MagitLog {
             repo_dir,
             entries: Vec::new(),
@@ -2889,6 +2948,7 @@ impl MagitLog {
             match_case: false,
             regex: false,
             per_parent: false,
+            branch,
         };
         log.reload();
         log
@@ -2902,7 +2962,10 @@ impl MagitLog {
         let log = |format: &[&str]| {
             let mut args = vec!["log", "-n", "200"];
             args.extend(format);
+            args.extend(self.branch.as_deref());
             args.extend(grep.iter().map(String::as_str));
+            // A branch named like a file would otherwise be ambiguous.
+            args.push("--");
             git_output(&self.repo_dir, &args).unwrap_or_default()
         };
         self.entries = parse_log(&log(&["--oneline", "--decorate"]));
@@ -3414,7 +3477,11 @@ impl Component for MagitLog {
             return;
         }
 
-        let title = " Magit log";
+        let title = match &self.branch {
+            Some(branch) => format!(" Magit log {branch}"),
+            None => " Magit log".to_string(),
+        };
+        let title = title.as_str();
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
         let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  m merge parents  Tab long  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
@@ -3869,10 +3936,6 @@ impl Component for MagitShow {
         }
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
-        let text_style = theme.get("ui.text");
-        let plus_style = theme.get("diff.plus");
-        let minus_style = theme.get("diff.minus");
-        let meta_style = theme.get("ui.text.focus");
 
         surface.clear_with(area, bg);
         if area.width < 8 || area.height < 3 {
@@ -3910,20 +3973,7 @@ impl Component for MagitShow {
             .take(body_h as usize)
         {
             let y = body_y + (offset - self.scroll) as u16;
-            let style = if line.starts_with("+++") || line.starts_with("---") {
-                meta_style
-            } else if line.starts_with('+') {
-                plus_style
-            } else if line.starts_with('-') {
-                minus_style
-            } else if line.starts_with("commit ")
-                || line.starts_with("diff ")
-                || line.starts_with("@@")
-            {
-                meta_style
-            } else {
-                text_style
-            };
+            let style = diff_line_style(theme, line);
             surface.set_stringn(area.x, y, line, area.width as usize, style);
         }
     }
@@ -4046,6 +4096,31 @@ impl Component for MagitBranch {
                 cx.editor
                     .set_status("new branch name (Enter to create, Esc to cancel)");
             }
+            // JetBrains "Update Branch Filter in Log": the branch's own history.
+            key!('l') => {
+                if let Some(b) = self.entries.get(self.selected) {
+                    let log = MagitLog::for_branch(self.repo_dir.clone(), Some(b.name.clone()));
+                    return EventResult::Consumed(Some(Box::new(move |compositor, _cx| {
+                        compositor.push(Box::new(log));
+                    })));
+                }
+            }
+            // JetBrains "Navigate Log to Selected Branch Head": the current
+            // branch's log with the branch head selected.
+            key!('L') => {
+                if let Some(b) = self.entries.get(self.selected) {
+                    match MagitLog::open_at(self.repo_dir.clone(), &b.name) {
+                        Ok(log) => {
+                            return EventResult::Consumed(Some(Box::new(
+                                move |compositor, _cx| {
+                                    compositor.push(Box::new(log));
+                                },
+                            )));
+                        }
+                        Err(e) => cx.editor.set_error(e),
+                    }
+                }
+            }
             key!(Enter) => {
                 if let Some(b) = self.entries.get(self.selected) {
                     if b.current {
@@ -4088,7 +4163,7 @@ impl Component for MagitBranch {
 
         let title = " Branches";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter checkout  n new  q back";
+        let hint = "j/k move  Enter checkout  n new  l branch log  L find in log  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -4355,6 +4430,11 @@ pub struct MagitStash {
     viewport: usize,
     /// `Some(msg)` while typing a stash-push message; `None` in list mode.
     pushing: Option<String>,
+    /// JetBrains "Preview Diff" (`Git.Stash.Toggle.Split.Preview`, `v`): the
+    /// selected stash's patch is shown under the list.
+    preview: bool,
+    /// The previewed stash ref and its `git stash show -p` lines.
+    preview_lines: Option<(String, Vec<String>)>,
 }
 
 impl MagitStash {
@@ -4366,9 +4446,24 @@ impl MagitStash {
             scroll: 0,
             viewport: 1,
             pushing: None,
+            preview: false,
+            preview_lines: None,
         };
         view.reload();
         view
+    }
+
+    /// Fetch the selected stash's patch for the preview, once per stash.
+    fn load_preview(&mut self) {
+        let Some(reff) = self.entries.get(self.selected).map(|e| e.reff.clone()) else {
+            self.preview_lines = None;
+            return;
+        };
+        if self.preview_lines.as_ref().is_some_and(|(r, _)| *r == reff) {
+            return;
+        }
+        let patch = git_output(&self.repo_dir, &["stash", "show", "-p", &reff]).unwrap_or_default();
+        self.preview_lines = Some((reff, patch.lines().map(str::to_string).collect()));
     }
 
     fn reload(&mut self) {
@@ -4400,6 +4495,8 @@ impl MagitStash {
             }
             Err(e) => cx.editor.set_error(format!("git stash: {e}")),
         }
+        // `stash@{N}` names shift after a push, pop or drop.
+        self.preview_lines = None;
         self.reload();
         schedule_status_refresh(cx);
     }
@@ -4466,7 +4563,11 @@ impl Component for MagitStash {
                     self.run_stash(cx, &["stash", "drop", &reff], "dropped");
                 }
             }
+            key!('v') => self.preview = !self.preview,
             _ => {}
+        }
+        if self.preview {
+            self.load_preview();
         }
         EventResult::Consumed(None)
     }
@@ -4492,7 +4593,7 @@ impl Component for MagitStash {
 
         let title = " Stashes";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "s push  p pop  a apply  D drop  q back";
+        let hint = "s push  p pop  a apply  D drop  v preview  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -4505,7 +4606,13 @@ impl Component for MagitStash {
 
         let body_y = area.y + 2;
         let body_h = area.height.saturating_sub(2);
-        self.viewport = body_h as usize;
+        // The preview takes the lower half, under a title row.
+        let list_h = if self.preview {
+            (body_h / 2).max(1)
+        } else {
+            body_h
+        };
+        self.viewport = list_h as usize;
 
         if let Some(msg) = &self.pushing {
             surface.set_stringn(
@@ -4540,7 +4647,7 @@ impl Component for MagitStash {
             .iter()
             .enumerate()
             .skip(self.scroll)
-            .take(body_h as usize)
+            .take(list_h as usize)
         {
             let y = body_y + (offset - self.scroll) as u16;
             if offset == self.selected {
@@ -4574,10 +4681,51 @@ impl Component for MagitStash {
                 );
             }
         }
+
+        let Some((reff, lines)) = self.preview_lines.as_ref().filter(|_| self.preview) else {
+            return;
+        };
+        let title_y = body_y + list_h;
+        if title_y >= area.y + area.height {
+            return;
+        }
+        let title = if lines.is_empty() {
+            format!(" {reff}: no changes")
+        } else {
+            format!(" {reff}")
+        };
+        surface.set_stringn(area.x, title_y, &title, area.width as usize, header_style);
+        let rows = (area.y + area.height - title_y - 1) as usize;
+        for (i, line) in lines.iter().take(rows).enumerate() {
+            let style = diff_line_style(theme, line);
+            surface.set_stringn(
+                area.x,
+                title_y + 1 + i as u16,
+                line,
+                area.width as usize,
+                style,
+            );
+        }
     }
 
     fn id(&self) -> Option<&'static str> {
         Some("magit-stash")
+    }
+}
+
+/// The style of one line of `git show` / `git diff` output: file and hunk
+/// headers, added and removed lines, and context.
+fn diff_line_style(theme: &zmax_view::Theme, line: &str) -> zmax_view::graphics::Style {
+    if line.starts_with("+++") || line.starts_with("---") {
+        theme.get("ui.text.focus")
+    } else if line.starts_with('+') {
+        theme.get("diff.plus")
+    } else if line.starts_with('-') {
+        theme.get("diff.minus")
+    } else if line.starts_with("commit ") || line.starts_with("diff ") || line.starts_with("@@") {
+        theme.get("ui.text.focus")
+    } else {
+        theme.get("ui.text")
     }
 }
 
@@ -6289,6 +6437,93 @@ mod tests {
     }
 
     #[test]
+    fn status_selects_a_file_and_commit_all_covers_only_tracked_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        let write = |name: &str, text: &str| std::fs::write(dir.path().join(name), text).unwrap();
+        git(&["init", "-q"]);
+        write("a.rs", "a\n");
+        write("b.rs", "b\n");
+        git(&["add", "a.rs", "b.rs"]);
+        git(&["commit", "-q", "-m", "base"]);
+        write("b.rs", "b2\n");
+        write("new.rs", "");
+
+        let mut status = MagitStatus::new(dir.path()).unwrap();
+        assert!(status.select_file(&dir.path().join("b.rs")));
+        let Target::File(i) = status.targets()[status.selected] else {
+            panic!("a file row is selected");
+        };
+        assert_eq!(status.entries[i].path, "b.rs");
+        assert!(!status.select_file(&dir.path().join("a.rs")), "unchanged");
+
+        let mut commit = MagitCommit::new(dir.path().to_path_buf(), false, "");
+        assert!(commit.commit_files().is_empty(), "nothing staged");
+        commit.all = true;
+        assert_eq!(commit.commit_files(), ["b.rs"], "untracked files stay out");
+        assert!(commit.commit_diff().contains("+b2"));
+    }
+
+    #[test]
+    fn branch_log_and_stash_preview() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        let write = |name: &str, text: &str| std::fs::write(dir.path().join(name), text).unwrap();
+        git(&["init", "-q", "-b", "main"]);
+        write("f", "1\n");
+        git(&["add", "f"]);
+        git(&["commit", "-q", "-m", "base"]);
+        git(&["checkout", "-q", "-b", "side"]);
+        git(&["commit", "-q", "--allow-empty", "-m", "side only"]);
+        git(&["checkout", "-q", "main"]);
+
+        let side = MagitLog::for_branch(dir.path().to_path_buf(), Some("side".into()));
+        assert_eq!(side.entries.len(), 2);
+        assert!(side.entries[0].summary.ends_with("side only"));
+        assert_eq!(MagitLog::new(dir.path().to_path_buf()).entries.len(), 1);
+        assert!(
+            MagitLog::open_at(dir.path().to_path_buf(), "side").is_err(),
+            "side's head is not in main's history"
+        );
+
+        write("f", "2\n");
+        git(&["stash", "push", "-q", "-m", "two"]);
+        write("f", "3\n");
+        git(&["stash", "push", "-q", "-m", "three"]);
+        let mut stash = MagitStash::new(dir.path().to_path_buf());
+        let previewed = |stash: &mut MagitStash, added: &str| {
+            stash.load_preview();
+            let (_, lines) = stash.preview_lines.as_ref().unwrap();
+            assert!(lines.iter().any(|l| l == added), "{lines:?}");
+        };
+        previewed(&mut stash, "+3");
+        stash.move_selection(1);
+        previewed(&mut stash, "+2");
+    }
+
+    #[test]
     fn staged_only() {
         let entries = parse_status("M  staged.rs\n");
         assert_eq!(entries.len(), 1);
@@ -6568,6 +6803,7 @@ MM both.rs
             match_case: false,
             regex: false,
             per_parent: false,
+            branch: None,
         };
         assert_eq!(log.go_to_parent(), "parent of c3");
         assert_eq!(log.selected, 1);

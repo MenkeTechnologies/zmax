@@ -965,6 +965,7 @@
 | `git_diff` | Open side-by-side diff vs HEAD | **spacemacs** — normal: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, select: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, insert: `` <C-x>v= ``<br>**hybrid** — normal: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, select: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd `` |
 | `resolve_conflicts` | Resolve merge conflicts (3-way) | **spacemacs, hybrid** — normal: `` <space>gm ``, `` <space>gcr ``, select: `` <space>gm ``, `` <space>gcr `` |
 | `git_status` | Magit status | **spacemacs** — normal: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, select: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, insert: `` <C-x>vd ``<br>**hybrid** — normal: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, select: `` <C-x>vd ``, `` <space>gs ``, `` <space>pv `` |
+| `git_status_select_file` | Open the git status buffer at the current file |  |
 | `github_browser` | GitHub browser (CI runs, PRs, issues, releases) |  |
 | `github_create_gist` | Create a secret gist of the selection or buffer and yank its URL (JetBrains Create Gist) |  |
 | `github_create_pull_request` | Open a pull request from the current branch (JetBrains Create Pull Request) |  |

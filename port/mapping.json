@@ -88547,5 +88547,61 @@
    "typable:magit"
   ],
   "note": "Git.Stage.ToggleIgnored = `I` in the zmax status buffer (`:magit`): lists ignored files in a last \"Ignored files\" section (`git status --ignored`); `s` on one stages it with `git add -f`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.ShowIgnored",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Show Ignored Files = `I` in the zmax status buffer (`:magit`), the same toggle as Git.Stage.ToggleIgnored: a last \"Ignored files\" section from `git status --ignored`."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.SelectFile",
+  "status": "ported",
+  "evidence": [
+   "static:git_status_select_file"
+  ],
+  "note": "Select Opened File in Changes View = `git_status_select_file`: opens the `:magit` status buffer with the cursor on the focused file's row (MagitStatus::select_file, ui/magit.rs); reports when the file has no changes."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.ToggleCommitAll",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Commit All when Nothing Is Staged = `C` in the zmax status buffer (`:magit`): while on, `c` with nothing staged opens the commit editor in `git commit --all` mode (its diff and file list show the tracked changes) instead of refusing. The setting lasts for the session (COMMIT_ALL, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stash.Toggle.Split.Preview",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Preview Diff = `v` in the zmax stash list (`z` from `:magit`): the selected stash's `git stash show -p` patch fills the lower half and follows the selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Log.Branches.Navigate.Log.To.Selected.Branch",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Navigate Log to Selected Branch Head = `L` in the zmax branch list (`b` from `:magit`): opens the commit log with the branch's head commit selected (MagitLog::open_at); a head outside the listed history is reported."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Log.Branches.Change.Branch.Filter.On.Selection",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Update Branch Filter = `l` in the zmax branch list (`b` from `:magit`): opens the commit log filtered to that branch's history (MagitLog::for_branch). JetBrains re-filters a docked log live as the branch selection moves; zmax opens the filtered log on the key, so the on-selection follow mode is absent."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Log.Branches.Navigate.Log.To.Branch.On.Selection",
+  "status": "partial",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Navigate Log to Branch Head = `L` in the zmax branch list (`b` from `:magit`): the log opens with the branch head selected. The JetBrains option does this live on every branch selection in a docked log; zmax does it on the key."
  }
 ]
