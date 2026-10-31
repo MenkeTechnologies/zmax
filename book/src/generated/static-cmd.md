@@ -974,6 +974,7 @@
 | `github_submit_review` | Approve, comment on or request changes to the current branch's pull request (JetBrains Github.PullRequest.Review.Submit) |  |
 | `github_next_review_comment` | Jump to the next review comment on the current branch's pull request (JetBrains CodeReview.NextComment) |  |
 | `github_previous_review_comment` | Jump to the previous review comment on the current branch's pull request (JetBrains CodeReview.PreviousComment) |  |
+| `github_delete_merged_branch` | Delete the current branch on GitHub once its pull request is merged (JetBrains Delete Merged Branch) |  |
 | `github_share` | Create a GitHub repository for the project and push to it (JetBrains Share Project on GitHub) |  |
 | `github_sync_fork` | Rebase the current branch onto the fork's parent (JetBrains Sync Fork) |  |
 | `git_push` | Push the current branch to its remote (SPC g P) | **spacemacs** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP ``, insert: `` <C-x>vP ``<br>**hybrid** — normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP `` |

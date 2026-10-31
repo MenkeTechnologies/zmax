@@ -14,7 +14,7 @@
 //!
 //! Keys: `j`/`k`/arrows move the selection, `g`/`G` jump to top/bottom, `s`
 //! stage, `u` unstage, `X` discard (press twice to confirm), `S` stage-all, `U`
-//! unstage-all, `c` commit (multi-line message buffer), `a` amend the last
+//! unstage-all, `I` show or hide ignored files, `c` commit (multi-line message buffer), `a` amend the last
 //! commit, `Enter` visit the file (a conflict row opens the `:merge` resolver),
 //! `P` push, `f` force push (press twice; `--force-with-lease`), `F` fetch, `p` pull, `R` pick the remote those three target, `!`
 //! (Emacs `vc-edit-next-command`) open the next git command for editing before
@@ -55,6 +55,9 @@ pub enum Section {
     Unstaged,
     Staged,
     Conflict,
+    /// Ignored files, listed only while JetBrains "Show Ignored Files"
+    /// (`Git.Stage.ToggleIgnored`, `I`) is on.
+    Ignored,
 }
 
 impl Section {
@@ -65,6 +68,7 @@ impl Section {
             Section::Unstaged => 1,
             Section::Staged => 2,
             Section::Conflict => 3,
+            Section::Ignored => 4,
         }
     }
 
@@ -74,6 +78,7 @@ impl Section {
             Section::Unstaged => "Unstaged changes",
             Section::Staged => "Staged changes",
             Section::Conflict => "Merge conflicts",
+            Section::Ignored => "Ignored files",
         }
     }
 }
@@ -126,6 +131,15 @@ pub fn parse_status(porcelain: &str) -> Vec<StatusEntry> {
         if x == '?' && y == '?' {
             out.push(StatusEntry {
                 section: Section::Untracked,
+                path,
+                x,
+                y,
+            });
+            continue;
+        }
+        if x == '!' && y == '!' {
+            out.push(StatusEntry {
+                section: Section::Ignored,
                 path,
                 x,
                 y,
@@ -637,6 +651,9 @@ pub struct MagitStatus {
     /// The remote push/fetch/pull target, chosen with `R`; `None` leaves the
     /// argv bare so git picks its configured default.
     remote: Option<String>,
+    /// JetBrains "Show Ignored Files" (`Git.Stage.ToggleIgnored`): list the
+    /// ignored files too (`git status --ignored`).
+    show_ignored: bool,
 }
 
 impl MagitStatus {
@@ -663,6 +680,7 @@ impl MagitStatus {
             edit_next: false,
             edit_command: None,
             remote: None,
+            show_ignored: false,
         };
         view.refresh();
         Some(view)
@@ -678,7 +696,11 @@ impl MagitStatus {
             &["rev-list", "--left-right", "--count", "@{u}...HEAD"],
         )
         .and_then(|s| parse_ahead_behind(&s));
-        let porcelain = git_output(&self.repo_dir, &["status", "--porcelain"]).unwrap_or_default();
+        let mut args = vec!["status", "--porcelain"];
+        if self.show_ignored {
+            args.push("--ignored");
+        }
+        let porcelain = git_output(&self.repo_dir, &args).unwrap_or_default();
         let mut entries = parse_status(&porcelain);
         entries.sort_by(|a, b| {
             a.section
@@ -716,7 +738,7 @@ impl MagitStatus {
                 Section::Staged => vec!["diff", "--cached", "--", &path],
                 // Untracked has no tracked diff; conflicts show a combined diff
                 // that isn't separately stageable, so we skip the cache.
-                Section::Untracked | Section::Conflict => continue,
+                Section::Untracked | Section::Conflict | Section::Ignored => continue,
             };
             if let Some(out) = git_output(&self.repo_dir, &args) {
                 let (header, hunks) = parse_diff_hunks(&out);
@@ -859,7 +881,7 @@ impl MagitStatus {
         let paths: Vec<String> = self
             .entries
             .iter()
-            .filter(|e| e.section != Section::Untracked)
+            .filter(|e| !matches!(e.section, Section::Untracked | Section::Ignored))
             .map(|e| e.path.clone())
             .collect();
         if paths.is_empty() {
@@ -905,13 +927,22 @@ impl MagitStatus {
             .set_status(format!("marked {n} file(s) ({} marked)", self.marked.len()));
     }
 
-    /// Stage the acted-on files (`git add -- <path>…`), then refresh.
+    /// Stage the acted-on files (`git add -- <path>…`), then refresh. An ignored
+    /// file among them needs `-f`, which changes nothing for the others.
     fn stage_selected(&mut self, cx: &mut Context) {
         let paths = self.acted_on();
         if paths.is_empty() {
             return;
         }
-        let mut args = vec!["add", "--"];
+        let ignored = self
+            .entries
+            .iter()
+            .any(|e| e.section == Section::Ignored && paths.contains(&e.path));
+        let mut args = vec!["add"];
+        if ignored {
+            args.push("-f");
+        }
+        args.push("--");
         args.extend(paths.iter().map(String::as_str));
         match self.run_git(&args) {
             Ok(()) => cx.editor.set_status(format!("staged {}", listing(&paths))),
@@ -949,10 +980,9 @@ impl MagitStatus {
         }
         let mut failed = Vec::new();
         for path in &paths {
-            let untracked = self
-                .entries
-                .iter()
-                .any(|e| e.path == *path && e.section == Section::Untracked);
+            let untracked = self.entries.iter().any(|e| {
+                e.path == *path && matches!(e.section, Section::Untracked | Section::Ignored)
+            });
             let result = if untracked {
                 std::fs::remove_file(self.repo_dir.join(path)).map_err(|e| e.to_string())
             } else {
@@ -1290,6 +1320,7 @@ impl MagitStatus {
             Section::Unstaged,
             Section::Staged,
             Section::Conflict,
+            Section::Ignored,
         ] {
             let idxs: Vec<usize> = self
                 .entries
@@ -1331,6 +1362,7 @@ impl MagitStatus {
                         let note = match entry.section {
                             Section::Untracked => "(untracked — s stages the whole file)",
                             Section::Conflict => "(conflict — resolve via Enter)",
+                            Section::Ignored => "(ignored — s stages it with git add -f)",
                             _ => "(no changes to show)",
                         };
                         rows.push(Row::Note(note.to_string()));
@@ -1685,6 +1717,15 @@ impl Component for MagitStatus {
             key!('M') => self.mark_all_files(cx),
             key!(Backspace) => self.unmark_file(cx),
             key!('*') => self.mark_registered_files(cx),
+            key!('I') => {
+                self.show_ignored = !self.show_ignored;
+                self.refresh();
+                cx.editor.set_status(if self.show_ignored {
+                    "ignored files shown"
+                } else {
+                    "ignored files hidden"
+                });
+            }
             key!('%') => {
                 self.mark_regexp = Some(String::new());
                 cx.editor
@@ -1801,7 +1842,7 @@ impl Component for MagitStatus {
             );
         } else {
             let hint =
-                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  c commit  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
+                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  I ignored  c commit  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -1888,6 +1929,7 @@ impl Component for MagitStatus {
                         Section::Unstaged => minus_style,
                         Section::Staged => plus_style,
                         Section::Conflict => conflict_style,
+                        Section::Ignored => info_style,
                     };
                     if selected_block {
                         surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
@@ -6221,6 +6263,32 @@ mod tests {
     }
 
     #[test]
+    fn ignored_files_are_listed_last_only_on_request() {
+        let dir = tempfile::tempdir().unwrap();
+        let ok = Command::new("git")
+            .arg("-C")
+            .arg(dir.path())
+            .args(["init", "-q"])
+            .status()
+            .unwrap()
+            .success();
+        assert!(ok);
+        std::fs::write(dir.path().join(".gitignore"), "*.log\n").unwrap();
+        std::fs::write(dir.path().join("build.log"), "").unwrap();
+
+        let mut status = MagitStatus::new(dir.path()).unwrap();
+        assert!(status.entries.iter().all(|e| e.section != Section::Ignored));
+        status.show_ignored = true;
+        status.refresh();
+        let last = status.entries.last().unwrap();
+        assert_eq!(
+            (last.section, last.path.as_str()),
+            (Section::Ignored, "build.log")
+        );
+        assert_eq!(status.entries[0].path, ".gitignore", "untracked first");
+    }
+
+    #[test]
     fn staged_only() {
         let entries = parse_status("M  staged.rs\n");
         assert_eq!(entries.len(), 1);
@@ -6787,6 +6855,7 @@ stash@{1}: On feature: experiment
             edit_next: false,
             edit_command: None,
             remote: None,
+            show_ignored: false,
         }
     }
 

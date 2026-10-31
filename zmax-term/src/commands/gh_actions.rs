@@ -481,9 +481,57 @@ pub fn github_previous_review_comment(cx: &mut Context) {
     goto_review_comment(cx, false);
 }
 
+/// The head branch of the first merged pull request in a `pulls?state=closed`
+/// response: `(head repository, head branch, number)`.
+fn merged_head(list: &Value) -> Result<(String, String, u64), String> {
+    let pr = list
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|pr| !pr["merged_at"].is_null())
+        .ok_or("no merged pull request for this branch")?;
+    let head = &pr["head"];
+    Ok((
+        head["repo"]["full_name"]
+            .as_str()
+            .ok_or("the head repository is gone")?
+            .to_string(),
+        head["ref"].as_str().ok_or("no head branch")?.to_string(),
+        pr["number"].as_u64().ok_or("no pull request number")?,
+    ))
+}
+
+/// JetBrains "Delete Merged Branch" (`GitHub.Timeline.DeleteMergedBranch`):
+/// once the current branch's pull request is merged, delete its branch on
+/// GitHub. The local branch stays.
+pub fn github_delete_merged_branch(cx: &mut Context) {
+    let Some((slug, branch)) = slug_and_branch(cx.editor) else {
+        return;
+    };
+    github_job(
+        cx.jobs,
+        cx.editor,
+        "deleting the merged branch…",
+        move || {
+            let owner = slug.split('/').next().unwrap_or_default();
+            let list = crate::github::api(&format!(
+                "repos/{slug}/pulls?state=closed&head={owner}:{branch}"
+            ))?;
+            let (repo, head, number) = merged_head(&list)?;
+            crate::github::request(
+                "DELETE",
+                &format!("repos/{repo}/git/refs/heads/{head}"),
+                None,
+            )?;
+            Ok(format!("deleted {repo}:{head}, merged in #{number}"))
+        },
+        |editor, done| editor.set_status(done),
+    );
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{adjacent_comment, render_pull_request, review_comments};
+    use super::{adjacent_comment, merged_head, render_pull_request, review_comments};
     use serde_json::json;
 
     #[test]
@@ -538,5 +586,25 @@ mod tests {
             "a buffer outside the repo wraps to the last"
         );
         assert_eq!(adjacent_comment(&[], "src/a.rs", 1, true), None);
+    }
+    #[test]
+    fn the_merged_pull_request_names_the_branch_to_delete() {
+        let head = |repo: &str| json!({ "ref": "fix", "repo": { "full_name": repo } });
+        let list = json!([
+            { "number": 3, "merged_at": null, "head": head("user/fork") },
+            { "number": 2, "merged_at": "2026-01-01T00:00:00Z", "head": head("user/fork") }
+        ]);
+        assert_eq!(
+            merged_head(&list),
+            Ok(("user/fork".into(), "fix".into(), 2)),
+            "a closed but unmerged pull request is passed over"
+        );
+        assert!(merged_head(&json!([{ "number": 3, "merged_at": null }])).is_err());
+        let gone =
+            json!([{ "number": 2, "merged_at": "x", "head": { "ref": "fix", "repo": null } }]);
+        assert_eq!(
+            merged_head(&gone),
+            Err("the head repository is gone".into())
+        );
     }
 }

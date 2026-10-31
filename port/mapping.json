@@ -88531,5 +88531,21 @@
    "static:choose_run_target"
   ],
   "note": "Targets (the run-targets combo) = zmax `choose_run_target`: where the active run configuration runs, locally or on one of the run targets."
+ },
+ {
+  "spec_id": "jetbrains-actions.GitHub.Timeline.DeleteMergedBranch",
+  "status": "partial",
+  "evidence": [
+   "static:github_delete_merged_branch"
+  ],
+  "note": "GitHub.Timeline.DeleteMergedBranch = zmax `github_delete_merged_branch`: finds the current branch's merged pull request (`pulls?state=closed`, first with `merged_at`) and deletes its head branch on GitHub (`DELETE repos/{head repo}/git/refs/heads/{branch}`); the local branch stays. Run from the editor, not from a PR timeline; fork heads are found only when the fork owner matches the repo owner, as with the other branch-PR commands."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Stage.ToggleIgnored",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Git.Stage.ToggleIgnored = `I` in the zmax status buffer (`:magit`): lists ignored files in a last \"Ignored files\" section (`git status --ignored`); `s` on one stages it with `git add -f`."
  }
 ]
