@@ -88243,5 +88243,293 @@
    "typable:merge"
   ],
   "note": "Diff.CompareWithBase.Right (Base and Right) = key `6` in the zmax `:merge` resolver: opens a read-only two-pane comparison Base \u21d4 Theirs (DiffView::handle_event, ui/merge.rs). Ours/Result/Theirs are the merge window's Left/Middle/Right; Base is the common ancestor from index stage 1, and Result is the resolution as currently chosen."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ShowSettingsPopup",
+  "status": "ported",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": "Diff.ShowSettingsPopup (Show Diff Settings Popup) = `S` in the zmax diff view (`:diff`, also `:merge`): a settings box over the body listing ignore whitespace (`w`) and highlighting by characters, words or lines (`i`), with the pane and export keys (DiffView render, ui/merge.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ShowInExternalTool",
+  "status": "ported",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": "Diff.ShowInExternalTool (Show Diff in External Tool) = `X` in the zmax diff view (`:diff`, also `:merge`): writes both sides to temporary files and opens them in `$ZMAX_DIFF_TOOL`, else FileMerge (`opendiff`) on macOS and Meld elsewhere (open_external_diff, ui/merge.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwapThreeWayColorModeInDiffWindow",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "SwapThreeWayColorModeInDiffWindow (Change Three-Side Viewer Mode) = `c` in the zmax `:merge` resolver: cycles what the conflict colouring compares, ours vs theirs, ours vs base, base vs theirs (ColorMode, ui/merge.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.ExpandAll",
+  "status": "ported",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Expand All = `E` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs): every project and workspace member expanded."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.CollapseAll",
+  "status": "ported",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Collapse All = `C` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.GroupModules",
+  "status": "ported",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Group Modules = `m` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs): workspace members nest under their project; the choice is saved in build-tool.toml."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.GroupTasks",
+  "status": "ported",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Group Tasks = `t` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs): tasks grouped by kind (task_group, build_tool.rs); saved."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.ShowInheritedTasks",
+  "status": "ported",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Display Tasks Inherited from Sub-Projects = `i` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs); saved."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.ShowIgnored",
+  "status": "ported",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Show Ignored = `s` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs): lists the projects ignored with `I`; saved."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.IgnoreProject",
+  "status": "ported",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Ignore = `I` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs): toggles the selected project as ignored (hidden unless `s`); saved."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.DetachProject",
+  "status": "ported",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Detach = `d` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs): removes the selected project from the window; saved."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.SelectProjectDataToImport",
+  "status": "partial",
+  "evidence": [
+   "static:build_tool_window"
+  ],
+  "note": "Select Project Data To Import = `x` in the zmax build-tool window (`build_tool_window`, ui/build_tool.rs): imports or skips the selected workspace member. Per member only; no data-kind selection, since zmax has no imported project model."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.RefreshAllProjects",
+  "status": "partial",
+  "evidence": [
+   "static:build_sync"
+  ],
+  "note": "Reload All Projects = zmax `build_sync` (also `R` in the build-tool window): runs the before-sync task triggers, restarts the language servers so they re-read the build files, runs the after-sync triggers and records the build files as loaded (build_sync_now, commands.rs). No project model is re-imported; the language servers are the model."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.RefreshProject",
+  "status": "partial",
+  "evidence": [
+   "static:build_sync_project"
+  ],
+  "note": "Reload Project = zmax `build_sync_project` (also `r` in the build-tool window): `build_sync` scoped to the build project containing the current file; same language-server reload as RefreshAllProjects."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.ProjectRefreshAction",
+  "status": "partial",
+  "evidence": [
+   "static:build_sync"
+  ],
+  "note": "Load Build Changes: on idle zmax checks (at most every 5 s) for build files changed since the last sync and says so in the status line, or syncs at once with auto-sync on (check_build_changes, commands.rs); `build_sync` loads them. A status-line notice, not a floating button."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.HideProjectRefreshAction",
+  "status": "ported",
+  "evidence": [
+   "static:build_hide_sync_notice"
+  ],
+  "note": "Hide (on the Load Build Changes notice) = zmax `build_hide_sync_notice`: no further notice until the build files change again."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.ShowCommonSettings",
+  "status": "partial",
+  "evidence": [
+   "static:build_auto_sync"
+  ],
+  "note": "Auto-Sync Settings = zmax `build_auto_sync` (also `S` in the build-tool window): toggles between reloading on any build-file change and only on `build_sync`; the IDE's dialog also distinguishes external changes."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.ShowSettings",
+  "status": "partial",
+  "evidence": [
+   "static:build_tool_settings"
+  ],
+  "note": "Build Tool Settings = zmax `build_tool_settings`: opens the build-tool window's saved settings (build-tool.toml) as a file to edit, not a settings dialog."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.OpenTasksActivationManager",
+  "status": "ported",
+  "evidence": [
+   "static:build_task_triggers"
+  ],
+  "note": "Tasks Activation = zmax `build_task_triggers` (also `T` in the build-tool window): lists the task triggers; picking one removes it."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.BeforeRun",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_add_before_task"
+  ],
+  "note": "Execute Before Run/Debug = zmax `run_config_add_before_task` (also `b` on a task in the build-tool window): the picked build task runs before the active run configuration."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.BeforeCompile",
+  "status": "ported",
+  "evidence": [
+   "static:build_task_trigger"
+  ],
+  "note": "Execute Before Build = zmax `build_task_trigger` (also `a` on a task in the build-tool window): pick a build task, then \"before build\" among the trigger times (build_tool::When); saved in build-tool.toml."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.AfterCompile",
+  "status": "ported",
+  "evidence": [
+   "static:build_task_trigger"
+  ],
+  "note": "Execute After Build = zmax `build_task_trigger` (also `a` on a task in the build-tool window): pick a build task, then \"after build\" among the trigger times (build_tool::When); saved in build-tool.toml."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.BeforeRebuild",
+  "status": "ported",
+  "evidence": [
+   "static:build_task_trigger"
+  ],
+  "note": "Execute Before Rebuild = zmax `build_task_trigger` (also `a` on a task in the build-tool window): pick a build task, then \"before rebuild\" among the trigger times (build_tool::When); saved in build-tool.toml."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.AfterRebuild",
+  "status": "ported",
+  "evidence": [
+   "static:build_task_trigger"
+  ],
+  "note": "Execute After Rebuild = zmax `build_task_trigger` (also `a` on a task in the build-tool window): pick a build task, then \"after rebuild\" among the trigger times (build_tool::When); saved in build-tool.toml."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.BeforeSync",
+  "status": "ported",
+  "evidence": [
+   "static:build_task_trigger"
+  ],
+  "note": "Execute Before Sync = zmax `build_task_trigger` (also `a` on a task in the build-tool window): pick a build task, then \"before sync\" among the trigger times (build_tool::When); saved in build-tool.toml."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExternalSystem.AfterSync",
+  "status": "ported",
+  "evidence": [
+   "static:build_task_trigger"
+  ],
+  "note": "Execute After Sync = zmax `build_task_trigger` (also `a` on a task in the build-tool window): pick a build task, then \"after sync\" among the trigger times (build_tool::When); saved in build-tool.toml."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.GroupByStatus",
+  "status": "ported",
+  "evidence": [
+   "static:services_view"
+  ],
+  "note": "Group by Status = `g` in the zmax Services view (`services_view`, ui/services.rs): running, finished, not started."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.GroupByType",
+  "status": "ported",
+  "evidence": [
+   "static:services_view"
+  ],
+  "note": "Group by Type = `t` in the zmax Services view (`services_view`, ui/services.rs): by the program each configuration runs."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.GroupConfigurations",
+  "status": "ported",
+  "evidence": [
+   "static:services_view"
+  ],
+  "note": "Group Configurations = `f` in the zmax Services view (`services_view`, ui/services.rs): prompts for a folder and puts the selected configuration in it; saved with the run configurations."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.UngroupConfigurations",
+  "status": "ported",
+  "evidence": [
+   "static:services_view"
+  ],
+  "note": "Ungroup Configurations = `u` in the zmax Services view (`services_view`, ui/services.rs): takes the selected configuration out of its folder."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.HideConfiguration",
+  "status": "ported",
+  "evidence": [
+   "static:services_view"
+  ],
+  "note": "Hide Configuration = `h` in the zmax Services view (`services_view`, ui/services.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.RestoreConfiguration",
+  "status": "ported",
+  "evidence": [
+   "static:services_view"
+  ],
+  "note": "Restore Configuration = `r` in the zmax Services view (`services_view`, ui/services.rs): picks one hidden configuration to show again."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.RestoreHiddenConfigurations",
+  "status": "ported",
+  "evidence": [
+   "static:services_restore_all"
+  ],
+  "note": "Restore Hidden Configurations = zmax `services_restore_all` (also `H` in the zmax Services view (`services_view`, ui/services.rs))."
+ },
+ {
+  "spec_id": "jetbrains-actions.RunDashboard.RemoveType",
+  "status": "ported",
+  "evidence": [
+   "static:services_view"
+  ],
+  "note": "Remove Configuration Type from Services = `x` in the zmax Services view (`services_view`, ui/services.rs): the selected configuration's type is no longer listed."
+ },
+ {
+  "spec_id": "jetbrains-actions.ManageTargets",
+  "status": "ported",
+  "evidence": [
+   "static:manage_run_targets"
+  ],
+  "note": "Manage Targets = zmax `manage_run_targets`: lists the run targets, picking one removes it; `run_target_add` defines one (`NAME ssh HOST[:DIR]`, `NAME docker IMAGE`, `NAME container NAME`)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ExecutionTargets",
+  "status": "ported",
+  "evidence": [
+   "static:choose_run_target"
+  ],
+  "note": "Targets (the run-targets combo) = zmax `choose_run_target`: where the active run configuration runs, locally or on one of the run targets."
  }
 ]
