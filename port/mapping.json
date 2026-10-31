@@ -88195,5 +88195,53 @@
    "static:ghost_text_accept_line"
   ],
   "note": "InsertInlineCompletionLineAction = zmax `ghost_text_accept_line`: inserts the AI ghost-text suggestion up to and including its next line break and keeps the rest as the ghost at the new cursor (shares the partial-accept path with `ghost_text_accept_word`)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ComparePartial.Base.Left",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "Diff.ComparePartial.Base.Left (Left and Middle) = key `1` in the zmax `:merge` resolver: opens a read-only two-pane comparison Ours \u21d4 Result (DiffView::handle_event, ui/merge.rs). Ours/Result/Theirs are the merge window's Left/Middle/Right; Base is the common ancestor from index stage 1, and Result is the resolution as currently chosen."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ComparePartial.Base.Right",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "Diff.ComparePartial.Base.Right (Middle and Right) = key `2` in the zmax `:merge` resolver: opens a read-only two-pane comparison Result \u21d4 Theirs (DiffView::handle_event, ui/merge.rs). Ours/Result/Theirs are the merge window's Left/Middle/Right; Base is the common ancestor from index stage 1, and Result is the resolution as currently chosen."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.ComparePartial.Left.Right",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "Diff.ComparePartial.Left.Right (Left and Right) = key `3` in the zmax `:merge` resolver: opens a read-only two-pane comparison Ours \u21d4 Theirs (DiffView::handle_event, ui/merge.rs). Ours/Result/Theirs are the merge window's Left/Middle/Right; Base is the common ancestor from index stage 1, and Result is the resolution as currently chosen."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.CompareWithBase.Left",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "Diff.CompareWithBase.Left (Base and Left) = key `4` in the zmax `:merge` resolver: opens a read-only two-pane comparison Base \u21d4 Ours (DiffView::handle_event, ui/merge.rs). Ours/Result/Theirs are the merge window's Left/Middle/Right; Base is the common ancestor from index stage 1, and Result is the resolution as currently chosen."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.CompareWithBase.Result",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "Diff.CompareWithBase.Result (Base and Middle) = key `5` in the zmax `:merge` resolver: opens a read-only two-pane comparison Base \u21d4 Result (DiffView::handle_event, ui/merge.rs). Ours/Result/Theirs are the merge window's Left/Middle/Right; Base is the common ancestor from index stage 1, and Result is the resolution as currently chosen."
+ },
+ {
+  "spec_id": "jetbrains-actions.Diff.CompareWithBase.Right",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": "Diff.CompareWithBase.Right (Base and Right) = key `6` in the zmax `:merge` resolver: opens a read-only two-pane comparison Base \u21d4 Theirs (DiffView::handle_event, ui/merge.rs). Ours/Result/Theirs are the merge window's Left/Middle/Right; Base is the common ancestor from index stage 1, and Result is the resolution as currently chosen."
  }
 ]
