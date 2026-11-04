@@ -457,6 +457,15 @@ pub fn parse_log(out: &str) -> Vec<LogEntry> {
 /// upstream commits missing locally (behind) and the number of local commits
 /// missing upstream (ahead). Returns `None` if the two integers can't be read
 /// (e.g. no upstream configured). Pure and unit-tested.
+/// The commits `git cherry <upstream> <head>` lists with `+`: on `<head>` with
+/// no equivalent change on `<upstream>`. `-` lines have one and are left out.
+fn parse_cherry(out: &str) -> HashSet<String> {
+    out.lines()
+        .filter_map(|line| line.strip_prefix("+ "))
+        .map(|sha| sha.trim().to_string())
+        .collect()
+}
+
 pub fn parse_ahead_behind(out: &str) -> Option<(usize, usize)> {
     let mut it = out.split_whitespace();
     let behind = it.next()?.parse().ok()?;
@@ -2888,8 +2897,8 @@ impl Component for MagitCommit {
 /// `D` switches the long form between author and committer date, `s` filters
 /// by message (`i` match case, `e` regex), `m` shows merges
 /// against each parent, `v` shows the selected commit's diff beside the list
-/// (`V` moves it between the bottom and the right), `q`/`Esc` return to the
-/// status buffer.
+/// (`V` moves it between the bottom and the right), `P` marks with `+` the
+/// commits not cherry-picked to `HEAD`, `q`/`Esc` return to the status buffer.
 pub struct MagitLog {
     repo_dir: PathBuf,
     entries: Vec<LogEntry>,
@@ -2932,6 +2941,10 @@ pub struct MagitLog {
     preview_right: bool,
     /// The previewed commit and its `git show` lines.
     preview_lines: Option<(String, Vec<String>)>,
+    /// JetBrains "Not Cherry-Picked Commits"
+    /// (`Git.Log.HighlightCherryPickedCommits`, `P`): the listed commits with
+    /// no equivalent on `HEAD` (`git cherry HEAD <tip>`), marked `+`.
+    unpicked: Option<HashSet<String>>,
 }
 
 impl MagitLog {
@@ -2961,6 +2974,7 @@ impl MagitLog {
             preview: false,
             preview_right: false,
             preview_lines: None,
+            unpicked: None,
         };
         log.reload();
         log
@@ -3188,7 +3202,12 @@ impl MagitLog {
         let mut out = Vec::new();
         for (i, entry) in self.entries.iter().enumerate() {
             let summary = shape_decoration(&entry.summary, self.show_tags, self.compact_refs);
-            out.push((i, format!("  {} {summary}", entry.sha), true));
+            let marker = if self.is_unpicked(&entry.sha) {
+                "+ "
+            } else {
+                "  "
+            };
+            out.push((i, format!("{marker}{} {summary}", entry.sha), true));
             if self.expanded.contains(&entry.sha) {
                 for line in self.bodies.get(&entry.sha).into_iter().flatten() {
                     out.push((i, format!("      {line}"), false));
@@ -3196,6 +3215,30 @@ impl MagitLog {
             }
         }
         out
+    }
+
+    /// Whether the abbreviated `sha` is one of [`Self::unpicked`].
+    fn is_unpicked(&self, sha: &str) -> bool {
+        self.unpicked
+            .as_ref()
+            .is_some_and(|set| set.iter().any(|full| full.starts_with(sha)))
+    }
+
+    /// Toggle the not-cherry-picked marks. Returns the status line.
+    fn toggle_unpicked(&mut self) -> String {
+        if self.unpicked.take().is_some() {
+            return "not cherry-picked commits: unmarked".into();
+        }
+        let tip = self.branch.as_deref().unwrap_or("HEAD");
+        let out = git_output(&self.repo_dir, &["cherry", "HEAD", tip]).unwrap_or_default();
+        let set = parse_cherry(&out);
+        let shown = self
+            .entries
+            .iter()
+            .filter(|e| set.iter().any(|full| full.starts_with(&e.sha)))
+            .count();
+        self.unpicked = Some(set);
+        format!("{shown} listed commits not cherry-picked to HEAD")
     }
 
     fn move_selection(&mut self, delta: isize) {
@@ -3479,6 +3522,10 @@ impl Component for MagitLog {
                     cx.editor.set_status(status);
                 }
             }
+            key!('P') => {
+                let status = self.toggle_unpicked();
+                cx.editor.set_status(status);
+            }
             key!('v') => self.preview = !self.preview,
             key!('V') => {
                 self.preview_right = !self.preview_right;
@@ -3522,7 +3569,7 @@ impl Component for MagitLog {
         };
         let title = title.as_str();
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  m merge parents  Tab long  v preview  V preview side  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  m merge parents  Tab long  v preview  V preview side  P not picked  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -4138,8 +4185,9 @@ impl Component for MagitShow {
 /// Lists local branches (`git branch`), the current one marked. `j`/`k`/arrows
 /// move, `Enter` checks out the selected branch (`git checkout <b>`), `n` starts
 /// creating a new branch — type a name then `Enter` runs `git checkout -b
-/// <name>` — and `q`/`Esc` go back. After a successful checkout/create the menu
-/// pops and the buried [`MagitStatus`] is refreshed.
+/// <name>` — `D` groups `a/b/c` names under their directories, and `q`/`Esc`
+/// go back. After a successful checkout/create the menu pops and the buried
+/// [`MagitStatus`] is refreshed.
 pub struct MagitBranch {
     repo_dir: PathBuf,
     entries: Vec<BranchEntry>,
@@ -4148,6 +4196,9 @@ pub struct MagitBranch {
     viewport: usize,
     /// `Some(name)` while typing a new branch name; `None` in list mode.
     creating: Option<String>,
+    /// JetBrains "Group by Directory" (`git.branches.group.by.directory`):
+    /// list `feature/x` as `x` under a `feature/` heading.
+    group_dirs: bool,
 }
 
 impl MagitBranch {
@@ -4162,7 +4213,36 @@ impl MagitBranch {
             scroll: 0,
             viewport: 1,
             creating: None,
+            group_dirs: false,
         }
+    }
+
+    /// The displayed rows: each branch with its index, or a directory heading
+    /// (`None`) when [`Self::group_dirs`] is on. `git branch` sorts by name, so
+    /// branches sharing a directory are adjacent.
+    fn rows(&self) -> Vec<(Option<usize>, String)> {
+        let mut rows = Vec::new();
+        let mut open: Vec<&str> = Vec::new();
+        for (i, b) in self.entries.iter().enumerate() {
+            let marker = if b.current { "* " } else { "  " };
+            if !self.group_dirs {
+                rows.push((Some(i), format!("{marker}{}", b.name)));
+                continue;
+            }
+            let mut parts: Vec<&str> = b.name.split('/').collect();
+            let leaf = parts.pop().unwrap_or_default();
+            let shared = open.iter().zip(&parts).take_while(|(a, b)| a == b).count();
+            open.truncate(shared);
+            for dir in parts[shared..].iter().copied() {
+                rows.push((None, format!("  {}{dir}/", "  ".repeat(open.len()))));
+                open.push(dir);
+            }
+            rows.push((
+                Some(i),
+                format!("{marker}{}{leaf}", "  ".repeat(open.len())),
+            ));
+        }
+        rows
     }
 
     fn move_selection(&mut self, delta: isize) {
@@ -4241,6 +4321,14 @@ impl Component for MagitBranch {
             key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
             key!('g') | key!(Home) => self.selected = 0,
             key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
+            key!('D') => {
+                self.group_dirs = !self.group_dirs;
+                cx.editor.set_status(if self.group_dirs {
+                    "branches: grouped by directory"
+                } else {
+                    "branches: flat"
+                });
+            }
             key!('n') | key!('c') => {
                 self.creating = Some(String::new());
                 cx.editor
@@ -4313,7 +4401,7 @@ impl Component for MagitBranch {
 
         let title = " Branches";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter checkout  n new  l branch log  L find in log  q back";
+        let hint = "j/k move  Enter checkout  n new  l branch log  L find in log  D group  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -4339,12 +4427,6 @@ impl Component for MagitBranch {
             return;
         }
 
-        if self.selected < self.scroll {
-            self.scroll = self.selected;
-        } else if self.selected >= self.scroll + self.viewport {
-            self.scroll = self.selected - self.viewport + 1;
-        }
-
         if self.entries.is_empty() {
             surface.set_stringn(
                 area.x,
@@ -4356,32 +4438,35 @@ impl Component for MagitBranch {
             return;
         }
 
-        for (offset, b) in self
-            .entries
+        // Scroll by rows: directory headings occupy rows of their own.
+        let rows = self.rows();
+        let sel_row = rows
+            .iter()
+            .position(|(i, _)| *i == Some(self.selected))
+            .unwrap_or(0);
+        if sel_row < self.scroll {
+            self.scroll = sel_row;
+        } else if sel_row >= self.scroll + self.viewport {
+            self.scroll = sel_row - self.viewport + 1;
+        }
+
+        for (offset, (idx, text)) in rows
             .iter()
             .enumerate()
             .skip(self.scroll)
             .take(body_h as usize)
         {
             let y = body_y + (offset - self.scroll) as u16;
-            if offset == self.selected {
-                surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
-            }
-            let marker = if b.current { "* " } else { "  " };
-            let style = if offset == self.selected {
-                sel_style
-            } else if b.current {
-                cur_style
-            } else {
-                text_style
+            let style = match idx {
+                None => info_style,
+                Some(i) if *i == self.selected => {
+                    surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+                    sel_style
+                }
+                Some(i) if self.entries[*i].current => cur_style,
+                Some(_) => text_style,
             };
-            surface.set_stringn(
-                area.x,
-                y,
-                &format!("{marker}{}", b.name),
-                area.width as usize,
-                style,
-            );
+            surface.set_stringn(area.x, y, text, area.width as usize, style);
         }
     }
 
@@ -6757,6 +6842,93 @@ mod tests {
     }
 
     #[test]
+    fn log_marks_commits_not_cherry_picked_to_head() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        let commit = |name: &str| {
+            std::fs::write(dir.path().join(name), name).unwrap();
+            git(&["add", name]);
+            git(&["commit", "-q", "-m", name]);
+        };
+        git(&["init", "-q", "-b", "main"]);
+        commit("base");
+        git(&["checkout", "-q", "-b", "side"]);
+        commit("picked");
+        commit("left");
+        git(&["checkout", "-q", "main"]);
+        git(&["cherry-pick", "side~1"]);
+
+        let mut log = MagitLog::for_branch(dir.path().to_path_buf(), Some("side".into()));
+        assert_eq!(
+            log.toggle_unpicked(),
+            "1 listed commits not cherry-picked to HEAD"
+        );
+        let marked: Vec<String> = log
+            .display_lines()
+            .into_iter()
+            .filter(|(_, text, _)| text.starts_with("+ "))
+            .map(|(_, text, _)| text)
+            .collect();
+        assert_eq!(marked.len(), 1, "{marked:?}");
+        assert!(marked[0].ends_with(" left"), "{marked:?}");
+        log.toggle_unpicked();
+        assert!(log
+            .display_lines()
+            .iter()
+            .all(|(_, t, _)| t.starts_with("  ")));
+    }
+
+    #[test]
+    fn branches_group_under_their_directories() {
+        let entry = |name: &str, current| BranchEntry {
+            name: name.into(),
+            current,
+        };
+        let mut menu = MagitBranch {
+            repo_dir: PathBuf::new(),
+            entries: vec![
+                entry("feature/a/x", false),
+                entry("feature/a/y", true),
+                entry("feature/b", false),
+                entry("main", false),
+            ],
+            selected: 0,
+            scroll: 0,
+            viewport: 1,
+            creating: None,
+            group_dirs: false,
+        };
+        assert_eq!(menu.rows()[1], (Some(1), "* feature/a/y".to_string()));
+        menu.group_dirs = true;
+        let rows = menu.rows();
+        let text: Vec<&str> = rows.iter().map(|(_, t)| t.as_str()).collect();
+        assert_eq!(
+            text,
+            [
+                "  feature/",
+                "    a/",
+                "      x",
+                "*     y",
+                "    b",
+                "  main"
+            ]
+        );
+        let idx: Vec<Option<usize>> = rows.iter().map(|(i, _)| *i).collect();
+        assert_eq!(idx, [None, None, Some(0), Some(1), Some(2), Some(3)]);
+    }
+
+    #[test]
     fn staged_only() {
         let entries = parse_status("M  staged.rs\n");
         assert_eq!(entries.len(), 1);
@@ -7040,6 +7212,7 @@ MM both.rs
             preview: false,
             preview_right: false,
             preview_lines: None,
+            unpicked: None,
         };
         assert_eq!(log.go_to_parent(), "parent of c3");
         assert_eq!(log.selected, 1);

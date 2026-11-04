@@ -88803,5 +88803,23 @@
    "static:file_explorer"
   ],
   "note": "Desktop = `Alt-t` in the zmax file explorer (`file_explorer`, Space-e; ui/mod.rs explorer_at): `~/Desktop`, or an error when there is none. JetBrains binds Ctrl-D, which the explorer's query line uses as delete-char."
+ },
+ {
+  "spec_id": "jetbrains-actions.Git.Log.HighlightCherryPickedCommits",
+  "status": "ported",
+  "evidence": [
+   "typable:magit",
+   "key:magit:P"
+  ],
+  "note": "Not Cherry-Picked Commits = `P` in the zmax git log (`:magit`, `l`; a branch's log from the branch menu with `l`): marks with `+` the listed commits that have no equivalent change on HEAD, from `git cherry HEAD <branch>`. `P` again removes the marks (MagitLog::toggle_unpicked, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.git.branches.group.by.directory",
+  "status": "ported",
+  "evidence": [
+   "typable:magit",
+   "key:magit:D"
+  ],
+  "note": "Group by Directory = `D` in the zmax branch menu (`:magit`, `b`): `feature/a/x` is listed as `x` under `feature/` and `a/` headings, and `D` again returns to the flat list (MagitBranch::rows, ui/magit.rs)."
  }
 ]
