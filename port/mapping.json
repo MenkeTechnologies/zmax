@@ -88643,5 +88643,125 @@
    "typable:magit"
   ],
   "note": "Collapse All Files = `C` in the zmax commit diff view: folds every file to its header, or unfolds them all when all are folded (MagitShow::toggle_all_files)."
+ },
+ {
+  "spec_id": "jetbrains-actions.TextComponent.ClearAction",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-k"
+  ],
+  "note": "Clear Text = `Alt-k` in the zmax prompt (`:`, search, and every picker's query line): empties the line and keeps it for `Ctrl-y` (Prompt::kill_whole_line, ui/prompt.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectFirstColumn",
+  "status": "ported",
+  "evidence": [
+   "key:table:home"
+  ],
+  "note": "Select First Column = `Home` in the zmax table editor (`table`, the Emacs table.el port, ui/table.rs): the first cell of the row."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectLastColumn",
+  "status": "ported",
+  "evidence": [
+   "key:table:end"
+  ],
+  "note": "Select Last Column = `End` in the zmax table editor (`table`, the Emacs table.el port, ui/table.rs): the last cell of the row."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectFirstRow",
+  "status": "ported",
+  "evidence": [
+   "key:table:C-home"
+  ],
+  "note": "Select First Row = `Ctrl-Home` in the zmax table editor (`table`, the Emacs table.el port, ui/table.rs): the top row, same column."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectLastRow",
+  "status": "ported",
+  "evidence": [
+   "key:table:C-end"
+  ],
+  "note": "Select Last Row = `Ctrl-End` in the zmax table editor (`table`, the Emacs table.el port, ui/table.rs): the bottom row, same column."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectNextRow",
+  "status": "ported",
+  "evidence": [
+   "key:table:down"
+  ],
+  "note": "Select Next Row = `Down` in the zmax table editor (`table`, the Emacs table.el port, ui/table.rs); it stops at the last row."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectPreviousRow",
+  "status": "ported",
+  "evidence": [
+   "key:table:up"
+  ],
+  "note": "Select Previous Row = `Up` in the zmax table editor (`table`, the Emacs table.el port, ui/table.rs); it stops at the first row."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectNextColumn",
+  "status": "partial",
+  "evidence": [
+   "key:table:right"
+  ],
+  "note": "Select Next Column = `Right` in the zmax table editor (`table`, the Emacs table.el port, ui/table.rs). At the last column it wraps to the next row's first cell (table.el table-forward-cell), where a JetBrains table stays put."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectPreviousColumn",
+  "status": "partial",
+  "evidence": [
+   "key:table:left"
+  ],
+  "note": "Select Previous Column = `Left` in the zmax table editor (`table`, the Emacs table.el port, ui/table.rs). At the first column it wraps to the previous row's last cell (table-backward-cell), where a JetBrains table stays put."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-selectNextRow",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Select Next Row = `Down` / `Tab` / `Ctrl-j` in every zmax picker (ui/picker.rs Picker::handle_event, e.g. `file_picker`)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-selectPreviousRow",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Select Previous Row = `Up` / `Shift-Tab` / `Ctrl-k` in every zmax picker (ui/picker.rs Picker::handle_event, e.g. `file_picker`)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-selectFirstRow",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Select First Row = `Home` in every zmax picker (ui/picker.rs Picker::handle_event, e.g. `file_picker`)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-selectLastRow",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Select Last Row = `End` in every zmax picker (ui/picker.rs Picker::handle_event, e.g. `file_picker`)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-scrollUp",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Scroll Up by a page = `PageUp` / `Ctrl-p` in every zmax picker (ui/picker.rs Picker::handle_event, e.g. `file_picker`); the selection moves with the page."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-scrollDown",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Scroll Down by a page = `PageDown` / `Ctrl-n` in every zmax picker (ui/picker.rs Picker::handle_event, e.g. `file_picker`); the selection moves with the page."
  }
 ]

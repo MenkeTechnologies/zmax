@@ -13,6 +13,8 @@
 //!   Tab / Enter / Right      table-forward-cell  (wraps across rows)
 //!   Shift-Tab / Left         table-backward-cell (wraps across rows)
 //!   Up / Down                move to the cell one row up / down
+//!   Home / End               the first / last cell of the row
+//!   C-Home / C-End           the first / last row, same column
 //!   printable char           insert the char into the current cell
 //!   Backspace                delete the last char of the current cell
 //!   M-o                      table-insert-row     (below the current row)
@@ -123,6 +125,11 @@ impl Component for TableEditor {
                     self.row += 1;
                 }
             }
+            // JetBrains Table-selectFirstColumn / LastColumn / FirstRow / LastRow.
+            key!(Home) => self.col = 0,
+            key!(End) => self.col = cols.saturating_sub(1),
+            ctrl!(Home) => self.row = 0,
+            ctrl!(End) => self.row = rows.saturating_sub(1),
             key!(Backspace) => self.backspace(),
             alt!('o') => {
                 self.table.insert_row(self.row + 1);

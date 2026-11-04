@@ -510,10 +510,10 @@ See the documentation page on [pickers](./pickers.md) for more info.
 
 | Key                          | Description                                                |
 | -----                        | -------------                                              |
-| `Shift-Tab`, `Up`, `Ctrl-p`  | Previous entry                                             |
-| `Tab`, `Down`, `Ctrl-n`      | Next entry                                                 |
-| `PageUp`, `Ctrl-u`           | Page up                                                    |
-| `PageDown`, `Ctrl-d`         | Page down                                                  |
+| `Shift-Tab`, `Up`, `Ctrl-k`  | Previous entry                                             |
+| `Tab`, `Down`, `Ctrl-j`      | Next entry                                                 |
+| `PageUp`, `Ctrl-p`           | Page up                                                    |
+| `PageDown`, `Ctrl-n`         | Page down                                                  |
 | `Home`                       | Go to first entry                                          |
 | `End`                        | Go to last entry                                           |
 | `Enter`                      | Open selected                                              |
@@ -540,6 +540,7 @@ Keys to use within prompt, Remapping currently not supported.
 | `Alt-d`, `Alt-Delete`, `Ctrl-Delete`        | Delete next word                                                        |
 | `Ctrl-u`                                    | Delete to start of line                                                 |
 | `Ctrl-k`                                    | Delete to end of line                                                   |
+| `Alt-k`                                     | Delete the whole line (`Ctrl-y` puts it back)                           |
 | `Backspace`, `Ctrl-h`, `Shift-Backspace`    | Delete previous char                                                    |
 | `Delete`, `Ctrl-d`                          | Delete next char                                                        |
 | `Ctrl-s`                                    | Insert a word under doc cursor, may be changed to Ctrl-r Ctrl-w later   |

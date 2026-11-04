@@ -1596,6 +1596,17 @@ impl Prompt {
         self.recalculate_completion(editor);
     }
 
+    /// readline `kill-whole-line` (`M-k` here; JetBrains "Clear Text",
+    /// `TextComponent.ClearAction`): empty the line, keeping it for `C-y`.
+    pub fn kill_whole_line(&mut self, editor: &Editor) {
+        if self.line.is_empty() {
+            return;
+        }
+        self.kill = std::mem::take(&mut self.line);
+        self.cursor = 0;
+        self.recalculate_completion(editor);
+    }
+
     /// readline `C-y`: re-insert the most recently killed text at the cursor.
     pub fn yank(&mut self, editor: &Editor) {
         if self.kill.is_empty() {
@@ -3587,6 +3598,10 @@ impl Component for Prompt {
             }
             ctrl!('u') => {
                 self.kill_to_start_of_line(cx.editor);
+                self.fire_update(cx);
+            }
+            alt!('k') => {
+                self.kill_whole_line(cx.editor);
                 self.fire_update(cx);
             }
             ctrl!('y') => {
