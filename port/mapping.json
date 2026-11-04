@@ -88603,5 +88603,45 @@
    "typable:magit"
   ],
   "note": "Navigate Log to Branch Head = `L` in the zmax branch list (`b` from `:magit`): the log opens with the branch head selected. The JetBrains option does this live on every branch selection in a docked log; zmax does it on the key."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.ShowDiffPreview",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Show Diff Preview = `v` in the zmax commit log (`l` from `:magit`): the selected commit's `git show --stat -p` is shown beside the list and follows the selection (MagitLog::load_preview, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.MoveDiffPreviewToBottom",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Diff preview at the bottom = `V` in the zmax commit log toggles the preview between the lower half of the log (the default) and the right half."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.MoveDiffPreviewToRight",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Diff preview on the right = `V` in the zmax commit log: the preview moves to the right half of the log, the list keeps the left half."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.CombinedDiff.ToggleCollapseBlock",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Collapse File = `Tab` in the zmax commit diff view (`Enter` on a commit in the `:magit` log): the file at the top of the screen folds to its `diff --git` header, and `Tab` again unfolds it (MagitShow::toggle_file)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.CombinedDiff.ToggleCollapseAllBlock",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Collapse All Files = `C` in the zmax commit diff view: folds every file to its header, or unfolds them all when all are folded (MagitShow::toggle_all_files)."
  }
 ]

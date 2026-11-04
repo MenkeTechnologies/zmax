@@ -2887,8 +2887,9 @@ impl Component for MagitCommit {
 /// ([`MagitShow`]), `/` selects the commit a typed hash, branch or tag names,
 /// `D` switches the long form between author and committer date, `s` filters
 /// by message (`i` match case, `e` regex), `m` shows merges
-/// against each parent, `q`/`Esc`
-/// return to the status buffer.
+/// against each parent, `v` shows the selected commit's diff beside the list
+/// (`V` moves it between the bottom and the right), `q`/`Esc` return to the
+/// status buffer.
 pub struct MagitLog {
     repo_dir: PathBuf,
     entries: Vec<LogEntry>,
@@ -2923,6 +2924,14 @@ pub struct MagitLog {
     /// JetBrains "Update Branch Filter" (`Git.Log.Branches.Change.Branch.Filter`):
     /// list this branch's history instead of `HEAD`'s.
     branch: Option<String>,
+    /// JetBrains "Show Diff Preview" (`Vcs.Log.ShowDiffPreview`, `v`): the
+    /// selected commit's diff is shown beside the list.
+    preview: bool,
+    /// JetBrains "Diff Preview on the Right" (`Vcs.Log.MoveDiffPreviewToRight`,
+    /// `V`); false puts it under the list (`Vcs.Log.MoveDiffPreviewToBottom`).
+    preview_right: bool,
+    /// The previewed commit and its `git show` lines.
+    preview_lines: Option<(String, Vec<String>)>,
 }
 
 impl MagitLog {
@@ -2949,6 +2958,9 @@ impl MagitLog {
             regex: false,
             per_parent: false,
             branch,
+            preview: false,
+            preview_right: false,
+            preview_lines: None,
         };
         log.reload();
         log
@@ -2973,6 +2985,19 @@ impl MagitLog {
         self.selected = keep
             .and_then(|sha| self.entries.iter().position(|e| e.sha == sha))
             .unwrap_or(0);
+    }
+
+    /// Fetch the selected commit's diff for the preview, once per commit.
+    fn load_preview(&mut self) {
+        let Some(sha) = self.entries.get(self.selected).map(|e| e.sha.clone()) else {
+            self.preview_lines = None;
+            return;
+        };
+        if self.preview_lines.as_ref().is_some_and(|(s, _)| *s == sha) {
+            return;
+        }
+        let lines = show_lines(&self.repo_dir, &sha, self.per_parent);
+        self.preview_lines = Some((sha, lines));
     }
 
     /// Prompt for the log's text filter; an empty answer clears it.
@@ -3411,6 +3436,7 @@ impl Component for MagitLog {
             }
             key!('m') => {
                 self.per_parent = !self.per_parent;
+                self.preview_lines = None;
                 cx.editor.set_status(if self.per_parent {
                     "merges: changes to each parent"
                 } else {
@@ -3453,7 +3479,20 @@ impl Component for MagitLog {
                     cx.editor.set_status(status);
                 }
             }
+            key!('v') => self.preview = !self.preview,
+            key!('V') => {
+                self.preview_right = !self.preview_right;
+                self.preview = true;
+                cx.editor.set_status(if self.preview_right {
+                    "diff preview: right"
+                } else {
+                    "diff preview: bottom"
+                });
+            }
             _ => {}
+        }
+        if self.preview {
+            self.load_preview();
         }
         EventResult::Consumed(None)
     }
@@ -3483,7 +3522,7 @@ impl Component for MagitLog {
         };
         let title = title.as_str();
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  m merge parents  Tab long  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  m merge parents  Tab long  v preview  V preview side  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -3495,8 +3534,25 @@ impl Component for MagitLog {
         }
 
         let body_y = area.y + 2;
-        let body_h = area.height.saturating_sub(2);
+        let full_h = area.height.saturating_sub(2);
+        // The diff preview takes the right or the lower half of the body.
+        let (list_w, body_h, preview) = match (self.preview, self.preview_right) {
+            (false, _) => (area.width, full_h, None),
+            (true, true) => {
+                let w = area.width / 2;
+                let right = Rect::new(area.x + w + 1, body_y, area.width - w - 1, full_h);
+                (w, full_h, Some(right))
+            }
+            (true, false) => {
+                let h = (full_h / 2).max(1);
+                let below = Rect::new(area.x, body_y + h, area.width, full_h - h);
+                (area.width, h, Some(below))
+            }
+        };
         self.viewport = body_h as usize;
+        if let (Some(preview), Some((sha, lines))) = (preview, &self.preview_lines) {
+            render_diff_preview(surface, preview, theme, sha, lines);
+        }
 
         if self.entries.is_empty() {
             surface.set_stringn(
@@ -3531,7 +3587,7 @@ impl Component for MagitLog {
             let y = body_y + (offset - self.scroll) as u16;
             let selected = *idx == self.selected;
             if selected {
-                surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+                surface.set_style(Rect::new(area.x, y, list_w, 1), sel_style);
             }
             let style = if selected {
                 sel_style
@@ -3540,7 +3596,7 @@ impl Component for MagitLog {
             } else {
                 text_style
             };
-            surface.set_stringn(area.x, y, text, area.width as usize, style);
+            surface.set_stringn(area.x, y, text, list_w as usize, style);
         }
     }
 
@@ -3865,36 +3921,107 @@ impl Component for MagitRebase {
 /// A scrollable viewer for a single commit's diff (`git show <sha>`).
 ///
 /// Pushed on top of [`MagitLog`]. `j`/`k`/arrows scroll a line, PageUp/PageDown
-/// (`Ctrl-u`/`Ctrl-d`) a screenful, `g`/`G` jump to top/bottom, `q`/`Esc`
-/// return to the log.
+/// (`Ctrl-u`/`Ctrl-d`) a screenful, `g`/`G` jump to top/bottom, `Tab` folds the
+/// file at the top of the screen to its header and `C` folds or unfolds every
+/// file, `q`/`Esc` return to the log.
 pub struct MagitShow {
     title: String,
     lines: Vec<String>,
+    /// Top visible row, counted in [`Self::visible`] rows.
     scroll: usize,
     viewport: usize,
+    /// JetBrains Combined Diff "Collapse File" (`Vcs.CombinedDiff.ToggleCollapseBlock`):
+    /// the `diff --git` header lines whose file body is hidden.
+    collapsed: HashSet<usize>,
+}
+
+/// `git show --stat -p <sha>` as lines; `per_parent` shows a merge against each
+/// parent (`git show -m`) instead of git's default for merges.
+fn show_lines(repo_dir: &Path, sha: &str, per_parent: bool) -> Vec<String> {
+    let mut args = vec!["show", "--stat", "-p"];
+    if per_parent {
+        args.push("-m");
+    }
+    args.push(sha);
+    let out = git_output(repo_dir, &args).unwrap_or_default();
+    out.lines().map(str::to_string).collect()
+}
+
+/// The line index where each file's section of a diff starts.
+fn file_starts(lines: &[String]) -> Vec<usize> {
+    (0..lines.len())
+        .filter(|&i| lines[i].starts_with("diff --"))
+        .collect()
 }
 
 impl MagitShow {
-    /// `per_parent` shows a merge against each parent (`git show -m`) instead
-    /// of git's default for merges.
     fn new(repo_dir: PathBuf, sha: &str, per_parent: bool) -> Self {
-        let mut args = vec!["show", "--stat", "-p"];
-        if per_parent {
-            args.push("-m");
-        }
-        args.push(sha);
-        let out = git_output(&repo_dir, &args).unwrap_or_default();
-        let lines: Vec<String> = out.lines().map(str::to_string).collect();
         MagitShow {
             title: format!(" {sha}"),
-            lines,
+            lines: show_lines(&repo_dir, sha, per_parent),
             scroll: 0,
             viewport: 1,
+            collapsed: HashSet::new(),
         }
     }
 
+    /// The indices of the lines shown: a collapsed file keeps only its header.
+    fn visible(&self) -> Vec<usize> {
+        let starts = file_starts(&self.lines);
+        let mut rows = Vec::with_capacity(self.lines.len());
+        let mut hidden_until = 0;
+        for i in 0..self.lines.len() {
+            if i < hidden_until {
+                continue;
+            }
+            rows.push(i);
+            if self.collapsed.contains(&i) {
+                hidden_until = starts
+                    .iter()
+                    .copied()
+                    .find(|&s| s > i)
+                    .unwrap_or(self.lines.len());
+            }
+        }
+        rows
+    }
+
+    /// "Collapse File": fold or unfold the file the top row belongs to (the
+    /// first file when the top row is still in the commit header), keeping its
+    /// header at the top.
+    fn toggle_file(&mut self) -> Option<String> {
+        let rows = self.visible();
+        let top = rows.get(self.scroll).copied().unwrap_or(0);
+        let starts = file_starts(&self.lines);
+        let file = starts
+            .iter()
+            .copied()
+            .rev()
+            .find(|&s| s <= top)
+            .or_else(|| starts.first().copied())?;
+        if !self.collapsed.remove(&file) {
+            self.collapsed.insert(file);
+        }
+        self.scroll = self.visible().iter().position(|&i| i == file).unwrap_or(0);
+        Some(self.lines[file].clone())
+    }
+
+    /// "Collapse All Files" (`Vcs.CombinedDiff.ToggleCollapseAllBlock`): fold
+    /// every file, or unfold them all when every one is folded already.
+    fn toggle_all_files(&mut self) -> bool {
+        let starts = file_starts(&self.lines);
+        let fold = starts.iter().any(|s| !self.collapsed.contains(s));
+        self.collapsed = if fold {
+            starts.into_iter().collect()
+        } else {
+            HashSet::new()
+        };
+        self.scroll = self.scroll.min(self.max_scroll());
+        fold
+    }
+
     fn max_scroll(&self) -> usize {
-        self.lines.len().saturating_sub(self.viewport)
+        self.visible().len().saturating_sub(self.viewport)
     }
 
     fn scroll_by(&mut self, delta: isize) {
@@ -3904,7 +4031,7 @@ impl MagitShow {
 }
 
 impl Component for MagitShow {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let key = match event {
             Event::Key(key) => *key,
             _ => return EventResult::Ignored(None),
@@ -3921,6 +4048,18 @@ impl Component for MagitShow {
             key!(PageUp) | ctrl!('u') | ctrl!('b') => self.scroll_by(-page),
             key!('g') | key!(Home) => self.scroll = 0,
             key!('G') | key!(End) => self.scroll = self.max_scroll(),
+            key!(Tab) => match self.toggle_file() {
+                Some(header) => cx.editor.set_status(header),
+                None => cx.editor.set_status("no files in this diff"),
+            },
+            key!('C') => {
+                let folded = self.toggle_all_files();
+                cx.editor.set_status(if folded {
+                    "all files collapsed"
+                } else {
+                    "all files expanded"
+                });
+            }
             _ => {}
         }
         EventResult::Consumed(None)
@@ -3949,7 +4088,7 @@ impl Component for MagitShow {
             area.width as usize,
             header_style,
         );
-        let hint = "j/k scroll  q back";
+        let hint = "j/k scroll  Tab fold file  C fold all  q back";
         if (self.title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -3965,16 +4104,27 @@ impl Component for MagitShow {
         self.viewport = body_h as usize;
         self.scroll = self.scroll.min(self.max_scroll());
 
-        for (offset, line) in self
-            .lines
+        for (row, &i) in self
+            .visible()
             .iter()
-            .enumerate()
             .skip(self.scroll)
             .take(body_h as usize)
+            .enumerate()
         {
-            let y = body_y + (offset - self.scroll) as u16;
+            let line = &self.lines[i];
             let style = diff_line_style(theme, line);
-            surface.set_stringn(area.x, y, line, area.width as usize, style);
+            let shown = if self.collapsed.contains(&i) {
+                format!("{line} …")
+            } else {
+                line.clone()
+            };
+            surface.set_stringn(
+                area.x,
+                body_y + row as u16,
+                &shown,
+                area.width as usize,
+                style,
+            );
         }
     }
 
@@ -4685,27 +4835,8 @@ impl Component for MagitStash {
         let Some((reff, lines)) = self.preview_lines.as_ref().filter(|_| self.preview) else {
             return;
         };
-        let title_y = body_y + list_h;
-        if title_y >= area.y + area.height {
-            return;
-        }
-        let title = if lines.is_empty() {
-            format!(" {reff}: no changes")
-        } else {
-            format!(" {reff}")
-        };
-        surface.set_stringn(area.x, title_y, &title, area.width as usize, header_style);
-        let rows = (area.y + area.height - title_y - 1) as usize;
-        for (i, line) in lines.iter().take(rows).enumerate() {
-            let style = diff_line_style(theme, line);
-            surface.set_stringn(
-                area.x,
-                title_y + 1 + i as u16,
-                line,
-                area.width as usize,
-                style,
-            );
-        }
+        let preview = Rect::new(area.x, body_y + list_h, area.width, body_h - list_h);
+        render_diff_preview(surface, preview, theme, reff, lines);
     }
 
     fn id(&self) -> Option<&'static str> {
@@ -4726,6 +4857,37 @@ fn diff_line_style(theme: &zmax_view::Theme, line: &str) -> zmax_view::graphics:
         theme.get("ui.text.focus")
     } else {
         theme.get("ui.text")
+    }
+}
+
+/// A diff preview pane: `name` on its first row, then as many of `lines` as fit.
+/// Shared by the stash list and the commit log (JetBrains "Preview Diff").
+fn render_diff_preview(
+    surface: &mut Surface,
+    area: Rect,
+    theme: &zmax_view::Theme,
+    name: &str,
+    lines: &[String],
+) {
+    if area.width == 0 || area.height == 0 {
+        return;
+    }
+    let title = if lines.is_empty() {
+        format!(" {name}: no changes")
+    } else {
+        format!(" {name}")
+    };
+    let header_style = to_bold(theme.get("ui.text.focus"));
+    surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
+    for (i, line) in lines.iter().take(area.height as usize - 1).enumerate() {
+        let style = diff_line_style(theme, line);
+        surface.set_stringn(
+            area.x,
+            area.y + 1 + i as u16,
+            line,
+            area.width as usize,
+            style,
+        );
     }
 }
 
@@ -6476,6 +6638,77 @@ mod tests {
     }
 
     #[test]
+    fn show_folds_one_file_or_all_of_them() {
+        let lines = [
+            "commit abc",
+            " a | 1 +",
+            "diff --git a/a b/a",
+            "+x",
+            "diff --git a/b b/b",
+            "-y",
+            "-z",
+        ];
+        let mut show = MagitShow {
+            title: String::new(),
+            lines: lines.iter().map(|l| l.to_string()).collect(),
+            scroll: 0,
+            viewport: 10,
+            collapsed: HashSet::new(),
+        };
+        // From the commit header, the first file folds.
+        assert_eq!(show.toggle_file().as_deref(), Some("diff --git a/a b/a"));
+        assert_eq!(show.visible(), [0, 1, 2, 4, 5, 6]);
+        assert_eq!(show.scroll, 2, "the folded header stays on top");
+
+        // A row inside the second file folds the second file.
+        show.scroll = 4;
+        assert_eq!(show.toggle_file().as_deref(), Some("diff --git a/b b/b"));
+        assert_eq!(show.visible(), [0, 1, 2, 4]);
+        show.toggle_file();
+        assert_eq!(show.visible(), [0, 1, 2, 4, 5, 6], "unfolded again");
+
+        assert!(show.toggle_all_files(), "one file was open: fold all");
+        assert_eq!(show.visible(), [0, 1, 2, 4]);
+        assert!(!show.toggle_all_files(), "all folded: unfold all");
+        assert_eq!(show.visible().len(), lines.len());
+    }
+
+    #[test]
+    fn log_preview_follows_the_selected_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        git(&["init", "-q"]);
+        for name in ["first", "second"] {
+            std::fs::write(dir.path().join(name), name).unwrap();
+            git(&["add", name]);
+            git(&["commit", "-q", "-m", name]);
+        }
+        let mut log = MagitLog::new(dir.path().to_path_buf());
+        let previewed = |log: &mut MagitLog| {
+            log.load_preview();
+            let (sha, lines) = log.preview_lines.clone().unwrap();
+            assert_eq!(sha, log.entries[log.selected].sha);
+            lines
+        };
+        assert!(previewed(&mut log).iter().any(|l| l == "+second"));
+        log.move_selection(1);
+        let older = previewed(&mut log);
+        assert!(older.iter().any(|l| l == "+first"));
+        assert!(!older.iter().any(|l| l == "+second"));
+    }
+
+    #[test]
     fn branch_log_and_stash_preview() {
         let dir = tempfile::tempdir().unwrap();
         let git = |args: &[&str]| {
@@ -6804,6 +7037,9 @@ MM both.rs
             regex: false,
             per_parent: false,
             branch: None,
+            preview: false,
+            preview_right: false,
+            preview_lines: None,
         };
         assert_eq!(log.go_to_parent(), "parent of c3");
         assert_eq!(log.selected, 1);
