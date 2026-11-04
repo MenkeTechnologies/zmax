@@ -88763,5 +88763,45 @@
    "static:file_picker"
   ],
   "note": "Scroll Down by a page = `PageDown` / `Ctrl-n` in every zmax picker (ui/picker.rs Picker::handle_event, e.g. `file_picker`); the selection moves with the page."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.GoBackward",
+  "status": "ported",
+  "evidence": [
+   "static:file_explorer"
+  ],
+  "note": "Back = `Alt-Left` in the zmax file explorer (`file_explorer`, Space-e; ui/mod.rs explorer_at): the directory shown before this one. The explorer keeps a back/forward history across the directories it visits (ExplorerHistory)."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.GoForward",
+  "status": "ported",
+  "evidence": [
+   "static:file_explorer"
+  ],
+  "note": "Forward = `Alt-Right` in the zmax file explorer (`file_explorer`, Space-e; ui/mod.rs explorer_at): the directory Back left; entering a new directory clears it, as in a browser."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.GotoHome",
+  "status": "ported",
+  "evidence": [
+   "static:file_explorer"
+  ],
+  "note": "Home = `Alt-h` in the zmax file explorer (`file_explorer`, Space-e; ui/mod.rs explorer_at) (JetBrains Ctrl-1, which a terminal does not deliver)."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.GoToRoot",
+  "status": "ported",
+  "evidence": [
+   "static:file_explorer"
+  ],
+  "note": "Root = `Alt-/` in the zmax file explorer (`file_explorer`, Space-e; ui/mod.rs explorer_at): the filesystem root of the shown directory."
+ },
+ {
+  "spec_id": "jetbrains-actions.FileChooser.GotoDesktop",
+  "status": "ported",
+  "evidence": [
+   "static:file_explorer"
+  ],
+  "note": "Desktop = `Alt-t` in the zmax file explorer (`file_explorer`, Space-e; ui/mod.rs explorer_at): `~/Desktop`, or an error when there is none. JetBrains binds Ctrl-D, which the explorer's query line uses as delete-char."
  }
 ]

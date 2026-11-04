@@ -34,3 +34,13 @@ When a command supplies no candidates and no source, and none of the environment
 ### File explorer
 
 `Space-e` opens an interactive file explorer for browsing and opening files, rooted at the workspace; `Space-.` opens one rooted at the current buffer's directory. Unlike the file picker, the explorer does not ignore most files by default; its ignore behaviour is configured separately in the [`[editor.file-explorer]`](./editor.md#editorfile-explorer-section) section.
+
+Besides the [picker keys](./keymap.md#picker), the explorer has:
+
+| Key         | Goes to                                      |
+| -----       | -------------                                |
+| `Alt-Left`  | The directory shown before this one (Back)   |
+| `Alt-Right` | The directory Back left (Forward)            |
+| `Alt-h`     | The home directory                           |
+| `Alt-/`     | The filesystem root                          |
+| `Alt-t`     | `~/Desktop`                                  |

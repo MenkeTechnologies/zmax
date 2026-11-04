@@ -47,6 +47,7 @@ use zmax_core::{
 use zmax_view::{
     editor::Action,
     graphics::{CursorKind, Margin, Modifier, Rect},
+    input::KeyEvent,
     theme::Style,
     view::ViewPosition,
     Document, DocumentId, Editor,
@@ -336,6 +337,9 @@ pub struct Picker<T: 'static + Send + Sync, D: 'static> {
     /// the JetBrains Find tool window: on close, the matched items become the
     /// quickfix list that Next / Previous Occurrence step through.
     quickfix_fn: Option<QuickfixFn<T>>,
+    /// Keys this picker handles itself, ahead of the shared picker keys
+    /// (see [`Self::with_key`]).
+    keys: Vec<(KeyEvent, KeyCallback<D>)>,
 }
 
 /// See [`Picker::with_quickfix`].
@@ -488,7 +492,19 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             on_abort: None,
             last_highlight: None,
             quickfix_fn: None,
+            keys: Vec::new(),
         }
+    }
+
+    /// Handle `key` with `f`, given the picker's editor data, before the shared
+    /// picker keys see it. `f` returns whether the picker should close.
+    pub fn with_key(
+        mut self,
+        key: KeyEvent,
+        f: impl Fn(&mut Context, &D) -> bool + 'static,
+    ) -> Self {
+        self.keys.push((key, Box::new(f)));
+        self
     }
 
     /// Keep the matched items as the quickfix list when the picker closes, the
@@ -1277,6 +1293,13 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
             EventResult::Consumed(Some(callback))
         };
 
+        if let Some((_, f)) = self.keys.iter().find(|(key, _)| *key == key_event) {
+            if f(ctx, &self.editor_data) {
+                return close_fn(self, ctx.editor);
+            }
+            return EventResult::Consumed(None);
+        }
+
         match key_event {
             // fzf-style: ctrl-k/j move one line, ctrl-p/n page. Readline keys (ctrl-a/e/w/u/d)
             // are intentionally left for the prompt below — do NOT alias them here.
@@ -1408,3 +1431,5 @@ type HighlightCallback<T> = Box<dyn Fn(&mut Context, Option<&T>)>;
 /// Called when the picker is dismissed without a selection (Esc), to undo any
 /// live preview side effects.
 type AbortCallback = Box<dyn Fn(&mut Context)>;
+/// A key one picker handles itself; returns whether to close the picker.
+type KeyCallback<D> = Box<dyn Fn(&mut Context, &D) -> bool>;

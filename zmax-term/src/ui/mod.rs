@@ -514,15 +514,102 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
     picker
 }
 
-type FileExplorer = Picker<(PathBuf, bool), (PathBuf, Style)>;
+/// The directories the file explorer has shown, for JetBrains FileChooser
+/// Back / Forward (`FileChooser.GoBackward`, `FileChooser.GoForward`).
+#[derive(Clone, Default)]
+pub struct ExplorerHistory {
+    back: Vec<PathBuf>,
+    forward: Vec<PathBuf>,
+}
+
+impl ExplorerHistory {
+    /// The history after leaving `from` for a new directory.
+    fn go(&self, from: &Path) -> Self {
+        let mut back = self.back.clone();
+        back.push(from.to_path_buf());
+        ExplorerHistory {
+            back,
+            forward: Vec::new(),
+        }
+    }
+
+    /// The directory Back (or Forward) leads to from `from`, and the history
+    /// there; `None` at the end of the history.
+    fn step(&self, from: &Path, forward: bool) -> Option<(PathBuf, Self)> {
+        let mut history = self.clone();
+        let (take, keep) = if forward {
+            (&mut history.forward, &mut history.back)
+        } else {
+            (&mut history.back, &mut history.forward)
+        };
+        let to = take.pop()?;
+        keep.push(from.to_path_buf());
+        Some((to, history))
+    }
+}
+
+type FileExplorer = Picker<(PathBuf, bool), (PathBuf, Style, ExplorerHistory)>;
 
 pub fn file_explorer(root: PathBuf, editor: &Editor) -> Result<FileExplorer, std::io::Error> {
+    explorer_at(root, ExplorerHistory::default(), editor)
+}
+
+/// Replace the explorer with one on `root`, as entering a directory does.
+fn reopen_explorer(cx: &mut crate::compositor::Context, root: PathBuf, history: ExplorerHistory) {
+    let callback = Box::pin(async move {
+        let call: Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
+            match explorer_at(root, history, editor) {
+                Ok(picker) => compositor.push(Box::new(overlay::overlaid(picker))),
+                Err(e) => editor.set_error(e.to_string()),
+            }
+        }));
+        Ok(call)
+    });
+    cx.jobs.callback(callback);
+}
+
+/// Move the explorer from `from` to `to`, remembering `from` for Back.
+fn explorer_go(
+    cx: &mut crate::compositor::Context,
+    from: &Path,
+    history: &ExplorerHistory,
+    to: PathBuf,
+) -> bool {
+    reopen_explorer(cx, to, history.go(from));
+    true
+}
+
+/// Back (`forward == false`) or Forward through the explorer's history.
+fn explorer_step(
+    cx: &mut crate::compositor::Context,
+    from: &Path,
+    history: &ExplorerHistory,
+    forward: bool,
+) -> bool {
+    let Some((to, history)) = history.step(from, forward) else {
+        cx.editor.set_status(if forward {
+            "no later directory"
+        } else {
+            "no earlier directory"
+        });
+        return false;
+    };
+    reopen_explorer(cx, to, history);
+    true
+}
+
+fn explorer_at(
+    root: PathBuf,
+    history: ExplorerHistory,
+    editor: &Editor,
+) -> Result<FileExplorer, std::io::Error> {
     let directory_style = editor.theme.get("ui.text.directory");
     let directory_content = directory_content(&root, editor)?;
 
     let columns = [PickerColumn::new(
         "path",
-        |(path, is_dir): &(PathBuf, bool), (root, directory_style): &(PathBuf, Style)| {
+        |(path, is_dir): &(PathBuf, bool),
+         (root, directory_style, _): &(PathBuf, Style, ExplorerHistory)| {
             let name = path.strip_prefix(root).unwrap_or(path).to_string_lossy();
             if *is_dir {
                 Span::styled(format!("{}/", name), *directory_style).into()
@@ -531,24 +618,17 @@ pub fn file_explorer(root: PathBuf, editor: &Editor) -> Result<FileExplorer, std
             }
         },
     )];
+    // The select callback is not handed the picker data: keep its own copy.
+    let (here, trail) = (root.clone(), history.clone());
     let picker = Picker::new(
         columns,
         0,
         directory_content,
-        (root, directory_style),
+        (root, directory_style, history),
         move |cx, (path, is_dir): &(PathBuf, bool), action| {
             if *is_dir {
                 let new_root = zmax_stdx::path::normalize(path);
-                let callback = Box::pin(async move {
-                    let call: Callback =
-                        Callback::EditorCompositor(Box::new(move |editor, compositor| {
-                            if let Ok(picker) = file_explorer(new_root, editor) {
-                                compositor.push(Box::new(overlay::overlaid(picker)));
-                            }
-                        }));
-                    Ok(call)
-                });
-                cx.jobs.callback(callback);
+                explorer_go(cx, &here, &trail, new_root);
             } else if let Err(e) = cx.editor.open(path, action) {
                 let err = if let Some(err) = e.source() {
                     format!("{}", err)
@@ -559,7 +639,41 @@ pub fn file_explorer(root: PathBuf, editor: &Editor) -> Result<FileExplorer, std
             }
         },
     )
-    .with_preview(|_editor, (path, _is_dir)| Some((path.as_path().into(), None)));
+    .with_preview(|_editor, (path, _is_dir)| Some((path.as_path().into(), None)))
+    // JetBrains FileChooser: Back / Forward, Home (Ctrl-1 there), the
+    // filesystem root (Ctrl-\) and the Desktop (Ctrl-D, the prompt's
+    // delete-char here).
+    .with_key(crate::alt!(Left), |cx, (root, _, history)| {
+        explorer_step(cx, root, history, false)
+    })
+    .with_key(crate::alt!(Right), |cx, (root, _, history)| {
+        explorer_step(cx, root, history, true)
+    })
+    .with_key(
+        crate::alt!('h'),
+        |cx, (root, _, history)| match zmax_stdx::path::home_dir() {
+            Ok(home) => explorer_go(cx, root, history, home),
+            Err(e) => {
+                cx.editor.set_error(format!("home directory: {e}"));
+                false
+            }
+        },
+    )
+    .with_key(crate::alt!('/'), |cx, (root, _, history)| {
+        let top = root.ancestors().last().unwrap_or(root).to_path_buf();
+        explorer_go(cx, root, history, top)
+    })
+    .with_key(
+        crate::alt!('t'),
+        |cx, (root, _, history)| match zmax_stdx::path::home_dir().map(|home| home.join("Desktop"))
+        {
+            Ok(desktop) if desktop.is_dir() => explorer_go(cx, root, history, desktop),
+            _ => {
+                cx.editor.set_error("no Desktop directory");
+                false
+            }
+        },
+    );
 
     Ok(picker)
 }
@@ -1118,6 +1232,27 @@ mod tests {
     use std::fs::{create_dir, File};
 
     use super::*;
+
+    #[test]
+    fn explorer_history_goes_back_and_forward_like_a_browser() {
+        let p = |s: &str| PathBuf::from(s);
+        // /a -> /b -> /c
+        let at_c = ExplorerHistory::default().go(&p("/a")).go(&p("/b"));
+        assert!(at_c.step(&p("/c"), true).is_none(), "nothing ahead yet");
+
+        let (to, at_b) = at_c.step(&p("/c"), false).unwrap();
+        assert_eq!(to, p("/b"));
+        let (to, at_a) = at_b.step(&p("/b"), false).unwrap();
+        assert_eq!(to, p("/a"));
+        assert!(at_a.step(&p("/a"), false).is_none(), "nothing before /a");
+
+        let (to, at_b) = at_a.step(&p("/a"), true).unwrap();
+        assert_eq!(to, p("/b"));
+        // A new directory from /b drops /c from Forward.
+        let at_d = at_b.go(&p("/b"));
+        assert!(at_d.step(&p("/d"), true).is_none());
+        assert_eq!(at_d.step(&p("/d"), false).unwrap().0, p("/b"));
+    }
 
     #[test]
     fn wildignorecase_folds_case_only_when_asked() {
