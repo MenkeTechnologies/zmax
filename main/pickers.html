@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-138af9f8.js";
+            window.path_to_searchindex_js = "searchindex-aa7d5cd9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -210,6 +210,21 @@
 <p><code>--preview-window</code> places and sizes the preview pane as it does under fzf — <code>up</code>/<code>down</code>/<code>left</code>/<code>right</code> (with <code>next</code> treated as <code>down</code>), a size in cells or per cent, <code>hidden</code>, and <code>wrap</code>. The parts arb does not model (<code>border-STYLE</code>, <code>follow</code>, <code>cycle</code>, <code>info</code>, <code>+SCROLL</code>, <code>~HEADER_LINES</code>, <code>default</code>, <code>&lt;THRESHOLD(ALT)</code>) are ignored rather than rejected, so a spec written for fzf is always accepted.</p>
 <h3 id="file-explorer"><a class="header" href="#file-explorer">File explorer</a></h3>
 <p><code>Space-e</code> opens an interactive file explorer for browsing and opening files, rooted at the workspace; <code>Space-.</code> opens one rooted at the current buffer’s directory. Unlike the file picker, the explorer does not ignore most files by default; its ignore behaviour is configured separately in the <a href="./editor.html#editorfile-explorer-section"><code>[editor.file-explorer]</code></a> section.</p>
+<p>Besides the <a href="./keymap.html#picker">picker keys</a>, the explorer has:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Goes to</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Alt-Left</code></td><td>The directory shown before this one (Back)</td></tr>
+<tr><td><code>Alt-Right</code></td><td>The directory Back left (Forward)</td></tr>
+<tr><td><code>Alt-h</code></td><td>The home directory</td></tr>
+<tr><td><code>Alt-/</code></td><td>The filesystem root</td></tr>
+<tr><td><code>Alt-t</code></td><td><code>~/Desktop</code></td></tr>
+</tbody>
+</table>
+</div>
 
                     </main>
 

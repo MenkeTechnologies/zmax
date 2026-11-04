@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-138af9f8.js";
+            window.path_to_searchindex_js = "searchindex-aa7d5cd9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -856,6 +856,21 @@ selection to the “func” <code>identifier</code>.</p>
 <p><code>--preview-window</code> places and sizes the preview pane as it does under fzf — <code>up</code>/<code>down</code>/<code>left</code>/<code>right</code> (with <code>next</code> treated as <code>down</code>), a size in cells or per cent, <code>hidden</code>, and <code>wrap</code>. The parts arb does not model (<code>border-STYLE</code>, <code>follow</code>, <code>cycle</code>, <code>info</code>, <code>+SCROLL</code>, <code>~HEADER_LINES</code>, <code>default</code>, <code>&lt;THRESHOLD(ALT)</code>) are ignored rather than rejected, so a spec written for fzf is always accepted.</p>
 <h3 id="file-explorer"><a class="header" href="#file-explorer">File explorer</a></h3>
 <p><code>Space-e</code> opens an interactive file explorer for browsing and opening files, rooted at the workspace; <code>Space-.</code> opens one rooted at the current buffer’s directory. Unlike the file picker, the explorer does not ignore most files by default; its ignore behaviour is configured separately in the <a href="#editorfile-explorer-section"><code>[editor.file-explorer]</code></a> section.</p>
+<p>Besides the <a href="#picker">picker keys</a>, the explorer has:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Goes to</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Alt-Left</code></td><td>The directory shown before this one (Back)</td></tr>
+<tr><td><code>Alt-Right</code></td><td>The directory Back left (Forward)</td></tr>
+<tr><td><code>Alt-h</code></td><td>The home directory</td></tr>
+<tr><td><code>Alt-/</code></td><td>The filesystem root</td></tr>
+<tr><td><code>Alt-t</code></td><td><code>~/Desktop</code></td></tr>
+</tbody>
+</table>
+</div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="jumplist"><a href="#jumplist" class="header">Jumplist</a></h1>
 <h2 id="using-the-jumplist"><a class="header" href="#using-the-jumplist">Using the jumplist</a></h2>
@@ -10097,9 +10112,9 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9940</strong> (83.3%)</li>
+<li>Ported: <strong>9945</strong> (83.4%)</li>
 <li>Partial: <strong>940</strong> (7.9%)</li>
-<li>Absent: <strong>1046</strong></li>
+<li>Absent: <strong>1041</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
 <li>zmax source surface: 3001 static commands, 3225 typable <code>:</code> commands, 4729 default keybindings</li>
 </ul>
@@ -10164,7 +10179,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">969</td><td style="text-align: right">365</td><td style="text-align: right">48.4%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">974</td><td style="text-align: right">365</td><td style="text-align: right">48.7%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10260,7 +10275,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">30</td><td style="text-align: right">6</td><td style="text-align: right">75.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">717</td><td style="text-align: right">306</td><td style="text-align: right">44.6%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">722</td><td style="text-align: right">306</td><td style="text-align: right">44.9%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">7</td><td style="text-align: right">4</td><td style="text-align: right">43.8%</td></tr>
