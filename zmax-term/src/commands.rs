@@ -2165,6 +2165,8 @@ impl MappableCommand {
         toggle_minimap, "Show or hide the workbench minimap (JetBrains Show Minimap)",
         enable_minimap, "Show the workbench minimap (JetBrains EnableMinimap)",
         disable_minimap, "Hide the workbench minimap (JetBrains DisableMinimap)",
+        move_minimap, "Move the workbench minimap to the other side of the editor (JetBrains Move Minimap)",
+        toggle_minimap_scale_mode, "Switch the workbench minimap between fitting the whole document and one line per row (JetBrains Fit to Document)",
         project_tree_collapse_all, "Collapse every directory in the project tree (JetBrains Collapse All)",
         project_tree_expand_all, "Expand every directory in the project tree (JetBrains Expand All)",
         project_tree_expand_node, "Expand the selected project tree directory (JetBrains Expand)",
@@ -57376,6 +57378,32 @@ fn enable_minimap(cx: &mut Context) {
 /// JetBrains `DisableMinimap`.
 fn disable_minimap(cx: &mut Context) {
     set_minimap(cx, Some(false));
+}
+
+/// Run `f` on the workbench and show the status line `f` returns.
+fn with_minimap(cx: &mut Context, f: fn(&mut crate::ui::ide::Ide) -> &'static str) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let status = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.with_ide(f));
+        cx.editor.set_status(status.unwrap_or("no workbench"));
+    }));
+}
+
+/// JetBrains "Move Minimap" (`MoveMinimap`).
+fn move_minimap(cx: &mut Context) {
+    with_minimap(cx, |ide| match ide.move_minimap() {
+        true => "minimap on the left",
+        false => "minimap on the right",
+    });
+}
+
+/// JetBrains "Fit to Document" (`ToggleMinimapScaleMode`).
+fn toggle_minimap_scale_mode(cx: &mut Context) {
+    with_minimap(cx, |ide| match ide.toggle_minimap_scale() {
+        true => "minimap scale: fit to document",
+        false => "minimap scale: fill",
+    });
 }
 
 /// JetBrains "Collapse All" (`CollapseAll`) in the project tree.

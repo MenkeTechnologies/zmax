@@ -15,6 +15,10 @@ pub struct IdeLayout {
     pub fold_problems: bool,
     /// Whether the right-hand minimap stripe is collapsed to a thin handle.
     pub fold_minimap: bool,
+    /// The minimap sits left of the editor (JetBrains Move Minimap).
+    pub minimap_left: bool,
+    /// The minimap scale is Fill (one line per row) rather than Fit.
+    pub minimap_fill: bool,
     /// Height of the bottom tool drawer, in rows (0 = use the default).
     pub bottom_height: u16,
     /// Bottom drawer maximized to full height.

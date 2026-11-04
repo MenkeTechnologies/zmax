@@ -566,6 +566,13 @@ pub struct Ide {
     fold_problems: bool,
     /// Whether the right-hand minimap stripe is collapsed to a thin handle.
     fold_minimap: bool,
+    /// JetBrains "Move Minimap" (`MoveMinimap`): the minimap sits left of the
+    /// editor instead of right of it.
+    minimap_left: bool,
+    /// JetBrains minimap scale Fill (`ToggleMinimapScaleMode` off "Fit to
+    /// Document"): one source line per braille sub-row, the window scrolling
+    /// with the editor, instead of the whole document squeezed into the pane.
+    minimap_fill: bool,
     left_width: u16,
     left_collapsed: bool,
     resizing_left: bool,
@@ -789,6 +796,8 @@ impl Ide {
             fold_structure: false,
             fold_problems: false,
             fold_minimap: false,
+            minimap_left: false,
+            minimap_fill: false,
             left_width: LEFT_W,
             left_collapsed: false,
             resizing_left: false,
@@ -1175,6 +1184,8 @@ impl Ide {
         self.fold_structure = fresh.fold_structure;
         self.fold_problems = fresh.fold_problems;
         self.fold_minimap = fresh.fold_minimap;
+        self.minimap_left = fresh.minimap_left;
+        self.minimap_fill = fresh.minimap_fill;
         self.bottom_height = fresh.bottom_height;
         self.bottom_zoom = fresh.bottom_zoom;
         self.bottom_splits = fresh.bottom_splits;
@@ -1376,6 +1387,78 @@ impl Ide {
         self.visible = true;
         self.fold_minimap = !show.unwrap_or(self.fold_minimap);
         !self.fold_minimap
+    }
+
+    /// JetBrains "Move Minimap": put the minimap on the other side of the
+    /// editor. Returns whether it is now on the left.
+    pub fn move_minimap(&mut self) -> bool {
+        self.visible = true;
+        self.minimap_left = !self.minimap_left;
+        self.minimap_left
+    }
+
+    /// JetBrains "Fit to Document" (`ToggleMinimapScaleMode`): flip between
+    /// Fit and Fill. Returns whether it now fits the whole document.
+    pub fn toggle_minimap_scale(&mut self) -> bool {
+        self.visible = true;
+        self.minimap_fill = !self.minimap_fill;
+        !self.minimap_fill
+    }
+
+    /// Lay the minimap pane out at the right of `rest`, or at its left after
+    /// Move Minimap (a 1-column handle when folded, nothing when too narrow).
+    /// Returns what is left for the editor.
+    fn place_minimap(&mut self, rest: Rect) -> Rect {
+        let w = match self.fold_minimap {
+            true if rest.width > 4 => 1,
+            false if rest.width > STRIPE_W + 30 => STRIPE_W,
+            _ => 0,
+        };
+        if w == 0 {
+            self.stripe_rect = empty_rect();
+            return rest;
+        }
+        let (stripe_x, editor_x) = if self.minimap_left {
+            (rest.x, rest.x + w)
+        } else {
+            (rest.x + rest.width - w, rest.x)
+        };
+        self.stripe_rect = Rect::new(stripe_x, rest.y, w, rest.height);
+        Rect::new(editor_x, rest.y, rest.width - w, rest.height)
+    }
+
+    /// The minimap column farthest from the editor: its fold chevron.
+    fn minimap_outer_x(&self) -> u16 {
+        if self.minimap_left {
+            self.stripe_rect.x
+        } else {
+            self.stripe_rect.x + self.stripe_rect.width.saturating_sub(1)
+        }
+    }
+
+    /// The first source line the minimap shows, given `slots` braille
+    /// sub-rows. Fill centres the editor viewport; Fit, and any document short
+    /// enough to need no scaling, start at the top.
+    fn minimap_top(&self, slots: usize) -> usize {
+        let total = self.total_lines.max(1);
+        if !self.minimap_fill || total <= slots {
+            return 0;
+        }
+        (self.view_top_line + self.view_lines / 2)
+            .saturating_sub(slots / 2)
+            .min(total - slots)
+    }
+
+    /// The source line drawn at braille sub-row `sub` of `slots`: one line per
+    /// sub-row from [`Self::minimap_top`], or under Fit the whole document
+    /// spread over the pane.
+    fn minimap_line_at(&self, sub: usize, slots: usize) -> usize {
+        let total = self.total_lines.max(1);
+        if total <= slots || self.minimap_fill {
+            self.minimap_top(slots) + sub
+        } else {
+            sub * total / slots
+        }
     }
 
     /// Toggle a panel's fold state (context-menu "Fold"): project / structure /
@@ -1584,6 +1667,8 @@ impl Ide {
             fold_structure: self.fold_structure,
             fold_problems: self.fold_problems,
             fold_minimap: self.fold_minimap,
+            minimap_left: self.minimap_left,
+            minimap_fill: self.minimap_fill,
             bottom_height: self.bottom_height,
             bottom_zoom: self.bottom_zoom,
             bottom_splits: self.bottom_splits,
@@ -1622,6 +1707,8 @@ impl Ide {
         self.fold_structure = l.fold_structure;
         self.fold_problems = l.fold_problems;
         self.fold_minimap = l.fold_minimap;
+        self.minimap_left = l.minimap_left;
+        self.minimap_fill = l.minimap_fill;
         if l.bottom_height > 0 {
             self.bottom_height = l.bottom_height;
         }
@@ -2948,19 +3035,21 @@ impl Ide {
                         self.fold_minimap = false;
                         return IdeAction::None;
                     }
-                    // Arm a drag-to-fold: dragging the minimap toward its right edge folds
+                    // Arm a drag-to-fold: dragging the minimap toward its outer edge folds
                     // it, just like dragging the left drawer's seam shut. A plain click
                     // (no drag) still navigates below.
                     self.resizing_stripe = true;
-                    // Top-right chevron → collapse.
-                    let chevron_x = self.stripe_rect.x + self.stripe_rect.width.saturating_sub(1);
-                    if row == self.stripe_rect.y && col == chevron_x {
+                    // Outer top chevron → collapse.
+                    if row == self.stripe_rect.y && col == self.minimap_outer_x() {
                         self.fold_minimap = true;
                         self.resizing_stripe = false;
                         return IdeAction::None;
                     }
-                    let frac = (row - self.stripe_rect.y) as f32 / self.stripe_rect.height as f32;
-                    let line = ((frac * self.total_lines as f32) as usize)
+                    // The line drawn on the clicked cell's first braille sub-row.
+                    let slots = self.stripe_rect.height as usize * 4;
+                    let sub = (row - self.stripe_rect.y) as usize * 4;
+                    let line = self
+                        .minimap_line_at(sub, slots)
                         .min(self.total_lines.saturating_sub(1));
                     let pos = line_to_char(line);
                     return IdeAction::Goto { from: pos, to: pos };
@@ -3164,10 +3253,10 @@ impl Ide {
                 IdeAction::None
             }
             MouseEventKind::Drag(MouseButton::Left) if self.resizing_stripe => {
-                // Dragging the minimap past its half-way point (toward the right edge)
+                // Dragging the minimap past its half-way point (toward its outer edge)
                 // folds it to the thin handle, mirroring the left drawer's collapse.
                 let half = self.stripe_rect.x + self.stripe_rect.width / 2;
-                if col >= half {
+                if (col >= half) != self.minimap_left {
                     self.fold_minimap = true;
                     self.resizing_stripe = false;
                 }
@@ -3279,21 +3368,7 @@ impl Ide {
             self.seam_x = u16::MAX;
         }
 
-        // right minimap pane (collapses to a 1-col handle when folded)
-        if self.fold_minimap && rest.width > 4 {
-            self.stripe_rect = Rect::new(rest.x + rest.width - 1, rest.y, 1, rest.height);
-            rest = Rect::new(rest.x, rest.y, rest.width - 1, rest.height);
-        } else if !self.fold_minimap && rest.width > STRIPE_W + 30 {
-            self.stripe_rect = Rect::new(
-                rest.x + rest.width - STRIPE_W,
-                rest.y,
-                STRIPE_W,
-                rest.height,
-            );
-            rest = Rect::new(rest.x, rest.y, rest.width - STRIPE_W, rest.height);
-        } else {
-            self.stripe_rect = empty_rect();
-        }
+        rest = self.place_minimap(rest);
 
         // Two stacked top bars over the editor region: row 1 = open-file tabs
         // (the bufferline, drawn by EditorView into `bufferline_rect`), row 2 =
@@ -3371,18 +3446,24 @@ impl Ide {
             self.render_bottom(surface, theme);
         }
         if self.stripe_rect.height > 0 {
+            // The arrows point toward the editor to expand, away from it to collapse.
+            let (expand, collapse) = if self.minimap_left {
+                ("›", "‹")
+            } else {
+                ("‹", "›")
+            };
             if self.fold_minimap {
-                // Collapsed: a thin clickable handle ("‹" = click to expand).
+                // Collapsed: a thin clickable handle (click to expand).
                 let st = theme.get("ui.window");
                 for y in self.stripe_rect.y..self.stripe_rect.y + self.stripe_rect.height {
-                    surface.set_stringn(self.stripe_rect.x, y, "‹", 1, st);
+                    surface.set_stringn(self.stripe_rect.x, y, expand, 1, st);
                 }
             } else {
                 self.render_stripe(surface, theme);
-                // Fold chevron at the top-right corner ("›" = click to collapse).
+                // Fold chevron at the outer top corner (click to collapse).
                 let chevron = theme.get("comment");
-                let cx_col = self.stripe_rect.x + self.stripe_rect.width.saturating_sub(1);
-                surface.set_stringn(cx_col, self.stripe_rect.y, "›", 1, chevron);
+                let x = self.minimap_outer_x();
+                surface.set_stringn(x, self.stripe_rect.y, collapse, 1, chevron);
             }
         }
 
@@ -5441,13 +5522,20 @@ impl Ide {
         let total = self.total_lines.max(1);
         let slots = h * 4; // vertical sub-rows
         let cols = (w * 2) as f64; // horizontal sub-cols
+
+        // One line per sub-row from `top` (Fill, or a short document), else the
+        // whole document scaled to the pane (Fit).
+        let top = self.minimap_top(slots);
+        let per_line = self.minimap_fill || total <= slots;
         let slot_of = |line: usize| -> usize {
-            if total <= slots {
-                line.min(slots.saturating_sub(1))
+            if per_line {
+                line.saturating_sub(top).min(slots.saturating_sub(1))
             } else {
                 line * slots / total
             }
         };
+        // Whether any of lines `start..end` lies in the shown window.
+        let shown = |start: usize, end: usize| !per_line || (start < top + slots && end > top);
         // Canvas y grows upward; source lines grow downward → flip.
         let flip = |slot: usize| -> f64 { slots.saturating_sub(1).saturating_sub(slot) as f64 };
 
@@ -5464,11 +5552,7 @@ impl Ide {
         // by the pane, not the file size).
         let mut code_pts: Vec<(f64, f64)> = Vec::new();
         for sub in 0..slots {
-            let srcline = if total <= slots {
-                sub
-            } else {
-                sub * total / slots
-            };
+            let srcline = self.minimap_line_at(sub, slots);
             let Some(dots) = self.minimap_dots.get(srcline) else {
                 continue;
             };
@@ -5484,6 +5568,7 @@ impl Ide {
         let diag_pts: Vec<(f64, f64, ratatui::style::Color)> = self
             .problems
             .iter()
+            .filter(|p| shown(p.line, p.line + 1))
             .map(|p| {
                 let color = to_rat_color(sev_mark(p.sev, theme).1.fg.unwrap_or(ZColor::Red));
                 (cols - 1.0, flip(slot_of(p.line)), color)
@@ -5493,6 +5578,10 @@ impl Ide {
         // git change bars on the left edge, coloured by kind.
         let mut git_pts: Vec<(f64, f64, ratatui::style::Color)> = Vec::new();
         for &(start, end, kind) in &self.git_hunks {
+            // A removal hunk is empty (`start == end`) but still marks its line.
+            if !shown(start as usize, (end as usize).max(start as usize + 1)) {
+                continue;
+            }
             let scope = match kind {
                 0 => "diff.plus",
                 2 => "diff.minus",
@@ -6365,6 +6454,43 @@ mod parse_tests {
             "left column stays folded after restore"
         );
         assert!(restored.bottom_zoom);
+    }
+
+    #[test]
+    fn minimap_moves_sides_and_scales_to_fit_or_fill() {
+        use zmax_view::graphics::Rect;
+        let mut ide = super::Ide::new();
+        let area = Rect::new(10, 0, 100, 20);
+        let w = super::STRIPE_W;
+        assert_eq!(ide.place_minimap(area), Rect::new(10, 0, 100 - w, 20));
+        assert_eq!(ide.stripe_rect.x, 110 - w);
+        assert_eq!(ide.minimap_outer_x(), 109);
+
+        assert!(ide.move_minimap());
+        assert_eq!(ide.place_minimap(area), Rect::new(10 + w, 0, 100 - w, 20));
+        assert_eq!(ide.stripe_rect.x, 10);
+        assert_eq!(ide.minimap_outer_x(), 10);
+        ide.fold_minimap = true;
+        assert_eq!(ide.place_minimap(area), Rect::new(11, 0, 99, 20));
+
+        // 1000 lines on 80 sub-rows, the editor showing lines 500..540.
+        ide.total_lines = 1000;
+        ide.view_top_line = 500;
+        ide.view_lines = 40;
+        assert_eq!(ide.minimap_line_at(40, 80), 500, "fit spreads the document");
+        assert!(!ide.toggle_minimap_scale());
+        assert_eq!(ide.minimap_top(80), 480, "fill centres the viewport");
+        assert_eq!(ide.minimap_line_at(40, 80), 520);
+        ide.view_top_line = 980;
+        assert_eq!(ide.minimap_top(80), 920, "fill stops at the last line");
+        // A document shorter than the pane is drawn a line per row either way.
+        ide.total_lines = 50;
+        assert_eq!(ide.minimap_line_at(7, 80), 7);
+
+        let saved = ide.layout();
+        let mut restored = super::Ide::new();
+        restored.apply_layout(&saved);
+        assert!(restored.minimap_left && restored.minimap_fill);
     }
 
     // Bad/uninitialized persisted geometry must fall back to defaults rather than

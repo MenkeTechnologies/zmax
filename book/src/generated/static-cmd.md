@@ -1772,6 +1772,8 @@
 | `toggle_minimap` | Show or hide the workbench minimap (JetBrains Show Minimap) |  |
 | `enable_minimap` | Show the workbench minimap (JetBrains EnableMinimap) |  |
 | `disable_minimap` | Hide the workbench minimap (JetBrains DisableMinimap) |  |
+| `move_minimap` | Move the workbench minimap to the other side of the editor (JetBrains Move Minimap) |  |
+| `toggle_minimap_scale_mode` | Switch the workbench minimap between fitting the whole document and one line per row (JetBrains Fit to Document) |  |
 | `project_tree_collapse_all` | Collapse every directory in the project tree (JetBrains Collapse All) |  |
 | `project_tree_expand_all` | Expand every directory in the project tree (JetBrains Expand All) |  |
 | `project_tree_expand_node` | Expand the selected project tree directory (JetBrains Expand) |  |
