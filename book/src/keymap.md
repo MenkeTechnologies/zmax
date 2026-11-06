@@ -516,6 +516,7 @@ See the documentation page on [pickers](./pickers.md) for more info.
 | `PageDown`, `Ctrl-n`         | Page down                                                  |
 | `Home`                       | Go to first entry                                          |
 | `End`                        | Go to last entry                                           |
+| `Shift-` + `Up`/`Down`/`PageUp`/`PageDown`/`Home`/`End` | Extend the selection over the entries passed |
 | `Enter`                      | Open selected                                              |
 | `Alt-Enter`                  | Open selected in the background without closing the picker |
 | `Ctrl-s`                     | Open horizontally                                          |

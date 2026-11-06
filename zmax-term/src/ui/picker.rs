@@ -307,6 +307,10 @@ pub struct Picker<T: 'static + Send + Sync, D: 'static> {
     completion_height: u16,
 
     cursor: u32,
+    /// The fixed end of a JetBrains list range selection
+    /// (`List-*ExtendSelection`): Shift with a move keeps this row and selects
+    /// every matched row between it and the cursor. `None` selects one row.
+    anchor: Option<u32>,
     prompt: Prompt,
     query: PickerQuery,
 
@@ -475,6 +479,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             editor_data,
             version,
             cursor: 0,
+            anchor: None,
             prompt,
             query,
             truncate_start: true,
@@ -632,6 +637,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
 
     /// Move the cursor by a number of lines, either down (`Forward`) or up (`Backward`)
     pub fn move_by(&mut self, amount: u32, direction: Direction) {
+        self.anchor = None;
         let len = self.matcher.snapshot().matched_item_count();
 
         if len == 0 {
@@ -661,16 +667,50 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
 
     /// Move the cursor to the first entry
     pub fn to_start(&mut self) {
+        self.anchor = None;
         self.cursor = 0;
     }
 
     /// Move the cursor to the last entry
     pub fn to_end(&mut self) {
+        self.anchor = None;
         self.cursor = self
             .matcher
             .snapshot()
             .matched_item_count()
             .saturating_sub(1);
+    }
+
+    /// Move the cursor to `row`, clamped to the matched rows without wrapping,
+    /// extending the range selection from the row it started on.
+    fn extend_to(&mut self, row: i64) {
+        let len = self.matcher.snapshot().matched_item_count();
+        if len == 0 {
+            return;
+        }
+        self.anchor.get_or_insert(self.cursor);
+        self.cursor = row.clamp(0, len as i64 - 1) as u32;
+    }
+
+    /// The matched rows the selection covers: the range between the anchor
+    /// and the cursor, or only the cursor's row.
+    fn selected_rows(&self) -> std::ops::RangeInclusive<u32> {
+        let anchor = self.anchor.unwrap_or(self.cursor);
+        anchor.min(self.cursor)..=anchor.max(self.cursor)
+    }
+
+    /// Run the picker's callback with `action` on every selected item, in
+    /// list order.
+    fn accept(&self, cx: &mut Context, action: Action) {
+        let snapshot = self.matcher.snapshot();
+        let Some(last) = snapshot.matched_item_count().checked_sub(1) else {
+            return;
+        };
+        let rows = self.selected_rows();
+        let rows = (*rows.start()).min(last)..=(*rows.end()).min(last);
+        for item in snapshot.matched_items(rows) {
+            (self.callback_fn)(cx, item.data, action);
+        }
     }
 
     pub fn selection(&self) -> Option<&T> {
@@ -715,6 +755,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         }
         // If the query has meaningfully changed, reset the cursor to the top of the results.
         self.cursor = 0;
+        self.anchor = None;
         // Have nucleo reparse each changed column.
         for (i, column) in self
             .columns
@@ -879,9 +920,9 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         let status = self.matcher.tick(10);
         let snapshot = self.matcher.snapshot();
         if status.changed {
-            self.cursor = self
-                .cursor
-                .min(snapshot.matched_item_count().saturating_sub(1))
+            let last = snapshot.matched_item_count().saturating_sub(1);
+            self.cursor = self.cursor.min(last);
+            self.anchor = self.anchor.map(|anchor| anchor.min(last));
         }
 
         let text_style = cx.editor.theme.get("ui.text");
@@ -902,12 +943,18 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
 
         // -- Render the input bar:
 
+        let picked = self.selected_rows().count();
         let count = format!(
-            "{}{}/{}",
+            "{}{}{}/{}",
             if status.running || self.matcher.active_injectors() > 0 {
                 "(running) "
             } else {
                 ""
+            },
+            if picked > 1 {
+                format!("{picked} selected · ")
+            } else {
+                String::new()
             },
             snapshot.matched_item_count(),
             snapshot.item_count(),
@@ -1048,7 +1095,8 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             .widths(&self.widths);
 
         // -- Header
-        if self.columns.iter().filter(|c| !c.hidden).count() > 1 {
+        let has_header = self.columns.iter().filter(|c| !c.hidden).count() > 1;
+        if has_header {
             let active_column = self.query.active_column(self.prompt.position());
             let header_style = cx.editor.theme.get("ui.picker.header");
             let header_column_style = cx.editor.theme.get("ui.picker.header.column");
@@ -1079,6 +1127,15 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             },
             self.truncate_start,
         );
+
+        // The rest of a range selection is drawn like the cursor's row.
+        let first_row = inner.y + has_header as u16;
+        for row in self.selected_rows() {
+            if (offset..end).contains(&row) && row != self.cursor {
+                let y = first_row + (row - offset) as u16;
+                surface.set_style(Rect::new(inner.x, y, inner.width, 1), selected);
+            }
+        }
     }
 
     fn render_preview(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {
@@ -1321,6 +1378,15 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
             key!(End) => {
                 self.to_end();
             }
+            // JetBrains `List-*ExtendSelection`: the same moves with Shift
+            // select every row passed over (no wrap-around), Enter then
+            // opening them all.
+            shift!(Up) => self.extend_to(self.cursor as i64 - 1),
+            shift!(Down) => self.extend_to(self.cursor as i64 + 1),
+            shift!(PageUp) => self.extend_to(self.cursor as i64 - self.completion_height as i64),
+            shift!(PageDown) => self.extend_to(self.cursor as i64 + self.completion_height as i64),
+            shift!(Home) => self.extend_to(0),
+            shift!(End) => self.extend_to(i64::MAX),
             key!(Esc) | ctrl!('c') => {
                 if let Some(on_abort) = self.on_abort.as_ref() {
                     on_abort(ctx);
@@ -1328,9 +1394,7 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
                 return close_fn(self, ctx.editor);
             }
             alt!(Enter) => {
-                if let Some(option) = self.selection() {
-                    (self.callback_fn)(ctx, option, self.default_action);
-                }
+                self.accept(ctx, self.default_action);
             }
             key!(Enter) => {
                 // If the prompt has a history completion and is empty, use enter to accept
@@ -1352,9 +1416,7 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
                     // Inserting from the history register is a paste.
                     self.handle_prompt_change(true);
                 } else {
-                    if let Some(option) = self.selection() {
-                        (self.callback_fn)(ctx, option, self.default_action);
-                    }
+                    self.accept(ctx, self.default_action);
                     if let Some(history_register) = self.prompt.history_register() {
                         if let Err(err) = ctx
                             .editor
@@ -1368,15 +1430,11 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
                 }
             }
             ctrl!('s') => {
-                if let Some(option) = self.selection() {
-                    (self.callback_fn)(ctx, option, Action::HorizontalSplit);
-                }
+                self.accept(ctx, Action::HorizontalSplit);
                 return close_fn(self, ctx.editor);
             }
             ctrl!('v') => {
-                if let Some(option) = self.selection() {
-                    (self.callback_fn)(ctx, option, Action::VerticalSplit);
-                }
+                self.accept(ctx, Action::VerticalSplit);
                 return close_fn(self, ctx.editor);
             }
             ctrl!('t') => {
@@ -1433,3 +1491,44 @@ type HighlightCallback<T> = Box<dyn Fn(&mut Context, Option<&T>)>;
 type AbortCallback = Box<dyn Fn(&mut Context)>;
 /// A key one picker handles itself; returns whether to close the picker.
 type KeyCallback<D> = Box<dyn Fn(&mut Context, &D) -> bool>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A picker over the numbers `0..n`, matched and ready to navigate.
+    fn numbers(n: u32) -> Picker<u32, ()> {
+        let column = Column::new("n", |n: &u32, _: &()| n.to_string().into());
+        let mut picker = Picker::new([column], 0, 0..n, (), |_, _, _| {});
+        while picker.matcher.tick(10).running {}
+        picker
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn shift_moves_extend_a_range_without_wrapping() {
+        let mut picker = numbers(10);
+        assert_eq!(picker.selected_rows(), 0..=0);
+
+        // Shift-Up at the top stays put instead of wrapping to the last row.
+        picker.extend_to(-1);
+        assert_eq!(picker.selected_rows(), 0..=0);
+        picker.extend_to(1);
+        picker.extend_to(2);
+        assert_eq!(picker.selected_rows(), 0..=2);
+
+        // Turning back past the anchor selects the other side of it.
+        picker.move_by(3, Direction::Forward);
+        assert_eq!(
+            picker.selected_rows(),
+            5..=5,
+            "a plain move drops the range"
+        );
+        picker.extend_to(3);
+        assert_eq!(picker.selected_rows(), 3..=5);
+        picker.extend_to(i64::MAX);
+        assert_eq!(picker.selected_rows(), 5..=9);
+
+        picker.to_start();
+        assert_eq!(picker.selected_rows(), 0..=0);
+    }
+}

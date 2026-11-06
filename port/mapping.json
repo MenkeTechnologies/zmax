@@ -88855,5 +88855,53 @@
    "key:magit:D"
   ],
   "note": "Group by Directory = `D` in the zmax git status buffer (`:magit`): each section's files are listed under nested directory headings; headings are not selectable, so staging, marking and diffs act on the same files as the flat view (group_by_directory, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-selectNextRowExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Add Next Row to Selection = `Shift-Down` in every zmax picker (e.g. `file_picker`): the cursor moves without wrapping while the row it started on stays selected, so every matched row between them is selected; Enter / Ctrl-s / Ctrl-v / Alt-Enter then act on each selected item in list order, and a plain move or a new query drops the range (Picker::extend_to / Picker::accept, ui/picker.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-selectPreviousRowExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Add Previous Row to Selection = `Shift-Up` in every zmax picker (e.g. `file_picker`): the cursor moves without wrapping while the row it started on stays selected, so every matched row between them is selected; Enter / Ctrl-s / Ctrl-v / Alt-Enter then act on each selected item in list order, and a plain move or a new query drops the range (Picker::extend_to / Picker::accept, ui/picker.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-scrollDownExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Scroll Down and Extend Selection = `Shift-PageDown` in every zmax picker (e.g. `file_picker`): the cursor moves without wrapping while the row it started on stays selected, so every matched row between them is selected; Enter / Ctrl-s / Ctrl-v / Alt-Enter then act on each selected item in list order, and a plain move or a new query drops the range (Picker::extend_to / Picker::accept, ui/picker.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-scrollUpExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Scroll Up and Extend Selection = `Shift-PageUp` in every zmax picker (e.g. `file_picker`): the cursor moves without wrapping while the row it started on stays selected, so every matched row between them is selected; Enter / Ctrl-s / Ctrl-v / Alt-Enter then act on each selected item in list order, and a plain move or a new query drops the range (Picker::extend_to / Picker::accept, ui/picker.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-selectFirstRowExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Select to First Row = `Shift-Home` in every zmax picker (e.g. `file_picker`): the cursor moves without wrapping while the row it started on stays selected, so every matched row between them is selected; Enter / Ctrl-s / Ctrl-v / Alt-Enter then act on each selected item in list order, and a plain move or a new query drops the range (Picker::extend_to / Picker::accept, ui/picker.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.List-selectLastRowExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": "Select to Last Row = `Shift-End` in every zmax picker (e.g. `file_picker`): the cursor moves without wrapping while the row it started on stays selected, so every matched row between them is selected; Enter / Ctrl-s / Ctrl-v / Alt-Enter then act on each selected item in list order, and a plain move or a new query drops the range (Picker::extend_to / Picker::accept, ui/picker.rs)."
  }
 ]
