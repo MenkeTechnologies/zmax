@@ -676,6 +676,13 @@ impl FileTree {
                 self.scroll = self.scroll.saturating_sub(self.page);
                 TreeAction::None
             }
+            // JetBrains ScrollTreeToCenter: scroll so the selected row sits in
+            // the middle of the panel, as far as the tree's ends allow.
+            KeyCode::Char('z') => {
+                let most = self.rows.len().saturating_sub(self.page);
+                self.scroll = self.selected.saturating_sub(self.page / 2).min(most);
+                TreeAction::None
+            }
             // Collapse the whole tree back to the project root.
             KeyCode::Char('c') => {
                 self.collapse_all();
@@ -1091,6 +1098,20 @@ mod tests {
             modifiers: KeyModifiers::empty(),
         });
         assert_eq!(0, tree.selected);
+
+        // `z` centres the selected row: rows a, inner.rs, b.rs, c.rs in a
+        // three-row panel put b.rs mid-panel, but a cannot rise above the top.
+        tree.page = 3;
+        tree.selected = index(&tree, "b.rs");
+        tree.handle_key(key('z'));
+        assert_eq!(1, tree.scroll);
+        tree.selected = index(&tree, "a");
+        tree.handle_key(key('z'));
+        assert_eq!(0, tree.scroll);
+        tree.page = 2;
+        tree.selected = index(&tree, "c.rs");
+        tree.handle_key(key('z'));
+        assert_eq!(2, tree.scroll, "no blank rows past the last one");
 
         let _ = std::fs::remove_dir_all(&root);
     }

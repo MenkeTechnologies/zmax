@@ -88951,5 +88951,13 @@
    "key:table:S-end"
   ],
   "note": "Select to Last Column = `S-end` in the zmax table editor (the `table` command, the Emacs table.el port): point moves without wrapping while the cell it started on stays selected, so the rectangle of cells between them is selected and highlighted; Backspace clears every selected cell, M-w copies them as tab-separated rows, and any other key drops the block (TableEditor::extend_to / block, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ScrollTreeToCenter",
+  "status": "ported",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "Scroll Tree to Center = `z` in the zmax project tree after `focus_file_tree`: scrolls so the selected row sits in the middle of the panel, clamped so the tree never scrolls above its first row or leaves blank rows past its last (FileTree::handle_key, ui/file_tree.rs); a panel key, not a named command."
  }
 ]
