@@ -260,6 +260,9 @@ enum BottomHit {
 pub enum IdeAction {
     None,
     OpenFile(PathBuf),
+    /// Open each of these files, the last one ending up in front (a range
+    /// selected in the project tree).
+    OpenFiles(Vec<PathBuf>),
     /// Open a file from the project tree in the preview tab.
     OpenPreview(PathBuf),
     /// Open a URL in the system browser (CI run links).
@@ -1814,6 +1817,10 @@ impl Ide {
                     self.focus = Focus::Editor;
                     self.open_from_tree(p)
                 }
+                TreeAction::OpenMany(paths) => {
+                    self.focus = Focus::Editor;
+                    IdeAction::OpenFiles(paths)
+                }
                 TreeAction::Close => IdeAction::None,
                 TreeAction::None => IdeAction::None,
             };
@@ -1855,6 +1862,10 @@ impl Ide {
                     TreeAction::Open(p) => {
                         self.focus = Focus::Editor;
                         self.open_from_tree(p)
+                    }
+                    TreeAction::OpenMany(paths) => {
+                        self.focus = Focus::Editor;
+                        IdeAction::OpenFiles(paths)
                     }
                     TreeAction::Close => {
                         self.focus = Focus::Editor;

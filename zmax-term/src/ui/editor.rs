@@ -931,6 +931,15 @@ impl EditorView {
                     }))
                 }
             }
+            // Only the front file's callback runs, so an earlier text file
+            // cannot dismiss the hex view a later binary file opened.
+            IdeAction::OpenFiles(paths) => {
+                let mut front = None;
+                for path in paths {
+                    front = self.apply_ide_action(IdeAction::OpenFile(path), context);
+                }
+                front
+            }
             IdeAction::OpenPreview(path) => {
                 if let Err(e) = crate::commands::open_preview(context.editor, &path) {
                     context.editor.set_error(format!("{}: {e}", path.display()));

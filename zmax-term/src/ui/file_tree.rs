@@ -5,6 +5,7 @@
 //! editor — no PTY round-trip, since this runs inside zmax itself.
 
 use std::collections::{HashMap, HashSet};
+use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 
 use tui::buffer::Buffer as Surface;
@@ -16,6 +17,8 @@ use zmax_view::{
 pub enum TreeAction {
     None,
     Open(PathBuf),
+    /// Open every file of a range selection (`Tree-*ExtendSelection`).
+    OpenMany(Vec<PathBuf>),
     Close,
 }
 
@@ -44,6 +47,10 @@ pub struct FileTree {
     expanded: HashSet<PathBuf>,
     rows: Vec<Row>,
     selected: usize,
+    /// The fixed end of a JetBrains tree range selection
+    /// (`Tree-*ExtendSelection`): Shift with a move keeps this row, selecting
+    /// every row between it and `selected`. `None` selects one row.
+    anchor: Option<usize>,
     scroll: usize,
     /// Speed-search query (JetBrains-style). Empty unless filtering.
     filter: String,
@@ -97,6 +104,7 @@ impl FileTree {
             dir_cache: HashMap::new(),
             page: 1,
             preview_tab: false,
+            anchor: None,
         };
         tree.expanded.insert(root);
         tree.rebuild();
@@ -209,6 +217,8 @@ impl FileTree {
     }
 
     fn rebuild(&mut self) {
+        // A rebuild reorders the rows under the range, so it ends it.
+        self.anchor = None;
         let show_hidden = self.show_hidden;
         let sort = self.sort;
         let compact = self.compact_dirs;
@@ -373,6 +383,7 @@ impl FileTree {
             return TreeAction::None;
         }
         self.selected = idx;
+        self.anchor = None;
         let row = &self.rows[idx];
         if row.is_dir {
             if self.expanded.contains(&row.path) {
@@ -558,6 +569,61 @@ impl FileTree {
         self.rows.iter().position(|r| r.path == parent)
     }
 
+    /// The rows the selection covers: the range between the anchor and the
+    /// selected row, or only the selected row.
+    fn selected_rows(&self) -> RangeInclusive<usize> {
+        span(self.anchor.unwrap_or(self.selected), self.selected)
+    }
+
+    /// Move the selection to `row` (clamped), extending the range from the row
+    /// it began on.
+    fn extend_to(&mut self, row: usize) {
+        if self.rows.is_empty() {
+            return;
+        }
+        self.anchor.get_or_insert(self.selected);
+        self.selected = row.min(self.rows.len() - 1);
+    }
+
+    /// JetBrains `Tree-*ExtendSelection` and `Tree-selectAll`: Shift with a
+    /// move key, and Ctrl-a. Returns whether `key` was one of them.
+    fn extend_key(&mut self, key: KeyEvent) -> bool {
+        let sel = self.selected;
+        match (key.code, key.modifiers) {
+            (KeyCode::Down, KeyModifiers::SHIFT) => self.extend_to(sel + 1),
+            (KeyCode::Up, KeyModifiers::SHIFT) => self.extend_to(sel.saturating_sub(1)),
+            (KeyCode::PageDown, KeyModifiers::SHIFT) => self.extend_to(sel + self.page),
+            (KeyCode::PageUp, KeyModifiers::SHIFT) => self.extend_to(sel.saturating_sub(self.page)),
+            (KeyCode::Home, KeyModifiers::SHIFT) => self.extend_to(0),
+            (KeyCode::End, KeyModifiers::SHIFT) => self.extend_to(usize::MAX),
+            (KeyCode::Left, KeyModifiers::SHIFT) => {
+                if let Some(parent) = self.parent_row() {
+                    self.extend_to(parent);
+                }
+            }
+            // Expand a collapsed directory (keeping the range), else take in
+            // the next row, which on an expanded directory is its first child.
+            (KeyCode::Right, KeyModifiers::SHIFT) => match self.rows.get(sel) {
+                Some(row) if row.is_dir && !self.expanded.contains(&row.path) => {
+                    let anchor = self.anchor;
+                    let before = self.rows.len();
+                    self.expanded.insert(row.path.clone());
+                    self.rebuild();
+                    let added = self.rows.len() - before;
+                    // Rows opened under the directory push down an anchor below it.
+                    self.anchor = anchor.map(|a| if a > sel { a + added } else { a });
+                }
+                _ => self.extend_to(sel + 1),
+            },
+            (KeyCode::Char('a'), KeyModifiers::CONTROL) => {
+                self.anchor = Some(0);
+                self.selected = self.rows.len().saturating_sub(1);
+            }
+            _ => return false,
+        }
+        true
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> TreeAction {
         // Speed-search input mode: keystrokes build the query until Esc/Enter.
         if self.filtering {
@@ -622,7 +688,29 @@ impl FileTree {
                 _ => return TreeAction::None,
             }
         }
+        if self.extend_key(key) {
+            return TreeAction::None;
+        }
+        // JetBrains ScrollTreeToCenter, on Emacs's recenter key (`z` is the
+        // workbench's fold key): the selected row moves to the middle of the
+        // panel, as far as the tree's ends allow.
+        if key.code == KeyCode::Char('l') && key.modifiers == KeyModifiers::CONTROL {
+            let most = self.rows.len().saturating_sub(self.page);
+            self.scroll = self.selected.saturating_sub(self.page / 2).min(most);
+            return TreeAction::None;
+        }
+        // Every other key ends a range selection; Enter opens its files first.
+        let anchor = self.anchor.take();
         match key.code {
+            KeyCode::Enter if anchor.is_some_and(|a| a != self.selected) => {
+                let rows = span(anchor.unwrap_or(self.selected), self.selected);
+                let files = self.rows[rows]
+                    .iter()
+                    .filter(|row| !row.is_dir)
+                    .map(|row| row.path.clone())
+                    .collect();
+                TreeAction::OpenMany(files)
+            }
             KeyCode::Char('/') => {
                 self.filtering = true;
                 self.filter.clear();
@@ -674,13 +762,6 @@ impl FileTree {
             KeyCode::PageUp => {
                 self.selected = self.selected.saturating_sub(self.page);
                 self.scroll = self.scroll.saturating_sub(self.page);
-                TreeAction::None
-            }
-            // JetBrains ScrollTreeToCenter: scroll so the selected row sits in
-            // the middle of the panel, as far as the tree's ends allow.
-            KeyCode::Char('z') => {
-                let most = self.rows.len().saturating_sub(self.page);
-                self.scroll = self.selected.saturating_sub(self.page / 2).min(most);
                 TreeAction::None
             }
             // Collapse the whole tree back to the project root.
@@ -926,7 +1007,7 @@ impl FileTree {
             }
             let row = &self.rows[idx];
             let y = area.y + i as u16;
-            if idx == self.selected {
+            if self.selected_rows().contains(&idx) {
                 surface.set_style(Rect::new(area.x, y, area.width, 1), sel);
             }
             let indent = "  ".repeat(row.depth);
@@ -962,6 +1043,11 @@ impl FileTree {
             }
         }
     }
+}
+
+/// The rows from `a` to `b`, whichever comes first.
+fn span(a: usize, b: usize) -> RangeInclusive<usize> {
+    a.min(b)..=a.max(b)
 }
 
 /// The extension the tree sorts by under "Sort by Type": lowercased, empty for
@@ -1099,19 +1185,69 @@ mod tests {
         });
         assert_eq!(0, tree.selected);
 
-        // `z` centres the selected row: rows a, inner.rs, b.rs, c.rs in a
+        // Ctrl-l centres the selected row: rows a, inner.rs, b.rs, c.rs in a
         // three-row panel put b.rs mid-panel, but a cannot rise above the top.
         tree.page = 3;
         tree.selected = index(&tree, "b.rs");
-        tree.handle_key(key('z'));
+        tree.handle_key(ctrl('l'));
         assert_eq!(1, tree.scroll);
         tree.selected = index(&tree, "a");
-        tree.handle_key(key('z'));
+        tree.handle_key(ctrl('l'));
         assert_eq!(0, tree.scroll);
         tree.page = 2;
         tree.selected = index(&tree, "c.rs");
-        tree.handle_key(key('z'));
+        tree.handle_key(ctrl('l'));
         assert_eq!(2, tree.scroll, "no blank rows past the last one");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn shift_moves_select_a_range_that_enter_opens() {
+        let root = std::env::temp_dir().join(format!("zmax_ft_range_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("a")).unwrap();
+        std::fs::write(root.join("a").join("inner.rs"), "").unwrap();
+        std::fs::write(root.join("b.rs"), "").unwrap();
+        std::fs::write(root.join("c.rs"), "").unwrap();
+        let shift = |code| KeyEvent {
+            code,
+            modifiers: KeyModifiers::SHIFT,
+        };
+
+        let mut tree = FileTree::new(root.clone());
+        // Shift-Right on the collapsed `a` expands it without starting a range.
+        tree.handle_key(shift(KeyCode::Right));
+        let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(names, ["a", "inner.rs", "b.rs", "c.rs"]);
+        assert_eq!(tree.selected_rows(), 0..=0);
+
+        tree.handle_key(shift(KeyCode::Down));
+        tree.handle_key(shift(KeyCode::Down));
+        assert_eq!(tree.selected_rows(), 0..=2);
+        // Enter opens the range's files (not the directory) and ends it.
+        match tree.handle_key(KeyEvent {
+            code: KeyCode::Enter,
+            modifiers: KeyModifiers::empty(),
+        }) {
+            TreeAction::OpenMany(paths) => {
+                assert_eq!(paths, [root.join("a").join("inner.rs"), root.join("b.rs")])
+            }
+            _ => panic!("Enter on a range opens its files"),
+        }
+        assert_eq!(tree.selected_rows(), 2..=2);
+
+        tree.handle_key(ctrl('a'));
+        assert_eq!(tree.selected_rows(), 0..=3, "Ctrl-a selects every row");
+        tree.handle_key(key('k'));
+        assert_eq!(tree.selected_rows(), 2..=2, "a plain move ends the range");
+
+        // Shift-Left takes in the parent; Shift-End runs on to the last row.
+        tree.selected = 1;
+        tree.handle_key(shift(KeyCode::Left));
+        assert_eq!(tree.selected_rows(), 0..=1);
+        tree.handle_key(shift(KeyCode::End));
+        assert_eq!(tree.selected_rows(), 1..=3);
 
         let _ = std::fs::remove_dir_all(&root);
     }
