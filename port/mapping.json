@@ -88837,5 +88837,23 @@
    "static:toggle_minimap_scale_mode"
   ],
   "note": "Fit to Document = `toggle_minimap_scale_mode`: switches the workbench minimap between JetBrains' two scale modes, Fit (the whole document squeezed into the pane, the default) and Fill (one source line per braille row, the window scrolling to keep the editor viewport centred). Clicking the minimap jumps to the line drawn there in either mode; the mode persists with the workbench layout (Ide::minimap_top/minimap_line_at, ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ChangesView.GroupBy.Directory",
+  "status": "ported",
+  "evidence": [
+   "typable:magit",
+   "key:magit:D"
+  ],
+  "note": "Group by Directory = `D` in the zmax git status buffer (`:magit`): each section's files are listed under nested directory headings; headings are not selectable, so staging, marking and diffs act on the same files as the flat view. The branch menu's `D` grouping shares the same helper (group_by_directory, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Frontend.ChangesView.GroupBy.Directory",
+  "status": "ported",
+  "evidence": [
+   "typable:magit",
+   "key:magit:D"
+  ],
+  "note": "Group by Directory = `D` in the zmax git status buffer (`:magit`): each section's files are listed under nested directory headings; headings are not selectable, so staging, marking and diffs act on the same files as the flat view (group_by_directory, ui/magit.rs)."
  }
 ]

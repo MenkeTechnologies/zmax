@@ -14,7 +14,7 @@
 //!
 //! Keys: `j`/`k`/arrows move the selection, `g`/`G` jump to top/bottom, `s`
 //! stage, `u` unstage, `X` discard (press twice to confirm), `S` stage-all, `U`
-//! unstage-all, `I` show or hide ignored files, `c` commit (multi-line message buffer), `C` commit every tracked change when
+//! unstage-all, `I` show or hide ignored files, `D` group the files by directory, `c` commit (multi-line message buffer), `C` commit every tracked change when
 //! nothing is staged, `a` amend the last commit, `Enter` visit the file (a conflict row opens the `:merge` resolver),
 //! `P` push, `f` force push (press twice; `--force-with-lease`), `F` fetch, `p` pull, `R` pick the remote those three target, `!`
 //! (Emacs `vc-edit-next-command`) open the next git command for editing before
@@ -325,6 +325,39 @@ pub fn parse_branches(out: &str) -> Vec<BranchEntry> {
     entries
 }
 
+/// A `/`-separated name split into its directory part and its last component.
+/// An untracked directory is listed as `dir/`: that trailing slash belongs to
+/// the last component, which stays `dir/`.
+fn split_dirs(name: &str) -> (&str, &str) {
+    match name.trim_end_matches('/').rfind('/') {
+        Some(cut) => (&name[..cut], &name[cut + 1..]),
+        None => ("", name),
+    }
+}
+
+/// JetBrains "Group by Directory": `names`, sorted so that the names under a
+/// directory are adjacent, as a tree. Each row is a directory heading
+/// `(None, depth, dir)` or the `i`th name's last component
+/// `(Some(i), depth, leaf)`, `depth` being the number of directories above it.
+fn group_by_directory<'a>(
+    names: impl IntoIterator<Item = &'a str>,
+) -> Vec<(Option<usize>, usize, &'a str)> {
+    let mut rows = Vec::new();
+    let mut open: Vec<&str> = Vec::new();
+    for (i, name) in names.into_iter().enumerate() {
+        let (dirs, leaf) = split_dirs(name);
+        let parts: Vec<&str> = dirs.split('/').filter(|d| !d.is_empty()).collect();
+        let shared = open.iter().zip(&parts).take_while(|(a, b)| a == b).count();
+        open.truncate(shared);
+        for dir in parts[shared..].iter().copied() {
+            rows.push((None, open.len(), dir));
+            open.push(dir);
+        }
+        rows.push((Some(i), open.len(), leaf));
+    }
+    rows
+}
+
 /// One stash entry as listed by `git stash list`: its ref (`stash@{N}`) and the
 /// descriptive remainder.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -578,6 +611,8 @@ enum Row {
     Header(String),
     /// A file row; carries the index into [`MagitStatus::entries`].
     File(usize),
+    /// A directory heading over its files while they are grouped by directory.
+    Dir(String),
     /// A hunk's `@@ … @@` header row (selectable). Identifies the owning entry
     /// and the hunk index within that entry's [`FileDiff`].
     HunkHeader {
@@ -669,6 +704,9 @@ pub struct MagitStatus {
     /// JetBrains "Show Ignored Files" (`Git.Stage.ToggleIgnored`): list the
     /// ignored files too (`git status --ignored`).
     show_ignored: bool,
+    /// JetBrains "Group by Directory" (`ChangesView.GroupBy.Directory`, `D`):
+    /// each section lists its files under directory headings.
+    group_dirs: bool,
 }
 
 impl MagitStatus {
@@ -696,6 +734,7 @@ impl MagitStatus {
             edit_command: None,
             remote: None,
             show_ignored: false,
+            group_dirs: false,
         };
         view.refresh();
         Some(view)
@@ -1369,7 +1408,20 @@ impl MagitStatus {
             }
             rows.push(Row::Blank);
             rows.push(Row::Header(format!("{} ({})", section.title(), idxs.len())));
-            for i in idxs {
+            let listed: Vec<(Option<usize>, usize, &str)> = if self.group_dirs {
+                group_by_directory(idxs.iter().map(|&i| self.entries[i].path.as_str()))
+                    .into_iter()
+                    .map(|(k, depth, name)| (k.map(|k| idxs[k]), depth, name))
+                    .collect()
+            } else {
+                idxs.iter().map(|&i| (Some(i), 0, "")).collect()
+            };
+            for (idx, depth, name) in listed {
+                let Some(i) = idx else {
+                    // Aligned with the path column of the file rows.
+                    rows.push(Row::Dir(format!("      {}{name}/", "  ".repeat(depth))));
+                    continue;
+                };
                 rows.push(Row::File(i));
                 let entry = &self.entries[i];
                 let key = (entry.section, entry.path.clone());
@@ -1765,6 +1817,14 @@ impl Component for MagitStatus {
                     "ignored files hidden"
                 });
             }
+            key!('D') => {
+                self.group_dirs = !self.group_dirs;
+                cx.editor.set_status(if self.group_dirs {
+                    "changes: grouped by directory"
+                } else {
+                    "changes: flat"
+                });
+            }
             key!('%') => {
                 self.mark_regexp = Some(String::new());
                 cx.editor
@@ -1889,7 +1949,7 @@ impl Component for MagitStatus {
             );
         } else {
             let hint =
-                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  I ignored  c commit  C commit-all  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
+                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  I ignored  D dirs  c commit  C commit-all  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -1954,7 +2014,7 @@ impl Component for MagitStatus {
             let selected_block = is_selected_row(row) || in_selected_hunk(row);
             match row {
                 Row::Blank => {}
-                Row::Info(text) => {
+                Row::Info(text) | Row::Dir(text) => {
                     surface.set_stringn(area.x, y, text, area.width as usize, info_style);
                 }
                 Row::Header(text) => {
@@ -1988,7 +2048,16 @@ impl Component for MagitStatus {
                     };
                     // The vc-dir mark column: `*` on a marked file.
                     let mark = if self.is_marked(*i) { '*' } else { ' ' };
-                    let line = format!("{mark}{marker} {} {}", entry.code(), entry.path);
+                    // Grouped by directory: the file name, indented under its
+                    // directory headings.
+                    let path = if self.group_dirs {
+                        let (dirs, leaf) = split_dirs(&entry.path);
+                        let depth = dirs.split('/').filter(|d| !d.is_empty()).count();
+                        format!("{}{leaf}", "  ".repeat(depth))
+                    } else {
+                        entry.path.clone()
+                    };
+                    let line = format!("{mark}{marker} {} {path}", entry.code());
                     let style = if selected_block { sel_style } else { base };
                     surface.set_stringn(area.x, y, &line, area.width as usize, style);
                 }
@@ -4221,28 +4290,22 @@ impl MagitBranch {
     /// (`None`) when [`Self::group_dirs`] is on. `git branch` sorts by name, so
     /// branches sharing a directory are adjacent.
     fn rows(&self) -> Vec<(Option<usize>, String)> {
-        let mut rows = Vec::new();
-        let mut open: Vec<&str> = Vec::new();
-        for (i, b) in self.entries.iter().enumerate() {
-            let marker = if b.current { "* " } else { "  " };
-            if !self.group_dirs {
-                rows.push((Some(i), format!("{marker}{}", b.name)));
-                continue;
-            }
-            let mut parts: Vec<&str> = b.name.split('/').collect();
-            let leaf = parts.pop().unwrap_or_default();
-            let shared = open.iter().zip(&parts).take_while(|(a, b)| a == b).count();
-            open.truncate(shared);
-            for dir in parts[shared..].iter().copied() {
-                rows.push((None, format!("  {}{dir}/", "  ".repeat(open.len()))));
-                open.push(dir);
-            }
-            rows.push((
-                Some(i),
-                format!("{marker}{}{leaf}", "  ".repeat(open.len())),
-            ));
+        let marker = |i: usize| if self.entries[i].current { "* " } else { "  " };
+        if !self.group_dirs {
+            return (0..self.entries.len())
+                .map(|i| (Some(i), format!("{}{}", marker(i), self.entries[i].name)))
+                .collect();
         }
-        rows
+        group_by_directory(self.entries.iter().map(|b| b.name.as_str()))
+            .into_iter()
+            .map(|(idx, depth, name)| {
+                let indent = "  ".repeat(depth);
+                match idx {
+                    None => (None, format!("  {indent}{name}/")),
+                    Some(i) => (Some(i), format!("{}{indent}{name}", marker(i))),
+                }
+            })
+            .collect()
     }
 
     fn move_selection(&mut self, delta: isize) {
@@ -7501,7 +7564,49 @@ stash@{1}: On feature: experiment
             edit_command: None,
             remote: None,
             show_ignored: false,
+            group_dirs: false,
         }
+    }
+
+    #[test]
+    fn status_groups_each_sections_files_by_directory() {
+        let mut status = fake_status(
+            "?? src/ui/b.rs\n?? src/ui/a.rs\n?? src/main.rs\n?? README.md\n?? newdir/\n M src/lib.rs\n",
+        );
+        let shown = |status: &MagitStatus| -> Vec<String> {
+            status
+                .rows()
+                .iter()
+                .filter_map(|row| match row {
+                    Row::File(i) => Some(status.entries[*i].path.clone()),
+                    Row::Dir(text) => Some(text.clone()),
+                    _ => None,
+                })
+                .collect()
+        };
+        let flat = shown(&status);
+        let targets = status.targets();
+        status.group_dirs = true;
+        assert_eq!(
+            shown(&status),
+            [
+                "README.md",
+                "newdir/",
+                "      src/",
+                "src/main.rs",
+                "        ui/",
+                "src/ui/a.rs",
+                "src/ui/b.rs",
+                "      src/",
+                "src/lib.rs",
+            ]
+        );
+        // Headings are not selectable: the same files, in the same order.
+        assert_eq!(status.targets(), targets);
+        status.group_dirs = false;
+        assert_eq!(shown(&status), flat);
+        assert_eq!(split_dirs("a/b/"), ("a", "b/"));
+        assert_eq!(split_dirs("newdir/"), ("", "newdir/"));
     }
 
     /// The whole point of a mark: with none set, an operation acts on the row
