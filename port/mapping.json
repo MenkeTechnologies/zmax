@@ -89051,5 +89051,15 @@
    "static:focus_file_tree"
   ],
   "note": "Select All = `Ctrl-a` in the zmax project tree after `focus_file_tree`: every visible row is selected, and Enter opens all of their files (FileTree::extend_key, ui/file_tree.rs); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.IncludeWholeChangedLinesIntoCommit",
+  "status": "partial",
+  "evidence": [
+   "typable:magit",
+   "key:magit:J",
+   "key:magit:w"
+  ],
+  "note": "Include Whole Changed Lines into Commit = in the zmax git status buffer (`:magit`), `J`/`K` pick a changed line of an expanded hunk and `w` stages (unstaged section) or unstages (staged section) the whole run of consecutive changed lines around it, leaving the hunk's other changes alone (change_block / line_patch, ui/magit.rs). Partial: the run around one picked line rather than every run a selected range touches, from the status buffer rather than the diff viewer."
  }
 ]

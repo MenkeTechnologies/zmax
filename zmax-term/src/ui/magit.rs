@@ -14,7 +14,8 @@
 //!
 //! Keys: `j`/`k`/arrows move the selection, `g`/`G` jump to top/bottom, `s`
 //! stage, `u` unstage, `J`/`K` pick the next / previous changed line of the
-//! selected hunk so that `s`/`u` stage or unstage only that line, `X` discard (press twice to confirm), `S` stage-all, `U`
+//! selected hunk so that `s`/`u` stage or unstage only that line (`w` the
+//! whole run of changed lines around it), `X` discard (press twice to confirm), `S` stage-all, `U`
 //! unstage-all, `I` show or hide ignored files, `D` group the files by directory, `c` commit (multi-line message buffer), `C` commit every tracked change when
 //! nothing is staged, `a` amend the last commit, `Enter` visit the file (a conflict row opens the `:merge` resolver),
 //! `P` push, `f` force push (press twice; `--force-with-lease`), `F` fetch, `p` pull, `R` pick the remote those three target, `!`
@@ -35,6 +36,7 @@
 //! where `D` deletes a reply comment.
 
 use std::collections::{HashMap, HashSet};
+use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -267,14 +269,20 @@ pub fn hunk_patch(header: &[String], hunk: &Hunk) -> String {
     out
 }
 
-/// A one-hunk patch that applies only the changed body line `pick` of `hunk`
-/// (JetBrains Include / Exclude Changed Lines), or `None` when `pick` is not a
-/// `+`/`-` line. The other changes are taken out the way `git add -p` edits a
-/// hunk: an unpicked `+` line is dropped and an unpicked `-` line becomes
-/// context. A patch applied in `reverse` swaps the two, since then its new
-/// side is what must match the index.
-pub fn line_patch(header: &[String], hunk: &Hunk, pick: usize, reverse: bool) -> Option<String> {
-    if !matches!(hunk.body.get(pick)?.chars().next(), Some('+' | '-')) {
+/// A one-hunk patch that applies only the changes among the body lines `pick`
+/// of `hunk` (JetBrains Include / Exclude Changed Lines), or `None` when `pick`
+/// holds no `+`/`-` line. The other changes are taken out the way `git add -p`
+/// edits a hunk: an unpicked `+` line is dropped and an unpicked `-` line
+/// becomes context. A patch applied in `reverse` swaps the two, since then its
+/// new side is what must match the index.
+pub fn line_patch(
+    header: &[String],
+    hunk: &Hunk,
+    pick: RangeInclusive<usize>,
+    reverse: bool,
+) -> Option<String> {
+    let changed = |line: &String| matches!(line.chars().next(), Some('+' | '-'));
+    if !hunk.body.get(pick.clone())?.iter().any(changed) {
         return None;
     }
     let (old_start, new_start, tail) = hunk_starts(&hunk.header)?;
@@ -290,11 +298,12 @@ pub fn line_patch(header: &[String], hunk: &Hunk, pick: usize, reverse: bool) ->
             }
             continue;
         }
-        dropped = i != pick && kind == drop;
+        let picked = pick.contains(&i);
+        dropped = !picked && kind == drop;
         if dropped {
             continue;
         }
-        if i != pick && kind == keep_as_context {
+        if !picked && kind == keep_as_context {
             body.push(format!(" {}", &line[1..]));
         } else {
             body.push(line.clone());
@@ -314,6 +323,25 @@ pub fn line_patch(header: &[String], hunk: &Hunk, pick: usize, reverse: bool) ->
         body,
     };
     Some(hunk_patch(header, &narrowed))
+}
+
+/// The body lines of the run of consecutive changes (`+`/`-` lines and their
+/// `\ No newline` notes) that body line `line` belongs to: JetBrains' "whole
+/// changed lines" around the caret. A context line is a run of its own.
+pub fn change_block(body: &[String], line: usize) -> RangeInclusive<usize> {
+    let in_block = |i: usize| matches!(body[i].chars().next(), Some('+' | '-' | '\\'));
+    if !in_block(line) {
+        return line..=line;
+    }
+    let mut start = line;
+    while start > 0 && in_block(start - 1) {
+        start -= 1;
+    }
+    let mut end = line;
+    while end + 1 < body.len() && in_block(end + 1) {
+        end += 1;
+    }
+    start..=end
 }
 
 /// The old and new start lines of a `@@ -a[,b] +c[,d] @@tail` hunk header,
@@ -1661,7 +1689,7 @@ impl MagitStatus {
             Some(Target::File(_)) => self.stage_selected(cx),
             Some(Target::Hunk { entry, hunk }) => {
                 if self.entries[entry].section == Section::Unstaged {
-                    let line = self.picked_line();
+                    let line = self.picked_line().map(|l| l..=l);
                     self.apply_hunk(cx, entry, hunk, line, false);
                 } else {
                     cx.editor
@@ -1680,7 +1708,7 @@ impl MagitStatus {
             Some(Target::File(_)) => self.unstage_selected(cx),
             Some(Target::Hunk { entry, hunk }) => {
                 if self.entries[entry].section == Section::Staged {
-                    let line = self.picked_line();
+                    let line = self.picked_line().map(|l| l..=l);
                     self.apply_hunk(cx, entry, hunk, line, true);
                 } else {
                     cx.editor
@@ -1691,17 +1719,45 @@ impl MagitStatus {
         }
     }
 
+    /// `w`: stage (in the unstaged section) or unstage (in the staged one) the
+    /// whole run of changed lines around the picked line ([`change_block`]),
+    /// JetBrains Include Whole Changed Lines.
+    fn apply_change_block(&mut self, cx: &mut Context) {
+        let (Some(Target::Hunk { entry, hunk }), Some(line)) =
+            (self.selected_target(), self.picked_line())
+        else {
+            cx.editor
+                .set_status("pick a changed line of a hunk first (J/K)");
+            return;
+        };
+        let e = &self.entries[entry];
+        let reverse = match e.section {
+            Section::Unstaged => false,
+            Section::Staged => true,
+            _ => return,
+        };
+        let Some(block) = self
+            .diffs
+            .get(&(e.section, e.path.clone()))
+            .and_then(|fd| fd.hunks.get(hunk))
+            .map(|h| change_block(&h.body, line))
+        else {
+            return;
+        };
+        self.apply_hunk(cx, entry, hunk, Some(block), reverse);
+    }
+
     /// Apply (stage) or reverse-apply (unstage) a single hunk by building a
     /// minimal one-hunk patch from the cached [`FileDiff`] and feeding it to
-    /// `git apply --cached [--reverse]` via a temp file. With `line`, only
-    /// that changed line of the hunk ([`line_patch`]). Surfaces any
+    /// `git apply --cached [--reverse]` via a temp file. With `lines`, only
+    /// the changes among those body lines of the hunk ([`line_patch`]). Surfaces any
     /// `git apply` error in the status line and never panics.
     fn apply_hunk(
         &mut self,
         cx: &mut Context,
         entry: usize,
         hunk: usize,
-        line: Option<usize>,
+        lines: Option<RangeInclusive<usize>>,
         reverse: bool,
     ) {
         let Some(e) = self.entries.get(entry).cloned() else {
@@ -1712,7 +1768,7 @@ impl MagitStatus {
         // shelling out / refreshing.
         let patch = match self.diffs.get(&key).and_then(|fd| {
             let h = fd.hunks.get(hunk)?;
-            match line {
+            match lines.clone() {
                 Some(l) => line_patch(&fd.header, h, l, reverse),
                 None => Some(hunk_patch(&fd.header, h)),
             }
@@ -1745,7 +1801,11 @@ impl MagitStatus {
         match result {
             Ok(()) => {
                 let verb = if reverse { "unstaged" } else { "staged" };
-                let what = if line.is_some() { "line" } else { "hunk" };
+                let what = match &lines {
+                    None => "hunk",
+                    Some(l) if l.start() == l.end() => "line",
+                    Some(_) => "lines",
+                };
                 cx.editor.set_status(format!("{verb} {what} in {}", e.path));
             }
             Err(err) => cx.editor.set_error(format!("git apply: {err}")),
@@ -1956,6 +2016,7 @@ impl Component for MagitStatus {
             key!(Tab) => self.toggle_expand(cx),
             key!('s') => self.stage(cx),
             key!('u') => self.unstage(cx),
+            key!('w') => self.apply_change_block(cx),
             key!('J') | key!('K') => match self.step_line(key == key!('J')) {
                 Some(text) => cx.editor.set_status(format!("line: {text}")),
                 None => cx
@@ -2072,7 +2133,7 @@ impl Component for MagitStatus {
             );
         } else {
             let hint =
-                "Tab expand  s stage  u unstage  J/K line  X discard  m mark  M mark-all  % regexp  * registered  I ignored  D dirs  c commit  C commit-all  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
+                "Tab expand  s stage  u unstage  J/K line  w block  X discard  m mark  M mark-all  % regexp  * registered  I ignored  D dirs  c commit  C commit-all  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -7717,21 +7778,49 @@ stash@{1}: On feature: experiment
         let header = vec!["--- a/f".to_string(), "+++ b/f".to_string()];
         // Staging `+A` alone: the other addition goes, the removals stay as context.
         assert_eq!(
-            line_patch(&header, &replace_hunk(), 3, false).unwrap(),
+            line_patch(&header, &replace_hunk(), 3..=3, false).unwrap(),
             "--- a/f\n+++ b/f\n@@ -1,4 +1,5 @@ fn f\n x\n a\n b\n+A\n y\n"
         );
         // Unstaging `-b` (a reverse apply): the other removal goes, the
         // additions, which the index holds, stay as context.
         assert_eq!(
-            line_patch(&header, &replace_hunk(), 2, true).unwrap(),
+            line_patch(&header, &replace_hunk(), 2..=2, true).unwrap(),
             "--- a/f\n+++ b/f\n@@ -1,5 +1,4 @@ fn f\n x\n-b\n A\n B\n y\n"
         );
         assert_eq!(
-            line_patch(&header, &replace_hunk(), 0, false),
+            line_patch(&header, &replace_hunk(), 0..=0, false),
             None,
             "context"
         );
         assert_eq!(hunk_starts("@@ -7 +9,2 @@"), Some((7, 9, "")));
+    }
+
+    #[test]
+    fn a_change_block_patch_takes_the_whole_run_around_a_line() {
+        let hunk = Hunk {
+            header: "@@ -1,4 +1,4 @@".into(),
+            body: [
+                " x",
+                "-a",
+                "+A",
+                " m",
+                "-b",
+                "+B",
+                "\\ No newline at end of file",
+            ]
+            .map(String::from)
+            .to_vec(),
+        };
+        assert_eq!(change_block(&hunk.body, 2), 1..=2);
+        assert_eq!(change_block(&hunk.body, 4), 4..=6, "the note joins its run");
+        assert_eq!(change_block(&hunk.body, 3), 3..=3, "context is its own run");
+
+        // The first run's change goes in whole; the second is neutralised,
+        // its `+B` taking its no-newline note with it.
+        assert_eq!(
+            line_patch(&[], &hunk, 1..=2, false).unwrap(),
+            "@@ -1,4 +1,4 @@\n x\n-a\n+A\n m\n b\n"
+        );
     }
 
     #[test]
@@ -7758,7 +7847,7 @@ stash@{1}: On feature: experiment
         let apply = |diff: &str, pick: &str, reverse: bool| {
             let (header, hunks) = parse_diff_hunks(diff);
             let line = hunks[0].body.iter().position(|l| l == pick).unwrap();
-            let patch = line_patch(&header, &hunks[0], line, reverse).unwrap();
+            let patch = line_patch(&header, &hunks[0], line..=line, reverse).unwrap();
             let file = dir.path().join("line.patch");
             std::fs::write(&file, patch).unwrap();
             let file = file.to_string_lossy().into_owned();
