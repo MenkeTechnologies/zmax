@@ -13,7 +13,8 @@
 //! re-reads the status so it stays live.
 //!
 //! Keys: `j`/`k`/arrows move the selection, `g`/`G` jump to top/bottom, `s`
-//! stage, `u` unstage, `X` discard (press twice to confirm), `S` stage-all, `U`
+//! stage, `u` unstage, `J`/`K` pick the next / previous changed line of the
+//! selected hunk so that `s`/`u` stage or unstage only that line, `X` discard (press twice to confirm), `S` stage-all, `U`
 //! unstage-all, `I` show or hide ignored files, `D` group the files by directory, `c` commit (multi-line message buffer), `C` commit every tracked change when
 //! nothing is staged, `a` amend the last commit, `Enter` visit the file (a conflict row opens the `:merge` resolver),
 //! `P` push, `f` force push (press twice; `--force-with-lease`), `F` fetch, `p` pull, `R` pick the remote those three target, `!`
@@ -264,6 +265,65 @@ pub fn hunk_patch(header: &[String], hunk: &Hunk) -> String {
         out.push('\n');
     }
     out
+}
+
+/// A one-hunk patch that applies only the changed body line `pick` of `hunk`
+/// (JetBrains Include / Exclude Changed Lines), or `None` when `pick` is not a
+/// `+`/`-` line. The other changes are taken out the way `git add -p` edits a
+/// hunk: an unpicked `+` line is dropped and an unpicked `-` line becomes
+/// context. A patch applied in `reverse` swaps the two, since then its new
+/// side is what must match the index.
+pub fn line_patch(header: &[String], hunk: &Hunk, pick: usize, reverse: bool) -> Option<String> {
+    if !matches!(hunk.body.get(pick)?.chars().next(), Some('+' | '-')) {
+        return None;
+    }
+    let (old_start, new_start, tail) = hunk_starts(&hunk.header)?;
+    let (drop, keep_as_context) = if reverse { ('-', '+') } else { ('+', '-') };
+    let mut body = Vec::new();
+    let mut dropped = false;
+    for (i, line) in hunk.body.iter().enumerate() {
+        let kind = line.chars().next().unwrap_or(' ');
+        if kind == '\\' {
+            // "\ No newline at end of file" belongs to the line before it.
+            if !dropped {
+                body.push(line.clone());
+            }
+            continue;
+        }
+        dropped = i != pick && kind == drop;
+        if dropped {
+            continue;
+        }
+        if i != pick && kind == keep_as_context {
+            body.push(format!(" {}", &line[1..]));
+        } else {
+            body.push(line.clone());
+        }
+    }
+    let count = |side: char| {
+        body.iter()
+            .filter(|l| l.starts_with(' ') || l.starts_with(side))
+            .count()
+    };
+    let narrowed = Hunk {
+        header: format!(
+            "@@ -{old_start},{} +{new_start},{} @@{tail}",
+            count('-'),
+            count('+')
+        ),
+        body,
+    };
+    Some(hunk_patch(header, &narrowed))
+}
+
+/// The old and new start lines of a `@@ -a[,b] +c[,d] @@tail` hunk header,
+/// and the text after its closing `@@`.
+fn hunk_starts(header: &str) -> Option<(usize, usize, &str)> {
+    let rest = header.strip_prefix("@@ -")?;
+    let (ranges, tail) = rest.split_once(" @@")?;
+    let (old, new) = ranges.split_once(" +")?;
+    let start = |range: &str| range.split(',').next()?.parse().ok();
+    Some((start(old)?, start(new)?, tail))
 }
 
 /// A configured remote as listed by `git remote -v`: its name and its fetch URL.
@@ -625,6 +685,8 @@ enum Row {
     HunkLine {
         entry: usize,
         hunk: usize,
+        /// The index of this line in the hunk's body.
+        line: usize,
         text: String,
     },
     /// An indented note shown under an expanded file that has no hunks (e.g. an
@@ -707,6 +769,11 @@ pub struct MagitStatus {
     /// JetBrains "Group by Directory" (`ChangesView.GroupBy.Directory`, `D`):
     /// each section lists its files under directory headings.
     group_dirs: bool,
+    /// JetBrains Include / Exclude Changed Lines
+    /// (`Vcs.Diff.IncludeChangedLinesIntoCommit`, `J`/`K`): a changed line of
+    /// the selected hunk, by body index, that `s`/`u` stage or unstage alone.
+    /// Only meaningful while that hunk is still the selection.
+    line_cursor: Option<(Target, usize)>,
 }
 
 impl MagitStatus {
@@ -735,6 +802,7 @@ impl MagitStatus {
             remote: None,
             show_ignored: false,
             group_dirs: false,
+            line_cursor: None,
         };
         view.refresh();
         Some(view)
@@ -743,6 +811,8 @@ impl MagitStatus {
     /// Re-read `git status` + the current branch and rebuild the section list,
     /// clamping the selection to the new entry count.
     fn refresh(&mut self) {
+        // Hunks are renumbered by a re-read, so a picked line no longer holds.
+        self.line_cursor = None;
         self.head = git_head(&self.repo_dir);
         self.rebase = detect_rebase(&self.repo_dir);
         self.upstream = git_output(
@@ -1436,10 +1506,11 @@ impl MagitStatus {
                                 hunk: h,
                                 text: hunk.header.clone(),
                             });
-                            for line in &hunk.body {
+                            for (l, line) in hunk.body.iter().enumerate() {
                                 rows.push(Row::HunkLine {
                                     entry: i,
                                     hunk: h,
+                                    line: l,
                                     text: line.clone(),
                                 });
                             }
@@ -1549,6 +1620,39 @@ impl MagitStatus {
         })
     }
 
+    /// The body index of the line the line cursor is on, while its hunk is
+    /// still the selection.
+    fn picked_line(&self) -> Option<usize> {
+        let (target, line) = self.line_cursor?;
+        (self.selected_target() == Some(target)).then_some(line)
+    }
+
+    /// `J`/`K`: move the line cursor to the next / previous changed (`+`/`-`)
+    /// line of the selected hunk. Returns the line picked, or `None` when the
+    /// selection is not a hunk or no changed line lies that way.
+    fn step_line(&mut self, forward: bool) -> Option<String> {
+        let target @ Target::Hunk { entry, hunk } = self.selected_target()? else {
+            return None;
+        };
+        let e = &self.entries[entry];
+        let body = &self
+            .diffs
+            .get(&(e.section, e.path.clone()))?
+            .hunks
+            .get(hunk)?
+            .body;
+        let changed = |i: &usize| matches!(body[*i].chars().next(), Some('+' | '-'));
+        let from = self.picked_line();
+        let next = if forward {
+            (from.map_or(0, |l| l + 1)..body.len()).find(changed)
+        } else {
+            (0..from.unwrap_or(body.len())).rev().find(changed)
+        }?;
+        let text = body[next].clone();
+        self.line_cursor = Some((target, next));
+        Some(text)
+    }
+
     /// `s`: stage the selection. On a file row this stages the whole file
     /// (slice-1 behaviour); on a hunk row it stages just that hunk via
     /// `git apply --cached`.
@@ -1557,7 +1661,8 @@ impl MagitStatus {
             Some(Target::File(_)) => self.stage_selected(cx),
             Some(Target::Hunk { entry, hunk }) => {
                 if self.entries[entry].section == Section::Unstaged {
-                    self.apply_hunk(cx, entry, hunk, false);
+                    let line = self.picked_line();
+                    self.apply_hunk(cx, entry, hunk, line, false);
                 } else {
                     cx.editor
                         .set_status("hunk is already staged (press u to unstage)");
@@ -1575,7 +1680,8 @@ impl MagitStatus {
             Some(Target::File(_)) => self.unstage_selected(cx),
             Some(Target::Hunk { entry, hunk }) => {
                 if self.entries[entry].section == Section::Staged {
-                    self.apply_hunk(cx, entry, hunk, true);
+                    let line = self.picked_line();
+                    self.apply_hunk(cx, entry, hunk, line, true);
                 } else {
                     cx.editor
                         .set_status("hunk is not staged (press s to stage)");
@@ -1587,20 +1693,30 @@ impl MagitStatus {
 
     /// Apply (stage) or reverse-apply (unstage) a single hunk by building a
     /// minimal one-hunk patch from the cached [`FileDiff`] and feeding it to
-    /// `git apply --cached [--reverse]` via a temp file. Surfaces any
+    /// `git apply --cached [--reverse]` via a temp file. With `line`, only
+    /// that changed line of the hunk ([`line_patch`]). Surfaces any
     /// `git apply` error in the status line and never panics.
-    fn apply_hunk(&mut self, cx: &mut Context, entry: usize, hunk: usize, reverse: bool) {
+    fn apply_hunk(
+        &mut self,
+        cx: &mut Context,
+        entry: usize,
+        hunk: usize,
+        line: Option<usize>,
+        reverse: bool,
+    ) {
         let Some(e) = self.entries.get(entry).cloned() else {
             return;
         };
         let key = (e.section, e.path.clone());
         // Clone the patch pieces so we drop the borrow on `self.diffs` before
         // shelling out / refreshing.
-        let patch = match self
-            .diffs
-            .get(&key)
-            .and_then(|fd| fd.hunks.get(hunk).map(|h| hunk_patch(&fd.header, h)))
-        {
+        let patch = match self.diffs.get(&key).and_then(|fd| {
+            let h = fd.hunks.get(hunk)?;
+            match line {
+                Some(l) => line_patch(&fd.header, h, l, reverse),
+                None => Some(hunk_patch(&fd.header, h)),
+            }
+        }) {
             Some(p) => p,
             None => {
                 cx.editor.set_error("no hunk to apply (try g to refresh)");
@@ -1629,7 +1745,8 @@ impl MagitStatus {
         match result {
             Ok(()) => {
                 let verb = if reverse { "unstaged" } else { "staged" };
-                cx.editor.set_status(format!("{verb} hunk in {}", e.path));
+                let what = if line.is_some() { "line" } else { "hunk" };
+                cx.editor.set_status(format!("{verb} {what} in {}", e.path));
             }
             Err(err) => cx.editor.set_error(format!("git apply: {err}")),
         }
@@ -1839,6 +1956,12 @@ impl Component for MagitStatus {
             key!(Tab) => self.toggle_expand(cx),
             key!('s') => self.stage(cx),
             key!('u') => self.unstage(cx),
+            key!('J') | key!('K') => match self.step_line(key == key!('J')) {
+                Some(text) => cx.editor.set_status(format!("line: {text}")),
+                None => cx
+                    .editor
+                    .set_status("no changed line that way in the selected hunk"),
+            },
             key!('S') => self.stage_all(cx),
             key!('U') => self.unstage_all(cx),
             key!('b') => return EventResult::Consumed(Some(self.branch_callback())),
@@ -1949,7 +2072,7 @@ impl Component for MagitStatus {
             );
         } else {
             let hint =
-                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  I ignored  D dirs  c commit  C commit-all  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
+                "Tab expand  s stage  u unstage  J/K line  X discard  m mark  M mark-all  % regexp  * registered  I ignored  D dirs  c commit  C commit-all  a amend  f force-push  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -1967,6 +2090,8 @@ impl Component for MagitStatus {
 
         let text_style = theme.get("ui.text");
         let sel_target = self.selected_target();
+        let picked_line = self.picked_line();
+        let cursor_style = theme.get("ui.cursor");
         let rows = self.rows();
         // Keep the selected target's row inside the viewport.
         let is_selected_row = |row: &Row| -> bool {
@@ -2078,7 +2203,9 @@ impl Component for MagitStatus {
                         style,
                     );
                 }
-                Row::HunkLine { text, .. } => {
+                Row::HunkLine { line, text, .. } => {
+                    // The line `J`/`K` picked in the selected hunk.
+                    let picked = selected_block && picked_line == Some(*line);
                     if selected_block {
                         surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
                     }
@@ -2089,11 +2216,17 @@ impl Component for MagitStatus {
                     } else {
                         text_style
                     };
-                    let style = if selected_block { sel_style } else { base };
+                    let style = if picked {
+                        cursor_style
+                    } else if selected_block {
+                        sel_style
+                    } else {
+                        base
+                    };
                     surface.set_stringn(
                         area.x,
                         y,
-                        &format!("    {text}"),
+                        &format!("  {} {text}", if picked { '▶' } else { ' ' }),
                         area.width as usize,
                         style,
                     );
@@ -7565,7 +7698,110 @@ stash@{1}: On feature: experiment
             remote: None,
             show_ignored: false,
             group_dirs: false,
+            line_cursor: None,
         }
+    }
+
+    /// A hunk replacing `a`/`b` with `A`/`B` between two context lines.
+    fn replace_hunk() -> Hunk {
+        Hunk {
+            header: "@@ -1,4 +1,4 @@ fn f".into(),
+            body: [" x", "-a", "-b", "+A", "+B", " y"]
+                .map(String::from)
+                .to_vec(),
+        }
+    }
+
+    #[test]
+    fn line_patch_keeps_one_change_and_recounts_the_hunk() {
+        let header = vec!["--- a/f".to_string(), "+++ b/f".to_string()];
+        // Staging `+A` alone: the other addition goes, the removals stay as context.
+        assert_eq!(
+            line_patch(&header, &replace_hunk(), 3, false).unwrap(),
+            "--- a/f\n+++ b/f\n@@ -1,4 +1,5 @@ fn f\n x\n a\n b\n+A\n y\n"
+        );
+        // Unstaging `-b` (a reverse apply): the other removal goes, the
+        // additions, which the index holds, stay as context.
+        assert_eq!(
+            line_patch(&header, &replace_hunk(), 2, true).unwrap(),
+            "--- a/f\n+++ b/f\n@@ -1,5 +1,4 @@ fn f\n x\n-b\n A\n B\n y\n"
+        );
+        assert_eq!(
+            line_patch(&header, &replace_hunk(), 0, false),
+            None,
+            "context"
+        );
+        assert_eq!(hunk_starts("@@ -7 +9,2 @@"), Some((7, 9, "")));
+    }
+
+    #[test]
+    fn a_line_patch_stages_and_unstages_one_line_through_git() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let out = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(args)
+                .output()
+                .unwrap();
+            assert!(out.status.success(), "git {args:?}: {out:?}");
+            String::from_utf8(out.stdout).unwrap()
+        };
+        git(&["init", "-q"]);
+        git(&["config", "user.email", "user@example.com"]);
+        git(&["config", "user.name", "user"]);
+        std::fs::write(dir.path().join("f"), "x\na\nb\ny\n").unwrap();
+        git(&["add", "f"]);
+        git(&["commit", "-qm", "base"]);
+        std::fs::write(dir.path().join("f"), "x\nA\nB\ny\n").unwrap();
+
+        let apply = |diff: &str, pick: &str, reverse: bool| {
+            let (header, hunks) = parse_diff_hunks(diff);
+            let line = hunks[0].body.iter().position(|l| l == pick).unwrap();
+            let patch = line_patch(&header, &hunks[0], line, reverse).unwrap();
+            let file = dir.path().join("line.patch");
+            std::fs::write(&file, patch).unwrap();
+            let file = file.to_string_lossy().into_owned();
+            let mut args = vec!["apply", "--cached"];
+            if reverse {
+                args.push("--reverse");
+            }
+            args.push(&file);
+            git(&args);
+        };
+
+        apply(&git(&["diff", "--", "f"]), "+A", false);
+        assert_eq!(git(&["show", ":f"]), "x\na\nb\nA\ny\n");
+        apply(&git(&["diff", "--cached", "--", "f"]), "+A", true);
+        assert_eq!(git(&["show", ":f"]), "x\na\nb\ny\n", "index back at HEAD");
+    }
+
+    #[test]
+    fn j_and_k_step_through_the_selected_hunks_changed_lines() {
+        let mut status = fake_status(" M f\n");
+        let key = (Section::Unstaged, "f".to_string());
+        status.expanded.insert(key.clone());
+        status.diffs.insert(
+            key,
+            FileDiff {
+                header: Vec::new(),
+                hunks: vec![replace_hunk()],
+            },
+        );
+        assert_eq!(status.step_line(true), None, "a file row has no lines");
+
+        status.selected = 1;
+        let mut seen = Vec::new();
+        while let Some(text) = status.step_line(true) {
+            seen.push(text);
+        }
+        assert_eq!(seen, ["-a", "-b", "+A", "+B"]);
+        assert_eq!(status.picked_line(), Some(4), "stays on the last one");
+        assert_eq!(status.step_line(false).as_deref(), Some("+A"));
+
+        // Moving the selection off the hunk drops the picked line.
+        status.selected = 0;
+        assert_eq!(status.picked_line(), None);
     }
 
     #[test]

@@ -88959,5 +88959,25 @@
    "static:focus_file_tree"
   ],
   "note": "Scroll Tree to Center = `z` in the zmax project tree after `focus_file_tree`: scrolls so the selected row sits in the middle of the panel, clamped so the tree never scrolls above its first row or leaves blank rows past its last (FileTree::handle_key, ui/file_tree.rs); a panel key, not a named command."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.IncludeChangedLinesIntoCommit",
+  "status": "partial",
+  "evidence": [
+   "typable:magit",
+   "key:magit:J",
+   "key:magit:s"
+  ],
+  "note": "Include Changed Lines into Commit = in the zmax git status buffer (`:magit`), `J`/`K` on an expanded unstaged hunk pick one of its changed lines and `s` stages just that line (git apply --cached of a patch narrowed the way `git add -p` edits a hunk; line_patch, ui/magit.rs). Partial: one line per `s` rather than a selected range, from the status buffer rather than the diff viewer."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Diff.ExcludeChangedLinesFromCommit",
+  "status": "partial",
+  "evidence": [
+   "typable:magit",
+   "key:magit:J",
+   "key:magit:u"
+  ],
+  "note": "Exclude Changed Lines from Commit = in the zmax git status buffer (`:magit`), `J`/`K` on an expanded staged hunk pick one of its changed lines and `u` unstages just that line (git apply --cached --reverse of a narrowed patch; line_patch, ui/magit.rs). Partial: one line per `u` rather than a selected range, from the status buffer rather than the diff viewer."
  }
 ]
