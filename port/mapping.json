@@ -88903,5 +88903,53 @@
    "static:file_picker"
   ],
   "note": "Select to Last Row = `Shift-End` in every zmax picker (e.g. `file_picker`): the cursor moves without wrapping while the row it started on stays selected, so every matched row between them is selected; Enter / Ctrl-s / Ctrl-v / Alt-Enter then act on each selected item in list order, and a plain move or a new query drops the range (Picker::extend_to / Picker::accept, ui/picker.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectNextRowExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "key:table:S-down"
+  ],
+  "note": "Add Next Row to Selection = `S-down` in the zmax table editor (the `table` command, the Emacs table.el port): point moves without wrapping while the cell it started on stays selected, so the rectangle of cells between them is selected and highlighted; Backspace clears every selected cell, M-w copies them as tab-separated rows, and any other key drops the block (TableEditor::extend_to / block, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectPreviousRowExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "key:table:S-up"
+  ],
+  "note": "Add Previous Row to Selection = `S-up` in the zmax table editor (the `table` command, the Emacs table.el port): point moves without wrapping while the cell it started on stays selected, so the rectangle of cells between them is selected and highlighted; Backspace clears every selected cell, M-w copies them as tab-separated rows, and any other key drops the block (TableEditor::extend_to / block, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectNextColumnExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "key:table:S-right"
+  ],
+  "note": "Add Next Column to Selection = `S-right` in the zmax table editor (the `table` command, the Emacs table.el port): point moves without wrapping while the cell it started on stays selected, so the rectangle of cells between them is selected and highlighted; Backspace clears every selected cell, M-w copies them as tab-separated rows, and any other key drops the block (TableEditor::extend_to / block, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectPreviousColumnExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "key:table:S-left"
+  ],
+  "note": "Add Previous Column to Selection = `S-left` in the zmax table editor (the `table` command, the Emacs table.el port): point moves without wrapping while the cell it started on stays selected, so the rectangle of cells between them is selected and highlighted; Backspace clears every selected cell, M-w copies them as tab-separated rows, and any other key drops the block (TableEditor::extend_to / block, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectFirstColumnExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "key:table:S-home"
+  ],
+  "note": "Select to First Column = `S-home` in the zmax table editor (the `table` command, the Emacs table.el port): point moves without wrapping while the cell it started on stays selected, so the rectangle of cells between them is selected and highlighted; Backspace clears every selected cell, M-w copies them as tab-separated rows, and any other key drops the block (TableEditor::extend_to / block, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectLastColumnExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "key:table:S-end"
+  ],
+  "note": "Select to Last Column = `S-end` in the zmax table editor (the `table` command, the Emacs table.el port): point moves without wrapping while the cell it started on stays selected, so the rectangle of cells between them is selected and highlighted; Backspace clears every selected cell, M-w copies them as tab-separated rows, and any other key drops the block (TableEditor::extend_to / block, ui/table.rs)."
  }
 ]
