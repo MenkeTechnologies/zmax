@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-0994e591.js";
+            window.path_to_searchindex_js = "searchindex-73d469b3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -3219,6 +3219,7 @@ without scrolling.</p>
 <tr><td><code>:layout-save</code></td><td>Save the IDE workbench layout (drawer sizes, folds, bottom tabs, expanded folders) under NAME and make it current, or over the current layout with no NAME (JetBrains Save Current Layout as New / Save Changes in Current Layout).</td></tr>
 <tr><td><code>:layout-restore</code></td><td>Put the IDE workbench back into the current saved layout, or the factory layout before any save (JetBrains Restore Current Layout).</td></tr>
 <tr><td><code>:layout-delete</code></td><td>Forget a layout saved with <code>:layout-save</code>.</td></tr>
+<tr><td><code>:navbar-members</code></td><td>Show (<code>on</code>) or hide (<code>off</code>) the symbol around the cursor at the end of the IDE breadcrumb trail; with no argument, flip it (JetBrains Show Members in Navigation Bar).</td></tr>
 <tr><td><code>:navbar-location</code></td><td>Place the IDE breadcrumb trail: <code>top</code> (the toolbar), <code>bottom</code> (the status bar, in place of the file path) or <code>hide</code>; with no argument, show the current placement (JetBrains Navigation Bar location).</td></tr>
 <tr><td><code>:split-chooser</code></td><td>Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser).</td></tr>
 <tr><td><code>:vsplit</code>, <code>:vs</code></td><td>Open the file in a vertical split.</td></tr>
@@ -10124,11 +10125,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>9996</strong> (83.8%)</li>
+<li>Ported: <strong>9998</strong> (83.8%)</li>
 <li>Partial: <strong>932</strong> (7.8%)</li>
-<li>Absent: <strong>998</strong></li>
+<li>Absent: <strong>996</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 3003 static commands, 3231 typable <code>:</code> commands, 4741 default keybindings</li>
+<li>zmax source surface: 3003 static commands, 3232 typable <code>:</code> commands, 4741 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10191,7 +10192,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1025</td><td style="text-align: right">357</td><td style="text-align: right">51.2%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1027</td><td style="text-align: right">357</td><td style="text-align: right">51.3%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10287,7 +10288,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">30</td><td style="text-align: right">6</td><td style="text-align: right">75.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">770</td><td style="text-align: right">298</td><td style="text-align: right">47.9%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">772</td><td style="text-align: right">298</td><td style="text-align: right">48.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">8</td><td style="text-align: right">4</td><td style="text-align: right">50.0%</td></tr>
