@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-a30e7252.js";
+            window.path_to_searchindex_js = "searchindex-f009067f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -1682,6 +1682,7 @@
 <tr><td><code>:layout-restore</code></td><td>Put the IDE workbench back into the current saved layout, or the factory layout before any save (JetBrains Restore Current Layout).</td></tr>
 <tr><td><code>:layout-delete</code></td><td>Forget a layout saved with <code>:layout-save</code>.</td></tr>
 <tr><td><code>:navbar-members</code></td><td>Show (<code>on</code>) or hide (<code>off</code>) the symbol around the cursor at the end of the IDE breadcrumb trail; with no argument, flip it (JetBrains Show Members in Navigation Bar).</td></tr>
+<tr><td><code>:md-list</code></td><td>Make the selected lines a markdown list: <code>bullet</code> (default), <code>numbered</code>, <code>checkbox</code>, or <code>none</code> to drop the markers; existing markers are replaced and nesting kept (JetBrains Create or Change List).</td></tr>
 <tr><td><code>:navbar-location</code></td><td>Place the IDE breadcrumb trail: <code>top</code> (the toolbar), <code>bottom</code> (the status bar, in place of the file path) or <code>hide</code>; with no argument, show the current placement (JetBrains Navigation Bar location).</td></tr>
 <tr><td><code>:split-chooser</code></td><td>Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser).</td></tr>
 <tr><td><code>:vsplit</code>, <code>:vs</code></td><td>Open the file in a vertical split.</td></tr>
@@ -2475,6 +2476,7 @@
 <tr><td><code>toggle_breadcrumbs</code></td><td>Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)</td><td></td></tr>
 <tr><td><code>toggle_sticky_lines_for_language</code></td><td>Turn the sticky lines off, or back on, for the buffer’s language (JetBrains Disable Sticky Lines for Language)</td><td></td></tr>
 <tr><td><code>toggle_sticky_lines</code></td><td>Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)</td><td></td></tr>
+<tr><td><code>disable_sticky_lines</code></td><td>Hide the pinned scope headers; does nothing when they are already off (JetBrains Sticky Lines &gt; Disable)</td><td></td></tr>
 <tr><td><code>toggle_indent_guides</code></td><td>Toggle indentation guides (IntelliJ View &gt; Show Indent Guides)</td><td></td></tr>
 <tr><td><code>toggle_inlay_hints</code></td><td>Toggle display of LSP inlay hints (IntelliJ View &gt; Inlay Hints)</td><td></td></tr>
 <tr><td><code>toggle_auto_highlight</code></td><td>Toggle automatic symbol-under-cursor highlight (SPC t h a)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;tha</code>, select: <code>&lt;space&gt;tha</code></td></tr>
@@ -2629,6 +2631,7 @@
 <tr><td><code>select_line_above</code></td><td>Select current line, if already selected, extend or shrink line above based on the anchor</td><td></td></tr>
 <tr><td><code>select_line_below</code></td><td>Select current line, if already selected, extend or shrink line below based on the anchor</td><td></td></tr>
 <tr><td><code>extend_to_line_bounds</code></td><td>Extend selection to line bounds</td><td><strong>helix, kakoune</strong> — normal: <code>X</code>, select: <code>X</code></td></tr>
+<tr><td><code>select_line_at_caret</code></td><td>Select the whole line each cursor is on, dropping the rest of the selection (JetBrains Select Single Line at Caret)</td><td></td></tr>
 <tr><td><code>extend_chars_right_vim</code></td><td>Extend count graphemes right, line-bounded (dl/cl/yl)</td><td></td></tr>
 <tr><td><code>extend_chars_left_vim</code></td><td>Extend count graphemes left, line-bounded (dh/ch/yh)</td><td></td></tr>
 <tr><td><code>extend_line_below_linewise</code></td><td>Extend whole lines down for a linewise operator (dj/cj/yj)</td><td></td></tr>
@@ -3666,6 +3669,8 @@
 <tr><td><code>scroll_column_left</code></td><td>Scroll view left one column (zh)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zh</code>, <code>z&lt;left&gt;</code>, select: <code>zh</code>, <code>z&lt;left&gt;</code></td></tr>
 <tr><td><code>scroll_column_right</code></td><td>Scroll view right one column (zl)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zl</code>, <code>z&lt;right&gt;</code>, select: <code>zl</code>, <code>z&lt;right&gt;</code></td></tr>
 <tr><td><code>scroll_half_column_left</code></td><td>Scroll view left half a screen (zH)</td><td><strong>spacemacs</strong> — normal: <code>zH</code>, <code>&lt;C-x&gt;&lt;gt&gt;</code>, select: <code>zH</code>, <code>&lt;C-x&gt;&lt;gt&gt;</code>, insert: <code>&lt;C-x&gt;&lt;gt&gt;</code><br><strong>hybrid</strong> — normal: <code>zH</code>, <code>&lt;C-x&gt;&lt;gt&gt;</code>, select: <code>zH</code>, <code>&lt;C-x&gt;&lt;gt&gt;</code><br><strong>vim</strong> — normal: <code>zH</code>, select: <code>zH</code></td></tr>
+<tr><td><code>scroll_page_column_right</code></td><td>Scroll view right a full window width (JetBrains Scroll Page Right)</td><td></td></tr>
+<tr><td><code>scroll_page_column_left</code></td><td>Scroll view left a full window width (JetBrains Scroll Page Left)</td><td></td></tr>
 <tr><td><code>scroll_half_column_right</code></td><td>Scroll view right half a screen (zL)</td><td><strong>spacemacs</strong> — normal: <code>zL</code>, <code>&lt;C-x&gt;&lt;lt&gt;</code>, select: <code>zL</code>, <code>&lt;C-x&gt;&lt;lt&gt;</code>, insert: <code>&lt;C-x&gt;&lt;lt&gt;</code><br><strong>hybrid</strong> — normal: <code>zL</code>, <code>&lt;C-x&gt;&lt;lt&gt;</code>, select: <code>zL</code>, <code>&lt;C-x&gt;&lt;lt&gt;</code><br><strong>vim</strong> — normal: <code>zL</code>, select: <code>zL</code></td></tr>
 <tr><td><code>scroll_cursor_to_left_edge</code></td><td>Scroll so the cursor sits at the left edge (zs)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zs</code>, select: <code>zs</code></td></tr>
 <tr><td><code>scroll_cursor_to_right_edge</code></td><td>Scroll so the cursor sits at the right edge (ze)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>ze</code>, select: <code>ze</code></td></tr>

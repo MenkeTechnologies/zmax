@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-a30e7252.js";
+            window.path_to_searchindex_js = "searchindex-f009067f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -3220,6 +3220,7 @@ without scrolling.</p>
 <tr><td><code>:layout-restore</code></td><td>Put the IDE workbench back into the current saved layout, or the factory layout before any save (JetBrains Restore Current Layout).</td></tr>
 <tr><td><code>:layout-delete</code></td><td>Forget a layout saved with <code>:layout-save</code>.</td></tr>
 <tr><td><code>:navbar-members</code></td><td>Show (<code>on</code>) or hide (<code>off</code>) the symbol around the cursor at the end of the IDE breadcrumb trail; with no argument, flip it (JetBrains Show Members in Navigation Bar).</td></tr>
+<tr><td><code>:md-list</code></td><td>Make the selected lines a markdown list: <code>bullet</code> (default), <code>numbered</code>, <code>checkbox</code>, or <code>none</code> to drop the markers; existing markers are replaced and nesting kept (JetBrains Create or Change List).</td></tr>
 <tr><td><code>:navbar-location</code></td><td>Place the IDE breadcrumb trail: <code>top</code> (the toolbar), <code>bottom</code> (the status bar, in place of the file path) or <code>hide</code>; with no argument, show the current placement (JetBrains Navigation Bar location).</td></tr>
 <tr><td><code>:split-chooser</code></td><td>Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser).</td></tr>
 <tr><td><code>:vsplit</code>, <code>:vs</code></td><td>Open the file in a vertical split.</td></tr>
@@ -4013,6 +4014,7 @@ without scrolling.</p>
 <tr><td><code>toggle_breadcrumbs</code></td><td>Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)</td><td></td></tr>
 <tr><td><code>toggle_sticky_lines_for_language</code></td><td>Turn the sticky lines off, or back on, for the buffer’s language (JetBrains Disable Sticky Lines for Language)</td><td></td></tr>
 <tr><td><code>toggle_sticky_lines</code></td><td>Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)</td><td></td></tr>
+<tr><td><code>disable_sticky_lines</code></td><td>Hide the pinned scope headers; does nothing when they are already off (JetBrains Sticky Lines &gt; Disable)</td><td></td></tr>
 <tr><td><code>toggle_indent_guides</code></td><td>Toggle indentation guides (IntelliJ View &gt; Show Indent Guides)</td><td></td></tr>
 <tr><td><code>toggle_inlay_hints</code></td><td>Toggle display of LSP inlay hints (IntelliJ View &gt; Inlay Hints)</td><td></td></tr>
 <tr><td><code>toggle_auto_highlight</code></td><td>Toggle automatic symbol-under-cursor highlight (SPC t h a)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;tha</code>, select: <code>&lt;space&gt;tha</code></td></tr>
@@ -4167,6 +4169,7 @@ without scrolling.</p>
 <tr><td><code>select_line_above</code></td><td>Select current line, if already selected, extend or shrink line above based on the anchor</td><td></td></tr>
 <tr><td><code>select_line_below</code></td><td>Select current line, if already selected, extend or shrink line below based on the anchor</td><td></td></tr>
 <tr><td><code>extend_to_line_bounds</code></td><td>Extend selection to line bounds</td><td><strong>helix, kakoune</strong> — normal: <code>X</code>, select: <code>X</code></td></tr>
+<tr><td><code>select_line_at_caret</code></td><td>Select the whole line each cursor is on, dropping the rest of the selection (JetBrains Select Single Line at Caret)</td><td></td></tr>
 <tr><td><code>extend_chars_right_vim</code></td><td>Extend count graphemes right, line-bounded (dl/cl/yl)</td><td></td></tr>
 <tr><td><code>extend_chars_left_vim</code></td><td>Extend count graphemes left, line-bounded (dh/ch/yh)</td><td></td></tr>
 <tr><td><code>extend_line_below_linewise</code></td><td>Extend whole lines down for a linewise operator (dj/cj/yj)</td><td></td></tr>
@@ -5204,6 +5207,8 @@ without scrolling.</p>
 <tr><td><code>scroll_column_left</code></td><td>Scroll view left one column (zh)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zh</code>, <code>z&lt;left&gt;</code>, select: <code>zh</code>, <code>z&lt;left&gt;</code></td></tr>
 <tr><td><code>scroll_column_right</code></td><td>Scroll view right one column (zl)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zl</code>, <code>z&lt;right&gt;</code>, select: <code>zl</code>, <code>z&lt;right&gt;</code></td></tr>
 <tr><td><code>scroll_half_column_left</code></td><td>Scroll view left half a screen (zH)</td><td><strong>spacemacs</strong> — normal: <code>zH</code>, <code>&lt;C-x&gt;&lt;gt&gt;</code>, select: <code>zH</code>, <code>&lt;C-x&gt;&lt;gt&gt;</code>, insert: <code>&lt;C-x&gt;&lt;gt&gt;</code><br><strong>hybrid</strong> — normal: <code>zH</code>, <code>&lt;C-x&gt;&lt;gt&gt;</code>, select: <code>zH</code>, <code>&lt;C-x&gt;&lt;gt&gt;</code><br><strong>vim</strong> — normal: <code>zH</code>, select: <code>zH</code></td></tr>
+<tr><td><code>scroll_page_column_right</code></td><td>Scroll view right a full window width (JetBrains Scroll Page Right)</td><td></td></tr>
+<tr><td><code>scroll_page_column_left</code></td><td>Scroll view left a full window width (JetBrains Scroll Page Left)</td><td></td></tr>
 <tr><td><code>scroll_half_column_right</code></td><td>Scroll view right half a screen (zL)</td><td><strong>spacemacs</strong> — normal: <code>zL</code>, <code>&lt;C-x&gt;&lt;lt&gt;</code>, select: <code>zL</code>, <code>&lt;C-x&gt;&lt;lt&gt;</code>, insert: <code>&lt;C-x&gt;&lt;lt&gt;</code><br><strong>hybrid</strong> — normal: <code>zL</code>, <code>&lt;C-x&gt;&lt;lt&gt;</code>, select: <code>zL</code>, <code>&lt;C-x&gt;&lt;lt&gt;</code><br><strong>vim</strong> — normal: <code>zL</code>, select: <code>zL</code></td></tr>
 <tr><td><code>scroll_cursor_to_left_edge</code></td><td>Scroll so the cursor sits at the left edge (zs)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>zs</code>, select: <code>zs</code></td></tr>
 <tr><td><code>scroll_cursor_to_right_edge</code></td><td>Scroll so the cursor sits at the right edge (ze)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>ze</code>, select: <code>ze</code></td></tr>
@@ -10129,11 +10134,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>10020</strong> (84.0%)</li>
-<li>Partial: <strong>912</strong> (7.6%)</li>
+<li>Ported: <strong>10025</strong> (84.1%)</li>
+<li>Partial: <strong>907</strong> (7.6%)</li>
 <li>Absent: <strong>994</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 3005 static commands, 3234 typable <code>:</code> commands, 4741 default keybindings</li>
+<li>zmax source surface: 3009 static commands, 3235 typable <code>:</code> commands, 4741 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10196,7 +10201,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1049</td><td style="text-align: right">337</td><td style="text-align: right">52.4%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1054</td><td style="text-align: right">332</td><td style="text-align: right">52.6%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10291,8 +10296,8 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>vcs</td><td style="text-align: right">16</td><td style="text-align: right">16</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">30</td><td style="text-align: right">6</td><td style="text-align: right">75.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">794</td><td style="text-align: right">278</td><td style="text-align: right">49.4%</td></tr>
+<tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">31</td><td style="text-align: right">5</td><td style="text-align: right">77.5%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">798</td><td style="text-align: right">274</td><td style="text-align: right">49.7%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">8</td><td style="text-align: right">4</td><td style="text-align: right">50.0%</td></tr>
