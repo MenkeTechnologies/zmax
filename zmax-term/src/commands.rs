@@ -49267,14 +49267,7 @@ fn scroll_column_impl(cx: &mut Context, cols: usize, right: bool) {
     if col == pos.col {
         return;
     }
-    let (idx, _) = char_idx_at_visual_offset(
-        text,
-        cursor,
-        0,
-        col,
-        &text_fmt,
-        &annotations,
-    );
+    let (idx, _) = char_idx_at_visual_offset(text, cursor, 0, col, &text_fmt, &annotations);
     drop(annotations);
     let selection = doc.selection(view.id).clone();
     let primary = selection.primary_index();
@@ -63309,7 +63302,8 @@ fn fold_block_to_level(cx: &mut Context) {
         return;
     }
     fold_snap_cursor(view, doc);
-    cx.editor.set_status(format!("block expanded to level {level}"));
+    cx.editor
+        .set_status(format!("block expanded to level {level}"));
 }
 
 fn fold_open_all(cx: &mut Context) {

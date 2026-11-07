@@ -121,9 +121,13 @@ fn indent_to(out: &mut String, from_col: usize, to_col: usize, tw: usize) {
 /// next stop of `tw`) and the text after them.
 fn leading_indent(line: &str, tw: usize) -> (usize, &str) {
     let rest = line.trim_start_matches([' ', '\t']);
-    let col = line[..line.len() - rest.len()]
-        .chars()
-        .fold(0, |col, c| if c == '\t' { col + tw - col % tw } else { col + 1 });
+    let col = line[..line.len() - rest.len()].chars().fold(0, |col, c| {
+        if c == '\t' {
+            col + tw - col % tw
+        } else {
+            col + 1
+        }
+    });
     (col, rest)
 }
 

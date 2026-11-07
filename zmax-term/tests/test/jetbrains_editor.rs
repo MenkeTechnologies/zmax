@@ -999,10 +999,7 @@ async fn scroll_page_columns_move_a_full_width() -> anyhow::Result<()> {
                     assert_eq!(offset, 2 * width);
                 }),
             ),
-            (
-                Some("YYY"),
-                Some(&|app| assert_eq!(state(app).0, 0)),
-            ),
+            (Some("YYY"), Some(&|app| assert_eq!(state(app).0, 0))),
         ],
         false,
     )

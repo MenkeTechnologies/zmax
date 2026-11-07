@@ -22536,10 +22536,8 @@ fn md_list(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let block: String = slice.slice(start..end).chunks().collect();
     let new = md_relist(&block, kind);
     if new != block {
-        let transaction = Transaction::change(
-            doc.text(),
-            std::iter::once((start, end, Some(new.into()))),
-        );
+        let transaction =
+            Transaction::change(doc.text(), std::iter::once((start, end, Some(new.into()))));
         doc.apply(&transaction, view.id);
         doc.append_changes_to_history(view);
     }
