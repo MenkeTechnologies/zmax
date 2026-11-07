@@ -3567,7 +3567,14 @@ impl Ide {
             mode: self.status_mode,
             modified: self.status_modified,
             branch: self.status_branch.clone(),
-            path: self.status_path.clone(),
+            // JetBrains `NavBarLocationBottom`: the trail takes the path's place.
+            path: match crate::commands::navbar_location() {
+                crate::commands::NavBarLocation::Bottom => {
+                    breadcrumb(&self.status_path, self.cursor_symbol())
+                        .unwrap_or_else(|| self.status_path.clone())
+                }
+                _ => self.status_path.clone(),
+            },
             harpoon_slot: self.harpoon_slot,
             harpoon_total: self.harpoon_total,
             carets: self.status_carets,
@@ -4145,38 +4152,15 @@ impl Ide {
         };
 
         // breadcrumb of the current file in the gap between the selector and
-        // buttons — JetBrains "Show Breadcrumbs" turns it off.
+        // buttons — when the navigation bar is placed on top (JetBrains
+        // `NavBarLocationTop`, the default; "Show Breadcrumbs" hides it).
         let bc_start = lx + 2;
-        if crate::commands::breadcrumbs_enabled()
+        if crate::commands::navbar_location() == crate::commands::NavBarLocation::Top
             && buttons_start > bc_start + 4
-            && !self.status_path.is_empty()
         {
             let avail = (buttons_start - 1 - bc_start) as usize;
-            let parts: Vec<&str> = self
-                .status_path
-                .split('/')
-                .filter(|s| !s.is_empty())
-                .collect();
-            if let Some((file, dirs)) = parts.split_last() {
-                let glyph = crate::ui::icons::file_icon(file);
-                let mut crumb = String::from(" ");
-                crumb.push(glyph);
-                crumb.push(' ');
-                for d in dirs {
-                    crumb.push_str(d);
-                    crumb.push_str(" › ");
-                }
-                crumb.push_str(file);
-                // append the innermost outline symbol containing the cursor
-                if let Some(sym) = self
-                    .structure
-                    .iter()
-                    .filter(|o| o.start <= self.cursor_char && self.cursor_char <= o.end)
-                    .min_by_key(|o| o.end.saturating_sub(o.start))
-                {
-                    crumb.push_str(" › ");
-                    crumb.push_str(&sym.name);
-                }
+            if let Some(trail) = breadcrumb(&self.status_path, self.cursor_symbol()) {
+                let crumb = format!(" {trail}");
                 // left-truncate (keep the filename) when the path is too long
                 let shown = if crumb.chars().count() > avail {
                     let tail: String = crumb
@@ -4196,6 +4180,15 @@ impl Ide {
                 self.breadcrumb_hit = (bc_start, end_x);
             }
         }
+    }
+
+    /// The innermost outline symbol containing the cursor.
+    fn cursor_symbol(&self) -> Option<&str> {
+        self.structure
+            .iter()
+            .filter(|o| o.start <= self.cursor_char && self.cursor_char <= o.end)
+            .min_by_key(|o| o.end.saturating_sub(o.start))
+            .map(|o| o.name.as_str())
     }
 
     /// Bottom tool window: a `Problems | Run` tab header (with run controls) + the active body.
@@ -6116,6 +6109,27 @@ pub(crate) fn file_menu_entries(
     e
 }
 
+/// The breadcrumb trail for the `/`-separated `path` and the symbol around the
+/// cursor: the file's icon, then directories, file and symbol joined by ` › `.
+/// `None` for an empty path.
+fn breadcrumb(path: &str, symbol: Option<&str>) -> Option<String> {
+    let parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+    let (file, dirs) = parts.split_last()?;
+    let mut crumb = String::new();
+    crumb.push(crate::ui::icons::file_icon(file));
+    crumb.push(' ');
+    for d in dirs {
+        crumb.push_str(d);
+        crumb.push_str(" › ");
+    }
+    crumb.push_str(file);
+    if let Some(sym) = symbol {
+        crumb.push_str(" › ");
+        crumb.push_str(sym);
+    }
+    Some(crumb)
+}
+
 /// Prompt for a name, then create/rename the target and refresh the tree.
 fn name_prompt(kind: FileActionKind, target: PathBuf, _is_dir: bool) -> crate::ui::Prompt {
     use crate::ui::PromptEvent;
@@ -6792,5 +6806,51 @@ mod tool_window_tests {
         assert!(!ide.tool_window_shown("project"));
         ide.open_tool_window("project", true);
         assert!(ide.visible() && ide.tool_window_shown("project"));
+    }
+
+    /// JetBrains `NavBarLocationBottom`: the status bar shows the trail
+    /// (directories › file › innermost symbol) where it showed the path.
+    #[test]
+    fn the_bottom_navbar_puts_the_trail_in_the_status_bar() {
+        use crate::commands::{navbar_location, set_navbar_location, NavBarLocation};
+        use tui::buffer::Buffer as Surface;
+        use zmax_view::graphics::Rect;
+
+        let trail = super::breadcrumb("src/ui/ide.rs", Some("render")).expect("a path has a trail");
+        assert!(trail.ends_with(" src › ui › ide.rs › render"), "{trail}");
+        assert_eq!(super::breadcrumb("", Some("render")), None);
+
+        let mut ide = Ide::new();
+        ide.status_path = "src/ui/ide.rs".into();
+        ide.cursor_char = 50;
+        for (name, start, end) in [("Ide", 0, 900), ("render", 40, 60), ("other", 70, 80)] {
+            ide.structure.push(super::OutlineRow {
+                kind: "fn".into(),
+                name: name.into(),
+                start,
+                end,
+            });
+        }
+        let row = |ide: &Ide| {
+            let area = Rect::new(0, 0, 120, 1);
+            let mut surface = Surface::empty(area);
+            ide.render_statusbar(&mut surface, &zmax_view::Theme::default(), area);
+            (0..area.width)
+                .filter_map(|x| surface.get(x, 0).map(|cell| cell.symbol.to_string()))
+                .collect::<String>()
+        };
+
+        let before = navbar_location();
+        set_navbar_location(NavBarLocation::Bottom);
+        let bottom = row(&ide);
+        set_navbar_location(NavBarLocation::Top);
+        let top = row(&ide);
+        set_navbar_location(before);
+
+        assert!(bottom.contains("src › ui › ide.rs › render "), "{bottom}");
+        assert!(
+            top.contains(" src/ui/ide.rs ") && !top.contains(" › "),
+            "{top}"
+        );
     }
 }

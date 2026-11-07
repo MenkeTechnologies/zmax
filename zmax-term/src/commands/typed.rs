@@ -27201,6 +27201,32 @@ fn tree_sitter_layers(
     Ok(())
 }
 
+/// `:navbar-location [top|bottom|hide]` — JetBrains `NavBarLocationTop` /
+/// `NavBarLocationBottom` / `NavBarLocationHide`: draw the IDE breadcrumb
+/// trail on the toolbar, in the status bar in place of the file path, or
+/// nowhere. With no argument, report the current placement.
+fn navbar_location(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    use super::NavBarLocation;
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(name) = args.first() else {
+        let current = super::navbar_location().name();
+        cx.editor.set_status(format!("navbar-location: {current}"));
+        return Ok(());
+    };
+    let loc = NavBarLocation::from_name(&name.to_ascii_lowercase())
+        .with_context(|| format!("expected top, bottom or hide, not {name}"))?;
+    super::set_navbar_location(loc);
+    cx.editor
+        .set_status(format!("navbar-location: {}", loc.name()));
+    Ok(())
+}
+
 /// `:split-chooser` — JetBrains "Open in Split with Chooser": pick a window,
 /// or a side of one to split, and move or copy the current file there
 /// ([`crate::ui::split_chooser`]).
@@ -67500,6 +67526,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "navbar-location",
+        aliases: &[],
+        doc: "Place the IDE breadcrumb trail: `top` (the toolbar), `bottom` (the status bar, in place of the file path) or `hide`; with no argument, show the current placement (JetBrains Navigation Bar location).",
+        fun: navbar_location,
+        completer: CommandCompleter::positional(&[completers::navbar_location]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

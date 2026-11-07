@@ -19842,13 +19842,53 @@ fn toggle_completion_docs(cx: &mut Context) {
     ));
 }
 
-/// Whether the IDE toolbar draws the breadcrumb trail — JetBrains
-/// "Show Breadcrumbs" (`EditorToggleShowBreadcrumbs`). On, as the IDE ships it.
-static BREADCRUMBS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+/// Where the IDE draws the breadcrumb trail (directories, file, enclosing
+/// symbol) — JetBrains "Navigation Bar" placement: `NavBarLocationTop`,
+/// `NavBarLocationBottom` (in the status bar), `NavBarLocationHide`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum NavBarLocation {
+    Hide,
+    Top,
+    Bottom,
+}
 
-/// Whether the IDE view should draw the breadcrumb trail.
-pub(crate) fn breadcrumbs_enabled() -> bool {
-    BREADCRUMBS.load(std::sync::atomic::Ordering::Relaxed)
+impl NavBarLocation {
+    /// Every placement, in the order `:navbar-location` lists them.
+    pub(crate) const ALL: [NavBarLocation; 3] = [
+        NavBarLocation::Top,
+        NavBarLocation::Bottom,
+        NavBarLocation::Hide,
+    ];
+
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            NavBarLocation::Hide => "hide",
+            NavBarLocation::Top => "top",
+            NavBarLocation::Bottom => "bottom",
+        }
+    }
+
+    pub(crate) fn from_name(name: &str) -> Option<NavBarLocation> {
+        Self::ALL.into_iter().find(|loc| loc.name() == name)
+    }
+}
+
+/// The current [`NavBarLocation`], as its discriminant. On the toolbar, as the
+/// IDE ships it.
+static NAVBAR_LOCATION: std::sync::atomic::AtomicU8 =
+    std::sync::atomic::AtomicU8::new(NavBarLocation::Top as u8);
+
+/// Where the IDE view should draw the breadcrumb trail.
+pub(crate) fn navbar_location() -> NavBarLocation {
+    match NAVBAR_LOCATION.load(std::sync::atomic::Ordering::Relaxed) {
+        0 => NavBarLocation::Hide,
+        2 => NavBarLocation::Bottom,
+        _ => NavBarLocation::Top,
+    }
+}
+
+pub(crate) fn set_navbar_location(loc: NavBarLocation) {
+    NAVBAR_LOCATION.store(loc as u8, std::sync::atomic::Ordering::Relaxed);
 }
 
 /// JetBrains "Show Breadcrumbs" (`EditorToggleShowBreadcrumbs`): the trail of
@@ -19856,8 +19896,16 @@ pub(crate) fn breadcrumbs_enabled() -> bool {
 ///
 /// `navigation_bar` (the jump) keeps working either way — the IDE separates
 /// showing the trail from navigating by it, and so does this.
+///
+/// Showing it again puts it back on the toolbar; `:navbar-location` picks the
+/// status bar instead.
 fn toggle_breadcrumbs(cx: &mut Context) {
-    let on = !BREADCRUMBS.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    let on = navbar_location() == NavBarLocation::Hide;
+    set_navbar_location(if on {
+        NavBarLocation::Top
+    } else {
+        NavBarLocation::Hide
+    });
     cx.editor
         .set_status(format!("breadcrumbs: {}", if on { "on" } else { "off" }));
 }

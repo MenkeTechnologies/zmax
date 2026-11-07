@@ -1476,6 +1476,7 @@
 | `:debug-eval` | Evaluate expression in current debug context. |
 | `:close`, `:clo` | Close the current window (vim :close). Refuses to close the last window. |
 | `:only`, `:on` | Close all windows except the current one (vim :only). |
+| `:navbar-location` | Place the IDE breadcrumb trail: `top` (the toolbar), `bottom` (the status bar, in place of the file path) or `hide`; with no argument, show the current placement (JetBrains Navigation Bar location). |
 | `:split-chooser` | Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser). |
 | `:vsplit`, `:vs` | Open the file in a vertical split. |
 | `:vsplit-new`, `:vnew` | Open a scratch buffer in a vertical split. |

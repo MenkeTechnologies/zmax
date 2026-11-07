@@ -85981,19 +85981,21 @@
  },
  {
   "spec_id": "jetbrains-actions.NavBarLocationHide",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:navbar-location",
    "static:toggle_breadcrumbs"
   ],
-  "note": "NavBarLocationHide (Don't Show) ~ zmax `toggle_breadcrumbs`: turns the toolbar trail off (commands.rs:19586) but as a toggle, not a set-hidden choice; `navigation_bar` still navigates."
+  "note": "Navigation Bar location Don't Show = zmax `:navbar-location hide`: the IDE breadcrumb trail is drawn neither on the toolbar nor in the status bar (navbar_location, commands.rs); `toggle_breadcrumbs` flips between hidden and the toolbar, and `navigation_bar` still navigates."
  },
  {
   "spec_id": "jetbrains-actions.NavBarLocationTop",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:navbar-location",
    "static:toggle_breadcrumbs"
   ],
-  "note": "NavBarLocationTop (Top) ~ zmax `toggle_breadcrumbs`: the trail zmax shows is on the top toolbar (ui/ide.rs:3400), so toggling it on gives the Top placement; a toggle rather than a location choice."
+  "note": "Navigation Bar location Top = zmax `:navbar-location top` (the default): the IDE breadcrumb trail of directories \u203a file \u203a innermost symbol is drawn on the top toolbar (navbar_location, commands.rs; render_toolbar, ui/ide.rs). `toggle_breadcrumbs` shows it there again after hiding it."
  },
  {
   "spec_id": "jetbrains-actions.NewElement",
@@ -89140,5 +89142,13 @@
    "static:repl"
   ],
   "note": "Browse Console History = `C-r` in the zmax REPL (`repl`, ui/repl.rs): lists the current language's past inputs newest first in place of the transcript; typing filters them (case-insensitive substring), Up/Down or C-p/C-n (and C-r again) pick, Enter puts the entry in the input to edit or run, Esc backs out (ReplPanel::browse_matches / browse_key)."
+ },
+ {
+  "spec_id": "jetbrains-actions.NavBarLocationBottom",
+  "status": "ported",
+  "evidence": [
+   "typable:navbar-location"
+  ],
+  "note": "Navigation Bar location In Status Bar = zmax `:navbar-location bottom`: the IDE breadcrumb trail (file icon, directories \u203a file \u203a innermost symbol at the cursor) moves off the toolbar into the workbench status bar, in place of the file path segment (navbar_location, commands.rs; breadcrumb / render_statusbar, ui/ide.rs)."
  }
 ]

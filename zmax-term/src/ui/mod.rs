@@ -866,6 +866,15 @@ pub mod completers {
             .collect()
     }
 
+    /// `:navbar-location` placements.
+    pub fn navbar_location(_editor: &Editor, input: &str) -> Vec<Completion> {
+        let names = crate::commands::NavBarLocation::ALL.map(|loc| loc.name());
+        fuzzy_match(input, names, false)
+            .into_iter()
+            .map(|(name, _)| ((0..), name.into()))
+            .collect()
+    }
+
     /// Recursive function to get all keys from this value and add them to vec
     fn get_keys(value: &serde_json::Value, vec: &mut Vec<String>, scope: Option<&str>) {
         if let Some(map) = value.as_object() {
