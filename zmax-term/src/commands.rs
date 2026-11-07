@@ -2208,6 +2208,7 @@ impl MappableCommand {
         hide_side_windows, "Fold the workbench's left column away (JetBrains Hide Side Tool Windows)",
         hide_bottom_windows, "Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows)",
         hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
+        show_hidden_tabs, "Pick among the buffers scrolled off the bufferline (JetBrains Show Hidden Tabs)",
         focus_editor, "Return focus to the editor, leaving tool windows open (JetBrains Focus Editor)",
         jump_to_last_tool_window, "Toggle focus between the editor and the last tool window (JetBrains F12)",
         stretch_tool_window_left, "Narrow the workbench's left drawer (JetBrains Stretch to Left)",
@@ -35448,6 +35449,26 @@ fn buffer_picker(cx: &mut Context) {
     buffer_picker_impl(cx, None, false);
 }
 
+/// JetBrains "Show Hidden Tabs" (`TabList`): pick among the buffers the
+/// bufferline has scrolled out of view (the ones behind its `‹` and `…`).
+/// With no bufferline drawn every buffer is hidden, so all are offered.
+fn show_hidden_tabs(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let Some(shown) = compositor
+            .find::<crate::ui::EditorView>()
+            .map(|view| view.bufferline_shown())
+        else {
+            return;
+        };
+        let hidden = |id: DocumentId| !shown.contains(&id);
+        if !cx.editor.documents.keys().any(|id| hidden(*id)) {
+            cx.editor.set_status("every buffer is on the bufferline");
+            return;
+        }
+        compositor.push(build_buffer_picker_of(cx.editor, None, false, hidden));
+    }));
+}
+
 /// SPC b N C-i : open an existing buffer in a split — a second view of that buffer's shared
 /// Document, i.e. an indirect buffer of it (Spacemacs `make-indirect-buffer` from a buffer).
 fn clone_indirect_from_buffer(cx: &mut Context) {
@@ -35476,6 +35497,16 @@ pub(crate) fn build_buffer_picker(
     force_action: Option<Action>,
     goto_window: bool,
 ) -> Box<dyn Component> {
+    build_buffer_picker_of(editor, force_action, goto_window, |_| true)
+}
+
+/// [`build_buffer_picker`] over the buffers `keep` accepts.
+fn build_buffer_picker_of(
+    editor: &mut Editor,
+    force_action: Option<Action>,
+    goto_window: bool,
+    keep: impl Fn(DocumentId) -> bool,
+) -> Box<dyn Component> {
     let current = view!(editor).doc;
 
     struct BufferMeta<'a> {
@@ -35502,7 +35533,7 @@ pub(crate) fn build_buffer_picker(
     let mut items = editor
         .documents
         .values()
-        .filter(|doc| doc.id() == current || doc.listed)
+        .filter(|doc| (doc.id() == current || doc.listed) && keep(doc.id()))
         .map(new_meta)
         .collect::<Vec<BufferMeta>>();
 
@@ -62000,22 +62031,80 @@ fn html_mode(cx: &mut Context) {
     enter_language_mode(cx, "html", "HTML");
 }
 
-/// Emacs `htmlfontify-buffer` (partial): export the current buffer as an HTML
-/// `<pre>` block (HTML-escaped) into a scratch buffer. The pure builder in
-/// `zmax_core::sgml::htmlfontify` supports per-face `<span style>` spans; this
-/// wrapper currently emits plain escaped text (face/colour extraction is TODO).
+/// Emacs `htmlfontify-buffer`: export the current buffer as an HTML page into
+/// a scratch buffer, every highlighted stretch a `<span style>` carrying the
+/// theme's colour, weight, slant and decoration.
 fn htmlfontify_buffer(cx: &mut Context) {
-    let text = {
-        let doc = doc!(cx.editor);
-        doc.text().to_string()
-    };
-    let html = zmax_core::sgml::htmlfontify::fontify(&text, &[]);
-    let doc_wrapped = format!(
-        "<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"></head>\n<body>\n{html}\n</body>\n</html>\n"
-    );
-    show_text_in_scratch(cx.editor, &doc_wrapped);
+    let html = fontified_html(cx.editor, 0..doc!(cx.editor).text().len_chars());
+    show_text_in_scratch(cx.editor, &html);
     cx.editor
-        .set_status("htmlfontify-buffer: exported to scratch (no faces yet)");
+        .set_status("htmlfontify-buffer: exported to scratch");
+}
+
+/// The CSS for one face run: what [`ps_face_from_style`] keeps of a theme
+/// style. Empty for a run in the default face.
+fn html_face_css(face: &PsFace) -> String {
+    let mut css = Vec::new();
+    if let Some((r, g, b)) = face.fg {
+        css.push(format!("color:#{r:02x}{g:02x}{b:02x}"));
+    }
+    if face.bold {
+        css.push("font-weight:bold".to_string());
+    }
+    if face.italic {
+        css.push("font-style:italic".to_string());
+    }
+    let lines: Vec<&str> = [
+        (face.underline, "underline"),
+        (face.strikeout, "line-through"),
+    ]
+    .into_iter()
+    .filter_map(|(on, line)| on.then_some(line))
+    .collect();
+    if !lines.is_empty() {
+        css.push(format!("text-decoration:{}", lines.join(" ")));
+    }
+    css.join(";")
+}
+
+/// `chars` of the current buffer as a standalone HTML page, syntax colours
+/// taken from the same highlighter and theme the screen uses
+/// ([`ps_face_runs`]). The page background and default text colour are the
+/// theme's `ui.background` and `ui.text`.
+pub(crate) fn fontified_html(editor: &Editor, chars: std::ops::Range<usize>) -> String {
+    let mut text = String::new();
+    let mut styles = Vec::new();
+    let mut at = 0;
+    for run in ps_face_runs(editor, chars) {
+        let len = run.text.chars().count();
+        let css = html_face_css(&run.face);
+        if !css.is_empty() {
+            styles.push((at, at + len, css));
+        }
+        text.push_str(&run.text);
+        at += len;
+    }
+    let spans: Vec<(usize, usize, &str)> = styles
+        .iter()
+        .map(|(s, e, css)| (*s, *e, css.as_str()))
+        .collect();
+    let body = zmax_core::sgml::htmlfontify::fontify(&text, &spans);
+    let hex = |c: Option<zmax_view::theme::Color>| {
+        c.and_then(ps_color_rgb)
+            .map(|(r, g, b)| format!("#{r:02x}{g:02x}{b:02x}"))
+    };
+    let mut page = Vec::new();
+    if let Some(bg) = hex(editor.theme.get("ui.background").bg) {
+        page.push(format!("background:{bg}"));
+    }
+    if let Some(fg) = hex(editor.theme.get("ui.text").fg) {
+        page.push(format!("color:{fg}"));
+    }
+    let title = zmax_core::sgml::htmlfontify::escape(&doc!(editor).display_name());
+    format!(
+        "<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"><title>{title}</title></head>\n<body style=\"{}\">\n{body}\n</body>\n</html>\n",
+        page.join(";")
+    )
 }
 
 // --------------------------------------------------------------------------

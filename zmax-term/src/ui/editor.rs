@@ -555,6 +555,12 @@ impl EditorView {
         }
     }
 
+    /// The buffers whose pills the last frame drew on the bufferline; empty
+    /// when no bufferline was drawn.
+    pub fn bufferline_shown(&self) -> Vec<zmax_view::DocumentId> {
+        self.bufferline_tabs.iter().map(|tab| tab.3).collect()
+    }
+
     /// JetBrains "Hide Active Tool Window" (Shift-Esc): fold the active tool
     /// window and return focus to the editor. False when no workbench is shown.
     pub fn hide_active_tool_window(&mut self) -> bool {

@@ -1815,6 +1815,7 @@
 | `hide_side_windows` | Fold the workbench's left column away (JetBrains Hide Side Tool Windows) | **spacemacs, hybrid** — normal: `` <space>WS ``, select: `` <space>WS `` |
 | `hide_bottom_windows` | Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows) | **spacemacs, hybrid** — normal: `` <space>WB ``, select: `` <space>WB `` |
 | `hide_active_tool_window` | Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc) | **spacemacs, hybrid** — normal: `` <space>Wq ``, select: `` <space>Wq `` |
+| `show_hidden_tabs` | Pick among the buffers scrolled off the bufferline (JetBrains Show Hidden Tabs) |  |
 | `focus_editor` | Return focus to the editor, leaving tool windows open (JetBrains Focus Editor) |  |
 | `jump_to_last_tool_window` | Toggle focus between the editor and the last tool window (JetBrains F12) | **spacemacs, hybrid** — normal: `` <space>W<tab> ``, select: `` <space>W<tab> `` |
 | `stretch_tool_window_left` | Narrow the workbench's left drawer (JetBrains Stretch to Left) | **spacemacs, hybrid** — normal: `` <space>W<left> ``, select: `` <space>W<left> `` |

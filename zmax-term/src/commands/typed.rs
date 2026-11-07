@@ -8902,6 +8902,40 @@ fn render_problem_report(mut rows: Vec<ProblemReportRow>) -> String {
     out
 }
 
+/// `:export-html [path]` — JetBrains "Export to HTML" (`ExportToHTML`): write
+/// the selection, or the whole buffer when nothing wider than the cursor is
+/// selected, as a syntax-coloured HTML page. The default path is the buffer's
+/// file with `.html` appended, or `<buffer name>.html` in the working
+/// directory for a buffer without a file.
+fn export_html(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current_ref!(cx.editor);
+    let range = doc.selection(view.id).primary();
+    let chars = if range.len() > 1 {
+        range.from()..range.to()
+    } else {
+        0..doc.text().len_chars()
+    };
+    let path = match (args.first(), doc.path()) {
+        (Some(p), _) => PathBuf::from(zmax_stdx::path::expand_tilde(Path::new(p)).as_ref()),
+        (None, Some(file)) => {
+            let mut name = file.as_os_str().to_owned();
+            name.push(".html");
+            PathBuf::from(name)
+        }
+        (None, None) => {
+            zmax_stdx::env::current_working_dir().join(format!("{}.html", doc.display_name()))
+        }
+    };
+    let html = super::fontified_html(cx.editor, chars);
+    std::fs::write(&path, html)?;
+    cx.editor
+        .set_status(format!("exported to {}", path.display()));
+    Ok(())
+}
+
 /// `:export-problems [path]` — JetBrains "Export to Text File" on the Problems
 /// tool window. Writes every diagnostic the editor holds to a file and opens
 /// it. The default path is `problems.txt` in the working directory.
@@ -61861,6 +61895,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "export-html",
+        aliases: &[],
+        doc: "Write the selection, or the whole buffer, as syntax-coloured HTML (JetBrains Export to HTML).",
+        fun: export_html,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

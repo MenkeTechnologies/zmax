@@ -896,6 +896,7 @@
 | `:conflict-ours`, `:diffget-ours`, `:conflict-keep-ours` | Resolve the merge conflict at the cursor by keeping OUR side (HEAD). |
 | `:conflict-theirs`, `:diffget-theirs`, `:conflict-keep-theirs` | Resolve the merge conflict at the cursor by keeping THEIR side (incoming). |
 | `:conflict-both`, `:conflict-keep-both` | Resolve the merge conflict at the cursor by keeping BOTH sides. |
+| `:export-html` | Write the selection, or the whole buffer, as syntax-coloured HTML (JetBrains Export to HTML). |
 | `:export-problems` | Write every diagnostic to a file and open it (JetBrains Export to Text File). |
 | `:export-test-results` | Write the recorded test runs to a file and open it (JetBrains Export Test Results). |
 | `:conflict-imports` | Merge every conflict whose two sides are only import statements (JetBrains Resolve Conflicts in Import Statements). |

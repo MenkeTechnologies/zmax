@@ -79962,9 +79962,10 @@
   "spec_id": "jetbrains-actions.ExportToHTML",
   "status": "partial",
   "evidence": [
+   "typable:export-html",
    "static:htmlfontify_buffer"
   ],
-  "note": "ExportToHTML (Export Files or Selection to HTML) = zmax `htmlfontify_buffer`: exports the buffer as HTML into a scratch buffer, but without syntax colouring yet (commands.rs htmlfontify_buffer doc)."
+  "note": "ExportToHTML (Export Files or Selection to HTML) = zmax `:export-html [path]`: writes the selection, or the whole buffer, as an HTML page coloured from the screen's own highlighter and theme (fontified_html over ps_face_runs, commands.rs), to `<file>.html` by default; `htmlfontify_buffer` puts the same page in a scratch buffer. The IDE dialog can also export every file of a directory, which zmax does not."
  },
  {
   "spec_id": "jetbrains-actions.ExportToTextFile",
@@ -82508,11 +82509,11 @@
  },
  {
   "spec_id": "jetbrains-actions.TabList",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:buffer_picker"
+   "static:show_hidden_tabs"
   ],
-  "note": "TabList (Show Hidden Tabs) partial: zmax `buffer_picker` lists every open buffer for selection; there is no tab-overflow concept, so it is not a hidden-tabs-only list."
+  "note": "TabList (Show Hidden Tabs) = zmax `show_hidden_tabs`: the buffer picker limited to the buffers the bufferline scrolled out of view (behind its `\u2039` and `\u2026`), read from the pills the last frame drew (EditorView::bufferline_shown, ui/editor.rs); with no bufferline drawn every buffer counts as hidden, and with none hidden it says so instead of opening."
  },
  {
   "spec_id": "jetbrains-actions.UnselectPreviousOccurrence",

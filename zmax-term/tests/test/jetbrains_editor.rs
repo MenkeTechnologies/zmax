@@ -997,6 +997,55 @@ async fn popup_hints_toggle_stays_with_its_file() -> anyhow::Result<()> {
     .await
 }
 
+/// Show Hidden Tabs offers only the buffers the bufferline could not draw:
+/// with two buffers there are none, so no picker opens and Enter does not
+/// switch; with thirty the current buffer and its neighbours on the bar are
+/// left out.
+#[tokio::test(flavor = "multi_thread")]
+async fn show_hidden_tabs_lists_the_buffers_off_the_bufferline() -> anyhow::Result<()> {
+    let files = (0..30)
+        .map(|i| temp_file_with_contents(format!("{i}\n")))
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    let app_over = |count: usize| {
+        let mut config = Config::default();
+        config.keys.insert(
+            Mode::Normal,
+            keymap!({ "Normal mode" "Z" => show_hidden_tabs, }),
+        );
+        let mut builder = AppBuilder::new().with_config(config);
+        for f in &files[..count] {
+            builder = builder.with_file(f.path(), None);
+        }
+        builder.build()
+    };
+    let shown = |app: &Application| zmax_view::doc!(app.editor).text().to_string();
+
+    let mut app = app_over(2)?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("<esc>Z<ret>"),
+            Some(&|app| assert_eq!(shown(app), "0\n")),
+        )],
+        false,
+    )
+    .await?;
+
+    let mut app = app_over(30)?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("<esc>Z<ret>"),
+            Some(&|app| {
+                let n: usize = shown(app).trim().parse().unwrap();
+                assert!(n >= 3, "buffer {n} was on the bufferline");
+            }),
+        )],
+        false,
+    )
+    .await
+}
+
 /// Select Single Line at Caret keeps only the line the cursor is on, even
 /// when the selection spanned more.
 #[tokio::test(flavor = "multi_thread")]
@@ -1054,4 +1103,59 @@ async fn scroll_page_columns_move_a_full_width() -> anyhow::Result<()> {
         false,
     )
     .await
+}
+
+/// Export to HTML writes the buffer as a page whose highlighted stretches
+/// carry the theme's colours; with a selection it writes the selection only.
+#[tokio::test(flavor = "multi_thread")]
+async fn export_html_colours_the_buffer_or_the_selection() -> anyhow::Result<()> {
+    let file = tempfile::Builder::new().suffix(".rs").tempfile()?;
+    std::fs::write(file.path(), "fn main() { let s = \"<b>\"; }\n")?;
+    let dir = tempfile::tempdir()?;
+    let (whole, part) = (dir.path().join("whole.html"), dir.path().join("part.html"));
+    // Bound to keys rather than typed at the prompt: typing a temp path
+    // re-lists the temp directory for completion on every character.
+    let mut config = Config::default();
+    config.keys = toml::from_str(&format!(
+        "[normal]\nZ = ':export-html {}'\nX = ':export-html {}'\n",
+        whole.display(),
+        part.display()
+    ))?;
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequence(&mut app, Some("Z"), None, false).await?;
+    let html = std::fs::read_to_string(&whole)?;
+    assert!(html.contains("<span style=\"color:#"), "{html}");
+    assert!(html.contains("&quot;&lt;b&gt;&quot;"), "{html}");
+    let plain: String = {
+        let pre = &html[html.find("<pre>").unwrap() + 5..html.find("</pre>").unwrap()];
+        let mut out = String::new();
+        let mut in_tag = false;
+        for c in pre.chars() {
+            match c {
+                '<' => in_tag = true,
+                '>' if in_tag => in_tag = false,
+                c if !in_tag => out.push(c),
+                _ => {}
+            }
+        }
+        out
+    };
+    assert_eq!(plain, "fn main() { let s = &quot;&lt;b&gt;&quot;; }\n");
+
+    {
+        let (view, doc) = zmax_view::current!(app.editor);
+        doc.set_selection(view.id, zmax_core::Selection::single(0, 7));
+    }
+    test_key_sequence(&mut app, Some("X"), None, false).await?;
+    let html = std::fs::read_to_string(&part)?;
+    assert!(html.contains("main"), "{html}");
+    assert!(
+        !html.contains("let"),
+        "only the selection is exported: {html}"
+    );
+    Ok(())
 }
