@@ -556,6 +556,34 @@ pub enum StretchDir {
     Bottom,
 }
 
+/// The project tree's default share of the left drawer's height, in percent.
+const PROJECT_PCT: u16 = 60;
+
+/// Bottom-drawer dividers (percent of its width) with column `col` made `d`
+/// points wider (`grow`) or narrower, taken from or given to its neighbours;
+/// the middle column moves both dividers by half each. Dividers stay ordered
+/// within 0..=100.
+fn widen_column([a, b]: [u16; 2], col: usize, grow: bool, d: u16) -> [u16; 2] {
+    let (a, b, d) = (
+        a as i32,
+        b as i32,
+        if grow { d as i32 } else { -(d as i32) },
+    );
+    let (a, b) = match col {
+        0 => ((a + d).clamp(0, b), b),
+        2 => (a, (b - d).clamp(a, 100)),
+        _ => {
+            let (na, nb) = ((a - d / 2).max(0), (b + d / 2).min(100));
+            if na > nb {
+                ((a + b) / 2, (a + b) / 2)
+            } else {
+                (na, nb)
+            }
+        }
+    };
+    [a as u16, b as u16]
+}
+
 /// The problem preview: the selected problem's file and line, and the
 /// numbered lines around it.
 type ProblemPreview = (Option<(Option<PathBuf>, usize)>, Vec<(usize, String)>);
@@ -566,6 +594,8 @@ pub struct Ide {
     visible: bool,
     fold_project: bool,
     fold_structure: bool,
+    /// The project tree's share of the left drawer's height, in percent.
+    project_pct: u16,
     fold_problems: bool,
     /// Whether the right-hand minimap stripe is collapsed to a thin handle.
     fold_minimap: bool,
@@ -576,6 +606,9 @@ pub struct Ide {
     /// Document"): one source line per braille sub-row, the window scrolling
     /// with the editor, instead of the whole document squeezed into the pane.
     minimap_fill: bool,
+    /// The tool window that last had focus: the "active tool window" the
+    /// JetBrains resize actions act on once focus is back in the editor.
+    last_tool: Focus,
     left_width: u16,
     left_collapsed: bool,
     resizing_left: bool,
@@ -797,10 +830,12 @@ impl Ide {
             visible: true,
             fold_project: false,
             fold_structure: false,
+            project_pct: PROJECT_PCT,
             fold_problems: false,
             fold_minimap: false,
             minimap_left: false,
             minimap_fill: false,
+            last_tool: Focus::Project,
             left_width: LEFT_W,
             left_collapsed: false,
             resizing_left: false,
@@ -1185,6 +1220,7 @@ impl Ide {
         self.left_collapsed = fresh.left_collapsed;
         self.fold_project = fresh.fold_project;
         self.fold_structure = fresh.fold_structure;
+        self.project_pct = fresh.project_pct;
         self.fold_problems = fresh.fold_problems;
         self.fold_minimap = fresh.fold_minimap;
         self.minimap_left = fresh.minimap_left;
@@ -1350,6 +1386,51 @@ impl Ide {
     /// drag handlers' own clamps, so keyboard and mouse cannot reach different
     /// layouts. Returns false when the workbench is hidden, so the caller can
     /// say why nothing moved.
+    /// JetBrains Increment/Decrement Width/Height: resize the active tool
+    /// window (the focused one, or the last one focused). Along its drawer's
+    /// free edge the drawer itself resizes; across it, the window takes space
+    /// from or gives it to its neighbours in the drawer (the tree and tag list
+    /// share the left drawer's height, the bottom columns its width).
+    pub fn resize_active(&mut self, width: bool, grow: bool) -> Result<(), &'static str> {
+        if !self.visible {
+            return Err("No workbench to resize (open it with :ide)");
+        }
+        let toward = |grow: bool, more, less| if grow { more } else { less };
+        match (self.active_tool(), width) {
+            (Focus::Project | Focus::Structure, true) => {
+                self.stretch(toward(grow, StretchDir::Right, StretchDir::Left), 4);
+            }
+            (Focus::Problems | Focus::Editor, false) => {
+                self.stretch(toward(grow, StretchDir::Top, StretchDir::Bottom), 2);
+            }
+            // The tree and the tag list share the left drawer's height: one
+            // grows at the other's expense.
+            (tool, false) => {
+                let more = grow == (tool == Focus::Project);
+                let pct = if more {
+                    self.project_pct + 10
+                } else {
+                    self.project_pct.saturating_sub(10)
+                };
+                self.project_pct = pct.clamp(10, 90);
+            }
+            (_, true) => {
+                self.bottom_splits =
+                    widen_column(self.bottom_splits, self.bottom_focus_col, grow, 10);
+            }
+        }
+        Ok(())
+    }
+
+    /// The focused tool window, or the last one focused when the editor has
+    /// focus.
+    fn active_tool(&mut self) -> Focus {
+        if self.focus != Focus::Editor {
+            self.last_tool = self.focus;
+        }
+        self.last_tool
+    }
+
     pub fn stretch(&mut self, dir: StretchDir, step: u16) -> bool {
         if !self.visible {
             return false;
@@ -1668,6 +1749,7 @@ impl Ide {
             left_collapsed: self.left_collapsed,
             fold_project: self.fold_project,
             fold_structure: self.fold_structure,
+            project_pct: self.project_pct,
             fold_problems: self.fold_problems,
             fold_minimap: self.fold_minimap,
             minimap_left: self.minimap_left,
@@ -1708,6 +1790,11 @@ impl Ide {
         self.left_collapsed = l.left_collapsed;
         self.fold_project = l.fold_project;
         self.fold_structure = l.fold_structure;
+        self.project_pct = if (10..=90).contains(&l.project_pct) {
+            l.project_pct
+        } else {
+            PROJECT_PCT
+        };
         self.fold_problems = l.fold_problems;
         self.fold_minimap = l.fold_minimap;
         self.minimap_left = l.minimap_left;
@@ -3304,6 +3391,7 @@ impl Ide {
         if !self.visible {
             return area;
         }
+        self.active_tool();
         self.refresh(cx);
         // Keep the project tree's dotfile visibility in sync with the config
         // (`editor.file-explorer.hidden`; false = show dotfiles, the default).
@@ -3369,7 +3457,8 @@ impl Ide {
                 (true, false) => (1, col_h.saturating_sub(1)),
                 (false, true) => (col_h.saturating_sub(1), 1),
                 (false, false) => {
-                    let p = (col_h * 6 / 10).max(3);
+                    let p = (col_h as u32 * self.project_pct as u32 / 100) as u16;
+                    let p = p.clamp(3.min(col_h), col_h.saturating_sub(3).max(3.min(col_h)));
                     (p, col_h - p)
                 }
             };
@@ -6767,6 +6856,64 @@ mod tool_window_tests {
         }
         ide.focus = Focus::Editor;
         ide
+    }
+
+    /// The resize actions follow the active tool window: the left drawer
+    /// grows in width, the bottom one in height, and focus going back to the
+    /// editor keeps the last tool window active.
+    #[test]
+    fn resizing_follows_the_active_tool_window() {
+        let mut ide = Ide::new();
+        ide.visible = true;
+        let (w, h) = (ide.left_width, ide.bottom_height);
+
+        ide.focus = Focus::Structure;
+        ide.resize_active(true, true).unwrap();
+        assert_eq!(ide.left_width, w + 4);
+        // A taller tag list leaves the tree less of the drawer.
+        ide.resize_active(false, true).unwrap();
+        assert_eq!(ide.project_pct, 50);
+
+        ide.focus = Focus::Editor;
+        // Back in the editor, the tag list is still the active tool window.
+        ide.resize_active(true, false).unwrap();
+        assert_eq!(ide.left_width, w);
+
+        ide.focus = Focus::Problems;
+        ide.resize_active(false, true).unwrap();
+        assert_eq!(ide.bottom_height, h + 2);
+        ide.focus = Focus::Editor;
+        // Width on the bottom drawer goes to its focused column.
+        ide.bottom_focus_col = 1;
+        ide.resize_active(true, true).unwrap();
+        assert_eq!(ide.bottom_splits, [28, 71]);
+        ide.focus = Focus::Project;
+        for _ in 0..9 {
+            ide.resize_active(false, true).unwrap();
+        }
+        assert_eq!(ide.project_pct, 90, "the tag list keeps a share");
+
+        ide.visible = false;
+        assert!(ide.resize_active(true, true).is_err(), "no workbench shown");
+    }
+
+    #[test]
+    fn widening_a_column_moves_its_dividers_within_the_drawer() {
+        use super::widen_column;
+        assert_eq!(widen_column([33, 66], 0, true, 10), [43, 66]);
+        assert_eq!(widen_column([33, 66], 2, true, 10), [33, 56]);
+        assert_eq!(widen_column([33, 66], 1, false, 10), [38, 61]);
+        assert_eq!(
+            widen_column([5, 95], 0, false, 10),
+            [0, 95],
+            "stops at the edge"
+        );
+        assert_eq!(
+            widen_column([60, 66], 2, true, 10),
+            [60, 60],
+            "never crosses"
+        );
+        assert_eq!(widen_column([48, 52], 1, false, 10), [50, 50], "folds shut");
     }
 
     /// Each window opens and closes on its own, as the plugins' windows do:

@@ -2212,6 +2212,10 @@ impl MappableCommand {
         stretch_tool_window_right, "Widen the workbench's left drawer (JetBrains Stretch to Right)",
         stretch_tool_window_up, "Grow the workbench's bottom drawer (JetBrains Stretch to Top)",
         stretch_tool_window_down, "Shrink the workbench's bottom drawer (JetBrains Stretch to Bottom)",
+        increment_tool_window_width, "Widen the active tool window: the left drawer, or the focused bottom-drawer column (JetBrains Increment Width)",
+        decrement_tool_window_width, "Narrow the active tool window: the left drawer, or the focused bottom-drawer column (JetBrains Decrement Width)",
+        increment_tool_window_height, "Make the active tool window taller: the bottom drawer, or the project tree or tag list at the other's expense (JetBrains Increment Height)",
+        decrement_tool_window_height, "Make the active tool window shorter: the bottom drawer, or the project tree or tag list in the other's favour (JetBrains Decrement Height)",
         recent_changes_picker, "Files this project changed most recently, newest first (JetBrains Recent Changes)",
         focus_bookmarks, "Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks)",
         focus_marks_panel, "Focus the Marks tool window",
@@ -57746,6 +57750,37 @@ fn stretch_ide(cx: &mut Context, dir: crate::ui::StretchDir) {
                 .set_error("No workbench to stretch (open it with :ide)");
         }
     }));
+}
+
+/// Resize the workbench's active tool window — the focused one, or the last
+/// one focused; reports an error when no workbench is shown.
+fn resize_active_tool_window(cx: &mut Context, width: bool, grow: bool) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let result = compositor
+            .find::<crate::ui::EditorView>()
+            .map_or(Err("No workbench to resize (open it with :ide)"), |view| {
+                view.resize_active_tool_window(width, grow)
+            });
+        if let Err(why) = result {
+            cx.editor.set_error(why);
+        }
+    }));
+}
+
+fn increment_tool_window_width(cx: &mut Context) {
+    resize_active_tool_window(cx, true, true);
+}
+
+fn decrement_tool_window_width(cx: &mut Context) {
+    resize_active_tool_window(cx, true, false);
+}
+
+fn increment_tool_window_height(cx: &mut Context) {
+    resize_active_tool_window(cx, false, true);
+}
+
+fn decrement_tool_window_height(cx: &mut Context) {
+    resize_active_tool_window(cx, false, false);
 }
 
 fn stretch_tool_window_left(cx: &mut Context) {

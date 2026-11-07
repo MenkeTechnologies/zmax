@@ -78743,19 +78743,19 @@
  },
  {
   "spec_id": "jetbrains-actions.DecrementWindowHeight",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:stretch_tool_window_down"
+   "static:decrement_tool_window_height"
   ],
-  "note": "DecrementWindowHeight (Decrement Height) = zmax `stretch_tool_window_down`: shrinks the bottom drawer only; JetBrains shrinks whichever tool window is active."
+  "note": "Decrement Height = zmax `decrement_tool_window_height`: makes the active tool window shorter: the bottom drawer for a bottom-drawer window, the shared left-drawer split for the project tree or tag list. The active tool window is the focused one, or the last one focused once the editor has it back (Ide::resize_active, ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.DecrementWindowWidth",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:stretch_tool_window_left"
+   "static:decrement_tool_window_width"
   ],
-  "note": "DecrementWindowWidth (Decrement Width) = zmax `stretch_tool_window_left`: narrows the left drawer only; JetBrains narrows whichever tool window is active."
+  "note": "Decrement Width = zmax `decrement_tool_window_width`: narrows the active tool window: the left drawer for the project tree or tag list, the focused column for a bottom-drawer window. The active tool window is the focused one, or the last one focused once the editor has it back (Ide::resize_active, ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.DeleteRecentFilesFallback",
@@ -81074,11 +81074,11 @@
  },
  {
   "spec_id": "jetbrains-actions.IncrementWindowHeight",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:resize"
+   "static:increment_tool_window_height"
   ],
-  "note": "IncrementWindowHeight (Increment Height) ~ zmax `resize`: `:resize +N` grows the current editor split's height; JetBrains resizes the active tool window"
+  "note": "Increment Height = zmax `increment_tool_window_height`: makes the active tool window taller: a bottom-drawer window raises the drawer, and the project tree or tag list grows at the other's expense, the two sharing the left drawer's height (saved with named layouts). The active tool window is the focused one, or the last one focused once the editor has it back (Ide::resize_active, ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.IncrementalSearch",
@@ -84188,11 +84188,11 @@
  },
  {
   "spec_id": "jetbrains-actions.IncrementWindowWidth",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:stretch_tool_window_right"
+   "static:increment_tool_window_width"
   ],
-  "note": "IncrementWindowWidth (Increment Width) = zmax `stretch_tool_window_right`: widens the left drawer only; JetBrains widens whichever tool window is active (same model as DecrementWindowWidth)."
+  "note": "Increment Width = zmax `increment_tool_window_width`: widens the active tool window: the project tree or tag list widens the left drawer, and a bottom-drawer window widens its column at its neighbours' expense. The active tool window is the focused one, or the last one focused once the editor has it back (Ide::resize_active, ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.MaximizeEditorInSplit",
@@ -86675,19 +86675,19 @@
  },
  {
   "spec_id": "jetbrains-actions.SwitcherBackwardFallback",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:recent_files_switcher"
   ],
-  "note": "SwitcherBackwardFallback (Iterate Switcher Backward) = zmax `recent_files_switcher`: k/Up inside the switcher moves the selection back (ui/switcher.rs:216); it stops at the top instead of wrapping and has no hold-modifier-and-release-to-open behaviour."
+  "note": "Iterate Switcher Backward = k/Up in the zmax switcher opened by `recent_files_switcher`: moves to the previous entry, wrapping from the first to the last (wrap_step, ui/switcher.rs)."
  },
  {
   "spec_id": "jetbrains-actions.SwitcherForwardFallback",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:recent_files_switcher"
   ],
-  "note": "SwitcherForwardFallback (Iterate Switcher Forward) = zmax `recent_files_switcher`: j/Down inside the switcher moves the selection forward (ui/switcher.rs:203); no wrap-around and no Ctrl-Tab repeat-to-advance."
+  "note": "Iterate Switcher Forward = j/Down in the zmax switcher opened by `recent_files_switcher`: moves to the next recent file (or tool window on the left rail), wrapping from the last to the first (wrap_step, ui/switcher.rs)."
  },
  {
   "spec_id": "jetbrains-actions.SwitcherIterateItemsFallback",

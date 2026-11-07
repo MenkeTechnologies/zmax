@@ -13,6 +13,9 @@ pub struct IdeLayout {
     pub left_collapsed: bool,
     pub fold_project: bool,
     pub fold_structure: bool,
+    /// The project tree's share of the left drawer's height, in percent; the
+    /// tag list below it takes the rest (0 = use the default).
+    pub project_pct: u16,
     pub fold_problems: bool,
     /// Whether the right-hand minimap stripe is collapsed to a thin handle.
     pub fold_minimap: bool,

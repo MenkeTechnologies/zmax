@@ -2,7 +2,8 @@
 //! tool windows on the left, recent files on the right, a "Show edited only" toggle
 //! at the top, and a workspace path at the bottom.
 //!
-//! Keys: j/k or ↑/↓ move the recent-files list · Tab or ←/→ switch to the left
+//! Keys: j/k or ↑/↓ move the recent-files list, wrapping at either end as the
+//! JetBrains Switcher does · Tab or ←/→ switch to the left
 //! rail · Enter / click activates · `e` toggles edited-only · Esc closes.
 
 use std::path::PathBuf;
@@ -95,6 +96,16 @@ pub struct RecentFilesSwitcher {
     /// left of this hits the tool rail; at-or-right hits the file list. Both
     /// panes share the same screen rows, so row alone can't disambiguate them.
     split_x: u16,
+}
+
+/// The row one step from `i` in a list of `n`, wrapping past either end
+/// (JetBrains Iterate Switcher Forward / Backward). An empty list stays at 0.
+fn wrap_step(i: usize, n: usize, forward: bool) -> usize {
+    match n {
+        0 => 0,
+        _ if forward => (i + 1) % n,
+        _ => (i + n - 1) % n,
+    }
 }
 
 impl RecentFilesSwitcher {
@@ -200,24 +211,12 @@ impl Component for RecentFilesSwitcher {
                     self.on_left = false;
                     EventResult::Consumed(None)
                 }
-                KeyCode::Down | KeyCode::Char('j') => {
+                KeyCode::Down | KeyCode::Char('j') | KeyCode::Up | KeyCode::Char('k') => {
+                    let forward = matches!(key.code, KeyCode::Down | KeyCode::Char('j'));
                     if self.on_left {
-                        if self.left_sel + 1 < TOOLS.len() {
-                            self.left_sel += 1;
-                        }
+                        self.left_sel = wrap_step(self.left_sel, TOOLS.len(), forward);
                     } else {
-                        let n = self.files().len();
-                        if n > 0 && self.sel + 1 < n {
-                            self.sel += 1;
-                        }
-                    }
-                    EventResult::Consumed(None)
-                }
-                KeyCode::Up | KeyCode::Char('k') => {
-                    if self.on_left {
-                        self.left_sel = self.left_sel.saturating_sub(1);
-                    } else {
-                        self.sel = self.sel.saturating_sub(1);
+                        self.sel = wrap_step(self.sel, self.files().len(), forward);
                     }
                     EventResult::Consumed(None)
                 }
@@ -402,5 +401,21 @@ impl Component for RecentFilesSwitcher {
 
     fn id(&self) -> Option<&'static str> {
         Some(ID)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wrap_step;
+
+    #[test]
+    fn stepping_wraps_past_both_ends_and_survives_an_empty_list() {
+        assert_eq!(wrap_step(2, 3, true), 0, "past the last row: the first");
+        assert_eq!(wrap_step(0, 3, false), 2, "before the first: the last");
+        assert_eq!(wrap_step(1, 3, true), 2);
+        assert_eq!(wrap_step(0, 1, false), 0, "one row stays put");
+        // Toggling "edited only" can leave no files at all.
+        assert_eq!(wrap_step(0, 0, true), 0);
+        assert_eq!(wrap_step(0, 0, false), 0);
     }
 }

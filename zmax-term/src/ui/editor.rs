@@ -810,6 +810,18 @@ impl EditorView {
 
     /// JetBrains "Stretch to …": resize the workbench drawers from the
     /// keyboard. False when there is no visible workbench to resize.
+    /// JetBrains Increment/Decrement Width/Height on the active tool window.
+    pub fn resize_active_tool_window(
+        &mut self,
+        width: bool,
+        grow: bool,
+    ) -> Result<(), &'static str> {
+        match &mut self.ide {
+            Some(ide) => ide.resize_active(width, grow),
+            None => Err("No workbench to resize (open it with :ide)"),
+        }
+    }
+
     pub fn stretch_ide(&mut self, dir: crate::ui::StretchDir) -> bool {
         match &mut self.ide {
             Some(ide) => ide.stretch(dir, 4),

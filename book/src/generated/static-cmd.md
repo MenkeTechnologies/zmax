@@ -1819,6 +1819,10 @@
 | `stretch_tool_window_right` | Widen the workbench's left drawer (JetBrains Stretch to Right) | **spacemacs, hybrid** — normal: `` <space>W<right> ``, select: `` <space>W<right> `` |
 | `stretch_tool_window_up` | Grow the workbench's bottom drawer (JetBrains Stretch to Top) | **spacemacs, hybrid** — normal: `` <space>W<up> ``, select: `` <space>W<up> `` |
 | `stretch_tool_window_down` | Shrink the workbench's bottom drawer (JetBrains Stretch to Bottom) | **spacemacs, hybrid** — normal: `` <space>W<down> ``, select: `` <space>W<down> `` |
+| `increment_tool_window_width` | Widen the active tool window: the left drawer, or the focused bottom-drawer column (JetBrains Increment Width) |  |
+| `decrement_tool_window_width` | Narrow the active tool window: the left drawer, or the focused bottom-drawer column (JetBrains Decrement Width) |  |
+| `increment_tool_window_height` | Make the active tool window taller: the bottom drawer, or the project tree or tag list at the other's expense (JetBrains Increment Height) |  |
+| `decrement_tool_window_height` | Make the active tool window shorter: the bottom drawer, or the project tree or tag list in the other's favour (JetBrains Decrement Height) |  |
 | `recent_changes_picker` | Files this project changed most recently, newest first (JetBrains Recent Changes) | **spacemacs, hybrid** — normal: `` <space>jC ``, select: `` <space>jC `` |
 | `focus_bookmarks` | Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks) | **spacemacs, hybrid** — normal: `` <space>Wb ``, select: `` <space>Wb `` |
 | `focus_marks_panel` | Focus the Marks tool window | **spacemacs, hybrid** — normal: `` <space>Wk ``, select: `` <space>Wk `` |
