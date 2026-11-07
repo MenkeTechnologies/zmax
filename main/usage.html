@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d8ae6dba.js";
+            window.path_to_searchindex_js = "searchindex-50031a5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -219,7 +219,7 @@ can be accessed via the command <code>zmax --tutor</code> or <code>:tutor</code>
 <h2 id="hex-editing"><a class="header" href="#hex-editing">Hex editing</a></h2>
 <p><code>:hex</code> (also <code>:hexview</code>/<code>:hexedit</code>) opens a byte-faithful, xxd-style view of a file’s raw bytes — an offset column, the hex bytes, and the ASCII rendering side by side. It takes an optional path and otherwise uses the current buffer’s file. Binary files opened the normal way are routed here automatically rather than rejected. Press <code>i</code>/<code>R</code> to edit, type into the hex or ASCII column (<code>Tab</code> toggles between them), <code>Ctrl-s</code> to write the raw bytes back, and <code>q</code> to close.</p>
 <h2 id="merge-conflicts"><a class="header" href="#merge-conflicts">Merge conflicts</a></h2>
-<p>When a file has git merge conflicts, <code>:merge</code> (also <code>:resolve</code>) opens a three-pane resolver — <em>ours</em> on the left, the <em>result</em> you are building in the middle, <em>theirs</em> on the right, with a diff3 <em>base</em> pane — modeled on JetBrains’ merge tool, with inline character highlighting and horizontal scrolling. <code>]n</code> and <code>[n</code> jump between conflict markers, and, in the modal presets, the space-<code>g</code> git menu resolves them: <code>SPC g m</code> (or <code>SPC g c r</code>) opens the resolver, <code>SPC g c O</code>/<code>SPC g c T</code> take all of our/their side, and <code>SPC g =</code> shows a read-only diff of the buffer against git <code>HEAD</code> (<code>:diff</code>). The per-conflict typable commands <code>:conflict-ours</code>/<code>:conflict-theirs</code>/<code>:conflict-both</code> resolve the conflict at the cursor.</p>
+<p>When a file has git merge conflicts, <code>:merge</code> (also <code>:resolve</code>) opens a three-pane resolver — <em>ours</em> on the left, the <em>result</em> you are building in the middle, <em>theirs</em> on the right, with a diff3 <em>base</em> pane — modeled on JetBrains’ merge tool, with inline character highlighting and horizontal scrolling. <code>]n</code> and <code>[n</code> jump between conflict markers, and, in the modal presets, the space-<code>g</code> git menu resolves them: <code>SPC g m</code> (or <code>SPC g c r</code>) opens the resolver, <code>SPC g c O</code>/<code>SPC g c T</code> take all of our/their side, and <code>SPC g =</code> shows a read-only diff of the buffer against git <code>HEAD</code> (<code>:diff</code>). The per-conflict typable commands <code>:conflict-ours</code>/<code>:conflict-theirs</code>/<code>:conflict-both</code> resolve the conflict at the cursor. Inside the resolver, <code>,</code> and <code>.</code> take one side and <code>b</code> both; <code>&lt;</code> and <code>&gt;</code> append a side after the one already taken (so <code>.</code> then <code>&lt;</code> gives theirs followed by ours), and <code>(</code> and <code>)</code> ignore a side, which leaves the other one, or the diff3 base once neither is taken.</p>
 
                     </main>
 
