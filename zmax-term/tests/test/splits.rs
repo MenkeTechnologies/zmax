@@ -558,3 +558,91 @@ async fn test_close_window_and_refuses_last() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// JetBrains "Open in Split with Chooser": Left proposes a new split on the
+/// left (there is no window there) and Enter moves the file into it, leaving
+/// the old window on its previous buffer; `d` instead copies the file into the
+/// window chosen with Right, keeping it where it was.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_split_chooser_moves_or_copies_the_file() -> anyhow::Result<()> {
+    let file1 = tempfile::NamedTempFile::new()?;
+    let file2 = tempfile::NamedTempFile::new()?;
+
+    let mut app = helpers::AppBuilder::new()
+        .with_file(file1.path(), None)
+        .build()?;
+
+    /// Each window's file, left to right, and the focused window's file.
+    fn layout(app: &Application) -> (Vec<std::path::PathBuf>, std::path::PathBuf) {
+        let path = |id| {
+            let view = app.editor.tree.get(id);
+            app.editor
+                .document(view.doc)
+                .unwrap()
+                .path()
+                .unwrap()
+                .to_path_buf()
+        };
+        let mut views: Vec<_> = app
+            .editor
+            .tree
+            .views()
+            .map(|(v, _)| (v.area.x, v.id))
+            .collect();
+        views.sort();
+        (
+            views.into_iter().map(|(_, id)| path(id)).collect(),
+            path(app.editor.tree.focus),
+        )
+    }
+
+    let (p1, p2) = (path::normalize(file1.path()), path::normalize(file2.path()));
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(&format!(
+                    ":o {}<ret>:split-chooser<ret>",
+                    file2.path().to_string_lossy()
+                )),
+                None,
+            ),
+            // The chooser opens from a job callback, so its keys go in a later
+            // step, after the overlay is up.
+            (
+                Some("<left><ret>"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(
+                        layout(app),
+                        (vec![p2.clone(), p1.clone()], p2.clone()),
+                        "file2 moved into a new left split; the old window went back to file1"
+                    );
+                }),
+            ),
+            (Some(":split-chooser<ret>"), None),
+            (
+                Some("<right>d"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(
+                        layout(app),
+                        (vec![p2.clone(), p2.clone()], p2.clone()),
+                        "file2 copied into the right window and still on the left"
+                    );
+                }),
+            ),
+            (Some(":split-chooser<ret>"), None),
+            (
+                Some("<left><esc>"),
+                Some(&|app| {
+                    assert_eq!(app.editor.tree.views().count(), 2, "Esc changes nothing");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+
+    Ok(())
+}

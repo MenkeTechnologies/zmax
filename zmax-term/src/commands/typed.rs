@@ -27201,6 +27201,27 @@ fn tree_sitter_layers(
     Ok(())
 }
 
+/// `:split-chooser` — JetBrains "Open in Split with Chooser": pick a window,
+/// or a side of one to split, and move or copy the current file there
+/// ([`crate::ui::split_chooser`]).
+fn split_chooser(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let chooser = crate::ui::split_chooser::SplitChooser::new(view!(cx.editor).id);
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(chooser));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -67476,6 +67497,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["on"],
         doc: "Close all windows except the current one (vim :only).",
         fun: window_only,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "split-chooser",
+        aliases: &[],
+        doc: "Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser).",
+        fun: split_chooser,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

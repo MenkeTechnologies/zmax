@@ -107,6 +107,7 @@ pub mod sokoban;
 pub mod solitaire;
 mod spinner;
 pub mod spook_data;
+pub mod split_chooser;
 pub mod startify;
 pub(crate) mod statusline;
 pub mod subst_confirm;

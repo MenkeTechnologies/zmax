@@ -1476,6 +1476,7 @@
 | `:debug-eval` | Evaluate expression in current debug context. |
 | `:close`, `:clo` | Close the current window (vim :close). Refuses to close the last window. |
 | `:only`, `:on` | Close all windows except the current one (vim :only). |
+| `:split-chooser` | Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser). |
 | `:vsplit`, `:vs` | Open the file in a vertical split. |
 | `:vsplit-new`, `:vnew` | Open a scratch buffer in a vertical split. |
 | `:hsplit`, `:hs`, `:sp`, `:split` | Open the file in a horizontal split. |

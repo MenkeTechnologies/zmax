@@ -86626,19 +86626,21 @@
  },
  {
   "spec_id": "jetbrains-actions.SplitChooser.NextWindow",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:split-chooser",
    "static:rotate_view"
   ],
-  "note": "SplitChooser.NextWindow (Next Split) = zmax `rotate_view`: moves focus to the next split in traversal order; there is no chooser mode, so focus moves immediately rather than moving a placement highlight."
+  "note": "Next Split = `Tab` in `:split-chooser` (SplitChooser::cycle, ui/split_chooser.rs): moves the drop zone to the next window in traversal order, wrapping, without a split. `rotate_view` moves focus the same way outside the chooser."
  },
  {
   "spec_id": "jetbrains-actions.SplitChooser.PreviousWindow",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:split-chooser",
    "static:rotate_view_reverse"
   ],
-  "note": "SplitChooser.PreviousWindow (Previous Split) = zmax `rotate_view_reverse`: moves focus to the previous split; no chooser highlight, focus moves immediately."
+  "note": "Previous Split = `Shift-Tab` in `:split-chooser` (SplitChooser::cycle, ui/split_chooser.rs): moves the drop zone to the previous window, wrapping, without a split. `rotate_view_reverse` moves focus the same way outside the chooser."
  },
  {
   "spec_id": "jetbrains-actions.StartNewUsersOnboarding",
@@ -87694,27 +87696,30 @@
  },
  {
   "spec_id": "jetbrains-actions.SplitChooser.SplitRight",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:split-chooser",
    "static:split_right_and_move"
   ],
-  "note": "SplitChooser.SplitRight opens this file in a right split and moves it out of the old group (`split_right_and_move`); no interactive drop-zone chooser."
+  "note": "Use Right Split or Switch Right = `Right`/`l` in `:split-chooser` (SplitChooser::step, ui/split_chooser.rs): moves the drop zone onto the window to the right, or proposes a new split on the right when there is none; Enter then moves the file there. `split_right_and_move` is the one-shot form without the chooser."
  },
  {
   "spec_id": "jetbrains-actions.SplitChooser.SplitDown",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:split-chooser",
    "static:split_down_and_move"
   ],
-  "note": "SplitChooser.SplitDown opens this file in a bottom split and moves it out of the old group (`split_down_and_move`); no interactive drop-zone chooser."
+  "note": "Use Down Split or Switch Down = `Down`/`j` in `:split-chooser` (SplitChooser::step, ui/split_chooser.rs): moves the drop zone onto the window below, or proposes a new split below when there is none; Enter then moves the file there. `split_down_and_move` is the one-shot form without the chooser."
  },
  {
   "spec_id": "jetbrains-actions.SplitChooser.Duplicate",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:split-chooser",
    "static:vsplit"
   ],
-  "note": "SplitChooser.Duplicate keeps the file in both groups: `vsplit` shows the same buffer in a second view; no chooser."
+  "note": "Duplicate = `d` in `:split-chooser` (SplitChooser::apply with keep, ui/split_chooser.rs): opens the file in the chosen window or new split and leaves it in the window it came from too. `vsplit` is the one-shot form without the chooser."
  },
  {
   "spec_id": "jetbrains-actions.DirDiffMenu.CancelComparingNewFilesWithEachOther",
@@ -87998,19 +88003,21 @@
  },
  {
   "spec_id": "jetbrains-actions.SplitChooser.SplitLeft",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:split-chooser",
    "static:split_left_and_move"
   ],
-  "note": "SplitChooser.SplitLeft moves this file into a new split on the left (`split_left_and_move`, placed left whatever split-right says); no interactive drop-zone chooser."
+  "note": "Use Left Split or Switch Left = `Left`/`h` in `:split-chooser` (SplitChooser::step, ui/split_chooser.rs): moves the drop zone onto the window to the left, or proposes a new split on the left when there is none; Enter then moves the file there. `split_left_and_move` is the one-shot form without the chooser."
  },
  {
   "spec_id": "jetbrains-actions.SplitChooser.SplitTop",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:split-chooser",
    "static:split_up_and_move"
   ],
-  "note": "SplitChooser.SplitTop moves this file into a new split above (`split_up_and_move`, placed above whatever split-below says); no interactive drop-zone chooser."
+  "note": "Use Top Split or Switch Up = `Up`/`k` in `:split-chooser` (SplitChooser::step, ui/split_chooser.rs): moves the drop zone onto the window above, or proposes a new split above when there is none; Enter then moves the file there. `split_up_and_move` is the one-shot form without the chooser."
  },
  {
   "spec_id": "jetbrains-actions.Diff.FocusOppositePane",
@@ -89093,5 +89100,37 @@
    "key:table:S-pageup"
   ],
   "note": "Scroll Up and Extend Selection = `S-PageUp` in the zmax table editor (the `table` command): point moves a page of rows up while the cell the selection began on stays fixed, extending the selected block of cells (TableEditor::page_row / extend_to, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser",
+  "status": "ported",
+  "evidence": [
+   "typable:split-chooser"
+  ],
+  "note": "Open in Split with Chooser = zmax `:split-chooser` (ui/split_chooser.rs): an overlay highlights a drop zone, a whole window or the half of one a new split would take; arrows/hjkl use the window on that side or propose a split there, Tab/S-Tab cycle windows, Enter moves the current file there (its old window falls back to its previous buffer, or closes if it has none), `d` copies it, Esc leaves."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.Split",
+  "status": "ported",
+  "evidence": [
+   "typable:split-chooser"
+  ],
+  "note": "Split = `Enter` in `:split-chooser` (SplitChooser::apply, ui/split_chooser.rs): opens the file in the chosen window or new split (swapping a new split onto the chosen side whatever split-right/split-below say), then takes it out of the window it came from, which shows its previous buffer or closes."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.SplitCenter",
+  "status": "ported",
+  "evidence": [
+   "typable:split-chooser"
+  ],
+  "note": "Without Split = `c` in `:split-chooser` (ui/split_chooser.rs): drops a proposed split so the drop zone is the chosen window itself; Enter then shows the file in that window instead of a new split."
+ },
+ {
+  "spec_id": "jetbrains-actions.SplitChooser.Exit",
+  "status": "ported",
+  "evidence": [
+   "typable:split-chooser"
+  ],
+  "note": "Exit Chooser = `Esc` (or `q`, `C-g`) in `:split-chooser` (ui/split_chooser.rs): closes the overlay without touching any window."
  }
 ]
