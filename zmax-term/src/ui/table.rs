@@ -15,7 +15,8 @@
 //!   Up / Down                move to the cell one row up / down
 //!   Home / End               the first / last cell of the row
 //!   C-Home / C-End           the first / last row, same column
-//!   Shift + Up/Down/Left/Right/Home/End, C-S-Home / C-S-End
+//!   PageUp / PageDown        a page of rows up / down, scrolling the view
+//!   Shift + Up/Down/Left/Right/Home/End/PageUp/PageDown, C-S-Home / C-S-End
 //!                            the same moves (without wrapping), extending a
 //!                            rectangular selection of cells from where it began
 //!   Backspace on a selection clear every selected cell
@@ -56,6 +57,11 @@ pub struct TableEditor {
     /// with a move keeps this cell, selecting the rectangle between it and
     /// point. `None` selects only the current cell.
     anchor: Option<(usize, usize)>,
+    /// The first table row on screen; [`Self::scroll_to_point`] keeps the
+    /// current row in view.
+    top: usize,
+    /// How many table rows the last render fit: the step of PageUp/PageDown.
+    page: usize,
 }
 
 impl TableEditor {
@@ -66,6 +72,8 @@ impl TableEditor {
             row: 0,
             col: 0,
             anchor: None,
+            top: 0,
+            page: 1,
         }
     }
 
@@ -81,6 +89,24 @@ impl TableEditor {
         self.anchor.get_or_insert((self.row, self.col));
         self.row = row.min(self.table.rows().saturating_sub(1));
         self.col = col.min(self.table.cols().saturating_sub(1));
+    }
+
+    /// The row a page up or down from point, stopping at the first / last row.
+    fn page_row(&self, forward: bool) -> usize {
+        if forward {
+            (self.row + self.page).min(self.table.rows().saturating_sub(1))
+        } else {
+            self.row.saturating_sub(self.page)
+        }
+    }
+
+    /// Scroll so the current row is among the `page` rows shown from `top`.
+    fn scroll_to_point(&mut self) {
+        if self.row < self.top {
+            self.top = self.row;
+        } else if self.row >= self.top + self.page {
+            self.top = self.row + 1 - self.page;
+        }
     }
 
     /// [`Self::extend_to`] as a handled key.
@@ -175,6 +201,8 @@ impl Component for TableEditor {
             shift!(Right) => return self.extend(row, col + 1),
             shift!(Home) => return self.extend(row, 0),
             shift!(End) => return self.extend(row, usize::MAX),
+            shift!(PageUp) => return self.extend(self.page_row(false), col),
+            shift!(PageDown) => return self.extend(self.page_row(true), col),
             KeyEvent {
                 code: KeyCode::Home,
                 modifiers,
@@ -212,6 +240,9 @@ impl Component for TableEditor {
             key!(End) => self.col = cols.saturating_sub(1),
             ctrl!(Home) => self.row = 0,
             ctrl!(End) => self.row = rows.saturating_sub(1),
+            // JetBrains Table-scrollUpChangeSelection / scrollDownChangeSelection.
+            key!(PageUp) => self.row = self.page_row(false),
+            key!(PageDown) => self.row = self.page_row(true),
             key!(Backspace) if self.anchor.is_some() => self.clear_block(),
             key!(Backspace) => self.backspace(),
             alt!('w') => {
@@ -286,11 +317,14 @@ impl Component for TableEditor {
             header_style,
         );
 
-        // Body: the rendered box table, separators dimmed.
+        // Body: the rendered box table, separators dimmed, scrolled so point's
+        // row shows. Each row takes two lines below the top border.
         let body_y = area.y + 2;
         let last_y = area.y + area.height - 1; // reserved for the footer
+        self.page = ((last_y - body_y).saturating_sub(1) / 2).max(1) as usize;
+        self.scroll_to_point();
         let rendered = self.table.render();
-        for (i, line) in rendered.lines().enumerate() {
+        for (i, line) in rendered.lines().skip(2 * self.top).enumerate() {
             let y = body_y + i as u16;
             if y >= last_y {
                 break;
@@ -306,8 +340,8 @@ impl Component for TableEditor {
         // Highlight the selected cells (content row is line 2*row + 1).
         if rows > 0 && cols > 0 {
             let (sel_rows, sel_cols) = self.block();
-            for r in sel_rows {
-                let cy = body_y + (2 * r + 1) as u16;
+            for r in sel_rows.filter(|&r| r >= self.top) {
+                let cy = body_y + (2 * (r - self.top) + 1) as u16;
                 if cy >= last_y {
                     break;
                 }
@@ -321,7 +355,7 @@ impl Component for TableEditor {
         }
 
         // Footer: key hints.
-        let footer = "Tab/Enter next  S-Tab prev  arrows move  S-arrows select  M-w copy  M-o/M-c ins  M-k/M-d del  Esc quit";
+        let footer = "Tab/Enter next  S-Tab prev  arrows/PgUp/PgDn move  S-moves select  M-w copy  M-o/M-c ins  M-k/M-d del  Esc quit";
         surface.set_stringn(area.x, last_y, footer, area.width as usize, footer_style);
     }
 }
@@ -366,5 +400,34 @@ mod tests {
             "cells outside the block stay"
         );
         assert_eq!(ed.table.get(0, 2), Some("02"));
+    }
+
+    #[test]
+    fn page_moves_stop_at_the_edges_and_scroll_the_row_into_view() {
+        let mut ed = TableEditor::new();
+        ed.table = Table::new(10, 2);
+        ed.page = 4;
+
+        ed.row = ed.page_row(true);
+        assert_eq!(ed.row, 4);
+        ed.scroll_to_point();
+        assert_eq!(ed.top, 1, "row 4 is the last of the four shown");
+
+        ed.row = ed.page_row(true);
+        ed.row = ed.page_row(true);
+        assert_eq!(ed.row, 9, "stops at the last row");
+        ed.scroll_to_point();
+        assert_eq!(ed.top, 6);
+
+        ed.row = 7;
+        ed.row = ed.page_row(false);
+        assert_eq!(ed.row, 3);
+        ed.scroll_to_point();
+        assert_eq!(ed.top, 3, "scrolling up puts the row at the top");
+        assert_eq!(ed.page_row(false), 0, "stops at the first row");
+
+        // Shift-PageDown extends the block a page down from where it began.
+        ed.extend_to(ed.page_row(true), 1);
+        assert_eq!(ed.block(), (3..=7, 0..=1));
     }
 }
