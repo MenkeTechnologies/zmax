@@ -913,3 +913,35 @@ async fn blank_diff_sides_diff_against_each_other() -> anyhow::Result<()> {
     )
     .await
 }
+
+/// Go to Tab N counts buffers in buffer-line order; a count past the last
+/// buffer leaves the current one shown.
+#[tokio::test(flavor = "multi_thread")]
+async fn goto_buffer_tab_picks_the_nth_buffer() -> anyhow::Result<()> {
+    let files = [
+        temp_file_with_contents("one\n")?,
+        temp_file_with_contents("two\n")?,
+        temp_file_with_contents("three\n")?,
+    ];
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode" "Z" => goto_buffer_tab, }),
+    );
+    let mut builder = AppBuilder::new().with_config(config);
+    for f in &files {
+        builder = builder.with_file(f.path(), None);
+    }
+    let mut app = builder.build()?;
+    let shown = |app: &Application| zmax_view::doc!(app.editor).text().to_string();
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("2Z"), Some(&|app| assert_eq!(shown(app), "two\n"))),
+            (Some("Z"), Some(&|app| assert_eq!(shown(app), "one\n"))),
+            (Some("3Z9Z"), Some(&|app| assert_eq!(shown(app), "three\n"))),
+        ],
+        false,
+    )
+    .await
+}

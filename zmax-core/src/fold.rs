@@ -378,6 +378,25 @@ impl Folds {
         changed
     }
 
+    /// JetBrains "Expand to Level N" (Code > Folding): inside the innermost
+    /// fold at `line`, counting that fold as level 1, open the folds at most
+    /// `level` deep and close the deeper ones. Folds outside it and the buffer
+    /// 'foldlevel' are left alone. `false` when no fold contains `line`.
+    pub fn set_level_within(&mut self, line: usize, level: usize) -> bool {
+        let Some(root) = self.innermost_idx(line) else {
+            return false;
+        };
+        let (start, end) = (self.folds[root].start, self.folds[root].end);
+        let base = self.fold_level(root) - 1;
+        for i in 0..self.folds.len() {
+            let f = self.folds[i];
+            if start <= f.start && f.end <= end {
+                self.folds[i].closed = self.fold_level(i) - base > level;
+            }
+        }
+        true
+    }
+
     /// vim `zm`: fold more — decrease 'foldlevel' by one, closing the next level
     /// of nested blocks. Stops at `0` (everything closed).
     pub fn fold_more(&mut self) {
@@ -488,6 +507,27 @@ mod tests {
             .filter(|f| f.closed)
             .map(|f| (f.start, f.end))
             .collect()
+    }
+
+    #[test]
+    fn set_level_within_counts_from_the_fold_at_the_line() {
+        // Two top-level blocks; the first nests two levels deeper.
+        let mut f = Folds::default();
+        for (s, e) in [(0, 20), (2, 10), (4, 6), (30, 40), (32, 35)] {
+            f.create(s, e);
+        }
+        f.open_all();
+
+        // From line 3, the fold at 2..10 is level 1: it stays open, 4..6 closes,
+        // and nothing outside it changes.
+        assert!(f.set_level_within(3, 1));
+        assert_eq!(closed(&f), vec![(4, 6)]);
+        // From the outermost block, level 2 opens 0..20 and 2..10 only.
+        f.close_all();
+        assert!(f.set_level_within(0, 2));
+        assert_eq!(closed(&f), vec![(4, 6), (30, 40), (32, 35)]);
+        assert_eq!(f.level(), 0, "the buffer foldlevel is untouched");
+        assert!(!f.set_level_within(25, 1), "no fold at the line");
     }
 
     #[test]

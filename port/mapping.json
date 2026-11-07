@@ -78631,19 +78631,19 @@
  },
  {
   "spec_id": "jetbrains-actions.ConvertIndentsToSpaces",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:untabify"
+   "typable:indents-to-spaces"
   ],
-  "note": "ConvertIndentsToSpaces (To Spaces) = zmax `:untabify`: expands every tab in the region to spaces, not only indentation tabs."
+  "note": "Convert Indents > To Spaces = zmax `:indents-to-spaces`: rewrites the leading indentation of the selected lines, or of the whole buffer when nothing is selected, as spaces reaching the same column at the buffer tab width; tabs after the indentation stay (indent_to_spaces, zmax-core/src/whitespace.rs; `:untabify` is the expand-every-tab variant)."
  },
  {
   "spec_id": "jetbrains-actions.ConvertIndentsToTabs",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:tabify"
+   "typable:indents-to-tabs"
   ],
-  "note": "ConvertIndentsToTabs (To Tabs) = zmax `:tabify`: converts runs of spaces at tab stops anywhere in the region, not only leading indentation."
+  "note": "Convert Indents > To Tabs = zmax `:indents-to-tabs`: rewrites the leading indentation of the selected lines, or of the whole buffer when nothing is selected, as tabs plus the spaces left over below one tab width; blanks after the indentation stay (indent_to_tabs, zmax-core/src/whitespace.rs)."
  },
  {
   "spec_id": "jetbrains-actions.ConvertToUnixLineSeparators",
@@ -78895,11 +78895,12 @@
  },
  {
   "spec_id": "jetbrains-actions.EditorBreadcrumbsHideBoth",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:navbar-location",
    "static:toggle_breadcrumbs"
   ],
-  "note": "EditorBreadcrumbsHideBoth (Don't Show) = zmax `toggle_breadcrumbs`: toggles the breadcrumb trail on/off; no explicit hide action and no above/below placement."
+  "note": "Breadcrumbs: Don't Show = zmax `:navbar-location hide`: the IDE breadcrumb trail is drawn nowhere until a placement is set again; `toggle_breadcrumbs` flips between hidden and the top (NavBarLocation, commands.rs; ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.EditorCloneCaretAbove",
@@ -79827,7 +79828,7 @@
   "evidence": [
    "static:fold_to_level"
   ],
-  "note": "ExpandAllToLevel1 (1) = zmax `fold_to_level` with count 1: sets the buffer-wide fold level (doc: JetBrains Expand to Level N)."
+  "note": "ExpandAllToLevel1 (1) = zmax `fold_to_level` with count 1: sets the buffer-wide fold level (doc: JetBrains Expand All to Level N)."
  },
  {
   "spec_id": "jetbrains-actions.ExpandAllToLevel2",
@@ -79911,43 +79912,43 @@
  },
  {
   "spec_id": "jetbrains-actions.ExpandToLevel1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:fold_to_level"
+   "static:fold_block_to_level"
   ],
-  "note": "ExpandToLevel1 (1) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+  "note": "Expand to Level 1 = zmax `1 fold_block_to_level` (count 1): the innermost fold around the cursor counts as level 1; folds inside it open down to depth 1 and deeper ones close, while the rest of the buffer and 'foldlevel' stay as they were (Folds::set_level_within, zmax-core/src/fold.rs). `fold_to_level` is the buffer-wide Expand All to Level."
  },
  {
   "spec_id": "jetbrains-actions.ExpandToLevel2",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:fold_to_level"
+   "static:fold_block_to_level"
   ],
-  "note": "ExpandToLevel2 (2) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+  "note": "Expand to Level 2 = zmax `2 fold_block_to_level` (count 2): the innermost fold around the cursor counts as level 1; folds inside it open down to depth 2 and deeper ones close, while the rest of the buffer and 'foldlevel' stay as they were (Folds::set_level_within, zmax-core/src/fold.rs). `fold_to_level` is the buffer-wide Expand All to Level."
  },
  {
   "spec_id": "jetbrains-actions.ExpandToLevel3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:fold_to_level"
+   "static:fold_block_to_level"
   ],
-  "note": "ExpandToLevel3 (3) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+  "note": "Expand to Level 3 = zmax `3 fold_block_to_level` (count 3): the innermost fold around the cursor counts as level 1; folds inside it open down to depth 3 and deeper ones close, while the rest of the buffer and 'foldlevel' stay as they were (Folds::set_level_within, zmax-core/src/fold.rs). `fold_to_level` is the buffer-wide Expand All to Level."
  },
  {
   "spec_id": "jetbrains-actions.ExpandToLevel4",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:fold_to_level"
+   "static:fold_block_to_level"
   ],
-  "note": "ExpandToLevel4 (4) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+  "note": "Expand to Level 4 = zmax `4 fold_block_to_level` (count 4): the innermost fold around the cursor counts as level 1; folds inside it open down to depth 4 and deeper ones close, while the rest of the buffer and 'foldlevel' stay as they were (Folds::set_level_within, zmax-core/src/fold.rs). `fold_to_level` is the buffer-wide Expand All to Level."
  },
  {
   "spec_id": "jetbrains-actions.ExpandToLevel5",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:fold_to_level"
+   "static:fold_block_to_level"
   ],
-  "note": "ExpandToLevel5 (5) = zmax `fold_to_level` sets the fold level buffer-wide; JetBrains Expand to Level applies only to the block at the caret."
+  "note": "Expand to Level 5 = zmax `5 fold_block_to_level` (count 5): the innermost fold around the cursor counts as level 1; folds inside it open down to depth 5 and deeper ones close, while the rest of the buffer and 'foldlevel' stay as they were (Folds::set_level_within, zmax-core/src/fold.rs). `fold_to_level` is the buffer-wide Expand All to Level."
  },
  {
   "spec_id": "jetbrains-actions.ExportSettings",
@@ -80473,75 +80474,75 @@
  },
  {
   "spec_id": "jetbrains-actions.GoToTab1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab1 (GoToTab1) ~ zmax `tab_select`: `1 tab_select` goes to the 1-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 1 = zmax `1 goto_buffer_tab` (count 1): switches to the 1th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GoToTab2",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab2 (GoToTab2) ~ zmax `tab_select`: `2 tab_select` goes to the 2-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 2 = zmax `2 goto_buffer_tab` (count 2): switches to the 2th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GoToTab3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab3 (GoToTab3) ~ zmax `tab_select`: `3 tab_select` goes to the 3-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 3 = zmax `3 goto_buffer_tab` (count 3): switches to the 3th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GoToTab4",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab4 (GoToTab4) ~ zmax `tab_select`: `4 tab_select` goes to the 4-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 4 = zmax `4 goto_buffer_tab` (count 4): switches to the 4th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GoToTab5",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab5 (GoToTab5) ~ zmax `tab_select`: `5 tab_select` goes to the 5-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 5 = zmax `5 goto_buffer_tab` (count 5): switches to the 5th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GoToTab6",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab6 (GoToTab6) ~ zmax `tab_select`: `6 tab_select` goes to the 6-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 6 = zmax `6 goto_buffer_tab` (count 6): switches to the 6th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GoToTab7",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab7 (GoToTab7) ~ zmax `tab_select`: `7 tab_select` goes to the 7-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 7 = zmax `7 goto_buffer_tab` (count 7): switches to the 7th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GoToTab8",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab8 (GoToTab8) ~ zmax `tab_select`: `8 tab_select` goes to the 8-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 8 = zmax `8 goto_buffer_tab` (count 8): switches to the 8th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GoToTab9",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:tab_select"
+   "static:goto_buffer_tab"
   ],
-  "note": "GoToTab9 (GoToTab9) ~ zmax `tab_select`: `9 tab_select` goes to the 9-th tab, but zmax tabs are tabpages holding window layouts, not one editor tab per file"
+  "note": "Go to Tab 9 = zmax `9 goto_buffer_tab` (count 9): switches to the 9th buffer in the order the buffer line shows them, one buffer per file as JetBrains has one tab per file; a count past the last buffer reports how many are open and stays put (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.GotoAction",
@@ -85451,19 +85452,20 @@
  },
  {
   "spec_id": "jetbrains-actions.EditorBreadcrumbsShowAbove",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:navbar-location",
    "static:toggle_breadcrumbs"
   ],
-  "note": "EditorBreadcrumbsShowAbove (Breadcrumbs: Top) = zmax `toggle_breadcrumbs`: shows/hides the breadcrumb trail (commands.rs:19586, drawn in the workbench toolbar at ui/ide.rs:3403); its position is fixed, no above/below placement choice."
+  "note": "Breadcrumbs: Top = zmax `:navbar-location top`: the IDE breadcrumb trail (dirs \u203a file \u203a symbol at the cursor) is drawn in the workbench toolbar row above the editor (NavBarLocation::Top, commands.rs; ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.EditorBreadcrumbsShowBelow",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:toggle_breadcrumbs"
+   "typable:navbar-location"
   ],
-  "note": "EditorBreadcrumbsShowBelow (Breadcrumbs: Bottom) = zmax `toggle_breadcrumbs`: shows/hides the breadcrumb trail (commands.rs:19586); it is drawn only in the workbench toolbar (ui/ide.rs:3403), not below the editor."
+  "note": "Breadcrumbs: Bottom = zmax `:navbar-location bottom`: the IDE breadcrumb trail takes the place of the file path in the workbench status bar, the row below the editor, and leaves the toolbar (NavBarLocation::Bottom; Ide::render_statusbar, ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.EditorChooseLookupItem",
@@ -87072,11 +87074,12 @@
  },
  {
   "spec_id": "jetbrains-actions.ViewObsoleteNavBarAction",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:navbar-location",
    "static:toggle_breadcrumbs"
   ],
-  "note": "ViewObsoleteNavBarAction (Navigation Bar placement) = zmax `toggle_breadcrumbs`: on/off only; the IDE also chooses top / bottom / status-bar placement."
+  "note": "Navigation Bar placement = zmax `:navbar-location top|bottom|hide`: the IDE breadcrumb trail goes in the workbench toolbar, in the status bar, or nowhere; with no argument it reports the current placement (NavBarLocation, commands.rs; ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.ViewObsoleteToolbarAction",
@@ -89184,5 +89187,21 @@
    "typable:navbar-members"
   ],
   "note": "Members in Navigation Bar = zmax `:navbar-members [on|off]` (no argument flips it): shows or hides the symbol around the cursor at the end of the IDE breadcrumb trail (navbar_members, commands.rs; Ide::trail_symbol, ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectFirstRowExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "static:table"
+  ],
+  "note": "Select First Row and Extend Selection = `Ctrl-Shift-Home` in the zmax table editor opened by `table` (the Emacs table.el port): point moves to the top row in the same column while the cell the selection began on stays fixed, so the block of cells between them is selected; Backspace clears it and M-w copies it (TableEditor::extend_to, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-selectLastRowExtendSelection",
+  "status": "ported",
+  "evidence": [
+   "static:table"
+  ],
+  "note": "Select Last Row and Extend Selection = `Ctrl-Shift-End` in the zmax table editor opened by `table` (the Emacs table.el port): point moves to the bottom row in the same column, extending the block of selected cells from where it began (TableEditor::extend_to, ui/table.rs)."
  }
 ]

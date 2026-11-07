@@ -1608,6 +1608,8 @@
 | `:cycle-spacing` | Cycle the whitespace around the cursor: one space, then none, then restore. |
 | `:tabify` | Convert runs of spaces in the region to tabs at tab stops (emacs tabify). |
 | `:untabify` | Expand tabs in the region to spaces at the buffer tab width (emacs untabify). |
+| `:indents-to-spaces` | Rewrite the leading indentation of the selected lines, or of the whole buffer, as spaces. |
+| `:indents-to-tabs` | Rewrite the leading indentation of the selected lines, or of the whole buffer, as tabs. |
 | `:delete-blank-lines` | Collapse consecutive blank lines down to a single blank line. |
 | `:uniquify-lines`, `:uniq` | Delete duplicate lines, keeping the first occurrence. |
 | `:reverse`, `:reverse-lines`, `:reverse-region`, `:tac` | Reverse the order of the selected lines (or the whole buffer). Emacs reverse-region. |

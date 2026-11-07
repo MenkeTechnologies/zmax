@@ -114,6 +114,37 @@ fn indent_to(out: &mut String, from_col: usize, to_col: usize, tw: usize) {
 }
 
 // ---------------------------------------------------------------------------
+// Indentation only — JetBrains Edit > Convert Indents > To Spaces / To Tabs.
+// ---------------------------------------------------------------------------
+
+/// Split `line` into the column its leading blanks reach (a TAB advancing to the
+/// next stop of `tw`) and the text after them.
+fn leading_indent(line: &str, tw: usize) -> (usize, &str) {
+    let rest = line.trim_start_matches([' ', '\t']);
+    let col = line[..line.len() - rest.len()]
+        .chars()
+        .fold(0, |col, c| if c == '\t' { col + tw - col % tw } else { col + 1 });
+    (col, rest)
+}
+
+/// Rewrite the leading indentation of `line` as spaces reaching the same
+/// column; TABs after the first non-blank character are left alone, unlike
+/// [`untabify`].
+pub fn indent_to_spaces(line: &str, tab_width: usize) -> String {
+    let (col, rest) = leading_indent(line, tab_width.max(1));
+    " ".repeat(col) + rest
+}
+
+/// Rewrite the leading indentation of `line` as TABs, then the spaces left
+/// over below one tab width, reaching the same column; blanks after the first
+/// non-blank character are left alone, unlike [`tabify`].
+pub fn indent_to_tabs(line: &str, tab_width: usize) -> String {
+    let tw = tab_width.max(1);
+    let (col, rest) = leading_indent(line, tw);
+    format!("{}{}{rest}", "\t".repeat(col / tw), " ".repeat(col % tw))
+}
+
+// ---------------------------------------------------------------------------
 // Trailing whitespace — Emacs `delete-trailing-whitespace`.
 // ---------------------------------------------------------------------------
 
@@ -344,6 +375,21 @@ mod tests {
         // Every produced run must reach the same column as the space form.
         let line = "a   b     c";
         assert_eq!(untabify(&tabify(line, 4), 4), untabify(line, 4));
+    }
+
+    #[test]
+    fn indent_conversions_touch_only_the_leading_blanks() {
+        // A space before a TAB still lands on the TAB's stop: column 4.
+        assert_eq!(indent_to_spaces(" \tx\ty", 4), "    x\ty");
+        assert_eq!(indent_to_tabs("      x    y", 4), "\t  x    y");
+        assert_eq!(indent_to_tabs("  \t  x", 4), "\t  x");
+        assert_eq!(indent_to_tabs("x  y", 4), "x  y", "no indent, no change");
+        // A blank line is all indentation.
+        assert_eq!(indent_to_tabs("        ", 4), "\t\t");
+        assert_eq!(
+            indent_to_spaces(&indent_to_tabs("\t   if a {", 4), 4),
+            "       if a {"
+        );
     }
 
     #[test]

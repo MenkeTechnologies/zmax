@@ -1146,6 +1146,7 @@
 | `vim_goto_column` | Goto screen column [count] (vim bar motion) | **spacemacs, hybrid, vim** — normal: `` \| `` |
 | `goto_next_buffer` | Goto next buffer | **spacemacs, hybrid** — normal: `` ]b ``, `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, select: `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, insert: `` <C-x><right> ``<br>**vim** — normal: `` ]b ``<br>**helix, kakoune** — normal: `` gn ``, select: `` gn ``<br>**emacs** — normal: `` <C-x><right> ``, insert: `` <C-x><right> ``<br>**cua** — normal: `` <C-x><right> ``, select: `` <C-X><right> ``, insert: `` <C-x><right> ``<br>**micro** — normal: `` <A-.> ``, insert: `` <A-.> `` |
 | `goto_previous_buffer` | Goto previous buffer | **spacemacs, hybrid** — normal: `` [b ``, `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, select: `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, insert: `` <C-x><left> ``<br>**vim** — normal: `` [b ``<br>**helix, kakoune** — normal: `` gp ``, select: `` gp ``<br>**emacs** — normal: `` <C-x><left> ``, insert: `` <C-x><left> ``<br>**cua** — normal: `` <C-x><left> ``, select: `` <C-X><left> ``, insert: `` <C-x><left> ``<br>**micro** — normal: `` <A-,> ``, insert: `` <A-,> `` |
+| `goto_buffer_tab` | Goto the count-th buffer in buffer-line order (JetBrains Go to Tab N) |  |
 | `goto_line_end_newline` | Goto newline at line end | **spacemacs, vim, helix, kakoune** — insert: `` <end> `` |
 | `goto_first_nonwhitespace` | Goto first non-blank in line | **spacemacs** — normal: `` ^ ``, `` <A-m> ``<br>**hybrid** — normal: `` ^ ``, `` <A-m> ``, insert: `` <A-m> ``<br>**vim** — normal: `` ^ ``<br>**helix, kakoune** — normal: `` gs ``, select: `` gs ``<br>**emacs, cua, micro, nano** — normal: `` <A-m> ``, insert: `` <A-m> `` |
 | `trim_selections` | Trim whitespace from selections | **helix, kakoune** — normal: `` _ ``, select: `` _ `` |
@@ -1889,7 +1890,8 @@
 | `fold_enable_on` | Set 'foldenable': folds back to 'foldlevel' (vim zN) | **spacemacs, hybrid, vim** — normal: `` zN `` |
 | `fold_more` | Fold more: close one more level of nested folds (zm) | **spacemacs, hybrid, vim** — normal: `` zm `` |
 | `fold_less` | Fold less: open one more level of nested folds (zr) | **spacemacs, hybrid, vim** — normal: `` zr `` |
-| `fold_to_level` | Set foldlevel to the count outright (JetBrains Expand to Level N) |  |
+| `fold_to_level` | Set foldlevel to the count outright (JetBrains Expand All to Level N) |  |
+| `fold_block_to_level` | Open the fold at the cursor to the count's depth, closing deeper folds (JetBrains Expand to Level N) |  |
 | `goto_next_problem_file` | Go to the next open buffer that has diagnostics (JetBrains Select Next Problem File) | **spacemacs, hybrid** — normal: `` <space>b] ``, select: `` <space>b] `` |
 | `goto_prev_problem_file` | Go to the previous open buffer that has diagnostics (JetBrains Select Previous Problem File) | **spacemacs, hybrid** — normal: `` <space>b[ ``, select: `` <space>b[ `` |
 | `fix_doc_comment` | Write the doc comment for the definition at the cursor (JetBrains Fix Doc Comment) | **spacemacs, hybrid** — normal: `` <space>co ``, select: `` <space>co `` |

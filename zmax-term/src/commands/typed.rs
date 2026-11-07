@@ -40038,10 +40038,25 @@ fn map_region_lines(
     cx: &mut compositor::Context,
     f: impl Fn(&str, usize) -> String,
 ) -> anyhow::Result<()> {
+    map_lines(cx, false, f)
+}
+
+/// [`map_region_lines`], or over the whole buffer when `whole_if_unselected`
+/// and the primary selection is no wider than the cursor (the JetBrains rule
+/// for Convert Indents).
+fn map_lines(
+    cx: &mut compositor::Context,
+    whole_if_unselected: bool,
+    f: impl Fn(&str, usize) -> String,
+) -> anyhow::Result<()> {
     let (view, doc) = current!(cx.editor);
     let tab_width = doc.tab_width();
     let slice = doc.text().slice(..);
-    let (first, last) = primary_line_range(doc, view.id);
+    let (first, last) = if whole_if_unselected && doc.selection(view.id).primary().len() <= 1 {
+        (0, slice.len_lines().saturating_sub(1))
+    } else {
+        primary_line_range(doc, view.id)
+    };
 
     let mut changes = Vec::new();
     for line in first..=last {
@@ -40078,6 +40093,34 @@ fn untabify(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
         return Ok(());
     }
     map_region_lines(cx, zmax_core::whitespace::untabify)
+}
+
+/// JetBrains Edit > Convert Indents > To Spaces: rewrite the leading
+/// indentation of the selected lines (the whole buffer with no selection) as
+/// spaces; tabs after the indentation stay.
+fn indents_to_spaces(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    map_lines(cx, true, zmax_core::whitespace::indent_to_spaces)
+}
+
+/// JetBrains Edit > Convert Indents > To Tabs: rewrite the leading
+/// indentation of the selected lines (the whole buffer with no selection) as
+/// tabs plus the spaces left over below one tab width.
+fn indents_to_tabs(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    map_lines(cx, true, zmax_core::whitespace::indent_to_tabs)
 }
 
 fn join_lines_cmd(
@@ -69119,6 +69162,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Expand tabs in the region to spaces at the buffer tab width (emacs untabify).",
         fun: untabify,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "indents-to-spaces",
+        aliases: &[],
+        doc: "Rewrite the leading indentation of the selected lines, or of the whole buffer, as spaces.",
+        fun: indents_to_spaces,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "indents-to-tabs",
+        aliases: &[],
+        doc: "Rewrite the leading indentation of the selected lines, or of the whole buffer, as tabs.",
+        fun: indents_to_tabs,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

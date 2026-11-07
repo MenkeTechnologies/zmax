@@ -1539,6 +1539,7 @@ impl MappableCommand {
         vim_goto_column, "Goto screen column [count] (vim bar motion)",
         goto_next_buffer, "Goto next buffer",
         goto_previous_buffer, "Goto previous buffer",
+        goto_buffer_tab, "Goto the count-th buffer in buffer-line order (JetBrains Go to Tab N)",
         goto_line_end_newline, "Goto newline at line end",
         goto_first_nonwhitespace, "Goto first non-blank in line",
         trim_selections, "Trim whitespace from selections",
@@ -2282,7 +2283,8 @@ impl MappableCommand {
         fold_enable_on, "Set 'foldenable': folds back to 'foldlevel' (vim zN)",
         fold_more, "Fold more: close one more level of nested folds (zm)",
         fold_less, "Fold less: open one more level of nested folds (zr)",
-        fold_to_level, "Set foldlevel to the count outright (JetBrains Expand to Level N)",
+        fold_to_level, "Set foldlevel to the count outright (JetBrains Expand All to Level N)",
+        fold_block_to_level, "Open the fold at the cursor to the count's depth, closing deeper folds (JetBrains Expand to Level N)",
         goto_next_problem_file, "Go to the next open buffer that has diagnostics (JetBrains Select Next Problem File)",
         goto_prev_problem_file, "Go to the previous open buffer that has diagnostics (JetBrains Select Previous Problem File)",
         fix_doc_comment, "Write the doc comment for the definition at the cursor (JetBrains Fix Doc Comment)",
@@ -4215,6 +4217,20 @@ fn goto_next_buffer(cx: &mut Context) {
 
 fn goto_previous_buffer(cx: &mut Context) {
     goto_buffer(cx.editor, Direction::Backward, cx.count());
+}
+
+/// JetBrains "Go to Tab 1–9": switch to the count-th buffer (no count: the
+/// first) in the order the buffer line shows them. A count past the last
+/// buffer reports how many there are and stays put.
+fn goto_buffer_tab(cx: &mut Context) {
+    let n = cx.count();
+    let order = cx.editor.ordered_document_ids();
+    match order.get(n - 1) {
+        Some(&id) => cx.editor.switch(id, Action::Replace),
+        None => cx
+            .editor
+            .set_status(format!("no buffer {n}: {} open", order.len())),
+    }
 }
 
 fn goto_buffer(editor: &mut Editor, direction: Direction, count: usize) {
@@ -63195,6 +63211,27 @@ fn fold_to_level(cx: &mut Context) {
     doc.folds_mut().set_level(level);
     fold_snap_cursor(view, doc);
     cx.editor.set_status(format!("foldlevel={level}"));
+}
+
+/// JetBrains "Expand to Level 1–5": [`fold_to_level`] for the block at the
+/// caret only. The innermost fold around the cursor counts as level 1; folds
+/// inside it open down to the count's depth (no count: 1) and deeper ones
+/// close. The rest of the buffer and 'foldlevel' stay as they were.
+fn fold_block_to_level(cx: &mut Context) {
+    let level = cx.count();
+    ensure_folds(cx);
+    let (view, doc) = current!(cx.editor);
+    let line = doc.text().char_to_line(
+        doc.selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..)),
+    );
+    if !doc.folds_mut().set_level_within(line, level) {
+        cx.editor.set_status("no fold around the cursor");
+        return;
+    }
+    fold_snap_cursor(view, doc);
+    cx.editor.set_status(format!("block expanded to level {level}"));
 }
 
 fn fold_open_all(cx: &mut Context) {

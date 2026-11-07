@@ -1863,6 +1863,36 @@ async fn ex_retab_tabs_to_spaces() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// JetBrains Convert Indents: only leading blanks change; a cursor-wide
+/// selection converts the whole buffer, a wider one only its lines.
+#[tokio::test(flavor = "multi_thread")]
+async fn indents_convert_only_leading_blanks() -> anyhow::Result<()> {
+    let text = |app: &Application| zmax_view::doc!(app.editor).text().to_string();
+    let mut app = AppBuilder::new()
+        .with_input_text("#[x|]#\n      a  b\n \tc\td\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":indents-to-tabs<ret>"),
+                Some(&|app| assert_eq!(text(app), "x\n\t  a  b\n\tc\td\n")),
+            ),
+            (
+                Some(":indents-to-spaces<ret>"),
+                Some(&|app| assert_eq!(text(app), "x\n      a  b\n    c\td\n")),
+            ),
+            // `x` through the next line: the third keeps its spaces.
+            (
+                Some("ggxx:indents-to-tabs<ret>"),
+                Some(&|app| assert_eq!(text(app), "x\n\t  a  b\n    c\td\n")),
+            ),
+        ],
+        false,
+    )
+    .await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn ex_left_align() -> anyhow::Result<()> {
     test(("    #[|a]#b\n", ":left 2<ret>", "  #[|a]#b\n")).await?;

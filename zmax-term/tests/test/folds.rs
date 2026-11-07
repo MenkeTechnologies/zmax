@@ -1,5 +1,8 @@
 use super::*;
 
+use zmax_core::hashmap;
+use zmax_term::keymap;
+
 /// A buffer whose fold `foldmethod=marker` can find. Markers keep these tests
 /// independent of tree-sitter and of the indent settings, and keep the
 /// (process-global) 'foldmethod' from creating folds in any other test's buffer
@@ -85,4 +88,42 @@ async fn buffer_opened_later_gets_its_folds() -> anyhow::Result<()> {
     )
     .await?;
     Ok(())
+}
+
+/// JetBrains Expand to Level N acts on the fold around the cursor only: it
+/// opens that fold, closes the ones nested deeper than the count, and leaves
+/// the other top-level fold as it was.
+#[tokio::test(flavor = "multi_thread")]
+async fn fold_block_to_level_leaves_other_blocks_alone() -> anyhow::Result<()> {
+    let file = temp_file_with_contents("a {{{\nb {{{\nc\nd }}}\ne }}}\nf {{{\ng\nh }}}\n")?;
+    let mut config = Config::default();
+    config.keys.insert(
+        zmax_view::document::Mode::Normal,
+        keymap!({ "Normal mode" "Z" => fold_block_to_level, }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":set foldmethod=marker<ret>zRggZ"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let closed: Vec<(usize, usize)> = zmax_view::doc!(app.editor)
+                        .folds()
+                        .iter()
+                        .filter(|f| f.closed)
+                        .map(|f| (f.start, f.end))
+                        .collect();
+                    assert_eq!(closed, vec![(1, 3)]);
+                }),
+            ),
+            (Some(":set foldmethod=manual<ret>"), None),
+        ],
+        false,
+    )
+    .await
 }
