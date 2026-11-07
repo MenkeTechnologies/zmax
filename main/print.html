@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-50031a5a.js";
+            window.path_to_searchindex_js = "searchindex-c29e3b63.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -5473,7 +5473,7 @@ without scrolling.</p>
 <tr><td><code>problems_jump_to_source</code></td><td>Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source)</td><td></td></tr>
 <tr><td><code>problems_quick_fixes</code></td><td>Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes)</td><td></td></tr>
 <tr><td><code>toggle_search_preview</code></td><td>Move to the match while typing a search, or only on Enter (JetBrains Scroll to Results During Typing)</td><td></td></tr>
-<tr><td><code>toggle_popup_hints</code></td><td>Turn signature-help popups on or off (JetBrains Toggle Popup Hints)</td><td></td></tr>
+<tr><td><code>toggle_popup_hints</code></td><td>Turn signature-help popups on or off for this file (JetBrains Toggle Popup Hints)</td><td></td></tr>
 <tr><td><code>zen_mode</code></td><td>Distraction Free and full screen together (JetBrains Toggle Zen Mode)</td><td></td></tr>
 <tr><td><code>change_view_mode</code></td><td>Pick a view mode: distraction free, zen, full screen, focus (JetBrains View Mode)</td><td></td></tr>
 <tr><td><code>keymap_to_csv</code></td><td>Export every key binding as mode,keys,command CSV (JetBrains Export Keymap to CSV)</td><td></td></tr>
@@ -5526,6 +5526,7 @@ without scrolling.</p>
 <tr><td><code>hide_side_windows</code></td><td>Fold the workbench’s left column away (JetBrains Hide Side Tool Windows)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;WS</code>, select: <code>&lt;space&gt;WS</code></td></tr>
 <tr><td><code>hide_bottom_windows</code></td><td>Fold the workbench’s bottom drawer away (JetBrains Hide Bottom Tool Windows)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;WB</code>, select: <code>&lt;space&gt;WB</code></td></tr>
 <tr><td><code>hide_active_tool_window</code></td><td>Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wq</code>, select: <code>&lt;space&gt;Wq</code></td></tr>
+<tr><td><code>focus_editor</code></td><td>Return focus to the editor, leaving tool windows open (JetBrains Focus Editor)</td><td></td></tr>
 <tr><td><code>jump_to_last_tool_window</code></td><td>Toggle focus between the editor and the last tool window (JetBrains F12)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;tab&gt;</code>, select: <code>&lt;space&gt;W&lt;tab&gt;</code></td></tr>
 <tr><td><code>stretch_tool_window_left</code></td><td>Narrow the workbench’s left drawer (JetBrains Stretch to Left)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;left&gt;</code>, select: <code>&lt;space&gt;W&lt;left&gt;</code></td></tr>
 <tr><td><code>stretch_tool_window_right</code></td><td>Widen the workbench’s left drawer (JetBrains Stretch to Right)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;right&gt;</code>, select: <code>&lt;space&gt;W&lt;right&gt;</code></td></tr>
@@ -10140,11 +10141,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>10036</strong> (84.2%)</li>
-<li>Partial: <strong>896</strong> (7.5%)</li>
+<li>Ported: <strong>10040</strong> (84.2%)</li>
+<li>Partial: <strong>892</strong> (7.5%)</li>
 <li>Absent: <strong>994</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 3014 static commands, 3235 typable <code>:</code> commands, 4745 default keybindings</li>
+<li>zmax source surface: 3015 static commands, 3235 typable <code>:</code> commands, 4745 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10207,7 +10208,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1065</td><td style="text-align: right">321</td><td style="text-align: right">53.2%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1069</td><td style="text-align: right">317</td><td style="text-align: right">53.4%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10303,7 +10304,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">31</td><td style="text-align: right">5</td><td style="text-align: right">77.5%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">809</td><td style="text-align: right">263</td><td style="text-align: right">50.3%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">813</td><td style="text-align: right">259</td><td style="text-align: right">50.6%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">8</td><td style="text-align: right">4</td><td style="text-align: right">50.0%</td></tr>
