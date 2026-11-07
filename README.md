@@ -222,7 +222,11 @@ leaving the editor:
   `git ls-files` is of course still a process; the picker is not.
 - **IDE workbench** (`:ide` / `F2`) — a project file-tree, a tree-sitter
   structure outline, problems/run panels, and an error-stripe minimap; the
-  whole layout persists to appdata.
+  whole layout persists to appdata. `:layout-save NAME` keeps named layouts
+  (`:layout NAME` switches, `:layout-restore` undoes changes since the last
+  save or switch, `:layout-delete NAME` forgets one), and `:navbar-location
+  top|bottom|hide` places the breadcrumb trail on the toolbar, in the status
+  bar, or nowhere.
 - **Integrated terminal** (`:terminal`) — a PTY shell in a pane, with a `C-\`
   window leader for split/focus and click-to-focus across panes; `terminal_find`
   searches the scrollback, `terminal_copy_all` copies it, and

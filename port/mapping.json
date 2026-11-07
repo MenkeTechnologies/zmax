@@ -85055,11 +85055,12 @@
  },
  {
   "spec_id": "jetbrains-actions.ChangeToolWindowLayout",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:layout",
    "static:restore_default_layout"
   ],
-  "note": "ChangeToolWindowLayout (Layout) = zmax `restore_default_layout`: resets the workbench drawers to the default layout (commands.rs:55359); there are no named saved tool-window layouts to pick from."
+  "note": "Window | Layouts = zmax `:layout NAME`: switches the IDE workbench to a layout saved with `:layout-save` (geometry, folds, bottom tabs, expanded folders, shown/hidden) and makes it current; `:layout` alone lists the saved layouts with the current one starred, and `restore_default_layout` is the factory layout (NamedLayouts::select, appdata.rs)."
  },
  {
   "spec_id": "jetbrains-actions.CheckForUpdate",
@@ -86259,11 +86260,12 @@
  },
  {
   "spec_id": "jetbrains-actions.RestoreDefaultLayout",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "typable:layout-restore",
    "static:restore_default_layout"
   ],
-  "note": "RestoreDefaultLayout (Restore Current Layout) = zmax `restore_default_layout`: resets drawer widths, folds and splits to the built-in default (ui/ide.rs:869-880); the IDE restores the currently selected named layout, zmax has no named workbench layouts."
+  "note": "Restore Current Layout = zmax `:layout-restore`: puts the IDE workbench back into the current named layout (the last one saved with `:layout-save` or picked with `:layout`), undoing drawer changes since; before any layout is saved it falls back to the factory layout that `restore_default_layout` restores (NamedLayouts::current_layout, appdata.rs; Ide::apply_named_layout, ui/ide.rs)."
  },
  {
   "spec_id": "jetbrains-actions.RunDashboard.AddConfiguration",
@@ -89150,5 +89152,21 @@
    "typable:navbar-location"
   ],
   "note": "Navigation Bar location In Status Bar = zmax `:navbar-location bottom`: the IDE breadcrumb trail (file icon, directories \u203a file \u203a innermost symbol at the cursor) moves off the toolbar into the workbench status bar, in place of the file path segment (navbar_location, commands.rs; breadcrumb / render_statusbar, ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.StoreNewLayout",
+  "status": "ported",
+  "evidence": [
+   "typable:layout-save"
+  ],
+  "note": "Save Current Layout as New = zmax `:layout-save NAME`: stores the IDE workbench layout (drawer widths, folds, bottom columns and their tabs, minimap placement, expanded tree folders, shown/hidden) under NAME in <config-dir>/ide-layouts.toml and makes it the current layout (NamedLayouts::store, appdata.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.StoreDefaultLayout",
+  "status": "ported",
+  "evidence": [
+   "typable:layout-save"
+  ],
+  "note": "Save Changes in Current Layout = zmax `:layout-save` with no name: overwrites the current named layout (the last one saved or picked; `default` before any) with the workbench as it is now (NamedLayouts::store, appdata.rs)."
  }
 ]

@@ -27201,6 +27201,137 @@ fn tree_sitter_layers(
     Ok(())
 }
 
+/// Run `f` on the editor view, where the IDE workbench lives, once the
+/// command line has closed.
+fn with_editor_view(
+    cx: &mut compositor::Context,
+    f: impl FnOnce(&mut Editor, &mut crate::ui::EditorView) + Send + 'static,
+) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                f(editor, view);
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// `:layout-save [NAME]` — JetBrains "Save Current Layout as New…"
+/// (`StoreNewLayout`) with a name, "Save Changes in Current Layout"
+/// (`StoreDefaultLayout`) without: store the workbench's drawer widths, folds,
+/// bottom columns and tabs, and expanded tree folders.
+fn layout_save(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().map(|n| n.to_string());
+    with_editor_view(cx, move |editor, view| {
+        let Some(layout) = view.ide_layout() else {
+            editor.set_error("no workbench to save (:ide opens it)");
+            return;
+        };
+        let mut named = crate::appdata::NamedLayouts::load();
+        let saved = named.store(name.as_deref(), layout);
+        match named.save() {
+            Ok(()) => editor.set_status(format!("layout saved as {saved}")),
+            Err(err) => editor.set_error(format!("cannot save layout {saved}: {err}")),
+        }
+    });
+    Ok(())
+}
+
+/// `:layout [NAME]` — JetBrains Window | Layouts (`ChangeToolWindowLayout`):
+/// put the workbench into the named saved layout and make it current. With no
+/// name, list the saved layouts, the current one starred.
+fn layout(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut named = crate::appdata::NamedLayouts::load();
+    let Some(name) = args.first() else {
+        let list: Vec<String> = named
+            .layouts
+            .keys()
+            .map(|n| {
+                if *n == named.current {
+                    format!("*{n}")
+                } else {
+                    n.clone()
+                }
+            })
+            .collect();
+        if list.is_empty() {
+            cx.editor
+                .set_status("no saved layouts (:layout-save NAME saves one)");
+        } else {
+            cx.editor
+                .set_status(format!("layouts: {}", list.join("  ")));
+        }
+        return Ok(());
+    };
+    let layout = named
+        .select(name)
+        .cloned()
+        .with_context(|| format!("no layout named {name}"))?;
+    named.save()?;
+    let name = name.to_string();
+    with_editor_view(cx, move |editor, view| {
+        if view.apply_ide_layout(&layout) {
+            editor.set_status(format!("layout {name}"));
+        } else {
+            editor.set_error("no workbench to lay out (:ide opens it)");
+        }
+    });
+    Ok(())
+}
+
+/// `:layout-restore` — JetBrains "Restore Current Layout"
+/// (`RestoreDefaultLayout`): undo the drawer changes made since the current
+/// layout was saved or picked. Before any save that is the factory layout.
+fn layout_restore(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let named = crate::appdata::NamedLayouts::load();
+    let saved = named.current_layout().cloned().map(|l| (named.current, l));
+    with_editor_view(cx, move |editor, view| {
+        let restored = match &saved {
+            Some((_, layout)) => view.apply_ide_layout(layout),
+            None => view.restore_ide_layout(),
+        };
+        match (restored, saved) {
+            (false, _) => editor.set_error("no workbench to restore (:ide opens it)"),
+            (true, Some((name, _))) => editor.set_status(format!("layout {name} restored")),
+            (true, None) => editor.set_status("no saved layout: factory layout restored"),
+        }
+    });
+    Ok(())
+}
+
+/// `:layout-delete NAME` — forget a layout saved with `:layout-save`.
+fn layout_delete(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = &args[0];
+    let mut named = crate::appdata::NamedLayouts::load();
+    if !named.remove(name) {
+        bail!("no layout named {name}");
+    }
+    named.save()?;
+    cx.editor.set_status(format!("layout {name} deleted"));
+    Ok(())
+}
+
 /// `:navbar-location [top|bottom|hide]` — JetBrains `NavBarLocationTop` /
 /// `NavBarLocationBottom` / `NavBarLocationHide`: draw the IDE breadcrumb
 /// trail on the toolbar, in the status bar in place of the file path, or
@@ -67526,6 +67657,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "layout",
+        aliases: &[],
+        doc: "Put the IDE workbench into a layout saved with `:layout-save` and make it current; with no name, list the saved layouts (JetBrains Window | Layouts).",
+        fun: layout,
+        completer: CommandCompleter::positional(&[completers::ide_layout]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "layout-save",
+        aliases: &[],
+        doc: "Save the IDE workbench layout (drawer sizes, folds, bottom tabs, expanded folders) under NAME and make it current, or over the current layout with no NAME (JetBrains Save Current Layout as New / Save Changes in Current Layout).",
+        fun: layout_save,
+        completer: CommandCompleter::positional(&[completers::ide_layout]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "layout-restore",
+        aliases: &[],
+        doc: "Put the IDE workbench back into the current saved layout, or the factory layout before any save (JetBrains Restore Current Layout).",
+        fun: layout_restore,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "layout-delete",
+        aliases: &[],
+        doc: "Forget a layout saved with `:layout-save`.",
+        fun: layout_delete,
+        completer: CommandCompleter::positional(&[completers::ide_layout]),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

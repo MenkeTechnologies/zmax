@@ -785,6 +785,18 @@ impl EditorView {
         }
     }
 
+    /// Put the workbench into a saved layout, shown or hidden as it was saved.
+    /// False when there is no workbench.
+    pub fn apply_ide_layout(&mut self, layout: &crate::appdata::IdeLayout) -> bool {
+        match self.ide.as_mut() {
+            Some(ide) => {
+                ide.apply_named_layout(layout);
+                true
+            }
+            None => false,
+        }
+    }
+
     /// JetBrains "Hide Side Tool Windows" (`HideSideWindows`): fold the left
     /// column away, or bring it back. `None` when there is no workbench.
     pub fn toggle_side_windows(&mut self) -> Option<bool> {

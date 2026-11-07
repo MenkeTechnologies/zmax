@@ -866,6 +866,15 @@ pub mod completers {
             .collect()
     }
 
+    /// The names of the workbench layouts saved with `:layout-save`.
+    pub fn ide_layout(_editor: &Editor, input: &str) -> Vec<Completion> {
+        let named = crate::appdata::NamedLayouts::load();
+        fuzzy_match(input, named.layouts.keys(), false)
+            .into_iter()
+            .map(|(name, _)| ((0..), name.clone().into()))
+            .collect()
+    }
+
     /// `:navbar-location` placements.
     pub fn navbar_location(_editor: &Editor, input: &str) -> Vec<Completion> {
         let names = crate::commands::NavBarLocation::ALL.map(|loc| loc.name());

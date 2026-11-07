@@ -1476,6 +1476,10 @@
 | `:debug-eval` | Evaluate expression in current debug context. |
 | `:close`, `:clo` | Close the current window (vim :close). Refuses to close the last window. |
 | `:only`, `:on` | Close all windows except the current one (vim :only). |
+| `:layout` | Put the IDE workbench into a layout saved with `:layout-save` and make it current; with no name, list the saved layouts (JetBrains Window | Layouts). |
+| `:layout-save` | Save the IDE workbench layout (drawer sizes, folds, bottom tabs, expanded folders) under NAME and make it current, or over the current layout with no NAME (JetBrains Save Current Layout as New / Save Changes in Current Layout). |
+| `:layout-restore` | Put the IDE workbench back into the current saved layout, or the factory layout before any save (JetBrains Restore Current Layout). |
+| `:layout-delete` | Forget a layout saved with `:layout-save`. |
 | `:navbar-location` | Place the IDE breadcrumb trail: `top` (the toolbar), `bottom` (the status bar, in place of the file path) or `hide`; with no argument, show the current placement (JetBrains Navigation Bar location). |
 | `:split-chooser` | Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser). |
 | `:vsplit`, `:vs` | Open the file in a vertical split. |

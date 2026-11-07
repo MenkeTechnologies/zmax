@@ -2,7 +2,8 @@
 //! stored at `<config-dir>/appdata.toml`. Saved on exit, restored on a no-file launch.
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -119,9 +120,134 @@ pub fn save(data: &AppData) {
     let _ = std::fs::write(path, contents);
 }
 
+/// The workbench layouts saved by name — JetBrains Window | Layouts:
+/// "Save Current Layout as New…" (`StoreNewLayout`), "Save Changes in Current
+/// Layout" (`StoreDefaultLayout`), "Restore Current Layout" and picking one.
+/// Kept apart from [`AppData`], which is rebuilt from the live session on exit,
+/// at `<config-dir>/ide-layouts.toml`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NamedLayouts {
+    /// The layout last saved or picked: the one a save without a name writes
+    /// and a restore goes back to.
+    pub current: String,
+    pub layouts: BTreeMap<String, IdeLayout>,
+}
+
+impl Default for NamedLayouts {
+    fn default() -> Self {
+        NamedLayouts {
+            current: "default".to_string(),
+            layouts: BTreeMap::new(),
+        }
+    }
+}
+
+impl NamedLayouts {
+    fn store_path() -> PathBuf {
+        zmax_loader::config_dir().join("ide-layouts.toml")
+    }
+
+    pub fn load() -> NamedLayouts {
+        Self::load_from(&Self::store_path())
+    }
+
+    pub fn save(&self) -> std::io::Result<()> {
+        self.save_to(&Self::store_path())
+    }
+
+    fn load_from(path: &Path) -> NamedLayouts {
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|s| toml::from_str(&s).ok())
+            .unwrap_or_default()
+    }
+
+    fn save_to(&self, path: &Path) -> std::io::Result<()> {
+        let contents = toml::to_string_pretty(self).map_err(std::io::Error::other)?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(path, contents)
+    }
+
+    /// Save `layout` under `name` and make it current, or, with no name, over
+    /// the current layout. Returns the name it was saved under.
+    pub fn store(&mut self, name: Option<&str>, layout: IdeLayout) -> String {
+        if let Some(name) = name {
+            self.current = name.to_string();
+        }
+        self.layouts.insert(self.current.clone(), layout);
+        self.current.clone()
+    }
+
+    /// Make `name` current and return its layout; `None` (and no change) for
+    /// a name never saved.
+    pub fn select(&mut self, name: &str) -> Option<&IdeLayout> {
+        let layout = self.layouts.get(name)?;
+        self.current = name.to_string();
+        Some(layout)
+    }
+
+    /// The current layout, if it has been saved.
+    pub fn current_layout(&self) -> Option<&IdeLayout> {
+        self.layouts.get(&self.current)
+    }
+
+    /// Forget `name`; removing the current layout makes `default` current.
+    pub fn remove(&mut self, name: &str) -> bool {
+        let removed = self.layouts.remove(name).is_some();
+        if removed && self.current == name {
+            self.current = NamedLayouts::default().current;
+        }
+        removed
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn named_layouts_save_select_and_survive_a_reload() {
+        let narrow = IdeLayout {
+            left_width: 20,
+            ..Default::default()
+        };
+        let wide = IdeLayout {
+            left_width: 60,
+            fold_problems: true,
+            ..Default::default()
+        };
+        let mut named = NamedLayouts::default();
+        assert!(named.current_layout().is_none(), "nothing saved yet");
+
+        // A save without a name goes to the current layout, `default`.
+        assert_eq!(named.store(None, narrow.clone()), "default");
+        // Saving as a new name makes that one current; saving again without a
+        // name overwrites it, not `default`.
+        assert_eq!(named.store(Some("review"), narrow), "review");
+        named.store(None, wide);
+        assert_eq!(named.layouts["default"].left_width, 20);
+        assert_eq!(named.current_layout().unwrap().left_width, 60);
+
+        assert!(named.select("nope").is_none());
+        assert_eq!(named.current, "review", "an unknown name changes nothing");
+        assert_eq!(named.select("default").unwrap().left_width, 20);
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("sub").join("ide-layouts.toml");
+        named.save_to(&path).unwrap();
+        let mut back = NamedLayouts::load_from(&path);
+        assert_eq!(back.current, "default");
+        assert!(back.layouts["review"].fold_problems);
+
+        assert!(back.remove("default"));
+        assert!(!back.remove("default"));
+        assert_eq!(back.current, "default", "current falls back to default");
+        assert!(back.current_layout().is_none());
+        assert!(back.layouts.contains_key("review"));
+    }
 
     #[test]
     fn ide_layout_survives_toml_round_trip() {

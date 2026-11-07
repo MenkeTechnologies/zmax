@@ -1748,6 +1748,16 @@ impl Ide {
         }
     }
 
+    /// A layout saved by name (JetBrains Window | Layouts): its geometry and
+    /// folds, and the workbench shown or hidden as it was when saved.
+    pub fn apply_named_layout(&mut self, l: &crate::appdata::IdeLayout) {
+        self.apply_layout(l);
+        self.visible = l.open;
+        if !self.visible {
+            self.focus = Focus::Editor;
+        }
+    }
+
     /// F2: toggle the whole workbench (and focus the tree when showing).
     pub fn toggle(&mut self) {
         self.visible = !self.visible;
@@ -6806,6 +6816,27 @@ mod tool_window_tests {
         assert!(!ide.tool_window_shown("project"));
         ide.open_tool_window("project", true);
         assert!(ide.visible() && ide.tool_window_shown("project"));
+    }
+
+    /// A layout picked by name brings back its geometry and whether the
+    /// workbench was shown; a hidden one hands the keyboard to the editor.
+    #[test]
+    fn a_named_layout_restores_geometry_and_visibility() {
+        let mut ide = Ide::new();
+        ide.left_width = 50;
+        ide.toggle_bottom_windows();
+        ide.toggle();
+        assert!(!ide.visible());
+        let saved = ide.layout();
+
+        let mut other = Ide::new();
+        other.focus = Focus::Project;
+        assert!(other.visible());
+        other.apply_named_layout(&saved);
+        assert_eq!(other.left_width, 50);
+        assert!(other.fold_problems);
+        assert!(!other.visible());
+        assert!(other.focus == Focus::Editor);
     }
 
     /// JetBrains `NavBarLocationBottom`: the status bar shows the trail
