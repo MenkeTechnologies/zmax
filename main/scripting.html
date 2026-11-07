@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d60d7ac2.js";
+            window.path_to_searchindex_js = "searchindex-eb2a01bc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -311,7 +311,10 @@ embedded languages behind one read-eval-print loop:</p>
 <ul>
 <li><strong>Enter</strong> evaluates, <strong>Alt-Enter</strong> inserts a newline.</li>
 <li><strong>Tab</strong> / <strong>Shift-Tab</strong> cycle the active language.</li>
-<li><strong>↑/↓</strong> or <strong>C-p/C-n</strong> browse per-language history.</li>
+<li><strong>↑/↓</strong> or <strong>C-p/C-n</strong> step through per-language history.</li>
+<li><strong>C-r</strong> browses that history: type to filter (case-insensitive), <strong>↑/↓</strong> pick
+(another <strong>C-r</strong> steps to the next older match), <strong>Enter</strong> puts the entry in the
+input to edit or run, <strong>Esc</strong> backs out.</li>
 <li><strong>C-l</strong> clears the transcript, <strong>PgUp/PgDn</strong> scroll, <strong>Esc</strong> closes.</li>
 </ul>
 <p><code>:repl awk</code> (etc.) opens directly on a given language. Per-language input history
