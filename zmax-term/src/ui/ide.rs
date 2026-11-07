@@ -1008,6 +1008,7 @@ impl Ide {
 
     /// Focus the editor but keep the workbench visible (the `--ide` boot state).
     pub fn focus_editor(&mut self) {
+        self.active_tool(); // remember the window the keyboard leaves
         self.focus = Focus::Editor;
     }
 
@@ -1604,6 +1605,23 @@ impl Ide {
         if self.focus == owner && owner != Focus::Editor {
             self.focus = Focus::Editor;
         }
+    }
+
+    /// JetBrains "Hide Active Tool Window" (Shift-Esc): fold the focused tool
+    /// window — or the last one focused, when the editor has it — and hand the
+    /// keyboard to the editor. False when the workbench is not shown.
+    pub fn hide_active(&mut self) -> bool {
+        if !self.visible {
+            return false;
+        }
+        match self.active_tool() {
+            Focus::Project => self.fold_project = true,
+            Focus::Structure => self.fold_structure = true,
+            Focus::Problems => self.fold_problems = true,
+            Focus::Editor => return false,
+        }
+        self.focus = Focus::Editor;
+        true
     }
 
     /// Wipe the Run console output (keeps the process running; new output still
@@ -6958,6 +6976,39 @@ mod tool_window_tests {
 
         ide.select_tab(BottomTab::Problems);
         assert!(!ide.tool_window_shown("registers"));
+    }
+
+    /// Shift-Esc folds the window that has the keyboard, or — from the editor —
+    /// the one that had it last; Focus Editor moves the keyboard and folds
+    /// nothing.
+    #[test]
+    fn hide_active_folds_the_window_focus_came_from() {
+        let mut ide = Ide::new();
+        ide.focus_panel("structure");
+        ide.focus_editor();
+        assert!(
+            ide.tool_window_shown("structure"),
+            "Focus Editor folds nothing"
+        );
+
+        assert!(
+            ide.hide_active(),
+            "the editor has focus: the last window goes"
+        );
+        assert!(!ide.tool_window_shown("structure"));
+        assert!(ide.tool_window_shown("project"));
+        assert!(ide.focus == Focus::Editor);
+
+        ide.focus_panel("registers");
+        assert!(ide.hide_active());
+        assert!(!ide.tool_window_shown("registers"));
+        assert!(ide.focus == Focus::Editor);
+
+        ide.toggle_visible();
+        assert!(
+            !ide.hide_active(),
+            "nothing to hide with the workbench down"
+        );
     }
 
     /// With the whole workbench hidden nothing counts as shown, so a toggle

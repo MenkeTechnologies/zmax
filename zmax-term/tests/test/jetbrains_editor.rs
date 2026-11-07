@@ -947,6 +947,56 @@ async fn goto_buffer_tab_picks_the_nth_buffer() -> anyhow::Result<()> {
     .await
 }
 
+/// Toggle Popup Hints for Current File switches the buffer it ran in; the
+/// other buffer keeps its popups.
+#[tokio::test(flavor = "multi_thread")]
+async fn popup_hints_toggle_stays_with_its_file() -> anyhow::Result<()> {
+    let files = [
+        temp_file_with_contents("one\n")?,
+        temp_file_with_contents("two\n")?,
+    ];
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => toggle_popup_hints,
+            "X" => goto_next_buffer,
+        }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_file(files[0].path(), None)
+        .with_file(files[1].path(), None)
+        .build()?;
+    let off = |app: &Application| {
+        let doc = zmax_view::doc!(app.editor);
+        (doc.text().to_string(), doc.popup_hints_off)
+    };
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("Z"),
+                Some(&|app| assert_eq!(off(app), ("one\n".into(), true))),
+            ),
+            (
+                Some("X"),
+                Some(&|app| assert_eq!(off(app), ("two\n".into(), false))),
+            ),
+            (
+                Some("X"),
+                Some(&|app| assert_eq!(off(app), ("one\n".into(), true))),
+            ),
+            (
+                Some("Z"),
+                Some(&|app| assert_eq!(off(app), ("one\n".into(), false))),
+            ),
+        ],
+        false,
+    )
+    .await
+}
+
 /// Select Single Line at Caret keeps only the line the cursor is on, even
 /// when the selection spanned more.
 #[tokio::test(flavor = "multi_thread")]

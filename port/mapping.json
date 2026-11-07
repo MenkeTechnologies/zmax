@@ -80106,11 +80106,11 @@
  },
  {
   "spec_id": "jetbrains-actions.FocusEditor",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:hide_active_tool_window"
+   "static:focus_editor"
   ],
-  "note": "FocusEditor (Focus Editor) = zmax `hide_active_tool_window`: returns focus to the editor but also hides the tool window, where JetBrains Focus Editor leaves it open."
+  "note": "Focus Editor = zmax `focus_editor`: hands the keyboard back to the editor and leaves every workbench tool window open (Ide::focus_editor, ui/ide.rs); `hide_active_tool_window` is the Shift-Esc variant that also folds the window."
  },
  {
   "spec_id": "jetbrains-actions.Forward",
@@ -81014,7 +81014,7 @@
   "evidence": [
    "static:hide_active_tool_window"
   ],
-  "note": "HideActiveWindow (Hide Active Tool Window) = zmax `hide_active_tool_window`: `hide_active_tool_window` hides the active tool window and returns focus to the editor (JetBrains Shift-Esc)"
+  "note": "HideActiveWindow (Hide Active Tool Window) = zmax `hide_active_tool_window`: folds the focused workbench tool window, or the last one focused when the editor has the keyboard, and returns focus to the editor (Ide::hide_active, ui/ide.rs; JetBrains Shift-Esc)."
  },
  {
   "spec_id": "jetbrains-actions.HideAllWindows",
@@ -81314,19 +81314,19 @@
  },
  {
   "spec_id": "jetbrains-actions.MoveTabDown",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:hsplit"
+   "static:split_down_and_move"
   ],
-  "note": "MoveTabDown (Split and Move Down) = zmax `hsplit`: opens a bottom split on the same document; IntelliJ moves the tab out of the original group, zmax leaves the original view."
+  "note": "Split and Move Down = zmax `split_down_and_move`: opens a bottom split on this buffer; the old group steps back to the buffer it showed before (`goto_previous_buffer`), so the file is in the new split only. With a single buffer open there is nothing to step back to and it is a plain split (commands.rs split_and_move)."
  },
  {
   "spec_id": "jetbrains-actions.MoveTabRight",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:vsplit"
+   "static:split_right_and_move"
   ],
-  "note": "MoveTabRight (Split and Move Right) = zmax `vsplit`: opens a right split on the same document; IntelliJ moves the tab out of the original group, zmax leaves the original view."
+  "note": "Split and Move Right = zmax `split_right_and_move`: opens a right split on this buffer; the old group steps back to the buffer it showed before (`goto_previous_buffer`), so the file is in the new split only. With a single buffer open there is nothing to step back to and it is a plain split (commands.rs split_and_move)."
  },
  {
   "spec_id": "jetbrains-actions.NewDir",
@@ -84796,11 +84796,11 @@
  },
  {
   "spec_id": "jetbrains-actions.TogglePopupHints",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:toggle_popup_hints"
   ],
-  "note": "Toggle Popup Hints for Current File ~ zmax `toggle_popup_hints`: switches signature-help popups for every buffer, not for the current file alone."
+  "note": "Toggle Popup Hints for Current File = zmax `toggle_popup_hints`: flips Document::popup_hints_off for this buffer only, so signature-help popups stop (or resume) opening while typing in it; other buffers are untouched and a manual signature-help request still opens one (handlers/signature_help.rs). `:toggle-option lsp.auto-signature-help` switches every buffer."
  },
  {
   "spec_id": "jetbrains-actions.EmmetNextEditPoint",

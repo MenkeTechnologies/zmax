@@ -2155,7 +2155,7 @@ impl MappableCommand {
         problems_jump_to_source, "Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source)",
         problems_quick_fixes, "Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes)",
         toggle_search_preview, "Move to the match while typing a search, or only on Enter (JetBrains Scroll to Results During Typing)",
-        toggle_popup_hints, "Turn signature-help popups on or off (JetBrains Toggle Popup Hints)",
+        toggle_popup_hints, "Turn signature-help popups on or off for this file (JetBrains Toggle Popup Hints)",
         zen_mode, "Distraction Free and full screen together (JetBrains Toggle Zen Mode)",
         change_view_mode, "Pick a view mode: distraction free, zen, full screen, focus (JetBrains View Mode)",
         keymap_to_csv, "Export every key binding as mode,keys,command CSV (JetBrains Export Keymap to CSV)",
@@ -2208,6 +2208,7 @@ impl MappableCommand {
         hide_side_windows, "Fold the workbench's left column away (JetBrains Hide Side Tool Windows)",
         hide_bottom_windows, "Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows)",
         hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
+        focus_editor, "Return focus to the editor, leaving tool windows open (JetBrains Focus Editor)",
         jump_to_last_tool_window, "Toggle focus between the editor and the last tool window (JetBrains F12)",
         stretch_tool_window_left, "Narrow the workbench's left drawer (JetBrains Stretch to Left)",
         stretch_tool_window_right, "Widen the workbench's left drawer (JetBrains Stretch to Right)",
@@ -15365,14 +15366,17 @@ fn toggle_search_preview(cx: &mut Context) {
 }
 
 /// JetBrains "Toggle Popup Hints for Current File" (`TogglePopupHints`):
-/// signature-help popups on or off.
+/// signature-help popups on or off while typing in this buffer only. Every
+/// buffer at once is `:toggle-option lsp.auto-signature-help`.
 fn toggle_popup_hints(cx: &mut Context) {
-    let mut bridge = crate::compositor::Context {
-        editor: cx.editor,
-        jobs: cx.jobs,
-        scroll: None,
-    };
-    typed::run_command_line(&mut bridge, "toggle-option lsp.auto-signature-help");
+    let doc = doc_mut!(cx.editor);
+    doc.popup_hints_off = !doc.popup_hints_off;
+    let off = doc.popup_hints_off;
+    cx.editor.set_status(if off {
+        "popup hints: off for this file"
+    } else {
+        "popup hints: on for this file"
+    });
 }
 
 /// Split a vim search input into `(pattern, offset)`: the offset is everything
@@ -57754,11 +57758,25 @@ fn hide_bottom_windows(cx: &mut Context) {
     }));
 }
 
-/// JetBrains "Hide Active Tool Window" (Shift-Esc): return focus to the editor.
+/// JetBrains "Hide Active Tool Window" (Shift-Esc): fold the active tool
+/// window and return focus to the editor.
 fn hide_active_tool_window(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let hidden = compositor
+            .find::<crate::ui::EditorView>()
+            .is_some_and(|view| view.hide_active_tool_window());
+        if !hidden {
+            cx.editor.set_status("No tool window to hide");
+        }
+    }));
+}
+
+/// JetBrains "Focus Editor" (`FocusEditor`): return focus to the editor and
+/// leave the tool windows as they are.
+fn focus_editor(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, _cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-            view.hide_active_tool_window();
+            view.focus_editor();
         }
     }));
 }

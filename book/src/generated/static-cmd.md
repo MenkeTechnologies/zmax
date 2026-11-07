@@ -1762,7 +1762,7 @@
 | `problems_jump_to_source` | Select the diagnostic chosen in the Problems panel (JetBrains Jump to Source) |  |
 | `problems_quick_fixes` | Code actions for the diagnostic chosen in the Problems panel (JetBrains Show Quick Fixes) |  |
 | `toggle_search_preview` | Move to the match while typing a search, or only on Enter (JetBrains Scroll to Results During Typing) |  |
-| `toggle_popup_hints` | Turn signature-help popups on or off (JetBrains Toggle Popup Hints) |  |
+| `toggle_popup_hints` | Turn signature-help popups on or off for this file (JetBrains Toggle Popup Hints) |  |
 | `zen_mode` | Distraction Free and full screen together (JetBrains Toggle Zen Mode) |  |
 | `change_view_mode` | Pick a view mode: distraction free, zen, full screen, focus (JetBrains View Mode) |  |
 | `keymap_to_csv` | Export every key binding as mode,keys,command CSV (JetBrains Export Keymap to CSV) |  |
@@ -1815,6 +1815,7 @@
 | `hide_side_windows` | Fold the workbench's left column away (JetBrains Hide Side Tool Windows) | **spacemacs, hybrid** — normal: `` <space>WS ``, select: `` <space>WS `` |
 | `hide_bottom_windows` | Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows) | **spacemacs, hybrid** — normal: `` <space>WB ``, select: `` <space>WB `` |
 | `hide_active_tool_window` | Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc) | **spacemacs, hybrid** — normal: `` <space>Wq ``, select: `` <space>Wq `` |
+| `focus_editor` | Return focus to the editor, leaving tool windows open (JetBrains Focus Editor) |  |
 | `jump_to_last_tool_window` | Toggle focus between the editor and the last tool window (JetBrains F12) | **spacemacs, hybrid** — normal: `` <space>W<tab> ``, select: `` <space>W<tab> `` |
 | `stretch_tool_window_left` | Narrow the workbench's left drawer (JetBrains Stretch to Left) | **spacemacs, hybrid** — normal: `` <space>W<left> ``, select: `` <space>W<left> `` |
 | `stretch_tool_window_right` | Widen the workbench's left drawer (JetBrains Stretch to Right) | **spacemacs, hybrid** — normal: `` <space>W<right> ``, select: `` <space>W<right> `` |

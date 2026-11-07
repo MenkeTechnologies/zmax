@@ -183,7 +183,9 @@ pub fn show_signature_help(
     // annoyance (upstream fix: suppress auto signature-help outside insert mode)
     // For the most part this should not be needed as the request gets canceled automatically now
     // but it's technically possible for the mode change to just preempt this callback so better safe than sorry
-    if invoked == SignatureHelpInvoked::Automatic && editor.mode != Mode::Insert {
+    if invoked == SignatureHelpInvoked::Automatic
+        && (editor.mode != Mode::Insert || doc!(editor).popup_hints_off)
+    {
         return;
     }
 
@@ -296,6 +298,9 @@ fn signature_help_post_insert_char_hook(
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
+    if doc.popup_hints_off {
+        return Ok(());
+    }
     // TODO support multiple language servers (not just the first that is found), likely by merging UI somehow
     let Some(language_server) = doc
         .language_servers_with_feature(LanguageServerFeature::SignatureHelp)

@@ -555,9 +555,15 @@ impl EditorView {
         }
     }
 
-    /// JetBrains "Hide Active Tool Window" (Shift-Esc): return focus to the
-    /// editor, defocusing whatever tool window was active.
-    pub fn hide_active_tool_window(&mut self) {
+    /// JetBrains "Hide Active Tool Window" (Shift-Esc): fold the active tool
+    /// window and return focus to the editor. False when no workbench is shown.
+    pub fn hide_active_tool_window(&mut self) -> bool {
+        self.ide.as_mut().is_some_and(|ide| ide.hide_active())
+    }
+
+    /// JetBrains "Focus Editor" (`FocusEditor`): hand the keyboard back to
+    /// the editor, leaving every tool window open.
+    pub fn focus_editor(&mut self) {
         if let Some(ide) = self.ide.as_mut() {
             ide.focus_editor();
         }

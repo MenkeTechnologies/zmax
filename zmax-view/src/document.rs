@@ -256,6 +256,10 @@ pub struct Document {
     /// Set to `true` when the document is updated, reset to `false` on the next inlay hints
     /// update from the LSP
     pub inlay_hints_oudated: bool,
+    /// Signature-help popups stay closed while typing in this buffer
+    /// (JetBrains "Toggle Popup Hints for Current File"); a manual request
+    /// still opens one.
+    pub popup_hints_off: bool,
 
     path: Option<PathBuf>,
     /// Explicit buffer name set via Emacs `rename-buffer` / `rename-uniquely`.
@@ -1402,6 +1406,7 @@ impl Document {
             selection_history: HashMap::default(),
             inlay_hints: HashMap::default(),
             inlay_hints_oudated: false,
+            popup_hints_off: false,
             view_data: Default::default(),
             indent_style: DEFAULT_INDENT,
             editor_config: EditorConfig::default(),
