@@ -1481,6 +1481,7 @@
 | `:layout-restore` | Put the IDE workbench back into the current saved layout, or the factory layout before any save (JetBrains Restore Current Layout). |
 | `:layout-delete` | Forget a layout saved with `:layout-save`. |
 | `:navbar-members` | Show (`on`) or hide (`off`) the symbol around the cursor at the end of the IDE breadcrumb trail; with no argument, flip it (JetBrains Show Members in Navigation Bar). |
+| `:md-list` | Make the selected lines a markdown list: `bullet` (default), `numbered`, `checkbox`, or `none` to drop the markers; existing markers are replaced and nesting kept (JetBrains Create or Change List). |
 | `:navbar-location` | Place the IDE breadcrumb trail: `top` (the toolbar), `bottom` (the status bar, in place of the file path) or `hide`; with no argument, show the current placement (JetBrains Navigation Bar location). |
 | `:split-chooser` | Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser). |
 | `:vsplit`, `:vs` | Open the file in a vertical split. |

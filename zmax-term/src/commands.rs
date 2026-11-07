@@ -696,6 +696,7 @@ impl MappableCommand {
         toggle_breadcrumbs, "Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs)",
         toggle_sticky_lines_for_language, "Turn the sticky lines off, or back on, for the buffer's language (JetBrains Disable Sticky Lines for Language)",
         toggle_sticky_lines, "Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines)",
+        disable_sticky_lines, "Hide the pinned scope headers; does nothing when they are already off (JetBrains Sticky Lines > Disable)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
         toggle_auto_highlight, "Toggle automatic symbol-under-cursor highlight (SPC t h a)",
@@ -850,6 +851,7 @@ impl MappableCommand {
         select_line_above, "Select current line, if already selected, extend or shrink line above based on the anchor",
         select_line_below, "Select current line, if already selected, extend or shrink line below based on the anchor",
         extend_to_line_bounds, "Extend selection to line bounds",
+        select_line_at_caret, "Select the whole line each cursor is on, dropping the rest of the selection (JetBrains Select Single Line at Caret)",
         extend_chars_right_vim, "Extend count graphemes right, line-bounded (dl/cl/yl)",
         extend_chars_left_vim, "Extend count graphemes left, line-bounded (dh/ch/yh)",
         extend_line_below_linewise, "Extend whole lines down for a linewise operator (dj/cj/yj)",
@@ -1887,6 +1889,8 @@ impl MappableCommand {
         scroll_column_left, "Scroll view left one column (zh)",
         scroll_column_right, "Scroll view right one column (zl)",
         scroll_half_column_left, "Scroll view left half a screen (zH)",
+        scroll_page_column_right, "Scroll view right a full window width (JetBrains Scroll Page Right)",
+        scroll_page_column_left, "Scroll view left a full window width (JetBrains Scroll Page Left)",
         scroll_half_column_right, "Scroll view right half a screen (zL)",
         scroll_cursor_to_left_edge, "Scroll so the cursor sits at the left edge (zs)",
         scroll_cursor_to_right_edge, "Scroll so the cursor sits at the right edge (ze)",
@@ -20007,6 +20011,13 @@ fn toggle_sticky_lines(cx: &mut Context) {
         .set_status(format!("sticky lines: {}", if on { "on" } else { "off" }));
 }
 
+/// JetBrains Sticky Lines "Disable": turn the pinned scope headers off; unlike
+/// [`toggle_sticky_lines`], running it again leaves them off.
+fn disable_sticky_lines(cx: &mut Context) {
+    STICKY_LINES.store(false, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status("sticky lines: off");
+}
+
 /// Toggle indentation guides (IntelliJ "View > Active Editor > Show Indent Guides").
 fn toggle_indent_guides(cx: &mut Context) {
     let mut on = false;
@@ -27258,6 +27269,23 @@ fn extend_to_line_bounds(cx: &mut Context) {
             Range::new(start, end).with_direction(range.direction())
         }),
     );
+}
+
+/// JetBrains "Select Single Line at Caret": each selection becomes the whole
+/// line its cursor is on, line ending included, however many lines it spanned
+/// before ([`extend_to_line_bounds`] grows a selection to cover all of its
+/// lines instead).
+fn select_line_at_caret(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let line = text.char_to_line(range.cursor(text));
+        Range::new(
+            text.line_to_char(line),
+            text.line_to_char((line + 1).min(text.len_lines())),
+        )
+    });
+    doc.set_selection(view.id, selection);
 }
 
 fn shrink_to_line_bounds(cx: &mut Context) {
@@ -49209,6 +49237,7 @@ fn scroll_cursor_to_right_edge(cx: &mut Context) {
 
 // --- horizontal scroll (vim z h / z l / z H / z L) ---------------------------
 fn scroll_column_impl(cx: &mut Context, cols: usize, right: bool) {
+    let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
     let mut offset = doc.view_offset(view.id);
     offset.horizontal_offset = if right {
@@ -49217,6 +49246,39 @@ fn scroll_column_impl(cx: &mut Context, cols: usize, right: bool) {
         offset.horizontal_offset.saturating_sub(cols)
     };
     doc.set_view_offset(view.id, offset);
+
+    // vim: "the cursor is moved to stay on the screen". Without this the
+    // render pass would scroll the view straight back to the cursor.
+    let width = view.inner_area(doc).width as usize;
+    let text_fmt = doc.text_format(view.inner_width(doc), None, Some(view.id));
+    if text_fmt.soft_wrap {
+        return;
+    }
+    let text = doc.text().slice(..);
+    let annotations = view.text_annotations(doc, None);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let pos = visual_offset_from_block(text, offset.anchor, cursor, &text_fmt, &annotations).0;
+    let (left, right_margin) = zmax_view::View::side_margins(width, scrolloff);
+    let lo = offset.horizontal_offset + left;
+    let hi = (offset.horizontal_offset + width.saturating_sub(1))
+        .saturating_sub(right_margin)
+        .max(lo);
+    let col = pos.col.clamp(lo, hi);
+    if col == pos.col {
+        return;
+    }
+    let (idx, _) = char_idx_at_visual_offset(
+        text,
+        cursor,
+        0,
+        col,
+        &text_fmt,
+        &annotations,
+    );
+    drop(annotations);
+    let selection = doc.selection(view.id).clone();
+    let primary = selection.primary_index();
+    doc.set_selection(view.id, selection.replace(primary, Range::point(idx)));
 }
 
 fn scroll_column_right(cx: &mut Context) {
@@ -49239,6 +49301,22 @@ fn scroll_half_column_left(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let half = (view.inner_area(doc).width as usize / 2).max(1);
     scroll_column_impl(cx, half, false);
+}
+
+/// JetBrains / Swing `ScrollPane-scrollRight`: scroll by one whole visible
+/// width, where `zL` scrolls by half of it.
+fn scroll_page_column_right(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let width = (view.inner_area(doc).width as usize).max(1);
+    scroll_column_impl(cx, width, true);
+}
+
+/// JetBrains / Swing `ScrollPane-scrollLeft`: [`scroll_page_column_right`]
+/// the other way, stopping at the first column.
+fn scroll_page_column_left(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let width = (view.inner_area(doc).width as usize).max(1);
+    scroll_column_impl(cx, width, false);
 }
 
 // --- window width resize (vim CTRL-W < / CTRL-W > / CTRL-W |) -----------------

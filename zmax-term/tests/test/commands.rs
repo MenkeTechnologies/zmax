@@ -1893,6 +1893,30 @@ async fn indents_convert_only_leading_blanks() -> anyhow::Result<()> {
     .await
 }
 
+/// `:md-list` rewrites only the selected lines' markers.
+#[tokio::test(flavor = "multi_thread")]
+async fn md_list_numbers_the_selected_lines() -> anyhow::Result<()> {
+    let text = |app: &Application| zmax_view::doc!(app.editor).text().to_string();
+    let mut app = AppBuilder::new()
+        .with_input_text("#[- a\n  * b|]#\nc\n")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":md-list numbered<ret>"),
+                Some(&|app| assert_eq!(text(app), "1. a\n  1. b\nc\n")),
+            ),
+            (
+                Some("%:md-list checkbox<ret>"),
+                Some(&|app| assert_eq!(text(app), "- [ ] a\n  - [ ] b\n- [ ] c\n")),
+            ),
+        ],
+        false,
+    )
+    .await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn ex_left_align() -> anyhow::Result<()> {
     test(("    #[|a]#b\n", ":left 2<ret>", "  #[|a]#b\n")).await?;

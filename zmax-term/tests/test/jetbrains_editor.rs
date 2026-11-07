@@ -30,6 +30,7 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "md_link_to_reference" => keymap!({ "Normal mode" "Z" => md_link_to_reference, }),
         "next_occurrence" => keymap!({ "Normal mode" "Z" => next_occurrence, }),
         "fold_code_block" => keymap!({ "Normal mode" "Z" => fold_code_block, }),
+        "select_line_at_caret" => keymap!({ "Normal mode" "Z" => select_line_at_caret, }),
         other => panic!("no binding for {other}"),
     };
     config.keys.insert(Mode::Normal, keys);
@@ -940,6 +941,68 @@ async fn goto_buffer_tab_picks_the_nth_buffer() -> anyhow::Result<()> {
             (Some("2Z"), Some(&|app| assert_eq!(shown(app), "two\n"))),
             (Some("Z"), Some(&|app| assert_eq!(shown(app), "one\n"))),
             (Some("3Z9Z"), Some(&|app| assert_eq!(shown(app), "three\n"))),
+        ],
+        false,
+    )
+    .await
+}
+
+/// Select Single Line at Caret keeps only the line the cursor is on, even
+/// when the selection spanned more.
+#[tokio::test(flavor = "multi_thread")]
+async fn select_line_at_caret_drops_the_other_lines() -> anyhow::Result<()> {
+    let mut app = app_with("a#[b\nc|]#d\ne\n", "select_line_at_caret")?;
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Z"),
+            Some(&|app| {
+                assert_eq!(primary(app), (3, 6));
+                assert_eq!(text(app), "ab\ncd\ne\n");
+            }),
+        )],
+        false,
+    )
+    .await
+}
+
+/// Scroll Page Right / Left move the view by its whole width, and left stops
+/// at the first column.
+#[tokio::test(flavor = "multi_thread")]
+async fn scroll_page_columns_move_a_full_width() -> anyhow::Result<()> {
+    let mut config = Config::default();
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "Z" => scroll_page_column_right,
+            "Y" => scroll_page_column_left,
+        }),
+    );
+    let mut app = AppBuilder::new()
+        .with_config(config)
+        .with_input_text(&format!("#[x|]#{}\n", "y".repeat(500)))
+        .build()?;
+    let state = |app: &Application| {
+        let (view, doc) = zmax_view::current_ref!(app.editor);
+        (
+            doc.view_offset(view.id).horizontal_offset,
+            view.inner_area(doc).width as usize,
+        )
+    };
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("ZZ"),
+                Some(&|app| {
+                    let (offset, width) = state(app);
+                    assert_eq!(offset, 2 * width);
+                }),
+            ),
+            (
+                Some("YYY"),
+                Some(&|app| assert_eq!(state(app).0, 0)),
+            ),
         ],
         false,
     )

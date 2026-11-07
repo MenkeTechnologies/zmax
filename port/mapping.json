@@ -79536,11 +79536,11 @@
  },
  {
   "spec_id": "jetbrains-actions.EditorSelectSingleLineAtCaret",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extend_to_line_bounds"
+   "static:select_line_at_caret"
   ],
-  "note": "EditorSelectSingleLineAtCaret (Select Single Line at Caret) = zmax `extend_to_line_bounds`: selects the caret line when there is no selection, but grows an existing multi-line selection to its line bounds instead of replacing it with the single caret line."
+  "note": "Select Single Line at Caret = zmax `select_line_at_caret`: every selection becomes the whole line its cursor is on, line ending included, however many lines it spanned before (commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.EditorSelectWord",
@@ -79584,11 +79584,11 @@
  },
  {
   "spec_id": "jetbrains-actions.EditorStickyLinesDisable",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:toggle_sticky_lines"
+   "static:disable_sticky_lines"
   ],
-  "note": "EditorStickyLinesDisable (Disable) = zmax `toggle_sticky_lines`: hides the pinned scope headers when they are on, but it is a toggle rather than a one-way disable."
+  "note": "Sticky Lines > Disable = zmax `disable_sticky_lines`: turns the pinned scope headers off and leaves them off when run again; `toggle_sticky_lines` turns them back on (STICKY_LINES, commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.EditorSwapSelectionBoundaries",
@@ -81202,11 +81202,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Markdown.Styling.CreateOrChangeList",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:bullet_list_selection"
+   "typable:md-list"
   ],
-  "note": "Markdown.Styling.CreateOrChangeList (Create Or Change List) = zmax `bullet_list_selection`: makes a bullet list from the selected lines; no numbered/checkbox list cycling."
+  "note": "Create or Change List = zmax `:md-list bullet|numbered|checkbox|none`: makes the selected lines items of that list kind, replacing any `-`/`*`/`+`/`1.`/`1)` marker and task box they had, or drops the markers with `none`; indentation is kept, numbering restarts for each nested run, and a checked task stays checked (md_relist, commands/typed.rs)."
  },
  {
   "spec_id": "jetbrains-actions.MaximizeToolWindow",
@@ -86467,19 +86467,19 @@
  },
  {
   "spec_id": "jetbrains-actions.ScrollPane-scrollLeft",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:scroll_half_column_left"
+   "static:scroll_page_column_left"
   ],
-  "note": "ScrollPane-scrollLeft (Scroll Page Left) = zmax `scroll_half_column_left`: scrolls left half a screen width (commands.rs:48092); Swing scrolls a full visible width."
+  "note": "Scroll Page Left = zmax `scroll_page_column_left`: scrolls the view left by its whole visible width, stopping at the first column; as with vim `zh`, a cursor that would leave the screen moves to the nearest visible column so the view stays put (scroll_column_impl, commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.ScrollPane-scrollRight",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:scroll_half_column_right"
+   "static:scroll_page_column_right"
   ],
-  "note": "ScrollPane-scrollRight (Scroll Page Right) = zmax `scroll_half_column_right`: scrolls right half a screen width (commands.rs:48086); Swing scrolls a full visible width."
+  "note": "Scroll Page Right = zmax `scroll_page_column_right`: scrolls the view right by its whole visible width (`zL` scrolls half of it); a cursor that would leave the screen moves to the nearest visible column so the view stays put (scroll_column_impl, commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.ScrollPane-scrollUp",

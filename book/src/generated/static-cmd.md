@@ -303,6 +303,7 @@
 | `toggle_breadcrumbs` | Show or hide the toolbar breadcrumb trail (JetBrains Show Breadcrumbs) |  |
 | `toggle_sticky_lines_for_language` | Turn the sticky lines off, or back on, for the buffer's language (JetBrains Disable Sticky Lines for Language) |  |
 | `toggle_sticky_lines` | Show or hide the pinned scope headers at the top of the window (JetBrains Show Sticky Lines) |  |
+| `disable_sticky_lines` | Hide the pinned scope headers; does nothing when they are already off (JetBrains Sticky Lines > Disable) |  |
 | `toggle_indent_guides` | Toggle indentation guides (IntelliJ View > Show Indent Guides) |  |
 | `toggle_inlay_hints` | Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints) |  |
 | `toggle_auto_highlight` | Toggle automatic symbol-under-cursor highlight (SPC t h a) | **spacemacs, hybrid** — normal: `` <space>tha ``, select: `` <space>tha `` |
@@ -457,6 +458,7 @@
 | `select_line_above` | Select current line, if already selected, extend or shrink line above based on the anchor |  |
 | `select_line_below` | Select current line, if already selected, extend or shrink line below based on the anchor |  |
 | `extend_to_line_bounds` | Extend selection to line bounds | **helix, kakoune** — normal: `` X ``, select: `` X `` |
+| `select_line_at_caret` | Select the whole line each cursor is on, dropping the rest of the selection (JetBrains Select Single Line at Caret) |  |
 | `extend_chars_right_vim` | Extend count graphemes right, line-bounded (dl/cl/yl) |  |
 | `extend_chars_left_vim` | Extend count graphemes left, line-bounded (dh/ch/yh) |  |
 | `extend_line_below_linewise` | Extend whole lines down for a linewise operator (dj/cj/yj) |  |
@@ -1494,6 +1496,8 @@
 | `scroll_column_left` | Scroll view left one column (zh) | **spacemacs, hybrid, vim** — normal: `` zh ``, `` z<left> ``, select: `` zh ``, `` z<left> `` |
 | `scroll_column_right` | Scroll view right one column (zl) | **spacemacs, hybrid, vim** — normal: `` zl ``, `` z<right> ``, select: `` zl ``, `` z<right> `` |
 | `scroll_half_column_left` | Scroll view left half a screen (zH) | **spacemacs** — normal: `` zH ``, `` <C-x><gt> ``, select: `` zH ``, `` <C-x><gt> ``, insert: `` <C-x><gt> ``<br>**hybrid** — normal: `` zH ``, `` <C-x><gt> ``, select: `` zH ``, `` <C-x><gt> ``<br>**vim** — normal: `` zH ``, select: `` zH `` |
+| `scroll_page_column_right` | Scroll view right a full window width (JetBrains Scroll Page Right) |  |
+| `scroll_page_column_left` | Scroll view left a full window width (JetBrains Scroll Page Left) |  |
 | `scroll_half_column_right` | Scroll view right half a screen (zL) | **spacemacs** — normal: `` zL ``, `` <C-x><lt> ``, select: `` zL ``, `` <C-x><lt> ``, insert: `` <C-x><lt> ``<br>**hybrid** — normal: `` zL ``, `` <C-x><lt> ``, select: `` zL ``, `` <C-x><lt> ``<br>**vim** — normal: `` zL ``, select: `` zL `` |
 | `scroll_cursor_to_left_edge` | Scroll so the cursor sits at the left edge (zs) | **spacemacs, hybrid, vim** — normal: `` zs ``, select: `` zs `` |
 | `scroll_cursor_to_right_edge` | Scroll so the cursor sits at the right edge (ze) | **spacemacs, hybrid, vim** — normal: `` ze ``, select: `` ze `` |

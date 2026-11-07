@@ -884,6 +884,13 @@ pub mod completers {
             .collect()
     }
 
+    pub fn md_list_kind(_editor: &Editor, input: &str) -> Vec<Completion> {
+        fuzzy_match(input, crate::commands::typed::MD_LIST_KINDS, false)
+            .into_iter()
+            .map(|(name, _)| ((0..), name.into()))
+            .collect()
+    }
+
     /// Recursive function to get all keys from this value and add them to vec
     fn get_keys(value: &serde_json::Value, vec: &mut Vec<String>, scope: Option<&str>) {
         if let Some(map) = value.as_object() {

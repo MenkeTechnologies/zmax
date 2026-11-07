@@ -22442,6 +22442,110 @@ fn markdown_link(text: &str, url: &str) -> String {
     format!("[{text}]({url})")
 }
 
+/// The list kinds `:md-list` converts between.
+pub(crate) const MD_LIST_KINDS: [&str; 4] = ["bullet", "numbered", "checkbox", "none"];
+
+/// Split a markdown list line into its indentation, its checkbox state if it
+/// is a task item (`Some(true)` for `[x]`), and the text after any list marker
+/// (`- `, `* `, `+ `, `1. `, `1) `, optionally followed by `[ ] ` / `[x] `).
+fn md_list_item(line: &str) -> (&str, Option<bool>, &str) {
+    let rest = line.trim_start_matches([' ', '\t']);
+    let indent = &line[..line.len() - rest.len()];
+    let digits = rest.len() - rest.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+    let after = ["- ", "* ", "+ "]
+        .iter()
+        .find_map(|m| rest.strip_prefix(m))
+        .or_else(|| {
+            (digits > 0)
+                .then(|| &rest[digits..])
+                .and_then(|r| r.strip_prefix(". ").or_else(|| r.strip_prefix(") ")))
+        });
+    let Some(after) = after else {
+        return (indent, None, rest);
+    };
+    for (box_, checked) in [("[ ] ", false), ("[x] ", true), ("[X] ", true)] {
+        if let Some(text) = after.strip_prefix(box_) {
+            return (indent, Some(checked), text);
+        }
+    }
+    (indent, None, after)
+}
+
+/// JetBrains Markdown "Create or Change List": make every non-blank line of
+/// `block` an item of `kind` (see [`MD_LIST_KINDS`]), replacing whatever list
+/// marker it had, or drop the markers with `none`. Indentation is kept, so a
+/// nested list stays nested; numbering restarts at 1 for each nested run, and
+/// a task item keeps its checked state.
+fn md_relist(block: &str, kind: &str) -> String {
+    // (indent width, last number) for each open nesting level.
+    let mut levels: Vec<(usize, usize)> = Vec::new();
+    let mut out = String::with_capacity(block.len() + 8);
+    for line in block.split_inclusive('\n') {
+        let body = line.trim_end_matches(['\n', '\r']);
+        let eol = &line[body.len()..];
+        if body.trim().is_empty() {
+            out.push_str(line);
+            continue;
+        }
+        let (indent, checked, text) = md_list_item(body);
+        while levels.last().is_some_and(|&(w, _)| w > indent.len()) {
+            levels.pop();
+        }
+        let n = match levels.last_mut() {
+            Some((w, n)) if *w == indent.len() => {
+                *n += 1;
+                *n
+            }
+            _ => {
+                levels.push((indent.len(), 1));
+                1
+            }
+        };
+        out.push_str(indent);
+        match kind {
+            "bullet" => out.push_str("- "),
+            "numbered" => out.push_str(&format!("{n}. ")),
+            "checkbox" if checked == Some(true) => out.push_str("- [x] "),
+            "checkbox" => out.push_str("- [ ] "),
+            _ => {}
+        }
+        out.push_str(text);
+        out.push_str(eol);
+    }
+    out
+}
+
+/// `:md-list bullet|numbered|checkbox|none` — JetBrains Markdown "Create or
+/// Change List" over the lines of the primary selection.
+fn md_list(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let kind = args.first().map(|k| k.to_ascii_lowercase());
+    let kind = kind.as_deref().unwrap_or("bullet");
+    anyhow::ensure!(
+        MD_LIST_KINDS.contains(&kind),
+        "expected one of {}, not {kind}",
+        MD_LIST_KINDS.join(", ")
+    );
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let (first, last) = primary_line_range(doc, view.id);
+    let start = slice.line_to_char(first);
+    let end = line_ending::line_end_char_index(&slice, last);
+    let block: String = slice.slice(start..end).chunks().collect();
+    let new = md_relist(&block, kind);
+    if new != block {
+        let transaction = Transaction::change(
+            doc.text(),
+            std::iter::once((start, end, Some(new.into()))),
+        );
+        doc.apply(&transaction, view.id);
+        doc.append_changes_to_history(view);
+    }
+    Ok(())
+}
+
 fn markdown_link_cmd(
     cx: &mut compositor::Context,
     args: Args,
@@ -67785,6 +67889,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "md-list",
+        aliases: &[],
+        doc: "Make the selected lines a markdown list: `bullet` (default), `numbered`, `checkbox`, or `none` to drop the markers; existing markers are replaced and nesting kept (JetBrains Create or Change List).",
+        fun: md_list,
+        completer: CommandCompleter::positional(&[completers::md_list_kind]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "navbar-location",
         aliases: &[],
         doc: "Place the IDE breadcrumb trail: `top` (the toolbar), `bottom` (the status bar, in place of the file path) or `hide`; with no argument, show the current placement (JetBrains Navigation Bar location).",
@@ -77775,6 +77890,25 @@ mod vim_set_tests {
         assert_eq!(strip_line_numbers("42: line\n3) item"), "line\nitem");
         // lines without a leading number are untouched
         assert_eq!(strip_line_numbers("noprefix"), "noprefix");
+    }
+
+    #[test]
+    fn md_relist_converts_markers_and_keeps_nesting() {
+        use super::md_relist;
+        let mixed = "- a\n  * b\n  3) c\n\n10. d\ne";
+        assert_eq!(
+            md_relist(mixed, "numbered"),
+            "1. a\n  1. b\n  2. c\n\n2. d\n3. e"
+        );
+        assert_eq!(md_relist(mixed, "bullet"), "- a\n  - b\n  - c\n\n- d\n- e");
+        assert_eq!(
+            md_relist("- [x] done\n- [ ] todo\nnew\r\n", "checkbox"),
+            "- [x] done\n- [ ] todo\n- [ ] new\r\n",
+            "a task keeps its state; line endings stay"
+        );
+        assert_eq!(md_relist("1. [x] a\n  - b", "none"), "a\n  b");
+        // Text that only looks like a marker without its space is not one.
+        assert_eq!(md_relist("-x\n2.5", "bullet"), "- -x\n- 2.5");
     }
 
     #[test]

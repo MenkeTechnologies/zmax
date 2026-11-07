@@ -701,6 +701,18 @@ impl View {
         self.offset_coords_to_in_view_center::<false>(doc, scrolloff)
     }
 
+    /// The columns kept clear left and right of the cursor in a viewport
+    /// `width` wide. vim `sidescrolloff` is its own option; only when it is
+    /// unset does the vertical `scrolloff` stand in for it.
+    pub fn side_margins(width: usize, scrolloff: usize) -> (usize, usize) {
+        let sidescrolloff = sidescrolloff().unwrap_or(scrolloff);
+        (
+            // - 1 from the left so we have at least one gap in the middle.
+            sidescrolloff.min(width.saturating_sub(1) / 2),
+            sidescrolloff.min(width / 2),
+        )
+    }
+
     pub fn offset_coords_to_in_view_center<const CENTERING: bool>(
         &self,
         doc: &Document,
@@ -722,18 +734,10 @@ impl View {
                 scrolloff.min(viewport.height as usize / 2),
             )
         };
-        // vim `sidescrolloff`: the horizontal margin is its own option; only when
-        // it is unset does the vertical `scrolloff` stand in for it (which is all
-        // zmax used to do).
-        let sidescrolloff = sidescrolloff().unwrap_or(scrolloff);
         let (scrolloff_left, scrolloff_right) = if CENTERING {
             (0, 0)
         } else {
-            (
-                // - 1 from the left so we have at least one gap in the middle.
-                sidescrolloff.min(viewport.width.saturating_sub(1) as usize / 2),
-                sidescrolloff.min(viewport.width as usize / 2),
-            )
+            Self::side_margins(viewport.width as usize, scrolloff)
         };
 
         let cursor = doc.selection(self.id).primary().cursor(doc_text);
