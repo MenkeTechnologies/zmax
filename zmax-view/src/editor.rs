@@ -849,6 +849,9 @@ pub struct LspConfig {
     pub display_signature_help_docs: bool,
     /// Display inlay hints
     pub display_inlay_hints: bool,
+    /// Among the inlay hints, display the ones the server marks as parameter
+    /// names (JetBrains "Show Parameter Name Hints").
+    pub display_parameter_hints: bool,
     /// Automatically highlight symbol references at the cursor.
     pub auto_document_highlight: bool,
     /// Maximum displayed length of inlay hints (excluding the added trailing `…`).
@@ -871,6 +874,7 @@ impl Default for LspConfig {
             auto_signature_help: true,
             display_signature_help_docs: true,
             display_inlay_hints: false,
+            display_parameter_hints: true,
             auto_document_highlight: false,
             inlay_hints_length_limit: None,
             snippets: true,

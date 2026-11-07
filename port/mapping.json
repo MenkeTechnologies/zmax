@@ -82484,11 +82484,11 @@
  },
  {
   "spec_id": "jetbrains-actions.ToggleInlineHintsAction",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:toggle_inlay_hints"
+   "static:toggle_parameter_hints"
   ],
-  "note": "ToggleInlineHintsAction (Toggle Parameter Name Hints) partial: zmax `toggle_inlay_hints` toggles every inlay hint kind; there is no parameter-name-hints-only toggle."
+  "note": "Toggle Parameter Name Hints = zmax `toggle_parameter_hints`: flips `lsp.display-parameter-hints`, so the inlay hints the language server marks as parameter names are hidden or shown while type and other hints stay; every buffer's hints are fetched again at the next idle (commands.rs; filter in commands/lsp.rs). `toggle_inlay_hints` switches every kind."
  },
  {
   "spec_id": "jetbrains-actions.ToggleRenderedDocPresentation",
@@ -85372,19 +85372,19 @@
  },
  {
   "spec_id": "jetbrains-actions.Diff.AppendLeftSide",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:conflict-both"
+   "key:merge:<"
   ],
-  "note": "Diff.AppendLeftSide (Append Left Side) = zmax `:conflict-both`: keeps both sides of the conflict at the cursor (ours then theirs); no append of one side after an already-applied other side."
+  "note": "Append Left Side = `<` in the zmax 3-pane conflict resolver (`:merge`, ui/merge.rs; Resolution::appending / ignoring): adds ours to the result of the selected conflict, after theirs when theirs is already taken (`.` then `<` gives theirs followed by ours), otherwise taking ours."
  },
  {
   "spec_id": "jetbrains-actions.Diff.AppendRightSide",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:conflict-both"
+   "key:merge:>"
   ],
-  "note": "Diff.AppendRightSide (Append Right Side) = zmax `:conflict-both`: keeps both sides, ours then theirs; the order is fixed."
+  "note": "Append Right Side = `>` in the zmax 3-pane conflict resolver (`:merge`, ui/merge.rs; Resolution::appending / ignoring): adds theirs to the result, after ours when ours is already taken, otherwise taking theirs."
  },
  {
   "spec_id": "jetbrains-actions.Diff.ApplyNonConflicts.Left",
@@ -85412,19 +85412,19 @@
  },
  {
   "spec_id": "jetbrains-actions.Diff.IgnoreLeftSide",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:conflict-theirs"
+   "key:merge:("
   ],
-  "note": "Diff.IgnoreLeftSide (Ignore Left Side) = zmax `:conflict-theirs`: resolves the conflict at the cursor by keeping theirs, discarding the left change; ignoring both sides to fall back to base is not available."
+  "note": "Ignore Left Side = `(` in the zmax 3-pane conflict resolver (`:merge`, ui/merge.rs; Resolution::appending / ignoring): drops ours from the selected conflict's result, leaving theirs if it was taken, or the diff3 common base (empty for markers without one) when neither side is."
  },
  {
   "spec_id": "jetbrains-actions.Diff.IgnoreRightSide",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:conflict-ours"
+   "key:merge:)"
   ],
-  "note": "Diff.IgnoreRightSide (Ignore Right Side) = zmax `:conflict-ours`: resolves the conflict at the cursor by keeping ours, discarding the right change; no fall-back to base."
+  "note": "Ignore Right Side = `)` in the zmax 3-pane conflict resolver (`:merge`, ui/merge.rs; Resolution::appending / ignoring): drops theirs from the result, leaving ours if it was taken, or the common base when neither side is."
  },
  {
   "spec_id": "jetbrains-actions.Diff.ResolveConflict",

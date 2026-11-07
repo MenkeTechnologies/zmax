@@ -21,7 +21,10 @@
 //! Keys: `j`/`k`/arrows scroll a row, PageUp/PageDown (`ctrl-d`/`ctrl-u`) a
 //! screenful, `g`/`G` jump to top/bottom, `n`/`p` (F7 / Shift-F7) move the selected block,
 //! `,`/`[`/`h` take HEAD, `.`/`]`/`l` take working, `L`/`R` resolve all,
-//! `Enter`/`a` apply, `q`/`Esc` cancel. Mouse wheel scrolls too.
+//! `Enter`/`a` apply, `q`/`Esc` cancel. Mouse wheel scrolls too. Resolving
+//! conflicts also has `<`/`>` (JetBrains Append Left / Right Side: add that
+//! side after the one already taken) and `(`/`)` (Ignore Left / Right Side:
+//! drop that side, falling back to the common base when neither is left).
 
 use std::ops::Range;
 use std::path::PathBuf;
@@ -192,6 +195,11 @@ enum Resolution {
     Right,
     /// Conflict mode: emit ours then theirs.
     Both,
+    /// Conflict mode: emit theirs then ours (ours appended after theirs).
+    BothReversed,
+    /// Conflict mode: both sides ignored; emit the common base (empty when
+    /// the markers carry none).
+    Base,
     /// Conflict mode: leave the conflict unresolved (re-emit the markers). The
     /// default for a freshly-loaded conflict block.
     None,
@@ -458,6 +466,11 @@ fn conflict_result_text(segments: &[Segment], blocks: &[Block]) -> String {
                         emit(&mut out, ours);
                         emit(&mut out, theirs);
                     }
+                    Resolution::BothReversed => {
+                        emit(&mut out, theirs);
+                        emit(&mut out, ours);
+                    }
+                    Resolution::Base => emit(&mut out, base),
                     Resolution::None => {
                         out.push_str("<<<<<<<\n");
                         emit(&mut out, ours);
@@ -474,6 +487,35 @@ fn conflict_result_text(segments: &[Segment], blocks: &[Block]) -> String {
         }
     }
     out
+}
+
+impl Resolution {
+    /// JetBrains "Append Left / Right Side": add that side to the result.
+    /// With the other side already taken it goes after it; otherwise it is
+    /// simply taken.
+    fn appending(self, left: bool) -> Resolution {
+        use Resolution::*;
+        match (self, left) {
+            (Right, true) => BothReversed,
+            (Left, false) => Both,
+            (Both | BothReversed, _) => self,
+            (_, true) => Left,
+            (_, false) => Right,
+        }
+    }
+
+    /// JetBrains "Ignore Left / Right Side": drop that side from the result.
+    /// What is left is the other side if it was taken, else the base.
+    fn ignoring(self, left: bool) -> Resolution {
+        use Resolution::*;
+        match (self, left) {
+            (Both | BothReversed, true) => Right,
+            (Both | BothReversed, false) => Left,
+            (Right, true) => Right,
+            (Left, false) => Left,
+            _ => Base,
+        }
+    }
 }
 
 /// A contiguous run of changed rows together with its chosen resolution.
@@ -546,7 +588,11 @@ fn result_text(
             // `Right` is the diff-mode default; `Both`/`None` never occur in
             // diff mode (conflict mode uses `conflict_result_text`) but keep the
             // match exhaustive by treating them as "keep the right side".
-            Some(Resolution::Right) | Some(Resolution::Both) | Some(Resolution::None) => {
+            Some(Resolution::Right)
+            | Some(Resolution::Both)
+            | Some(Resolution::BothReversed)
+            | Some(Resolution::Base)
+            | Some(Resolution::None) => {
                 if let Some(r) = row.right.and_then(|r| doc_lines.get(r)) {
                     out.push_str(r);
                     out.push('\n');
@@ -1668,6 +1714,18 @@ impl Component for DiffView {
             key!('R') => self.resolve_all(Resolution::Right),
             // Conflict-mode only: take both sides / reset to unresolved.
             key!('b') if self.kind == ViewKind::Conflict => self.resolve_selected(Resolution::Both),
+            // JetBrains Append Left / Right Side and Ignore Left / Right Side.
+            key!('<') | key!('>') | key!('(') | key!(')') if self.kind == ViewKind::Conflict => {
+                let left = matches!(key, key!('<') | key!('('));
+                if let Some(block) = self.blocks.get(self.selected) {
+                    let res = if matches!(key, key!('<') | key!('>')) {
+                        block.resolution.appending(left)
+                    } else {
+                        block.resolution.ignoring(left)
+                    };
+                    self.resolve_selected(res);
+                }
+            }
             // JetBrains "Resolve Simple Conflicts": the blocks whose two sides
             // agree resolve themselves; the rest stay unresolved.
             key!('m') if self.kind == ViewKind::Conflict => {
@@ -1832,7 +1890,7 @@ impl Component for DiffView {
                 " Working tree",
             ),
             ViewKind::Conflict => (
-                ", ours  . theirs  b both  m simple  u unresolve  B base  n/p nav  Enter apply  q cancel",
+                ", ours  . theirs  b both  </> append  (/) ignore  m simple  u unresolve  B base  n/p nav  Enter apply  q cancel",
                 " Current (ours)",
                 " Incoming (theirs)",
             ),
@@ -2155,7 +2213,8 @@ fn result_line<'a>(
         None => " ",
         Some(Resolution::Left) => "\u{25C0}",  // ◀
         Some(Resolution::Right) => "\u{25B6}", // ▶
-        Some(Resolution::Both) => "\u{25C6}",  // ◆
+        Some(Resolution::Both) | Some(Resolution::BothReversed) => "\u{25C6}", // ◆
+        Some(Resolution::Base) => "\u{25CB}",  // ○ both sides ignored
         Some(Resolution::None) => "?",         // unresolved conflict
     };
     // Which source line this row previews. `Left`/`Right` pick a side; `Both`,
@@ -2864,6 +2923,33 @@ mod tests {
             resolved_conflict(text, &[Resolution::Both]),
             "x\nours\ntheirs\ny\n"
         );
+    }
+
+    /// Append adds a side after the one already taken; Ignore drops a side,
+    /// leaving the other one or, with neither, the common base.
+    #[test]
+    fn append_and_ignore_follow_what_is_already_taken() {
+        let text = "<<<<<<<\nours\n|||||||\nbase\n=======\ntheirs\n>>>>>>>\n";
+        let after = |steps: &[(bool, bool)]| {
+            // (append?, left?) applied in turn to an unresolved block.
+            let res = steps.iter().fold(Resolution::None, |r, &(append, left)| {
+                if append {
+                    r.appending(left)
+                } else {
+                    r.ignoring(left)
+                }
+            });
+            resolved_conflict(text, &[res])
+        };
+        assert_eq!(after(&[(true, false), (true, true)]), "theirs\nours\n");
+        assert_eq!(after(&[(true, true), (true, false)]), "ours\ntheirs\n");
+        assert_eq!(after(&[(true, false), (false, false)]), "base\n");
+        assert_eq!(after(&[(false, true)]), "base\n", "nothing taken: the base");
+        assert_eq!(
+            after(&[(true, true), (true, false), (false, true)]),
+            "theirs\n"
+        );
+        assert_eq!(after(&[(false, true), (true, false)]), "theirs\n");
     }
 
     #[test]

@@ -306,6 +306,7 @@
 | `disable_sticky_lines` | Hide the pinned scope headers; does nothing when they are already off (JetBrains Sticky Lines > Disable) |  |
 | `toggle_indent_guides` | Toggle indentation guides (IntelliJ View > Show Indent Guides) |  |
 | `toggle_inlay_hints` | Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints) |  |
+| `toggle_parameter_hints` | Show or hide the parameter-name inlay hints, leaving the other kinds (JetBrains Toggle Parameter Name Hints) |  |
 | `toggle_auto_highlight` | Toggle automatic symbol-under-cursor highlight (SPC t h a) | **spacemacs, hybrid** — normal: `` <space>tha ``, select: `` <space>tha `` |
 | `toggle_syntax_highlighting` | Toggle syntax highlighting for the current buffer (SPC t h s) | **spacemacs, hybrid** — normal: `` <space>ths ``, select: `` <space>ths `` |
 | `toggle_diagnostics` | Toggle diagnostics display / flycheck (SPC t s) | **spacemacs, hybrid** — normal: `` <space>ts ``, select: `` <space>ts `` |

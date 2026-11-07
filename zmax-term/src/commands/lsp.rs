@@ -2886,8 +2886,12 @@ fn compute_inlay_hints_for_view(
 
             let doc_text = doc.text();
             let inlay_hints_length_limit = doc.config.load().lsp.inlay_hints_length_limit;
+            let parameter_hints = doc.config.load().lsp.display_parameter_hints;
 
             for hint in hints {
+                if !parameter_hints && hint.kind == Some(lsp::InlayHintKind::PARAMETER) {
+                    continue;
+                }
                 let char_idx = match zmax_lsp::util::lsp_pos_to_pos(
                     doc_text,
                     hint.position,

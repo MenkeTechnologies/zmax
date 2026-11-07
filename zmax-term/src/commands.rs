@@ -699,6 +699,7 @@ impl MappableCommand {
         disable_sticky_lines, "Hide the pinned scope headers; does nothing when they are already off (JetBrains Sticky Lines > Disable)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
+        toggle_parameter_hints, "Show or hide the parameter-name inlay hints, leaving the other kinds (JetBrains Toggle Parameter Name Hints)",
         toggle_auto_highlight, "Toggle automatic symbol-under-cursor highlight (SPC t h a)",
         toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
         toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
@@ -20042,6 +20043,30 @@ fn toggle_inlay_hints(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("inlay hints: {}", if on { "on" } else { "off" }));
+}
+
+/// JetBrains "Toggle Parameter Name Hints": `lsp.display-parameter-hints`,
+/// the parameter-name kind of inlay hint on its own; type and other hints
+/// keep showing. Every buffer's hints are fetched again so the change shows
+/// at the next idle.
+fn toggle_parameter_hints(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        on = !c.lsp.display_parameter_hints;
+        c.lsp.display_parameter_hints = on;
+    });
+    for doc in cx.editor.documents_mut() {
+        doc.inlay_hints_oudated = true;
+    }
+    let hidden = if cx.editor.config().lsp.display_inlay_hints {
+        ""
+    } else {
+        " (inlay hints are off: toggle_inlay_hints)"
+    };
+    cx.editor.set_status(format!(
+        "parameter hints: {}{hidden}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// SPC t h a : toggle automatic highlighting of the symbol under the cursor (Spacemacs

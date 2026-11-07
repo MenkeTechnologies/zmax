@@ -282,6 +282,22 @@ mod tests {
         );
     }
 
+    /// `[editor.lsp] display-parameter-hints`: parameter-name hints show by
+    /// default and can be turned off on their own, leaving inlay hints on.
+    #[test]
+    fn parameter_hints_default_on_and_opt_out_alone() {
+        assert!(Config::default().editor.lsp.display_parameter_hints);
+        let off = Config::load_test(
+            r#"
+            [editor.lsp]
+            display-inlay-hints = true
+            display-parameter-hints = false
+        "#,
+        );
+        assert!(off.editor.lsp.display_inlay_hints);
+        assert!(!off.editor.lsp.display_parameter_hints);
+    }
+
     #[test]
     fn parsing_keymaps_config_file() {
         use crate::keymap;
