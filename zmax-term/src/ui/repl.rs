@@ -10,8 +10,10 @@
 //! `~/.zmax/repl-history.toml`.
 //!
 //! Open: `SPC a r` · `:repl [lang]`. Enter evaluates · Alt-Enter inserts a newline ·
-//! Tab/Shift-Tab switch language · ↑/↓ or C-p/C-n browse history · C-l clears the
-//! transcript · PgUp/PgDn scroll · Esc closes.
+//! Tab/Shift-Tab switch language · ↑/↓ or C-p/C-n step through history · C-r browses
+//! it (JetBrains Browse Console History: type to filter, ↑/↓ pick, Enter puts the
+//! entry in the input, Esc backs out) · C-l clears the transcript · PgUp/PgDn
+//! scroll · Esc closes.
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -426,6 +428,13 @@ impl History {
     }
 }
 
+/// The `C-r` history browser: a filter and the selected match.
+struct Browse {
+    query: String,
+    /// Index into [`ReplPanel::browse_matches`].
+    sel: usize,
+}
+
 pub struct ReplPanel {
     lang: ReplLang,
     input: Vec<char>,
@@ -438,6 +447,8 @@ pub struct ReplPanel {
     hist_idx: Option<usize>,
     /// In-progress input stashed while browsing history.
     stash: Vec<char>,
+    /// The history browser, while it is open.
+    browse: Option<Browse>,
     /// Caret position computed during `render`, consumed by `cursor`.
     caret: Option<Position>,
     /// Language tab hit regions: `(x0, x1, row, lang_index)`.
@@ -459,6 +470,7 @@ impl ReplPanel {
             history: History::load(),
             hist_idx: None,
             stash: Vec::new(),
+            browse: None,
             caret: None,
             tab_hits: Vec::new(),
             node: None,
@@ -548,6 +560,63 @@ impl ReplPanel {
         }
     }
 
+    /// The current language's history entries containing the browser's
+    /// filter (case-insensitively), newest first.
+    fn browse_matches(&self) -> Vec<&str> {
+        let query = self
+            .browse
+            .as_ref()
+            .map(|b| b.query.to_lowercase())
+            .unwrap_or_default();
+        self.history
+            .list(self.lang)
+            .iter()
+            .rev()
+            .filter(|e| e.to_lowercase().contains(&query))
+            .map(String::as_str)
+            .collect()
+    }
+
+    /// A key while the history browser is open.
+    fn browse_key(&mut self, key: KeyEvent) {
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        let count = self.browse_matches().len();
+        let Some(b) = self.browse.as_mut() else {
+            return;
+        };
+        match key.code {
+            KeyCode::Esc => self.browse = None,
+            KeyCode::Char('g') if ctrl => self.browse = None,
+            KeyCode::Enter => {
+                let sel = b.sel;
+                let picked = self.browse_matches().get(sel).map(|e| e.to_string());
+                self.browse = None;
+                if let Some(entry) = picked {
+                    self.set_input(&entry);
+                    self.hist_idx = None;
+                }
+            }
+            KeyCode::Up => b.sel = b.sel.saturating_sub(1),
+            KeyCode::Char('p') if ctrl => b.sel = b.sel.saturating_sub(1),
+            // C-r again steps to the next older match, as in readline.
+            KeyCode::Down => b.sel = (b.sel + 1).min(count.saturating_sub(1)),
+            KeyCode::Char('n' | 'r') if ctrl => b.sel = (b.sel + 1).min(count.saturating_sub(1)),
+            KeyCode::Backspace => {
+                b.query.pop();
+                b.sel = 0;
+            }
+            KeyCode::Char(c) if !ctrl => {
+                b.query.push(c);
+                b.sel = 0;
+            }
+            _ => {}
+        }
+        if self.browse.is_none() {
+            // Back to the transcript, pinned to its end again.
+            self.follow = true;
+        }
+    }
+
     fn insert_char(&mut self, c: char) {
         self.input.insert(self.cursor, c);
         self.cursor += 1;
@@ -621,6 +690,10 @@ impl Component for ReplPanel {
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         let alt = key.modifiers.contains(KeyModifiers::ALT);
 
+        if self.browse.is_some() {
+            self.browse_key(key);
+            return EventResult::Consumed(None);
+        }
         match key.code {
             KeyCode::Esc => return Self::close(),
             KeyCode::Char('c') if ctrl => return Self::close(),
@@ -644,6 +717,12 @@ impl Component for ReplPanel {
             KeyCode::Down => self.history_move(false),
             KeyCode::Char('p') if ctrl => self.history_move(true),
             KeyCode::Char('n') if ctrl => self.history_move(false),
+            KeyCode::Char('r') if ctrl => {
+                self.browse = Some(Browse {
+                    query: String::new(),
+                    sel: 0,
+                })
+            }
             KeyCode::Char('l') if ctrl => {
                 self.transcript.clear();
                 self.scroll = 0;
@@ -761,10 +840,16 @@ impl Component for ReplPanel {
         }
 
         // ── geometry ─────────────────────────────────────────────────────────
-        let prompt = format!("{}❯ ", self.lang.label());
+        // While the history browser is open the input line holds its filter.
+        let (prompt, input_lines) = match &self.browse {
+            Some(b) => ("history❯ ".to_string(), b.query.clone()),
+            None => (
+                format!("{}❯ ", self.lang.label()),
+                self.input.iter().collect::<String>(),
+            ),
+        };
         let prompt_w = prompt.chars().count() as u16;
         let footer_y = area.y + area.height - 1;
-        let input_lines = self.input.iter().collect::<String>();
         let n_in = input_lines.split('\n').count().max(1) as u16;
         let input_h = n_in.clamp(1, 6);
         let input_y = footer_y.saturating_sub(input_h);
@@ -793,6 +878,30 @@ impl Component for ReplPanel {
                     lines.push(Line::from(Span::styled(l.to_string(), out_style)));
                 }
             }
+        }
+
+        // The history browser takes the transcript's place: the matches,
+        // newest first, scrolled to keep the selected one in view.
+        if let Some(b) = &self.browse {
+            let matches = self.browse_matches();
+            lines = vec![Line::from(Span::styled(
+                format!("{} history · {} matching", self.lang.label(), matches.len()),
+                accent,
+            ))];
+            for (i, entry) in matches.iter().enumerate() {
+                let mut shown = entry.lines().next().unwrap_or("").to_string();
+                if entry.contains('\n') {
+                    shown.push_str(" …");
+                }
+                let style = if i == b.sel {
+                    text.add_modifier(RMod::REVERSED)
+                } else {
+                    text
+                };
+                lines.push(Line::from(Span::styled(shown, style)));
+            }
+            self.follow = false;
+            self.scroll = (b.sel as u16 + 1).saturating_sub(body_h.saturating_sub(1));
         }
 
         let total = lines.len() as u16;
@@ -857,7 +966,11 @@ impl Component for ReplPanel {
         // ── footer hint ────────────────────────────────────────────────────────
         render(
             Paragraph::new(Span::styled(
-                " Enter eval · Alt-Enter newline · Tab lang · ↑/↓ history · C-l clear · Esc close",
+                if self.browse.is_some() {
+                    " type to filter · ↑/↓ pick · Enter use · Esc back"
+                } else {
+                    " Enter eval · Alt-Enter newline · Tab lang · ↑/↓ history · C-r browse · C-l clear · Esc close"
+                },
                 dim,
             )),
             Rect::new(area.x + 1, footer_y, body_w, 1),
@@ -865,9 +978,16 @@ impl Component for ReplPanel {
         );
 
         // ── caret (real terminal cursor in the input) ──────────────────────────
-        let before = &self.input[..self.cursor];
-        let row = before.iter().filter(|&&c| c == '\n').count() as u16;
-        let col = before.iter().rev().take_while(|&&c| c != '\n').count() as u16;
+        let (row, col) = match &self.browse {
+            Some(b) => (0, b.query.chars().count() as u16),
+            None => {
+                let before = &self.input[..self.cursor];
+                (
+                    before.iter().filter(|&&c| c == '\n').count() as u16,
+                    before.iter().rev().take_while(|&&c| c != '\n').count() as u16,
+                )
+            }
+        };
         let crow = (input_y + row).min(footer_y.saturating_sub(1));
         let ccol = area.x + 1 + prompt_w + col;
         self.caret = Some(Position::new(crow as usize, ccol as usize));
@@ -946,6 +1066,57 @@ mod tests {
             "the inherited PATH must still follow the project bins"
         );
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn c_r_browses_filters_and_picks_a_history_entry() {
+        let key = |code, modifiers| KeyEvent { code, modifiers };
+        let ch = |c| key(KeyCode::Char(c), KeyModifiers::NONE);
+        let mut p = ReplPanel::new(ReplLang::Elisp);
+        p.history = History::default();
+        for e in ["(car xs)", "(+ 1 2)", "(cdr xs)", "(message \"hi\")"] {
+            p.history.push(ReplLang::Elisp, e);
+        }
+        p.set_input("draft");
+        p.browse = Some(Browse {
+            query: String::new(),
+            sel: 0,
+        });
+        assert_eq!(
+            p.browse_matches(),
+            ["(message \"hi\")", "(cdr xs)", "(+ 1 2)", "(car xs)"],
+            "newest first"
+        );
+
+        for c in "XS".chars() {
+            p.browse_key(ch(c));
+        }
+        assert_eq!(
+            p.browse_matches(),
+            ["(cdr xs)", "(car xs)"],
+            "case-insensitive filter"
+        );
+        // C-r and Down step to older matches, stopping at the last; Up comes back.
+        p.browse_key(key(KeyCode::Char('r'), KeyModifiers::CONTROL));
+        p.browse_key(key(KeyCode::Down, KeyModifiers::NONE));
+        assert_eq!(p.browse.as_ref().unwrap().sel, 1);
+        p.browse_key(key(KeyCode::Up, KeyModifiers::NONE));
+        p.browse_key(key(KeyCode::Down, KeyModifiers::NONE));
+        assert_eq!(p.input_string(), "draft", "browsing leaves the input alone");
+
+        p.browse_key(key(KeyCode::Enter, KeyModifiers::NONE));
+        assert!(p.browse.is_none());
+        assert_eq!(p.input_string(), "(car xs)");
+        assert_eq!(p.cursor, 8);
+
+        // Esc backs out without touching the input; a filter with no match
+        // picks nothing.
+        p.browse = Some(Browse {
+            query: "nope".into(),
+            sel: 0,
+        });
+        p.browse_key(key(KeyCode::Enter, KeyModifiers::NONE));
+        assert_eq!(p.input_string(), "(car xs)");
     }
 
     #[test]

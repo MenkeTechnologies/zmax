@@ -126,7 +126,10 @@ embedded languages behind one read-eval-print loop:
 
 - **Enter** evaluates, **Alt-Enter** inserts a newline.
 - **Tab** / **Shift-Tab** cycle the active language.
-- **↑/↓** or **C-p/C-n** browse per-language history.
+- **↑/↓** or **C-p/C-n** step through per-language history.
+- **C-r** browses that history: type to filter (case-insensitive), **↑/↓** pick
+  (another **C-r** steps to the next older match), **Enter** puts the entry in the
+  input to edit or run, **Esc** backs out.
 - **C-l** clears the transcript, **PgUp/PgDn** scroll, **Esc** closes.
 
 `:repl awk` (etc.) opens directly on a given language. Per-language input history

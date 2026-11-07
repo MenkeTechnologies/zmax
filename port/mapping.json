@@ -89132,5 +89132,13 @@
    "typable:split-chooser"
   ],
   "note": "Exit Chooser = `Esc` (or `q`, `C-g`) in `:split-chooser` (ui/split_chooser.rs): closes the overlay without touching any window."
+ },
+ {
+  "spec_id": "jetbrains-actions.Console.History.Browse",
+  "status": "ported",
+  "evidence": [
+   "static:repl"
+  ],
+  "note": "Browse Console History = `C-r` in the zmax REPL (`repl`, ui/repl.rs): lists the current language's past inputs newest first in place of the transcript; typing filters them (case-insensitive substring), Up/Down or C-p/C-n (and C-r again) pick, Enter puts the entry in the input to edit or run, Esc backs out (ReplPanel::browse_matches / browse_key)."
  }
 ]
