@@ -226,7 +226,7 @@ leaving the editor:
   (`:layout NAME` switches, `:layout-restore` undoes changes since the last
   save or switch, `:layout-delete NAME` forgets one), and `:navbar-location
   top|bottom|hide` places the breadcrumb trail on the toolbar, in the status
-  bar, or nowhere.
+  bar, or nowhere (`:navbar-members` drops or restores the symbol at its end).
 - **Integrated terminal** (`:terminal`) — a PTY shell in a pane, with a `C-\`
   window leader for split/focus and click-to-focus across panes; `terminal_find`
   searches the scrollback, `terminal_copy_all` copies it, and

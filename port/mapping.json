@@ -89168,5 +89168,21 @@
    "typable:layout-save"
   ],
   "note": "Save Changes in Current Layout = zmax `:layout-save` with no name: overwrites the current named layout (the last one saved or picked; `default` before any) with the workbench as it is now (NamedLayouts::store, appdata.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowMembersInNavigationBar",
+  "status": "ported",
+  "evidence": [
+   "typable:navbar-members"
+  ],
+  "note": "Show Members (navigation bar) = zmax `:navbar-members [on|off]` (no argument flips it): the IDE breadcrumb trail, on the toolbar or in the status bar per `:navbar-location`, ends with the innermost outline symbol around the cursor when on and stops at the file when off (navbar_members, commands.rs; Ide::trail_symbol, ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ViewMembersInNavigationBar",
+  "status": "ported",
+  "evidence": [
+   "typable:navbar-members"
+  ],
+  "note": "Members in Navigation Bar = zmax `:navbar-members [on|off]` (no argument flips it): shows or hides the symbol around the cursor at the end of the IDE breadcrumb trail (navbar_members, commands.rs; Ide::trail_symbol, ui/ide.rs)."
  }
 ]

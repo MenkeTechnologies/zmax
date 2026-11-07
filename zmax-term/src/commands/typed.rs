@@ -27358,6 +27358,32 @@ fn navbar_location(
     Ok(())
 }
 
+/// `:navbar-members [on|off]` — JetBrains "Show Members in Navigation Bar"
+/// (`ShowMembersInNavigationBar` / `ViewMembersInNavigationBar`): end the IDE
+/// breadcrumb trail with the symbol around the cursor, or stop it at the file.
+/// With no argument, flip it.
+fn navbar_members(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = match args.first().map(|a| a.to_ascii_lowercase()).as_deref() {
+        None => !super::navbar_members(),
+        Some("on") => true,
+        Some("off") => false,
+        Some(other) => bail!("expected on or off, not {other}"),
+    };
+    super::set_navbar_members(on);
+    cx.editor.set_status(format!(
+        "navigation bar members: {}",
+        if on { "on" } else { "off" }
+    ));
+    Ok(())
+}
+
 /// `:split-chooser` — JetBrains "Open in Split with Chooser": pick a window,
 /// or a side of one to split, and move or copy the current file there
 /// ([`crate::ui::split_chooser`]).
@@ -67701,6 +67727,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::ide_layout]),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "navbar-members",
+        aliases: &[],
+        doc: "Show (`on`) or hide (`off`) the symbol around the cursor at the end of the IDE breadcrumb trail; with no argument, flip it (JetBrains Show Members in Navigation Bar).",
+        fun: navbar_members,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

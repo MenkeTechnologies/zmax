@@ -1480,6 +1480,7 @@
 | `:layout-save` | Save the IDE workbench layout (drawer sizes, folds, bottom tabs, expanded folders) under NAME and make it current, or over the current layout with no NAME (JetBrains Save Current Layout as New / Save Changes in Current Layout). |
 | `:layout-restore` | Put the IDE workbench back into the current saved layout, or the factory layout before any save (JetBrains Restore Current Layout). |
 | `:layout-delete` | Forget a layout saved with `:layout-save`. |
+| `:navbar-members` | Show (`on`) or hide (`off`) the symbol around the cursor at the end of the IDE breadcrumb trail; with no argument, flip it (JetBrains Show Members in Navigation Bar). |
 | `:navbar-location` | Place the IDE breadcrumb trail: `top` (the toolbar), `bottom` (the status bar, in place of the file path) or `hide`; with no argument, show the current placement (JetBrains Navigation Bar location). |
 | `:split-chooser` | Choose a window, or a side of one to split, with the arrow keys, then move (Enter) or copy (d) the current file there (JetBrains Open in Split with Chooser). |
 | `:vsplit`, `:vs` | Open the file in a vertical split. |

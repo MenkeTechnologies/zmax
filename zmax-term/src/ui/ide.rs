@@ -3580,7 +3580,7 @@ impl Ide {
             // JetBrains `NavBarLocationBottom`: the trail takes the path's place.
             path: match crate::commands::navbar_location() {
                 crate::commands::NavBarLocation::Bottom => {
-                    breadcrumb(&self.status_path, self.cursor_symbol())
+                    breadcrumb(&self.status_path, self.trail_symbol())
                         .unwrap_or_else(|| self.status_path.clone())
                 }
                 _ => self.status_path.clone(),
@@ -4169,7 +4169,7 @@ impl Ide {
             && buttons_start > bc_start + 4
         {
             let avail = (buttons_start - 1 - bc_start) as usize;
-            if let Some(trail) = breadcrumb(&self.status_path, self.cursor_symbol()) {
+            if let Some(trail) = breadcrumb(&self.status_path, self.trail_symbol()) {
                 let crumb = format!(" {trail}");
                 // left-truncate (keep the filename) when the path is too long
                 let shown = if crumb.chars().count() > avail {
@@ -4190,6 +4190,13 @@ impl Ide {
                 self.breadcrumb_hit = (bc_start, end_x);
             }
         }
+    }
+
+    /// The symbol the breadcrumb trail ends with: the one around the cursor,
+    /// unless members are off in the navigation bar.
+    fn trail_symbol(&self) -> Option<&str> {
+        self.cursor_symbol()
+            .filter(|_| crate::commands::navbar_members())
     }
 
     /// The innermost outline symbol containing the cursor.
@@ -6843,7 +6850,9 @@ mod tool_window_tests {
     /// (directories › file › innermost symbol) where it showed the path.
     #[test]
     fn the_bottom_navbar_puts_the_trail_in_the_status_bar() {
-        use crate::commands::{navbar_location, set_navbar_location, NavBarLocation};
+        use crate::commands::{
+            navbar_location, set_navbar_location, set_navbar_members, NavBarLocation,
+        };
         use tui::buffer::Buffer as Surface;
         use zmax_view::graphics::Rect;
 
@@ -6874,11 +6883,20 @@ mod tool_window_tests {
         let before = navbar_location();
         set_navbar_location(NavBarLocation::Bottom);
         let bottom = row(&ide);
+        // JetBrains "Show Members in Navigation Bar" off: the trail stops at
+        // the file.
+        set_navbar_members(false);
+        let no_members = row(&ide);
+        set_navbar_members(true);
         set_navbar_location(NavBarLocation::Top);
         let top = row(&ide);
         set_navbar_location(before);
 
         assert!(bottom.contains("src › ui › ide.rs › render "), "{bottom}");
+        assert!(
+            no_members.contains("src › ui › ide.rs ") && !no_members.contains("render"),
+            "{no_members}"
+        );
         assert!(
             top.contains(" src/ui/ide.rs ") && !top.contains(" › "),
             "{top}"

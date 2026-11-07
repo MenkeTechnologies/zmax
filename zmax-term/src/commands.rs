@@ -19891,6 +19891,19 @@ pub(crate) fn set_navbar_location(loc: NavBarLocation) {
     NAVBAR_LOCATION.store(loc as u8, std::sync::atomic::Ordering::Relaxed);
 }
 
+/// Whether the breadcrumb trail ends with the symbol around the cursor —
+/// JetBrains "Show Members in Navigation Bar" (`ShowMembersInNavigationBar`).
+/// On, as the IDE ships it.
+static NAVBAR_MEMBERS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+pub(crate) fn navbar_members() -> bool {
+    NAVBAR_MEMBERS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+pub(crate) fn set_navbar_members(on: bool) {
+    NAVBAR_MEMBERS.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// JetBrains "Show Breadcrumbs" (`EditorToggleShowBreadcrumbs`): the trail of
 /// directories, file and enclosing symbol on the toolbar, on or off.
 ///
