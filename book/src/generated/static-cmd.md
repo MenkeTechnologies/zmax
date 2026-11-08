@@ -2446,6 +2446,7 @@
 | `execute_extended_command_for_buffer` | Run a command declared by this buffer's major mode (emacs execute-extended-command-for-buffer, M-X) | **spacemacs** — normal: `` <A-X> ``<br>**hybrid** — normal: `` <A-X> ``, insert: `` <A-X> ``<br>**emacs, cua, micro, nano** — insert: `` <A-X> `` |
 | `search_everywhere` | Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains) | **spacemacs, hybrid** — normal: `` <space>sE ``, select: `` <space>sE `` |
 | `recent_files_switcher` | Recent Files switcher: tool windows + recent files (SPC b r) | **spacemacs, hybrid** — normal: `` <space>br ``, select: `` <space>br `` |
+| `recent_changed_files` | Recent Files switcher showing changed files only (JetBrains Recently Changed Files) |  |
 | `recentf_mode` | Toggle recording of opened files in the recent-files list (emacs recentf-mode) |  |
 | `recentf_save_list` | Write the recent-files list to its store file (emacs recentf-save-list) |  |
 | `recentf_edit_list` | Edit the recent-files list: mark entries and delete them (emacs recentf-edit-list) |  |
@@ -2628,6 +2629,7 @@
 | `build_project` | Build the project with its own build tool (JetBrains Build Project, Ctrl F9) | **spacemacs, hybrid** — normal: `` <space>pB ``, select: `` <space>pB `` |
 | `rebuild_project` | Clean and build the project (JetBrains Rebuild, Ctrl Shift F9) | **spacemacs, hybrid** — normal: `` <space>pC ``, select: `` <space>pC `` |
 | `new_file_in_directory` | Create a file next to the current one and open it (JetBrains New in This Directory) | **spacemacs, hybrid** — normal: `` <space>fn ``, select: `` <space>fn `` |
+| `project_tree_new_file` | Create a file in the directory selected in the project tree and open it (JetBrains New File) |  |
 | `find_sibling_file` | Open a sibling of this file: header/source, test/impl, style/template (emacs find-sibling-file, JetBrains Related File) |  |
 | `navigation_bar` | Jump to an enclosing function/class from the breadcrumb trail (JetBrains Navigation Bar) |  |
 | `select_in` | Select this file in another view: project tree, dired, terminal (JetBrains Select In) |  |

@@ -2839,6 +2839,7 @@ impl MappableCommand {
         execute_extended_command_for_buffer, "Run a command declared by this buffer's major mode (emacs execute-extended-command-for-buffer, M-X)",
         search_everywhere, "Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains)",
         recent_files_switcher, "Recent Files switcher: tool windows + recent files (SPC b r)",
+        recent_changed_files, "Recent Files switcher showing changed files only (JetBrains Recently Changed Files)",
         recentf_mode, "Toggle recording of opened files in the recent-files list (emacs recentf-mode)",
         recentf_save_list, "Write the recent-files list to its store file (emacs recentf-save-list)",
         recentf_edit_list, "Edit the recent-files list: mark entries and delete them (emacs recentf-edit-list)",
@@ -3021,6 +3022,7 @@ impl MappableCommand {
         build_project, "Build the project with its own build tool (JetBrains Build Project, Ctrl F9)",
         rebuild_project, "Clean and build the project (JetBrains Rebuild, Ctrl Shift F9)",
         new_file_in_directory, "Create a file next to the current one and open it (JetBrains New in This Directory)",
+        project_tree_new_file, "Create a file in the directory selected in the project tree and open it (JetBrains New File)",
         find_sibling_file, "Open a sibling of this file: header/source, test/impl, style/template (emacs find-sibling-file, JetBrains Related File)",
         navigation_bar, "Jump to an enclosing function/class from the breadcrumb trail (JetBrains Navigation Bar)",
         select_in, "Select this file in another view: project tree, dired, terminal (JetBrains Select In)",
@@ -37970,17 +37972,42 @@ fn recentf_edit_list(cx: &mut Context) {
 /// JetBrains "Recent Files" switcher (SPC b r): a two-pane popup with tool-window
 /// shortcuts on the left and the recent-files list on the right.
 fn recent_files_switcher(cx: &mut Context) {
+    open_recent_files_switcher(cx, false);
+}
+
+/// JetBrains "Recently Changed Files" (`RecentChangedFilesFallback`): the
+/// Recent Files switcher with "Show edited only" already ticked.
+fn recent_changed_files(cx: &mut Context) {
+    open_recent_files_switcher(cx, true);
+}
+
+/// The switcher over the recent-files store. A file counts as changed when a
+/// buffer of it was edited this session, or when Local History holds a
+/// snapshot of it — snapshots are taken on save, so a file changed in an
+/// earlier session still counts after its buffer is gone.
+fn open_recent_files_switcher(cx: &mut Context, edited_only: bool) {
     let all = crate::recent_files::load();
-    let open: Vec<std::path::PathBuf> = cx
+    let mut edited: Vec<std::path::PathBuf> = cx
         .editor
-        .documents()
-        .filter_map(|d| d.path().map(|p| p.to_path_buf()))
+        .documents_mut()
+        .filter_map(|d| {
+            let edited = d.get_current_revision() > 0;
+            d.path().filter(|_| edited).map(|p| p.to_path_buf())
+        })
         .collect();
+    edited.extend(
+        crate::local_history::recent(all.len())
+            .into_iter()
+            .map(|(_, file, _)| file),
+    );
     let root = zmax_loader::find_workspace().0;
     cx.callback.push(Box::new(
         move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
             compositor.push(Box::new(crate::ui::switcher::RecentFilesSwitcher::new(
-                all, open, root,
+                all,
+                edited,
+                root,
+                edited_only,
             )));
         },
     ));
@@ -76478,7 +76505,39 @@ fn new_file_in_directory(cx: &mut Context) {
         .path()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()))
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-    let prompt = ui::Prompt::new(
+    cx.push_layer(Box::new(new_file_prompt(dir)));
+}
+
+/// JetBrains New File (`NewFile`) from the project view: prompt for a name and
+/// create it in the directory selected in the project tree — the selected
+/// directory itself, or the directory holding the selected file.
+fn project_tree_new_file(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let selected = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| {
+                view.with_project_tree(|tree| tree.selected_path().map(Path::to_path_buf))
+            })
+            .flatten();
+        match selected {
+            Some(path) => compositor.push(Box::new(new_file_prompt(directory_of(&path)))),
+            None => cx.editor.set_status("no project tree selection"),
+        }
+    }));
+}
+
+/// `path` when it is a directory, otherwise the directory that holds it.
+fn directory_of(path: &Path) -> PathBuf {
+    match path.parent() {
+        Some(parent) if !path.is_dir() => parent.to_path_buf(),
+        _ => path.to_path_buf(),
+    }
+}
+
+/// The New File prompt for `dir`: the named file (and any missing parent
+/// directories in the name) is created on disk and opened.
+fn new_file_prompt(dir: PathBuf) -> ui::Prompt {
+    ui::Prompt::new(
         format!("new file in {}: ", dir.display()).into(),
         None,
         ui::completers::none,
@@ -76511,8 +76570,25 @@ fn new_file_in_directory(cx: &mut Context) {
                 Err(e) => cx.editor.set_error(format!("new file: {e}")),
             }
         },
-    );
-    cx.push_layer(Box::new(prompt));
+    )
+}
+
+#[cfg(test)]
+mod new_file_tests {
+    use super::directory_of;
+
+    /// A selected directory is where the file goes; a selected file sends it
+    /// next door.
+    #[test]
+    fn a_new_file_goes_into_the_selected_directory() {
+        let root = tempfile::tempdir().unwrap();
+        let sub = root.path().join("sub");
+        std::fs::create_dir(&sub).unwrap();
+        let file = sub.join("a.rs");
+        std::fs::write(&file, "").unwrap();
+        assert_eq!(directory_of(&sub), sub);
+        assert_eq!(directory_of(&file), sub);
+    }
 }
 
 fn workspace_relative_path(editor: &Editor) -> Option<String> {

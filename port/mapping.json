@@ -78759,11 +78759,12 @@
  },
  {
   "spec_id": "jetbrains-actions.DeleteRecentFilesFallback",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:recent_files_switcher",
    "static:recentf_edit_list"
   ],
-  "note": "DeleteRecentFilesFallback (Delete from Recent Files) = zmax `recentf_edit_list`: removes entries from the recent-files list via a mark-and-delete list buffer rather than deleting the selected row in the popup."
+  "note": "DeleteRecentFilesFallback (Delete from Recent Files) = Delete / Backspace on the selected row of the zmax Recent Files switcher (`recent_files_switcher`, ui/switcher.rs forget_selected): the file leaves the list on screen and the recent-files store, and the selection stays on the row that moved up. `recentf_edit_list` is the mark-and-delete list buffer for the same store."
  },
  {
   "spec_id": "jetbrains-actions.Diff.ApplyLeftSide",
@@ -81347,11 +81348,12 @@
  },
  {
   "spec_id": "jetbrains-actions.NewFile",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:project_tree_new_file",
    "static:new_file_in_directory"
   ],
-  "note": "NewFile (File) = zmax `new_file_in_directory`: creates and opens a named file on disk, but always in the current file's directory rather than a project-view selection."
+  "note": "NewFile (File) = zmax `project_tree_new_file`: prompts for a name and creates the file on disk in the directory selected in the project tree (the selected directory, or the one holding the selected file), then opens it; `new_file_in_directory` is the same prompt beside the current buffer's file. Missing parent directories in the name are created."
  },
  {
   "spec_id": "jetbrains-actions.NewScratchBuffer",
@@ -81739,11 +81741,11 @@
  },
  {
   "spec_id": "jetbrains-actions.RecentChangedFilesFallback",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:recent_changes_picker"
+   "static:recent_changed_files"
   ],
-  "note": "RecentChangedFilesFallback (Recently Changed Files) = zmax `recent_changes_picker`: lists recently changed files from saved Local History snapshots, not from in-session edits of recent files."
+  "note": "RecentChangedFilesFallback (Recently Changed Files) = zmax `recent_changed_files`: the Recent Files switcher opened with \"Show edited only\" ticked; a file counts as changed when a buffer of it was edited this session (current revision > 0) or Local History holds a snapshot of it, so changes from earlier sessions still count (open_recent_files_switcher, commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.RecentChanges",
@@ -86704,7 +86706,7 @@
   "evidence": [
    "static:recent_files_switcher"
   ],
-  "note": "SwitcherRecentEditedChangedToggleCheckBoxFallback (Toggle Changed Only Files) = zmax `recent_files_switcher`: `e` (or clicking the checkbox) inside the switcher flips edited_only and filters the file list (ui/switcher.rs:186-189, 311)."
+  "note": "SwitcherRecentEditedChangedToggleCheckBoxFallback (Toggle Changed Only Files) = zmax `recent_files_switcher`: `e` (or clicking the checkbox) inside the switcher flips edited_only and filters the file list to changed files (ui/switcher.rs); a file counts as changed when a buffer of it was edited this session (current revision > 0) or Local History holds a snapshot of it, so changes from earlier sessions still count (open_recent_files_switcher, commands.rs)."
  },
  {
   "spec_id": "jetbrains-actions.SwitchIdeScaleAction",

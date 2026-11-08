@@ -4,7 +4,8 @@
 //!
 //! Keys: j/k or ↑/↓ move the recent-files list, wrapping at either end as the
 //! JetBrains Switcher does · Tab or ←/→ switch to the left
-//! rail · Enter / click activates · `e` toggles edited-only · Esc closes.
+//! rail · Enter / click activates · Delete / Backspace removes the selected file
+//! from the recent-files list · `e` toggles edited-only · Esc closes.
 
 use std::path::PathBuf;
 
@@ -80,8 +81,9 @@ const TOOLS: &[Tool] = &[
 pub struct RecentFilesSwitcher {
     /// All recent files (MRU, newest first).
     all: Vec<PathBuf>,
-    /// Paths currently open as buffers (the "edited" proxy).
-    open: Vec<PathBuf>,
+    /// Files changed lately: buffers edited this session and files with a
+    /// Local History snapshot (what "Show edited only" keeps).
+    edited: Vec<PathBuf>,
     edited_only: bool,
     root: PathBuf,
     sel: usize,      // selected recent-file index
@@ -109,11 +111,11 @@ fn wrap_step(i: usize, n: usize, forward: bool) -> usize {
 }
 
 impl RecentFilesSwitcher {
-    pub fn new(all: Vec<PathBuf>, open: Vec<PathBuf>, root: PathBuf) -> Self {
+    pub fn new(all: Vec<PathBuf>, edited: Vec<PathBuf>, root: PathBuf, edited_only: bool) -> Self {
         Self {
             all,
-            open,
-            edited_only: false,
+            edited,
+            edited_only,
             root,
             sel: 0,
             left_sel: 0,
@@ -129,10 +131,23 @@ impl RecentFilesSwitcher {
     /// The recent-files list honoring the edited-only toggle.
     fn files(&self) -> Vec<&PathBuf> {
         if self.edited_only {
-            self.all.iter().filter(|p| self.open.contains(p)).collect()
+            self.all
+                .iter()
+                .filter(|p| self.edited.contains(p))
+                .collect()
         } else {
             self.all.iter().collect()
         }
+    }
+
+    /// Take the selected file out of the list (JetBrains "Delete from Recent
+    /// Files"), keeping the selection on the row that moved up into its place
+    /// or on the new last row. Returns the path, for the store to forget too.
+    fn forget_selected(&mut self) -> Option<PathBuf> {
+        let path = (*self.files().get(self.sel)?).clone();
+        self.all.retain(|p| *p != path);
+        self.sel = self.sel.min(self.files().len().saturating_sub(1));
+        Some(path)
     }
 
     fn close() -> Callback {
@@ -190,7 +205,7 @@ impl RecentFilesSwitcher {
 }
 
 impl Component for RecentFilesSwitcher {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         match event {
             Event::Key(key) => match key.code {
                 KeyCode::Esc => EventResult::Consumed(Some(Self::close())),
@@ -221,6 +236,14 @@ impl Component for RecentFilesSwitcher {
                     EventResult::Consumed(None)
                 }
                 KeyCode::Enter => self.activate(),
+                KeyCode::Delete | KeyCode::Backspace if !self.on_left => {
+                    if let Some(path) = self.forget_selected() {
+                        if let Err(e) = crate::recent_files::remove(&[path]) {
+                            cx.editor.set_error(format!("recent files: {e}"));
+                        }
+                    }
+                    EventResult::Consumed(None)
+                }
                 _ => EventResult::Consumed(None),
             },
             Event::Mouse(ev) => match ev.kind {
@@ -406,7 +429,36 @@ impl Component for RecentFilesSwitcher {
 
 #[cfg(test)]
 mod tests {
-    use super::wrap_step;
+    use super::{wrap_step, RecentFilesSwitcher};
+    use std::path::PathBuf;
+
+    /// Deleting a row drops that file only, from the full list as well as the
+    /// edited-only view, and the selection stays in range.
+    #[test]
+    fn forgetting_a_file_keeps_the_selection_on_the_list() {
+        let p = |s: &str| PathBuf::from(s);
+        let mut sw = RecentFilesSwitcher::new(
+            vec![p("a"), p("b"), p("c"), p("d")],
+            vec![p("b"), p("d")],
+            p("/"),
+            false,
+        );
+        sw.sel = 1;
+        assert_eq!(sw.forget_selected(), Some(p("b")));
+        assert_eq!(sw.all, [p("a"), p("c"), p("d")]);
+        assert_eq!(sw.sel, 1, "c moved up into b's row");
+
+        sw.edited_only = true;
+        sw.sel = 0;
+        assert_eq!(
+            sw.forget_selected(),
+            Some(p("d")),
+            "the edited-only row 0 is d"
+        );
+        assert_eq!(sw.all, [p("a"), p("c")]);
+        assert_eq!(sw.sel, 0);
+        assert_eq!(sw.forget_selected(), None, "nothing edited is left");
+    }
 
     #[test]
     fn stepping_wraps_past_both_ends_and_survives_an_empty_list() {
