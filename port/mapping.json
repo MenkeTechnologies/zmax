@@ -80228,11 +80228,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.CheckoutRevision",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:vc_retrieve_tag"
+   "static:git_checkout_revision"
   ],
-  "note": "Git.CheckoutRevision (Checkout Revision) = zmax `vc_retrieve_tag`: runs `git checkout <ref>` for a typed ref; JetBrains checks out the commit selected in the log."
+  "note": "Git.CheckoutRevision (Checkout Revision) = zmax `git_checkout_revision`: `git checkout --detach` on a commit picked from the branch log, leaving HEAD detached at it as the IDE does; open buffers are reloaded."
  },
  {
   "spec_id": "jetbrains-actions.Git.Clone",
@@ -80276,11 +80276,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.CreateNewTag",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:vc_create_tag"
+   "static:git_tag_commit"
   ],
-  "note": "Git.CreateNewTag (New Tag) = zmax `vc_create_tag`: tags HEAD; JetBrains tags the commit selected in the log."
+  "note": "Git.CreateNewTag (New Tag) = zmax `git_tag_commit`: a lightweight tag, named at a prompt, on a commit picked from the branch log; `vc_create_tag` still tags HEAD."
  },
  {
   "spec_id": "jetbrains-actions.Git.Fetch",
@@ -80404,11 +80404,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.Stash.Pop",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:stash-pop"
+   "static:git_stash_pop_picked"
   ],
-  "note": "Git.Stash.Pop (Pop) ~ zmax `stash-pop`: `:stash-pop` pops only the most recent stash; JetBrains pops the stash selected in the stash list"
+  "note": "Git.Stash.Pop (Pop) = zmax `git_stash_pop_picked`: `git stash pop` on the stash picked from the stash list (newest first, `stash@{n}: message`), where `:stash-pop` pops only the newest."
  },
  {
   "spec_id": "jetbrains-actions.Git.Stash.Silently",
@@ -80428,11 +80428,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.Unstash",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:stash-pop"
+   "static:git_unstash"
   ],
-  "note": "Git.Unstash (Unstash Changes) ~ zmax `stash-pop`: `:stash-pop` pops the most recent stash; JetBrains Unstash offers a stash picker with pop/apply/branch options"
+  "note": "Git.Unstash (Unstash Changes) = zmax `git_unstash`: pick a stash, then the dialog's choices: pop or only apply it, each with or without \"Reinstate index\" (`--index`, unstash_args), or pop it onto a new branch (`git stash branch`)."
  },
  {
   "spec_id": "jetbrains-actions.Git.WorkingTrees.Open",

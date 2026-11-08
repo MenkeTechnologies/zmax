@@ -1013,6 +1013,8 @@
 | `git_stash_apply_picked` | Apply a picked stash (JetBrains stash Apply) |  |
 | `git_stash_drop_picked` | Drop a picked stash (JetBrains stash Drop) |  |
 | `git_unstash_as_branch` | Pop a picked stash onto a new branch (JetBrains Unstash) |  |
+| `git_unstash` | Pick a stash, then pop or apply it, with or without its index, or onto a new branch (JetBrains Unstash Changes) |  |
+| `git_stash_pop_picked` | Pop a picked stash (JetBrains stash Pop) |  |
 | `git_stash_file` | Stash the changes to this file only (JetBrains Git.Stage.Stash.Files) |  |
 | `git_worktree_add` | Create a linked worktree at a path, on a new branch or at HEAD (JetBrains New Worktree) |  |
 | `git_worktree_remove` | Remove a picked linked worktree (JetBrains worktree Delete) |  |
@@ -1030,6 +1032,8 @@
 | `git_branch_at_commit` | Create a branch at a picked commit and switch to it (JetBrains New Branch) |  |
 | `git_reset_to_commit` | Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here) |  |
 | `git_revert_commit` | Commit the inverse of a picked commit (JetBrains Revert Commit) |  |
+| `git_checkout_revision` | Check out a picked commit, detaching HEAD (JetBrains Checkout Revision) |  |
+| `git_tag_commit` | Tag a picked commit (JetBrains New Tag) |  |
 | `git_push_up_to_commit` | Push the current branch only up to a picked commit (JetBrains Push All up to Here) |  |
 | `git_stash_list` | The stashes; picking one shows its patch (JetBrains Show Git Stash) |  |
 | `git_manage_remotes` | Add a remote, change a remote's URL, or remove it (JetBrains Manage Remotes) |  |

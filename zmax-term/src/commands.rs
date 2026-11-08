@@ -1406,6 +1406,8 @@ impl MappableCommand {
         git_stash_apply_picked, "Apply a picked stash (JetBrains stash Apply)",
         git_stash_drop_picked, "Drop a picked stash (JetBrains stash Drop)",
         git_unstash_as_branch, "Pop a picked stash onto a new branch (JetBrains Unstash)",
+        git_unstash, "Pick a stash, then pop or apply it, with or without its index, or onto a new branch (JetBrains Unstash Changes)",
+        git_stash_pop_picked, "Pop a picked stash (JetBrains stash Pop)",
         git_stash_file, "Stash the changes to this file only (JetBrains Git.Stage.Stash.Files)",
         git_worktree_add, "Create a linked worktree at a path, on a new branch or at HEAD (JetBrains New Worktree)",
         git_worktree_remove, "Remove a picked linked worktree (JetBrains worktree Delete)",
@@ -1423,6 +1425,8 @@ impl MappableCommand {
         git_branch_at_commit, "Create a branch at a picked commit and switch to it (JetBrains New Branch)",
         git_reset_to_commit, "Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)",
         git_revert_commit, "Commit the inverse of a picked commit (JetBrains Revert Commit)",
+        git_checkout_revision, "Check out a picked commit, detaching HEAD (JetBrains Checkout Revision)",
+        git_tag_commit, "Tag a picked commit (JetBrains New Tag)",
         git_push_up_to_commit, "Push the current branch only up to a picked commit (JetBrains Push All up to Here)",
         git_stash_list, "The stashes; picking one shows its patch (JetBrains Show Git Stash)",
         git_manage_remotes, "Add a remote, change a remote's URL, or remove it (JetBrains Manage Remotes)",
@@ -77499,6 +77503,35 @@ fn git_revert_commit(cx: &mut Context) {
     });
 }
 
+/// JetBrains "Checkout Revision" (`Git.CheckoutRevision`): check out a picked
+/// commit; HEAD is left detached at it, as the IDE leaves it.
+fn git_checkout_revision(cx: &mut Context) {
+    git_pick_commit(cx, "check out", |cx, sha| {
+        git_run_cx(
+            cx,
+            &["checkout", "--detach", sha],
+            &format!("HEAD detached at {sha}"),
+            true,
+        )
+    });
+}
+
+/// JetBrains "New Tag" from the log (`Git.CreateNewTag`): a lightweight tag
+/// on a picked commit.
+fn git_tag_commit(cx: &mut Context) {
+    git_pick_commit(cx, "tag", |cx, sha| {
+        let sha = sha.to_string();
+        prompt_then_cx(cx, "new tag: ", move |cx, name| {
+            git_run_cx(
+                cx,
+                &["tag", name, &sha],
+                &format!("Tagged {sha} as {name}"),
+                false,
+            )
+        });
+    });
+}
+
 /// JetBrains "Get" (`Vcs.GetVersion`): replace this file in the working tree
 /// with its content at a revision.
 fn vcs_get_version(cx: &mut Context) {
@@ -78188,6 +78221,138 @@ fn git_unstash_as_branch(cx: &mut Context) {
             });
         },
     );
+}
+
+/// JetBrains "Pop" in the stash list (`Git.Stash.Pop`).
+fn git_stash_pop_picked(cx: &mut Context) {
+    git_pick(cx, "pop stash", git_stashes(), "No stashes", |cx, line| {
+        let stash = stash_ref(line);
+        git_run_cx(
+            cx,
+            &unstash_args(stash, true, false),
+            &format!("Popped {stash}"),
+            true,
+        )
+    });
+}
+
+/// The `git stash` command the Unstash dialog runs: `pop` drops the stash
+/// once it applies, and "Reinstate index" (`--index`) restores what was
+/// staged as staged rather than folding it into the working tree.
+fn unstash_args(stash: &str, pop: bool, index: bool) -> Vec<&str> {
+    let mut args = vec!["stash", if pop { "pop" } else { "apply" }];
+    if index {
+        args.push("--index");
+    }
+    args.push(stash);
+    args
+}
+
+/// JetBrains "Unstash Changes" (`Git.Unstash`): pick a stash, then the
+/// dialog's choices — pop it or only apply it, with or without reinstating
+/// its index, or pop it onto a new branch.
+fn git_unstash(cx: &mut Context) {
+    const BRANCH: &str = "as new branch";
+    git_pick(cx, "unstash", git_stashes(), "No stashes", |cx, line| {
+        let stash = stash_ref(line).to_string();
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let modes = [
+                    "pop",
+                    "pop, reinstate index",
+                    "apply",
+                    "apply, reinstate index",
+                    BRANCH,
+                ]
+                .map(String::from)
+                .to_vec();
+                let columns = [PickerColumn::new("unstash", |m: &String, _: &()| {
+                    m.as_str().into()
+                })];
+                let stash = stash.clone();
+                let picker = Picker::new(columns, 0, modes, (), move |cx, mode: &String, _| {
+                    if mode == BRANCH {
+                        let stash = stash.clone();
+                        prompt_then_cx(cx, "new branch: ", move |cx, branch| {
+                            git_run_cx(
+                                cx,
+                                &["stash", "branch", branch, &stash],
+                                &format!("Unstashed {stash} onto {branch}"),
+                                true,
+                            )
+                        });
+                        return;
+                    }
+                    let pop = mode.starts_with("pop");
+                    let index = mode.ends_with("index");
+                    let verb = if pop { "Popped" } else { "Applied" };
+                    git_run_cx(
+                        cx,
+                        &unstash_args(&stash, pop, index),
+                        &format!("{verb} {stash}"),
+                        true,
+                    )
+                });
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+#[cfg(test)]
+mod unstash_tests {
+    use super::unstash_args;
+    use std::path::Path;
+    use std::process::Command;
+
+    fn git(dir: &Path, args: &[&str]) -> String {
+        let out = Command::new("git")
+            .current_dir(dir)
+            .args(["-c", "user.name=test", "-c", "user.email=test@example.com"])
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "git {args:?}: {out:?}");
+        String::from_utf8(out.stdout).unwrap()
+    }
+
+    /// A repo whose stash holds a staged change to `a` and an unstaged one to
+    /// `b`.
+    fn repo_with_stash() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let d = dir.path();
+        git(d, &["init", "-q"]);
+        std::fs::write(d.join("a"), "1\n").unwrap();
+        std::fs::write(d.join("b"), "1\n").unwrap();
+        git(d, &["add", "a", "b"]);
+        git(d, &["commit", "-q", "-m", "base"]);
+        std::fs::write(d.join("a"), "2\n").unwrap();
+        std::fs::write(d.join("b"), "2\n").unwrap();
+        git(d, &["add", "a"]);
+        git(d, &["stash", "-q"]);
+        dir
+    }
+
+    #[test]
+    fn pop_with_index_restores_what_was_staged_and_drops_the_stash() {
+        let dir = repo_with_stash();
+        let d = dir.path();
+        git(d, &unstash_args("stash@{0}", true, true));
+        assert_eq!(git(d, &["diff", "--cached", "--name-only"]), "a\n");
+        assert_eq!(git(d, &["diff", "--name-only"]), "b\n");
+        assert_eq!(git(d, &["stash", "list"]), "");
+    }
+
+    #[test]
+    fn apply_without_index_leaves_nothing_staged_and_keeps_the_stash() {
+        let dir = repo_with_stash();
+        let d = dir.path();
+        git(d, &unstash_args("stash@{0}", false, false));
+        assert_eq!(git(d, &["diff", "--cached", "--name-only"]), "");
+        assert_eq!(git(d, &["diff", "--name-only"]), "a\nb\n");
+        assert_eq!(git(d, &["stash", "list"]).lines().count(), 1);
+    }
 }
 
 /// `git stash push` limited to this buffer's file (`Git.Stage.Stash.Files`).
