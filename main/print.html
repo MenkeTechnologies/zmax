@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ccd8c662.js";
+            window.path_to_searchindex_js = "searchindex-8e7d9e05.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -5432,6 +5432,7 @@ without scrolling.</p>
 <tr><td><code>validate_xml</code></td><td>Check the XML file is well formed and valid against its DTD (JetBrains Validate)</td><td></td></tr>
 <tr><td><code>stop_run</code></td><td>Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;px</code>, select: <code>&lt;space&gt;px</code></td></tr>
 <tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code>, select: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code></td></tr>
+<tr><td><code>pause_run_output</code></td><td>Pause or resume the Run tool window output display (JetBrains Pause Output)</td><td></td></tr>
 <tr><td><code>open_log_file</code></td><td>Open zmax’s own log file (JetBrains Show Log)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;hL</code>, select: <code>&lt;space&gt;hL</code></td></tr>
 <tr><td><code>global_search_masked</code></td><td>Search the project, restricted to a file glob (JetBrains Find in Path file mask)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sm</code>, select: <code>&lt;space&gt;sm</code></td></tr>
 <tr><td><code>global_search_in_scope</code></td><td>Search the project inside a saved named scope (JetBrains scopes)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;sM</code>, select: <code>&lt;space&gt;sM</code></td></tr>
@@ -6713,6 +6714,7 @@ without scrolling.</p>
 <tr><td><code>mouse_buffer_menu</code></td><td>The buffer menu, from the mouse (emacs mouse-buffer-menu)</td><td><strong>spacemacs, hybrid, vim</strong> — normal: <code>&lt;C-F10&gt;</code></td></tr>
 <tr><td><code>browse_url_at_mouse</code></td><td>Open the URL under the mouse in a browser (emacs browse-url-at-mouse)</td><td></td></tr>
 <tr><td><code>mouse_start_secondary</code></td><td>Anchor the secondary selection at the click (emacs mouse-start-secondary)</td><td></td></tr>
+<tr><td><code>mouse_add_or_remove_caret</code></td><td>Add a caret at the click, or remove the one there (JetBrains Add or Remove Caret)</td><td></td></tr>
 <tr><td><code>mouse_set_secondary</code></td><td>Set the secondary selection from the anchor to the click (emacs mouse-set-secondary)</td><td></td></tr>
 <tr><td><code>mouse_yank_secondary</code></td><td>Insert the secondary selection at the click (emacs mouse-yank-secondary)</td><td></td></tr>
 <tr><td><code>mouse_secondary_save_then_kill</code></td><td>Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill)</td><td></td></tr>
@@ -10153,11 +10155,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>10048</strong> (84.3%)</li>
-<li>Partial: <strong>887</strong> (7.4%)</li>
-<li>Absent: <strong>991</strong></li>
+<li>Ported: <strong>10050</strong> (84.3%)</li>
+<li>Partial: <strong>886</strong> (7.4%)</li>
+<li>Absent: <strong>990</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 3020 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
+<li>zmax source surface: 3022 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10220,7 +10222,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1077</td><td style="text-align: right">312</td><td style="text-align: right">53.8%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1079</td><td style="text-align: right">311</td><td style="text-align: right">53.9%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10316,7 +10318,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">31</td><td style="text-align: right">5</td><td style="text-align: right">77.5%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">821</td><td style="text-align: right">254</td><td style="text-align: right">51.1%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">823</td><td style="text-align: right">253</td><td style="text-align: right">51.2%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">8</td><td style="text-align: right">4</td><td style="text-align: right">50.0%</td></tr>
