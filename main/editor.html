@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-57c6a171.js";
+            window.path_to_searchindex_js = "searchindex-ccd8c662.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -640,8 +640,12 @@ specific gutter components as subsections.</p>
 <code>code-action-hint</code>, <code>marks</code>, <code>signs</code>, and <code>blame</code>. The <code>blame</code> gutter is a
 JetBrains-style “Annotate” column (author + relative time per line); it takes no
 space until toggled on with <code>SPC g B</code> (<code>toggle_blame_annotate</code>). The <code>signs</code>
-gutter shows vim signs placed with <code>:sign place</code>; it takes no space until a sign
-is placed in the file (vim’s <code>signcolumn=auto</code>).</p>
+gutter shows vim signs placed with <code>:sign place</code>, and the run / not-run bars of a
+coverage report loaded with <code>:coverage-import &lt;lcov file&gt;</code> (in the theme’s
+<code>diff.plus</code> colour for lines that ran, <code>diff.minus</code> for lines that did not;
+<code>coverage_hide</code> takes them away, <code>coverage_switch</code> picks another imported
+report, <code>:coverage-html</code> writes the report as a page); it takes no space until
+a sign is placed in the file (vim’s <code>signcolumn=auto</code>).</p>
 <p>Example:</p>
 <pre><code class="language-toml">[editor.gutters]
 layout = ["diff", "diagnostics", "line-numbers", "spacer"]

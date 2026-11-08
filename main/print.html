@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-57c6a171.js";
+            window.path_to_searchindex_js = "searchindex-ccd8c662.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -2629,6 +2629,8 @@ without scrolling.</p>
 <tr><td><code>:conflict-ours</code>, <code>:diffget-ours</code>, <code>:conflict-keep-ours</code></td><td>Resolve the merge conflict at the cursor by keeping OUR side (HEAD).</td></tr>
 <tr><td><code>:conflict-theirs</code>, <code>:diffget-theirs</code>, <code>:conflict-keep-theirs</code></td><td>Resolve the merge conflict at the cursor by keeping THEIR side (incoming).</td></tr>
 <tr><td><code>:conflict-both</code>, <code>:conflict-keep-both</code></td><td>Resolve the merge conflict at the cursor by keeping BOTH sides.</td></tr>
+<tr><td><code>:coverage-import</code></td><td>Mark lines run and not run in the gutter from an LCOV tracefile (JetBrains Import Coverage).</td></tr>
+<tr><td><code>:coverage-html</code></td><td>Write the shown coverage report as HTML to <dir>/index.html (JetBrains Generate Coverage Report).</dir></td></tr>
 <tr><td><code>:export-html</code></td><td>Write the selection, or the whole buffer, as syntax-coloured HTML (JetBrains Export to HTML).</td></tr>
 <tr><td><code>:export-problems</code></td><td>Write every diagnostic to a file and open it (JetBrains Export to Text File).</td></tr>
 <tr><td><code>:export-test-results</code></td><td>Write the recorded test runs to a file and open it (JetBrains Export Test Results).</td></tr>
@@ -5528,6 +5530,8 @@ without scrolling.</p>
 <tr><td><code>hide_bottom_windows</code></td><td>Fold the workbench’s bottom drawer away (JetBrains Hide Bottom Tool Windows)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;WB</code>, select: <code>&lt;space&gt;WB</code></td></tr>
 <tr><td><code>hide_active_tool_window</code></td><td>Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wq</code>, select: <code>&lt;space&gt;Wq</code></td></tr>
 <tr><td><code>show_hidden_tabs</code></td><td>Pick among the buffers scrolled off the bufferline (JetBrains Show Hidden Tabs)</td><td></td></tr>
+<tr><td><code>coverage_hide</code></td><td>Take the coverage marks out of the gutter (JetBrains Hide Coverage)</td><td></td></tr>
+<tr><td><code>coverage_switch</code></td><td>Pick an imported coverage report to show (JetBrains Show Coverage Data)</td><td></td></tr>
 <tr><td><code>focus_editor</code></td><td>Return focus to the editor, leaving tool windows open (JetBrains Focus Editor)</td><td></td></tr>
 <tr><td><code>jump_to_last_tool_window</code></td><td>Toggle focus between the editor and the last tool window (JetBrains F12)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;tab&gt;</code>, select: <code>&lt;space&gt;W&lt;tab&gt;</code></td></tr>
 <tr><td><code>stretch_tool_window_left</code></td><td>Narrow the workbench’s left drawer (JetBrains Stretch to Left)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;W&lt;left&gt;</code>, select: <code>&lt;space&gt;W&lt;left&gt;</code></td></tr>
@@ -8196,8 +8200,12 @@ specific gutter components as subsections.</p>
 <code>code-action-hint</code>, <code>marks</code>, <code>signs</code>, and <code>blame</code>. The <code>blame</code> gutter is a
 JetBrains-style “Annotate” column (author + relative time per line); it takes no
 space until toggled on with <code>SPC g B</code> (<code>toggle_blame_annotate</code>). The <code>signs</code>
-gutter shows vim signs placed with <code>:sign place</code>; it takes no space until a sign
-is placed in the file (vim’s <code>signcolumn=auto</code>).</p>
+gutter shows vim signs placed with <code>:sign place</code>, and the run / not-run bars of a
+coverage report loaded with <code>:coverage-import &lt;lcov file&gt;</code> (in the theme’s
+<code>diff.plus</code> colour for lines that ran, <code>diff.minus</code> for lines that did not;
+<code>coverage_hide</code> takes them away, <code>coverage_switch</code> picks another imported
+report, <code>:coverage-html</code> writes the report as a page); it takes no space until
+a sign is placed in the file (vim’s <code>signcolumn=auto</code>).</p>
 <p>Example:</p>
 <pre><code class="language-toml">[editor.gutters]
 layout = ["diff", "diagnostics", "line-numbers", "spacer"]
@@ -10145,11 +10153,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>10044</strong> (84.2%)</li>
-<li>Partial: <strong>888</strong> (7.4%)</li>
-<li>Absent: <strong>994</strong></li>
+<li>Ported: <strong>10048</strong> (84.3%)</li>
+<li>Partial: <strong>887</strong> (7.4%)</li>
+<li>Absent: <strong>991</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 3018 static commands, 3236 typable <code>:</code> commands, 4745 default keybindings</li>
+<li>zmax source surface: 3020 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10212,7 +10220,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1073</td><td style="text-align: right">313</td><td style="text-align: right">53.6%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1077</td><td style="text-align: right">312</td><td style="text-align: right">53.8%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10308,7 +10316,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">31</td><td style="text-align: right">5</td><td style="text-align: right">77.5%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">817</td><td style="text-align: right">255</td><td style="text-align: right">50.8%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">821</td><td style="text-align: right">254</td><td style="text-align: right">51.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">8</td><td style="text-align: right">4</td><td style="text-align: right">50.0%</td></tr>
