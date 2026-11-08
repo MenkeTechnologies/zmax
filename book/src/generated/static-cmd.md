@@ -3001,6 +3001,7 @@
 | `browse_url_at_mouse` | Open the URL under the mouse in a browser (emacs browse-url-at-mouse) |  |
 | `mouse_start_secondary` | Anchor the secondary selection at the click (emacs mouse-start-secondary) |  |
 | `mouse_add_or_remove_caret` | Add a caret at the click, or remove the one there (JetBrains Add or Remove Caret) |  |
+| `mouse_drag_rectangle` | Select the rectangle the mouse is dragged over (JetBrains Rectangular Selection on Mouse Drag) |  |
 | `mouse_set_secondary` | Set the secondary selection from the anchor to the click (emacs mouse-set-secondary) |  |
 | `mouse_yank_secondary` | Insert the secondary selection at the click (emacs mouse-yank-secondary) |  |
 | `mouse_secondary_save_then_kill` | Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill) |  |

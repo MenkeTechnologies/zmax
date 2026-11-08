@@ -3394,6 +3394,7 @@ impl MappableCommand {
         browse_url_at_mouse, "Open the URL under the mouse in a browser (emacs browse-url-at-mouse)",
         mouse_start_secondary, "Anchor the secondary selection at the click (emacs mouse-start-secondary)",
         mouse_add_or_remove_caret, "Add a caret at the click, or remove the one there (JetBrains Add or Remove Caret)",
+        mouse_drag_rectangle, "Select the rectangle the mouse is dragged over (JetBrains Rectangular Selection on Mouse Drag)",
         mouse_set_secondary, "Set the secondary selection from the anchor to the click (emacs mouse-set-secondary)",
         mouse_yank_secondary, "Insert the secondary selection at the click (emacs mouse-yank-secondary)",
         mouse_secondary_save_then_kill, "Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill)",
@@ -13457,10 +13458,7 @@ fn rectangle_bounds(a: (usize, usize), b: (usize, usize)) -> (usize, usize, usiz
 /// per spanned row, each covering the same visual column range — IntelliJ-style
 /// column / block selection. Rows too short to reach the left column are skipped
 /// (matching IntelliJ, where the block only lands where a line is wide enough).
-#[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for column-select (no softwrap)
 fn column_selection(cx: &mut Context) {
-    use zmax_core::{pos_at_visual_coords, visual_coords_at_pos};
-
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let tab_width = doc.tab_width();
@@ -13473,6 +13471,26 @@ fn column_selection(cx: &mut Context) {
     } else {
         (range.head, range.anchor.saturating_sub(1))
     };
+    let ranges = column_block(text, tab_width, anchor, head);
+    if ranges.is_empty() {
+        return;
+    }
+    let primary_index = ranges.len() - 1;
+    doc.set_selection(view.id, Selection::new(ranges, primary_index));
+}
+
+/// The rectangle with corners at chars `anchor` and `head` (both inclusive) as
+/// one range per row, each over the same visual columns. Rows too short to
+/// reach the left column are skipped.
+#[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for column-select (no softwrap)
+fn column_block(
+    text: RopeSlice,
+    tab_width: usize,
+    anchor: usize,
+    head: usize,
+) -> SmallVec<[Range; 1]> {
+    use zmax_core::{pos_at_visual_coords, visual_coords_at_pos};
+
     let head_pos = visual_coords_at_pos(text, head, tab_width);
     let anchor_pos = visual_coords_at_pos(text, anchor, tab_width);
     let (r0, r1, c0, c1) = rectangle_bounds(
@@ -13492,11 +13510,91 @@ fn column_selection(cx: &mut Context) {
         // zero-width block (c0 == c1) this collapses to a caret per row.
         ranges.push(Range::point(left).put_cursor(text, right, true));
     }
-    if ranges.is_empty() {
-        return;
+    ranges
+}
+
+/// A rectangle being dragged with the mouse: the document and char the press
+/// landed on, and the carets an Alt-Shift drag adds the rectangle to.
+struct RectangleDrag {
+    doc: DocumentId,
+    anchor: usize,
+    keep: Option<Selection>,
+}
+
+static RECTANGLE_DRAG: std::sync::Mutex<Option<RectangleDrag>> = std::sync::Mutex::new(None);
+
+/// Record a left-button press as the corner a rectangle drag would start from.
+pub(crate) fn begin_rectangle_drag(doc: DocumentId, anchor: usize, keep: Option<Selection>) {
+    *RECTANGLE_DRAG.lock().unwrap() = Some(RectangleDrag { doc, anchor, keep });
+}
+
+/// JetBrains "Create / Add Rectangular Selection on Mouse Drag": select the
+/// rectangle from the press to the pointer, one range per row, in place of the
+/// selection (Alt-drag) or added to the carets there were before the press
+/// (Alt-Shift-drag).
+pub(crate) fn mouse_drag_rectangle(cx: &mut Context) {
+    let pos = click_pos(cx.editor);
+    let (view, doc) = current!(cx.editor);
+    let (anchor, keep) = match &*RECTANGLE_DRAG.lock().unwrap() {
+        Some(drag) if drag.doc == doc.id() => (drag.anchor, drag.keep.clone()),
+        _ => (pos, None),
+    };
+    let selection = rectangle_selection(
+        doc.text().slice(..),
+        doc.tab_width(),
+        (anchor, pos),
+        keep.as_ref(),
+    );
+    doc.set_selection(view.id, selection);
+    cx.editor.mode = Mode::Select;
+}
+
+/// The selection a rectangle drag from `corners.0` to `corners.1` makes: the
+/// block's rows after the ranges of `keep`, if any, with the block's last row
+/// primary as `column_selection` leaves it. A drag over no row long enough to
+/// reach the block is a caret at the pointer.
+fn rectangle_selection(
+    text: RopeSlice,
+    tab_width: usize,
+    (anchor, head): (usize, usize),
+    keep: Option<&Selection>,
+) -> Selection {
+    let mut block = column_block(text, tab_width, anchor, head);
+    if block.is_empty() {
+        block.push(Range::point(head));
     }
-    let primary_index = ranges.len() - 1;
-    doc.set_selection(view.id, Selection::new(ranges, primary_index));
+    let mut all: SmallVec<[Range; 1]> = keep.map(|s| s.ranges().into()).unwrap_or_default();
+    all.extend(block);
+    let primary = all.len() - 1;
+    Selection::new(all, primary)
+}
+
+#[cfg(test)]
+mod rectangle_drag_tests {
+    use super::rectangle_selection;
+    use zmax_core::{Rope, Selection};
+
+    /// Dragging from row 0 col 1 to row 2 col 2 selects columns 1-2 of each
+    /// row long enough; the empty row is skipped. An Alt-Shift drag keeps the
+    /// caret there was before.
+    #[test]
+    fn a_drag_selects_the_rectangle_on_every_long_enough_row() {
+        let rope = Rope::from("abcd\n\nefgh\n");
+        let text = rope.slice(..);
+        let spans = |s: &Selection| {
+            s.ranges()
+                .iter()
+                .map(|r| text.slice(r.from()..r.to()).to_string())
+                .collect::<Vec<_>>()
+        };
+        // Row 2 col 2 is char 8 (`g`).
+        let created = rectangle_selection(text, 4, (1, 8), None);
+        assert_eq!(spans(&created), ["bc", "fg"]);
+        assert_eq!(created.primary().from(), 7, "the last row is primary");
+
+        let added = rectangle_selection(text, 4, (1, 8), Some(&Selection::point(5)));
+        assert_eq!(spans(&added), ["bc", "", "fg"], "the caret on row 1 stays");
+    }
 }
 
 // --- vim visual-block mode (CTRL-V) ------------------------------------------

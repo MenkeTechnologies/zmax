@@ -85480,11 +85480,12 @@
  },
  {
   "spec_id": "jetbrains-actions.EditorCreateRectangularSelection",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:mouse_drag_rectangle",
    "static:column_selection"
   ],
-  "note": "EditorCreateRectangularSelection (Create Rectangular Selection, Alt+Shift+middle-click from caret to click) = zmax `column_selection`: turns the primary selection's anchor/head into a column block (commands.rs:13167); corners come from the selection, not a mouse click."
+  "note": "EditorCreateRectangularSelection (Create Rectangular Selection) = Alt-Shift-middle-click runs zmax `mouse_drag_rectangle` from the caret to the click: the rectangle between them becomes the selection, one range per row (ui/editor.rs middle-button handler, commands.rs). `column_selection` turns an existing selection into the same block from the keyboard."
  },
  {
   "spec_id": "jetbrains-actions.EditorFocusGutter",
@@ -89238,5 +89239,21 @@
    "static:mouse_add_or_remove_caret"
   ],
   "note": "EditorAddOrRemoveCaret (Add or Remove Caret) = Alt-Shift-click in the editor runs zmax `mouse_add_or_remove_caret`: a caret already at the click is removed (the last one stays), otherwise one is added there (toggle_caret, commands.rs; the mouse-down handler in ui/editor.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorCreateRectangularSelectionOnMouseDrag",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_drag_rectangle"
+  ],
+  "note": "EditorCreateRectangularSelectionOnMouseDrag = Alt-drag under the vim presets runs zmax `mouse_drag_rectangle`: the rectangle from the press to the pointer becomes the selection, one range per row over the same visual columns, rows too short to reach it skipped (column_block / rectangle_selection, commands.rs). Under the emacs presets Alt-drag stays emacs's secondary selection; Alt-Shift-drag works there too."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorAddRectangularSelectionOnMouseDrag",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_drag_rectangle"
+  ],
+  "note": "EditorAddRectangularSelectionOnMouseDrag = Alt-Shift-drag runs zmax `mouse_drag_rectangle` with the carets there were before the press kept, so the dragged rectangle's rows are added to them (begin_rectangle_drag records them on the press, commands.rs)."
  }
 ]

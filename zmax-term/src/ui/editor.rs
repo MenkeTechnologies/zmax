@@ -5363,6 +5363,11 @@ impl EditorView {
                     // Emacs's mouse commands take the click as their argument
                     // (`(interactive "e")`); this is that argument.
                     let doc_id = doc.id();
+                    // Where a rectangle dragged from this press starts, and —
+                    // Alt-Shift adding one — the carets it is added to.
+                    let keep = (modifiers == KeyModifiers::ALT | KeyModifiers::SHIFT)
+                        .then(|| doc.selection(view_id).clone());
+                    commands::begin_rectangle_drag(doc_id, pos, keep);
 
                     // vim `<2-LeftMouse>`/`<3-LeftMouse>`/`<4-LeftMouse>`
                     // (term.txt *double-click*): "For selecting text, extra clicks
@@ -5586,6 +5591,17 @@ impl EditorView {
                 let (view_id, doc_id) = (view.id, doc.id());
                 cxt.editor.last_mouse_pos = Some((doc_id, pos));
 
+                // JetBrains rectangular selection on mouse drag: Alt-drag
+                // creates one (vim presets; emacs keeps Alt-drag for the
+                // secondary selection below), Alt-Shift-drag adds one.
+                if modifiers == KeyModifiers::ALT | KeyModifiers::SHIFT
+                    || (modifiers == KeyModifiers::ALT && cxt.editor.vim_semantics)
+                {
+                    commands::MappableCommand::mouse_drag_rectangle.execute(cxt);
+                    cxt.editor.ensure_cursor_in_view(view_id);
+                    return EventResult::Consumed(None);
+                }
+
                 // emacs `M-drag-mouse-1` is `mouse-set-secondary`: the drag sets
                 // the *secondary* selection, from the anchor `M-mouse-1` dropped
                 // to where the pointer is now, and leaves point and the region
@@ -5787,6 +5803,23 @@ impl EditorView {
                     }
                     commands::MappableCommand::facemenu.execute(cxt);
                     return EventResult::Consumed(None);
+                }
+                // JetBrains "Create Rectangular Selection" (Alt-Shift-middle-click):
+                // the rectangle from the caret to the click.
+                if modifiers == KeyModifiers::ALT | KeyModifiers::SHIFT {
+                    if let Some((pos, view_id)) = pos_and_view(cxt.editor, row, column, true) {
+                        cxt.editor.focus(view_id);
+                        let (view, doc) = current!(cxt.editor);
+                        let caret = doc
+                            .selection(view.id)
+                            .primary()
+                            .cursor(doc.text().slice(..));
+                        commands::begin_rectangle_drag(doc.id(), caret, None);
+                        cxt.editor.last_mouse_pos = Some((doc.id(), pos));
+                        commands::MappableCommand::mouse_drag_rectangle.execute(cxt);
+                        cxt.editor.ensure_cursor_in_view(view_id);
+                        return EventResult::Consumed(None);
+                    }
                 }
                 EventResult::Ignored(None)
             }
