@@ -325,6 +325,7 @@ pub enum LanguageServerFeature {
     DocumentColors,
     CallHierarchy,
     TypeHierarchy,
+    CodeLens,
 }
 
 impl Display for LanguageServerFeature {
@@ -353,6 +354,7 @@ impl Display for LanguageServerFeature {
             DocumentColors => "document-colors",
             CallHierarchy => "call-hierarchy",
             TypeHierarchy => "type-hierarchy",
+            CodeLens => "code-lens",
         };
         write!(f, "{feature}",)
     }

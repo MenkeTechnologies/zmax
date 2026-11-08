@@ -265,6 +265,8 @@ The list of supported features is:
 - `inlay-hints`
 - `document-colors`
 - `call-hierarchy`
+- `type-hierarchy`
+- `code-lens`
 
 ## Tree-sitter grammar configuration
 

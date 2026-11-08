@@ -414,6 +414,7 @@ impl Client {
                         | TypeHierarchyServerCapability::Options(_)
                 )
             ),
+            LanguageServerFeature::CodeLens => capabilities.code_lens_provider.is_some(),
         }
     }
 
@@ -733,6 +734,9 @@ impl Client {
                     inlay_hint: Some(lsp::InlayHintClientCapabilities {
                         dynamic_registration: Some(false),
                         resolve_support: None,
+                    }),
+                    code_lens: Some(lsp::CodeLensClientCapabilities {
+                        dynamic_registration: Some(false),
                     }),
                     document_link: Some(lsp::DocumentLinkClientCapabilities {
                         dynamic_registration: Some(false),
@@ -1270,6 +1274,39 @@ impl Client {
         };
 
         Some(self.call::<lsp::request::InlayHintRequest>(params))
+    }
+
+    /// `textDocument/codeLens`: every code lens of the document. None when
+    /// the server has no code lens provider.
+    pub fn text_document_code_lens(
+        &self,
+        text_document: lsp::TextDocumentIdentifier,
+    ) -> Option<impl Future<Output = Result<Option<Vec<lsp::CodeLens>>>>> {
+        self.capabilities
+            .get()
+            .unwrap()
+            .code_lens_provider
+            .as_ref()?;
+        let params = lsp::CodeLensParams {
+            text_document,
+            work_done_progress_params: lsp::WorkDoneProgressParams::default(),
+            partial_result_params: lsp::PartialResultParams::default(),
+        };
+        Some(self.call::<lsp::request::CodeLensRequest>(params))
+    }
+
+    /// `codeLens/resolve`: fill in a lens sent without its command. None when
+    /// the server does not resolve lenses.
+    pub fn code_lens_resolve(
+        &self,
+        lens: lsp::CodeLens,
+    ) -> Option<impl Future<Output = Result<lsp::CodeLens>>> {
+        match self.capabilities.get().unwrap().code_lens_provider {
+            Some(lsp::CodeLensOptions {
+                resolve_provider: Some(true),
+            }) => Some(self.call::<lsp::request::CodeLensResolve>(lens)),
+            _ => None,
+        }
     }
 
     pub fn text_document_document_color(
