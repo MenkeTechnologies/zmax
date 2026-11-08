@@ -89255,5 +89255,13 @@
    "static:mouse_drag_rectangle"
   ],
   "note": "EditorAddRectangularSelectionOnMouseDrag = Alt-Shift-drag runs zmax `mouse_drag_rectangle` with the carets there were before the press kept, so the dragged rectangle's rows are added to them (begin_rectangle_drag records them on the press, commands.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowContent",
+  "status": "ported",
+  "evidence": [
+   "static:show_tool_window_tabs"
+  ],
+  "note": "ShowContent (Show a popup with the list of toolwindow tabs) = zmax `show_tool_window_tabs`: a popup of the four tabs the active bottom tool window column holds, the shown one marked; picking one shows that tab and moves the keyboard to it (Ide::active_column_tabs, ui/ide.rs)."
  }
 ]

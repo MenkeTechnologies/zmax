@@ -1818,6 +1818,7 @@
 | `hide_active_tool_window` | Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc) | **spacemacs, hybrid** — normal: `` <space>Wq ``, select: `` <space>Wq `` |
 | `show_hidden_tabs` | Pick among the buffers scrolled off the bufferline (JetBrains Show Hidden Tabs) |  |
 | `coverage_hide` | Take the coverage marks out of the gutter (JetBrains Hide Coverage) |  |
+| `show_tool_window_tabs` | Pick a tab of the active bottom tool window (JetBrains Show Content) |  |
 | `coverage_switch` | Pick an imported coverage report to show (JetBrains Show Coverage Data) |  |
 | `focus_editor` | Return focus to the editor, leaving tool windows open (JetBrains Focus Editor) |  |
 | `jump_to_last_tool_window` | Toggle focus between the editor and the last tool window (JetBrains F12) | **spacemacs, hybrid** — normal: `` <space>W<tab> ``, select: `` <space>W<tab> `` |

@@ -2211,6 +2211,7 @@ impl MappableCommand {
         hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
         show_hidden_tabs, "Pick among the buffers scrolled off the bufferline (JetBrains Show Hidden Tabs)",
         coverage_hide, "Take the coverage marks out of the gutter (JetBrains Hide Coverage)",
+        show_tool_window_tabs, "Pick a tab of the active bottom tool window (JetBrains Show Content)",
         coverage_switch, "Pick an imported coverage report to show (JetBrains Show Coverage Data)",
         focus_editor, "Return focus to the editor, leaving tool windows open (JetBrains Focus Editor)",
         jump_to_last_tool_window, "Toggle focus between the editor and the last tool window (JetBrains F12)",
@@ -35551,6 +35552,36 @@ impl PathStyleConfig {
 
 fn buffer_picker(cx: &mut Context) {
     buffer_picker_impl(cx, None, false);
+}
+
+/// JetBrains "Show Content" (`ShowContent`): a popup of the active bottom
+/// tool window column's tabs, the shown one marked; picking one shows it and
+/// moves the keyboard there.
+fn show_tool_window_tabs(cx: &mut Context) {
+    use crate::ui::context_menu::{ContextMenu, Entry};
+    cx.callback.push(Box::new(|compositor, cx| {
+        let Some(tabs) = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.ide_column_tabs())
+        else {
+            cx.editor.set_status("no workbench (open it with :ide)");
+            return;
+        };
+        let entries = tabs
+            .into_iter()
+            .map(|(name, shown)| {
+                let mark = if shown { "• " } else { "  " };
+                Entry::item(format!("{mark}{name}"), move |co, _cx| {
+                    if let Some(view) = co.find::<crate::ui::EditorView>() {
+                        view.focus_ide_panel(name);
+                    }
+                })
+            })
+            .collect();
+        let size = compositor.size();
+        let col = size.width.saturating_sub(20) / 2;
+        compositor.push(Box::new(ContextMenu::new(size.height / 3, col, entries)));
+    }));
 }
 
 /// JetBrains "Hide Coverage" (`HideCoverage`): take the coverage marks out

@@ -2129,18 +2129,30 @@ impl Ide {
         }
     }
 
+    /// The tabs bottom column `col` holds, in tab-bar order.
+    fn column_group(col: usize) -> [BottomTab; 4] {
+        use BottomTab::*;
+        match col {
+            0 => [Problems, Run, Git, Debug],
+            1 => [Registers, Todo, Marks, Jumplist],
+            _ => [Recent, Harpoon, Ci, Docs],
+        }
+    }
+
+    /// JetBrains "Show Content" (`ShowContent`): the tabs of the active bottom
+    /// tool window column, by their `focus_panel` names, with the one it shows.
+    pub fn active_column_tabs(&self) -> Vec<(&'static str, bool)> {
+        let col = self.bottom_focus_col;
+        Self::column_group(col)
+            .into_iter()
+            .map(|t| (t.persist_name(), t == self.bottom_tabs[col]))
+            .collect()
+    }
+
     /// Cycle the focused column through its own tab group (`[` / `]`).
     fn cycle_bottom_tab(&mut self, forward: bool) {
-        use BottomTab::*;
-        const G0: [BottomTab; 4] = [Problems, Run, Git, Debug];
-        const G1: [BottomTab; 4] = [Registers, Todo, Marks, Jumplist];
-        const G2: [BottomTab; 4] = [Recent, Harpoon, Ci, Docs];
         let col = self.bottom_focus_col;
-        let order: &[BottomTab] = match col {
-            0 => &G0,
-            1 => &G1,
-            _ => &G2,
-        };
+        let order = Self::column_group(col);
         let cur = order
             .iter()
             .position(|t| *t == self.bottom_tabs[col])
@@ -6997,6 +7009,35 @@ mod tool_window_tests {
 
         ide.select_tab(BottomTab::Problems);
         assert!(!ide.tool_window_shown("registers"));
+    }
+
+    /// Show Content lists the focused column's four tabs, and every name it
+    /// lists opens that very tab when picked.
+    #[test]
+    fn show_content_names_open_their_own_tabs() {
+        let mut ide = Ide::new();
+        ide.focus_panel("jumplist");
+        let tabs = ide.active_column_tabs();
+        assert_eq!(
+            tabs,
+            [
+                ("registers", false),
+                ("todo", false),
+                ("marks", false),
+                ("jumplist", true)
+            ]
+        );
+        for col in 0..3 {
+            for tab in Ide::column_group(col) {
+                ide.focus_panel(tab.persist_name());
+                let shown: Vec<_> = ide
+                    .active_column_tabs()
+                    .into_iter()
+                    .filter(|t| t.1)
+                    .collect();
+                assert_eq!(shown, [(tab.persist_name(), true)]);
+            }
+        }
     }
 
     /// Shift-Esc folds the window that has the keyboard, or — from the editor —

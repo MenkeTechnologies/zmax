@@ -526,6 +526,15 @@ impl EditorView {
     }
 
     /// Focus a workbench panel by name (creates the workbench if needed).
+    /// The tabs of the active bottom tool window column (JetBrains Show
+    /// Content); None while no workbench is shown.
+    pub fn ide_column_tabs(&self) -> Option<Vec<(&'static str, bool)>> {
+        self.ide
+            .as_ref()
+            .filter(|ide| ide.visible())
+            .map(Ide::active_column_tabs)
+    }
+
     pub fn focus_ide_panel(&mut self, name: &str) {
         self.last_ide_panel = name.to_string();
         self.ide_or_create().focus_panel(name);
