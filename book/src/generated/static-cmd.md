@@ -1718,6 +1718,7 @@
 | `validate_xml` | Check the XML file is well formed and valid against its DTD (JetBrains Validate) |  |
 | `stop_run` | Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2) | **spacemacs, hybrid** — normal: `` <space>px ``, select: `` <space>px `` |
 | `clear_run_output` | Clear the Run tool window output | **spacemacs, hybrid** — normal: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck ``, select: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck `` |
+| `pause_run_output` | Pause or resume the Run tool window output display (JetBrains Pause Output) |  |
 | `open_log_file` | Open zmax's own log file (JetBrains Show Log) | **spacemacs, hybrid** — normal: `` <space>hL ``, select: `` <space>hL `` |
 | `global_search_masked` | Search the project, restricted to a file glob (JetBrains Find in Path file mask) | **spacemacs, hybrid** — normal: `` <space>sm ``, select: `` <space>sm `` |
 | `global_search_in_scope` | Search the project inside a saved named scope (JetBrains scopes) | **spacemacs, hybrid** — normal: `` <space>sM ``, select: `` <space>sM `` |
@@ -2999,6 +3000,7 @@
 | `mouse_buffer_menu` | The buffer menu, from the mouse (emacs mouse-buffer-menu) | **spacemacs, hybrid, vim** — normal: `` <C-F10> `` |
 | `browse_url_at_mouse` | Open the URL under the mouse in a browser (emacs browse-url-at-mouse) |  |
 | `mouse_start_secondary` | Anchor the secondary selection at the click (emacs mouse-start-secondary) |  |
+| `mouse_add_or_remove_caret` | Add a caret at the click, or remove the one there (JetBrains Add or Remove Caret) |  |
 | `mouse_set_secondary` | Set the secondary selection from the anchor to the click (emacs mouse-set-secondary) |  |
 | `mouse_yank_secondary` | Insert the secondary selection at the click (emacs mouse-yank-secondary) |  |
 | `mouse_secondary_save_then_kill` | Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill) |  |

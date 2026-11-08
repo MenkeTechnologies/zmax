@@ -24,6 +24,9 @@ pub struct RunState {
     pub exit_code: Option<i32>,
     pub scroll: usize,
     pub follow: bool,
+    /// JetBrains "Pause Output": while set, the console shows only the first
+    /// this-many lines; output keeps arriving behind it and appears on resume.
+    pub paused_at: Option<usize>,
     abort: Option<tokio::task::AbortHandle>,
 }
 
@@ -38,7 +41,27 @@ impl RunState {
             let drop = self.lines.len() - MAX_LINES;
             self.lines.drain(0..drop);
             self.line_widths.drain(0..drop);
+            // The frozen view loses the same lines off its top.
+            if let Some(shown) = &mut self.paused_at {
+                *shown = shown.saturating_sub(drop);
+            }
         }
+    }
+
+    /// How many lines the console draws: all of them, or the ones that had
+    /// arrived when output was paused.
+    pub fn shown_lines(&self) -> usize {
+        self.paused_at
+            .map_or(self.lines.len(), |n| n.min(self.lines.len()))
+    }
+
+    /// Pause or resume the console display; returns true when now paused.
+    pub fn toggle_pause(&mut self) -> bool {
+        self.paused_at = match self.paused_at {
+            Some(_) => None,
+            None => Some(self.lines.len()),
+        };
+        self.paused_at.is_some()
     }
 }
 
@@ -160,6 +183,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
         exit_code: None,
         scroll: 0,
         follow: true,
+        paused_at: None,
         abort: None,
     }));
 
@@ -400,8 +424,29 @@ mod push_tests {
             exit_code: None,
             scroll: 0,
             follow: true,
+            paused_at: None,
             abort: None,
         }
+    }
+
+    /// A paused console keeps its view while output still arrives, keeps
+    /// pointing at the same lines when the ring drops old ones, and shows
+    /// everything again on resume.
+    #[test]
+    fn pausing_freezes_what_the_console_shows() {
+        let mut s = blank_state();
+        for i in 0..10 {
+            s.push_line(format!("line {i}"));
+        }
+        assert!(s.toggle_pause());
+        for i in 10..(MAX_LINES + 4) {
+            s.push_line(format!("line {i}"));
+        }
+        // Four lines fell off the front: the frozen view is lines 4..10.
+        assert_eq!(s.shown_lines(), 6);
+        assert_eq!(s.lines[s.shown_lines() - 1], "line 9");
+        assert!(!s.toggle_pause());
+        assert_eq!(s.shown_lines(), MAX_LINES);
     }
 
     #[test]

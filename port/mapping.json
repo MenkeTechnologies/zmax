@@ -86083,11 +86083,11 @@
  },
  {
   "spec_id": "jetbrains-actions.PauseOutput",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:focus_run_console"
+   "static:pause_run_output"
   ],
-  "note": "PauseOutput = zmax Run console: scrolling up with j/k/PgUp in `focus_run_console` detaches tail-follow (ui/ide.rs:1624-1644, RunState.follow) so new output stops moving the view; output is still appended, the IDE freezes the console display entirely until resumed."
+  "note": "PauseOutput (Pause Output) = zmax `pause_run_output`: freezes what the Run console shows at the lines that had arrived (RunState::paused_at, ui/run.rs) while the process keeps writing behind it, with `paused` in the console header; running it again shows everything that arrived. Lines the ring buffer drops while paused leave the frozen view from its top."
  },
  {
   "spec_id": "jetbrains-actions.PlaySavedMacrosAction",
@@ -89230,5 +89230,13 @@
    "typable:coverage-html"
   ],
   "note": "GenerateCoverageReport (Generate Coverage Report) = zmax `:coverage-html [dir]`: writes the shown report as <dir>/index.html (default ./coverage-html): a per-file line-coverage table, then each source file with run lines on green and not-run lines on red (coverage::html)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorAddOrRemoveCaret",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_add_or_remove_caret"
+  ],
+  "note": "EditorAddOrRemoveCaret (Add or Remove Caret) = Alt-Shift-click in the editor runs zmax `mouse_add_or_remove_caret`: a caret already at the click is removed (the last one stays), otherwise one is added there (toggle_caret, commands.rs; the mouse-down handler in ui/editor.rs)."
  }
 ]

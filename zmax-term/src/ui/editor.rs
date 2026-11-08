@@ -720,6 +720,15 @@ impl EditorView {
         }
     }
 
+    /// JetBrains "Pause Output": freeze or unfreeze the Run console display.
+    pub fn toggle_run_pause(&mut self, cx: &mut crate::compositor::Context) {
+        match self.ide.as_mut().and_then(Ide::toggle_run_pause) {
+            Some(true) => cx.editor.set_status("Run output paused"),
+            Some(false) => cx.editor.set_status("Run output resumed"),
+            None => cx.editor.set_status("No run output to pause"),
+        }
+    }
+
     /// Clear the Run console output (no-op with a status hint when nothing ran).
     pub fn clear_run_output(&mut self, cx: &mut crate::compositor::Context) {
         let cleared = self.ide.as_mut().is_some_and(Ide::clear_run);
@@ -5451,6 +5460,11 @@ impl EditorView {
                         let selection = doc.selection(view_id).clone();
                         doc.set_selection(view_id, selection.push(Range::point(pos)));
                         editor.last_mouse_pos = Some((doc_id, pos));
+                    } else if modifiers == KeyModifiers::ALT | KeyModifiers::SHIFT {
+                        // JetBrains Alt-Shift-click: add or remove the caret there.
+                        editor.last_mouse_pos = Some((doc_id, pos));
+                        commands::MappableCommand::mouse_add_or_remove_caret.execute(cxt);
+                        return EventResult::Consumed(None);
                     } else if editor.mode == Mode::Select {
                         // Discards non-primary selections for consistent UX with normal mode
                         let primary = doc.selection(view_id).primary().put_cursor(

@@ -2111,6 +2111,7 @@ impl MappableCommand {
         validate_xml, "Check the XML file is well formed and valid against its DTD (JetBrains Validate)",
         stop_run, "Stop the process the Run tool window is running (JetBrains Stop, Ctrl F2)",
         clear_run_output, "Clear the Run tool window output",
+        pause_run_output, "Pause or resume the Run tool window output display (JetBrains Pause Output)",
         open_log_file, "Open zmax's own log file (JetBrains Show Log)",
         global_search_masked, "Search the project, restricted to a file glob (JetBrains Find in Path file mask)",
         global_search_in_scope, "Search the project inside a saved named scope (JetBrains scopes)",
@@ -3392,6 +3393,7 @@ impl MappableCommand {
         mouse_buffer_menu, "The buffer menu, from the mouse (emacs mouse-buffer-menu)",
         browse_url_at_mouse, "Open the URL under the mouse in a browser (emacs browse-url-at-mouse)",
         mouse_start_secondary, "Anchor the secondary selection at the click (emacs mouse-start-secondary)",
+        mouse_add_or_remove_caret, "Add a caret at the click, or remove the one there (JetBrains Add or Remove Caret)",
         mouse_set_secondary, "Set the secondary selection from the anchor to the click (emacs mouse-set-secondary)",
         mouse_yank_secondary, "Insert the secondary selection at the click (emacs mouse-yank-secondary)",
         mouse_secondary_save_then_kill, "Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill)",
@@ -56433,6 +56435,16 @@ fn rerun_failed_tests(cx: &mut Context) {
     }));
 }
 
+/// JetBrains "Pause Output" (`PauseOutput`): freeze the Run console where it
+/// is while the process keeps writing; run again to show what arrived.
+fn pause_run_output(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.toggle_run_pause(cx);
+        }
+    }));
+}
+
 /// Clear the Run tool window's output (the process, if any, keeps streaming).
 fn clear_run_output(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
@@ -90159,6 +90171,55 @@ pub(crate) fn mouse_set_point(cx: &mut Context) {
     doc.set_selection(view.id, Selection::point(pos));
     let id = view.id;
     cx.editor.ensure_cursor_in_view(id);
+}
+
+/// JetBrains "Add or Remove Caret" (Alt-Shift-click): a caret at the click
+/// is removed, otherwise one is added there.
+pub(crate) fn mouse_add_or_remove_caret(cx: &mut Context) {
+    let pos = click_pos(cx.editor);
+    let (view, doc) = current!(cx.editor);
+    let selection = toggle_caret(doc.selection(view.id), doc.text().slice(..), pos);
+    doc.set_selection(view.id, selection);
+}
+
+/// JetBrains "Add or Remove Caret" (`EditorAddOrRemoveCaret`): drop the
+/// caret at `pos` if there is one, otherwise add one there. The last caret
+/// is never removed.
+fn toggle_caret(selection: &Selection, text: zmax_core::RopeSlice, pos: usize) -> Selection {
+    let at = selection
+        .ranges()
+        .iter()
+        .position(|r| r.cursor(text) == pos);
+    match at {
+        Some(i) if selection.len() > 1 => selection.clone().remove(i),
+        Some(_) => selection.clone(),
+        None => selection.clone().push(Range::point(pos)),
+    }
+}
+
+#[cfg(test)]
+mod toggle_caret_tests {
+    use super::toggle_caret;
+    use zmax_core::{Rope, Selection};
+
+    /// A click where no caret is adds one; a click on a caret removes it,
+    /// unless it is the only one.
+    #[test]
+    fn a_click_adds_or_removes_the_caret_under_it() {
+        let rope = Rope::from("abcdef\n");
+        let text = rope.slice(..);
+        let cursors = |s: &Selection| {
+            s.ranges()
+                .iter()
+                .map(|r| r.cursor(text))
+                .collect::<Vec<_>>()
+        };
+        let two = toggle_caret(&Selection::point(1), text, 4);
+        assert_eq!(cursors(&two), [1, 4]);
+        let back = toggle_caret(&two, text, 1);
+        assert_eq!(cursors(&back), [4]);
+        assert_eq!(toggle_caret(&back, text, 4), back, "the last caret stays");
+    }
 }
 
 /// vim `<C-LeftMouse>` / `g<LeftMouse>`: jump to the tag (definition) of the

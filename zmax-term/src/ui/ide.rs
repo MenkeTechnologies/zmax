@@ -1624,6 +1624,14 @@ impl Ide {
         true
     }
 
+    /// JetBrains "Pause Output" (`PauseOutput`): freeze or unfreeze what the
+    /// Run console shows. None when there is no run.
+    pub fn toggle_run_pause(&mut self) -> Option<bool> {
+        let run = self.run.as_ref()?;
+        let paused = run.lock().unwrap().toggle_pause();
+        Some(paused)
+    }
+
     /// Wipe the Run console output (keeps the process running; new output still
     /// streams in) and reveal the Run tab so the cleared console is in view.
     /// Returns false when there's no run to clear.
@@ -1634,6 +1642,10 @@ impl Ide {
             s.line_widths.clear();
             s.scroll = 0;
             s.follow = true;
+            // A paused console stays paused, now over the empty output.
+            if s.paused_at.is_some() {
+                s.paused_at = Some(0);
+            }
         }
         self.select_tab(BottomTab::Run);
         self.visible = true;
@@ -5523,8 +5535,9 @@ impl Ide {
                 dw.div_ceil(w)
             }
         };
-        let total_vis: usize = s
-            .line_widths
+        // Pause Output: only the lines that had arrived when it was paused.
+        let shown = s.shown_lines();
+        let total_vis: usize = s.line_widths[..shown]
             .iter()
             .map(|&dw| vis_of(dw as usize))
             .sum::<usize>()
@@ -5543,7 +5556,7 @@ impl Ide {
         // the click handler's `row - problems_rect.y - 1`.
         self.run_row_src = vec![usize::MAX; full_h];
         let mut vis = 0usize;
-        'lines: for (li, line) in s.lines.iter().enumerate() {
+        'lines: for (li, line) in s.lines[..shown].iter().enumerate() {
             for chunk in wrap_chunks(line, w) {
                 if vis >= top + height {
                     break 'lines;
@@ -5595,7 +5608,15 @@ impl Ide {
         surface.set_stringn(lbl_x, area.y, "out", 3, dim);
         let spark_x = lbl_x + 4;
         let spark_w = (area.width / 2).saturating_sub(6);
-        if spark_w > 0 && self.run_rate.iter().any(|&r| r > 0) {
+        if s.paused_at.is_some() {
+            surface.set_stringn(
+                spark_x,
+                area.y,
+                "paused",
+                spark_w as usize,
+                theme.get("warning"),
+            );
+        } else if spark_w > 0 && self.run_rate.iter().any(|&r| r > 0) {
             let data: Vec<u64> = self.run_rate.iter().copied().collect();
             let spark = Sparkline::default()
                 .data(&data)
