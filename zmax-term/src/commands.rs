@@ -2209,6 +2209,8 @@ impl MappableCommand {
         hide_bottom_windows, "Fold the workbench's bottom drawer away (JetBrains Hide Bottom Tool Windows)",
         hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
         show_hidden_tabs, "Pick among the buffers scrolled off the bufferline (JetBrains Show Hidden Tabs)",
+        coverage_hide, "Take the coverage marks out of the gutter (JetBrains Hide Coverage)",
+        coverage_switch, "Pick an imported coverage report to show (JetBrains Show Coverage Data)",
         focus_editor, "Return focus to the editor, leaving tool windows open (JetBrains Focus Editor)",
         jump_to_last_tool_window, "Toggle focus between the editor and the last tool window (JetBrains F12)",
         stretch_tool_window_left, "Narrow the workbench's left drawer (JetBrains Stretch to Left)",
@@ -35449,6 +35451,56 @@ impl PathStyleConfig {
 
 fn buffer_picker(cx: &mut Context) {
     buffer_picker_impl(cx, None, false);
+}
+
+/// JetBrains "Hide Coverage" (`HideCoverage`): take the coverage marks out
+/// of the gutter; the imported reports stay for `coverage_switch`.
+fn coverage_hide(cx: &mut Context) {
+    cx.editor.set_status(if crate::coverage::hide() {
+        "coverage hidden"
+    } else {
+        "no coverage shown"
+    });
+}
+
+/// JetBrains "Show Coverage Data" (`SwitchCoverage`): pick one of the
+/// imported coverage reports and show it in the gutter.
+fn coverage_switch(cx: &mut Context) {
+    struct Item {
+        index: usize,
+        file: PathBuf,
+        summary: String,
+    }
+    let items: Vec<Item> = crate::coverage::reports()
+        .into_iter()
+        .enumerate()
+        .map(|(index, (file, covered, total, shown))| Item {
+            index,
+            file,
+            summary: format!(
+                "{:.1}% of {total}{}",
+                crate::coverage::percent(covered, total),
+                if shown { " (shown)" } else { "" }
+            ),
+        })
+        .collect();
+    if items.is_empty() {
+        cx.editor
+            .set_status("no coverage report imported (:coverage-import)");
+        return;
+    }
+    let columns = [
+        ui::PickerColumn::new("report", |item: &Item, _: &()| {
+            item.file.display().to_string().into()
+        }),
+        ui::PickerColumn::new("lines", |item: &Item, _: &()| item.summary.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, items, (), |cx, item: &Item, _action| {
+        crate::coverage::show(item.index);
+        cx.editor
+            .set_status(format!("coverage: {}", item.file.display()));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// JetBrains "Show Hidden Tabs" (`TabList`): pick among the buffers the

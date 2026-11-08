@@ -24,6 +24,7 @@ pub mod closed_files;
 pub mod commands;
 pub mod compositor;
 pub mod config;
+pub mod coverage;
 pub mod dictionary;
 pub mod emacs_abbrev;
 pub mod emacs_bookmark;

@@ -85801,11 +85801,11 @@
  },
  {
   "spec_id": "jetbrains-actions.HideCoverage",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:sign"
+   "static:coverage_hide"
   ],
-  "note": "HideCoverage (Hide Coverage) ~ zmax `:sign`: gutter signs can be unplaced (ex_sign typed.rs:31410), but zmax has no coverage report layer to close; see ImportCoverage for the coverage importer this would pair with."
+  "note": "HideCoverage (Hide Coverage) = zmax `coverage_hide`: takes the shown coverage report's run / not-run marks out of the gutter, leaving `:sign` placements alone; the imported reports stay for `coverage_switch` (coverage::hide)."
  },
  {
   "spec_id": "jetbrains-actions.IdeScriptingConsole",
@@ -89206,5 +89206,29 @@
    "static:table"
   ],
   "note": "Select Last Row and Extend Selection = `Ctrl-Shift-End` in the zmax table editor opened by `table` (the Emacs table.el port): point moves to the bottom row in the same column, extending the block of selected cells from where it began (TableEditor::extend_to, ui/table.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ImportCoverage",
+  "status": "ported",
+  "evidence": [
+   "typable:coverage-import"
+  ],
+  "note": "ImportCoverage (Import External Coverage Report) = zmax `:coverage-import <tracefile>`: loads an LCOV tracefile (cargo llvm-cov, grcov, c8, jest, gcovr, lcov) with SF: paths read against the workspace root, and marks every instrumented line in the signs gutter, diff.plus when it ran and diff.minus when it did not; hits from several records for one line add up (zmax-term/src/coverage.rs). Other report formats (IntelliJ .ic, JaCoCo XML) are not read."
+ },
+ {
+  "spec_id": "jetbrains-actions.SwitchCoverage",
+  "status": "ported",
+  "evidence": [
+   "static:coverage_switch"
+  ],
+  "note": "SwitchCoverage (Show Coverage Data) = zmax `coverage_switch`: a picker over every imported coverage report with its line coverage, the shown one marked; picking one moves the gutter marks to it (coverage::show)."
+ },
+ {
+  "spec_id": "jetbrains-actions.GenerateCoverageReport",
+  "status": "ported",
+  "evidence": [
+   "typable:coverage-html"
+  ],
+  "note": "GenerateCoverageReport (Generate Coverage Report) = zmax `:coverage-html [dir]`: writes the shown report as <dir>/index.html (default ./coverage-html): a per-file line-coverage table, then each source file with run lines on green and not-run lines on red (coverage::html)."
  }
 ]

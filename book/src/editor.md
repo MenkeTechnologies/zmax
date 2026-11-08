@@ -454,8 +454,12 @@ Available gutter types: `diagnostics`, `line-numbers`, `spacer`, `diff`,
 `code-action-hint`, `marks`, `signs`, and `blame`. The `blame` gutter is a
 JetBrains-style "Annotate" column (author + relative time per line); it takes no
 space until toggled on with `SPC g B` (`toggle_blame_annotate`). The `signs`
-gutter shows vim signs placed with `:sign place`; it takes no space until a sign
-is placed in the file (vim's `signcolumn=auto`).
+gutter shows vim signs placed with `:sign place`, and the run / not-run bars of a
+coverage report loaded with `:coverage-import <lcov file>` (in the theme's
+`diff.plus` colour for lines that ran, `diff.minus` for lines that did not;
+`coverage_hide` takes them away, `coverage_switch` picks another imported
+report, `:coverage-html` writes the report as a page); it takes no space until
+a sign is placed in the file (vim's `signcolumn=auto`).
 
 Example:
 

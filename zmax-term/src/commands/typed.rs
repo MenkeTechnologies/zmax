@@ -8902,6 +8902,58 @@ fn render_problem_report(mut rows: Vec<ProblemReportRow>) -> String {
     out
 }
 
+/// `:coverage-import <tracefile>` — JetBrains "Import External Coverage
+/// Report" (`ImportCoverage`): load an LCOV tracefile and mark every
+/// instrumented line in the gutter as run or not run. `SF:` paths are read
+/// relative to the workspace root.
+fn coverage_import(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(file) = args.first() else {
+        bail!("usage: :coverage-import <lcov tracefile>");
+    };
+    let file = zmax_stdx::path::expand_tilde(Path::new(file)).into_owned();
+    crate::coverage::import(&file, &zmax_loader::find_workspace().0)?;
+    if let Some((covered, total, files)) = crate::coverage::current_totals() {
+        cx.editor.set_status(format!(
+            "coverage: {:.1}% of {total} lines in {files} file(s)",
+            crate::coverage::percent(covered, total)
+        ));
+    }
+    Ok(())
+}
+
+/// `:coverage-html [dir]` — JetBrains "Generate Coverage Report"
+/// (`GenerateCoverageReport`): write the shown coverage report as
+/// `<dir>/index.html` (default dir `coverage-html` in the working directory).
+fn coverage_html(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(html) = crate::coverage::html() else {
+        bail!("no coverage report imported (:coverage-import)");
+    };
+    let dir = match args.first() {
+        Some(d) => PathBuf::from(zmax_stdx::path::expand_tilde(Path::new(d)).as_ref()),
+        None => zmax_stdx::env::current_working_dir().join("coverage-html"),
+    };
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join("index.html");
+    std::fs::write(&path, html)?;
+    cx.editor
+        .set_status(format!("coverage report written to {}", path.display()));
+    Ok(())
+}
+
 /// `:export-html [path]` — JetBrains "Export to HTML" (`ExportToHTML`): write
 /// the selection, or the whole buffer when nothing wider than the cursor is
 /// selected, as a syntax-coloured HTML page. The default path is the buffer's
@@ -61895,6 +61947,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "coverage-import",
+        aliases: &[],
+        doc: "Mark lines run and not run in the gutter from an LCOV tracefile (JetBrains Import Coverage).",
+        fun: coverage_import,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "coverage-html",
+        aliases: &[],
+        doc: "Write the shown coverage report as HTML to <dir>/index.html (JetBrains Generate Coverage Report).",
+        fun: coverage_html,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
