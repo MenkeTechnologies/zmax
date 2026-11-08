@@ -852,6 +852,9 @@ pub struct LspConfig {
     /// Among the inlay hints, display the ones the server marks as parameter
     /// names (JetBrains "Show Parameter Name Hints").
     pub display_parameter_hints: bool,
+    /// Show the language servers' code lenses ("N references", "Run test")
+    /// at the end of their lines (JetBrains Code Vision).
+    pub display_code_lens: bool,
     /// Automatically highlight symbol references at the cursor.
     pub auto_document_highlight: bool,
     /// Maximum displayed length of inlay hints (excluding the added trailing `…`).
@@ -875,6 +878,7 @@ impl Default for LspConfig {
             display_signature_help_docs: true,
             display_inlay_hints: false,
             display_parameter_hints: true,
+            display_code_lens: false,
             auto_document_highlight: false,
             inlay_hints_length_limit: None,
             snippets: true,

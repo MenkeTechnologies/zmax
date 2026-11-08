@@ -298,6 +298,23 @@ mod tests {
         assert!(!off.editor.lsp.display_parameter_hints);
     }
 
+    /// `[editor.lsp] display-code-lens`: off by default, on when asked, and
+    /// a language server can be given or denied the `code-lens` feature.
+    #[test]
+    fn code_lens_defaults_off_and_turns_on() {
+        assert!(!Config::default().editor.lsp.display_code_lens);
+        let on = Config::load_test(
+            r#"
+            [editor.lsp]
+            display-code-lens = true
+        "#,
+        );
+        assert!(on.editor.lsp.display_code_lens);
+        let feature: zmax_core::syntax::config::LanguageServerFeature =
+            serde_json::from_str(r#""code-lens""#).unwrap();
+        assert_eq!(feature.to_string(), "code-lens");
+    }
+
     #[test]
     fn parsing_keymaps_config_file() {
         use crate::keymap;

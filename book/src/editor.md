@@ -204,6 +204,7 @@ The following statusline elements can be configured:
 | `auto-document-highlight` | Automatically highlight symbol references at the cursor | `false` |
 | `display-inlay-hints` | Display inlay hints[^2]                                     | `false` |
 | `display-parameter-hints` | With inlay hints on, also show the ones the server marks as parameter names (`toggle_parameter_hints` flips it) | `true` |
+| `display-code-lens` | Show the servers' code lenses ("N references", "Run") at the end of their lines, styled `ui.virtual.code-lens` (else `ui.virtual.inlay-hint`); `toggle_code_vision` flips it and `code_vision_show_more` runs one on the cursor line | `false` |
 | `inlay-hints-length-limit` | Maximum displayed length (non-zero number) of inlay hints | Unset by default  |
 | `display-color-swatches` | Show color swatches next to colors | `true` |
 | `display-signature-help-docs` | Display docs under signature help popup             | `true`  |

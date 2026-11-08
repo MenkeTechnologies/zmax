@@ -1158,6 +1158,14 @@ impl View {
                 .add_inline_annotations(padding_after_inlay_hints, None);
         };
 
+        if doc.config.load().lsp.display_code_lens && !doc.code_lens_annotations.is_empty() {
+            let style = theme.and_then(|t| {
+                t.find_highlight("ui.virtual.code-lens")
+                    .or_else(|| t.find_highlight("ui.virtual.inlay-hint"))
+            });
+            text_annotations.add_inline_annotations(&doc.code_lens_annotations, style);
+        }
+
         if let Some(ghost) = doc.ghost_text.get(&self.id) {
             // Reuse the inlay-hint dim style if the theme has no dedicated ghost-text key.
             let style = theme.and_then(|t| {

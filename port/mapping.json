@@ -89263,5 +89263,21 @@
    "static:show_tool_window_tabs"
   ],
   "note": "ShowContent (Show a popup with the list of toolwindow tabs) = zmax `show_tool_window_tabs`: a popup of the four tabs the active bottom tool window column holds, the shown one marked; picking one shows that tab and moves the keyboard to it (Ide::active_column_tabs, ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeVisionToggleAction",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_code_vision"
+  ],
+  "note": "CodeVisionToggleAction (Toggle Code Vision) = zmax `toggle_code_vision`: flips `lsp.display-code-lens`; while on, the language servers' code lenses (textDocument/codeLens, resolved with codeLens/resolve when sent without a command) are fetched on idle for every shown buffer edited since the last fetch and drawn at the end of their lines, several on one line joined by ` \u00b7 ` (code_lens_annotations, commands/lsp.rs). This is the IDE's \"Right\" code vision position; the \"Top\" position, a virtual line above the declaration, is not drawn. Off by default, where the IDE ships it on."
+ },
+ {
+  "spec_id": "jetbrains-actions.CodeVision.ShowMore",
+  "status": "ported",
+  "evidence": [
+   "static:code_vision_show_more"
+  ],
+  "note": "CodeVision.ShowMore (Show More) = zmax `code_vision_show_more`: a menu of the code lenses on the cursor line; picking one runs it on its server when the server lists the command (workspace/executeCommand), and otherwise opens the locations the command's arguments carry, which is how servers' \"N references\" / \"N implementations\" lenses work (run_code_lens, command_locations). A client-side command that carries no locations is reported, not run."
  }
 ]

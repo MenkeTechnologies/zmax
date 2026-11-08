@@ -700,6 +700,8 @@ impl MappableCommand {
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
         toggle_parameter_hints, "Show or hide the parameter-name inlay hints, leaving the other kinds (JetBrains Toggle Parameter Name Hints)",
+        toggle_code_vision, "Show or hide the language servers' code lenses (JetBrains Code Vision)",
+        code_vision_show_more, "Pick and run a code lens on the cursor line (JetBrains Code Vision Show More)",
         toggle_auto_highlight, "Toggle automatic symbol-under-cursor highlight (SPC t h a)",
         toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
         toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
@@ -20177,6 +20179,23 @@ fn toggle_parameter_hints(cx: &mut Context) {
         "parameter hints: {}{hidden}",
         if on { "on" } else { "off" }
     ));
+}
+
+/// JetBrains "Toggle Code Vision" (`CodeVisionToggleAction`):
+/// `lsp.display-code-lens`, the language servers' code lenses at the end of
+/// their lines. Turning it on fetches every shown buffer's lenses at the next
+/// idle.
+fn toggle_code_vision(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        on = !c.lsp.display_code_lens;
+        c.lsp.display_code_lens = on;
+    });
+    for doc in cx.editor.documents_mut() {
+        doc.code_lens_outdated = true;
+    }
+    cx.editor
+        .set_status(format!("code vision: {}", if on { "on" } else { "off" }));
 }
 
 /// SPC t h a : toggle automatic highlighting of the symbol under the cursor (Spacemacs

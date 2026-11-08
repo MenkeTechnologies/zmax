@@ -4516,6 +4516,7 @@ impl EditorView {
 
     pub fn handle_idle_timeout(&mut self, cx: &mut commands::Context) -> EventResult {
         commands::compute_inlay_hints_for_all_views(cx.editor, cx.jobs);
+        commands::compute_code_lenses_for_all_views(cx.editor, cx.jobs);
 
         // JetBrains "Load Build Changes": build files changed since the last sync.
         commands::check_build_changes(cx);

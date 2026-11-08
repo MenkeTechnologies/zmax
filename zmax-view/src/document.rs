@@ -256,6 +256,13 @@ pub struct Document {
     /// Set to `true` when the document is updated, reset to `false` on the next inlay hints
     /// update from the LSP
     pub inlay_hints_oudated: bool,
+    /// LSP code lenses (JetBrains Code Vision): what the servers last sent,
+    /// and the end-of-line annotations they are drawn as.
+    pub code_lenses: Vec<DocumentCodeLens>,
+    pub code_lens_annotations: Vec<InlineAnnotation>,
+    /// Set by every edit and on open; the next idle fetch asks the servers
+    /// again.
+    pub code_lens_outdated: bool,
     /// Signature-help popups stay closed while typing in this buffer
     /// (JetBrains "Toggle Popup Hints for Current File"); a manual request
     /// still opens one.
@@ -493,6 +500,16 @@ impl GhostText {
             annotations,
         }
     }
+}
+
+/// One LSP code lens of a document: the 0-based line it belongs to, the text
+/// shown for it and the command it runs, from server `server`.
+#[derive(Debug, Clone)]
+pub struct DocumentCodeLens {
+    pub line: usize,
+    pub title: String,
+    pub command: Option<zmax_lsp::lsp::Command>,
+    pub server: zmax_lsp::LanguageServerId,
 }
 
 /// Inlay hints for a single `(Document, View)` combo.
@@ -1406,6 +1423,9 @@ impl Document {
             selection_history: HashMap::default(),
             inlay_hints: HashMap::default(),
             inlay_hints_oudated: false,
+            code_lenses: Vec::new(),
+            code_lens_annotations: Vec::new(),
+            code_lens_outdated: true,
             popup_hints_off: false,
             view_data: Default::default(),
             indent_style: DEFAULT_INDENT,
@@ -2711,6 +2731,10 @@ impl Document {
                     .map(|annotation| (&mut annotation.char_idx, Assoc::After)),
             );
         };
+
+        // Code lenses keep to their lines until the next fetch replaces them.
+        self.code_lens_outdated = true;
+        apply_inlay_hint_changes(&mut self.code_lens_annotations);
 
         self.inlay_hints_oudated = true;
         for text_annotation in self.inlay_hints.values_mut() {

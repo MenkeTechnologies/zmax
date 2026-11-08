@@ -20,7 +20,7 @@ use zmax_core::{
 use zmax_stdx::path;
 use zmax_view::{
     action::Action as CodeActionItem,
-    document::{DocumentInlayHints, DocumentInlayHintsId},
+    document::{DocumentCodeLens, DocumentInlayHints, DocumentInlayHintsId},
     editor::Action,
     handlers::lsp::SignatureHelpInvoked,
     theme::Style,
@@ -2973,6 +2973,250 @@ fn compute_inlay_hints_for_view(
     );
 
     Some(callback)
+}
+
+/// The end-of-line annotations code lenses are drawn as (JetBrains Code
+/// Vision placed "Right"): each line's titles joined by ` · ` after two
+/// spaces, anchored on the line ending so they draw after the code. Lenses
+/// without a title, or past the last line, are left out.
+pub fn code_lens_annotations(
+    text: zmax_core::RopeSlice,
+    lenses: &[DocumentCodeLens],
+) -> Vec<InlineAnnotation> {
+    let mut by_line: std::collections::BTreeMap<usize, Vec<&str>> = Default::default();
+    for lens in lenses {
+        if lens.line < text.len_lines() && !lens.title.is_empty() {
+            by_line.entry(lens.line).or_default().push(&lens.title);
+        }
+    }
+    by_line
+        .into_iter()
+        .map(|(line, titles)| {
+            let end = zmax_core::line_ending::line_end_char_index(&text, line);
+            InlineAnnotation::new(end, format!("  {}", titles.join(" · ")))
+        })
+        .collect()
+}
+
+/// JetBrains Code Vision: on idle, ask the language servers for the code
+/// lenses of every shown buffer edited (or opened) since the last fetch.
+/// Lenses sent without a command are resolved before they are kept.
+pub fn compute_code_lenses_for_all_views(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
+    if !editor.config().lsp.display_code_lens {
+        return;
+    }
+    let shown: HashSet<DocumentId> = editor.tree.views().map(|(view, _)| view.doc).collect();
+    for doc_id in shown {
+        let Some(doc) = editor.documents.get(&doc_id) else {
+            continue;
+        };
+        if !doc.code_lens_outdated {
+            continue;
+        }
+        let requests: Vec<_> = doc
+            .language_servers_with_feature(LanguageServerFeature::CodeLens)
+            .filter_map(|ls| {
+                let client = editor.language_servers.get_by_id(ls.id())?.clone();
+                Some((client, ls.text_document_code_lens(doc.identifier())?))
+            })
+            .collect();
+        if let Some(doc) = editor.documents.get_mut(&doc_id) {
+            doc.code_lens_outdated = false;
+        }
+        for (client, request) in requests {
+            jobs.callback(async move {
+                let lenses = request.await?.unwrap_or_default();
+                let lenses = futures_util::future::join_all(lenses.into_iter().map(|lens| {
+                    let resolve = lens
+                        .command
+                        .is_none()
+                        .then(|| client.code_lens_resolve(lens.clone()))
+                        .flatten();
+                    async move {
+                        match resolve {
+                            Some(future) => future.await.unwrap_or(lens),
+                            None => lens,
+                        }
+                    }
+                }))
+                .await;
+                let server = client.id();
+                Ok(Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    let Some(doc) = editor.documents.get_mut(&doc_id) else {
+                        return;
+                    };
+                    doc.code_lenses.retain(|lens| lens.server != server);
+                    doc.code_lenses.extend(lenses.into_iter().map(|lens| {
+                        DocumentCodeLens {
+                            line: lens.range.start.line as usize,
+                            title: lens
+                                .command
+                                .as_ref()
+                                .map(|c| c.title.clone())
+                                .unwrap_or_default(),
+                            command: lens.command,
+                            server,
+                        }
+                    }));
+                    doc.code_lens_annotations =
+                        code_lens_annotations(doc.text().slice(..), &doc.code_lenses);
+                })))
+            });
+        }
+    }
+}
+
+/// JetBrains "Show More" (`CodeVision.ShowMore`): a menu of the code lenses
+/// on the cursor line; picking one runs it.
+pub fn code_vision_show_more(cx: &mut Context) {
+    use crate::ui::context_menu::{ContextMenu, Entry};
+    let (view, doc) = current_ref!(cx.editor);
+    let line = doc
+        .selection(view.id)
+        .primary()
+        .cursor_line(doc.text().slice(..));
+    let entries: Vec<Entry> = doc
+        .code_lenses
+        .iter()
+        .filter(|lens| lens.line == line && lens.command.is_some())
+        .cloned()
+        .map(|lens| {
+            Entry::item(lens.title.clone(), move |compositor, cx| {
+                run_code_lens(cx.editor, compositor, lens)
+            })
+        })
+        .collect();
+    if entries.is_empty() {
+        cx.editor.set_status("no code vision entries on this line");
+        return;
+    }
+    cx.callback.push(Box::new(move |compositor, _cx| {
+        let size = compositor.size();
+        let col = size.width.saturating_sub(30) / 2;
+        compositor.push(Box::new(ContextMenu::new(size.height / 3, col, entries)));
+    }));
+}
+
+/// Run a code lens: on its server when the server lists the command, or —
+/// for the client-side commands servers use for "N references" and the like —
+/// as a jump to the locations its arguments carry.
+fn run_code_lens(editor: &mut Editor, compositor: &mut Compositor, lens: DocumentCodeLens) {
+    let Some(command) = lens.command else {
+        return;
+    };
+    let Some(server) = editor.language_server_by_id(lens.server) else {
+        editor.set_error("language server is no longer available");
+        return;
+    };
+    let offset_encoding = server.offset_encoding();
+    let server_runs_it = server
+        .capabilities()
+        .execute_command_provider
+        .as_ref()
+        .is_some_and(|provider| provider.commands.contains(&command.command));
+    if server_runs_it {
+        editor.execute_lsp_command(command, lens.server);
+        return;
+    }
+    let locations: Vec<Location> =
+        command_locations(command.arguments.as_deref().unwrap_or_default())
+            .into_iter()
+            .filter_map(|location| lsp_location_to_location(location, offset_encoding))
+            .collect();
+    if locations.is_empty() {
+        editor.set_status(format!(
+            "{}: a client-side command zmax does not run",
+            command.command
+        ));
+    } else {
+        goto_impl(editor, compositor, locations);
+    }
+}
+
+/// Every LSP `Location` in a command's arguments, at any depth: VS Code's
+/// `editor.action.showReferences` and the servers' own show-references
+/// commands pass `[uri, position, [Location, ...]]`.
+fn command_locations(args: &[serde_json::Value]) -> Vec<lsp::Location> {
+    let mut out = Vec::new();
+    for arg in args {
+        match serde_json::from_value::<lsp::Location>(arg.clone()) {
+            Ok(location) => out.push(location),
+            Err(_) => match arg {
+                serde_json::Value::Array(items) => out.extend(command_locations(items)),
+                serde_json::Value::Object(map) => {
+                    let values: Vec<_> = map.values().cloned().collect();
+                    out.extend(command_locations(&values));
+                }
+                _ => {}
+            },
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod code_lens_tests {
+    use super::{code_lens_annotations, command_locations};
+    use zmax_core::Rope;
+    use zmax_lsp::LanguageServerId;
+    use zmax_view::document::DocumentCodeLens;
+
+    fn lens(line: usize, title: &str) -> DocumentCodeLens {
+        DocumentCodeLens {
+            line,
+            title: title.into(),
+            command: None,
+            server: LanguageServerId::default(),
+        }
+    }
+
+    /// Lenses on one line share an annotation at that line's end, in the
+    /// order the server sent them; untitled lenses and lines past the end are
+    /// dropped.
+    #[test]
+    fn lenses_join_at_the_end_of_their_line() {
+        let rope = Rope::from("fn a() {}\nfn b() {}\n");
+        let lenses = [
+            lens(1, "2 references"),
+            lens(0, "Run"),
+            lens(1, "1 implementation"),
+            lens(0, ""),
+            lens(9, "gone"),
+        ];
+        let notes: Vec<_> = code_lens_annotations(rope.slice(..), &lenses)
+            .into_iter()
+            .map(|a| (a.char_idx, a.text.to_string()))
+            .collect();
+        assert_eq!(
+            notes,
+            [
+                (9, "  Run".to_string()),
+                (19, "  2 references · 1 implementation".to_string()),
+            ]
+        );
+    }
+
+    /// Locations are found wherever a show-references command nests them.
+    #[test]
+    fn command_arguments_yield_their_locations() {
+        let loc = |line: u32| {
+            serde_json::json!({
+                "uri": "file:///a.rs",
+                "range": {"start": {"line": line, "character": 0}, "end": {"line": line, "character": 1}},
+            })
+        };
+        let args = [
+            serde_json::json!("file:///a.rs"),
+            serde_json::json!({"line": 0, "character": 3}),
+            serde_json::json!([loc(4), loc(7)]),
+            serde_json::json!({"location": loc(9)}),
+        ];
+        let lines: Vec<u32> = command_locations(&args)
+            .into_iter()
+            .map(|l| l.range.start.line)
+            .collect();
+        assert_eq!(lines, [4, 7, 9]);
+    }
 }
 
 #[cfg(test)]

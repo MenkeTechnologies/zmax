@@ -1159,3 +1159,32 @@ async fn export_html_colours_the_buffer_or_the_selection() -> anyhow::Result<()>
     );
     Ok(())
 }
+
+/// A code lens drawn at a line's end stays there while text is typed before
+/// it, and the edit marks the buffer's lenses for the next fetch.
+#[tokio::test(flavor = "multi_thread")]
+async fn code_lens_annotations_follow_edits() -> anyhow::Result<()> {
+    let mut app = AppBuilder::new().with_input_text("#[a|]#b\ncd\n").build()?;
+    {
+        let doc = zmax_view::doc_mut!(app.editor);
+        doc.code_lens_outdated = false;
+        doc.code_lens_annotations = vec![zmax_core::text_annotations::InlineAnnotation::new(
+            2, "  Run",
+        )];
+    }
+    test_key_sequence(
+        &mut app,
+        Some("iXY<esc>"),
+        Some(&|app| {
+            let doc = zmax_view::doc!(app.editor);
+            assert_eq!(doc.text().to_string(), "XYab\ncd\n");
+            assert_eq!(
+                doc.code_lens_annotations[0].char_idx, 4,
+                "still the end of line 1"
+            );
+            assert!(doc.code_lens_outdated);
+        }),
+        false,
+    )
+    .await
+}
