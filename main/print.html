@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-95753691.js";
+            window.path_to_searchindex_js = "searchindex-532e117e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -4021,6 +4021,8 @@ without scrolling.</p>
 <tr><td><code>toggle_indent_guides</code></td><td>Toggle indentation guides (IntelliJ View &gt; Show Indent Guides)</td><td></td></tr>
 <tr><td><code>toggle_inlay_hints</code></td><td>Toggle display of LSP inlay hints (IntelliJ View &gt; Inlay Hints)</td><td></td></tr>
 <tr><td><code>toggle_parameter_hints</code></td><td>Show or hide the parameter-name inlay hints, leaving the other kinds (JetBrains Toggle Parameter Name Hints)</td><td></td></tr>
+<tr><td><code>toggle_code_vision</code></td><td>Show or hide the language servers’ code lenses (JetBrains Code Vision)</td><td></td></tr>
+<tr><td><code>code_vision_show_more</code></td><td>Pick and run a code lens on the cursor line (JetBrains Code Vision Show More)</td><td></td></tr>
 <tr><td><code>toggle_auto_highlight</code></td><td>Toggle automatic symbol-under-cursor highlight (SPC t h a)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;tha</code>, select: <code>&lt;space&gt;tha</code></td></tr>
 <tr><td><code>toggle_syntax_highlighting</code></td><td>Toggle syntax highlighting for the current buffer (SPC t h s)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;ths</code>, select: <code>&lt;space&gt;ths</code></td></tr>
 <tr><td><code>toggle_diagnostics</code></td><td>Toggle diagnostics display / flycheck (SPC t s)</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;ts</code>, select: <code>&lt;space&gt;ts</code></td></tr>
@@ -7953,6 +7955,7 @@ workspace-diagnostics = ["warning", "error"]
 <tr><td><code>auto-document-highlight</code></td><td>Automatically highlight symbol references at the cursor</td><td><code>false</code></td></tr>
 <tr><td><code>display-inlay-hints</code></td><td>Display inlay hints<sup class="footnote-reference" id="fr-2-1"><a href="#footnote-2">3</a></sup></td><td><code>false</code></td></tr>
 <tr><td><code>display-parameter-hints</code></td><td>With inlay hints on, also show the ones the server marks as parameter names (<code>toggle_parameter_hints</code> flips it)</td><td><code>true</code></td></tr>
+<tr><td><code>display-code-lens</code></td><td>Show the servers’ code lenses (“N references”, “Run”) at the end of their lines, styled <code>ui.virtual.code-lens</code> (else <code>ui.virtual.inlay-hint</code>); <code>toggle_code_vision</code> flips it and <code>code_vision_show_more</code> runs one on the cursor line</td><td><code>false</code></td></tr>
 <tr><td><code>inlay-hints-length-limit</code></td><td>Maximum displayed length (non-zero number) of inlay hints</td><td>Unset by default</td></tr>
 <tr><td><code>display-color-swatches</code></td><td>Show color swatches next to colors</td><td><code>true</code></td></tr>
 <tr><td><code>display-signature-help-docs</code></td><td>Display docs under signature help popup</td><td><code>true</code></td></tr>
@@ -8841,6 +8844,7 @@ See also <a href="https://github.com/MenkeTechnologies/zmax/issues/2380">#2380</
 <tr><td><code>ui.virtual.inlay-hint</code></td><td>Default style for inlay hints of all kinds</td></tr>
 <tr><td><code>ui.virtual.inlay-hint.parameter</code></td><td>Style for inlay hints of kind <code>parameter</code> (language servers are not required to set a kind)</td></tr>
 <tr><td><code>ui.virtual.inlay-hint.type</code></td><td>Style for inlay hints of kind <code>type</code> (language servers are not required to set a kind)</td></tr>
+<tr><td><code>ui.virtual.code-lens</code></td><td>Style for code lenses at the end of their lines (<code>display-code-lens</code>); falls back to <code>ui.virtual.inlay-hint</code></td></tr>
 <tr><td><code>ui.virtual.wrap</code></td><td>Soft-wrap indicator (see the <a href="#editor-section"><code>editor.soft-wrap</code> config</a>)</td></tr>
 <tr><td><code>ui.virtual.jump-label</code></td><td>Style for virtual jump labels</td></tr>
 <tr><td><code>ui.menu</code></td><td>Code and command completion menus</td></tr>
@@ -9235,6 +9239,8 @@ If a language server itself doesn’t support a feature, the next language serve
 <li><code>inlay-hints</code></li>
 <li><code>document-colors</code></li>
 <li><code>call-hierarchy</code></li>
+<li><code>type-hierarchy</code></li>
+<li><code>code-lens</code></li>
 </ul>
 <h2 id="tree-sitter-grammar-configuration"><a class="header" href="#tree-sitter-grammar-configuration">Tree-sitter grammar configuration</a></h2>
 <p>The source for a language’s tree-sitter grammar is specified in a <code>[[grammar]]</code>
@@ -10157,11 +10163,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>10054</strong> (84.3%)</li>
+<li>Ported: <strong>10056</strong> (84.3%)</li>
 <li>Partial: <strong>885</strong> (7.4%)</li>
-<li>Absent: <strong>987</strong></li>
+<li>Absent: <strong>985</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 3024 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
+<li>zmax source surface: 3026 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10224,7 +10230,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1083</td><td style="text-align: right">310</td><td style="text-align: right">54.1%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1085</td><td style="text-align: right">310</td><td style="text-align: right">54.2%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10320,7 +10326,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">31</td><td style="text-align: right">5</td><td style="text-align: right">77.5%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">827</td><td style="text-align: right">252</td><td style="text-align: right">51.5%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">829</td><td style="text-align: right">252</td><td style="text-align: right">51.6%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">8</td><td style="text-align: right">4</td><td style="text-align: right">50.0%</td></tr>
