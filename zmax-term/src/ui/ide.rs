@@ -3439,6 +3439,9 @@ impl Ide {
         // (`editor.file-explorer.hidden`; false = show dotfiles, the default).
         let config = cx.editor.config();
         self.project.set_show_hidden(!config.file_explorer.hidden);
+        let nesting = &config.file_explorer;
+        self.project
+            .set_nesting(nesting.file_nesting.then_some(&nesting.nesting_rules));
         self.transparent_bg = config.transparent_background;
 
         let full = area;

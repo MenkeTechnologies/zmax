@@ -284,6 +284,8 @@ Note that the ignore files consulted by the file explorer when `ignore` is set t
 |`git-global` | Enables reading global `.gitignore`, whose path is specified in git's config: `core.excludesfile` option | `false`
 |`git-exclude` | Enables reading `.git/info/exclude` files | `false`
 |`flatten-dirs` | Enables flattening single child directories | `true`
+|`file-nesting` | Shows files the nesting rules pair with another file under that file in the project tree, opened and closed like a directory (`toggle_file_nesting`) | `false`
+|`nesting-rules` | Table of parent suffix to child suffixes: `base + child` is nested under `base + parent` when both are in one directory, e.g. `".ts" = [".js", ".d.ts"]` or `"Cargo.toml" = ["Cargo.lock"]` | TypeScript, JavaScript and stylesheet outputs under their sources; lock files under `package.json`, `Cargo.toml`, `go.mod`, `Gemfile`, `pyproject.toml`, `composer.json`
 
 ### `[editor.buffer-picker]` Section
 

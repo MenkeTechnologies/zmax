@@ -315,6 +315,26 @@ mod tests {
         assert_eq!(feature.to_string(), "code-lens");
     }
 
+    /// `[editor.file-explorer]` file nesting: off by default with rules to
+    /// hand, and a table in the config replaces the rules.
+    #[test]
+    fn file_nesting_defaults_off_and_takes_its_rules_from_the_config() {
+        let default = Config::default().editor.file_explorer;
+        assert!(!default.file_nesting);
+        assert_eq!(default.nesting_rules["Cargo.toml"], ["Cargo.lock"]);
+        let set = Config::load_test(
+            r#"
+            [editor.file-explorer]
+            file-nesting = true
+            nesting-rules = { ".proto" = [".pb.go", "_grpc.pb.go"] }
+        "#,
+        );
+        let explorer = set.editor.file_explorer;
+        assert!(explorer.file_nesting);
+        assert_eq!(explorer.nesting_rules.len(), 1);
+        assert_eq!(explorer.nesting_rules[".proto"], [".pb.go", "_grpc.pb.go"]);
+    }
+
     #[test]
     fn parsing_keymaps_config_file() {
         use crate::keymap;

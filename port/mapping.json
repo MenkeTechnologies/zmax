@@ -89303,5 +89303,13 @@
    "static:stop_background_tasks"
   ],
   "note": "StopBackgroundProcesses ~ zmax `stop_background_tasks`: sends `window/workDoneProgress/cancel` for every running language-server task its server marked cancellable and reports how many could not be cancelled; zmax's own jobs are not stopped by it (`stop_run` stops the Run console)."
+ },
+ {
+  "spec_id": "jetbrains-actions.ProjectView.FileNesting",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_file_nesting"
+  ],
+  "note": "ProjectView.FileNesting (File Nesting...) ~ zmax `toggle_file_nesting` turns `editor.file-explorer.file-nesting` on or off; with it on the project tree shows a file that `nesting-rules` pairs with another (`base + child suffix` under `base + parent suffix`, the longest child suffix deciding) under that file, which opens and closes like a directory with Right/Left, nesting one level deep (nest_files, ui/file_tree.rs). The rules are a config table, edited in config.toml rather than in the IDE's dialog; nesting is off by default and speed search lists files flat."
  }
 ]

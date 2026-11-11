@@ -2211,6 +2211,7 @@ impl MappableCommand {
         focus_structure, "Focus the structure/symbol outline panel",
         toggle_group_problems, "Group the Problems panel by the checker that reported each diagnostic (JetBrains Group by Inspection)",
         toggle_compact_directories, "Draw single-child directory chains as one row (JetBrains Compact Directories)",
+        toggle_file_nesting, "Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting)",
         toggle_sort_by_type, "Order the project tree's files by extension (JetBrains Sort by Type)",
         toggle_file_details, "Show or hide file sizes in the project tree (JetBrains File Details)",
         restore_default_layout, "Put the workbench drawers back to their default layout (JetBrains Restore Default Layout)",
@@ -56695,6 +56696,19 @@ fn toggle_compact_directories(cx: &mut Context) {
             None => cx.editor.set_status("no project tree"),
         }
     }));
+}
+
+/// JetBrains File Nesting (`ProjectView.FileNesting`): turn
+/// `editor.file-explorer.file-nesting` on or off; the rules are
+/// `editor.file-explorer.nesting-rules`.
+fn toggle_file_nesting(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        on = !c.file_explorer.file_nesting;
+        c.file_explorer.file_nesting = on;
+    });
+    cx.editor
+        .set_status(format!("file nesting: {}", if on { "on" } else { "off" }));
 }
 
 /// JetBrains "Sort by Modification Time" (`ProjectView.SortByTimeDescending` /

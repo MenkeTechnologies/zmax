@@ -309,6 +309,42 @@ pub struct FileExplorerConfig {
     pub git_exclude: bool,
     /// Whether to flatten single-child directories in file explorer. Defaults to true.
     pub flatten_dirs: bool,
+    /// JetBrains File Nesting: show files `nesting-rules` pairs with another
+    /// file under that file in the project tree. Defaults to false.
+    pub file_nesting: bool,
+    /// File Nesting rules: a parent suffix and the child suffixes nested under
+    /// it, `base + child` under `base + parent` (`".ts" = [".js", ".d.ts"]`;
+    /// a whole name such as `"Cargo.toml" = ["Cargo.lock"]` works the same way).
+    pub nesting_rules: BTreeMap<String, Vec<String>>,
+}
+
+/// The File Nesting rules zmax starts with: generated and compiled files under
+/// their sources, lock files under their manifests.
+fn default_nesting_rules() -> BTreeMap<String, Vec<String>> {
+    [
+        (".ts", &[".js", ".js.map", ".d.ts"][..]),
+        (".tsx", &[".js", ".js.map", ".d.ts"]),
+        (".js", &[".js.map", ".min.js", ".min.js.map"]),
+        (".scss", &[".css", ".css.map"]),
+        (".sass", &[".css", ".css.map"]),
+        (".less", &[".css", ".css.map"]),
+        (".css", &[".css.map", ".min.css"]),
+        (
+            "package.json",
+            &["package-lock.json", "yarn.lock", "pnpm-lock.yaml"],
+        ),
+        ("Cargo.toml", &["Cargo.lock"]),
+        ("go.mod", &["go.sum"]),
+        ("Gemfile", &["Gemfile.lock"]),
+        ("pyproject.toml", &["poetry.lock", "uv.lock"]),
+        ("composer.json", &["composer.lock"]),
+    ]
+    .into_iter()
+    .map(|(parent, children)| {
+        let children = children.iter().map(|c| c.to_string()).collect();
+        (parent.to_string(), children)
+    })
+    .collect()
 }
 
 impl Default for FileExplorerConfig {
@@ -322,6 +358,8 @@ impl Default for FileExplorerConfig {
             git_global: false,
             git_exclude: false,
             flatten_dirs: true,
+            file_nesting: false,
+            nesting_rules: default_nesting_rules(),
         }
     }
 }

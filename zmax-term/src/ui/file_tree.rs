@@ -4,7 +4,7 @@
 //! expansion, keyboard navigation, and opening files directly via the in-process
 //! editor — no PTY round-trip, since this runs inside zmax itself.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 
@@ -28,6 +28,67 @@ struct Row {
     depth: usize,
     is_dir: bool,
     expanded: bool,
+    /// A file with others nested under it (JetBrains File Nesting); it opens
+    /// and closes like a directory.
+    nested: bool,
+    /// For a file nested under another, that file.
+    owner: Option<PathBuf>,
+}
+
+/// JetBrains File Nesting rules: a parent suffix and the child suffixes whose
+/// files are shown under it.
+pub type NestingRules = BTreeMap<String, Vec<String>>;
+
+/// JetBrains File Nesting over one directory `listing`: the index of the file
+/// each nested file is shown under. A rule nests `base + child suffix` under
+/// `base + parent suffix` when both are files of the listing, the longest
+/// matching child suffix deciding between rules. A file whose parent is itself
+/// nested goes under that file's own parent, so the nesting is one level deep,
+/// and files that would nest under each other stay unnested.
+pub fn nest_files(
+    listing: &[(PathBuf, String, bool)],
+    rules: &NestingRules,
+) -> HashMap<usize, usize> {
+    let files: HashMap<&str, usize> = listing
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, _, is_dir))| !is_dir)
+        .map(|(i, (_, name, _))| (name.as_str(), i))
+        .collect();
+    let mut direct = HashMap::new();
+    for (&name, &i) in &files {
+        let mut best: Option<(usize, usize)> = None;
+        for (parent, children) in rules {
+            for child in children.iter().filter(|c| name.ends_with(c.as_str())) {
+                let base = &name[..name.len() - child.len()];
+                let Some(&p) = files.get(format!("{base}{parent}").as_str()) else {
+                    continue;
+                };
+                if p != i && best.is_none_or(|(len, _)| child.len() > len) {
+                    best = Some((child.len(), p));
+                }
+            }
+        }
+        if let Some((_, p)) = best {
+            direct.insert(i, p);
+        }
+    }
+    direct
+        .keys()
+        .filter_map(|&i| {
+            let mut root = direct[&i];
+            for _ in 0..listing.len() {
+                match direct.get(&root) {
+                    Some(&up) => root = up,
+                    None => return Some((i, root)),
+                }
+                if root == i {
+                    return None;
+                }
+            }
+            None
+        })
+        .collect()
 }
 
 pub struct FileTree {
@@ -72,6 +133,10 @@ pub struct FileTree {
     /// JetBrains "Enable Preview Tab" (`ProjectView.OpenInPreviewTab`): files
     /// opened from the tree reuse one buffer until it is edited.
     preview_tab: bool,
+    /// JetBrains File Nesting (`ProjectView.FileNesting`): the rules nesting
+    /// files under others, `None` when nesting is off. Synced from
+    /// `editor.file-explorer.file-nesting` / `nesting-rules`.
+    nesting: Option<NestingRules>,
 }
 
 /// How the project tree orders the files inside a directory (JetBrains' Sort by
@@ -105,6 +170,7 @@ impl FileTree {
             page: 1,
             preview_tab: false,
             anchor: None,
+            nesting: None,
         };
         tree.expanded.insert(root);
         tree.rebuild();
@@ -118,6 +184,15 @@ impl FileTree {
         if self.show_hidden != show {
             self.show_hidden = show;
             self.dir_cache.clear();
+            self.rebuild();
+        }
+    }
+
+    /// Set the File Nesting rules (`None`: nesting off), rebuilding the tree
+    /// if they changed. Called by the owning view each render.
+    pub fn set_nesting(&mut self, rules: Option<&NestingRules>) {
+        if self.nesting.as_ref() != rules {
+            self.nesting = rules.cloned();
             self.rebuild();
         }
     }
@@ -234,10 +309,45 @@ impl FileTree {
             sort: TreeSort,
             compact: bool,
             folders_first: bool,
+            nesting: Option<&NestingRules>,
         ) {
-            for (path, name, is_dir) in
-                FileTree::cached_children(cache, dir, show_hidden, sort, folders_first)
-            {
+            let listing = FileTree::cached_children(cache, dir, show_hidden, sort, folders_first);
+            let nested = nesting.map(|r| nest_files(&listing, r)).unwrap_or_default();
+            let mut kids: HashMap<usize, Vec<usize>> = HashMap::new();
+            for (child, parent) in &nested {
+                kids.entry(*parent).or_default().push(*child);
+            }
+            for (i, (path, name, is_dir)) in listing.iter().cloned().enumerate() {
+                if nested.contains_key(&i) {
+                    continue;
+                }
+                if let Some(children) = kids.get_mut(&i) {
+                    // Nested files keep the directory's order under their parent.
+                    children.sort_unstable();
+                    let open = expanded.contains(&path);
+                    out.push(Row {
+                        path: path.clone(),
+                        name,
+                        depth,
+                        is_dir: false,
+                        expanded: open,
+                        nested: true,
+                        owner: None,
+                    });
+                    for &c in children.iter().filter(|_| open) {
+                        let (child, child_name, _) = listing[c].clone();
+                        out.push(Row {
+                            path: child,
+                            name: child_name,
+                            depth: depth + 1,
+                            is_dir: false,
+                            expanded: false,
+                            nested: false,
+                            owner: Some(path.clone()),
+                        });
+                    }
+                    continue;
+                }
                 // "Compact Directories": a directory whose only child is another
                 // directory is drawn as one row, `a/b/c`, and the walk continues
                 // from the end of the chain — the empty package levels the IDE
@@ -254,6 +364,8 @@ impl FileTree {
                     depth,
                     is_dir,
                     expanded: exp,
+                    nested: false,
+                    owner: None,
                 });
                 if exp {
                     walk(
@@ -266,6 +378,7 @@ impl FileTree {
                         sort,
                         compact,
                         folders_first,
+                        nesting,
                     );
                 }
             }
@@ -318,6 +431,8 @@ impl FileTree {
                             depth,
                             is_dir: true,
                             expanded: true,
+                            nested: false,
+                            owner: None,
                         });
                         out.append(&mut kids);
                         any = true;
@@ -329,6 +444,8 @@ impl FileTree {
                         depth,
                         is_dir: false,
                         expanded: false,
+                        nested: false,
+                        owner: None,
                     });
                     any = true;
                 }
@@ -351,6 +468,7 @@ impl FileTree {
                 sort,
                 compact,
                 folders_first,
+                self.nesting.as_ref(),
             );
         } else {
             walk_filtered(&mut self.dir_cache, &root, 0, &q, &mut rows, show_hidden);
@@ -420,9 +538,14 @@ impl FileTree {
         self.rows.get(self.selected).map(|row| row.path.as_path())
     }
 
-    /// JetBrains "Expand" (`ExpandTreeNode`): open the selected directory.
+    /// JetBrains "Expand" (`ExpandTreeNode`): open the selected directory,
+    /// or the selected file with files nested under it.
     pub fn expand_selected(&mut self) {
-        if let Some(row) = self.rows.get(self.selected).filter(|row| row.is_dir) {
+        if let Some(row) = self
+            .rows
+            .get(self.selected)
+            .filter(|row| row.is_dir || row.nested)
+        {
             if self.expanded.insert(row.path.clone()) {
                 self.rebuild();
             }
@@ -435,8 +558,10 @@ impl FileTree {
         let Some(row) = self.rows.get(self.selected) else {
             return;
         };
-        let dir = if row.is_dir && self.expanded.contains(&row.path) {
+        let dir = if (row.is_dir || row.nested) && self.expanded.contains(&row.path) {
             row.path.clone()
+        } else if let Some(owner) = &row.owner {
+            owner.clone()
         } else {
             match row.path.parent() {
                 Some(parent) if parent != self.root => parent.to_path_buf(),
@@ -778,10 +903,14 @@ impl FileTree {
             // Left: collapse an expanded dir, else jump to the parent directory.
             KeyCode::Char('h') | KeyCode::Left => {
                 if let Some(row) = self.rows.get(self.selected) {
-                    if row.is_dir && self.expanded.contains(&row.path) {
+                    if (row.is_dir || row.nested) && self.expanded.contains(&row.path) {
                         self.expanded.remove(&row.path);
                         self.rebuild();
-                    } else if let Some(parent) = row.path.parent().map(|p| p.to_path_buf()) {
+                    } else if let Some(parent) = row
+                        .owner
+                        .clone()
+                        .or_else(|| row.path.parent().map(|p| p.to_path_buf()))
+                    {
                         if let Some(idx) = self.rows.iter().position(|r| r.path == parent) {
                             self.selected = idx;
                         }
@@ -793,7 +922,7 @@ impl FileTree {
             // the first child; on a file, open it.
             KeyCode::Char('l') | KeyCode::Right => {
                 if let Some(row) = self.rows.get(self.selected) {
-                    if row.is_dir {
+                    if row.is_dir || row.nested {
                         if self.expanded.contains(&row.path) {
                             if self.selected + 1 < self.rows.len() {
                                 self.selected += 1;
@@ -1016,6 +1145,10 @@ impl FileTree {
                 let arrow = if row.expanded { '▾' } else { '▸' };
                 let folder = crate::ui::icons::folder_icon(row.expanded);
                 format!("{indent}{arrow} {folder} {}", row.name)
+            } else if row.nested {
+                let arrow = if row.expanded { '▾' } else { '▸' };
+                let glyph = crate::ui::icons::file_icon(&row.name);
+                format!("{indent}{arrow} {glyph} {}", row.name)
             } else {
                 let glyph = crate::ui::icons::file_icon(&row.name);
                 format!("{indent}  {glyph} {}", row.name)
@@ -1083,6 +1216,87 @@ pub fn human_size(bytes: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn rules(pairs: &[(&str, &[&str])]) -> NestingRules {
+        pairs
+            .iter()
+            .map(|(p, cs)| (p.to_string(), cs.iter().map(|c| c.to_string()).collect()))
+            .collect()
+    }
+
+    fn listing(entries: &[(&str, bool)]) -> Vec<(PathBuf, String, bool)> {
+        entries
+            .iter()
+            .map(|(name, is_dir)| (PathBuf::from(name), name.to_string(), *is_dir))
+            .collect()
+    }
+
+    #[test]
+    fn nesting_is_one_level_under_the_outermost_parent() {
+        let rules = rules(&[
+            (".ts", &[".js", ".js.map", ".d.ts"]),
+            (".js", &[".js.map", ".min.js"]),
+            ("Cargo.toml", &["Cargo.lock"]),
+        ]);
+        let list = listing(&[
+            ("x.js", true),
+            ("bar.js", false),
+            ("bar.min.js", false),
+            ("Cargo.lock", false),
+            ("Cargo.toml", false),
+            ("foo.d.ts", false),
+            ("foo.js", false),
+            ("foo.js.map", false),
+            ("foo.ts", false),
+            ("x.ts", false),
+        ]);
+        let mut nested: Vec<(usize, usize)> = nest_files(&list, &rules).into_iter().collect();
+        nested.sort();
+        // bar.min.js under bar.js; Cargo.lock under Cargo.toml; foo.d.ts,
+        // foo.js and foo.js.map (which `.js` would put under foo.js) all
+        // under foo.ts; the directory x.js stays where it is.
+        assert_eq!(nested, vec![(2, 1), (3, 4), (5, 8), (6, 8), (7, 8)]);
+    }
+
+    #[test]
+    fn files_that_would_nest_under_each_other_stay_apart() {
+        let rules = rules(&[(".x", &[".y"]), (".y", &[".x"])]);
+        let list = listing(&[("f.x", false), ("f.y", false)]);
+        assert!(nest_files(&list, &rules).is_empty());
+    }
+
+    #[test]
+    fn a_nesting_parent_opens_like_a_directory_and_collapses_from_a_child() {
+        let dir = tempfile::tempdir().unwrap();
+        for name in ["a.css", "a.scss", "b.rs"] {
+            std::fs::write(dir.path().join(name), "").unwrap();
+        }
+        let names = |tree: &FileTree| {
+            tree.rows
+                .iter()
+                .map(|r| format!("{}{}", "  ".repeat(r.depth), r.name))
+                .collect::<Vec<_>>()
+        };
+        let mut tree = FileTree::new(dir.path().to_path_buf());
+        assert_eq!(names(&tree), ["a.css", "a.scss", "b.rs"]);
+
+        let rules = rules(&[(".scss", &[".css"])]);
+        tree.set_nesting(Some(&rules));
+        assert_eq!(names(&tree), ["a.scss", "b.rs"]);
+        assert!(tree.rows[0].nested);
+
+        tree.selected = 0;
+        tree.handle_key(key('l'));
+        assert_eq!(names(&tree), ["a.scss", "  a.css", "b.rs"]);
+
+        tree.selected = 1;
+        tree.collapse_selected();
+        assert_eq!(names(&tree), ["a.scss", "b.rs"]);
+        assert_eq!(tree.selected, 0);
+
+        tree.set_nesting(None);
+        assert_eq!(names(&tree), ["a.css", "a.scss", "b.rs"]);
+    }
     use zmax_view::input::KeyModifiers;
 
     fn key(c: char) -> KeyEvent {
