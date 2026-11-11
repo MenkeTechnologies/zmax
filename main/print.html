@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ad4dbbe8.js";
+            window.path_to_searchindex_js = "searchindex-c5ad7c74.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -5532,6 +5532,7 @@ without scrolling.</p>
 <tr><td><code>focus_structure</code></td><td>Focus the structure/symbol outline panel</td><td><strong>spacemacs, hybrid</strong> — normal: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code>, select: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code></td></tr>
 <tr><td><code>toggle_group_problems</code></td><td>Group the Problems panel by the checker that reported each diagnostic (JetBrains Group by Inspection)</td><td></td></tr>
 <tr><td><code>toggle_compact_directories</code></td><td>Draw single-child directory chains as one row (JetBrains Compact Directories)</td><td></td></tr>
+<tr><td><code>toggle_essential_highlighting</code></td><td>Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting)</td><td></td></tr>
 <tr><td><code>toggle_file_nesting</code></td><td>Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting)</td><td></td></tr>
 <tr><td><code>toggle_sort_by_type</code></td><td>Order the project tree’s files by extension (JetBrains Sort by Type)</td><td></td></tr>
 <tr><td><code>toggle_file_details</code></td><td>Show or hide file sizes in the project tree (JetBrains File Details)</td><td></td></tr>
@@ -7842,6 +7843,7 @@ add are merged on top of the selected preset.</p>
 <tr><td><code>popup-border</code></td><td>Draw border around <code>popup</code>, <code>menu</code>, <code>all</code>, or <code>none</code></td><td><code>"none"</code></td></tr>
 <tr><td><code>indent-heuristic</code></td><td>How the indentation for a newly inserted line is computed: <code>simple</code> just copies the indentation level from the previous line, <code>tree-sitter</code> computes the indentation based on the syntax tree and <code>hybrid</code> combines both approaches. If the chosen heuristic is not available, a different one will be used as a fallback (the fallback order being <code>hybrid</code> -&gt; <code>tree-sitter</code> -&gt; <code>simple</code>).</td><td><code>"hybrid"</code></td></tr>
 <tr><td><code>jump-label-alphabet</code></td><td>The characters that are used to generate two character jump labels. Characters at the start of the alphabet are used first.</td><td><code>"abcdefghijklmnopqrstuvwxyz"</code></td></tr>
+<tr><td><code>essential-highlighting</code></td><td>While a buffer has unsaved edits, show only its error diagnostics; every diagnostic comes back when it is saved (JetBrains Essential highlighting, <code>toggle_essential_highlighting</code>)</td><td><code>false</code></td></tr>
 <tr><td><code>end-of-line-diagnostics</code></td><td>Minimum severity of diagnostics to render at the end of the line. Set to <code>disable</code> to disable entirely. Refer to the setting about <code>inline-diagnostics</code> for more details</td><td><code>"hint"</code></td></tr>
 <tr><td><code>clipboard-provider</code></td><td>Which API to use for clipboard interaction. One of <code>pasteboard</code> (MacOS), <code>wayland</code>, <code>x-clip</code>, <code>x-sel</code>, <code>win32-yank</code>, <code>termux</code>, <code>tmux</code>, <code>windows</code>, <code>termcode</code>, <code>none</code>, or a custom command set.</td><td>Platform and environment specific.</td></tr>
 <tr><td><code>editor-config</code></td><td>Whether to read settings from <a href="https://editorconfig.org">EditorConfig</a> files</td><td><code>true</code></td></tr>
@@ -10175,11 +10177,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>10063</strong> (84.4%)</li>
+<li>Ported: <strong>10064</strong> (84.4%)</li>
 <li>Partial: <strong>882</strong> (7.4%)</li>
-<li>Absent: <strong>981</strong></li>
+<li>Absent: <strong>980</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 3036 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
+<li>zmax source surface: 3037 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10242,7 +10244,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1092</td><td style="text-align: right">307</td><td style="text-align: right">54.5%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1093</td><td style="text-align: right">307</td><td style="text-align: right">54.6%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10338,7 +10340,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>markdown</td><td style="text-align: right">40</td><td style="text-align: right">31</td><td style="text-align: right">5</td><td style="text-align: right">77.5%</td></tr>
-<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">829</td><td style="text-align: right">255</td><td style="text-align: right">51.6%</td></tr>
+<tr><td>jetbrains-actions</td><td>platform</td><td style="text-align: right">1607</td><td style="text-align: right">830</td><td style="text-align: right">255</td><td style="text-align: right">51.6%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">8</td><td style="text-align: right">4</td><td style="text-align: right">50.0%</td></tr>
