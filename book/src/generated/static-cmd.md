@@ -1818,6 +1818,8 @@
 | `focus_structure` | Focus the structure/symbol outline panel | **spacemacs, hybrid** — normal: `` <space>Wo ``, `` <space>Ws ``, select: `` <space>Wo ``, `` <space>Ws `` |
 | `toggle_group_problems` | Group the Problems panel by the checker that reported each diagnostic (JetBrains Group by Inspection) |  |
 | `toggle_compact_directories` | Draw single-child directory chains as one row (JetBrains Compact Directories) |  |
+| `run_send_input` | Type a line into the running Run console process's input |  |
+| `run_send_eof` | Close the running Run console process's input so it reads end of file (JetBrains Send EOF) |  |
 | `toggle_essential_highlighting` | Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting) |  |
 | `toggle_file_nesting` | Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting) |  |
 | `toggle_sort_by_type` | Order the project tree's files by extension (JetBrains Sort by Type) |  |

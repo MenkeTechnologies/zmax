@@ -716,6 +716,11 @@ impl EditorView {
     }
 
     /// Stop the active run (Run-console context menu / toolbar Stop).
+    /// The IDE Run console's current run, if the workbench has one.
+    pub fn active_run(&self) -> Option<crate::ui::run::Run> {
+        self.ide.as_ref().and_then(Ide::active_run)
+    }
+
     pub fn stop_active_run(&mut self) {
         if let Some(ide) = self.ide.as_mut() {
             ide.stop_run();

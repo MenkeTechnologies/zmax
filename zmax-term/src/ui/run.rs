@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
 /// Live state of a run, shared between the spawned task and the render loop.
@@ -27,6 +27,9 @@ pub struct RunState {
     /// JetBrains "Pause Output": while set, the console shows only the first
     /// this-many lines; output keeps arriving behind it and appears on resume.
     pub paused_at: Option<usize>,
+    /// The process's standard input, fed from the console (JetBrains Run
+    /// console input). `None` once it is closed (Send EOF) or the run ended.
+    stdin: Option<tokio::sync::mpsc::UnboundedSender<String>>,
     abort: Option<tokio::task::AbortHandle>,
 }
 
@@ -173,6 +176,8 @@ fn find_up(start: &Path, marker: &str) -> Option<PathBuf> {
 
 /// Start `cmd` under `shell` (e.g. `["sh","-c"]`) in `cwd`, streaming output into a fresh `Run`.
 pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
+    // Made before the task so input sent the moment the run starts is kept.
+    let (stdin_tx, mut stdin_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
     let state = Arc::new(Mutex::new(RunState {
         cmd: cmd.clone(),
         shell: shell.clone(),
@@ -184,6 +189,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
         scroll: 0,
         follow: true,
         paused_at: None,
+        stdin: Some(stdin_tx),
         abort: None,
     }));
 
@@ -196,6 +202,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
             .args(&args)
             .arg(&cmd)
             .current_dir(&cwd)
+            .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .kill_on_drop(true);
@@ -209,6 +216,20 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
                 return;
             }
         };
+
+        // Console input goes to the process a line at a time; when the console
+        // closes its end (Send EOF) or the run ends, the pipe is dropped and the
+        // process reads end of file.
+        if let Some(mut stdin) = child.stdin.take() {
+            tokio::spawn(async move {
+                while let Some(line) = stdin_rx.recv().await {
+                    let sent = stdin.write_all(format!("{line}\n").as_bytes()).await;
+                    if sent.is_err() || stdin.flush().await.is_err() {
+                        break;
+                    }
+                }
+            });
+        }
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
         if let Some(stdout) = child.stdout.take() {
@@ -249,6 +270,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
                     let mut s = st.lock().unwrap();
                     s.exit_code = status.ok().and_then(|s| s.code());
                     s.running = false;
+                    s.stdin = None;
                     remember(&s);
                     return;
                 }
@@ -259,6 +281,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
         let mut s = st.lock().unwrap();
         s.exit_code = code;
         s.running = false;
+        s.stdin = None;
         remember(&s);
     });
 
@@ -285,6 +308,38 @@ pub fn stop(run: &Run) {
         abort.abort();
     }
     s.running = false;
+    s.stdin = None;
+}
+
+/// JetBrains Run console input: send `line` (and a newline) to the running
+/// process's standard input. The line is echoed into the console, as the IDE
+/// shows what was typed among the output.
+pub fn send_input(run: &Run, line: &str) -> Result<(), &'static str> {
+    let mut s = run.lock().unwrap();
+    if !s.running {
+        return Err("the process has exited");
+    }
+    let sent = s.stdin.as_ref().map(|stdin| stdin.send(line.to_string()));
+    match sent {
+        Some(Ok(())) => {
+            s.push_line(line.to_string());
+            Ok(())
+        }
+        _ => Err("the process's input is closed"),
+    }
+}
+
+/// JetBrains "Send EOF" (`SendEOF`): close the running process's standard
+/// input, so it reads end of file.
+pub fn send_eof(run: &Run) -> Result<(), &'static str> {
+    let mut s = run.lock().unwrap();
+    if !s.running {
+        return Err("the process has exited");
+    }
+    s.stdin
+        .take()
+        .map(drop)
+        .ok_or("the process's input is already closed")
 }
 
 /// Re-run the same command, returning a fresh `Run`.
@@ -425,6 +480,7 @@ mod push_tests {
             scroll: 0,
             follow: true,
             paused_at: None,
+            stdin: None,
             abort: None,
         }
     }
@@ -536,5 +592,45 @@ mod push_tests {
         assert!(rerun_failed_command("make check", &failed).is_none());
         // Nothing failed, nothing to re-run.
         assert!(rerun_failed_command("cargo test", &[]).is_none());
+    }
+}
+
+#[cfg(test)]
+mod input_tests {
+    use super::{send_eof, send_input, spawn, Run};
+
+    async fn finished(run: &Run) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while run.lock().unwrap().running {
+            assert!(std::time::Instant::now() < deadline, "the run never ended");
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    }
+
+    fn sh() -> Vec<String> {
+        vec!["sh".to_string(), "-c".to_string()]
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_line_typed_into_the_console_reaches_the_process() {
+        let run = spawn("read x; echo got:$x".into(), sh(), std::env::temp_dir());
+        send_input(&run, "hello").unwrap();
+        finished(&run).await;
+        let s = run.lock().unwrap();
+        assert_eq!(s.lines, ["hello", "got:hello"]);
+        assert_eq!(s.exit_code, Some(0));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn send_eof_ends_a_process_reading_its_input() {
+        let run = spawn("cat; echo done".into(), sh(), std::env::temp_dir());
+        send_input(&run, "a").unwrap();
+        send_eof(&run).unwrap();
+        assert_eq!(send_input(&run, "b"), Err("the process's input is closed"));
+        finished(&run).await;
+        let s = run.lock().unwrap();
+        assert_eq!(s.lines, ["a", "a", "done"]);
+        drop(s);
+        assert_eq!(send_eof(&run), Err("the process has exited"));
     }
 }

@@ -86543,11 +86543,12 @@
  },
  {
   "spec_id": "jetbrains-actions.SendEOF",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
+   "static:run_send_eof",
    "static:comint_delchar_or_maybe_eof"
   ],
-  "note": "SendEOF (Send EOF) = zmax `comint_delchar_or_maybe_eof` sends EOF to a comint process on empty input; the Run console spawns processes without stdin (ui/run.rs:169-176 pipes only stdout/stderr), so it has no EOF to send there."
+  "note": "SendEOF (Send EOF) = zmax `run_send_eof`: closes the standard input of the process running in the Run console, so it reads end of file (send_eof, ui/run.rs); the console's process now gets a stdin pipe that `run_send_input` types lines into, echoed among its output. In a comint buffer `comint_delchar_or_maybe_eof` sends EOF on empty input."
  },
  {
   "spec_id": "jetbrains-actions.SetCaretVisualAttributesInternalAction",

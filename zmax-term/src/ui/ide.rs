@@ -1372,6 +1372,11 @@ impl Ide {
     }
 
     /// Stop the active run (SIGTERM the process). No-op if nothing is running.
+    /// The Run console's current run, if one was started.
+    pub fn active_run(&self) -> Option<crate::ui::run::Run> {
+        self.run.clone()
+    }
+
     pub fn stop_run(&mut self) {
         if let Some(r) = &self.run {
             crate::ui::run::stop(r);

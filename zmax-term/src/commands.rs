@@ -2211,6 +2211,8 @@ impl MappableCommand {
         focus_structure, "Focus the structure/symbol outline panel",
         toggle_group_problems, "Group the Problems panel by the checker that reported each diagnostic (JetBrains Group by Inspection)",
         toggle_compact_directories, "Draw single-child directory chains as one row (JetBrains Compact Directories)",
+        run_send_input, "Type a line into the running Run console process's input",
+        run_send_eof, "Close the running Run console process's input so it reads end of file (JetBrains Send EOF)",
         toggle_essential_highlighting, "Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting)",
         toggle_file_nesting, "Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting)",
         toggle_sort_by_type, "Order the project tree's files by extension (JetBrains Sort by Type)",
@@ -56640,6 +56642,52 @@ fn pause_run_output(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
             view.toggle_run_pause(cx);
+        }
+    }));
+}
+
+/// JetBrains Run console input: prompt for a line and send it to the running
+/// process's standard input.
+fn run_send_input(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "run input:".into(),
+        None,
+        ui::completers::none,
+        |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let line = input.to_string();
+            cx.jobs.callback(async move {
+                let call: job::Callback =
+                    Callback::EditorCompositor(Box::new(move |editor, compositor| {
+                        let run = compositor
+                            .find::<crate::ui::EditorView>()
+                            .and_then(|view| view.active_run());
+                        match run.map(|run| crate::ui::run::send_input(&run, &line)) {
+                            Some(Ok(())) => {}
+                            Some(Err(e)) => editor.set_error(format!("run: {e}")),
+                            None => editor.set_error("run: nothing is running"),
+                        }
+                    }));
+                Ok(call)
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// JetBrains "Send EOF" (`SendEOF`): close the running Run console process's
+/// standard input.
+fn run_send_eof(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let run = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| view.active_run());
+        match run.map(|run| crate::ui::run::send_eof(&run)) {
+            Some(Ok(())) => cx.editor.set_status("run: input closed"),
+            Some(Err(e)) => cx.editor.set_error(format!("run: {e}")),
+            None => cx.editor.set_error("run: nothing is running"),
         }
     }));
 }
