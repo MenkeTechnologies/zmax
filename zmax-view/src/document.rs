@@ -398,6 +398,10 @@ pub struct Document {
     pub(crate) modified_since_accessed: bool,
 
     pub(crate) diagnostics: Vec<Diagnostic>,
+    /// JetBrains "Essential" highlighting (`editor.essential-highlighting`)
+    /// while the document has unsaved edits: only its errors, every problem
+    /// coming back once it is saved. `None` shows all of `diagnostics`.
+    essential_diagnostics: Option<Vec<Diagnostic>>,
     pub(crate) language_servers: HashMap<LanguageServerName, Arc<Client>>,
 
     diff_handle: Option<DiffHandle>,
@@ -1442,6 +1446,7 @@ impl Document {
             old_state,
             undojoin_pending: false,
             diagnostics: Vec::new(),
+            essential_diagnostics: None,
             version: 0,
             history: Cell::new(History::default()),
             savepoints: Vec::new(),
@@ -2692,6 +2697,7 @@ impl Document {
                 diagnostic.provider.clone(),
             )
         });
+        self.refresh_essential_diagnostics();
 
         // Emacs text properties live on the characters, so every face / invisible
         // run boundary moves with the edit. `Assoc::After` on the start and
@@ -2821,6 +2827,8 @@ impl Document {
             take_with(&mut self.changes, |changes| {
                 changes.compose(transaction.changes().clone())
             });
+            // The pending changes now count toward `is_modified`.
+            self.refresh_essential_diagnostics();
         }
         success
     }
@@ -2968,6 +2976,8 @@ impl Document {
             self.changes = ChangeSet::new(self.text().slice(..));
             // Sync with changes with the jumplist selections.
             view.sync_changes(self);
+            // An undo can land back on the saved revision, or leave it.
+            self.refresh_essential_diagnostics();
         }
         success
     }
@@ -3188,6 +3198,7 @@ impl Document {
         let current_revision = history.current_revision();
         self.history.set(history);
         self.last_saved_revision = current_revision;
+        self.refresh_essential_diagnostics();
     }
 
     /// vim `:set modified` / `:set nomodified`: force the buffer's modified state.
@@ -3214,6 +3225,7 @@ impl Document {
         );
         self.last_saved_revision = rev;
         *self.last_saved_time.lock() = save_time;
+        self.refresh_essential_diagnostics();
     }
 
     /// Get the document's latest saved revision.
@@ -3731,9 +3743,30 @@ impl Document {
         })
     }
 
+    /// The diagnostics the editor shows: every one, or under essential
+    /// highlighting with unsaved edits only the errors.
     #[inline]
     pub fn diagnostics(&self) -> &[Diagnostic] {
-        &self.diagnostics
+        self.essential_diagnostics
+            .as_deref()
+            .unwrap_or(&self.diagnostics)
+    }
+
+    /// JetBrains "Essential" highlighting level: "highlight only essential
+    /// problems as you type and show all detected problems when the file is
+    /// saved". With `editor.essential-highlighting` on and edits not yet
+    /// saved, [`Self::diagnostics`] holds only the errors. Run whenever the
+    /// diagnostics, the saved state or the setting change.
+    pub fn refresh_essential_diagnostics(&mut self) {
+        use zmax_core::diagnostic::Severity;
+        let essential = self.config.load().essential_highlighting && self.is_modified();
+        self.essential_diagnostics = essential.then(|| {
+            self.diagnostics
+                .iter()
+                .filter(|d| d.severity == Some(Severity::Error))
+                .cloned()
+                .collect()
+        });
     }
 
     pub fn replace_diagnostics(
@@ -3770,12 +3803,14 @@ impl Document {
                 diagnostic.provider.clone(),
             )
         });
+        self.refresh_essential_diagnostics();
     }
 
     /// clears diagnostics for a given language server id if set, otherwise all diagnostics are cleared
     pub fn clear_diagnostics_for_language_server(&mut self, id: LanguageServerId) {
         self.diagnostics
             .retain(|d| d.provider.language_server_id() != Some(id));
+        self.refresh_essential_diagnostics();
     }
 
     /// Get the document's auto pairs. If the document has a recognized
@@ -4219,6 +4254,82 @@ mod test {
     use arc_swap::ArcSwap;
 
     use super::*;
+
+    /// Essential highlighting: while the buffer has unsaved edits only its
+    /// errors are shown, mapped through the edit; saving brings back the rest.
+    /// With the setting off, edits hide nothing.
+    #[test]
+    fn essential_highlighting_hides_all_but_errors_until_the_save() {
+        use zmax_core::diagnostic::Severity;
+        let diagnostic = |start: usize, severity: Severity| Diagnostic {
+            range: zmax_core::diagnostic::Range {
+                start,
+                end: start + 1,
+            },
+            ends_at_word: false,
+            starts_at_word: false,
+            zero_width: false,
+            line: 0,
+            message: format!("{severity:?}"),
+            severity: Some(severity),
+            code: None,
+            provider: DiagnosticProvider::Lsp {
+                server_id: LanguageServerId::default(),
+                identifier: None,
+            },
+            tags: Vec::new(),
+            source: None,
+            data: None,
+        };
+        let shown = |doc: &Document| {
+            doc.diagnostics()
+                .iter()
+                .map(|d| (d.range.start, d.message.clone()))
+                .collect::<Vec<_>>()
+        };
+        let config = Arc::new(ArcSwap::from_pointee(Config {
+            essential_highlighting: true,
+            ..Config::default()
+        }));
+        let mut doc = Document::from(
+            Rope::from("let x = y;\n"),
+            None,
+            config.clone(),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let mut view = View::new(doc.id(), Default::default());
+        doc.ensure_view_init(view.id);
+        doc.replace_diagnostics(
+            [
+                diagnostic(4, Severity::Warning),
+                diagnostic(8, Severity::Error),
+            ],
+            &[],
+            None,
+        );
+        assert_eq!(shown(&doc).len(), 2, "nothing unsaved yet");
+
+        let insert = Transaction::insert(doc.text(), &Selection::point(0), "  ".into());
+        doc.apply(&insert, view.id);
+        assert_eq!(shown(&doc), [(10, "Error".to_string())]);
+        // Committing the edit to the undo history does not save it.
+        doc.append_changes_to_history(&mut view);
+        assert_eq!(shown(&doc), [(10, "Error".to_string())]);
+
+        doc.reset_modified();
+        let all = [(6, "Warning".to_string()), (10, "Error".to_string())];
+        assert_eq!(shown(&doc), all);
+        // Undoing past the save is an unsaved edit again.
+        assert!(doc.undo(&mut view));
+        assert_eq!(shown(&doc), [(8, "Error".to_string())]);
+        assert!(doc.redo(&mut view));
+        assert_eq!(shown(&doc), all);
+
+        config.store(Arc::new(Config::default()));
+        let insert = Transaction::insert(doc.text(), &Selection::point(0), "  ".into());
+        doc.apply(&insert, view.id);
+        assert_eq!(shown(&doc).len(), 2, "the setting is off");
+    }
 
     /// kakoune `<a-u>` / `<a-U>`: the selection history walks back and forward
     /// through selection changes without touching the text.

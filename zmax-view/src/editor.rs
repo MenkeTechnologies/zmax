@@ -665,6 +665,10 @@ pub struct Config {
     /// Display diagnostic below the line they occur.
     pub inline_diagnostics: InlineDiagnosticsConfig,
     pub end_of_line_diagnostics: DiagnosticFilter,
+    /// JetBrains "Essential" highlighting level: while a buffer has unsaved
+    /// edits only its errors are shown, every diagnostic once it is saved.
+    /// Defaults to false.
+    pub essential_highlighting: bool,
     // Set to override the default clipboard provider
     pub clipboard_provider: ClipboardProvider,
     /// Whether to read settings from [EditorConfig](https://editorconfig.org) files. Defaults to
@@ -1619,6 +1623,7 @@ impl Default for Config {
             jump_label_alphabet: ('a'..='z').collect(),
             inline_diagnostics: InlineDiagnosticsConfig::default(),
             end_of_line_diagnostics: DiagnosticFilter::Enable(Severity::Hint),
+            essential_highlighting: false,
             clipboard_provider: ClipboardProvider::default(),
             editor_config: true,
             rainbow_brackets: false,
@@ -3042,6 +3047,11 @@ impl Editor {
     pub fn refresh_config(&mut self, old_config: &Config) {
         let config = self.config();
         self.auto_pairs = (&config.auto_pairs).into();
+        if config.essential_highlighting != old_config.essential_highlighting {
+            for doc in self.documents.values_mut() {
+                doc.refresh_essential_diagnostics();
+            }
+        }
         self.reset_idle_timer();
         self._refresh();
         zmax_event::dispatch(crate::events::ConfigDidChange {

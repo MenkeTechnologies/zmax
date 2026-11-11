@@ -89311,5 +89311,13 @@
    "static:toggle_file_nesting"
   ],
   "note": "ProjectView.FileNesting (File Nesting...) ~ zmax `toggle_file_nesting` turns `editor.file-explorer.file-nesting` on or off; with it on the project tree shows a file that `nesting-rules` pairs with another (`base + child suffix` under `base + parent suffix`, the longest child suffix deciding) under that file, which opens and closes like a directory with Right/Left, nesting one level deep (nest_files, ui/file_tree.rs). The rules are a config table, edited in config.toml rather than in the IDE's dialog; nesting is off by default and speed search lists files flat."
+ },
+ {
+  "spec_id": "jetbrains-actions.ToggleEssentialHighlighting",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_essential_highlighting"
+  ],
+  "note": "ToggleEssentialHighlighting = zmax `toggle_essential_highlighting`: flips `editor.essential-highlighting`, the IDE's Essential highlighting level (\"highlight only essential problems as you type and show all detected problems when the file is saved\"). While a buffer has unsaved edits Document::diagnostics() holds only its errors, mapped through each edit, so the underlines, gutter, inline and end-of-line text, status-line counts, diagnostic navigation and the Problems panel all follow it; saving, or undoing back to the saved revision, brings every diagnostic back (refresh_essential_diagnostics, zmax-view/src/document.rs). Essential is taken as error severity: language servers do not mark which problems the IDE would call essential."
  }
 ]

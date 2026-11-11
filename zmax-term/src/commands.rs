@@ -2211,6 +2211,7 @@ impl MappableCommand {
         focus_structure, "Focus the structure/symbol outline panel",
         toggle_group_problems, "Group the Problems panel by the checker that reported each diagnostic (JetBrains Group by Inspection)",
         toggle_compact_directories, "Draw single-child directory chains as one row (JetBrains Compact Directories)",
+        toggle_essential_highlighting, "Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting)",
         toggle_file_nesting, "Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting)",
         toggle_sort_by_type, "Order the project tree's files by extension (JetBrains Sort by Type)",
         toggle_file_details, "Show or hide file sizes in the project tree (JetBrains File Details)",
@@ -56696,6 +56697,25 @@ fn toggle_compact_directories(cx: &mut Context) {
             None => cx.editor.set_status("no project tree"),
         }
     }));
+}
+
+/// JetBrains "Essential" highlighting (`ToggleEssentialHighlighting`): turn
+/// `editor.essential-highlighting` on or off; [`Editor::refresh_config`] re-sorts
+/// what every buffer shows once the new config is in.
+fn toggle_essential_highlighting(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        on = !c.essential_highlighting;
+        c.essential_highlighting = on;
+    });
+    cx.editor.set_status(format!(
+        "essential highlighting: {}",
+        if on {
+            "on (errors only until saved)"
+        } else {
+            "off"
+        }
+    ));
 }
 
 /// JetBrains File Nesting (`ProjectView.FileNesting`): turn
