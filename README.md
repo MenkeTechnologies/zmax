@@ -229,7 +229,9 @@ leaving the editor:
   bar, or nowhere (`:navbar-members` drops or restores the symbol at its end).
 - **Integrated terminal** (`:terminal`) — a PTY shell in a pane, with a `C-\`
   window leader for split/focus and click-to-focus across panes; `terminal_find`
-  searches the scrollback, `terminal_copy_all` copies it, and
+  searches the scrollback, a mouse drag selects text (`terminal_select_all`
+  selects everything) and `terminal_copy_selection` copies it,
+  `terminal_copy_all` copies the whole scrollback in one step, and
   `terminal_rename_session` names the session in the title bar.
 - **Comint shell** (`comint_shell` from the command palette, emacs `M-x shell`)
   — a line-oriented subprocess buffer: type a command, `Enter` runs it, output

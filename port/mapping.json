@@ -87950,19 +87950,19 @@
  },
  {
   "spec_id": "jetbrains-actions.Terminal.SelectAll",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:terminal_copy_all"
+   "static:terminal_select_all"
   ],
-  "note": "Terminal.SelectAll = zmax `terminal_copy_all`: the terminal has no visible selection, so select-all and copy are one command that puts scrollback plus screen on the clipboard."
+  "note": "Terminal.SelectAll = zmax `terminal_select_all`: selects every line of the terminal panel's scrollback and screen (TerminalPanel::select_all, ui/terminal.rs), drawn in `ui.selection` and copied by `terminal_copy_selection`."
  },
  {
   "spec_id": "jetbrains-actions.Terminal.CopySelectedText",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:terminal_copy_all"
+   "static:terminal_copy_selection"
   ],
-  "note": "Terminal.CopySelectedText = zmax `terminal_copy_all`: copies the whole scrollback and screen; the terminal has no partial selection to copy."
+  "note": "Terminal.CopySelectedText = zmax `terminal_copy_selection`: the text selected in the terminal panel, by a left-button drag or `terminal_select_all`, to the clipboard register. The selection is kept in history lines so it stays on its text while the view scrolls, is cut by display column (wide characters count their two cells), drops each line's trailing blanks, and clears when a key is typed into the shell (selection_text, ui/terminal.rs)."
  },
  {
   "spec_id": "jetbrains-actions.Vcs.Log.GoToParent",

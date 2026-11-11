@@ -3242,7 +3242,9 @@ impl MappableCommand {
         open_in_terminal, "Open a terminal in this file's directory (JetBrains Open in Terminal)",
         terminal_new_predefined_session, "Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session)",
         terminal_rename_session, "Name the terminal session in its title bar (JetBrains Rename Session)",
-        terminal_copy_all, "Copy the terminal's scrollback and screen to the clipboard (JetBrains Select All + Copy Selected Text)",
+        terminal_copy_all, "Copy the terminal's scrollback and screen to the clipboard in one step",
+        terminal_select_all, "Select the terminal's whole scrollback and screen (JetBrains Terminal Select All)",
+        terminal_copy_selection, "Copy the text selected in the terminal to the clipboard (JetBrains Terminal Copy Selected Text)",
         terminal_find, "Scroll the terminal back to the previous line containing a prompted text (JetBrains Find in the terminal)",
         terminal_search_history, "Type a command picked from the shell history at the terminal prompt (JetBrains Search in Command History)",
         switch_to_completions, "Move into the list of completions (emacs switch-to-completions)",
@@ -54881,10 +54883,8 @@ fn terminal_rename_session(cx: &mut Context) {
     cx.push_layer(Box::new(prompt));
 }
 
-/// JetBrains "Select All" and "Copy Selected Text" in the terminal
-/// (`Terminal.SelectAll`, `Terminal.CopySelectedText`): the whole scrollback and
-/// screen go to the clipboard register. The terminal has no partial selection,
-/// so this is the one selection it can make.
+/// The whole scrollback and screen to the clipboard register in one step:
+/// `terminal_select_all` then `terminal_copy_selection` without the selection.
 fn terminal_copy_all(cx: &mut Context) {
     term_action(cx, |panel, cx| {
         let text = panel.history_lines().join("\n");
@@ -54895,6 +54895,33 @@ fn terminal_copy_all(cx: &mut Context) {
                 .set_status(format!("copied {lines} terminal lines")),
             Err(e) => cx.editor.set_error(e.to_string()),
         }
+    });
+}
+
+/// JetBrains "Select All" in the terminal (`Terminal.SelectAll`): select the
+/// whole scrollback and screen, drawn as a selection for `terminal_copy_selection`.
+fn terminal_select_all(cx: &mut Context) {
+    term_action(cx, |panel, cx| {
+        let lines = panel.select_all();
+        cx.editor
+            .set_status(format!("selected {lines} terminal lines"));
+    });
+}
+
+/// JetBrains "Copy Selected Text" in the terminal (`Terminal.CopySelectedText`):
+/// the text selected with the mouse (or `terminal_select_all`) to the clipboard.
+fn terminal_copy_selection(cx: &mut Context) {
+    term_action(cx, |panel, cx| match panel.selected_text() {
+        Some(text) => {
+            let lines = text.lines().count().max(1);
+            match cx.editor.registers.write('+', vec![text]) {
+                Ok(()) => cx
+                    .editor
+                    .set_status(format!("copied {lines} selected terminal lines")),
+                Err(e) => cx.editor.set_error(e.to_string()),
+            }
+        }
+        None => cx.editor.set_status("terminal: nothing selected"),
     });
 }
 

@@ -21,7 +21,7 @@ use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize}
 use tui::buffer::Buffer as Surface;
 use zmax_view::{
     graphics::{Color, CursorKind, Modifier, Rect, Style},
-    input::{KeyCode, KeyEvent, KeyModifiers, MouseEventKind},
+    input::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
     ViewId,
 };
 
@@ -168,7 +168,16 @@ pub struct TerminalPanel {
     /// feeding the vt100 parser once a screenful of output has arrived and waits
     /// for a key.
     pager: Pager,
+    /// The mouse selection, anchor then head (both cells included), in
+    /// history coordinates so it stays on its text while the view scrolls.
+    selection: Option<(HistoryPoint, HistoryPoint)>,
+    /// The cell grid last drawn, for mapping clicks to cells.
+    grid: Rect,
 }
+
+/// A cell of the terminal's history: the line (0 is the oldest scrollback
+/// line, as in [`TerminalPanel::history_lines`]) and the display column.
+type HistoryPoint = (usize, usize);
 
 /// The paging state (Emacs `term-pager-enabled`), shared with the reader thread.
 ///
@@ -383,6 +392,8 @@ impl TerminalPanel {
             line: String::new(),
             name: None,
             pager,
+            selection: None,
+            grid: Rect::default(),
         })
     }
 
@@ -509,6 +520,42 @@ impl TerminalPanel {
         let name = name.trim();
         self.name = (!name.is_empty()).then(|| name.to_string());
         zmax_event::request_redraw();
+    }
+
+    /// The history line shown on the grid's top row: the scrollback length
+    /// less how far the view is scrolled back.
+    fn view_top(parser: &mut vt100::Parser) -> usize {
+        let saved = parser.screen().scrollback();
+        parser.set_scrollback(usize::MAX);
+        let max = parser.screen().scrollback();
+        parser.set_scrollback(saved);
+        max - saved
+    }
+
+    /// The history cell under screen position (`column`, `row`), clamped to
+    /// the grid so a drag past its edge selects to that edge.
+    fn history_point(&self, column: u16, row: u16) -> HistoryPoint {
+        let g = self.grid;
+        let row = row.clamp(g.y, (g.y + g.height).saturating_sub(1)) - g.y;
+        let col = column.clamp(g.x, (g.x + g.width).saturating_sub(1)) - g.x;
+        let top = Self::view_top(&mut self.parser.parser.lock());
+        (top + row as usize, col as usize)
+    }
+
+    /// JetBrains "Select All" in the terminal: every line of the scrollback
+    /// and the screen. Returns how many lines that is.
+    pub fn select_all(&mut self) -> usize {
+        let lines = self.history_lines().len();
+        self.selection = (lines > 0).then(|| ((0, 0), (lines - 1, usize::MAX - 1)));
+        zmax_event::request_redraw();
+        lines
+    }
+
+    /// The selected text, one terminal line per line, or `None` with nothing
+    /// selected.
+    pub fn selected_text(&self) -> Option<String> {
+        let (a, b) = self.selection?;
+        Some(selection_text(&self.history_lines(), a.min(b), a.max(b)))
     }
 
     /// Every line of the scrollback followed by the screen, oldest first, with
@@ -682,6 +729,8 @@ impl Component for TerminalPanel {
                 if self.dead.load(Ordering::Relaxed) {
                     return Self::close();
                 }
+                // Typing into the shell drops the selection, as terminals do.
+                self.selection = None;
                 // At the pager's `-- MORE --`, the key releases the next screenful
                 // and is not passed on to the child (Emacs `term-pager-page`).
                 if self.pager.paused.load(Ordering::Relaxed) {
@@ -709,6 +758,37 @@ impl Component for TerminalPanel {
             }
             Event::Mouse(me) if focused && matches!(me.kind, MouseEventKind::ScrollDown) => {
                 self.scroll(-3);
+                EventResult::Consumed(None)
+            }
+            // A press on the grid starts a selection there; dragging moves its
+            // head; a release where it started (a plain click) clears it.
+            Event::Mouse(me)
+                if focused
+                    && me.kind == MouseEventKind::Down(MouseButton::Left)
+                    && (self.grid.left()..self.grid.right()).contains(&me.column)
+                    && (self.grid.top()..self.grid.bottom()).contains(&me.row) =>
+            {
+                let at = self.history_point(me.column, me.row);
+                self.selection = Some((at, at));
+                EventResult::Consumed(None)
+            }
+            Event::Mouse(me)
+                if focused
+                    && me.kind == MouseEventKind::Drag(MouseButton::Left)
+                    && self.selection.is_some() =>
+            {
+                let head = self.history_point(me.column, me.row);
+                if let Some((_, h)) = &mut self.selection {
+                    *h = head;
+                }
+                EventResult::Consumed(None)
+            }
+            Event::Mouse(me)
+                if focused
+                    && me.kind == MouseEventKind::Up(MouseButton::Left)
+                    && self.selection.is_some_and(|(a, h)| a == h) =>
+            {
+                self.selection = None;
                 EventResult::Consumed(None)
             }
             // A click inside the terminal's pane stays here (and is swallowed so
@@ -794,8 +874,10 @@ impl Component for TerminalPanel {
 
         let grid = Rect::new(area.x, area.y + 1, area.width, area.height - 1);
         self.resize(grid.height, grid.width);
+        self.grid = grid;
 
-        let parser = self.parser.parser.lock();
+        let mut parser = self.parser.parser.lock();
+        let top = Self::view_top(&mut parser);
         let screen = parser.screen();
         for row in 0..grid.height {
             for col in 0..grid.width {
@@ -820,6 +902,22 @@ impl Component for TerminalPanel {
                     c.set_symbol(sym);
                     c.set_style(style);
                 }
+            }
+        }
+
+        if let Some((a, b)) = self.selection {
+            let (start, end) = (a.min(b), a.max(b));
+            let selected = theme.get("ui.selection");
+            for row in 0..grid.height {
+                let Some(cols) = selected_columns(top + row as usize, start, end) else {
+                    continue;
+                };
+                let from = cols.start.min(grid.width as usize) as u16;
+                let to = cols.end.min(grid.width as usize) as u16;
+                surface.set_style(
+                    Rect::new(grid.x + from, grid.y + row, to - from, 1),
+                    selected,
+                );
             }
         }
 
@@ -1070,6 +1168,128 @@ mod test {
         assert!(screen.feed(b"!"));
         let parser = screen.parser.lock();
         assert!(parser.screen().contents().contains("hello world!"));
+    }
+}
+
+/// The display columns of history line `line` inside the selection from
+/// `start` to `end` (both cells included, `start` first), or `None` when the
+/// line is outside it.
+fn selected_columns(
+    line: usize,
+    start: HistoryPoint,
+    end: HistoryPoint,
+) -> Option<std::ops::Range<usize>> {
+    if line < start.0 || line > end.0 {
+        return None;
+    }
+    let from = if line == start.0 { start.1 } else { 0 };
+    let to = if line == end.0 { end.1 + 1 } else { usize::MAX };
+    Some(from..to)
+}
+
+/// The text of `lines` from `start` to `end` (both cells included, `start`
+/// first), cut by display column so a wide character counts its two cells.
+/// A character is taken when the cell it starts in is selected; trailing
+/// blanks of each line are dropped, as terminals copy them.
+fn selection_text(lines: &[String], start: HistoryPoint, end: HistoryPoint) -> String {
+    use zmax_core::unicode::width::UnicodeWidthChar;
+    (start.0..=end.0)
+        .map(|i| {
+            let cols = selected_columns(i, start, end).unwrap_or(0..0);
+            let mut col = 0;
+            let mut out = String::new();
+            for c in lines.get(i).map_or("", String::as_str).chars() {
+                if cols.contains(&col) {
+                    out.push(c);
+                }
+                col += c.width().unwrap_or(0);
+            }
+            out.trim_end().to_string()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+#[cfg(test)]
+mod selection_tests {
+    use super::{selected_columns, selection_text, TerminalPanel};
+    use zmax_view::graphics::Rect;
+
+    /// A panel that printed `line1` .. `line30`, more than its 24 rows hold,
+    /// once the reader thread has fed all of it to the screen.
+    fn printed_panel() -> TerminalPanel {
+        let args: Vec<String> = std::iter::once("line%s\\n".to_string())
+            .chain((1..=30).map(|i| i.to_string()))
+            .collect();
+        let panel = TerminalPanel::with_command("printf", &args, None).unwrap();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while !panel.history_lines().iter().any(|l| l == "line30") {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "printf output never arrived"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        panel
+    }
+
+    #[test]
+    fn select_all_copies_the_scrollback_and_the_screen() {
+        let mut panel = printed_panel();
+        assert_eq!(panel.selected_text(), None);
+        assert_eq!(panel.select_all(), 30);
+        let want: Vec<String> = (1..=30).map(|i| format!("line{i}")).collect();
+        assert_eq!(panel.selected_text().unwrap(), want.join("\n"));
+    }
+
+    #[test]
+    fn a_clicked_cell_maps_to_its_history_line_and_follows_the_scroll() {
+        let mut panel = printed_panel();
+        panel.grid = Rect::new(0, 1, 80, 24);
+        let lines = panel.history_lines();
+        let (top, col) = panel.history_point(4, 1);
+        assert_eq!(col, 4);
+        // 30 lines and the empty line the cursor sits on, 24 of them shown.
+        assert_eq!(lines[top], "line8");
+        panel.scroll(3);
+        assert_eq!(panel.history_point(4, 1).0, top - 3);
+        // A drag below the grid clamps to its last row.
+        assert_eq!(panel.history_point(4, 99).0, top - 3 + 23);
+    }
+
+    fn lines() -> Vec<String> {
+        ["$ ls -l", "total 8", "a.txt   b.txt", "$ "]
+            .map(String::from)
+            .to_vec()
+    }
+
+    #[test]
+    fn a_selection_takes_the_tail_of_its_first_line_and_the_head_of_its_last() {
+        assert_eq!(
+            selection_text(&lines(), (0, 2), (2, 4)),
+            "ls -l\ntotal 8\na.txt"
+        );
+    }
+
+    #[test]
+    fn one_line_selection_is_inclusive_of_both_cells() {
+        assert_eq!(selection_text(&lines(), (2, 8), (2, 12)), "b.txt");
+        assert_eq!(selection_text(&lines(), (1, 0), (1, 0)), "t");
+    }
+
+    #[test]
+    fn wide_characters_are_cut_by_the_cells_they_cover() {
+        let lines = vec!["你好 ok".to_string()];
+        // 你 covers columns 0-1, 好 2-3; column 2 starts 好.
+        assert_eq!(selection_text(&lines, (0, 2), (0, 6)), "好 ok");
+        assert_eq!(selection_text(&lines, (0, 1), (0, 1)), "");
+    }
+
+    #[test]
+    fn lines_past_the_history_select_as_empty_and_rows_outside_are_none() {
+        assert_eq!(selection_text(&lines(), (3, 0), (5, 3)), "$\n\n");
+        assert_eq!(selected_columns(1, (2, 0), (3, 0)), None);
+        assert_eq!(selected_columns(3, (2, 4), (3, 1)), Some(0..2));
     }
 }
 
