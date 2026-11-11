@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ea3303d9.js";
+            window.path_to_searchindex_js = "searchindex-9d077222.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -6563,7 +6563,9 @@ without scrolling.</p>
 <tr><td><code>open_in_terminal</code></td><td>Open a terminal in this file’s directory (JetBrains Open in Terminal)</td><td></td></tr>
 <tr><td><code>terminal_new_predefined_session</code></td><td>Open a terminal on a shell picked from /etc/shells (JetBrains New Predefined Session)</td><td></td></tr>
 <tr><td><code>terminal_rename_session</code></td><td>Name the terminal session in its title bar (JetBrains Rename Session)</td><td></td></tr>
-<tr><td><code>terminal_copy_all</code></td><td>Copy the terminal’s scrollback and screen to the clipboard (JetBrains Select All + Copy Selected Text)</td><td></td></tr>
+<tr><td><code>terminal_copy_all</code></td><td>Copy the terminal’s scrollback and screen to the clipboard in one step</td><td></td></tr>
+<tr><td><code>terminal_select_all</code></td><td>Select the terminal’s whole scrollback and screen (JetBrains Terminal Select All)</td><td></td></tr>
+<tr><td><code>terminal_copy_selection</code></td><td>Copy the text selected in the terminal to the clipboard (JetBrains Terminal Copy Selected Text)</td><td></td></tr>
 <tr><td><code>terminal_find</code></td><td>Scroll the terminal back to the previous line containing a prompted text (JetBrains Find in the terminal)</td><td></td></tr>
 <tr><td><code>terminal_search_history</code></td><td>Type a command picked from the shell history at the terminal prompt (JetBrains Search in Command History)</td><td></td></tr>
 <tr><td><code>switch_to_completions</code></td><td>Move into the list of completions (emacs switch-to-completions)</td><td></td></tr>
@@ -10167,11 +10169,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>11926</strong></li>
-<li>Ported: <strong>10060</strong> (84.4%)</li>
-<li>Partial: <strong>881</strong> (7.4%)</li>
+<li>Ported: <strong>10062</strong> (84.4%)</li>
+<li>Partial: <strong>879</strong> (7.4%)</li>
 <li>Absent: <strong>985</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zmax source surface: 3030 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
+<li>zmax source surface: 3032 static commands, 3238 typable <code>:</code> commands, 4745 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zmax do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -10234,7 +10236,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">186</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">217</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
-<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1089</td><td style="text-align: right">306</td><td style="text-align: right">54.4%</td></tr>
+<tr><td>jetbrains-actions</td><td style="text-align: right">2002</td><td style="text-align: right">1091</td><td style="text-align: right">304</td><td style="text-align: right">54.5%</td></tr>
 <tr><td>kakoune</td><td style="text-align: right">328</td><td style="text-align: right">204</td><td style="text-align: right">30</td><td style="text-align: right">62.2%</td></tr>
 <tr><td>lazyvim</td><td style="text-align: right">100</td><td style="text-align: right">84</td><td style="text-align: right">9</td><td style="text-align: right">84.0%</td></tr>
 <tr><td>lunarvim</td><td style="text-align: right">27</td><td style="text-align: right">27</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -10334,7 +10336,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains-actions</td><td>platform-bookmarks-plugin</td><td style="text-align: right">101</td><td style="text-align: right">100</td><td style="text-align: right">1</td><td style="text-align: right">99.0%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-execution-serviceView-plugin</td><td style="text-align: right">37</td><td style="text-align: right">13</td><td style="text-align: right">4</td><td style="text-align: right">35.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>platform-vcs-split-plugin</td><td style="text-align: right">16</td><td style="text-align: right">8</td><td style="text-align: right">4</td><td style="text-align: right">50.0%</td></tr>
-<tr><td>jetbrains-actions</td><td>terminal</td><td style="text-align: right">59</td><td style="text-align: right">18</td><td style="text-align: right">7</td><td style="text-align: right">30.5%</td></tr>
+<tr><td>jetbrains-actions</td><td>terminal</td><td style="text-align: right">59</td><td style="text-align: right">20</td><td style="text-align: right">5</td><td style="text-align: right">33.9%</td></tr>
 <tr><td>jetbrains-actions</td><td>vcs-git</td><td style="text-align: right">118</td><td style="text-align: right">78</td><td style="text-align: right">26</td><td style="text-align: right">66.1%</td></tr>
 <tr><td>jetbrains-actions</td><td>vcs-github</td><td style="text-align: right">24</td><td style="text-align: right">12</td><td style="text-align: right">7</td><td style="text-align: right">50.0%</td></tr>
 <tr><td>kakoune</td><td>cancelling-operations</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
