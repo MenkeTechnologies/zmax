@@ -3245,6 +3245,7 @@ impl MappableCommand {
         terminal_copy_all, "Copy the terminal's scrollback and screen to the clipboard in one step",
         terminal_select_all, "Select the terminal's whole scrollback and screen (JetBrains Terminal Select All)",
         terminal_copy_selection, "Copy the text selected in the terminal to the clipboard (JetBrains Terminal Copy Selected Text)",
+        terminal_block_selection, "Switch the terminal selection between text and the rectangle between its ends, as an Alt-drag selects (JetBrains Terminal Rectangular Selection)",
         terminal_find, "Scroll the terminal back to the previous line containing a prompted text (JetBrains Find in the terminal)",
         terminal_search_history, "Type a command picked from the shell history at the terminal prompt (JetBrains Search in Command History)",
         switch_to_completions, "Move into the list of completions (emacs switch-to-completions)",
@@ -54922,6 +54923,21 @@ fn terminal_copy_selection(cx: &mut Context) {
             }
         }
         None => cx.editor.set_status("terminal: nothing selected"),
+    });
+}
+
+/// JetBrains rectangular selection in the terminal
+/// (`Terminal.CreateRectangularSelectionOnMouseDrag`): an Alt-drag selects the
+/// rectangle between its ends; this switches a selection made either way
+/// between that rectangle and the text from one end to the other.
+fn terminal_block_selection(cx: &mut Context) {
+    term_action(cx, |panel, cx| {
+        let block = panel.toggle_block();
+        cx.editor.set_status(if block {
+            "terminal selection: rectangle"
+        } else {
+            "terminal selection: text"
+        });
     });
 }
 

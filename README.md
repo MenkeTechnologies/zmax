@@ -229,7 +229,8 @@ leaving the editor:
   bar, or nowhere (`:navbar-members` drops or restores the symbol at its end).
 - **Integrated terminal** (`:terminal`) — a PTY shell in a pane, with a `C-\`
   window leader for split/focus and click-to-focus across panes; `terminal_find`
-  searches the scrollback, a mouse drag selects text (`terminal_select_all`
+  searches the scrollback, a mouse drag selects text (Alt-drag a rectangle,
+  `terminal_block_selection` switches between the two, `terminal_select_all`
   selects everything) and `terminal_copy_selection` copies it,
   `terminal_copy_all` copies the whole scrollback in one step, and
   `terminal_rename_session` names the session in the title bar.

@@ -171,6 +171,9 @@ pub struct TerminalPanel {
     /// The mouse selection, anchor then head (both cells included), in
     /// history coordinates so it stays on its text while the view scrolls.
     selection: Option<(HistoryPoint, HistoryPoint)>,
+    /// The selection is the rectangle between its two cells (an Alt-drag, or
+    /// `terminal_block_selection`) rather than the text from one to the other.
+    block: bool,
     /// The cell grid last drawn, for mapping clicks to cells.
     grid: Rect,
 }
@@ -393,6 +396,7 @@ impl TerminalPanel {
             name: None,
             pager,
             selection: None,
+            block: false,
             grid: Rect::default(),
         })
     }
@@ -547,6 +551,7 @@ impl TerminalPanel {
     pub fn select_all(&mut self) -> usize {
         let lines = self.history_lines().len();
         self.selection = (lines > 0).then(|| ((0, 0), (lines - 1, usize::MAX - 1)));
+        self.block = false;
         zmax_event::request_redraw();
         lines
     }
@@ -555,7 +560,15 @@ impl TerminalPanel {
     /// selected.
     pub fn selected_text(&self) -> Option<String> {
         let (a, b) = self.selection?;
-        Some(selection_text(&self.history_lines(), a.min(b), a.max(b)))
+        Some(selection_text(&self.history_lines(), a, b, self.block))
+    }
+
+    /// Switch the selection between the text from one end to the other and
+    /// the rectangle between them. Returns whether it is now a rectangle.
+    pub fn toggle_block(&mut self) -> bool {
+        self.block = !self.block;
+        zmax_event::request_redraw();
+        self.block
     }
 
     /// Every line of the scrollback followed by the screen, oldest first, with
@@ -770,6 +783,8 @@ impl Component for TerminalPanel {
             {
                 let at = self.history_point(me.column, me.row);
                 self.selection = Some((at, at));
+                // JetBrains: Alt with the drag selects a rectangle.
+                self.block = me.modifiers.contains(KeyModifiers::ALT);
                 EventResult::Consumed(None)
             }
             Event::Mouse(me)
@@ -906,10 +921,9 @@ impl Component for TerminalPanel {
         }
 
         if let Some((a, b)) = self.selection {
-            let (start, end) = (a.min(b), a.max(b));
             let selected = theme.get("ui.selection");
             for row in 0..grid.height {
-                let Some(cols) = selected_columns(top + row as usize, start, end) else {
+                let Some(cols) = selected_columns(top + row as usize, a, b, self.block) else {
                     continue;
                 };
                 let from = cols.start.min(grid.width as usize) as u16;
@@ -1171,31 +1185,42 @@ mod test {
     }
 }
 
-/// The display columns of history line `line` inside the selection from
-/// `start` to `end` (both cells included, `start` first), or `None` when the
-/// line is outside it.
+/// The display columns of history line `line` inside the selection between
+/// cells `anchor` and `head` (both included, in either order), or `None` when
+/// the line is outside it. A `block` selection is the same columns on every
+/// line, those between the two cells' columns.
 fn selected_columns(
     line: usize,
-    start: HistoryPoint,
-    end: HistoryPoint,
+    anchor: HistoryPoint,
+    head: HistoryPoint,
+    block: bool,
 ) -> Option<std::ops::Range<usize>> {
+    let (start, end) = (anchor.min(head), anchor.max(head));
     if line < start.0 || line > end.0 {
         return None;
+    }
+    if block {
+        return Some(anchor.1.min(head.1)..anchor.1.max(head.1) + 1);
     }
     let from = if line == start.0 { start.1 } else { 0 };
     let to = if line == end.0 { end.1 + 1 } else { usize::MAX };
     Some(from..to)
 }
 
-/// The text of `lines` from `start` to `end` (both cells included, `start`
-/// first), cut by display column so a wide character counts its two cells.
-/// A character is taken when the cell it starts in is selected; trailing
-/// blanks of each line are dropped, as terminals copy them.
-fn selection_text(lines: &[String], start: HistoryPoint, end: HistoryPoint) -> String {
+/// The text of `lines` selected between cells `anchor` and `head` (see
+/// [`selected_columns`]), cut by display column so a wide character counts
+/// its two cells. A character is taken when the cell it starts in is
+/// selected; trailing blanks of each line are dropped, as terminals copy them.
+fn selection_text(
+    lines: &[String],
+    anchor: HistoryPoint,
+    head: HistoryPoint,
+    block: bool,
+) -> String {
     use zmax_core::unicode::width::UnicodeWidthChar;
-    (start.0..=end.0)
+    (anchor.0.min(head.0)..=anchor.0.max(head.0))
         .map(|i| {
-            let cols = selected_columns(i, start, end).unwrap_or(0..0);
+            let cols = selected_columns(i, anchor, head, block).unwrap_or(0..0);
             let mut col = 0;
             let mut out = String::new();
             for c in lines.get(i).map_or("", String::as_str).chars() {
@@ -1266,30 +1291,50 @@ mod selection_tests {
     #[test]
     fn a_selection_takes_the_tail_of_its_first_line_and_the_head_of_its_last() {
         assert_eq!(
-            selection_text(&lines(), (0, 2), (2, 4)),
+            selection_text(&lines(), (0, 2), (2, 4), false),
             "ls -l\ntotal 8\na.txt"
         );
     }
 
     #[test]
     fn one_line_selection_is_inclusive_of_both_cells() {
-        assert_eq!(selection_text(&lines(), (2, 8), (2, 12)), "b.txt");
-        assert_eq!(selection_text(&lines(), (1, 0), (1, 0)), "t");
+        assert_eq!(selection_text(&lines(), (2, 8), (2, 12), false), "b.txt");
+        assert_eq!(selection_text(&lines(), (1, 0), (1, 0), false), "t");
     }
 
     #[test]
     fn wide_characters_are_cut_by_the_cells_they_cover() {
         let lines = vec!["你好 ok".to_string()];
         // 你 covers columns 0-1, 好 2-3; column 2 starts 好.
-        assert_eq!(selection_text(&lines, (0, 2), (0, 6)), "好 ok");
-        assert_eq!(selection_text(&lines, (0, 1), (0, 1)), "");
+        assert_eq!(selection_text(&lines, (0, 2), (0, 6), false), "好 ok");
+        assert_eq!(selection_text(&lines, (0, 1), (0, 1), false), "");
     }
 
     #[test]
     fn lines_past_the_history_select_as_empty_and_rows_outside_are_none() {
-        assert_eq!(selection_text(&lines(), (3, 0), (5, 3)), "$\n\n");
-        assert_eq!(selected_columns(1, (2, 0), (3, 0)), None);
-        assert_eq!(selected_columns(3, (2, 4), (3, 1)), Some(0..2));
+        assert_eq!(selection_text(&lines(), (3, 0), (5, 3), false), "$\n\n");
+        assert_eq!(selected_columns(1, (2, 0), (3, 0), false), None);
+        assert_eq!(selected_columns(3, (2, 4), (3, 1), false), Some(0..2));
+    }
+
+    #[test]
+    fn a_drag_upward_selects_the_same_text_as_one_downward() {
+        assert_eq!(
+            selection_text(&lines(), (2, 4), (0, 2), false),
+            selection_text(&lines(), (0, 2), (2, 4), false)
+        );
+    }
+
+    #[test]
+    fn a_block_takes_the_same_columns_from_every_line_whichever_corner_led() {
+        // Columns 2-4 of lines 0-2, dragged from the bottom-left corner up
+        // to the top-right one.
+        assert_eq!(
+            selection_text(&lines(), (2, 2), (0, 4), true),
+            "ls\ntal\ntxt"
+        );
+        assert_eq!(selected_columns(1, (2, 2), (0, 4), true), Some(2..5));
+        assert_eq!(selected_columns(3, (2, 2), (0, 4), true), None);
     }
 }
 

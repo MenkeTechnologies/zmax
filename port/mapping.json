@@ -89279,5 +89279,13 @@
    "static:code_vision_show_more"
   ],
   "note": "CodeVision.ShowMore (Show More) = zmax `code_vision_show_more`: a menu of the code lenses on the cursor line; picking one runs it on its server when the server lists the command (workspace/executeCommand), and otherwise opens the locations the command's arguments carry, which is how servers' \"N references\" / \"N implementations\" lenses work (run_code_lens, command_locations). A client-side command that carries no locations is reported, not run."
+ },
+ {
+  "spec_id": "jetbrains-actions.Terminal.CreateRectangularSelectionOnMouseDrag",
+  "status": "ported",
+  "evidence": [
+   "static:terminal_block_selection"
+  ],
+  "note": "Terminal.CreateRectangularSelectionOnMouseDrag = an Alt-drag in the zmax terminal panel selects the rectangle between the press and the drag's end: the same columns of every line it spans, whichever corner led (selected_columns, ui/terminal.rs), copied by `terminal_copy_selection`. `terminal_block_selection` switches a selection made either way between that rectangle and the text from one end to the other. The Alt-drag needs a host terminal that reports Alt with mouse events rather than taking Option-drag for its own selection."
  }
 ]
