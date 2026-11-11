@@ -1932,6 +1932,125 @@ pub struct LspProgress {
     pub percentage: Option<u32>,
 }
 
+/// One piece of in-flight `$/progress` work, as the JetBrains processes window
+/// lists its background tasks.
+#[derive(Debug, Clone)]
+pub struct LspTask {
+    pub server_id: LanguageServerId,
+    pub token: lsp::ProgressToken,
+    pub progress: LspProgress,
+    /// Whether the server lets `window/workDoneProgress/cancel` stop it: set by
+    /// `begin`, which a `report` may change.
+    pub cancellable: bool,
+}
+
+impl LspTask {
+    /// Follow `$/progress` `work` for token `token` of server `server_id`
+    /// (named `server`) in `tasks`: a `begin` adds the task, a `report`
+    /// updates it, keeping the message and percentage it leaves out as the
+    /// protocol says, and an `end` drops it.
+    pub fn track(
+        tasks: &mut Vec<LspTask>,
+        server_id: LanguageServerId,
+        server: &str,
+        token: &lsp::ProgressToken,
+        work: &lsp::WorkDoneProgress,
+    ) {
+        let at = tasks
+            .iter()
+            .position(|t| t.server_id == server_id && &t.token == token);
+        match work {
+            lsp::WorkDoneProgress::Begin(begin) => {
+                let task = LspTask {
+                    server_id,
+                    token: token.clone(),
+                    progress: LspProgress {
+                        server: server.to_string(),
+                        title: begin.title.clone(),
+                        message: begin.message.clone(),
+                        percentage: begin.percentage,
+                    },
+                    cancellable: begin.cancellable.unwrap_or(false),
+                };
+                match at {
+                    Some(i) => tasks[i] = task,
+                    None => tasks.push(task),
+                }
+            }
+            lsp::WorkDoneProgress::Report(report) => {
+                let Some(task) = at.map(|i| &mut tasks[i]) else {
+                    return;
+                };
+                if report.message.is_some() {
+                    task.progress.message = report.message.clone();
+                }
+                if report.percentage.is_some() {
+                    task.progress.percentage = report.percentage;
+                }
+                if let Some(cancellable) = report.cancellable {
+                    task.cancellable = cancellable;
+                }
+            }
+            lsp::WorkDoneProgress::End(_) => {
+                if let Some(i) = at {
+                    tasks.remove(i);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod lsp_task_tests {
+    use super::{lsp, LanguageServerId, LspTask};
+    use slotmap::KeyData;
+
+    fn begin(title: &str, cancellable: bool) -> lsp::WorkDoneProgress {
+        lsp::WorkDoneProgress::Begin(lsp::WorkDoneProgressBegin {
+            title: title.to_string(),
+            cancellable: Some(cancellable),
+            message: Some("starting".to_string()),
+            percentage: Some(0),
+        })
+    }
+
+    fn report(message: Option<&str>, percentage: Option<u32>) -> lsp::WorkDoneProgress {
+        lsp::WorkDoneProgress::Report(lsp::WorkDoneProgressReport {
+            cancellable: None,
+            message: message.map(str::to_string),
+            percentage,
+        })
+    }
+
+    #[test]
+    fn tasks_follow_begin_report_and_end_per_server_and_token() {
+        let a = LanguageServerId::from(KeyData::from_ffi(1));
+        let b = LanguageServerId::from(KeyData::from_ffi(2));
+        let token = lsp::ProgressToken::String("index".to_string());
+        let mut tasks = Vec::new();
+        LspTask::track(&mut tasks, a, "ra", &token, &begin("Indexing", true));
+        // The same token from another server is another task.
+        LspTask::track(&mut tasks, b, "taplo", &token, &begin("Loading", false));
+        assert_eq!(tasks.len(), 2);
+
+        // A report without a message keeps the last one; one with a
+        // percentage moves it.
+        LspTask::track(&mut tasks, a, "ra", &token, &report(None, Some(40)));
+        assert_eq!(tasks[0].progress.title, "Indexing");
+        assert_eq!(tasks[0].progress.message.as_deref(), Some("starting"));
+        assert_eq!(tasks[0].progress.percentage, Some(40));
+        assert!(tasks[0].cancellable && !tasks[1].cancellable);
+
+        let end = lsp::WorkDoneProgress::End(lsp::WorkDoneProgressEnd { message: None });
+        LspTask::track(&mut tasks, a, "ra", &token, &end);
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].progress.server, "taplo");
+        // A report for a task that never began is ignored.
+        LspTask::track(&mut tasks, a, "ra", &token, &report(Some("late"), None));
+        assert_eq!(tasks.len(), 1);
+    }
+}
+
 /// vim visual-block (`CTRL-V`) state. Block mode reuses `Mode::Select`; this
 /// flag (when `Some`) marks that the current Select is a rectangular block.
 /// `anchor` is the fixed corner in visual (row, col); the active corner is
@@ -2461,6 +2580,9 @@ pub struct Editor {
     /// here by the event loop so UI surfaces (e.g. the IDE workbench gauge) can
     /// render it. `None` when no server is currently progressing.
     pub lsp_progress: Option<LspProgress>,
+    /// Every in-flight `$/progress` task of every server, oldest first: the
+    /// JetBrains processes window (`show_background_tasks`).
+    pub lsp_tasks: Vec<LspTask>,
 
     /// Variables of the active debug stack frame as `(name, value)`, fetched when
     /// the debugger stops so the IDE Debug tool window can render them without an
@@ -2822,6 +2944,7 @@ impl Editor {
             pending_fzf: None,
             pending_tty_command: None,
             lsp_progress: None,
+            lsp_tasks: Vec::new(),
             dap_variables: Vec::new(),
             idle_timer: Box::pin(sleep(conf.idle_timeout)),
             redraw_timer: Box::pin(sleep(Duration::MAX)),

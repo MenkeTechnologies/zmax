@@ -702,6 +702,8 @@ impl MappableCommand {
         toggle_parameter_hints, "Show or hide the parameter-name inlay hints, leaving the other kinds (JetBrains Toggle Parameter Name Hints)",
         toggle_code_vision, "Show or hide the language servers' code lenses (JetBrains Code Vision)",
         code_vision_show_more, "Pick and run a code lens on the cursor line (JetBrains Code Vision Show More)",
+        show_background_tasks, "List the language servers' running background tasks; picking one cancels it (JetBrains Show Processes)",
+        stop_background_tasks, "Cancel every background task its language server lets be cancelled (JetBrains Stop Background Processes)",
         toggle_auto_highlight, "Toggle automatic symbol-under-cursor highlight (SPC t h a)",
         toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
         toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",

@@ -89287,5 +89287,21 @@
    "static:terminal_block_selection"
   ],
   "note": "Terminal.CreateRectangularSelectionOnMouseDrag = an Alt-drag in the zmax terminal panel selects the rectangle between the press and the drag's end: the same columns of every line it spans, whichever corner led (selected_columns, ui/terminal.rs), copied by `terminal_copy_selection`. `terminal_block_selection` switches a selection made either way between that rectangle and the text from one end to the other. The Alt-drag needs a host terminal that reports Alt with mouse events rather than taking Option-drag for its own selection."
+ },
+ {
+  "spec_id": "jetbrains-actions.ShowProcessWindow",
+  "status": "partial",
+  "evidence": [
+   "static:show_background_tasks"
+  ],
+  "note": "ShowProcessWindow (Show Processes) ~ zmax `show_background_tasks`: lists the language servers' in-flight `$/progress` work (indexing, building, checking) oldest first, each with its server, percentage, title and latest message, followed from begin to end per server and token (LspTask::track, zmax-view/src/editor.rs); picking a task the server marked cancellable sends `window/workDoneProgress/cancel`, the window's cancel button. Only language-server work is listed: zmax's own jobs (the Run console, git commands) do not report progress there."
+ },
+ {
+  "spec_id": "jetbrains-actions.StopBackgroundProcesses",
+  "status": "partial",
+  "evidence": [
+   "static:stop_background_tasks"
+  ],
+  "note": "StopBackgroundProcesses ~ zmax `stop_background_tasks`: sends `window/workDoneProgress/cancel` for every running language-server task its server marked cancellable and reports how many could not be cancelled; zmax's own jobs are not stopped by it (`stop_run` stops the Run console)."
  }
 ]

@@ -3066,6 +3066,85 @@ pub fn compute_code_lenses_for_all_views(editor: &mut Editor, jobs: &mut crate::
     }
 }
 
+/// How a background task reads in the processes window: its server, its
+/// percentage when reported, its title and its latest message.
+fn lsp_task_label(task: &zmax_view::editor::LspTask) -> String {
+    let p = &task.progress;
+    let mut label = format!("{}: ", p.server);
+    if let Some(percentage) = p.percentage {
+        label.push_str(&format!("{percentage}% "));
+    }
+    label.push_str(&p.title);
+    if let Some(message) = &p.message {
+        label.push_str(" ⋅ ");
+        label.push_str(message);
+    }
+    label
+}
+
+/// Ask `task`'s server to stop it (`window/workDoneProgress/cancel`). The task
+/// stays listed until the server ends it.
+fn cancel_lsp_task(editor: &Editor, task: &zmax_view::editor::LspTask) -> bool {
+    let Some(client) = editor.language_servers.get_by_id(task.server_id) else {
+        return false;
+    };
+    client.notify::<lsp::notification::WorkDoneProgressCancel>(lsp::WorkDoneProgressCancelParams {
+        token: task.token.clone(),
+    });
+    true
+}
+
+/// JetBrains "Show Processes" (`ShowProcessWindow`): the background tasks the
+/// language servers are running (indexing, building, checking), oldest first,
+/// with their progress; picking a cancellable one asks its server to stop it,
+/// as the window's cancel button does.
+pub fn show_background_tasks(cx: &mut Context) {
+    use zmax_view::editor::LspTask;
+    let tasks = cx.editor.lsp_tasks.clone();
+    if tasks.is_empty() {
+        cx.editor.set_status("no background tasks");
+        return;
+    }
+    let columns = [
+        ui::PickerColumn::new("task", |task: &LspTask, _: &()| lsp_task_label(task).into()),
+        ui::PickerColumn::new("cancel", |task: &LspTask, _: &()| {
+            if task.cancellable { "cancellable" } else { "" }.into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, tasks, (), |cx, task: &LspTask, _action| {
+        if !task.cancellable {
+            cx.editor
+                .set_error(format!("{} cannot be cancelled", task.progress.title));
+        } else if cancel_lsp_task(cx.editor, task) {
+            cx.editor
+                .set_status(format!("cancelling {}", task.progress.title));
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Stop Background Processes" (`StopBackgroundProcesses`): ask
+/// every language server to stop each running task it marked cancellable.
+pub fn stop_background_tasks(cx: &mut Context) {
+    let tasks: Vec<_> = cx
+        .editor
+        .lsp_tasks
+        .iter()
+        .filter(|t| t.cancellable)
+        .cloned()
+        .collect();
+    let left = cx.editor.lsp_tasks.len() - tasks.len();
+    let cancelled = tasks
+        .iter()
+        .filter(|task| cancel_lsp_task(cx.editor, task))
+        .count();
+    cx.editor.set_status(match (cancelled, left) {
+        (0, 0) => "no background tasks".to_string(),
+        (n, 0) => format!("cancelling {n} background tasks"),
+        (n, k) => format!("cancelling {n} background tasks; {k} cannot be cancelled"),
+    });
+}
+
 /// JetBrains "Show More" (`CodeVision.ShowMore`): a menu of the code lenses
 /// on the cursor line; picking one runs it.
 pub fn code_vision_show_more(cx: &mut Context) {
@@ -3152,6 +3231,36 @@ fn command_locations(args: &[serde_json::Value]) -> Vec<lsp::Location> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod background_task_tests {
+    use super::lsp_task_label;
+    use zmax_lsp::{lsp, LanguageServerId};
+    use zmax_view::editor::{LspProgress, LspTask};
+
+    fn task(percentage: Option<u32>, message: Option<&str>) -> LspTask {
+        LspTask {
+            server_id: LanguageServerId::default(),
+            token: lsp::ProgressToken::Number(1),
+            progress: LspProgress {
+                server: "rust-analyzer".to_string(),
+                title: "Indexing".to_string(),
+                message: message.map(str::to_string),
+                percentage,
+            },
+            cancellable: false,
+        }
+    }
+
+    #[test]
+    fn a_task_reads_server_percentage_title_and_message() {
+        assert_eq!(
+            lsp_task_label(&task(Some(40), Some("12/30 crates"))),
+            "rust-analyzer: 40% Indexing ⋅ 12/30 crates"
+        );
+        assert_eq!(lsp_task_label(&task(None, None)), "rust-analyzer: Indexing");
+    }
 }
 
 #[cfg(test)]

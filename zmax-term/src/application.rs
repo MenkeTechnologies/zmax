@@ -1688,6 +1688,7 @@ impl Application {
                             token,
                             value: lsp::ProgressParamsValue::WorkDone(work),
                         } = params;
+                        Self::track_lsp_task(&mut self.editor, server_id, &token, &work);
                         let (title, message, percentage) = match &work {
                             lsp::WorkDoneProgress::Begin(lsp::WorkDoneProgressBegin {
                                 title,
@@ -1778,8 +1779,11 @@ impl Application {
                             }
                         }
                     }
-                    Notification::ProgressMessage(_params) => {
-                        // do nothing
+                    Notification::ProgressMessage(params) => {
+                        // No status line while a prompt is open, but the
+                        // background tasks list still follows the work.
+                        let lsp::ProgressParamsValue::WorkDone(work) = &params.value;
+                        Self::track_lsp_task(&mut self.editor, server_id, &params.token, work);
                     }
                     Notification::Exit => {
                         self.editor.set_status("Language server exited");
@@ -1805,6 +1809,7 @@ impl Application {
                             server_id,
                         });
 
+                        self.editor.lsp_tasks.retain(|t| t.server_id != server_id);
                         // Remove the language server from the registry.
                         self.editor.language_servers.remove_by_id(server_id);
                     }
@@ -2036,6 +2041,21 @@ impl Application {
             }
             Call::Invalid { id } => log::error!("LSP invalid method call id={:?}", id),
         }
+    }
+
+    /// Follow a server's `$/progress` work in the background tasks list.
+    fn track_lsp_task(
+        editor: &mut Editor,
+        server_id: LanguageServerId,
+        token: &lsp::ProgressToken,
+        work: &lsp::WorkDoneProgress,
+    ) {
+        let server = editor
+            .language_servers
+            .get_by_id(server_id)
+            .map(|client| client.name().to_string())
+            .unwrap_or_default();
+        zmax_view::editor::LspTask::track(&mut editor.lsp_tasks, server_id, &server, token, work);
     }
 
     fn handle_show_message(&mut self, message_type: lsp::MessageType, message: String) {
