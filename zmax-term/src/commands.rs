@@ -1422,11 +1422,11 @@ impl MappableCommand {
         git_show_staged, "Show this file as the index holds it (JetBrains Show Staged Version)",
         git_fixup_commit, "Commit the staged changes as a fixup! of a picked commit (JetBrains Fixup)",
         git_squash_into_commit, "Commit the staged changes as a squash! of a picked commit (JetBrains Squash Into)",
-        git_drop_commit, "Remove a picked commit from the branch (JetBrains Drop Commits)",
+        git_drop_commit, "Remove the picked commits from the branch (JetBrains Drop Commits)",
         git_reword_commit, "Change the message of a picked commit (JetBrains Edit Commit Message)",
         git_branch_at_commit, "Create a branch at a picked commit and switch to it (JetBrains New Branch)",
         git_reset_to_commit, "Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here)",
-        git_revert_commit, "Commit the inverse of a picked commit (JetBrains Revert Commit)",
+        git_revert_commit, "Commit the inverse of each picked commit, newest first (JetBrains Revert Commit)",
         git_checkout_revision, "Check out a picked commit, detaching HEAD (JetBrains Checkout Revision)",
         git_tag_commit, "Tag a picked commit (JetBrains New Tag)",
         git_push_up_to_commit, "Push the current branch only up to a picked commit (JetBrains Push All up to Here)",
@@ -77529,8 +77529,10 @@ fn git_squash_into_commit(cx: &mut Context) {
     });
 }
 
-/// JetBrains "Drop Commits" (`Git.Drop.Commits`): remove a picked commit from
-/// the branch, replaying the ones after it.
+/// JetBrains "Drop Commits" (`Git.Drop.Commits`): remove the picked commits
+/// from the branch, replaying the ones after them. Several are picked with
+/// Shift ranges and `Ctrl-Space`; the log lists newest first and they are
+/// dropped in that order, so each older commit keeps its hash until its turn.
 fn git_drop_commit(cx: &mut Context) {
     git_pick_commit(cx, "drop commit", |cx, sha| {
         git_run_cx(
@@ -77617,8 +77619,9 @@ fn git_reset_to_commit(cx: &mut Context) {
     });
 }
 
-/// JetBrains "Revert Commit" (`Git.Revert.In.Log`): a new commit undoing a
-/// picked one.
+/// JetBrains "Revert Commit" (`Git.Revert.In.Log`): a new commit undoing each
+/// picked one (Shift ranges and `Ctrl-Space` pick several), newest first, as
+/// the IDE reverts a multi-selection.
 fn git_revert_commit(cx: &mut Context) {
     git_pick_commit(cx, "revert", |cx, sha| {
         git_run_cx(

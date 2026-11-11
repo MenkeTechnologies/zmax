@@ -83479,11 +83479,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.Drop.Commits",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:git_drop_commit"
   ],
-  "note": "Git.Drop.Commits = zmax `git_drop_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection. One commit per run; the IDE acts on a multi-selection."
+  "note": "Git.Drop.Commits = zmax `git_drop_commit`: removes the commits picked from the branch log (several with Shift ranges and `Ctrl-Space`, the list's Ctrl-click) by `git rebase --onto <c>^ <c>` for each, newest first, so every older commit keeps its hash until its turn and the commits after each are replayed."
  },
  {
   "spec_id": "jetbrains-actions.Git.Fixup.To.Commit",
@@ -83519,11 +83519,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.Revert.In.Log",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:git_revert_commit"
   ],
-  "note": "Git.Revert.In.Log = zmax `git_revert_commit`: the same git operation on a commit picked from the branch log, where the IDE uses the log selection. One commit per run; the IDE acts on a multi-selection."
+  "note": "Git.Revert.In.Log = zmax `git_revert_commit`: `git revert --no-edit` on each commit picked from the branch log (several with Shift ranges and `Ctrl-Space`), newest first, as the IDE reverts a multi-selection."
  },
  {
   "spec_id": "jetbrains-actions.Git.Reword.Commit",

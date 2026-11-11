@@ -517,6 +517,7 @@ See the documentation page on [pickers](./pickers.md) for more info.
 | `Home`                       | Go to first entry                                          |
 | `End`                        | Go to last entry                                           |
 | `Shift-` + `Up`/`Down`/`PageUp`/`PageDown`/`Home`/`End` | Extend the selection over the entries passed |
+| `Ctrl-Space`                 | Add the entry to the selection, or take it out; with entries marked, the selection is them plus any Shift range |
 | `Enter`                      | Open selected                                              |
 | `Alt-Enter`                  | Open selected in the background without closing the picker |
 | `Ctrl-s`                     | Open horizontally                                          |

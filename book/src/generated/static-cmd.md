@@ -1029,11 +1029,11 @@
 | `git_show_staged` | Show this file as the index holds it (JetBrains Show Staged Version) |  |
 | `git_fixup_commit` | Commit the staged changes as a fixup! of a picked commit (JetBrains Fixup) |  |
 | `git_squash_into_commit` | Commit the staged changes as a squash! of a picked commit (JetBrains Squash Into) |  |
-| `git_drop_commit` | Remove a picked commit from the branch (JetBrains Drop Commits) |  |
+| `git_drop_commit` | Remove the picked commits from the branch (JetBrains Drop Commits) |  |
 | `git_reword_commit` | Change the message of a picked commit (JetBrains Edit Commit Message) |  |
 | `git_branch_at_commit` | Create a branch at a picked commit and switch to it (JetBrains New Branch) |  |
 | `git_reset_to_commit` | Reset the current branch to a picked commit (JetBrains Reset Current Branch to Here) |  |
-| `git_revert_commit` | Commit the inverse of a picked commit (JetBrains Revert Commit) |  |
+| `git_revert_commit` | Commit the inverse of each picked commit, newest first (JetBrains Revert Commit) |  |
 | `git_checkout_revision` | Check out a picked commit, detaching HEAD (JetBrains Checkout Revision) |  |
 | `git_tag_commit` | Tag a picked commit (JetBrains New Tag) |  |
 | `git_push_up_to_commit` | Push the current branch only up to a picked commit (JetBrains Push All up to Here) |  |

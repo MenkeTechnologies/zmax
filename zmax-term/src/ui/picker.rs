@@ -311,6 +311,11 @@ pub struct Picker<T: 'static + Send + Sync, D: 'static> {
     /// (`List-*ExtendSelection`): Shift with a move keeps this row and selects
     /// every matched row between it and the cursor. `None` selects one row.
     anchor: Option<u32>,
+    /// Rows toggled into the selection one at a time (`Ctrl-Space`), the
+    /// JetBrains list's Ctrl-click: with any marked, the selection is these
+    /// rows plus a Shift range. Matched-row numbers, so a new query or
+    /// re-sorted matches clear them.
+    marked: std::collections::BTreeSet<u32>,
     prompt: Prompt,
     query: PickerQuery,
 
@@ -480,6 +485,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             version,
             cursor: 0,
             anchor: None,
+            marked: std::collections::BTreeSet::new(),
             prompt,
             query,
             truncate_start: true,
@@ -699,6 +705,29 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         anchor.min(self.cursor)..=anchor.max(self.cursor)
     }
 
+    /// Add the cursor's row to the selection, or take it out (`Ctrl-Space`).
+    fn toggle_mark(&mut self) {
+        if self.matcher.snapshot().matched_item_count() == 0 {
+            return;
+        }
+        if !self.marked.remove(&self.cursor) {
+            self.marked.insert(self.cursor);
+        }
+    }
+
+    /// Every selected row, in list order: the Shift range (the cursor's row
+    /// alone without one), or with rows marked, the marked rows and any range.
+    fn picked_rows(&self) -> Vec<u32> {
+        if self.marked.is_empty() {
+            return self.selected_rows().collect();
+        }
+        let mut rows = self.marked.clone();
+        if self.anchor.is_some() {
+            rows.extend(self.selected_rows());
+        }
+        rows.into_iter().collect()
+    }
+
     /// Run the picker's callback with `action` on every selected item, in
     /// list order.
     fn accept(&self, cx: &mut Context, action: Action) {
@@ -706,10 +735,10 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         let Some(last) = snapshot.matched_item_count().checked_sub(1) else {
             return;
         };
-        let rows = self.selected_rows();
-        let rows = (*rows.start()).min(last)..=(*rows.end()).min(last);
-        for item in snapshot.matched_items(rows) {
-            (self.callback_fn)(cx, item.data, action);
+        for row in self.picked_rows().into_iter().filter(|&row| row <= last) {
+            if let Some(item) = snapshot.get_matched_item(row) {
+                (self.callback_fn)(cx, item.data, action);
+            }
         }
     }
 
@@ -756,6 +785,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         // If the query has meaningfully changed, reset the cursor to the top of the results.
         self.cursor = 0;
         self.anchor = None;
+        self.marked.clear();
         // Have nucleo reparse each changed column.
         for (i, column) in self
             .columns
@@ -923,6 +953,8 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             let last = snapshot.matched_item_count().saturating_sub(1);
             self.cursor = self.cursor.min(last);
             self.anchor = self.anchor.map(|anchor| anchor.min(last));
+            // The matches moved under the marks.
+            self.marked.clear();
         }
 
         let text_style = cx.editor.theme.get("ui.text");
@@ -943,7 +975,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
 
         // -- Render the input bar:
 
-        let picked = self.selected_rows().count();
+        let picked = self.picked_rows().len();
         let count = format!(
             "{}{}{}/{}",
             if status.running || self.matcher.active_injectors() > 0 {
@@ -1128,9 +1160,9 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             self.truncate_start,
         );
 
-        // The rest of a range selection is drawn like the cursor's row.
+        // The rest of the selection is drawn like the cursor's row.
         let first_row = inner.y + has_header as u16;
-        for row in self.selected_rows() {
+        for row in self.picked_rows() {
             if (offset..end).contains(&row) && row != self.cursor {
                 let y = first_row + (row - offset) as u16;
                 surface.set_style(Rect::new(inner.x, y, inner.width, 1), selected);
@@ -1440,6 +1472,8 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
             ctrl!('t') => {
                 self.toggle_preview();
             }
+            // Terminals send Ctrl-Space as NUL, read back as Ctrl-Space or Ctrl-@.
+            ctrl!(' ') | ctrl!('@') => self.toggle_mark(),
             _ => {
                 self.prompt_handle_event(event, ctx);
             }
@@ -1530,5 +1564,30 @@ mod tests {
 
         picker.to_start();
         assert_eq!(picker.selected_rows(), 0..=0);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn marked_rows_join_the_selection_in_list_order() {
+        let mut picker = numbers(10);
+        assert_eq!(picker.picked_rows(), [0], "the cursor alone");
+
+        picker.move_by(7, Direction::Forward);
+        picker.toggle_mark();
+        picker.to_start();
+        picker.move_by(2, Direction::Forward);
+        picker.toggle_mark();
+        // Marked rows stay picked as the cursor moves on, and the cursor's
+        // own row is not picked unless it is marked.
+        picker.move_by(2, Direction::Forward);
+        assert_eq!(picker.picked_rows(), [2, 7]);
+
+        // A Shift range joins them.
+        picker.extend_to(5);
+        assert_eq!(picker.picked_rows(), [2, 4, 5, 7]);
+
+        // Toggling a marked row takes it out again.
+        picker.move_by(2, Direction::Forward);
+        picker.toggle_mark();
+        assert_eq!(picker.picked_rows(), [2]);
     }
 }
