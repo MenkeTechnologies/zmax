@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-c791b092.js";
+            window.path_to_searchindex_js = "searchindex-ad4dbbe8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -468,6 +468,8 @@ not visible in the Zmax file picker and global search.</p>
 <tr><td><code>git-global</code></td><td>Enables reading global <code>.gitignore</code>, whose path is specified in git’s config: <code>core.excludesfile</code> option</td><td><code>false</code></td></tr>
 <tr><td><code>git-exclude</code></td><td>Enables reading <code>.git/info/exclude</code> files</td><td><code>false</code></td></tr>
 <tr><td><code>flatten-dirs</code></td><td>Enables flattening single child directories</td><td><code>true</code></td></tr>
+<tr><td><code>file-nesting</code></td><td>Shows files the nesting rules pair with another file under that file in the project tree, opened and closed like a directory (<code>toggle_file_nesting</code>)</td><td><code>false</code></td></tr>
+<tr><td><code>nesting-rules</code></td><td>Table of parent suffix to child suffixes: <code>base + child</code> is nested under <code>base + parent</code> when both are in one directory, e.g. <code>".ts" = [".js", ".d.ts"]</code> or <code>"Cargo.toml" = ["Cargo.lock"]</code></td><td>TypeScript, JavaScript and stylesheet outputs under their sources; lock files under <code>package.json</code>, <code>Cargo.toml</code>, <code>go.mod</code>, <code>Gemfile</code>, <code>pyproject.toml</code>, <code>composer.json</code></td></tr>
 </tbody>
 </table>
 </div>
