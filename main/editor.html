@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e50ff9f9.js";
+            window.path_to_searchindex_js = "searchindex-013096b3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -452,6 +452,7 @@ not visible in the Zmax file picker and global search.</p>
 !.gitignore
 !.gitattributes
 </code></pre>
+<p>The <code>project_tree_exclude</code> command adds the project tree’s selected directory to the workspace <code>.zmax/ignore</code> as an anchored line (<code>/target/</code>), so the file picker and global search skip it; the project tree keeps listing it, dimmed. <code>project_tree_unexclude</code> removes that line again. Other lines in the file are left as they are.</p>
 <h3 id="editorfile-explorer-section"><a class="header" href="#editorfile-explorer-section"><code>[editor.file-explorer]</code> Section</a></h3>
 <p>In addition to the options for the file picker and global search, a similar set of options is presented to configure the file explorer separately. However, unlike the file picker, the defaults are set to avoid ignoring most files.</p>
 <p>Note that the ignore files consulted by the file explorer when <code>ignore</code> is set to true are the same ones used by the file picker, including the aforementioned Zmax-specific ignore files.</p>
