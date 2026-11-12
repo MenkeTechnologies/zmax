@@ -27,6 +27,13 @@
 //!   M-c                      table-insert-column  (right of the current col)
 //!   M-k                      table-delete-row     (the current row)
 //!   M-d                      table-delete-column  (the current column)
+//!   F2                       edit the current cell in place (JetBrains
+//!                            Table-startEditing): a caret that Left/Right/
+//!                            Home/End move, typing and Backspace/Delete at
+//!                            it; Enter keeps the text and goes down a row,
+//!                            Tab / Shift-Tab keep it and go to the next /
+//!                            previous cell, Up/Down keep it and move, Esc
+//!                            puts the cell back as it was
 //!   Esc / C-g / C-c          quit
 //!
 //! Deferred (behave as no-ops here, documented for the port tracker):
@@ -62,6 +69,20 @@ pub struct TableEditor {
     top: usize,
     /// How many table rows the last render fit: the step of PageUp/PageDown.
     page: usize,
+    /// The current cell's in-place edit (F2), if one is open.
+    editing: Option<CellEdit>,
+}
+
+/// JetBrains table cell editing (`Table-startEditing`): the text the cell had
+/// when editing began, for Esc, and the caret, in chars.
+struct CellEdit {
+    original: String,
+    caret: usize,
+}
+
+/// The byte index of char `n` of `s` (its length past the end).
+fn byte_at(s: &str, n: usize) -> usize {
+    s.char_indices().nth(n).map_or(s.len(), |(i, _)| i)
 }
 
 impl TableEditor {
@@ -74,7 +95,68 @@ impl TableEditor {
             anchor: None,
             top: 0,
             page: 1,
+            editing: None,
         }
+    }
+
+    /// F2: open the current cell for editing, the caret after its text.
+    fn start_editing(&mut self) {
+        let original = self.table.get(self.row, self.col).unwrap_or("").to_string();
+        let caret = original.chars().count();
+        self.editing = Some(CellEdit { original, caret });
+    }
+
+    /// A key while a cell is being edited. Returns whether it was used up by
+    /// the edit; a key that ends it (Tab, Up, Down, ...) keeps the text and
+    /// returns false so it then does its usual move.
+    fn edit_key(&mut self, key: KeyEvent) -> bool {
+        let Some(edit) = self.editing.as_mut() else {
+            return false;
+        };
+        let mut text = self.table.get(self.row, self.col).unwrap_or("").to_string();
+        let len = text.chars().count();
+        match key {
+            key!(Esc) => {
+                self.table.set(self.row, self.col, edit.original.clone());
+                self.editing = None;
+            }
+            key!(Enter) => {
+                self.editing = None;
+                if self.row + 1 < self.table.rows() {
+                    self.row += 1;
+                }
+            }
+            key!(Left) => edit.caret = edit.caret.saturating_sub(1),
+            key!(Right) => edit.caret = (edit.caret + 1).min(len),
+            key!(Home) => edit.caret = 0,
+            key!(End) => edit.caret = len,
+            key!(Backspace) => {
+                if edit.caret > 0 {
+                    edit.caret -= 1;
+                    text.remove(byte_at(&text, edit.caret));
+                    self.table.set(self.row, self.col, text);
+                }
+            }
+            key!(Delete) => {
+                if edit.caret < len {
+                    text.remove(byte_at(&text, edit.caret));
+                    self.table.set(self.row, self.col, text);
+                }
+            }
+            KeyEvent {
+                code: KeyCode::Char(ch),
+                modifiers,
+            } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
+                text.insert(byte_at(&text, edit.caret), ch);
+                edit.caret += 1;
+                self.table.set(self.row, self.col, text);
+            }
+            _ => {
+                self.editing = None;
+                return false;
+            }
+        }
+        true
     }
 
     /// Keep point inside the (possibly resized) grid.
@@ -189,6 +271,9 @@ impl Component for TableEditor {
             compositor.pop();
         });
 
+        if self.edit_key(key) {
+            return EventResult::Consumed(None);
+        }
         let rows = self.table.rows();
         let cols = self.table.cols();
         let (row, col) = (self.row, self.col);
@@ -219,6 +304,10 @@ impl Component for TableEditor {
         }
         match key {
             key!(Esc) | ctrl!('g') | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            KeyEvent {
+                code: KeyCode::F(2),
+                modifiers: KeyModifiers::NONE,
+            } => self.start_editing(),
             key!(Tab) | key!(Enter) | key!(Right) => {
                 let (r, c) = forward_cell(self.row, self.col, rows, cols);
                 self.row = r;
@@ -354,8 +443,26 @@ impl Component for TableEditor {
             }
         }
 
+        // The edited cell's caret, drawn as a reversed cell.
+        if let Some(edit) = &self.editing {
+            use zmax_core::unicode::width::UnicodeWidthStr;
+            let text = self.table.get(self.row, self.col).unwrap_or("");
+            let before = text[..byte_at(text, edit.caret)].width() as u16;
+            let y = body_y + (2 * (self.row.saturating_sub(self.top)) + 1) as u16;
+            let x = area.x + self.cell_x_offset(self.col) + before;
+            if self.row >= self.top && y < last_y && x < area.x + area.width {
+                let caret = text_style.add_modifier(zmax_view::graphics::Modifier::REVERSED);
+                surface.set_style(Rect::new(x, y, 1, 1), caret);
+            }
+        }
+
         // Footer: key hints.
-        let footer = "Tab/Enter next  S-Tab prev  arrows/PgUp/PgDn move  S-moves select  M-w copy  M-o/M-c ins  M-k/M-d del  Esc quit";
+        if self.editing.is_some() {
+            let footer = "editing cell: arrows/Home/End caret  Enter keep, next row  Tab keep, next cell  Esc put back";
+            surface.set_stringn(area.x, last_y, footer, area.width as usize, footer_style);
+            return;
+        }
+        let footer = "F2 edit  Tab/Enter next  S-Tab prev  arrows/PgUp/PgDn move  S-moves select  M-w copy  M-o/M-c ins  M-k/M-d del  Esc quit";
         surface.set_stringn(area.x, last_y, footer, area.width as usize, footer_style);
     }
 }
@@ -400,6 +507,46 @@ mod tests {
             "cells outside the block stay"
         );
         assert_eq!(ed.table.get(0, 2), Some("02"));
+    }
+
+    #[test]
+    fn f2_edits_at_a_caret_and_esc_puts_the_cell_back() {
+        let mut ed = filled();
+        ed.row = 1;
+        ed.col = 1;
+        ed.start_editing();
+        // Caret after "11": two lefts, then type at the front.
+        assert!(ed.edit_key(key!(Left)) && ed.edit_key(key!(Left)));
+        assert!(ed.edit_key(key!('a')));
+        assert!(ed.edit_key(key!(End)) && ed.edit_key(key!('z')));
+        assert_eq!(ed.table.get(1, 1), Some("a11z"));
+        assert!(ed.edit_key(key!(Home)) && ed.edit_key(key!(Delete)));
+        assert!(ed.edit_key(key!(End)) && ed.edit_key(key!(Backspace)));
+        assert_eq!(ed.table.get(1, 1), Some("11"));
+
+        ed.edit_key(key!('x'));
+        assert!(ed.edit_key(key!(Esc)), "Esc ends the edit, not the table");
+        assert_eq!(ed.table.get(1, 1), Some("11"));
+        assert!(ed.editing.is_none());
+        assert!(!ed.edit_key(key!('y')), "no edit open");
+    }
+
+    #[test]
+    fn enter_keeps_the_edit_and_goes_down_and_tab_keeps_it_for_the_move() {
+        let mut ed = filled();
+        ed.start_editing();
+        ed.edit_key(key!('é'));
+        assert!(ed.edit_key(key!(Enter)));
+        assert_eq!(ed.table.get(0, 0), Some("00é"));
+        assert_eq!((ed.row, ed.col), (1, 0));
+        assert!(ed.editing.is_none());
+
+        ed.start_editing();
+        ed.edit_key(key!(Left));
+        ed.edit_key(key!('-'));
+        assert!(!ed.edit_key(key!(Tab)), "Tab goes on to move the cell");
+        assert_eq!(ed.table.get(1, 0), Some("1-0"));
+        assert!(ed.editing.is_none());
     }
 
     #[test]

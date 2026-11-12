@@ -89328,5 +89328,13 @@
    "static:project_tree_rename"
   ],
   "note": "Tree-startEditing (Start Editing) = zmax `project_tree_rename`: renames the project tree's selected file or directory, the prompt holding its current name to edit (rename_prompt). The rename goes through Editor::move_path, so language servers get willRenameFiles first and didRenameFiles after; an open buffer of the file, or of any file under a renamed directory, follows it; a taken name, or a path instead of a name, is refused (rename_path, commands.rs). The tree's context-menu Rename uses the same prompt."
+ },
+ {
+  "spec_id": "jetbrains-actions.Table-startEditing",
+  "status": "ported",
+  "evidence": [
+   "static:table"
+  ],
+  "note": "Table-startEditing = `F2` in the zmax table editor (the `table` command, the Emacs table.el port): the current cell opens for editing with a caret that Left/Right/Home/End move, typing and Backspace/Delete acting at it; Enter keeps the text and moves down a row, Tab / Shift-Tab and Up/Down keep it and move, Esc puts the cell back as it was (TableEditor::start_editing / edit_key, ui/table.rs) \u2014 a Swing table's F2 editor."
  }
 ]
