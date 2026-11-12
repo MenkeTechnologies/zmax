@@ -137,6 +137,10 @@ pub struct FileTree {
     /// files under others, `None` when nesting is off. Synced from
     /// `editor.file-explorer.file-nesting` / `nesting-rules`.
     nesting: Option<NestingRules>,
+    /// Directories marked excluded in the workspace's `.zmax/ignore`
+    /// ([`crate::excluded_dirs`]): still listed, drawn dimmed with their
+    /// contents. Re-read on [`Self::refresh`].
+    excluded: Vec<PathBuf>,
 }
 
 /// How the project tree orders the files inside a directory (JetBrains' Sort by
@@ -171,6 +175,7 @@ impl FileTree {
             preview_tab: false,
             anchor: None,
             nesting: None,
+            excluded: crate::excluded_dirs::excluded(&root),
         };
         tree.expanded.insert(root);
         tree.rebuild();
@@ -286,8 +291,14 @@ impl FileTree {
     /// Re-read the directory tree from disk (preserving expand/selection state).
     /// Called by the filesystem watcher when files change on disk, so the cache
     /// is dropped to pick up the on-disk changes.
+    /// Whether `path` is an excluded directory or lies inside one.
+    fn is_excluded(&self, path: &Path) -> bool {
+        self.excluded.iter().any(|dir| path.starts_with(dir))
+    }
+
     pub fn refresh(&mut self) {
         self.dir_cache.clear();
+        self.excluded = crate::excluded_dirs::excluded(&self.root);
         self.rebuild();
     }
 
@@ -1128,6 +1139,7 @@ impl FileTree {
         let base = theme.get("ui.text");
         let dir_style = theme.get("function");
         let sel = theme.get("ui.selection");
+        let excluded_style = theme.get("comment");
 
         for i in 0..height {
             let idx = self.scroll + i;
@@ -1153,7 +1165,13 @@ impl FileTree {
                 let glyph = crate::ui::icons::file_icon(&row.name);
                 format!("{indent}  {glyph} {}", row.name)
             };
-            let style = if row.is_dir { dir_style } else { base };
+            let style = if self.is_excluded(&row.path) {
+                excluded_style
+            } else if row.is_dir {
+                dir_style
+            } else {
+                base
+            };
             surface.set_stringn(area.x, y, &text, area.width as usize, style);
             // File Details: the size, right-aligned at the edge of the panel.
             // Directories have no meaningful size, and a name that already
@@ -1215,6 +1233,28 @@ pub fn human_size(bytes: u64) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn an_excluded_directory_stays_listed_and_is_dimmed_after_a_refresh() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::create_dir_all(root.join("target/debug")).unwrap();
+        std::fs::create_dir_all(root.join("targets")).unwrap();
+        let mut tree = super::FileTree::new(root.clone());
+        assert!(!tree.is_excluded(&root.join("target")));
+
+        crate::excluded_dirs::exclude(&root, &root.join("target")).unwrap();
+        tree.refresh();
+        assert!(tree.rows.iter().any(|r| r.path == root.join("target")));
+        assert!(tree.is_excluded(&root.join("target")));
+        assert!(tree.is_excluded(&root.join("target/debug")));
+        // A path prefix is not a directory prefix.
+        assert!(!tree.is_excluded(&root.join("targets")));
+
+        crate::excluded_dirs::include(&root, &root.join("target")).unwrap();
+        tree.refresh();
+        assert!(!tree.is_excluded(&root.join("target")));
+    }
+
     use super::*;
 
     fn rules(pairs: &[(&str, &[&str])]) -> NestingRules {

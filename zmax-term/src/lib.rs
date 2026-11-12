@@ -46,6 +46,7 @@ pub mod embedded;
 pub mod emmet;
 pub mod events;
 pub mod eww;
+pub mod excluded_dirs;
 pub mod file_cache;
 pub mod file_watcher;
 pub mod filesets;

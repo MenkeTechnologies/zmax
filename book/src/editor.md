@@ -268,6 +268,8 @@ Example:
 !.gitattributes
 ```
 
+The `project_tree_exclude` command adds the project tree's selected directory to the workspace `.zmax/ignore` as an anchored line (`/target/`), so the file picker and global search skip it; the project tree keeps listing it, dimmed. `project_tree_unexclude` removes that line again. Other lines in the file are left as they are.
+
 ### `[editor.file-explorer]` Section
 
 In addition to the options for the file picker and global search, a similar set of options is presented to configure the file explorer separately. However, unlike the file picker, the defaults are set to avoid ignoring most files.

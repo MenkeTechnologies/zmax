@@ -2215,6 +2215,8 @@ impl MappableCommand {
         run_send_eof, "Close the running Run console process's input so it reads end of file (JetBrains Send EOF)",
         toggle_essential_highlighting, "Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting)",
         project_tree_rename, "Rename the project tree's selected file or directory, open buffers following it (JetBrains tree Start Editing)",
+        project_tree_exclude, "Keep the project tree's selected directory out of the file picker and project search (JetBrains Mark Directory as Excluded)",
+        project_tree_unexclude, "Return the project tree's selected excluded directory to the file picker and project search (JetBrains Unmark as Excluded)",
         toggle_file_nesting, "Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting)",
         toggle_sort_by_type, "Order the project tree's files by extension (JetBrains Sort by Type)",
         toggle_file_details, "Show or hide file sizes in the project tree (JetBrains File Details)",
@@ -76979,6 +76981,60 @@ fn project_tree_rename(cx: &mut Context) {
             Some(path) => compositor.push(Box::new(rename_prompt(path, cx.editor))),
             None => cx.editor.set_status("no project tree selection"),
         }
+    }));
+}
+
+/// JetBrains "Mark Directory as > Excluded" (`MarkExcludeRoot`): the project
+/// tree's selected directory goes into the workspace `.zmax/ignore`, so the
+/// file picker and project search skip it; the tree dims it.
+fn project_tree_exclude(cx: &mut Context) {
+    set_tree_dir_excluded(cx, true);
+}
+
+/// JetBrains "Unmark as Excluded" (`UnmarkRoot`, `MarkAsContentRoot`): undo
+/// [`project_tree_exclude`] for the selected directory.
+fn project_tree_unexclude(cx: &mut Context) {
+    set_tree_dir_excluded(cx, false);
+}
+
+fn set_tree_dir_excluded(cx: &mut Context, exclude: bool) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let Some(view) = compositor.find::<crate::ui::EditorView>() else {
+            return;
+        };
+        let selected = view
+            .with_project_tree(|tree| {
+                let dir = tree.selected_path().map(Path::to_path_buf)?;
+                Some((tree.root_path(), dir))
+            })
+            .flatten();
+        let Some((root, dir)) = selected else {
+            cx.editor.set_status("no project tree selection");
+            return;
+        };
+        if !dir.is_dir() {
+            cx.editor
+                .set_error(format!("{} is not a directory", dir.display()));
+            return;
+        }
+        let changed = if exclude {
+            crate::excluded_dirs::exclude(&root, &dir)
+        } else {
+            crate::excluded_dirs::include(&root, &dir)
+        };
+        let name = dir.strip_prefix(&root).unwrap_or(&dir).display();
+        let status = match (changed, exclude) {
+            (Ok(true), true) => format!("excluded {name}"),
+            (Ok(true), false) => format!("{name} is no longer excluded"),
+            (Ok(false), true) => format!("{name} is already excluded"),
+            (Ok(false), false) => format!("{name} is not excluded"),
+            (Err(e), _) => {
+                cx.editor.set_error(format!("{name}: {e}"));
+                return;
+            }
+        };
+        cx.editor.set_status(status);
+        view.refresh_file_tree();
     }));
 }
 

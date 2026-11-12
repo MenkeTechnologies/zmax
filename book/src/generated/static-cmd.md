@@ -1822,6 +1822,8 @@
 | `run_send_eof` | Close the running Run console process's input so it reads end of file (JetBrains Send EOF) |  |
 | `toggle_essential_highlighting` | Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting) |  |
 | `project_tree_rename` | Rename the project tree's selected file or directory, open buffers following it (JetBrains tree Start Editing) |  |
+| `project_tree_exclude` | Keep the project tree's selected directory out of the file picker and project search (JetBrains Mark Directory as Excluded) |  |
+| `project_tree_unexclude` | Return the project tree's selected excluded directory to the file picker and project search (JetBrains Unmark as Excluded) |  |
 | `toggle_file_nesting` | Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting) |  |
 | `toggle_sort_by_type` | Order the project tree's files by extension (JetBrains Sort by Type) |  |
 | `toggle_file_details` | Show or hide file sizes in the project tree (JetBrains File Details) |  |

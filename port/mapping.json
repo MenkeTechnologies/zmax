@@ -89336,5 +89336,29 @@
    "static:table"
   ],
   "note": "Table-startEditing = `F2` in the zmax table editor (the `table` command, the Emacs table.el port): the current cell opens for editing with a caret that Left/Right/Home/End move, typing and Backspace/Delete acting at it; Enter keeps the text and moves down a row, Tab / Shift-Tab and Up/Down keep it and move, Esc puts the cell back as it was (TableEditor::start_editing / edit_key, ui/table.rs) \u2014 a Swing table's F2 editor."
+ },
+ {
+  "spec_id": "jetbrains-actions.MarkExcludeRoot",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_exclude"
+  ],
+  "note": "MarkExcludeRoot = zmax `project_tree_exclude`: the project tree's selected directory is written to the workspace `.zmax/ignore` as an anchored `/rel/` line (excluded_dirs::exclude), which the file picker, global search and file explorer walks already read (ui::workspace_walk), so its files leave Go to File / Find in Files; the project tree keeps listing it, dimmed with its contents (FileTree.excluded) \u2014 the IDE's excluded folder."
+ },
+ {
+  "spec_id": "jetbrains-actions.UnmarkRoot",
+  "status": "partial",
+  "evidence": [
+   "static:project_tree_unexclude"
+  ],
+  "note": "UnmarkRoot (Unmark as Excluded) = zmax `project_tree_unexclude`: removes the selected directory's `/rel/` line from `.zmax/ignore` (excluded_dirs::include), leaving any other patterns there untouched, so the picker and project search see it again and the tree stops dimming it. Source/test-root unmarking has no zmax counterpart: zmax has no source roots."
+ },
+ {
+  "spec_id": "jetbrains-actions.MarkAsContentRoot",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_unexclude"
+  ],
+  "note": "MarkAsContentRoot (\"Cancel exclusion for the selected directory to make its files processable\") = zmax `project_tree_unexclude`: the directory's `.zmax/ignore` line goes (excluded_dirs::include) and its files return to the file picker and project search."
  }
 ]
