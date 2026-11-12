@@ -5992,7 +5992,6 @@ pub fn goto_selection(from: usize, to: usize) -> Selection {
 enum FileActionKind {
     NewFile,
     NewFolder,
-    Rename,
 }
 
 /// Rebuild the file tree on the main thread (from a background callback context).
@@ -6164,11 +6163,10 @@ pub(crate) fn file_menu_entries(
     // Refactor: Rename / Delete
     {
         let p = path.clone();
-        e.push(Entry::item("Rename…", move |compositor, _cx| {
-            compositor.push(Box::new(name_prompt(
-                FileActionKind::Rename,
+        e.push(Entry::item("Rename…", move |compositor, cx| {
+            compositor.push(Box::new(crate::commands::rename_prompt(
                 p.clone(),
-                is_dir,
+                cx.editor,
             )));
         }));
         let p = path.clone();
@@ -6295,13 +6293,13 @@ fn breadcrumb(path: &str, symbol: Option<&str>) -> Option<String> {
     Some(crumb)
 }
 
-/// Prompt for a name, then create/rename the target and refresh the tree.
+/// Prompt for a name, then create the file or folder in `target` and refresh
+/// the tree. Renaming is [`crate::commands::rename_prompt`].
 fn name_prompt(kind: FileActionKind, target: PathBuf, _is_dir: bool) -> crate::ui::Prompt {
     use crate::ui::PromptEvent;
     let label: std::borrow::Cow<'static, str> = match kind {
         FileActionKind::NewFile => "New file: ".into(),
         FileActionKind::NewFolder => "New folder: ".into(),
-        FileActionKind::Rename => "Rename to: ".into(),
     };
     crate::ui::Prompt::new(
         label,
@@ -6320,14 +6318,6 @@ fn name_prompt(kind: FileActionKind, target: PathBuf, _is_dir: bool) -> crate::u
                 FileActionKind::NewFolder => {
                     let p = target.join(input);
                     std::fs::create_dir_all(&p).map(|_| p)
-                }
-                FileActionKind::Rename => {
-                    let parent = target
-                        .parent()
-                        .map(|p| p.to_path_buf())
-                        .unwrap_or_else(|| std::path::PathBuf::from("."));
-                    let np = parent.join(input);
-                    std::fs::rename(&target, &np).map(|_| np)
                 }
             };
             match result {

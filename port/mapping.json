@@ -89320,5 +89320,13 @@
    "static:toggle_essential_highlighting"
   ],
   "note": "ToggleEssentialHighlighting = zmax `toggle_essential_highlighting`: flips `editor.essential-highlighting`, the IDE's Essential highlighting level (\"highlight only essential problems as you type and show all detected problems when the file is saved\"). While a buffer has unsaved edits Document::diagnostics() holds only its errors, mapped through each edit, so the underlines, gutter, inline and end-of-line text, status-line counts, diagnostic navigation and the Problems panel all follow it; saving, or undoing back to the saved revision, brings every diagnostic back (refresh_essential_diagnostics, zmax-view/src/document.rs). Essential is taken as error severity: language servers do not mark which problems the IDE would call essential."
+ },
+ {
+  "spec_id": "jetbrains-actions.Tree-startEditing",
+  "status": "ported",
+  "evidence": [
+   "static:project_tree_rename"
+  ],
+  "note": "Tree-startEditing (Start Editing) = zmax `project_tree_rename`: renames the project tree's selected file or directory, the prompt holding its current name to edit (rename_prompt). The rename goes through Editor::move_path, so language servers get willRenameFiles first and didRenameFiles after; an open buffer of the file, or of any file under a renamed directory, follows it; a taken name, or a path instead of a name, is refused (rename_path, commands.rs). The tree's context-menu Rename uses the same prompt."
  }
 ]

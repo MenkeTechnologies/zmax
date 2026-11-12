@@ -2214,6 +2214,7 @@ impl MappableCommand {
         run_send_input, "Type a line into the running Run console process's input",
         run_send_eof, "Close the running Run console process's input so it reads end of file (JetBrains Send EOF)",
         toggle_essential_highlighting, "Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting)",
+        project_tree_rename, "Rename the project tree's selected file or directory, open buffers following it (JetBrains tree Start Editing)",
         toggle_file_nesting, "Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting)",
         toggle_sort_by_type, "Order the project tree's files by extension (JetBrains Sort by Type)",
         toggle_file_details, "Show or hide file sizes in the project tree (JetBrains File Details)",
@@ -76879,6 +76880,108 @@ fn directory_of(path: &Path) -> PathBuf {
 
 /// The New File prompt for `dir`: the named file (and any missing parent
 /// directories in the name) is created on disk and opened.
+/// JetBrains in-place rename of a project node (`Tree-startEditing`): give
+/// `old` the name `name` in its own directory, through [`Editor::move_path`]
+/// so the language servers are asked first (`willRenameFiles`) and told after.
+/// An open buffer of the file, or of any file under a renamed directory,
+/// follows it. A name that only changes the case of the old one is allowed on
+/// a case-insensitive file system; any other existing name is refused.
+pub fn rename_path(editor: &mut Editor, old: &Path, name: &str) -> Result<PathBuf, String> {
+    let name = name.trim();
+    if name.is_empty() || name == "." || name == ".." || name.contains(std::path::is_separator) {
+        return Err(format!("`{name}` is not a file name"));
+    }
+    let parent = old.parent().ok_or("the root cannot be renamed")?;
+    let new = parent.join(name);
+    if new == old {
+        return Ok(new);
+    }
+    if new.exists() && !same_file(old, &new) {
+        return Err(format!("{} already exists", new.display()));
+    }
+    editor.move_path(old, &new).map_err(|e| e.to_string())?;
+    if new.is_dir() {
+        let moved: Vec<_> = editor
+            .documents()
+            .filter_map(|doc| {
+                let inside = doc.path()?.strip_prefix(old).ok()?;
+                Some((doc.id(), new.join(inside)))
+            })
+            .collect();
+        for (id, path) in moved {
+            editor.set_doc_path(id, &path);
+        }
+    }
+    Ok(new)
+}
+
+/// Whether two paths name one file (a case-only rename on a case-insensitive
+/// file system).
+fn same_file(a: &Path, b: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        match (std::fs::metadata(a), std::fs::metadata(b)) {
+            (Ok(a), Ok(b)) => a.dev() == b.dev() && a.ino() == b.ino(),
+            _ => false,
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        a.to_string_lossy().to_lowercase() == b.to_string_lossy().to_lowercase()
+    }
+}
+
+/// The rename prompt for a project node, its current name filled in; the
+/// tree is re-read and the node selected under its new name.
+pub(crate) fn rename_prompt(target: PathBuf, editor: &Editor) -> ui::Prompt {
+    let name = target
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    ui::Prompt::new(
+        "rename to: ".into(),
+        None,
+        ui::completers::none,
+        move |cx, input: &str, event: ui::PromptEvent| {
+            if event != ui::PromptEvent::Validate {
+                return;
+            }
+            match rename_path(cx.editor, &target, input) {
+                Ok(new) => {
+                    cx.editor
+                        .set_status(format!("renamed to {}", new.display()));
+                    crate::job::dispatch_blocking(move |_editor, compositor| {
+                        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                            view.refresh_file_tree();
+                            view.with_project_tree(|tree| tree.reveal(&new));
+                        }
+                    });
+                }
+                Err(e) => cx.editor.set_error(format!("rename: {e}")),
+            }
+        },
+    )
+    .with_line(name, editor)
+}
+
+/// JetBrains "Start Editing" on a tree node (`Tree-startEditing`): rename the
+/// project tree's selected file or directory in place.
+fn project_tree_rename(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let selected = compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|view| {
+                view.with_project_tree(|tree| tree.selected_path().map(Path::to_path_buf))
+            })
+            .flatten();
+        match selected {
+            Some(path) => compositor.push(Box::new(rename_prompt(path, cx.editor))),
+            None => cx.editor.set_status("no project tree selection"),
+        }
+    }));
+}
+
 fn new_file_prompt(dir: PathBuf) -> ui::Prompt {
     ui::Prompt::new(
         format!("new file in {}: ", dir.display()).into(),

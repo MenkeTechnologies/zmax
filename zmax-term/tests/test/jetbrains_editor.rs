@@ -1188,3 +1188,48 @@ async fn code_lens_annotations_follow_edits() -> anyhow::Result<()> {
     )
     .await
 }
+
+/// Renaming a project node moves the file and the buffer showing it; renaming
+/// a directory carries the buffers of the files inside along; a name that is
+/// taken, or that is a path, is refused and nothing moves.
+#[tokio::test(flavor = "multi_thread")]
+async fn renaming_a_tree_node_takes_its_open_buffers_along() -> anyhow::Result<()> {
+    use zmax_term::commands::rename_path;
+    let dir = tempfile::tempdir()?;
+    let root = dir.path().canonicalize()?;
+    std::fs::create_dir(root.join("d"))?;
+    std::fs::write(root.join("a.txt"), "a\n")?;
+    std::fs::write(root.join("taken.txt"), "t\n")?;
+    std::fs::write(root.join("d").join("x.txt"), "x\n")?;
+    let mut app = AppBuilder::new()
+        .with_file(root.join("a.txt"), None)
+        .with_file(root.join("d").join("x.txt"), None)
+        .build()?;
+    let open_paths = |app: &Application| {
+        let mut paths: Vec<_> = app
+            .editor
+            .documents()
+            .filter_map(|doc| doc.path().map(std::path::Path::to_path_buf))
+            .collect();
+        paths.sort();
+        paths
+    };
+
+    let new = rename_path(&mut app.editor, &root.join("a.txt"), "b.txt").unwrap();
+    assert_eq!(new, root.join("b.txt"));
+    assert!(!root.join("a.txt").exists() && root.join("b.txt").exists());
+
+    let new = rename_path(&mut app.editor, &root.join("d"), "e").unwrap();
+    assert_eq!(new, root.join("e"));
+    assert_eq!(
+        open_paths(&app),
+        [root.join("b.txt"), root.join("e").join("x.txt")]
+    );
+
+    let taken = rename_path(&mut app.editor, &root.join("b.txt"), "taken.txt");
+    assert!(taken.unwrap_err().contains("already exists"));
+    assert!(rename_path(&mut app.editor, &root.join("b.txt"), "e/b.txt").is_err());
+    assert_eq!(std::fs::read_to_string(root.join("b.txt"))?, "a\n");
+    assert_eq!(std::fs::read_to_string(root.join("taken.txt"))?, "t\n");
+    Ok(())
+}
