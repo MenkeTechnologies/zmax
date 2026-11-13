@@ -89376,5 +89376,21 @@
    "static:documentation_close_all_tabs"
   ],
   "note": "TW.CloseAllTabs = zmax `documentation_close_all_tabs` (and `X` in the Documentation tool window): every Documentation tab closes and the next lookup opens a fresh one (Ide::docs_close_tabs, ui/ide.rs). Partial: the Documentation window is the only zmax tool window that holds tabs."
+ },
+ {
+  "spec_id": "jetbrains-actions.CloseOtherProjects",
+  "status": "partial",
+  "evidence": [
+   "static:close_other_projects"
+  ],
+  "note": "CloseOtherProjects = zmax `close_other_projects`: every buffer whose file lies outside this workspace closes, a modified one staying open and pathless scratch buffers kept (close_other_project_buffers, commands.rs; projectile::close_unmodified). Partial: the IDE closes other project windows, while zmax runs one workspace per process and only other projects' buffers can go."
+ },
+ {
+  "spec_id": "jetbrains-actions.WelcomeScreen.CopyProjectPath",
+  "status": "ported",
+  "evidence": [
+   "static:project_copy_path"
+  ],
+  "note": "WelcomeScreen.CopyProjectPath (Copy Path on a recent project) = zmax `project_copy_path`: a prompt completing over the known-project list (the recent projects `project-switch-project` records) puts the chosen project's root on the clipboard register."
  }
 ]

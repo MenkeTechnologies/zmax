@@ -1233,3 +1233,47 @@ async fn renaming_a_tree_node_takes_its_open_buffers_along() -> anyhow::Result<(
     assert_eq!(std::fs::read_to_string(root.join("taken.txt"))?, "t\n");
     Ok(())
 }
+
+/// JetBrains Close Other Projects: the buffers of files outside the project
+/// close, an unsaved one stays rather than losing its edit, and the project's
+/// own buffers are untouched.
+#[tokio::test(flavor = "multi_thread")]
+async fn closing_other_projects_keeps_this_project_and_unsaved_edits() -> anyhow::Result<()> {
+    use zmax_term::commands::close_other_project_buffers;
+    let here = tempfile::tempdir()?;
+    let there = tempfile::tempdir()?;
+    let (here, there) = (here.path().canonicalize()?, there.path().canonicalize()?);
+    for (dir, name) in [(&here, "a.txt"), (&there, "b.txt"), (&there, "c.txt")] {
+        std::fs::write(dir.join(name), "x\n")?;
+    }
+    let mut app = AppBuilder::new()
+        .with_file(here.join("a.txt"), None)
+        .with_file(there.join("b.txt"), None)
+        .with_file(there.join("c.txt"), None)
+        .build()?;
+    let unsaved = app
+        .editor
+        .document_by_path(there.join("c.txt"))
+        .map(|doc| doc.id())
+        .unwrap();
+    app.editor
+        .switch(unsaved, zmax_view::editor::Action::Replace);
+    {
+        let (view, doc) = zmax_view::current!(app.editor);
+        let edit =
+            zmax_core::Transaction::change(doc.text(), [(0, 0, Some("y".into()))].into_iter());
+        doc.apply(&edit, view.id);
+    }
+
+    assert_eq!(close_other_project_buffers(&mut app.editor, &here), (1, 1));
+    let mut open: Vec<_> = app
+        .editor
+        .documents()
+        .filter_map(|doc| doc.path().map(std::path::Path::to_path_buf))
+        .collect();
+    open.sort();
+    let mut want = vec![here.join("a.txt"), there.join("c.txt")];
+    want.sort();
+    assert_eq!(open, want);
+    Ok(())
+}

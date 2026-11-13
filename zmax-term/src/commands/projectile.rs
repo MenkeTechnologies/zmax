@@ -2719,6 +2719,31 @@ pub(crate) fn project_buffer_ids(
         .collect()
 }
 
+/// Close the buffers `ids` names, leaving a modified one open rather than
+/// losing the edit — emacs asks, and a command has nobody to ask. Returns how
+/// many closed and how many were left for being modified.
+pub(crate) fn close_unmodified(
+    editor: &mut zmax_view::Editor,
+    ids: Vec<zmax_view::DocumentId>,
+) -> (usize, usize) {
+    let mut killed = 0;
+    let mut modified = 0;
+    for id in ids {
+        if editor
+            .documents
+            .get(&id)
+            .is_some_and(|doc| doc.is_modified())
+        {
+            modified += 1;
+            continue;
+        }
+        if editor.close_document(id, false).is_ok() {
+            killed += 1;
+        }
+    }
+    (killed, modified)
+}
+
 /// `projectile-kill-buffers`: "Kill project buffers."
 pub(crate) fn kill_buffers(
     cx: &mut compositor::Context,
@@ -2733,24 +2758,7 @@ pub(crate) fn kill_buffers(
     if ids.is_empty() {
         anyhow::bail!("projectile-kill-buffers: no buffers in this project");
     }
-    let mut killed = 0;
-    let mut modified = 0;
-    for id in ids {
-        // A modified buffer is left alone rather than losing the edit — emacs
-        // asks, and a `:` command has nobody to ask.
-        if cx
-            .editor
-            .documents
-            .get(&id)
-            .is_some_and(|doc| doc.is_modified())
-        {
-            modified += 1;
-            continue;
-        }
-        if cx.editor.close_document(id, false).is_ok() {
-            killed += 1;
-        }
-    }
+    let (killed, modified) = close_unmodified(cx.editor, ids);
     cx.editor.set_status(match modified {
         0 => format!("Killed {killed} project buffer(s)"),
         n => format!("Killed {killed} project buffer(s); {n} modified buffer(s) left open"),

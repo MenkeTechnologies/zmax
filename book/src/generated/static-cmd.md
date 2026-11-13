@@ -1824,6 +1824,8 @@
 | `run_send_eof` | Close the running Run console process's input so it reads end of file (JetBrains Send EOF) |  |
 | `toggle_essential_highlighting` | Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting) |  |
 | `project_tree_rename` | Rename the project tree's selected file or directory, open buffers following it (JetBrains tree Start Editing) |  |
+| `close_other_projects` | Close the buffers of files outside this project, modified ones left open (JetBrains Close Other Projects) |  |
+| `project_copy_path` | Copy a known project's path to the clipboard (JetBrains Copy Path on a recent project) |  |
 | `project_tree_exclude` | Keep the project tree's selected directory out of the file picker and project search (JetBrains Mark Directory as Excluded) |  |
 | `project_tree_unexclude` | Return the project tree's selected excluded directory to the file picker and project search (JetBrains Unmark as Excluded) |  |
 | `toggle_file_nesting` | Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting) |  |

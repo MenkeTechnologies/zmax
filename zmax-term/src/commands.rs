@@ -2217,6 +2217,8 @@ impl MappableCommand {
         run_send_eof, "Close the running Run console process's input so it reads end of file (JetBrains Send EOF)",
         toggle_essential_highlighting, "Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting)",
         project_tree_rename, "Rename the project tree's selected file or directory, open buffers following it (JetBrains tree Start Editing)",
+        close_other_projects, "Close the buffers of files outside this project, modified ones left open (JetBrains Close Other Projects)",
+        project_copy_path, "Copy a known project's path to the clipboard (JetBrains Copy Path on a recent project)",
         project_tree_exclude, "Keep the project tree's selected directory out of the file picker and project search (JetBrains Mark Directory as Excluded)",
         project_tree_unexclude, "Return the project tree's selected excluded directory to the file picker and project search (JetBrains Unmark as Excluded)",
         toggle_file_nesting, "Show generated and lock files under the files they belong to in the project tree (JetBrains File Nesting)",
@@ -60887,6 +60889,56 @@ pub(crate) fn expand_home(dir: &str) -> std::path::PathBuf {
             .unwrap_or_else(|| std::path::PathBuf::from(dir)),
         _ => std::path::PathBuf::from(dir),
     }
+}
+
+/// The buffers whose file lies outside `root` close, a modified one staying
+/// open; scratch buffers, having no file, stay too. Returns how many closed
+/// and how many were left for being modified. JetBrains "Close Other
+/// Projects" (`CloseOtherProjects`), where a project is a window: here one
+/// editor holds every project's buffers, so the other projects' buffers go.
+pub fn close_other_project_buffers(editor: &mut Editor, root: &Path) -> (usize, usize) {
+    let ids = editor
+        .documents()
+        .filter(|doc| doc.path().is_some_and(|path| !path.starts_with(root)))
+        .map(|doc| doc.id())
+        .collect();
+    crate::commands::projectile::close_unmodified(editor, ids)
+}
+
+fn close_other_projects(cx: &mut Context) {
+    let root = zmax_loader::find_workspace().0;
+    let (closed, modified) = close_other_project_buffers(cx.editor, &root);
+    cx.editor.set_status(match modified {
+        0 => format!("closed {closed} buffer(s) outside {}", root.display()),
+        n => format!(
+            "closed {closed} buffer(s) outside {}; {n} modified buffer(s) left open",
+            root.display()
+        ),
+    });
+}
+
+/// JetBrains "Copy Path" on a Welcome screen recent project
+/// (`WelcomeScreen.CopyProjectPath`): pick a known project, its root goes to
+/// the clipboard.
+fn project_copy_path(cx: &mut Context) {
+    if known_projects().is_empty() {
+        cx.editor.set_error("no known projects yet");
+        return;
+    }
+    ui::prompt(
+        cx,
+        "Copy project path: ".into(),
+        None,
+        known_project_completer,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let root = expand_home(input.trim()).to_string_lossy().into_owned();
+            let _ = cx.editor.registers.write('+', vec![root.clone()]);
+            cx.editor.set_status(format!("Yanked to clipboard: {root}"));
+        },
+    );
 }
 
 /// Emacs `project-forget-project` (`C-x p F`): remove a project from the
