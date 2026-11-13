@@ -247,6 +247,9 @@ pub struct Document {
     /// vim changelist: char positions of edits, oldest first. `g;`/`g,` walk it.
     /// Positions are remapped through edits (like marks) so they track their text.
     pub(crate) changelist: Vec<usize>,
+    /// JetBrains custom wraps (`EditorAddCustomWrap`): sorted char indices
+    /// the visual line breaks before, kept on their text through edits.
+    pub custom_wraps: Vec<usize>,
     /// Cursor into `changelist` for `g;`/`g,`. Equal to `changelist.len()` means
     /// "after the newest change", so the first `g;` steps back onto the last edit.
     pub(crate) changelist_idx: usize,
@@ -1493,6 +1496,7 @@ impl Document {
             code_action_hints: HashSet::new(),
             marks: HashMap::new(),
             changelist: Vec::new(),
+            custom_wraps: Vec::new(),
             changelist_idx: 0,
             narrow: None,
             last_visual: None,
@@ -2532,6 +2536,11 @@ impl Document {
         for pos in self.changelist.iter_mut() {
             *pos = transaction.changes().map_pos(*pos, Assoc::After);
         }
+        // And custom wraps; two that meet in deleted text become one.
+        for pos in self.custom_wraps.iter_mut() {
+            *pos = transaction.changes().map_pos(*pos, Assoc::After);
+        }
+        self.custom_wraps.dedup();
 
         // Keep the narrowing bounds pinned to their text so edits inside the region grow/shrink it.
         if let Some((start, end)) = self.narrow {
@@ -3977,6 +3986,7 @@ impl Document {
                 }
                 folded
             },
+            custom_wraps: self.custom_wraps.clone(),
         }
     }
 
@@ -4273,6 +4283,31 @@ mod test {
     use arc_swap::ArcSwap;
 
     use super::*;
+
+    #[test]
+    fn custom_wraps_stay_on_their_text_through_edits() {
+        let config = Arc::new(ArcSwap::from_pointee(Config::default()));
+        let mut doc = Document::from(
+            Rope::from("abcdef ghij\n"),
+            None,
+            config,
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let view = View::new(doc.id(), Default::default());
+        doc.ensure_view_init(view.id);
+        doc.custom_wraps = vec![3, 5, 8];
+        let insert = Transaction::insert(doc.text(), &Selection::point(0), "xy".into());
+        doc.apply(&insert, view.id);
+        assert_eq!(doc.custom_wraps, [5, 7, 10]);
+        assert_eq!(
+            doc.text_format(80, None, Some(view.id)).custom_wraps,
+            [5, 7, 10]
+        );
+        // Deleting "cdef" (chars 4..8) brings the first two together.
+        let delete = Transaction::change(doc.text(), [(4, 8, None)].into_iter());
+        doc.apply(&delete, view.id);
+        assert_eq!(doc.custom_wraps, [4, 6]);
+    }
 
     /// Essential highlighting: while the buffer has unsaved edits only its
     /// errors are shown, mapped through the edit; saving brings back the rest.

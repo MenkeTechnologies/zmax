@@ -18,6 +18,9 @@ fn app_with(text: &str, command: &str) -> anyhow::Result<Application> {
         "extend_to_block_end" => keymap!({ "Normal mode" "Z" => extend_to_block_end, }),
         "extend_to_window_bottom" => keymap!({ "Normal mode" "Z" => extend_to_window_bottom, }),
         "md_table_insert_row_below" => keymap!({ "Normal mode" "Z" => md_table_insert_row_below, }),
+        "custom_wrap" => {
+            keymap!({ "Normal mode" "Z" => add_custom_wrap, "Y" => remove_custom_wraps_at_caret, })
+        }
         "md_table_move_column_right" => {
             keymap!({ "Normal mode" "Z" => md_table_move_column_right, })
         }
@@ -1382,4 +1385,51 @@ async fn markdown_preview_follows_edits_layout_and_scroll() -> anyhow::Result<()
     let (_, back) = tops(&app);
     assert_eq!(back, "New\n");
     Ok(())
+}
+
+/// JetBrains Add Custom Wrap breaks the visual line at every cursor and
+/// leaves the text alone; one at a line start adds nothing. Remove Custom
+/// Wraps At Caret clears only the cursor's line.
+#[tokio::test(flavor = "multi_thread")]
+async fn custom_wraps_are_added_at_cursors_and_removed_by_line() -> anyhow::Result<()> {
+    let mut app = app_with("ab#[c|]#def\n#(g|)#h#(i|)#j\n", "custom_wrap")?;
+    let wraps = |app: &Application| app.editor.documents().next().unwrap().custom_wraps.clone();
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("Z"),
+                Some(&|app| {
+                    assert_eq!(wraps(app), [2, 9], "not at the start of line 2");
+                    assert_eq!("abcdef\nghij\n", text(app));
+                }),
+            ),
+            (Some("Z"), Some(&|app| assert_eq!(wraps(app), [2, 9]))),
+        ],
+        false,
+    )
+    .await?;
+
+    let mut app = app_with("ab#[c|]#def\nghij\n", "custom_wrap")?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("ZjZ"),
+                Some(&|app| {
+                    let w = wraps(app);
+                    assert!(w.len() == 2 && w[0] == 2 && w[1] > 7, "{w:?}");
+                }),
+            ),
+            (
+                Some("kY"),
+                Some(&|app| {
+                    let w = wraps(app);
+                    assert!(w.len() == 1 && w[0] > 7, "line 2 keeps its wrap: {w:?}");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await
 }

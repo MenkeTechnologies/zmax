@@ -2155,6 +2155,8 @@ impl MappableCommand {
         markdown_preview_side_by_side, "Show a live rendered preview of this Markdown buffer beside it (JetBrains Editor and Preview, Vertical Split)",
         markdown_preview_stacked, "Show a live rendered preview of this Markdown buffer below it (JetBrains Horizontal Split)",
         toggle_markdown_sync_scroll, "Keep Markdown previews scrolled with their source (JetBrains Sync Scroll)",
+        add_custom_wrap, "Break the visual line at each cursor without changing the text (JetBrains Add Custom Wrap)",
+        remove_custom_wraps_at_caret, "Remove the custom wraps on each cursor's line (JetBrains Remove Custom Wraps At Caret)",
         tool_window_next_group, "Focus the next bottom drawer column (JetBrains Go to Next Splitter)",
         tool_window_prev_group, "Focus the previous bottom drawer column (JetBrains Go to Previous Splitter)",
         documentation_jump_to_source, "Go to the declaration of the symbol the documentation shows (JetBrains Jump to Source)",
@@ -57231,6 +57233,54 @@ fn open_markdown_preview(cx: &mut Context, split: Action) {
         Ok(()) => cx.editor.set_status("Markdown preview follows this buffer"),
         Err(e) => cx.editor.set_error(e),
     }
+}
+
+/// JetBrains "Add Custom Wrap" (`EditorAddCustomWrap`): the visual line breaks
+/// before each cursor, as a soft wrap would, with soft wrap on or off; the
+/// text is unchanged. A cursor at a line start has nothing to break.
+fn add_custom_wrap(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursors: Vec<usize> = doc
+        .selection(view.id)
+        .iter()
+        .map(|range| range.cursor(text))
+        .filter(|&pos| text.line_to_char(text.char_to_line(pos)) != pos)
+        .collect();
+    let mut added = 0;
+    for pos in cursors {
+        if let Err(i) = doc.custom_wraps.binary_search(&pos) {
+            doc.custom_wraps.insert(i, pos);
+            added += 1;
+        }
+    }
+    cx.editor.set_status(match added {
+        0 => "no custom wrap added".to_string(),
+        1 => "custom wrap added".to_string(),
+        n => format!("{n} custom wraps added"),
+    });
+}
+
+/// JetBrains "Remove Custom Wraps At Caret" (`EditorRemoveCustomWrapsAtCaret`):
+/// every custom wrap on a cursor's line.
+fn remove_custom_wraps_at_caret(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    // A handle on the text, so the wraps can change while it is read.
+    let text = doc.text().clone();
+    let lines: Vec<usize> = doc
+        .selection(view.id)
+        .iter()
+        .map(|range| text.char_to_line(range.cursor(text.slice(..))))
+        .collect();
+    let before = doc.custom_wraps.len();
+    doc.custom_wraps
+        .retain(|&pos| !lines.contains(&text.char_to_line(pos.min(text.len_chars()))));
+    let removed = before - doc.custom_wraps.len();
+    cx.editor.set_status(match removed {
+        0 => "no custom wraps here".to_string(),
+        1 => "custom wrap removed".to_string(),
+        n => format!("{n} custom wraps removed"),
+    });
 }
 
 /// JetBrains Markdown "Sync Scroll" (`AutoScrollAction`).

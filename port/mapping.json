@@ -89456,5 +89456,21 @@
    "static:toggle_markdown_sync_scroll"
   ],
   "note": "AutoScrollAction (Sync Scroll, on by default) = zmax `toggle_markdown_sync_scroll`: previews scroll so the source's top line is rendered at their top, through a source-line to preview-line map from render_markdown_mapped; synced after each command, typed character and mouse-wheel scroll (markdown_preview.rs, ui/editor.rs wheel handler)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorAddCustomWrap",
+  "status": "ported",
+  "evidence": [
+   "static:add_custom_wrap"
+  ],
+  "note": "EditorAddCustomWrap (Add Custom Wrap) = zmax `add_custom_wrap`: the visual line breaks before each cursor without changing the text, with soft wrap on (behind the wrap indicator) or off. Wraps live in Document::custom_wraps, are mapped through every edit, and reach the renderer as TextFormat::custom_wraps, which DocumentFormatter honours (zmax-core/src/doc_formatter.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorRemoveCustomWrapsAtCaret",
+  "status": "partial",
+  "evidence": [
+   "static:remove_custom_wraps_at_caret"
+  ],
+  "note": "EditorRemoveCustomWrapsAtCaret = zmax `remove_custom_wraps_at_caret`: removes every custom wrap on each cursor's line. JetBrains documents neither custom-wrap action, so which wraps its version removes (the caret's line or only the wrap at the caret) is unverified."
  }
 ]

@@ -16,6 +16,7 @@ impl TextFormat {
             viewport_width: 17,
             soft_wrap_at_text_width: false,
             folded: Vec::new(),
+            custom_wraps: Vec::new(),
         }
     }
 }
@@ -77,6 +78,40 @@ fn fold_hides_inner_lines() {
     );
     // line0 and line3 are on adjacent visual rows (exactly one row break).
     assert_eq!(folded.matches('\n').count(), 2, "rows: {folded:?}");
+}
+
+fn custom_wrapped_text(text: &str, softwrap: bool, wraps: Vec<usize>) -> String {
+    let mut fmt = TextFormat::new_test(softwrap);
+    fmt.custom_wraps = wraps;
+    let annotations = TextAnnotations::default();
+    let res = DocumentFormatter::new_at_prev_checkpoint(text.into(), &fmt, &annotations, 0)
+        .collect_to_str();
+    res
+}
+
+#[test]
+fn custom_wraps_break_the_visual_line_before_their_char() {
+    // Without soft wrap: a plain break, no indicator.
+    assert_eq!(
+        custom_wrapped_text("abcdefgh\nij", false, vec![4]),
+        "abcd\nefgh \nij "
+    );
+    // With it: mid-word, behind the wrap indicator, and only once.
+    assert_eq!(
+        custom_wrapped_text("foo bar baz\n", true, vec![5]),
+        "foo b\n.ar baz \n "
+    );
+    assert_eq!(
+        custom_wrapped_text("foo bar baz\nqux\n", true, vec![4, 14]),
+        "foo \n.bar baz \nqu\n.x \n "
+    );
+    // At a line start there is nothing to break.
+    for softwrap in [false, true] {
+        assert_eq!(
+            custom_wrapped_text("ab\ncd", softwrap, vec![0, 3]),
+            "ab \ncd "
+        );
+    }
 }
 
 fn softwrap_text(text: &str) -> String {

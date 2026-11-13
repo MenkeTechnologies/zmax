@@ -105,6 +105,7 @@ impl InlineDiagnosticsConfig {
             viewport_width: width,
             soft_wrap_at_text_width: true,
             folded: Vec::new(),
+            custom_wraps: Vec::new(),
         }
     }
 }

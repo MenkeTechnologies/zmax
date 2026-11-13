@@ -166,6 +166,10 @@ pub struct TextFormat {
     /// formatter skips them so they neither render nor occupy visual rows.
     /// Empty in the common case (no folds) — zero overhead.
     pub folded: Vec<(usize, usize)>,
+    /// JetBrains custom wraps (`EditorAddCustomWrap`): sorted char indices
+    /// the visual line breaks before, with soft wrap on or off. One at the
+    /// start of a line adds nothing.
+    pub custom_wraps: Vec<usize>,
 }
 
 /// Apply vim `'breakindentopt'`'s `shift:` and `min:` to the indent a wrapped
@@ -236,6 +240,7 @@ impl Default for TextFormat {
             wrap_indicator_highlight: None,
             soft_wrap_at_text_width: false,
             folded: Vec::new(),
+            custom_wraps: Vec::new(),
         }
     }
 }
@@ -271,6 +276,8 @@ pub struct DocumentFormatter<'t> {
     word_buf: Vec<GraphemeWithSource<'t>>,
     /// The index of the next grapheme that will be yielded from the `word_buf`
     word_i: usize,
+    /// The char index the last custom wrap broke before, so it breaks once.
+    custom_wrapped: Option<usize>,
 }
 
 impl<'t> DocumentFormatter<'t> {
@@ -302,6 +309,7 @@ impl<'t> DocumentFormatter<'t> {
             peeked_grapheme: None,
             word_buf: Vec::with_capacity(64),
             word_i: 0,
+            custom_wrapped: None,
             line_pos: block_line_idx,
             inline_annotation_graphemes: None,
         }
@@ -425,6 +433,13 @@ impl<'t> DocumentFormatter<'t> {
         word_width
     }
 
+    /// Whether a custom wrap breaks the visual line before `char_pos` and
+    /// has not broken it yet.
+    fn custom_wrap_due(&self, char_pos: usize) -> bool {
+        self.custom_wrapped != Some(char_pos)
+            && self.text_fmt.custom_wraps.binary_search(&char_pos).is_ok()
+    }
+
     fn peek_grapheme(&mut self, col: usize, char_pos: usize) -> Option<&GraphemeWithSource<'t>> {
         if self.peeked_grapheme.is_none() {
             self.peeked_grapheme = self.advance_grapheme(col, char_pos);
@@ -447,8 +462,17 @@ impl<'t> DocumentFormatter<'t> {
         }
 
         loop {
-            let mut col = self.visual_pos.col + word_width;
             let char_pos = self.char_pos + word_chars;
+            if self.custom_wrap_due(char_pos) && self.visual_pos.col + word_width > 0 {
+                // The word so far stays on this row; the next one starts
+                // with the wrap.
+                if !self.word_buf.is_empty() {
+                    return;
+                }
+                self.custom_wrapped = Some(char_pos);
+                word_width = self.wrap_word();
+            }
+            let mut col = self.visual_pos.col + word_width;
             match col.cmp(&(self.text_fmt.viewport_width as usize)) {
                 // The EOF char and newline chars are always selectable in zmax. That means
                 // that wrapping happens "too-early" if a word fits a line perfectly. This
@@ -562,6 +586,16 @@ impl<'t> Iterator for DocumentFormatter<'t> {
             self.word_i += 1;
             grapheme
         } else {
+            if self.custom_wrap_due(self.char_pos) && self.visual_pos.col > 0 {
+                self.custom_wrapped = Some(self.char_pos);
+                let virtual_lines = self.annotations.virtual_lines_at(
+                    self.char_pos,
+                    self.visual_pos,
+                    self.line_pos,
+                );
+                self.visual_pos.row += 1 + virtual_lines;
+                self.visual_pos.col = 0;
+            }
             self.advance_grapheme(self.visual_pos.col, self.char_pos)?
         };
 
