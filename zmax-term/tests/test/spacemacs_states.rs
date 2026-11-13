@@ -738,8 +738,8 @@ async fn epub_read_renders_the_spine_as_text() -> anyhow::Result<()> {
     {
         let file = std::fs::File::create(&path)?;
         let mut zip = zip::ZipWriter::new(file);
-        let opts: zip::write::FileOptions<'_, ()> =
-            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
         zip.start_file("META-INF/container.xml", opts)?;
         zip.write_all(
             br#"<container><rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles></container>"#,
