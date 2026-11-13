@@ -89424,5 +89424,37 @@
    "typable:magit"
   ],
   "note": "Vcs.Log.ShowOnlyAffectedChanges = `a` in the zmax git log (`:magit`, then `l`), over the log's Paths filter (`F`, `git log -- <paths>`): the selected commit's diff (`Enter`/`d`, the `v` preview) and affected files (`f`) leave out its changes outside the filtered paths (MagitLog::diff_paths, ui/magit.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.TextEditorWithPreview.Layout.EditorAndPreview",
+  "status": "ported",
+  "evidence": [
+   "static:markdown_preview_side_by_side"
+  ],
+  "note": "TextEditorWithPreview.Layout.EditorAndPreview = zmax `markdown_preview_side_by_side`: the Markdown buffer stays focused with a rendered preview split beside it; the preview refuses edits and is rendered again after every command or typed character that changed the source (markdown_preview.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.TextEditorWithPreview.SplitVertically",
+  "status": "ported",
+  "evidence": [
+   "static:markdown_preview_side_by_side"
+  ],
+  "note": "TextEditorWithPreview.SplitVertically (Vertical Layout; JetBrains help: split vertically = side by side, the default) = zmax `markdown_preview_side_by_side`; an open preview moves to this layout instead of opening a second one."
+ },
+ {
+  "spec_id": "jetbrains-actions.TextEditorWithPreview.SplitHorizontally",
+  "status": "ported",
+  "evidence": [
+   "static:markdown_preview_stacked"
+  ],
+  "note": "TextEditorWithPreview.SplitHorizontally (Horizontal Layout: editor above preview) = zmax `markdown_preview_stacked`; an open preview moves to this layout instead of opening a second one."
+ },
+ {
+  "spec_id": "jetbrains-actions.org.intellij.plugins.markdown.ui.actions.scrolling.AutoScrollAction",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_markdown_sync_scroll"
+  ],
+  "note": "AutoScrollAction (Sync Scroll, on by default) = zmax `toggle_markdown_sync_scroll`: previews scroll so the source's top line is rendered at their top, through a source-line to preview-line map from render_markdown_mapped; synced after each command, typed character and mouse-wheel scroll (markdown_preview.rs, ui/editor.rs wheel handler)."
  }
 ]

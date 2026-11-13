@@ -2152,6 +2152,9 @@ impl MappableCommand {
         documentation_keep_tab, "Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation)",
         documentation_close_other_tabs, "Close every Documentation tool window tab but the shown one (JetBrains Close Other Tabs)",
         documentation_close_all_tabs, "Close every Documentation tool window tab (JetBrains Close All Tabs)",
+        markdown_preview_side_by_side, "Show a live rendered preview of this Markdown buffer beside it (JetBrains Editor and Preview, Vertical Split)",
+        markdown_preview_stacked, "Show a live rendered preview of this Markdown buffer below it (JetBrains Horizontal Split)",
+        toggle_markdown_sync_scroll, "Keep Markdown previews scrolled with their source (JetBrains Sync Scroll)",
         tool_window_next_group, "Focus the next bottom drawer column (JetBrains Go to Next Splitter)",
         tool_window_prev_group, "Focus the previous bottom drawer column (JetBrains Go to Previous Splitter)",
         documentation_jump_to_source, "Go to the declaration of the symbol the documentation shows (JetBrains Jump to Source)",
@@ -11398,9 +11401,20 @@ fn markdown_toc(text: &str) -> String {
 /// fenced block is passed through indented and unchanged — the rendering a
 /// reader wants and the IDE's rendered view shows.
 fn render_markdown(text: &str) -> String {
+    render_markdown_mapped(text).0
+}
+
+/// [`render_markdown`], with the rendered line each source line starts on
+/// (a fence marker, which renders as nothing, gets the line after it).
+pub(crate) fn render_markdown_mapped(text: &str) -> (String, Vec<usize>) {
     let mut out = String::new();
+    let mut starts = Vec::new();
+    let (mut rendered, mut counted) = (0, 0);
     let mut in_fence = false;
     for raw in text.lines() {
+        rendered += out[counted..].matches('\n').count();
+        counted = out.len();
+        starts.push(rendered);
         let line = raw.trim_end();
         let trimmed = line.trim_start();
         if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
@@ -11439,7 +11453,7 @@ fn render_markdown(text: &str) -> String {
         out.push_str(&body);
         out.push('\n');
     }
-    out
+    (out, starts)
 }
 
 /// One line of markdown with its inline markers resolved. Pure — unit tested.
@@ -57199,6 +57213,36 @@ fn documentation_close_all_tabs(cx: &mut Context) {
     with_ide_status(cx, |ide| Some(closed_tabs(ide.docs_close_tabs(false))));
 }
 
+/// JetBrains Markdown "Editor and Preview" with the vertical split
+/// (`TextEditorWithPreview.Layout.EditorAndPreview`,
+/// `TextEditorWithPreview.SplitVertically`): the preview beside the source.
+fn markdown_preview_side_by_side(cx: &mut Context) {
+    open_markdown_preview(cx, Action::VerticalSplit);
+}
+
+/// JetBrains "Split Horizontally" (`TextEditorWithPreview.SplitHorizontally`):
+/// the preview below the source.
+fn markdown_preview_stacked(cx: &mut Context) {
+    open_markdown_preview(cx, Action::HorizontalSplit);
+}
+
+fn open_markdown_preview(cx: &mut Context, split: Action) {
+    match crate::markdown_preview::open(cx.editor, split) {
+        Ok(()) => cx.editor.set_status("Markdown preview follows this buffer"),
+        Err(e) => cx.editor.set_error(e),
+    }
+}
+
+/// JetBrains Markdown "Sync Scroll" (`AutoScrollAction`).
+fn toggle_markdown_sync_scroll(cx: &mut Context) {
+    let on = crate::markdown_preview::toggle_sync_scroll(cx.editor);
+    cx.editor.set_status(if on {
+        "Markdown preview sync scroll on"
+    } else {
+        "Markdown preview sync scroll off"
+    });
+}
+
 /// JetBrains "Go to Next Splitter" (`TW.MoveToNextSplitter`): keyboard focus
 /// to the next tab group of the bottom drawer.
 fn tool_window_next_group(cx: &mut Context) {
@@ -72096,6 +72140,17 @@ mod insert_generator_tests {
         let dups = duplicate_blocks(&src, 3);
         assert_eq!(dups.len(), 1, "indentation does not hide a copy: {dups:?}");
         assert_eq!(dups[0].starts, vec![0, 4]);
+    }
+
+    #[test]
+    fn render_markdown_maps_each_source_line_to_where_it_renders() {
+        let src = "# Title\ntext\n```\ncode\n```\n- item\n";
+        let (out, starts) = super::render_markdown_mapped(src);
+        let lines: Vec<&str> = out.lines().collect();
+        assert_eq!(starts, [0, 2, 3, 3, 4, 4], "{lines:?}");
+        assert_eq!(lines[starts[1]], "text", "a heading takes two lines");
+        assert_eq!(lines[starts[3]], "    code");
+        assert_eq!(lines[starts[5]], "• item", "after a closing fence");
     }
 
     #[test]

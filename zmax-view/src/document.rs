@@ -174,6 +174,19 @@ const SELECTION_HISTORY_LEN: usize = 256;
 /// is attempted; `readonly` only guards the write — see [`E45_READONLY`].
 pub const E21_NOT_MODIFIABLE: &str = "E21: Cannot make changes, 'modifiable' is off";
 
+/// A preview buffer's link to the buffer it renders ([`Document::preview_of`]).
+#[derive(Debug, Clone)]
+pub struct PreviewOf {
+    pub source: DocumentId,
+    /// The source's version when the preview was last rendered.
+    pub version: i32,
+    /// For each source line, the preview line its rendering starts on.
+    pub line_starts: Vec<usize>,
+    /// The preview line last scrolled to the top, so an unmoved source does
+    /// not keep resetting the preview's scroll.
+    pub top: Option<usize>,
+}
+
 /// vim's error for `:w` on a read-only buffer. `:w!` overrides it, and — unless
 /// `cpoptions` has `Z` — clears the flag on the way through.
 pub const E45_READONLY: &str = "E45: 'readonly' option is set (add ! to override)";
@@ -431,6 +444,11 @@ pub struct Document {
     /// vim `'buflisted'`: false keeps the buffer out of `:ls`, the buffer
     /// picker and sessions (`:set nobuflisted`, help buffers).
     pub listed: bool,
+
+    /// Set on a rendered preview of another buffer (JetBrains Markdown
+    /// "Editor and Preview"): which buffer, and how far the preview has
+    /// caught up with it. zmax-term renders and scrolls the preview.
+    pub preview_of: Option<PreviewOf>,
 
     pub is_binary: bool,
 
@@ -1461,6 +1479,7 @@ impl Document {
             readonly: false,
             modifiable: true,
             listed: true,
+            preview_of: None,
             is_binary: false,
             jump_labels: HashMap::new(),
             conceal_overlays: Vec::new(),

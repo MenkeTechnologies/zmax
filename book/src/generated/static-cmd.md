@@ -1759,6 +1759,9 @@
 | `documentation_keep_tab` | Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation) |  |
 | `documentation_close_other_tabs` | Close every Documentation tool window tab but the shown one (JetBrains Close Other Tabs) |  |
 | `documentation_close_all_tabs` | Close every Documentation tool window tab (JetBrains Close All Tabs) |  |
+| `markdown_preview_side_by_side` | Show a live rendered preview of this Markdown buffer beside it (JetBrains Editor and Preview, Vertical Split) |  |
+| `markdown_preview_stacked` | Show a live rendered preview of this Markdown buffer below it (JetBrains Horizontal Split) |  |
+| `toggle_markdown_sync_scroll` | Keep Markdown previews scrolled with their source (JetBrains Sync Scroll) |  |
 | `tool_window_next_group` | Focus the next bottom drawer column (JetBrains Go to Next Splitter) |  |
 | `tool_window_prev_group` | Focus the previous bottom drawer column (JetBrains Go to Previous Splitter) |  |
 | `documentation_jump_to_source` | Go to the declaration of the symbol the documentation shows (JetBrains Jump to Source) |  |

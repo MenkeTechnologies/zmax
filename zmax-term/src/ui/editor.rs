@@ -5717,6 +5717,8 @@ impl EditorView {
 
                 cxt.editor.tree.focus = current_view;
                 cxt.editor.ensure_cursor_in_view(current_view);
+                // The wheel runs no command, so Markdown previews follow it here.
+                crate::markdown_preview::sync(cxt.editor);
 
                 EventResult::Consumed(None)
             }

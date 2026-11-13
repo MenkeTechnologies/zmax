@@ -73,6 +73,7 @@ pub mod line_bookmarks;
 pub mod live_diff;
 pub mod local_history;
 pub mod logging;
+pub mod markdown_preview;
 pub mod md_table;
 pub mod numbered_bookmarks;
 pub mod parinfer;

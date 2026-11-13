@@ -1277,3 +1277,109 @@ async fn closing_other_projects_keeps_this_project_and_unsaved_edits() -> anyhow
     assert_eq!(open, want);
     Ok(())
 }
+
+/// JetBrains Markdown Editor and Preview: the preview opens beside the source
+/// without taking focus, follows its edits, refuses its own, moves to the
+/// other layout rather than opening twice, and with Sync Scroll keeps the
+/// source's top line at its own top.
+#[tokio::test(flavor = "multi_thread")]
+async fn markdown_preview_follows_edits_layout_and_scroll() -> anyhow::Result<()> {
+    use zmax_term::markdown_preview::{open, sync, toggle_sync_scroll};
+    use zmax_view::editor::Action;
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("notes.md");
+    let mut src = String::from("# Title\n");
+    // Taller than the 150-row test terminal, so the source has to scroll.
+    for i in 0..400 {
+        src.push_str(&format!("line {i}\n"));
+    }
+    std::fs::write(&path, &src)?;
+    let mut app = AppBuilder::new().with_file(&path, None).build()?;
+    let source_view = app.editor.tree.focus;
+
+    open(&mut app.editor, Action::VerticalSplit).map_err(anyhow::Error::msg)?;
+    assert_eq!(app.editor.tree.focus, source_view, "the source keeps focus");
+    assert_eq!(app.editor.tree.views().count(), 2);
+    let preview = app
+        .editor
+        .documents()
+        .find(|d| d.preview_of.is_some())
+        .map(|d| d.id())
+        .unwrap();
+    let preview_text = |app: &Application| app.editor.document(preview).unwrap().text().to_string();
+    assert!(preview_text(&app).starts_with("Title\n=====\nline 0\n"));
+
+    {
+        let (view, doc) = zmax_view::current!(app.editor);
+        let edit = zmax_core::Transaction::change(
+            doc.text(),
+            [(0, 0, Some("# New\n".into()))].into_iter(),
+        );
+        doc.apply(&edit, view.id);
+    }
+    sync(&mut app.editor);
+    assert!(preview_text(&app).starts_with("New\n===\nTitle\n=====\nline 0\n"));
+    assert!(
+        !app.editor.document(preview).unwrap().modifiable,
+        "edits go to the source"
+    );
+
+    open(&mut app.editor, Action::HorizontalSplit).map_err(anyhow::Error::msg)?;
+    assert_eq!(
+        app.editor.tree.views().count(),
+        2,
+        "moved, not opened twice"
+    );
+    assert_eq!(
+        app.editor
+            .documents()
+            .filter(|d| d.preview_of.is_some())
+            .count(),
+        1
+    );
+
+    // The source's top line, wherever the cursor leaves it, and the preview
+    // line the same source line renders on.
+    let tops = |app: &Application| {
+        let source = app.editor.tree.get(source_view).doc;
+        let doc = app.editor.document(source).unwrap();
+        let line = doc.text().char_to_line(doc.view_offset(source_view).anchor);
+        let preview_view = app
+            .editor
+            .tree
+            .views()
+            .find(|(v, _)| v.doc == preview)
+            .unwrap()
+            .0
+            .id;
+        let pdoc = app.editor.document(preview).unwrap();
+        let shown = pdoc
+            .text()
+            .char_to_line(pdoc.view_offset(preview_view).anchor);
+        (line, pdoc.text().line(shown).to_string())
+    };
+    let goto = |app: &mut Application, line: usize| {
+        let (view, doc) = zmax_view::current!(app.editor);
+        let pos = doc.text().line_to_char(line);
+        doc.set_selection(view.id, zmax_core::Selection::point(pos));
+    };
+    goto(&mut app, 300);
+    sync(&mut app.editor);
+    let (top, shown) = tops(&app);
+    assert!(top > 2, "the source scrolled");
+    assert_eq!(shown, format!("line {}\n", top - 2), "source line {top}");
+
+    assert!(!toggle_sync_scroll(&mut app.editor));
+    goto(&mut app, 0);
+    sync(&mut app.editor);
+    let (top_now, still) = tops(&app);
+    assert_eq!(top_now, 0);
+    assert_eq!(
+        still, shown,
+        "Sync Scroll off leaves the preview where it was"
+    );
+    assert!(toggle_sync_scroll(&mut app.editor));
+    let (_, back) = tops(&app);
+    assert_eq!(back, "New\n");
+    Ok(())
+}
