@@ -89360,5 +89360,21 @@
    "static:project_tree_unexclude"
   ],
   "note": "MarkAsContentRoot (\"Cancel exclusion for the selected directory to make its files processable\") = zmax `project_tree_unexclude`: the directory's `.zmax/ignore` line goes (excluded_dirs::include) and its files return to the file picker and project search."
+ },
+ {
+  "spec_id": "jetbrains-actions.TW.CloseOtherTabs",
+  "status": "partial",
+  "evidence": [
+   "static:documentation_close_other_tabs"
+  ],
+  "note": "TW.CloseOtherTabs = zmax `documentation_close_other_tabs` (and `o` in the Documentation tool window): every Documentation tab but the shown one closes, the shown tab keeping its history (Ide::docs_close_tabs, ui/ide.rs). Partial: the Documentation window is the only zmax tool window that holds tabs, so other tool windows have nothing to close."
+ },
+ {
+  "spec_id": "jetbrains-actions.TW.CloseAllTabs",
+  "status": "partial",
+  "evidence": [
+   "static:documentation_close_all_tabs"
+  ],
+  "note": "TW.CloseAllTabs = zmax `documentation_close_all_tabs` (and `X` in the Documentation tool window): every Documentation tab closes and the next lookup opens a fresh one (Ide::docs_close_tabs, ui/ide.rs). Partial: the Documentation window is the only zmax tool window that holds tabs."
  }
 ]

@@ -2316,6 +2316,22 @@ impl Ide {
         }
     }
 
+    /// JetBrains "Close Other Tabs" (`TW.CloseOtherTabs`, `others` true) and
+    /// "Close All Tabs" (`TW.CloseAllTabs`) in the Documentation tool window,
+    /// the one tool window here that holds tabs. Returns how many closed.
+    pub fn docs_close_tabs(&mut self, others: bool) -> usize {
+        let before = self.docs_tabs.len();
+        if others && self.docs_tab < before {
+            self.docs_tabs.swap(0, self.docs_tab);
+            self.docs_tabs.truncate(1);
+        } else {
+            self.docs_tabs.clear();
+        }
+        self.docs_tab = 0;
+        self.docs_scroll = 0;
+        before - self.docs_tabs.len()
+    }
+
     /// What opening Bookmarks row `idx` does; a list header opens nothing.
     fn bookmark_row_action(&self, idx: usize) -> IdeAction {
         match self.bookmark_rows.get(idx) {
@@ -2615,7 +2631,8 @@ impl Ide {
             return IdeAction::None;
         }
         // Documentation: j/k scroll, b/f back and forward, p keeps the tab,
-        // Tab moves between tabs, x closes one, Enter jumps to the source.
+        // Tab moves between tabs, x closes one, o the others, X all of them,
+        // Enter jumps to the source.
         if !structure && self.bottom_tab == BottomTab::Docs {
             match key.code {
                 KeyCode::Char('j') | KeyCode::Down => self.docs_scroll += 1,
@@ -2640,6 +2657,12 @@ impl Ide {
                     self.docs_tabs.remove(self.docs_tab);
                     self.docs_tab = self.docs_tab.min(self.docs_tabs.len().saturating_sub(1));
                     self.docs_scroll = 0;
+                }
+                KeyCode::Char('o') => {
+                    self.docs_close_tabs(true);
+                }
+                KeyCode::Char('X') => {
+                    self.docs_close_tabs(false);
                 }
                 KeyCode::Enter => {
                     if let Some((path, line, col)) =
@@ -3659,6 +3682,7 @@ impl Ide {
                     BottomTab::Registers => " ↵ paste register · [ ] tabs ",
                     BottomTab::Problems => " ↵ jump · [ ] tabs ",
                     BottomTab::Harpoon => " ↵ open · K/J move · [ ] tabs ",
+                    BottomTab::Docs => " ↵ source · b/f back/fwd · p keep · Tab next · x close · o others · X all ",
                     _ => " ↵ open · [ ] tabs ",
                 };
                 let maxw = (w / 2).saturating_sub(2);
@@ -6749,6 +6773,22 @@ mod parse_tests {
         ide.show_documentation(entry("d"), loader.clone(), true);
         assert_eq!(Some("d".into()), shown(&ide));
         assert!(!ide.docs_step(false), "d is alone in a new tab");
+
+        // Close Other Tabs keeps the shown one, history and all.
+        assert!(ide.docs_keep_tab());
+        ide.show_documentation(entry("e"), loader.clone(), true);
+        ide.docs_tab = 1;
+        assert_eq!(Some("d".into()), shown(&ide));
+        assert_eq!(2, ide.docs_close_tabs(true));
+        assert_eq!(Some("d".into()), shown(&ide));
+        assert!(ide.docs_keep_tab(), "still a tab with something shown");
+        assert_eq!(0, ide.docs_close_tabs(true));
+        // Close All Tabs empties the window; the next lookup starts afresh.
+        assert_eq!(1, ide.docs_close_tabs(false));
+        assert_eq!(None, shown(&ide));
+        ide.show_documentation(entry("f"), loader.clone(), true);
+        assert_eq!(Some("f".into()), shown(&ide));
+        assert!(!ide.docs_step(false));
     }
 
     /// Folders Always on Top: at the first place two paths differ, the one

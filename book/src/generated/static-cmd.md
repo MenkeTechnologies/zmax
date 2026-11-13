@@ -1757,6 +1757,8 @@
 | `documentation_back` | Show the previous lookup in the Documentation tool window (JetBrains Back) |  |
 | `documentation_forward` | Show the next lookup in the Documentation tool window (JetBrains Forward) |  |
 | `documentation_keep_tab` | Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation) |  |
+| `documentation_close_other_tabs` | Close every Documentation tool window tab but the shown one (JetBrains Close Other Tabs) |  |
+| `documentation_close_all_tabs` | Close every Documentation tool window tab (JetBrains Close All Tabs) |  |
 | `documentation_jump_to_source` | Go to the declaration of the symbol the documentation shows (JetBrains Jump to Source) |  |
 | `toggle_documentation_popup_first` | Show Quick Documentation in the popup, or in the Documentation tool window (JetBrains Show Documentation Popup First) |  |
 | `toggle_documentation_auto_update` | Make the Documentation tool window follow the caret (JetBrains Auto-Update from Source) |  |
