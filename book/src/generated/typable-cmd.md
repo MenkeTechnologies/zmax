@@ -895,6 +895,8 @@
 | `:hunk-prev`, `:prev-hunk` | Move the cursor to the previous git hunk. |
 | `:conflict-ours`, `:diffget-ours`, `:conflict-keep-ours` | Resolve the merge conflict at the cursor by keeping OUR side (HEAD). |
 | `:conflict-theirs`, `:diffget-theirs`, `:conflict-keep-theirs` | Resolve the merge conflict at the cursor by keeping THEIR side (incoming). |
+| `:conflict-accept-yours` | Take our version of the whole conflicted file and mark it resolved (JetBrains Accept Yours). |
+| `:conflict-accept-theirs` | Take their version of the whole conflicted file and mark it resolved (JetBrains Accept Theirs). |
 | `:conflict-both`, `:conflict-keep-both` | Resolve the merge conflict at the cursor by keeping BOTH sides. |
 | `:coverage-import` | Mark lines run and not run in the gutter from an LCOV tracefile (JetBrains Import Coverage). |
 | `:coverage-html` | Write the shown coverage report as HTML to <dir>/index.html (JetBrains Generate Coverage Report). |

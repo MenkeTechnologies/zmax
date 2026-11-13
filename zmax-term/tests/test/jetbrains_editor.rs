@@ -1433,3 +1433,36 @@ async fn custom_wraps_are_added_at_cursors_and_removed_by_line() -> anyhow::Resu
     )
     .await
 }
+
+/// JetBrains Preview Only puts the live preview in the Markdown buffer's own
+/// view, still following the buffer; Editor Only brings the buffer back.
+#[tokio::test(flavor = "multi_thread")]
+async fn markdown_preview_only_and_back_to_the_editor() -> anyhow::Result<()> {
+    use zmax_term::markdown_preview::{open, show_source, sync};
+    use zmax_view::editor::Action;
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("notes.md");
+    std::fs::write(&path, "# Title\nbody\n")?;
+    let mut app = AppBuilder::new().with_file(&path, None).build()?;
+    let view = app.editor.tree.focus;
+    let source = app.editor.tree.get(view).doc;
+
+    assert!(show_source(&mut app.editor).is_err(), "not a preview");
+    open(&mut app.editor, Action::Replace).map_err(anyhow::Error::msg)?;
+    assert_eq!(app.editor.tree.views().count(), 1);
+    let preview = app.editor.tree.get(view).doc;
+    assert_ne!(preview, source);
+    let shown = |app: &Application| app.editor.document(preview).unwrap().text().to_string();
+    assert_eq!(shown(&app), "Title\n=====\nbody\n");
+
+    let doc = app.editor.document_mut(source).unwrap();
+    let edit =
+        zmax_core::Transaction::change(doc.text(), [(8, 12, Some("text".into()))].into_iter());
+    doc.apply(&edit, view);
+    sync(&mut app.editor);
+    assert_eq!(shown(&app), "Title\n=====\ntext\n", "still live");
+
+    show_source(&mut app.editor).map_err(anyhow::Error::msg)?;
+    assert_eq!(app.editor.tree.get(view).doc, source);
+    Ok(())
+}

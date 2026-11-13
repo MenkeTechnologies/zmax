@@ -80204,19 +80204,19 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.ChangesView.AcceptTheirs",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:conflict-theirs"
+   "typable:conflict-accept-theirs"
   ],
-  "note": "Git.ChangesView.AcceptTheirs (Git.ChangesView.AcceptTheirs) = zmax `:conflict-theirs`: keeps the incoming side of the conflict at the cursor; JetBrains resolves the whole file with theirs."
+  "note": "Git.ChangesView.AcceptTheirs (Accept Theirs; JetBrains help: accepts the changes from the branch being merged and discards the checked-out branch's) = zmax `:conflict-accept-theirs`: the buffer's file becomes git's --theirs version whole (`git checkout --theirs`), is marked resolved (`git add`) and reloaded; refused for a file git does not list as unmerged (accept_conflict_side, commands/typed.rs)."
  },
  {
   "spec_id": "jetbrains-actions.Git.ChangesView.AcceptYours",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:conflict-ours"
+   "typable:conflict-accept-yours"
   ],
-  "note": "Git.ChangesView.AcceptYours (Git.ChangesView.AcceptYours) = zmax `:conflict-ours`: keeps our side of the conflict at the cursor; JetBrains resolves the whole file with yours."
+  "note": "Git.ChangesView.AcceptYours (Accept Yours; JetBrains help: keeps the checked-out branch's changes and discards the merged branch's) = zmax `:conflict-accept-yours`: the buffer's file becomes git's --ours version whole (`git checkout --ours`), is marked resolved (`git add`) and reloaded; refused for a file git does not list as unmerged (accept_conflict_side, commands/typed.rs)."
  },
  {
   "spec_id": "jetbrains-actions.Git.ChangesView.Merge",
@@ -86813,11 +86813,11 @@
  },
  {
   "spec_id": "jetbrains-actions.TextEditorWithPreview.Layout.PreviewOnly",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:toggle_rendered_view"
+   "static:markdown_preview_only"
   ],
-  "note": "TextEditorWithPreview.Layout.PreviewOnly (Preview Only) = zmax `toggle_rendered_view`: replaces the view with the markdown rendered as text in a scratch (commands.rs:11242); the render is a snapshot, not a live preview of further edits."
+  "note": "TextEditorWithPreview.Layout.PreviewOnly (Preview Only) = zmax `markdown_preview_only`: the Markdown buffer's view shows its live rendered preview instead, still rendered again whenever the buffer changes (markdown_preview.rs); `markdown_editor_only` from the preview brings the buffer back."
  },
  {
   "spec_id": "jetbrains-actions.TogglePresentationAssistantAction",

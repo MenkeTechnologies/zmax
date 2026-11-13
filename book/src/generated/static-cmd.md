@@ -1762,6 +1762,8 @@
 | `markdown_preview_side_by_side` | Show a live rendered preview of this Markdown buffer beside it (JetBrains Editor and Preview, Vertical Split) |  |
 | `markdown_preview_stacked` | Show a live rendered preview of this Markdown buffer below it (JetBrains Horizontal Split) |  |
 | `toggle_markdown_sync_scroll` | Keep Markdown previews scrolled with their source (JetBrains Sync Scroll) |  |
+| `markdown_preview_only` | Show this Markdown buffer's live rendered preview in its place (JetBrains Preview Only) |  |
+| `markdown_editor_only` | Show a Markdown preview's buffer in its place again (JetBrains Editor Only) |  |
 | `add_custom_wrap` | Break the visual line at each cursor without changing the text (JetBrains Add Custom Wrap) |  |
 | `remove_custom_wraps_at_caret` | Remove the custom wraps on each cursor's line (JetBrains Remove Custom Wraps At Caret) |  |
 | `tool_window_next_group` | Focus the next bottom drawer column (JetBrains Go to Next Splitter) |  |

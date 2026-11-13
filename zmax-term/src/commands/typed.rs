@@ -9297,6 +9297,139 @@ fn conflict_both(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyh
     Ok(())
 }
 
+/// JetBrains Conflicts "Accept Yours" / "Accept Theirs"
+/// (`Git.ChangesView.AcceptYours`, `Git.ChangesView.AcceptTheirs`): the
+/// buffer's conflicted file becomes git's `--ours` or `--theirs` version
+/// whole, discarding the other side's changes, is marked resolved
+/// (`git add`), and the buffer is read again.
+fn conflict_accept_side(cx: &mut compositor::Context, side: &str) -> anyhow::Result<()> {
+    let doc = doc!(cx.editor);
+    let path = doc.path().context("the buffer has no file")?.to_path_buf();
+    if doc.is_modified() {
+        bail!("save or discard the buffer's edits first");
+    }
+    accept_conflict_side(&path, side)?;
+    reload_docs_for_paths(cx.editor, std::slice::from_ref(&path));
+    cx.editor.set_status(format!(
+        "{} resolved with {side} version",
+        path.file_name().unwrap_or_default().to_string_lossy()
+    ));
+    Ok(())
+}
+
+/// `git checkout --<side> -- <path>` then `git add -- <path>`, run where the
+/// file is. Refused, changing nothing, unless git lists the file as unmerged:
+/// on a merged file `checkout --ours` would copy the index over the work
+/// tree instead.
+pub(crate) fn accept_conflict_side(path: &std::path::Path, side: &str) -> anyhow::Result<()> {
+    let dir = path.parent().context("the file has no directory")?;
+    let name = path.file_name().context("not a file")?;
+    let unmerged = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["ls-files", "--unmerged", "--"])
+        .arg(name)
+        .output()
+        .context("git")?;
+    if !unmerged.status.success() || unmerged.stdout.is_empty() {
+        bail!("{} has no merge conflict", name.to_string_lossy());
+    }
+    let checkout = format!("--{side}");
+    for args in [
+        vec![
+            std::ffi::OsStr::new("checkout"),
+            checkout.as_ref(),
+            "--".as_ref(),
+            name,
+        ],
+        vec!["add".as_ref(), "--".as_ref(), name],
+    ] {
+        let out = std::process::Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(&args)
+            .output()
+            .context("git")?;
+        if !out.status.success() {
+            bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
+        }
+    }
+    Ok(())
+}
+
+fn conflict_accept_yours(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e == PromptEvent::Validate {
+        conflict_accept_side(cx, "ours")?;
+    }
+    Ok(())
+}
+
+fn conflict_accept_theirs(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e == PromptEvent::Validate {
+        conflict_accept_side(cx, "theirs")?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod accept_conflict_side_tests {
+    use super::accept_conflict_side;
+    use std::process::Command;
+
+    #[test]
+    fn a_side_replaces_the_whole_file_and_resolves_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+        };
+        let write = |text: &str| std::fs::write(dir.path().join("f.txt"), text).unwrap();
+        git(&["init", "-q", "-b", "main"]);
+        write("a\nb\nc\n");
+        git(&["add", "f.txt"]);
+        git(&["commit", "-q", "-m", "base"]);
+        git(&["checkout", "-q", "-b", "side"]);
+        write("a\nB-side\nc\n");
+        git(&["commit", "-q", "-am", "side"]);
+        git(&["checkout", "-q", "main"]);
+        // Two changes on main: one conflicting, one not.
+        write("A-main\nB-main\nc\n");
+        git(&["commit", "-q", "-am", "main"]);
+        assert!(
+            !git(&["merge", "-q", "side"]).status.success(),
+            "a conflict"
+        );
+
+        let path = dir.path().join("f.txt");
+        accept_conflict_side(&path, "theirs").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "a\nB-side\nc\n",
+            "main's other change goes too"
+        );
+        let unmerged = git(&["diff", "--name-only", "--diff-filter=U"]);
+        assert!(unmerged.stdout.is_empty(), "resolved");
+
+        // A file with no conflict is refused and keeps its unstaged edit.
+        std::fs::write(&path, "edited\n").unwrap();
+        assert!(accept_conflict_side(&path, "ours").is_err());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "edited\n");
+    }
+}
+
 /// Jump to the next/previous `<<<<<<<` conflict marker.
 fn conflict_goto(cx: &mut compositor::Context, forward: bool) -> anyhow::Result<()> {
     let target: Option<usize> = {
@@ -61933,6 +62066,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["diffget-theirs", "conflict-keep-theirs"],
         doc: "Resolve the merge conflict at the cursor by keeping THEIR side (incoming).",
         fun: conflict_theirs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "conflict-accept-yours",
+        aliases: &[],
+        doc: "Take our version of the whole conflicted file and mark it resolved (JetBrains Accept Yours).",
+        fun: conflict_accept_yours,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "conflict-accept-theirs",
+        aliases: &[],
+        doc: "Take their version of the whole conflicted file and mark it resolved (JetBrains Accept Theirs).",
+        fun: conflict_accept_theirs,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

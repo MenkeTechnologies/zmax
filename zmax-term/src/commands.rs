@@ -2155,6 +2155,8 @@ impl MappableCommand {
         markdown_preview_side_by_side, "Show a live rendered preview of this Markdown buffer beside it (JetBrains Editor and Preview, Vertical Split)",
         markdown_preview_stacked, "Show a live rendered preview of this Markdown buffer below it (JetBrains Horizontal Split)",
         toggle_markdown_sync_scroll, "Keep Markdown previews scrolled with their source (JetBrains Sync Scroll)",
+        markdown_preview_only, "Show this Markdown buffer's live rendered preview in its place (JetBrains Preview Only)",
+        markdown_editor_only, "Show a Markdown preview's buffer in its place again (JetBrains Editor Only)",
         add_custom_wrap, "Break the visual line at each cursor without changing the text (JetBrains Add Custom Wrap)",
         remove_custom_wraps_at_caret, "Remove the custom wraps on each cursor's line (JetBrains Remove Custom Wraps At Caret)",
         tool_window_next_group, "Focus the next bottom drawer column (JetBrains Go to Next Splitter)",
@@ -57226,6 +57228,20 @@ fn markdown_preview_side_by_side(cx: &mut Context) {
 /// the preview below the source.
 fn markdown_preview_stacked(cx: &mut Context) {
     open_markdown_preview(cx, Action::HorizontalSplit);
+}
+
+/// JetBrains "Preview Only" (`TextEditorWithPreview.Layout.PreviewOnly`): the
+/// live preview takes the Markdown buffer's view.
+fn markdown_preview_only(cx: &mut Context) {
+    open_markdown_preview(cx, Action::Replace);
+}
+
+/// JetBrains "Editor Only" (`TextEditorWithPreview.Layout.EditorOnly`) from a
+/// preview.
+fn markdown_editor_only(cx: &mut Context) {
+    if let Err(e) = crate::markdown_preview::show_source(cx.editor) {
+        cx.editor.set_error(e);
+    }
 }
 
 fn open_markdown_preview(cx: &mut Context, split: Action) {

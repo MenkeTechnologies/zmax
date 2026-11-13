@@ -40,7 +40,8 @@ fn views_of(editor: &Editor, doc: DocumentId) -> Vec<ViewId> {
 
 /// Show a preview of the focused Markdown buffer in a `split` of its view
 /// (`Action::VerticalSplit` beside it, `Action::HorizontalSplit` below it),
-/// keeping the source focused. A preview it already has moves to the new
+/// keeping the source focused, or in the view itself (`Action::Replace`,
+/// JetBrains "Preview Only"). A preview it already has moves to the new
 /// layout rather than being opened twice.
 pub fn open(editor: &mut Editor, split: Action) -> Result<(), &'static str> {
     let source_view = editor.tree.focus;
@@ -87,6 +88,20 @@ pub fn open(editor: &mut Editor, split: Action) -> Result<(), &'static str> {
     }
     editor.focus(source_view);
     sync(editor);
+    Ok(())
+}
+
+/// JetBrains "Editor Only" (`TextEditorWithPreview.Layout.EditorOnly`) from a
+/// preview: its view shows the Markdown buffer again.
+pub fn show_source(editor: &mut Editor) -> Result<(), &'static str> {
+    let view = editor.tree.focus;
+    let doc = editor.tree.get(view).doc;
+    let source = editor
+        .document(doc)
+        .and_then(|d| d.preview_of.as_ref())
+        .map(|link| link.source)
+        .ok_or("not a Markdown preview")?;
+    editor.switch(source, Action::Replace);
     Ok(())
 }
 
