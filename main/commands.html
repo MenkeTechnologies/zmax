@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-3d32e174.js";
+            window.path_to_searchindex_js = "searchindex-34edc900.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -1090,6 +1090,8 @@
 <tr><td><code>:hunk-prev</code>, <code>:prev-hunk</code></td><td>Move the cursor to the previous git hunk.</td></tr>
 <tr><td><code>:conflict-ours</code>, <code>:diffget-ours</code>, <code>:conflict-keep-ours</code></td><td>Resolve the merge conflict at the cursor by keeping OUR side (HEAD).</td></tr>
 <tr><td><code>:conflict-theirs</code>, <code>:diffget-theirs</code>, <code>:conflict-keep-theirs</code></td><td>Resolve the merge conflict at the cursor by keeping THEIR side (incoming).</td></tr>
+<tr><td><code>:conflict-accept-yours</code></td><td>Take our version of the whole conflicted file and mark it resolved (JetBrains Accept Yours).</td></tr>
+<tr><td><code>:conflict-accept-theirs</code></td><td>Take their version of the whole conflicted file and mark it resolved (JetBrains Accept Theirs).</td></tr>
 <tr><td><code>:conflict-both</code>, <code>:conflict-keep-both</code></td><td>Resolve the merge conflict at the cursor by keeping BOTH sides.</td></tr>
 <tr><td><code>:coverage-import</code></td><td>Mark lines run and not run in the gutter from an LCOV tracefile (JetBrains Import Coverage).</td></tr>
 <tr><td><code>:coverage-html</code></td><td>Write the shown coverage report as HTML to <dir>/index.html (JetBrains Generate Coverage Report).</dir></td></tr>
@@ -3938,6 +3940,8 @@
 <tr><td><code>markdown_preview_side_by_side</code></td><td>Show a live rendered preview of this Markdown buffer beside it (JetBrains Editor and Preview, Vertical Split)</td><td></td></tr>
 <tr><td><code>markdown_preview_stacked</code></td><td>Show a live rendered preview of this Markdown buffer below it (JetBrains Horizontal Split)</td><td></td></tr>
 <tr><td><code>toggle_markdown_sync_scroll</code></td><td>Keep Markdown previews scrolled with their source (JetBrains Sync Scroll)</td><td></td></tr>
+<tr><td><code>markdown_preview_only</code></td><td>Show this Markdown buffer’s live rendered preview in its place (JetBrains Preview Only)</td><td></td></tr>
+<tr><td><code>markdown_editor_only</code></td><td>Show a Markdown preview’s buffer in its place again (JetBrains Editor Only)</td><td></td></tr>
 <tr><td><code>add_custom_wrap</code></td><td>Break the visual line at each cursor without changing the text (JetBrains Add Custom Wrap)</td><td></td></tr>
 <tr><td><code>remove_custom_wraps_at_caret</code></td><td>Remove the custom wraps on each cursor’s line (JetBrains Remove Custom Wraps At Caret)</td><td></td></tr>
 <tr><td><code>tool_window_next_group</code></td><td>Focus the next bottom drawer column (JetBrains Go to Next Splitter)</td><td></td></tr>
