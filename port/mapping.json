@@ -89400,5 +89400,29 @@
    "static:toggle_preview_soft_wrap"
   ],
   "note": "EditorToggleUseSoftWrapsInPreview = zmax `toggle_preview_soft_wrap`: flips `editor.preview-soft-wrap`, which overrides the soft wrap of the picker's file preview (preview_text_format / render_document_formatted, ui/picker.rs, ui/document.rs); unset, the preview wraps as the previewed document would \u2014 JetBrains' \"Use soft wraps in preview editors\"."
+ },
+ {
+  "spec_id": "jetbrains-actions.TW.MoveToNextSplitter",
+  "status": "ported",
+  "evidence": [
+   "static:tool_window_next_group"
+  ],
+  "note": "TW.MoveToNextSplitter (Go to next splitter window) = zmax `tool_window_next_group`: keyboard focus to the next bottom drawer column (tab group) that is not folded, wrapping, each column keeping its own selection (Ide::focus_next_column, ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.TW.MoveToPreviousSplitter",
+  "status": "ported",
+  "evidence": [
+   "static:tool_window_prev_group"
+  ],
+  "note": "TW.MoveToPreviousSplitter (Go to previous splitter window) = zmax `tool_window_prev_group`: the same as tool_window_next_group in the other direction (Ide::focus_next_column, ui/ide.rs)."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.ShowOnlyAffectedChanges",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.ShowOnlyAffectedChanges = `a` in the zmax git log (`:magit`, then `l`), over the log's Paths filter (`F`, `git log -- <paths>`): the selected commit's diff (`Enter`/`d`, the `v` preview) and affected files (`f`) leave out its changes outside the filtered paths (MagitLog::diff_paths, ui/magit.rs)."
  }
 ]

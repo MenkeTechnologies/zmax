@@ -3158,7 +3158,8 @@ impl Component for MagitCommit {
 /// `g`/`G` jump to top/bottom, `Enter`/`d` open the selected commit's diff
 /// ([`MagitShow`]), `/` selects the commit a typed hash, branch or tag names,
 /// `D` switches the long form between author and committer date, `s` filters
-/// by message (`i` match case, `e` regex), `m` shows merges
+/// by message (`i` match case, `e` regex), `F` filters by paths (`a` limits
+/// diffs and file lists to them), `m` shows merges
 /// against each parent, `v` shows the selected commit's diff beside the list
 /// (`V` moves it between the bottom and the right), `P` marks with `+` the
 /// commits not cherry-picked to `HEAD`, `q`/`Esc` return to the status buffer.
@@ -3189,6 +3190,14 @@ pub struct MagitLog {
     /// JetBrains "Regex" (`Vcs.Log.EnableFilterByRegexAction`): the filter is an
     /// extended regex (`-E`) instead of a fixed string (`-F`).
     regex: bool,
+    /// JetBrains log "Paths" filter: only commits that touch one of these
+    /// paths (`git log -- <paths>`), relative to the repository root. Empty
+    /// lists every commit.
+    paths: Vec<String>,
+    /// JetBrains "Show Only Changes from Filtered Paths"
+    /// (`Vcs.Log.ShowOnlyAffectedChanges`, `a`): a commit's diff and files
+    /// leave out what it changed outside [`Self::paths`].
+    only_affected: bool,
     /// JetBrains "Show Changes to Parents" (`Vcs.Log.ShowChangesFromParents`):
     /// a merge commit's diff and files are shown against each parent in turn
     /// (`git show -m`).
@@ -3232,6 +3241,8 @@ impl MagitLog {
             filter: String::new(),
             match_case: false,
             regex: false,
+            paths: Vec::new(),
+            only_affected: false,
             per_parent: false,
             branch,
             preview: false,
@@ -3255,6 +3266,7 @@ impl MagitLog {
             args.extend(grep.iter().map(String::as_str));
             // A branch named like a file would otherwise be ambiguous.
             args.push("--");
+            args.extend(self.paths.iter().map(String::as_str));
             git_output(&self.repo_dir, &args).unwrap_or_default()
         };
         self.entries = parse_log(&log(&["--oneline", "--decorate"]));
@@ -3273,8 +3285,70 @@ impl MagitLog {
         if self.preview_lines.as_ref().is_some_and(|(s, _)| *s == sha) {
             return;
         }
-        let lines = show_lines(&self.repo_dir, &sha, self.per_parent);
+        let lines = show_lines(&self.repo_dir, &sha, self.per_parent, self.diff_paths());
         self.preview_lines = Some((sha, lines));
+    }
+
+    /// The paths a commit's diff and file list are limited to: the Paths
+    /// filter while "Show Only Changes from Filtered Paths" is on, else none.
+    fn diff_paths(&self) -> &[String] {
+        if self.only_affected {
+            &self.paths
+        } else {
+            &[]
+        }
+    }
+
+    /// Prompt for the log's Paths filter, space-separated; an empty answer
+    /// clears it.
+    fn paths_prompt(current: String) -> Callback {
+        Box::new(move |compositor: &mut Compositor, cx| {
+            let mut prompt = crate::ui::prompt::Prompt::new(
+                "filter log by paths: ".into(),
+                None,
+                crate::ui::completers::filename,
+                |cx: &mut Context, input: &str, event: crate::ui::PromptEvent| {
+                    if event != crate::ui::PromptEvent::Validate {
+                        return;
+                    }
+                    let paths: Vec<String> = input.split_whitespace().map(str::to_string).collect();
+                    cx.jobs.callback(async move {
+                        let call: crate::job::Callback =
+                            crate::job::Callback::EditorCompositor(Box::new(
+                                move |editor, compositor| match compositor.find::<MagitLog>() {
+                                    Some(log) => {
+                                        log.paths = paths;
+                                        log.preview_lines = None;
+                                        log.reload();
+                                        editor.set_status(log.paths_status());
+                                    }
+                                    None => editor.set_error("no git log open"),
+                                },
+                            ));
+                        Ok(call)
+                    });
+                },
+            );
+            prompt.set_line(current.clone(), cx.editor);
+            compositor.push(Box::new(prompt));
+        })
+    }
+
+    /// The status line after the Paths filter or its diff option changed.
+    fn paths_status(&self) -> String {
+        if self.paths.is_empty() {
+            return format!("log: {} commits, no paths filter", self.entries.len());
+        }
+        format!(
+            "log: {} commits touching {} ({})",
+            self.entries.len(),
+            self.paths.join(" "),
+            if self.only_affected {
+                "their changes only"
+            } else {
+                "whole commits"
+            },
+        )
     }
 
     /// Prompt for the log's text filter; an empty answer clears it.
@@ -3517,8 +3591,14 @@ impl MagitLog {
         let sha = self.entries.get(self.selected)?.sha.clone();
         let repo_dir = self.repo_dir.clone();
         let per_parent = self.per_parent;
+        let paths = self.diff_paths().to_vec();
         Some(Box::new(move |compositor: &mut Compositor, _cx| {
-            compositor.push(Box::new(MagitShow::new(repo_dir.clone(), &sha, per_parent)));
+            compositor.push(Box::new(MagitShow::new(
+                repo_dir.clone(),
+                &sha,
+                per_parent,
+                &paths,
+            )));
         }))
     }
 
@@ -3564,18 +3644,29 @@ impl MagitLog {
             return;
         };
         let sha = entry.sha.clone();
-        let mut args = vec!["show", "--numstat", "--format=%h %s%n"];
-        if self.per_parent {
-            args.push("-m");
-        }
-        args.push(&sha);
-        let out = git_output(&self.repo_dir, &args).unwrap_or_default();
+        let out = self.affected_files(&sha);
         if out.trim().is_empty() {
             cx.editor.set_error(format!("no files for {sha}"));
             return;
         }
         crate::commands::show_text_in_scratch(cx.editor, &out);
         cx.editor.set_status(format!("files affected by {sha}"));
+    }
+
+    /// `git show --numstat` for `sha`: its subject, then each file it changed
+    /// (within [`Self::diff_paths`]) with the lines added and deleted.
+    fn affected_files(&self, sha: &str) -> String {
+        let mut args = vec!["show", "--numstat", "--format=%h %s%n"];
+        if self.per_parent {
+            args.push("-m");
+        }
+        args.push(sha);
+        let paths = self.diff_paths();
+        if !paths.is_empty() {
+            args.push("--");
+            args.extend(paths.iter().map(String::as_str));
+        }
+        git_output(&self.repo_dir, &args).unwrap_or_default()
     }
 
     /// JetBrains "History Up to Here" (`Vcs.ShowHistoryForRevision`): the log
@@ -3740,6 +3831,15 @@ impl Component for MagitLog {
                 self.reload();
                 cx.editor.set_status(self.filter_status());
             }
+            key!('F') => {
+                let current = self.paths.join(" ");
+                return EventResult::Consumed(Some(Self::paths_prompt(current)));
+            }
+            key!('a') => {
+                self.only_affected = !self.only_affected;
+                self.preview_lines = None;
+                cx.editor.set_status(self.paths_status());
+            }
             key!('m') => {
                 self.per_parent = !self.per_parent;
                 self.preview_lines = None;
@@ -3832,7 +3932,7 @@ impl Component for MagitLog {
         };
         let title = title.as_str();
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  m merge parents  Tab long  v preview  V preview side  P not picked  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  F paths  a paths only  m merge parents  Tab long  v preview  V preview side  P not picked  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -4246,13 +4346,18 @@ pub struct MagitShow {
 }
 
 /// `git show --stat -p <sha>` as lines; `per_parent` shows a merge against each
-/// parent (`git show -m`) instead of git's default for merges.
-fn show_lines(repo_dir: &Path, sha: &str, per_parent: bool) -> Vec<String> {
+/// parent (`git show -m`) instead of git's default for merges, and a non-empty
+/// `paths` leaves out the changes outside them.
+fn show_lines(repo_dir: &Path, sha: &str, per_parent: bool, paths: &[String]) -> Vec<String> {
     let mut args = vec!["show", "--stat", "-p"];
     if per_parent {
         args.push("-m");
     }
     args.push(sha);
+    if !paths.is_empty() {
+        args.push("--");
+        args.extend(paths.iter().map(String::as_str));
+    }
     let out = git_output(repo_dir, &args).unwrap_or_default();
     out.lines().map(str::to_string).collect()
 }
@@ -4265,10 +4370,10 @@ fn file_starts(lines: &[String]) -> Vec<usize> {
 }
 
 impl MagitShow {
-    fn new(repo_dir: PathBuf, sha: &str, per_parent: bool) -> Self {
+    fn new(repo_dir: PathBuf, sha: &str, per_parent: bool, paths: &[String]) -> Self {
         MagitShow {
             title: format!(" {sha}"),
-            lines: show_lines(&repo_dir, sha, per_parent),
+            lines: show_lines(&repo_dir, sha, per_parent, paths),
             scroll: 0,
             viewport: 1,
             collapsed: HashSet::new(),
@@ -7406,6 +7511,73 @@ MM both.rs
     }
 
     #[test]
+    fn log_paths_filter_lists_commits_and_can_narrow_their_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        let commit = |files: &[&str], message: &str| {
+            for name in files {
+                std::fs::write(dir.path().join(name), message).unwrap();
+            }
+            git(&[&["add"][..], files].concat());
+            git(&["commit", "-q", "-m", message]);
+        };
+        git(&["init", "-q"]);
+        commit(&["a.txt", "b.txt"], "both");
+        commit(&["b.txt"], "b only");
+        commit(&["c.txt"], "c only");
+
+        let mut log = MagitLog::new(dir.path().to_path_buf());
+        assert_eq!(3, log.entries.len());
+        log.paths = vec!["a.txt".into(), "c.txt".into()];
+        log.reload();
+        let subjects: Vec<_> = log.entries.iter().map(|e| e.summary.as_str()).collect();
+        assert!(
+            subjects.len() == 2 && subjects[0].ends_with("c only") && subjects[1].ends_with("both"),
+            "{subjects:?}"
+        );
+
+        let both = log.entries[1].sha.clone();
+        log.selected = 1;
+        let lists = |lines: &[String], name: &str| lines.iter().any(|l| l.contains(name));
+        assert!(lists(
+            &show_lines(&log.repo_dir, &both, false, log.diff_paths()),
+            "b.txt"
+        ));
+        assert!(
+            log.affected_files(&both).contains("b.txt"),
+            "whole commit by default"
+        );
+
+        log.only_affected = true;
+        let diff = show_lines(&log.repo_dir, &both, false, log.diff_paths());
+        assert!(lists(&diff, "a.txt") && !lists(&diff, "b.txt"), "{diff:?}");
+        let files = log.affected_files(&both);
+        assert!(
+            files.contains("a.txt") && !files.contains("b.txt"),
+            "{files}"
+        );
+
+        log.paths.clear();
+        log.reload();
+        assert_eq!(3, log.entries.len());
+        assert!(
+            log.affected_files(&both).contains("b.txt"),
+            "no filter, nothing left out"
+        );
+    }
+
+    #[test]
     fn show_lists_a_merge_against_each_parent() {
         let dir = tempfile::tempdir().unwrap();
         let git = |args: &[&str]| {
@@ -7436,7 +7608,7 @@ MM both.rs
         git(&["merge", "-q", "--no-edit", "side"]);
 
         let lists = |show: &MagitShow, name: &str| show.lines.iter().any(|l| l.contains(name));
-        let per_parent = MagitShow::new(dir.path().to_path_buf(), "HEAD", true);
+        let per_parent = MagitShow::new(dir.path().to_path_buf(), "HEAD", true, &[]);
         assert!(
             lists(&per_parent, "side_file"),
             "the change from main's side"
@@ -7464,6 +7636,8 @@ MM both.rs
             filter: String::new(),
             match_case: false,
             regex: false,
+            paths: Vec::new(),
+            only_affected: false,
             per_parent: false,
             branch: None,
             preview: false,

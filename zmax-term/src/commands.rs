@@ -2152,6 +2152,8 @@ impl MappableCommand {
         documentation_keep_tab, "Keep the shown documentation; the next lookup opens another tab (JetBrains Keep This Documentation)",
         documentation_close_other_tabs, "Close every Documentation tool window tab but the shown one (JetBrains Close Other Tabs)",
         documentation_close_all_tabs, "Close every Documentation tool window tab (JetBrains Close All Tabs)",
+        tool_window_next_group, "Focus the next bottom drawer column (JetBrains Go to Next Splitter)",
+        tool_window_prev_group, "Focus the previous bottom drawer column (JetBrains Go to Previous Splitter)",
         documentation_jump_to_source, "Go to the declaration of the symbol the documentation shows (JetBrains Jump to Source)",
         toggle_documentation_popup_first, "Show Quick Documentation in the popup, or in the Documentation tool window (JetBrains Show Documentation Popup First)",
         toggle_documentation_auto_update, "Make the Documentation tool window follow the caret (JetBrains Auto-Update from Source)",
@@ -57195,6 +57197,24 @@ fn documentation_close_other_tabs(cx: &mut Context) {
 /// window.
 fn documentation_close_all_tabs(cx: &mut Context) {
     with_ide_status(cx, |ide| Some(closed_tabs(ide.docs_close_tabs(false))));
+}
+
+/// JetBrains "Go to Next Splitter" (`TW.MoveToNextSplitter`): keyboard focus
+/// to the next tab group of the bottom drawer.
+fn tool_window_next_group(cx: &mut Context) {
+    with_ide_status(cx, |ide| Some(group_focused(ide.focus_next_column(true))));
+}
+
+/// JetBrains "Go to Previous Splitter" (`TW.MoveToPreviousSplitter`).
+fn tool_window_prev_group(cx: &mut Context) {
+    with_ide_status(cx, |ide| Some(group_focused(ide.focus_next_column(false))));
+}
+
+fn group_focused(tab: Option<&str>) -> String {
+    match tab {
+        Some(tab) => format!("{tab} tool window group focused"),
+        None => "no other tool window group on screen".to_string(),
+    }
 }
 
 fn closed_tabs(n: usize) -> String {

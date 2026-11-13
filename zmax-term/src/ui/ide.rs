@@ -2154,6 +2154,26 @@ impl Ide {
             .collect()
     }
 
+    /// JetBrains "Go to Next Splitter" / "Go to Previous Splitter"
+    /// (`TW.MoveToNextSplitter`, `TW.MoveToPreviousSplitter`): keyboard focus
+    /// to the next drawer column that is not folded, wrapping, with the drawer
+    /// shown. Returns the tab that column shows; None when no other column is
+    /// on screen.
+    pub fn focus_next_column(&mut self, forward: bool) -> Option<&'static str> {
+        let from = self.bottom_focus_col;
+        // Two steps forward round three columns is one step back.
+        let step = if forward { 1 } else { 2 };
+        let next = (1..3)
+            .map(|i| (from + i * step) % 3)
+            .find(|&c| !self.col_folded(c))?;
+        self.visible = true;
+        self.fold_problems = false;
+        self.set_focus_col(next);
+        self.focus = Focus::Problems;
+        self.sync_bottom_tab();
+        Some(self.bottom_tab.persist_name())
+    }
+
     /// Cycle the focused column through its own tab group (`[` / `]`).
     fn cycle_bottom_tab(&mut self, forward: bool) {
         let col = self.bottom_focus_col;
@@ -7003,6 +7023,34 @@ mod tool_window_tests {
             "never crosses"
         );
         assert_eq!(widen_column([48, 52], 1, false, 10), [50, 50], "folds shut");
+    }
+
+    #[test]
+    fn splitter_focus_skips_folded_columns_and_keeps_each_selection() {
+        let mut ide = super::Ide::new();
+        ide.fold_problems = true;
+        ide.aux_sel = 4;
+        assert_eq!(ide.focus_next_column(true), Some("marks"));
+        assert!(
+            ide.focus == Focus::Problems && !ide.fold_problems,
+            "drawer shown"
+        );
+        ide.aux_sel = 2;
+        assert_eq!(ide.focus_next_column(true), Some("ci"));
+        assert_eq!(ide.focus_next_column(true), Some("problems"), "wraps");
+        assert_eq!(ide.aux_sel, 4, "column 0 kept its selection");
+        assert_eq!(ide.focus_next_column(false), Some("ci"));
+
+        ide.toggle_col_fold(1);
+        assert_eq!(
+            ide.focus_next_column(false),
+            Some("problems"),
+            "middle folded"
+        );
+        assert_eq!(ide.focus_next_column(false), Some("ci"));
+        ide.bottom_splits = [0, 0]; // left and middle dragged shut
+        assert_eq!(ide.focus_next_column(true), None, "only this column shown");
+        assert_eq!(ide.bottom_focus_col, 2);
     }
 
     /// Each window opens and closes on its own, as the plugins' windows do:
