@@ -2216,6 +2216,7 @@ impl MappableCommand {
         run_send_input, "Type a line into the running Run console process's input",
         run_send_eof, "Close the running Run console process's input so it reads end of file (JetBrains Send EOF)",
         toggle_essential_highlighting, "Show only errors while a buffer has unsaved edits, every diagnostic once saved (JetBrains Essential Highlighting)",
+        toggle_preview_soft_wrap, "Soft-wrap long lines in the picker's file preview, or stop (JetBrains Use Soft Wraps in Preview Editors)",
         project_tree_rename, "Rename the project tree's selected file or directory, open buffers following it (JetBrains tree Start Editing)",
         close_other_projects, "Close the buffers of files outside this project, modified ones left open (JetBrains Close Other Projects)",
         project_copy_path, "Copy a known project's path to the clipboard (JetBrains Copy Path on a recent project)",
@@ -56770,6 +56771,24 @@ fn toggle_essential_highlighting(cx: &mut Context) {
         } else {
             "off"
         }
+    ));
+}
+
+/// JetBrains "Use Soft Wraps in Preview Editors"
+/// (`EditorToggleUseSoftWrapsInPreview`): flip `editor.preview-soft-wrap`.
+/// Unset, the preview wraps as the editor does, so the first toggle turns
+/// the opposite of `soft-wrap.enable` on.
+fn toggle_preview_soft_wrap(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        on = !c
+            .preview_soft_wrap
+            .unwrap_or(c.soft_wrap.enable.unwrap_or(false));
+        c.preview_soft_wrap = Some(on);
+    });
+    cx.editor.set_status(format!(
+        "soft wraps in previews: {}",
+        if on { "on" } else { "off" }
     ));
 }
 

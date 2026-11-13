@@ -669,6 +669,10 @@ pub struct Config {
     /// edits only its errors are shown, every diagnostic once it is saved.
     /// Defaults to false.
     pub essential_highlighting: bool,
+    /// JetBrains "Use soft wraps in preview editors": whether the picker's
+    /// file preview soft-wraps long lines. Unset, the preview wraps as the
+    /// previewed document would (`soft-wrap`, per language). Defaults to unset.
+    pub preview_soft_wrap: Option<bool>,
     // Set to override the default clipboard provider
     pub clipboard_provider: ClipboardProvider,
     /// Whether to read settings from [EditorConfig](https://editorconfig.org) files. Defaults to
@@ -1624,6 +1628,7 @@ impl Default for Config {
             inline_diagnostics: InlineDiagnosticsConfig::default(),
             end_of_line_diagnostics: DiagnosticFilter::Enable(Severity::Hint),
             essential_highlighting: false,
+            preview_soft_wrap: None,
             clipboard_provider: ClipboardProvider::default(),
             editor_config: true,
             rainbow_brackets: false,

@@ -336,6 +336,18 @@ mod tests {
     }
 
     #[test]
+    fn preview_soft_wrap_is_unset_until_the_config_says() {
+        assert_eq!(Config::default().editor.preview_soft_wrap, None);
+        let set = Config::load_test(
+            r#"
+            [editor]
+            preview-soft-wrap = false
+        "#,
+        );
+        assert_eq!(set.editor.preview_soft_wrap, Some(false));
+    }
+
+    #[test]
     fn parsing_keymaps_config_file() {
         use crate::keymap;
         use zmax_core::hashmap;

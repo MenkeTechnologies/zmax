@@ -62,6 +62,35 @@ pub fn render_document(
     decorations: DecorationManager,
     view_id: Option<zmax_view::ViewId>,
 ) {
+    render_document_formatted(
+        surface,
+        viewport,
+        doc,
+        offset,
+        doc_annotations,
+        syntax_highlighter,
+        overlay_highlights,
+        theme,
+        decorations,
+        &doc.text_format(viewport.width, Some(theme), view_id),
+    )
+}
+
+/// [`render_document`] with the text format given rather than the
+/// document's own: the picker preview's soft wrap can differ from it.
+#[allow(clippy::too_many_arguments)]
+pub fn render_document_formatted(
+    surface: &mut Surface,
+    viewport: Rect,
+    doc: &Document,
+    offset: ViewPosition,
+    doc_annotations: &TextAnnotations,
+    syntax_highlighter: Option<Highlighter<'_>>,
+    overlay_highlights: Vec<syntax::OverlayHighlights>,
+    theme: &Theme,
+    decorations: DecorationManager,
+    text_fmt: &TextFormat,
+) {
     let mut renderer = TextRenderer::new(
         surface,
         doc,
@@ -73,7 +102,7 @@ pub fn render_document(
         &mut renderer,
         doc.text().slice(..),
         offset.anchor,
-        &doc.text_format(viewport.width, Some(theme), view_id),
+        text_fmt,
         doc_annotations,
         syntax_highlighter,
         overlay_highlights,

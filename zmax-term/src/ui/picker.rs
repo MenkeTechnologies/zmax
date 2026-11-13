@@ -7,7 +7,7 @@ use crate::{
     ctrl, key, shift,
     ui::{
         self,
-        document::{render_document, LinePos, TextRenderer},
+        document::{render_document_formatted, LinePos, TextRenderer},
         picker::query::PickerQuery,
         text_decorations::DecorationManager,
         EditorView,
@@ -1221,6 +1221,12 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 }
             };
 
+            let text_fmt = preview_text_format(
+                doc,
+                inner.width,
+                Some(&cx.editor.theme),
+                cx.editor.config().preview_soft_wrap,
+            );
             let mut offset = ViewPosition::default();
             if let Some((start_line, end_line)) = range {
                 let height = end_line - start_line;
@@ -1228,7 +1234,6 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 let start = text.line_to_char(start_line);
                 let middle = text.line_to_char(start_line + height / 2);
                 if height < inner.height as usize {
-                    let text_fmt = doc.text_format(inner.width, None, None);
                     let annotations = TextAnnotations::default();
                     (offset.anchor, offset.vertical_offset) = char_idx_at_visual_offset(
                         text,
@@ -1298,7 +1303,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 decorations.add_decoration(draw_highlight);
             }
 
-            render_document(
+            render_document_formatted(
                 surface,
                 inner,
                 doc,
@@ -1309,10 +1314,27 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 overlay_highlights,
                 &cx.editor.theme,
                 decorations,
-                None,
+                &text_fmt,
             );
         }
     }
+}
+
+/// The text format the picker previews `doc` with: the document's own, its
+/// soft wrap overridden by `editor.preview-soft-wrap` when that is set
+/// (JetBrains "Use soft wraps in preview editors").
+fn preview_text_format(
+    doc: &Document,
+    width: u16,
+    theme: Option<&zmax_view::Theme>,
+    preview_soft_wrap: Option<bool>,
+) -> zmax_core::doc_formatter::TextFormat {
+    let mut fmt = doc.text_format(width, theme, None);
+    if let Some(wrap) = preview_soft_wrap {
+        // The document's own format refuses to wrap a viewport this narrow.
+        fmt.soft_wrap = wrap && width > 10;
+    }
+    fmt
 }
 
 impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I, D> {
@@ -1529,6 +1551,34 @@ type KeyCallback<D> = Box<dyn Fn(&mut Context, &D) -> bool>;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The preview wraps as the document does until `preview-soft-wrap`
+    /// says otherwise, either way, and never in a sliver of a pane.
+    #[test]
+    fn preview_soft_wrap_overrides_the_documents_own() {
+        use std::sync::Arc;
+        let doc = |wrap: Option<bool>| {
+            let mut config = zmax_view::editor::Config::default();
+            config.soft_wrap.enable = wrap;
+            Document::from(
+                zmax_core::Rope::from("x".repeat(200)),
+                None,
+                Arc::new(arc_swap::ArcSwap::new(Arc::new(config))),
+                Arc::new(arc_swap::ArcSwap::from_pointee(
+                    zmax_core::syntax::Loader::default(),
+                )),
+            )
+        };
+        let wraps = |doc: &Document, width, preview| {
+            preview_text_format(doc, width, None, preview).soft_wrap
+        };
+        let (plain, wrapped) = (doc(None), doc(Some(true)));
+        assert!(!wraps(&plain, 80, None));
+        assert!(wraps(&wrapped, 80, None));
+        assert!(wraps(&plain, 80, Some(true)));
+        assert!(!wraps(&wrapped, 80, Some(false)));
+        assert!(!wraps(&plain, 10, Some(true)));
+    }
 
     /// A picker over the numbers `0..n`, matched and ready to navigate.
     fn numbers(n: u32) -> Picker<u32, ()> {

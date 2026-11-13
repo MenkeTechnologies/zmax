@@ -89392,5 +89392,13 @@
    "static:project_copy_path"
   ],
   "note": "WelcomeScreen.CopyProjectPath (Copy Path on a recent project) = zmax `project_copy_path`: a prompt completing over the known-project list (the recent projects `project-switch-project` records) puts the chosen project's root on the clipboard register."
+ },
+ {
+  "spec_id": "jetbrains-actions.EditorToggleUseSoftWrapsInPreview",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_preview_soft_wrap"
+  ],
+  "note": "EditorToggleUseSoftWrapsInPreview = zmax `toggle_preview_soft_wrap`: flips `editor.preview-soft-wrap`, which overrides the soft wrap of the picker's file preview (preview_text_format / render_document_formatted, ui/picker.rs, ui/document.rs); unset, the preview wraps as the previewed document would \u2014 JetBrains' \"Use soft wraps in preview editors\"."
  }
 ]
