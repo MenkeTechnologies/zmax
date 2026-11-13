@@ -59428,22 +59428,20 @@ fn vc_ignore(cx: &mut Context) {
     }
 }
 
-/// `vc-revert` (C-x v u): discard working-tree changes to the current file,
-/// restoring it to HEAD (`git checkout -- <file>`), then reload the buffer.
+/// `vc-revert` (C-x v u): discard the current file's staged and unstaged
+/// changes, restoring it to HEAD (`git checkout HEAD -- <file>`), then reload
+/// the buffer.
 fn vc_revert(cx: &mut Context) {
     let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
         cx.editor.set_error("Buffer has no file");
         return;
     };
-    match git_exec(&["checkout", "--", &path.to_string_lossy()]) {
-        Ok(_) => {
+    match typed::git_restore(&path, true) {
+        Ok(()) => {
             reload_docs_for_paths(cx.editor, std::slice::from_ref(&path));
             cx.editor.set_status("Reverted file to HEAD");
         }
-        Err(e) => cx.editor.set_error(format!(
-            "git checkout: {}",
-            e.lines().next().unwrap_or("failed")
-        )),
+        Err(e) => cx.editor.set_error(format!("git checkout: {e}")),
     }
 }
 

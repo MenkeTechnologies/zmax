@@ -26738,6 +26738,89 @@ fn git_unstage(
     git_on_current_file(cx, &["reset", "-q", "HEAD"], "unstaged")
 }
 
+/// `:git-rollback-unstaged` — JetBrains staging area "Rollback"
+/// (`Git.Stage.Revert`): the file's unstaged changes are discarded back to
+/// its staged version, what is staged stays, and the buffer is read again.
+fn git_rollback_unstaged(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let doc = doc!(cx.editor);
+    let path = doc.path().context("the buffer has no file")?.to_path_buf();
+    if doc.is_modified() {
+        bail!("save or discard the buffer's edits first");
+    }
+    git_restore(&path, false)?;
+    reload_docs_for_paths(cx.editor, std::slice::from_ref(&path));
+    cx.editor.set_status(format!(
+        "{}: unstaged changes rolled back",
+        path.file_name().unwrap_or_default().to_string_lossy()
+    ));
+    Ok(())
+}
+
+/// Write `path` in the work tree back to its committed version
+/// (`git checkout HEAD -- path`, also resetting what is staged) or, without
+/// `from_head`, to its staged one (`git checkout -- path`).
+pub(crate) fn git_restore(path: &std::path::Path, from_head: bool) -> anyhow::Result<()> {
+    let dir = path.parent().context("the file has no directory")?;
+    let name = path.file_name().context("not a file")?;
+    let mut git = std::process::Command::new("git");
+    git.arg("-C").arg(dir).arg("checkout");
+    if from_head {
+        git.arg("HEAD");
+    }
+    let out = git.arg("--").arg(name).output().context("git")?;
+    if !out.status.success() {
+        bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod git_restore_tests {
+    use super::git_restore;
+    use std::process::Command;
+
+    #[test]
+    fn restores_the_staged_or_the_committed_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+        };
+        let path = dir.path().join("f.txt");
+        let read = || std::fs::read_to_string(&path).unwrap();
+        git(&["init", "-q", "-b", "main"]);
+        std::fs::write(&path, "base\n").unwrap();
+        git(&["add", "f.txt"]);
+        git(&["commit", "-q", "-m", "base"]);
+        std::fs::write(&path, "staged\n").unwrap();
+        git(&["add", "f.txt"]);
+        std::fs::write(&path, "unstaged\n").unwrap();
+
+        git_restore(&path, false).unwrap();
+        assert_eq!(read(), "staged\n", "only the unstaged change goes");
+        let index = git(&["show", ":f.txt"]);
+        assert_eq!(String::from_utf8_lossy(&index.stdout), "staged\n");
+
+        std::fs::write(&path, "unstaged\n").unwrap();
+        git_restore(&path, true).unwrap();
+        assert_eq!(read(), "base\n", "staged and unstaged changes go");
+        let index = git(&["show", ":f.txt"]);
+        assert_eq!(String::from_utf8_lossy(&index.stdout), "base\n");
+    }
+}
+
 /// Reload all open documents from disk (after an external working-tree change
 /// such as a branch checkout). Usable from non-typable callers.
 pub(crate) fn reload_open_docs(cx: &mut compositor::Context) {
@@ -66385,6 +66468,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["unstage"],
         doc: "Unstage the current buffer's file (git reset HEAD).",
         fun: git_unstage,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "git-rollback-unstaged",
+        aliases: &[],
+        doc: "Discard the current file's unstaged changes, keeping what is staged (JetBrains staging area Rollback).",
+        fun: git_rollback_unstaged,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

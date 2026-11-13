@@ -16591,7 +16591,7 @@
   "evidence": [
    "static:vc_revert"
   ],
-  "note": "git checkout -- <file> to restore to HEAD, then reload the buffer."
+  "note": "git checkout HEAD -- <file> to restore the file, and its staged version, to HEAD, then reload the buffer."
  },
  {
   "spec_id": "emacs.command.vc_revision_other_window",
@@ -78355,7 +78355,7 @@
   "evidence": [
    "static:vc_revert"
   ],
-  "note": "ChangesView.RevertFiles (Rollback File) = zmax `vc_revert`: discards the current file's working-tree changes (git checkout -- file) and reloads it."
+  "note": "ChangesView.RevertFiles (Rollback File) = zmax `vc_revert`: discards the current file's staged and unstaged changes (git checkout HEAD -- file) and reloads it."
  },
  {
   "spec_id": "jetbrains-actions.ChangesView.Shelve",
@@ -80348,19 +80348,19 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.Stage.AcceptTheirs",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:conflict_take_all_theirs"
+   "typable:conflict-accept-theirs"
   ],
-  "note": "Git.Stage.AcceptTheirs (Git.Stage.AcceptTheirs) ~ zmax `conflict_take_all_theirs`: resolves every conflict hunk in the buffer with their side, but does not `git checkout --theirs`/stage the file from a staging-area tree as JetBrains does"
+  "note": "Git.Stage.AcceptTheirs (Accept Theirs) = zmax `:conflict-accept-theirs`: the buffer's conflicted file becomes git's --theirs version whole (`git checkout --theirs`), is staged as resolved (`git add`) and reloaded; refused for a file git does not list as unmerged (accept_conflict_side, commands/typed.rs)."
  },
  {
   "spec_id": "jetbrains-actions.Git.Stage.AcceptYours",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:conflict_take_all_ours"
+   "typable:conflict-accept-yours"
   ],
-  "note": "Git.Stage.AcceptYours (Git.Stage.AcceptYours) ~ zmax `conflict_take_all_ours`: resolves every conflict hunk in the buffer with our side, but does not `git checkout --ours`/stage the file from a staging-area tree as JetBrains does"
+  "note": "Git.Stage.AcceptYours (Accept Yours) = zmax `:conflict-accept-yours`: the buffer's conflicted file becomes git's --ours version whole (`git checkout --ours`), is staged as resolved (`git add`) and reloaded; refused for a file git does not list as unmerged (accept_conflict_side, commands/typed.rs)."
  },
  {
   "spec_id": "jetbrains-actions.Git.Stage.Add",
@@ -80388,11 +80388,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.Stage.Revert",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:vc_revert"
+   "typable:git-rollback-unstaged"
   ],
-  "note": "Git.Stage.Revert (Git.Stage.Revert) ~ zmax `vc_revert`: reverts the file to HEAD, while JetBrains' staging-area rollback discards only unstaged changes back to the index version"
+  "note": "Git.Stage.Revert (staging area Rollback) = zmax `:git-rollback-unstaged`: the current file's unstaged changes are discarded back to its staged version (`git checkout -- file`), what is staged stays, and the buffer is reloaded; refused while the buffer has unsaved edits (git_restore, commands/typed.rs)."
  },
  {
   "spec_id": "jetbrains-actions.Git.Stash",

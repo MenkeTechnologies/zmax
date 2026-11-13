@@ -1287,6 +1287,7 @@
 | `:copy-patch`, `:patch-copy` | Copy the working tree's diff to the clipboard (JetBrains Copy as Patch to Clipboard). |
 | `:apply-patch`, `:patch-apply` | Apply the patch on the clipboard with git apply (JetBrains Apply Patch from Clipboard). |
 | `:git-unstage`, `:unstage` | Unstage the current buffer's file (git reset HEAD). |
+| `:git-rollback-unstaged` | Discard the current file's unstaged changes, keeping what is staged (JetBrains staging area Rollback). |
 | `:stash`, `:git-stash` | git stash the working-tree changes (then reload open buffers). |
 | `:stash-pop`, `:git-stash-pop` | git stash pop the most recent stash (then reload open buffers). |
 | `:update`, `:u` | Write changes only if the file has been modified. |
