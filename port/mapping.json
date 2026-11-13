@@ -80308,11 +80308,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Git.Pull",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:git_pull"
+   "typable:git-pull"
   ],
-  "note": "Git.Pull (Pull) = zmax `git_pull`: `git pull --ff-only`; JetBrains Pull offers merge/rebase and branch choice."
+  "note": "Git.Pull (Pull) = zmax `:git-pull [--rebase|--ff-only|--no-ff|--squash|--no-commit|--no-verify] [remote [branch]]`: pulls from the chosen remote and branch (the upstream when none is given) with the six options the IDE's Pull dialog lists under Modify options, then reloads open buffers (git_pull_with_options/pull_args, commands/typed.rs)."
  },
  {
   "spec_id": "jetbrains-actions.Git.ResolveConflicts",
@@ -82775,11 +82775,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Vcs.UpdateProject",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:git_pull"
+   "typable:git-update-project"
   ],
-  "note": "Vcs.UpdateProject (Update Project) = zmax `git_pull`: \"Update Project\" pull, but --ff-only; no merge/rebase update strategy when branches diverge."
+  "note": "Vcs.UpdateProject (Update Project) = zmax `:git-update-project [merge|rebase|reset]`: the IDE's three update types, merge (`git pull --no-rebase`, the default), rebase (`git pull --rebase`) and reset to the remote branch (`git fetch` + `git reset --keep @{upstream}`, dropping local commits), then reloads open buffers (update_project_steps, commands/typed.rs). One repository root per workspace."
  },
  {
   "spec_id": "jetbrains-actions.ViewBreakpoints",

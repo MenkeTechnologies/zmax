@@ -26763,6 +26763,208 @@ fn git_rollback_unstaged(
     Ok(())
 }
 
+/// The options JetBrains' Pull dialog offers under "Modify options", in the
+/// order they are passed to `git pull`.
+const PULL_OPTIONS: [&str; 6] = [
+    "rebase",
+    "ff-only",
+    "no-ff",
+    "squash",
+    "no-commit",
+    "no-verify",
+];
+
+/// `:git-pull [options] [remote [branch]]` — JetBrains "Pull" (`Git.Pull`):
+/// pull from a chosen remote and branch (the current branch's upstream when
+/// none is given) with the dialog's options, then reload open buffers.
+fn git_pull_with_options(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let options: Vec<&str> = PULL_OPTIONS
+        .into_iter()
+        .filter(|o| args.has_flag(o))
+        .collect();
+    let target: Vec<&str> = args.iter().map(|a| a.as_ref()).collect();
+    git_steps_async(cx, vec![pull_args(&options, &target)], "pulled");
+    Ok(())
+}
+
+/// `git pull` with `options` (names from [`PULL_OPTIONS`]) and an optional
+/// remote and branch.
+fn pull_args(options: &[&str], target: &[&str]) -> Vec<String> {
+    std::iter::once("pull".to_string())
+        .chain(options.iter().map(|o| format!("--{o}")))
+        .chain(target.iter().map(|t| t.to_string()))
+        .collect()
+}
+
+/// `:git-update-project [merge|rebase|reset]` — JetBrains "Update Project"
+/// (`Vcs.UpdateProject`) with its update type, merge by default; open buffers
+/// are reloaded after.
+fn git_update_project(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let steps = update_project_steps(args.first().unwrap_or("merge"))?;
+    git_steps_async(cx, steps, "project updated");
+    Ok(())
+}
+
+/// The git commands of an Update Project type. Merge and rebase are `git pull
+/// --no-rebase` / `--rebase`; reset fetches and moves the branch to its
+/// upstream, dropping local commits (`reset --keep` refuses instead of
+/// overwriting uncommitted changes to files the upstream changed).
+fn update_project_steps(kind: &str) -> anyhow::Result<Vec<Vec<String>>> {
+    let steps: &[&[&str]] = match kind {
+        "merge" => &[&["pull", "--no-rebase"]],
+        "rebase" => &[&["pull", "--rebase"]],
+        "reset" => &[&["fetch"], &["reset", "--keep", "@{upstream}"]],
+        other => bail!("update type is merge, rebase or reset, not {other}"),
+    };
+    Ok(steps
+        .iter()
+        .map(|step| step.iter().map(|a| a.to_string()).collect())
+        .collect())
+}
+
+/// Run the git `steps` in the workspace off-thread, stopping at the first that
+/// fails; then reload open buffers and report the last output line.
+fn git_steps_async(cx: &mut compositor::Context, steps: Vec<Vec<String>>, label: &'static str) {
+    let root = zmax_loader::find_workspace().0;
+    cx.editor.set_status(format!("git: {label}…"));
+    cx.jobs.callback(async move {
+        let res = tokio::task::spawn_blocking(move || run_git_steps(&root, &steps))
+            .await
+            .map_err(|e| anyhow!("git task: {e}"))?;
+        Ok(job::Callback::Editor(Box::new(
+            move |editor: &mut Editor| {
+                crate::commands::reload_all_open_docs(editor);
+                let last = |out: &str| out.lines().last().unwrap_or_default().to_string();
+                match res {
+                    Ok(out) => editor.set_status(format!("git {label}: {}", last(&out))),
+                    Err(e) => editor.set_error(format!("git: {}", last(&e))),
+                }
+            },
+        )))
+    });
+}
+
+/// `git -C dir <step>` for each step in turn: the output of the last, or the
+/// error output of the first that fails.
+fn run_git_steps(dir: &std::path::Path, steps: &[Vec<String>]) -> Result<String, String> {
+    let mut out = String::new();
+    for step in steps {
+        let run = std::process::Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(step)
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .output()
+            .map_err(|e| e.to_string())?;
+        let text = |b: &[u8]| String::from_utf8_lossy(b).trim().to_string();
+        if !run.status.success() {
+            return Err(format!("{}{}", text(&run.stdout), text(&run.stderr)));
+        }
+        out = text(&run.stdout);
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod update_project_tests {
+    use super::{pull_args, run_git_steps, update_project_steps};
+    use std::path::Path;
+    use std::process::Command;
+
+    fn git(dir: &Path, args: &[&str]) -> String {
+        let out = Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "git {args:?}: {out:?}");
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    }
+
+    fn commit(dir: &Path, file: &str) {
+        std::fs::write(dir.join(file), file).unwrap();
+        git(dir, &["add", file]);
+        git(dir, &["commit", "-q", "-m", file]);
+    }
+
+    /// An upstream and a clone of it, each with one commit the other lacks.
+    fn diverged() -> (tempfile::TempDir, std::path::PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let up = tmp.path().join("up");
+        std::fs::create_dir(&up).unwrap();
+        git(&up, &["init", "-q", "-b", "main"]);
+        commit(&up, "base");
+        let local = tmp.path().join("local");
+        git(tmp.path(), &["clone", "-q", "up", "local"]);
+        git(&local, &["config", "user.name", "t"]);
+        git(&local, &["config", "user.email", "t@example.com"]);
+        commit(&up, "theirs");
+        commit(&local, "mine");
+        (tmp, local)
+    }
+
+    fn subjects(dir: &Path) -> String {
+        git(dir, &["log", "--format=%s", "--first-parent"]).replace('\n', " ")
+    }
+
+    #[test]
+    fn each_update_type_brings_in_the_upstream_its_own_way() {
+        let (_tmp, local) = diverged();
+        run_git_steps(&local, &update_project_steps("merge").unwrap()).unwrap();
+        assert_eq!(
+            git(&local, &["rev-list", "--count", "--merges", "HEAD"]),
+            "1"
+        );
+        assert!(local.join("theirs").exists() && local.join("mine").exists());
+
+        let (_tmp, local) = diverged();
+        run_git_steps(&local, &update_project_steps("rebase").unwrap()).unwrap();
+        assert_eq!(subjects(&local), "mine theirs base", "mine replayed on top");
+
+        let (_tmp, local) = diverged();
+        std::fs::write(local.join("base"), "uncommitted").unwrap();
+        run_git_steps(&local, &update_project_steps("reset").unwrap()).unwrap();
+        assert_eq!(subjects(&local), "theirs base", "the local commit is gone");
+        assert_eq!(
+            std::fs::read_to_string(local.join("base")).unwrap(),
+            "uncommitted",
+            "an edit to a file the upstream left alone stays"
+        );
+
+        assert!(update_project_steps("squash").is_err());
+    }
+
+    #[test]
+    fn pull_passes_the_dialog_options_remote_and_branch() {
+        let (_tmp, local) = diverged();
+        // --ff-only cannot bring in a diverged upstream.
+        let ff_only = pull_args(&["ff-only"], &["origin", "main"]);
+        assert!(run_git_steps(&local, &[ff_only]).is_err());
+        assert_eq!(subjects(&local), "mine base");
+
+        let rebase = pull_args(&["rebase"], &["origin", "main"]);
+        assert_eq!(rebase, ["pull", "--rebase", "origin", "main"]);
+        run_git_steps(&local, &[rebase]).unwrap();
+        assert_eq!(subjects(&local), "mine theirs base");
+    }
+}
+
 /// Write `path` in the work tree back to its committed version
 /// (`git checkout HEAD -- path`, also resetting what is staged) or, without
 /// `from_head`, to its staged one (`git checkout -- path`).
@@ -66471,6 +66673,60 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "git-pull",
+        aliases: &[],
+        doc: "git pull from [remote [branch]] (default: the upstream) with JetBrains Pull's options, then reload open buffers.",
+        fun: git_pull_with_options,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(2)),
+            flags: &[
+                Flag {
+                    name: "rebase",
+                    doc: "rebase local commits onto the fetched ones",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "ff-only",
+                    doc: "only fast-forward",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "no-ff",
+                    doc: "always create a merge commit",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "squash",
+                    doc: "squash the pulled changes into one change on the current branch",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "no-commit",
+                    doc: "merge without committing the merge",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "no-verify",
+                    doc: "skip the pre-merge and commit-msg hooks",
+                    ..Flag::DEFAULT
+                },
+            ],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "git-update-project",
+        aliases: &[],
+        doc: "Update the branch from its upstream by merge (default), rebase or reset (JetBrains Update Project), then reload open buffers.",
+        fun: git_update_project,
+        completer: CommandCompleter::positional(&[completers::git_update_type]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

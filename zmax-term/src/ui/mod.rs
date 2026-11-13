@@ -866,6 +866,14 @@ pub mod completers {
             .collect()
     }
 
+    /// The update types of `:git-update-project`.
+    pub fn git_update_type(_editor: &Editor, input: &str) -> Vec<Completion> {
+        fuzzy_match(input, ["merge", "rebase", "reset"], false)
+            .into_iter()
+            .map(|(name, _)| ((0..), name.into()))
+            .collect()
+    }
+
     /// The names of the workbench layouts saved with `:layout-save`.
     pub fn ide_layout(_editor: &Editor, input: &str) -> Vec<Completion> {
         let named = crate::appdata::NamedLayouts::load();
