@@ -3213,6 +3213,12 @@ pub struct MagitLog {
     preview_right: bool,
     /// The previewed commit and its `git show` lines.
     preview_lines: Option<(String, Vec<String>)>,
+    /// JetBrains "Show Details" (`Vcs.Log.ShowDetailsAction`, `I`): the
+    /// selected commit's details pane beside the list, above the diff preview
+    /// when that is shown too.
+    details: bool,
+    /// The commit [`Self::details`] shows and its lines.
+    details_lines: Option<(String, Vec<String>)>,
     /// JetBrains "Not Cherry-Picked Commits"
     /// (`Git.Log.HighlightCherryPickedCommits`, `P`): the listed commits with
     /// no equivalent on `HEAD` (`git cherry HEAD <tip>`), marked `+`.
@@ -3248,6 +3254,8 @@ impl MagitLog {
             preview: false,
             preview_right: false,
             preview_lines: None,
+            details: false,
+            details_lines: None,
             unpicked: None,
         };
         log.reload();
@@ -3287,6 +3295,20 @@ impl MagitLog {
         }
         let lines = show_lines(&self.repo_dir, &sha, self.per_parent, self.diff_paths());
         self.preview_lines = Some((sha, lines));
+    }
+
+    /// Fetch the selected commit's details for the details pane, once per
+    /// commit.
+    fn load_details(&mut self) {
+        let Some(sha) = self.entries.get(self.selected).map(|e| e.sha.clone()) else {
+            self.details_lines = None;
+            return;
+        };
+        if self.details_lines.as_ref().is_some_and(|(s, _)| *s == sha) {
+            return;
+        }
+        let lines = commit_details(&self.repo_dir, &sha);
+        self.details_lines = Some((sha, lines));
     }
 
     /// The paths a commit's diff and file list are limited to: the Paths
@@ -3559,6 +3581,21 @@ impl MagitLog {
         self.unpicked
             .as_ref()
             .is_some_and(|set| set.iter().any(|full| full.starts_with(sha)))
+    }
+
+    /// JetBrains "Refresh" (`Vcs.Log.Refresh`, `C-r`): read the history
+    /// again, so commits made, fetched or rewritten since the log opened are
+    /// listed, keeping the selected commit selected while it still is. The
+    /// not-cherry-picked marks are worked out again too. Returns the status
+    /// line.
+    fn refresh(&mut self) -> String {
+        self.reload();
+        self.preview_lines = None;
+        self.details_lines = None;
+        if self.unpicked.take().is_some() {
+            self.toggle_unpicked();
+        }
+        format!("log refreshed: {} commits", self.entries.len())
     }
 
     /// Toggle the not-cherry-picked marks. Returns the status line.
@@ -3889,6 +3926,10 @@ impl Component for MagitLog {
                 let status = self.toggle_unpicked();
                 cx.editor.set_status(status);
             }
+            ctrl!('r') => {
+                let status = self.refresh();
+                cx.editor.set_status(status);
+            }
             key!('v') => self.preview = !self.preview,
             key!('V') => {
                 self.preview_right = !self.preview_right;
@@ -3899,10 +3940,21 @@ impl Component for MagitLog {
                     "diff preview: bottom"
                 });
             }
+            key!('I') => {
+                self.details = !self.details;
+                cx.editor.set_status(if self.details {
+                    "commit details: shown"
+                } else {
+                    "commit details: hidden"
+                });
+            }
             _ => {}
         }
         if self.preview {
             self.load_preview();
+        }
+        if self.details {
+            self.load_details();
         }
         EventResult::Consumed(None)
     }
@@ -3932,7 +3984,7 @@ impl Component for MagitLog {
         };
         let title = title.as_str();
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  F paths  a paths only  m merge parents  Tab long  v preview  V preview side  P not picked  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  q back";
+        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  F paths  a paths only  m merge parents  Tab long  v preview  V preview side  I details  P not picked  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  C-r refresh  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -3945,8 +3997,9 @@ impl Component for MagitLog {
 
         let body_y = area.y + 2;
         let full_h = area.height.saturating_sub(2);
-        // The diff preview takes the right or the lower half of the body.
-        let (list_w, body_h, preview) = match (self.preview, self.preview_right) {
+        // The details pane and the diff preview take the right or the lower
+        // half of the body; together, the details sit above the diff.
+        let (list_w, body_h, side) = match (self.preview || self.details, self.preview_right) {
             (false, _) => (area.width, full_h, None),
             (true, true) => {
                 let w = area.width / 2;
@@ -3960,7 +4013,36 @@ impl Component for MagitLog {
             }
         };
         self.viewport = body_h as usize;
-        if let (Some(preview), Some((sha, lines))) = (preview, &self.preview_lines) {
+        let mut preview = side;
+        if let (Some(side), true) = (side, self.details) {
+            let lines = self.details_lines.as_ref().map_or(&[][..], |(_, l)| l);
+            let h = if self.preview {
+                (lines.len() as u16 + 1).min(side.height / 2)
+            } else {
+                side.height
+            };
+            let pane = Rect::new(side.x, side.y, side.width, h);
+            surface.set_stringn(
+                pane.x,
+                pane.y,
+                " Details",
+                pane.width as usize,
+                header_style,
+            );
+            for (i, line) in lines.iter().take(h.saturating_sub(1) as usize).enumerate() {
+                surface.set_stringn(
+                    pane.x,
+                    pane.y + 1 + i as u16,
+                    line,
+                    pane.width as usize,
+                    text_style,
+                );
+            }
+            preview = Some(Rect::new(side.x, side.y + h, side.width, side.height - h));
+        }
+        if let (Some(preview), true, Some((sha, lines))) =
+            (preview, self.preview, &self.preview_lines)
+        {
             render_diff_preview(surface, preview, theme, sha, lines);
         }
 
@@ -5336,6 +5418,52 @@ fn render_diff_preview(
             style,
         );
     }
+}
+
+/// The JetBrains log "Commit Details" of `sha`: its message, hash, author
+/// and email, date, GPG signature, the repository root, and the branches
+/// that contain it.
+fn commit_details(repo_dir: &Path, sha: &str) -> Vec<String> {
+    let format = "--format=%B%x00%H%x00%an%x00%ae%x00%ad%x00%G?%x00%GS";
+    let out = git_output(repo_dir, &["show", "-s", format, sha]).unwrap_or_default();
+    let fields: Vec<&str> = out.split('\0').map(str::trim).collect();
+    let [message, hash, author, email, date, signed, signer] = fields[..] else {
+        return vec![format!("{sha}: no such commit")];
+    };
+    let signature = match signed {
+        "N" => "none".to_string(),
+        "G" => format!("good, {signer}"),
+        "B" => "bad".to_string(),
+        "U" => format!("good, unknown validity, {signer}"),
+        "X" | "Y" => format!("good, expired key or signature, {signer}"),
+        "R" => format!("good, revoked key, {signer}"),
+        _ => "cannot be checked".to_string(),
+    };
+    let branches = git_output(
+        repo_dir,
+        &[
+            "branch",
+            "--all",
+            "--contains",
+            sha,
+            "--format=%(refname:short)",
+        ],
+    )
+    .unwrap_or_default();
+    let branches: Vec<&str> = branches.lines().filter(|b| !b.is_empty()).collect();
+    let mut lines: Vec<String> = message.lines().map(str::to_string).collect();
+    lines.push(String::new());
+    lines.push(hash.to_string());
+    lines.push(format!("{author} <{email}> on {date}"));
+    lines.push(format!("Signature: {signature}"));
+    lines.push(format!("Root: {}", repo_dir.display()));
+    lines.push(format!(
+        "In {} branch{}: {}",
+        branches.len(),
+        if branches.len() == 1 { "" } else { "es" },
+        branches.join(", ")
+    ));
+    lines
 }
 
 /// Add BOLD to a style.
@@ -7156,6 +7284,105 @@ mod tests {
     }
 
     #[test]
+    fn refresh_lists_new_commits_and_rechecks_cherry_picks() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+                .args(args)
+                .output()
+                .unwrap()
+                .status
+                .success();
+            assert!(ok, "git {args:?}");
+        };
+        let commit = |name: &str| {
+            std::fs::write(dir.path().join(name), name).unwrap();
+            git(&["add", name]);
+            git(&["commit", "-q", "-m", name]);
+        };
+        git(&["init", "-q", "-b", "main"]);
+        commit("base");
+        git(&["checkout", "-q", "-b", "side"]);
+        commit("fix");
+        git(&["checkout", "-q", "main"]);
+
+        let mut log = MagitLog::for_branch(dir.path().to_path_buf(), Some("side".into()));
+        log.toggle_unpicked();
+        let fix = log.entries[0].sha.clone();
+        assert!(log.is_unpicked(&fix));
+        log.move_selection(1);
+        let base = log.entries[log.selected].sha.clone();
+
+        git(&["cherry-pick", "side"]);
+        git(&["checkout", "-q", "side"]);
+        commit("more");
+        git(&["checkout", "-q", "main"]);
+        assert_eq!(log.entries.len(), 2, "nothing changes until refreshed");
+        assert_eq!(log.refresh(), "log refreshed: 3 commits");
+        assert_eq!(log.entries[log.selected].sha, base, "selection kept");
+        assert!(!log.is_unpicked(&fix), "fix is on main now");
+        assert!(log.is_unpicked(&log.entries[0].sha), "more is not");
+    }
+
+    #[test]
+    fn details_pane_shows_message_hash_author_signature_root_and_branches() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let out = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args([
+                    "-c",
+                    "user.name=Jane Doe",
+                    "-c",
+                    "user.email=jane@example.com",
+                ])
+                .args(args)
+                .output()
+                .unwrap();
+            assert!(out.status.success(), "git {args:?}");
+            String::from_utf8_lossy(&out.stdout).trim().to_string()
+        };
+        git(&["init", "-q", "-b", "main"]);
+        git(&[
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "first",
+            "-m",
+            "why it was done",
+        ]);
+        git(&["branch", "keep"]);
+        git(&["commit", "-q", "--allow-empty", "-m", "second"]);
+        let first = git(&["rev-parse", "HEAD~1"]);
+
+        let mut log = MagitLog::new(dir.path().to_path_buf());
+        log.move_selection(1);
+        log.load_details();
+        let (sha, lines) = log.details_lines.clone().unwrap();
+        assert!(first.starts_with(&sha));
+        let root = format!("Root: {}", dir.path().display());
+        assert_eq!(lines[..2], ["first", ""]);
+        assert_eq!(lines[2], "why it was done");
+        let tail = &lines[lines.len() - 5..];
+        assert_eq!(tail[0], first);
+        assert!(tail[1].starts_with("Jane Doe <jane@example.com> on "));
+        assert_eq!(tail[2], "Signature: none");
+        assert_eq!(tail[3], root);
+        assert_eq!(tail[4], "In 2 branches: keep, main");
+
+        // Moving on fetches the newer commit's, which only main contains.
+        log.move_selection(-1);
+        log.load_details();
+        let lines = &log.details_lines.as_ref().unwrap().1;
+        assert_eq!(lines.last().unwrap(), "In 1 branch: main");
+    }
+
+    #[test]
     fn branch_log_and_stash_preview() {
         let dir = tempfile::tempdir().unwrap();
         let git = |args: &[&str]| {
@@ -7643,6 +7870,8 @@ MM both.rs
             preview: false,
             preview_right: false,
             preview_lines: None,
+            details: false,
+            details_lines: None,
             unpicked: None,
         };
         assert_eq!(log.go_to_parent(), "parent of c3");

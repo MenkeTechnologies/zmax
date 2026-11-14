@@ -86998,19 +86998,19 @@
  },
  {
   "spec_id": "jetbrains-actions.Vcs.Log.Refresh",
-  "status": "partial",
-  "evidence": [
-   "static:git_repo_log_picker"
-  ],
-  "note": "Vcs.Log.Refresh (Refresh) = zmax `git_repo_log_picker`: each open walks history afresh (git_log_picker, commands.rs:42617); an open log (picker or :magit log view) has no refresh key."
- },
- {
-  "spec_id": "jetbrains-actions.Vcs.Log.ShowDetailsAction",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:magit"
   ],
-  "note": "Vcs.Log.ShowDetailsAction (Show Details) = zmax `:magit` log view `Tab`: toggles the selected commit between one-line summary and full entry (author, date, message) inline (MagitLog::toggle_entry_display, ui/magit.rs); the IDE shows details in a side panel."
+  "note": "Vcs.Log.Refresh (Refresh; JetBrains: \"Refresh the list of commits\") = `C-r` in the zmax git log (`:magit`, then `l`): reads the history again under the current filters, keeping the selected commit selected while it is still listed, and works out the not-cherry-picked marks again (MagitLog::refresh, ui/magit.rs). Each open of `git_repo_log_picker` also walks history afresh."
+ },
+ {
+  "spec_id": "jetbrains-actions.Vcs.Log.ShowDetailsAction",
+  "status": "ported",
+  "evidence": [
+   "typable:magit"
+  ],
+  "note": "Vcs.Log.ShowDetailsAction (Show Details) = `I` in the zmax git log (`:magit`, then `l`): a Commit Details pane beside or under the list, above the `v` diff preview when both are on, with what the IDE's pane lists: the selected commit's message, hash, author and email, date, GPG signature, the repository root and the branches that contain it (commit_details, ui/magit.rs). All containing branches are listed at once rather than six behind a Show All link."
  },
  {
   "spec_id": "jetbrains-actions.Vcs.Log.ShowTooltip",
