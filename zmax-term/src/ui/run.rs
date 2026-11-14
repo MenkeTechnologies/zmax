@@ -174,6 +174,9 @@ fn find_up(start: &Path, marker: &str) -> Option<PathBuf> {
     None
 }
 
+/// How long a run that has exited keeps reading output its pipes still hold.
+const EXIT_DRAIN: std::time::Duration = std::time::Duration::from_millis(500);
+
 /// Start `cmd` under `shell` (e.g. `["sh","-c"]`) in `cwd`, streaming output into a fresh `Run`.
 pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
     // Made before the task so input sent the moment the run starts is kept.
@@ -264,9 +267,16 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
                     None => break, // both readers done
                 },
                 status = child.wait() => {
-                    while let Ok(line) = rx.try_recv() {
-                        push(&st, line);
-                    }
+                    // The child has exited, but its last lines can still be in
+                    // the pipes, not yet read into the channel: read on until
+                    // both readers reach end of file. Bounded, because a
+                    // background grandchild can hold the pipes open.
+                    let drain = async {
+                        while let Some(line) = rx.recv().await {
+                            push(&st, line);
+                        }
+                    };
+                    let _ = tokio::time::timeout(EXIT_DRAIN, drain).await;
                     let mut s = st.lock().unwrap();
                     s.exit_code = status.ok().and_then(|s| s.code());
                     s.running = false;
