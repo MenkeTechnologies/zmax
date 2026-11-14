@@ -361,8 +361,13 @@ impl Buffer {
             self.content[index].set_symbol(s);
             self.content[index].set_style(style);
             // Reset following cells if multi-width (they would be hidden by the grapheme),
-            for i in index + 1..index + grapheme_width {
-                self.content[i].reset();
+            for cell in self
+                .content
+                .iter_mut()
+                .take(index + grapheme_width)
+                .skip(index + 1)
+            {
+                cell.reset();
             }
             index += grapheme_width;
             x_offset += grapheme_width;
@@ -386,8 +391,8 @@ impl Buffer {
         cell.set_style(style);
         // Reset following cells if the grapheme spans multiple columns; they
         // would be hidden by the grapheme but must not carry stale content.
-        for i in index + 1..index + width {
-            self.content[i].reset();
+        for cell in self.content.iter_mut().take(index + width).skip(index + 1) {
+            cell.reset();
         }
     }
 
@@ -452,8 +457,13 @@ impl Buffer {
             self.content[index].set_style(style(byte_offset));
 
             // Reset following cells if multi-width (they would be hidden by the grapheme):
-            for i in index + 1..index + grapheme_width {
-                self.content[i].reset();
+            for cell in self
+                .content
+                .iter_mut()
+                .take(index + grapheme_width)
+                .skip(index + 1)
+            {
+                cell.reset();
             }
 
             index += grapheme_width;
@@ -510,8 +520,8 @@ impl Buffer {
                 self.content[index].set_symbol(s);
                 self.content[index].set_style(style(byte_offset));
                 // Reset following cells if multi-width (they would be hidden by the grapheme),
-                for i in index + 1..index + width {
-                    self.content[i].reset();
+                for cell in self.content.iter_mut().take(index + width).skip(index + 1) {
+                    cell.reset();
                 }
                 index += width;
                 x_offset += width;
@@ -543,8 +553,8 @@ impl Buffer {
                 }
                 self.content[start].set_symbol(s);
                 self.content[start].set_style(style(byte_offset));
-                for i in start + 1..index {
-                    self.content[i].reset();
+                for cell in self.content.iter_mut().take(index).skip(start + 1) {
+                    cell.reset();
                 }
                 index -= width;
                 x_offset += width;
@@ -586,8 +596,8 @@ impl Buffer {
                 }
                 self.content[start].set_symbol(s);
                 self.content[start].set_style(span.style);
-                for i in start + 1..index {
-                    self.content[i].reset();
+                for cell in self.content.iter_mut().take(index).skip(start + 1) {
+                    cell.reset();
                 }
                 index -= width;
                 x_offset += width;

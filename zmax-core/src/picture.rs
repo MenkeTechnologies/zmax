@@ -178,9 +178,9 @@ impl Canvas {
             self.grid[r0][c] = '-';
             self.grid[r1][c] = '-';
         }
-        for r in r0..=r1 {
-            self.grid[r][c0] = '|';
-            self.grid[r][c1] = '|';
+        for row in &mut self.grid[r0..=r1] {
+            row[c0] = '|';
+            row[c1] = '|';
         }
         for &(r, c) in &[(r0, c0), (r0, c1), (r1, c0), (r1, c1)] {
             self.grid[r][c] = '+';
