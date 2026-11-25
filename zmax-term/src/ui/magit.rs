@@ -497,9 +497,10 @@ fn strip_decoration(summary: &str) -> String {
 
 /// A `git log --decorate` summary with its reference list reshaped: JetBrains
 /// "Show Tag Names" (`show_tags` off drops `tag: …` references) and "Compact
-/// References View" (`compact` keeps only the first reference). Pure — unit
-/// tested.
-fn shape_decoration(summary: &str, show_tags: bool, compact: bool) -> String {
+/// References View" (`compact` keeps only the first reference) and
+/// "References on the Left" (`left` off moves the list after the subject).
+/// Pure — unit tested.
+fn shape_decoration(summary: &str, show_tags: bool, compact: bool, left: bool) -> String {
     let Some(rest) = summary.trim_start().strip_prefix('(') else {
         return summary.to_string();
     };
@@ -516,13 +517,49 @@ fn shape_decoration(summary: &str, show_tags: bool, compact: bool) -> String {
     }
     if refs.is_empty() {
         subject.to_string()
-    } else {
+    } else if left {
         format!("({}) {subject}", refs.join(", "))
+    } else {
+        format!("{subject} ({})", refs.join(", "))
     }
 }
 
-/// Parse `git log --format="%h %p"` output into abbreviated sha -> parent shas.
-/// Pure — unit tested.
+/// The `git log` format [`parse_columns`] reads: abbreviated sha, author,
+/// committer, author date, committer date.
+const COLUMNS_FORMAT: &str = "--format=%h%x00%an%x00%cn%x00%ad%x00%cd";
+/// The date and time the log's date column shows, as JetBrains does.
+const COLUMNS_DATE: &str = "--date=format:%Y-%m-%d %H:%M";
+
+/// One listed commit's JetBrains log columns.
+#[derive(Debug, PartialEq)]
+struct LogColumns {
+    author: String,
+    /// The author and the committer differ: JetBrains marks the author `*`.
+    other_committer: bool,
+    authored: String,
+    committed: String,
+}
+
+/// Parse [`COLUMNS_FORMAT`] output into abbreviated sha -> columns. Pure —
+/// unit tested.
+fn parse_columns(out: &str) -> std::collections::HashMap<String, LogColumns> {
+    out.lines()
+        .filter_map(|line| {
+            let mut fields = line.split('\0');
+            let sha = fields.next()?.to_string();
+            let author = fields.next()?.to_string();
+            let committer = fields.next()?;
+            let columns = LogColumns {
+                other_committer: author != committer,
+                author,
+                authored: fields.next()?.to_string(),
+                committed: fields.next()?.to_string(),
+            };
+            Some((sha, columns))
+        })
+        .collect()
+}
+
 /// The `git log` arguments for the log's text filter: `--grep` with a fixed
 /// string (`-F`) or an extended regex (`-E`), case-insensitive (`-i`) unless
 /// `match_case`. An empty filter adds nothing.
@@ -540,6 +577,8 @@ fn grep_args(filter: &str, match_case: bool, regex: bool) -> Vec<String> {
     args
 }
 
+/// Parse `git log --format="%h %p"` output into abbreviated sha -> parent shas.
+/// Pure — unit tested.
 fn parse_parents(out: &str) -> std::collections::HashMap<String, Vec<String>> {
     out.lines()
         .filter_map(|line| {
@@ -3157,7 +3196,9 @@ impl Component for MagitCommit {
 /// Opened from the status buffer with `l`. `j`/`k`/arrows move the selection,
 /// `g`/`G` jump to top/bottom, `Enter`/`d` open the selected commit's diff
 /// ([`MagitShow`]), `/` selects the commit a typed hash, branch or tag names,
-/// `D` switches the long form between author and committer date, `s` filters
+/// `T` shows each commit's author and date, `L` moves references between
+/// before and after the subject,
+/// `D` switches dates between author and committer date, `s` filters
 /// by message (`i` match case, `e` regex), `F` filters by paths (`a` limits
 /// diffs and file lists to them), `m` shows merges
 /// against each parent, `v` shows the selected commit's diff beside the list
@@ -3179,8 +3220,15 @@ pub struct MagitLog {
     show_tags: bool,
     /// JetBrains "Compact References View": only a commit's first reference.
     compact_refs: bool,
+    /// JetBrains "References on the Left" (`Vcs.Log.AlignLabels`, `L`): a
+    /// commit's references sit before its subject; off puts them after it.
+    refs_left: bool,
+    /// JetBrains log "Columns" (`T`): each listed commit's author and date,
+    /// fetched while shown.
+    columns: Option<std::collections::HashMap<String, LogColumns>>,
     /// JetBrains "Prefer Commit Date" (`Vcs.Log.PreferCommitDate`): the long
-    /// form shows the committer date instead of the author date.
+    /// form and the date column show the committer date instead of the
+    /// author date.
     commit_date: bool,
     /// JetBrains log text filter: commits whose message matches, via
     /// `git log --grep`. Empty lists every commit.
@@ -3243,6 +3291,8 @@ impl MagitLog {
             parents: std::collections::HashMap::new(),
             show_tags: true,
             compact_refs: false,
+            refs_left: true,
+            columns: None,
             commit_date: false,
             filter: String::new(),
             match_case: false,
@@ -3279,6 +3329,9 @@ impl MagitLog {
         };
         self.entries = parse_log(&log(&["--oneline", "--decorate"]));
         self.parents = parse_parents(&log(&["--format=%h %p"]));
+        if self.columns.is_some() {
+            self.columns = Some(parse_columns(&log(&[COLUMNS_FORMAT, COLUMNS_DATE])));
+        }
         self.selected = keep
             .and_then(|sha| self.entries.iter().position(|e| e.sha == sha))
             .unwrap_or(0);
@@ -3559,14 +3612,39 @@ impl MagitLog {
     /// expanded entry contributes its header plus one row per body line.
     fn display_lines(&self) -> Vec<(usize, String, bool)> {
         let mut out = Vec::new();
+        // Authors are padded to the longest listed one, `*` included.
+        let author_width = self.columns.as_ref().map_or(0, |columns| {
+            columns
+                .values()
+                .map(|c| c.author.chars().count() + usize::from(c.other_committer))
+                .max()
+                .unwrap_or(0)
+        });
         for (i, entry) in self.entries.iter().enumerate() {
-            let summary = shape_decoration(&entry.summary, self.show_tags, self.compact_refs);
+            let summary = shape_decoration(
+                &entry.summary,
+                self.show_tags,
+                self.compact_refs,
+                self.refs_left,
+            );
             let marker = if self.is_unpicked(&entry.sha) {
                 "+ "
             } else {
                 "  "
             };
-            out.push((i, format!("{marker}{} {summary}", entry.sha), true));
+            let columns = match self.columns.as_ref().and_then(|c| c.get(&entry.sha)) {
+                Some(c) => {
+                    let date = if self.commit_date {
+                        &c.committed
+                    } else {
+                        &c.authored
+                    };
+                    let star = if c.other_committer { "*" } else { "" };
+                    format!("{date} {:author_width$} ", format!("{}{star}", c.author))
+                }
+                None => String::new(),
+            };
+            out.push((i, format!("{marker}{} {columns}{summary}", entry.sha), true));
             if self.expanded.contains(&entry.sha) {
                 for line in self.bodies.get(&entry.sha).into_iter().flatten() {
                     out.push((i, format!("      {line}"), false));
@@ -3596,6 +3674,16 @@ impl MagitLog {
             self.toggle_unpicked();
         }
         format!("log refreshed: {} commits", self.entries.len())
+    }
+
+    /// Toggle the author and date columns. Returns the status line.
+    fn toggle_columns(&mut self) -> &'static str {
+        if self.columns.take().is_some() {
+            return "log columns: hash only";
+        }
+        self.columns = Some(Default::default());
+        self.reload();
+        "log columns: author and date"
     }
 
     /// Toggle the not-cherry-picked marks. Returns the status line.
@@ -3916,6 +4004,15 @@ impl Component for MagitLog {
                     }
                 ));
             }
+            key!('L') => {
+                self.refs_left = !self.refs_left;
+                cx.editor.set_status(if self.refs_left {
+                    "log references: left of the subject"
+                } else {
+                    "log references: right of the subject"
+                });
+            }
+            key!('T') => cx.editor.set_status(self.toggle_columns()),
             // `log-view-toggle-entry-display`: short form <-> full entry.
             key!(Tab) => {
                 if let Some(status) = self.toggle_entry_display() {
@@ -3984,7 +4081,7 @@ impl Component for MagitLog {
         };
         let title = title.as_str();
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  F paths  a paths only  m merge parents  Tab long  v preview  V preview side  I details  P not picked  p parent  n child  t tags  x refs  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  C-r refresh  q back";
+        let hint = "j/k move  Enter/d diff  / go to  s filter  i case  e regex  F paths  a paths only  m merge parents  Tab long  v preview  V preview side  I details  P not picked  p parent  n child  t tags  x refs  L refs left  T author/date  y subject  f files  h history  c vs local  A cherry-pick  R revert  r rebase  C-r refresh  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -7328,6 +7425,75 @@ mod tests {
     }
 
     #[test]
+    fn columns_show_author_and_either_date_and_references_move_right() {
+        let dir = tempfile::tempdir().unwrap();
+        let commit = |subject: &str, author: &str, authored: &str| {
+            let ok = Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["commit", "-q", "--allow-empty", "-m", subject])
+                .env("GIT_AUTHOR_NAME", author)
+                .env("GIT_AUTHOR_EMAIL", "a@example.com")
+                .env("GIT_AUTHOR_DATE", authored)
+                .env("GIT_COMMITTER_NAME", "Ann")
+                .env("GIT_COMMITTER_EMAIL", "ann@example.com")
+                .env("GIT_COMMITTER_DATE", "2021-05-06T07:08:00+0000")
+                .status()
+                .unwrap()
+                .success();
+            assert!(ok, "commit {subject}");
+        };
+        let git = |args: &[&str]| {
+            assert!(Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(args)
+                .status()
+                .unwrap()
+                .success());
+        };
+        git(&["init", "-q", "-b", "main"]);
+        commit("first", "Ann", "2020-01-02T03:04:00+0000");
+        commit("second", "Bob Builder", "2020-02-03T04:05:00+0000");
+        git(&["tag", "v1"]);
+
+        let mut log = MagitLog::new(dir.path().to_path_buf());
+        let rows = |log: &MagitLog| -> Vec<String> {
+            let shas: Vec<String> = log.entries.iter().map(|e| e.sha.clone()).collect();
+            log.display_lines()
+                .into_iter()
+                .zip(&shas)
+                .map(|((_, text, _), sha)| text.replacen(sha.as_str(), "SHA", 1))
+                .collect()
+        };
+        assert_eq!(rows(&log)[1], "  SHA first");
+        assert_eq!(log.toggle_columns(), "log columns: author and date");
+        // Bob was committed by Ann, so he carries the `*`; Ann pads to him.
+        assert_eq!(
+            rows(&log),
+            [
+                "  SHA 2020-02-03 04:05 Bob Builder* (HEAD -> main, tag: v1) second",
+                "  SHA 2020-01-02 03:04 Ann          first",
+            ]
+        );
+        log.commit_date = true;
+        log.refs_left = false;
+        assert_eq!(
+            rows(&log)[0],
+            "  SHA 2021-05-06 07:08 Bob Builder* second (HEAD -> main, tag: v1)"
+        );
+        // A refresh keeps the columns current.
+        commit("third", "Ann", "2020-03-04T05:06:00+0000");
+        log.refresh();
+        assert_eq!(
+            rows(&log)[0],
+            "  SHA 2021-05-06 07:08 Ann          third (HEAD -> main)"
+        );
+        assert_eq!(log.toggle_columns(), "log columns: hash only");
+        assert_eq!(rows(&log)[0], "  SHA third (HEAD -> main)");
+    }
+
+    #[test]
     fn details_pane_shows_message_hash_author_signature_root_and_branches() {
         let dir = tempfile::tempdir().unwrap();
         let git = |args: &[&str]| {
@@ -7623,21 +7789,27 @@ MM both.rs
     #[test]
     fn shape_decoration_drops_tags_and_keeps_the_first_ref() {
         let s = "(HEAD -> main, tag: v1, origin/main) release";
-        assert_eq!(shape_decoration(s, true, false), s);
+        assert_eq!(shape_decoration(s, true, false, true), s);
         assert_eq!(
-            shape_decoration(s, false, false),
+            shape_decoration(s, false, false, true),
             "(HEAD -> main, origin/main) release"
         );
-        assert_eq!(shape_decoration(s, true, true), "(HEAD -> main) release");
         assert_eq!(
-            shape_decoration("(tag: v1) release", false, false),
+            shape_decoration(s, true, true, true),
+            "(HEAD -> main) release"
+        );
+        assert_eq!(
+            shape_decoration("(tag: v1) release", false, false, true),
             "release"
         );
         assert_eq!(
-            shape_decoration("plain subject", false, true),
+            shape_decoration("plain subject", false, true, true),
             "plain subject"
         );
-        assert_eq!(shape_decoration("(unclosed", false, true), "(unclosed");
+        assert_eq!(
+            shape_decoration("(unclosed", false, true, true),
+            "(unclosed"
+        );
     }
 
     #[test]
@@ -7859,6 +8031,8 @@ MM both.rs
             parents: parse_parents("c3 b2\nb2 a1\na1 \n"),
             show_tags: true,
             compact_refs: false,
+            refs_left: true,
+            columns: None,
             commit_date: false,
             filter: String::new(),
             match_case: false,

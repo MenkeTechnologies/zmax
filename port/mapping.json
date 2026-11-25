@@ -87999,11 +87999,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Vcs.Log.AlignLabels",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:magit"
   ],
-  "note": "Vcs.Log.AlignLabels = `:magit` log view: references already sit before the commit message; there is no toggle to move them after it."
+  "note": "Vcs.Log.AlignLabels (References on the Left) = `:magit` log view `L`: toggles a commit's references between before the subject (default) and after it (shape_decoration `left`, ui/magit.rs); JetBrains: \"enable this option to see branch references to the left of the commit message\"."
  },
  {
   "spec_id": "jetbrains-actions.ShowBlankDiffWindow",
@@ -88081,11 +88081,11 @@
  },
  {
   "spec_id": "jetbrains-actions.Vcs.Log.PreferCommitDate",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:magit"
   ],
-  "note": "Vcs.Log.PreferCommitDate = `:magit` log view `D`: the long form of a commit (Tab) shows the committer date instead of the author date; the one-line rows carry no date column to switch."
+  "note": "Vcs.Log.PreferCommitDate (Commit Timestamp) = `:magit` log view `D`: the date column (`T`, author and date columns from `git log --format=%an%cn%ad%cd`) and the long form (Tab) show the committer date instead of the author date; authors committed by someone else carry JetBrains' `*`."
  },
  {
   "spec_id": "jetbrains-actions.Vcs.Log.SelectInLog",
