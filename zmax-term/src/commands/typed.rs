@@ -27254,8 +27254,8 @@ mod file_properties_tests {
         fs::write(&plain, b"hello").unwrap();
 
         let (removed, mandatory) = remove_boms(&[dir.path().to_path_buf()]).unwrap();
-        assert_eq!(removed, [utf8.clone()]);
-        assert_eq!(mandatory, [utf16.clone()]);
+        assert_eq!(removed, std::slice::from_ref(&utf8));
+        assert_eq!(mandatory, std::slice::from_ref(&utf16));
         assert_eq!(fs::read(&utf8).unwrap(), b"hello");
         assert_eq!(fs::read(&utf16).unwrap(), b"\xFF\xFEh\0i\0");
         assert_eq!(fs::read(&plain).unwrap(), b"hello");
@@ -27291,7 +27291,7 @@ mod file_properties_tests {
         fs::write(&binary, "a\n\n\0\n\n").unwrap();
 
         let fixed = fix_line_separators(&[dir.path().to_path_buf()]).unwrap();
-        assert_eq!(fixed, [doubled.clone()]);
+        assert_eq!(fixed, std::slice::from_ref(&doubled));
         assert_eq!(fs::read_to_string(&doubled).unwrap(), "a\r\nb\r\n");
         assert_eq!(fs::read_to_string(&normal).unwrap(), "a\nb\n\nc\n");
         assert_eq!(fs::read(&binary).unwrap(), b"a\n\n\0\n\n");
