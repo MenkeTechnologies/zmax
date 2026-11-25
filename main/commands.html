@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e12777df.js";
+            window.path_to_searchindex_js = "searchindex-3ce42da4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0da97fe6.js"></script>
@@ -1049,6 +1049,9 @@
 <tr><td><code>:format</code>, <code>:fmt</code></td><td>Format the file using an external formatter or language server.</td></tr>
 <tr><td><code>:indent-style</code></td><td>Set the indentation style for editing. (‘t’ for tabs or 1-16 for number of spaces.)</td></tr>
 <tr><td><code>:line-ending</code></td><td>Set the document’s default line ending. Options: crlf, lf.</td></tr>
+<tr><td><code>:fix-line-separators</code></td><td>Drop the empty line after every line in files whose line separators are doubled, directories recursively; the current file by default (JetBrains Fix Line Separators).</td></tr>
+<tr><td><code>:remove-bom</code></td><td>Strip the UTF-8 byte-order mark from files on disk, directories recursively; the current file by default (JetBrains Remove BOM).</td></tr>
+<tr><td><code>:add-bom</code></td><td>Write a UTF-8 byte-order mark at the start of a file on disk; the current file by default (JetBrains Add BOM).</td></tr>
 <tr><td><code>:earlier</code>, <code>:ear</code></td><td>Jump back to an earlier point in edit history. Accepts a number of steps or a time span.</td></tr>
 <tr><td><code>:later</code>, <code>:lat</code></td><td>Jump to a later point in edit history. Accepts a number of steps or a time span.</td></tr>
 <tr><td><code>:NERDTree</code></td><td>Open the project tree, rooted at [dir], and move into it (NERDTree :NERDTree).</td></tr>
