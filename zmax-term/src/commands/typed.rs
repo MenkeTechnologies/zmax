@@ -23747,6 +23747,237 @@ fn unix2dos_cmd(
     line_ending_impl(cx, event, true)
 }
 
+/// The UTF-8 byte-order mark.
+const UTF8_BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
+
+/// The byte-order marks a file can start with, UTF-32 before UTF-16 so a
+/// UTF-32 LE mark is not read as UTF-16 LE, each with whether its encoding
+/// needs it. As in JetBrains `CharsetToolkit`, only UTF-8's is optional.
+const BOMS: [(&[u8], bool); 5] = [
+    (&[0xFF, 0xFE, 0, 0], true),
+    (&[0, 0, 0xFE, 0xFF], true),
+    (UTF8_BOM, false),
+    (&[0xFF, 0xFE], true),
+    (&[0xFE, 0xFF], true),
+];
+
+/// The byte-order mark `bytes` start with and whether it is mandatory.
+fn file_bom(bytes: &[u8]) -> Option<(&'static [u8], bool)> {
+    BOMS.into_iter().find(|(bom, _)| bytes.starts_with(bom))
+}
+
+/// Every file `paths` name: a file itself, and for a directory each file
+/// beneath it, as JetBrains' File Properties actions visit a selection
+/// (`VfsUtilCore.visitChildrenRecursively`). Symlinked directories are not
+/// followed.
+fn files_under(paths: &[PathBuf]) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    let mut stack: Vec<PathBuf> = paths.iter().rev().cloned().collect();
+    while let Some(path) = stack.pop() {
+        let Ok(meta) = std::fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if meta.is_dir() {
+            let Ok(entries) = std::fs::read_dir(&path) else {
+                continue;
+            };
+            let mut children: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
+            children.sort_unstable_by(|a, b| b.cmp(a));
+            stack.extend(children);
+        } else if path.is_file() {
+            files.push(path);
+        }
+    }
+    files
+}
+
+/// JetBrains "Remove BOM" (`RemoveBomAction`): strip the byte-order mark
+/// from every file under `paths` that has one, on disk. Returns the files it
+/// was removed from, then the UTF-16 and UTF-32 files left alone because
+/// their encoding needs the mark.
+fn remove_boms(paths: &[PathBuf]) -> std::io::Result<(Vec<PathBuf>, Vec<PathBuf>)> {
+    use std::io::Read;
+    let (mut removed, mut mandatory) = (Vec::new(), Vec::new());
+    for file in files_under(paths) {
+        let mut head = Vec::with_capacity(4);
+        std::fs::File::open(&file)?.take(4).read_to_end(&mut head)?;
+        match file_bom(&head) {
+            Some((_, true)) => mandatory.push(file),
+            Some((bom, false)) => {
+                let bytes = std::fs::read(&file)?;
+                std::fs::write(&file, &bytes[bom.len()..])?;
+                removed.push(file);
+            }
+            None => {}
+        }
+    }
+    Ok((removed, mandatory))
+}
+
+/// JetBrains "Add BOM" (`AddBomAction`): put the UTF-8 byte-order mark in
+/// front of `file` on disk. As in the IDE, only a file with no mark whose
+/// content is UTF-8, the one encoding whose mark is optional.
+fn add_bom(file: &Path) -> anyhow::Result<()> {
+    let bytes = std::fs::read(file)?;
+    let name = file.file_name().unwrap_or_default().to_string_lossy();
+    if file_bom(&bytes).is_some() {
+        bail!("{name} already has a byte-order mark");
+    }
+    if std::str::from_utf8(&bytes).is_err() {
+        bail!("{name} is not UTF-8, the only encoding with an optional byte-order mark");
+    }
+    std::fs::write(file, [UTF8_BOM, &bytes].concat())?;
+    Ok(())
+}
+
+/// JetBrains "Fix Line Separators" (`FixLineSeparatorsAction`): when every
+/// second line of `text` (the 2nd, 4th, …) is empty, as when each line
+/// separator was doubled (`\r\r\n`), those empty lines are dropped by
+/// deleting the separator ending each one in turn, as the IDE does. `None`
+/// when the text is not like that or nothing changes. Lines end at `\r\n`,
+/// `\n` or `\r`. Pure — unit tested.
+fn undouble_line_separators(text: &str) -> Option<String> {
+    // (content, separator) per line; the last has no separator.
+    let mut lines: Vec<(String, &str)> = Vec::new();
+    let mut rest = text;
+    while let Some(at) = rest.find(['\r', '\n']) {
+        let sep = if rest[at..].starts_with("\r\n") {
+            "\r\n"
+        } else {
+            &rest[at..at + 1]
+        };
+        lines.push((rest[..at].to_string(), sep));
+        rest = &rest[at + sep.len()..];
+    }
+    lines.push((rest.to_string(), ""));
+    if !lines
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .all(|(line, _)| line.is_empty())
+    {
+        return None;
+    }
+    let mut i = 1;
+    while i + 1 < lines.len() {
+        // Line `i` loses its separator, joining the line after it.
+        let (next, sep) = lines.remove(i + 1);
+        lines[i].0.push_str(&next);
+        lines[i].1 = sep;
+        i += 1;
+    }
+    let fixed: String = lines
+        .iter()
+        .flat_map(|(line, sep)| [line.as_str(), sep])
+        .collect();
+    (fixed != text).then_some(fixed)
+}
+
+/// The files a File Properties command acts on: the paths given, or the
+/// current buffer's file. Refuses when one of them is open with unsaved
+/// edits, since the file on disk is what changes.
+fn file_property_targets(cx: &compositor::Context, args: &Args) -> anyhow::Result<Vec<PathBuf>> {
+    let paths: Vec<PathBuf> = if args.is_empty() {
+        let path = doc!(cx.editor).path().context("the buffer has no file")?;
+        vec![path.to_path_buf()]
+    } else {
+        args.iter()
+            .map(|a| zmax_stdx::path::canonicalize(a.as_ref() as &str))
+            .collect()
+    };
+    let unsaved = cx.editor.documents().find(|doc| {
+        doc.is_modified()
+            && doc
+                .path()
+                .is_some_and(|p| paths.iter().any(|t| p.starts_with(t)))
+    });
+    if let Some(doc) = unsaved {
+        bail!("save {} first", doc.display_name());
+    }
+    Ok(paths)
+}
+
+/// `:remove-bom [paths…]` — JetBrains File Properties "Remove BOM".
+fn remove_bom_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (removed, mandatory) = remove_boms(&file_property_targets(cx, &args)?)?;
+    reload_docs_for_paths(cx.editor, &removed);
+    for path in &removed {
+        if let Some(id) = cx.editor.document_id_by_path(path) {
+            doc_mut!(cx.editor, &id).set_bom(false);
+        }
+    }
+    let mut status = format!("byte-order mark removed from {} files", removed.len());
+    if !mandatory.is_empty() {
+        let names: Vec<String> = mandatory.iter().map(|p| p.display().to_string()).collect();
+        status.push_str(&format!(
+            "; kept where UTF-16/UTF-32 needs it: {}",
+            names.join(", ")
+        ));
+    }
+    cx.editor.set_status(status);
+    Ok(())
+}
+
+/// `:add-bom [path]` — JetBrains File Properties "Add BOM".
+fn add_bom_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let paths = file_property_targets(cx, &args)?;
+    add_bom(&paths[0])?;
+    reload_docs_for_paths(cx.editor, &paths);
+    if let Some(id) = cx.editor.document_id_by_path(&paths[0]) {
+        doc_mut!(cx.editor, &id).set_bom(true);
+    }
+    cx.editor
+        .set_status(format!("byte-order mark added to {}", paths[0].display()));
+    Ok(())
+}
+
+/// JetBrains "Fix Line Separators" over every text file under `paths`, on
+/// disk; files that are not UTF-8 or hold a NUL byte count as binary and are
+/// skipped, as the IDE skips binary file types. Returns the files fixed.
+fn fix_line_separators(paths: &[PathBuf]) -> std::io::Result<Vec<PathBuf>> {
+    let mut fixed = Vec::new();
+    for file in files_under(paths) {
+        let Ok(text) = String::from_utf8(std::fs::read(&file)?) else {
+            continue;
+        };
+        if text.contains('\0') {
+            continue;
+        }
+        if let Some(new) = undouble_line_separators(&text) {
+            std::fs::write(&file, new)?;
+            fixed.push(file);
+        }
+    }
+    Ok(fixed)
+}
+
+/// `:fix-line-separators [paths…]` — JetBrains "Fix Line Separators". Open
+/// buffers are read again, so the fix can be undone there.
+fn fix_line_separators_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let fixed = fix_line_separators(&file_property_targets(cx, &args)?)?;
+    reload_docs_for_paths(cx.editor, &fixed);
+    cx.editor
+        .set_status(format!("line separators fixed in {} files", fixed.len()));
+    Ok(())
+}
+
 /// Replace each numeric line with its percentage of the total of all numeric lines.
 /// Non-numeric lines pass through; if the total is zero, nothing changes. Pure —
 /// unit tested.
@@ -26981,6 +27212,90 @@ pub(crate) fn git_restore(path: &std::path::Path, from_head: bool) -> anyhow::Re
         bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod file_properties_tests {
+    use super::{add_bom, fix_line_separators, remove_boms, undouble_line_separators};
+    use std::fs;
+
+    #[test]
+    fn doubled_separators_lose_every_second_empty_line() {
+        assert_eq!(
+            undouble_line_separators("a\n\nb\n\nc").as_deref(),
+            Some("a\nb\nc")
+        );
+        assert_eq!(
+            undouble_line_separators("a\n\nb\n\n").as_deref(),
+            Some("a\nb\n")
+        );
+        // `\r\r\n` reads as `\r` then `\r\n`: the first separator stays.
+        assert_eq!(
+            undouble_line_separators("a\r\r\nb\r\r\nc").as_deref(),
+            Some("a\rb\rc")
+        );
+        // One non-empty second line and the file is left alone.
+        assert_eq!(undouble_line_separators("a\n\nb\nc\nd"), None);
+        assert_eq!(undouble_line_separators("a\nb\n"), None);
+        assert_eq!(undouble_line_separators("one line"), None);
+        assert_eq!(undouble_line_separators("a\n"), None);
+    }
+
+    #[test]
+    fn remove_bom_walks_directories_and_keeps_mandatory_marks() {
+        let dir = tempfile::tempdir().unwrap();
+        let nested = dir.path().join("sub");
+        fs::create_dir(&nested).unwrap();
+        let utf8 = nested.join("utf8.txt");
+        let utf16 = dir.path().join("utf16.txt");
+        let plain = dir.path().join("plain.txt");
+        fs::write(&utf8, b"\xEF\xBB\xBFhello").unwrap();
+        fs::write(&utf16, b"\xFF\xFEh\0i\0").unwrap();
+        fs::write(&plain, b"hello").unwrap();
+
+        let (removed, mandatory) = remove_boms(&[dir.path().to_path_buf()]).unwrap();
+        assert_eq!(removed, [utf8.clone()]);
+        assert_eq!(mandatory, [utf16.clone()]);
+        assert_eq!(fs::read(&utf8).unwrap(), b"hello");
+        assert_eq!(fs::read(&utf16).unwrap(), b"\xFF\xFEh\0i\0");
+        assert_eq!(fs::read(&plain).unwrap(), b"hello");
+    }
+
+    #[test]
+    fn add_bom_only_to_utf8_without_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("a.txt");
+        fs::write(&file, "héllo").unwrap();
+        add_bom(&file).unwrap();
+        assert_eq!(fs::read(&file).unwrap(), b"\xEF\xBB\xBFh\xC3\xA9llo");
+        let again = add_bom(&file).unwrap_err().to_string();
+        assert_eq!(again, "a.txt already has a byte-order mark");
+
+        let latin1 = dir.path().join("b.txt");
+        fs::write(&latin1, b"h\xE9llo").unwrap();
+        assert!(add_bom(&latin1)
+            .unwrap_err()
+            .to_string()
+            .contains("not UTF-8"));
+        assert_eq!(fs::read(&latin1).unwrap(), b"h\xE9llo");
+    }
+
+    #[test]
+    fn fix_line_separators_rewrites_doubled_text_files_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let doubled = dir.path().join("doubled.txt");
+        let normal = dir.path().join("normal.txt");
+        let binary = dir.path().join("blob.bin");
+        fs::write(&doubled, "a\r\n\r\nb\r\n\r\n").unwrap();
+        fs::write(&normal, "a\nb\n\nc\n").unwrap();
+        fs::write(&binary, "a\n\n\0\n\n").unwrap();
+
+        let fixed = fix_line_separators(&[dir.path().to_path_buf()]).unwrap();
+        assert_eq!(fixed, [doubled.clone()]);
+        assert_eq!(fs::read_to_string(&doubled).unwrap(), "a\r\nb\r\n");
+        assert_eq!(fs::read_to_string(&normal).unwrap(), "a\nb\n\nc\n");
+        assert_eq!(fs::read(&binary).unwrap(), b"a\n\n\0\n\n");
+    }
 }
 
 #[cfg(test)]
@@ -61895,6 +62210,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set the document's default line ending. Options: crlf, lf, cr, ff, nel.",
         fun: set_line_ending,
         completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "fix-line-separators",
+        aliases: &[],
+        doc: "Drop the empty line after every line in files whose line separators are doubled, directories recursively; the current file by default (JetBrains Fix Line Separators).",
+        fun: fix_line_separators_cmd,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "remove-bom",
+        aliases: &[],
+        doc: "Strip the UTF-8 byte-order mark from files on disk, directories recursively; the current file by default (JetBrains Remove BOM).",
+        fun: remove_bom_cmd,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "add-bom",
+        aliases: &[],
+        doc: "Write a UTF-8 byte-order mark at the start of a file on disk; the current file by default (JetBrains Add BOM).",
+        fun: add_bom_cmd,
+        completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (0, Some(1)),
             ..Signature::DEFAULT

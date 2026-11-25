@@ -854,6 +854,9 @@
 | `:format`, `:fmt` | Format the file using an external formatter or language server. |
 | `:indent-style` | Set the indentation style for editing. ('t' for tabs or 1-16 for number of spaces.) |
 | `:line-ending` | Set the document's default line ending. Options: crlf, lf. |
+| `:fix-line-separators` | Drop the empty line after every line in files whose line separators are doubled, directories recursively; the current file by default (JetBrains Fix Line Separators). |
+| `:remove-bom` | Strip the UTF-8 byte-order mark from files on disk, directories recursively; the current file by default (JetBrains Remove BOM). |
+| `:add-bom` | Write a UTF-8 byte-order mark at the start of a file on disk; the current file by default (JetBrains Add BOM). |
 | `:earlier`, `:ear` | Jump back to an earlier point in edit history. Accepts a number of steps or a time span. |
 | `:later`, `:lat` | Jump to a later point in edit history. Accepts a number of steps or a time span. |
 | `:NERDTree` | Open the project tree, rooted at [dir], and move into it (NERDTree :NERDTree). |

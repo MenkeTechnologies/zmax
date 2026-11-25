@@ -80084,11 +80084,11 @@
  },
  {
   "spec_id": "jetbrains-actions.FixLineSeparators",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:line-ending"
+   "typable:fix-line-separators"
   ],
-  "note": "FixLineSeparators (Fix Line Separators) = zmax `:line-ending`: converts every line ending of the current buffer to the chosen one; JetBrains converts selected files to the project default."
+  "note": "FixLineSeparators (Fix Line Separators) = zmax `:fix-line-separators [paths\u2026]`: as FixLineSeparatorsAction, a file counts as broken when every second line (2nd, 4th, \u2026) is empty, i.e. doubled separators, and the separator ending each of those lines is deleted in turn; directories are walked recursively and binary files skipped. Open buffers are reloaded, so the fix is undoable."
  },
  {
   "spec_id": "jetbrains-actions.Floating.CodeToolbar.SurroundWithIf",
@@ -81837,11 +81837,11 @@
  },
  {
   "spec_id": "jetbrains-actions.RemoveBom",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:set"
+   "typable:remove-bom"
   ],
-  "note": "RemoveBom (Remove BOM) = zmax `set`: drops the byte-order mark on the next write of the buffer (typed.rs:28384-28400); JetBrains strips BOMs from selected files immediately, possibly many at once."
+  "note": "RemoveBom (Remove BOM) = zmax `:remove-bom [paths\u2026]`: strips the byte-order mark on disk from every file named, directories recursively (RemoveBomAction visitChildrenRecursively); files whose encoding needs the mark (UTF-16/UTF-32, CharsetToolkit.getMandatoryBom) are kept and listed, as the IDE's 'unable to remove BOM' notification does."
  },
  {
   "spec_id": "jetbrains-actions.Rerun",
@@ -84839,11 +84839,11 @@
  },
  {
   "spec_id": "jetbrains-actions.AddBom",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:set"
+   "typable:add-bom"
   ],
-  "note": "AddBom (Add BOM) = zmax `:set bomb`: writes a byte-order mark on the next save of the buffer, as RemoveBom maps; the IDE adds it to selected files immediately."
+  "note": "AddBom (Add BOM) = zmax `:add-bom [path]`: writes the UTF-8 byte-order mark in front of the current (or named) file on disk at once, reloading its buffer. As AddBomAction (doAddBOM: getPossibleBom, setBinaryContent), only a file with no BOM whose charset's BOM is optional, i.e. UTF-8."
  },
  {
   "spec_id": "jetbrains-actions.Markdown.Export",
